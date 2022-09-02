@@ -1,8 +1,5 @@
 atomic
-chrono
 climits
-cmath
-compare
 cstddef
 cstdint
 cstring
@@ -10,6 +7,5 @@ ctime
 iosfwd
 limits
 ratio
-semaphore
 type_traits
 version

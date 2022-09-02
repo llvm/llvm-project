@@ -2,6 +2,8 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64-- < %s | FileCheck %s --check-prefix=CHECK-THROUGHPUT
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mtriple=aarch64-- < %s | FileCheck %s --check-prefix=CHECK-SIZE
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define i32 @cmps() {
 ; CHECK-THROUGHPUT-LABEL: 'cmps'
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a0 = icmp slt i8 undef, undef

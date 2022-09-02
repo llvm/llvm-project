@@ -3,8 +3,8 @@
 
 ; Test case where not vectorizing is more profitable because multiple
 ; fmul/{fadd,fsub} pairs can be lowered to fma instructions.
-define void @slp_not_profitable(ptr %A, ptr %B) {
-; CHECK-LABEL: @slp_not_profitable(
+define void @slp_not_profitable_with_fast_fmf(ptr %A, ptr %B) {
+; CHECK-LABEL: @slp_not_profitable_with_fast_fmf(
 ; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
@@ -36,6 +36,169 @@ define void @slp_not_profitable(ptr %A, ptr %B) {
   %mul.2  = fmul fast float %B.0, %B.1
   %mul.3 = fmul fast float %B.2, %A.0
   %add = fadd fast float %mul.3, %mul.2
+  store float %sub, ptr %A, align 4
+  %gep.A.1 = getelementptr inbounds float, ptr %A, i64 1
+  store float %add, ptr %gep.A.1, align 4
+  store float %B.2, ptr %B, align 4
+  ret void
+}
+
+define void @slp_not_profitable_with_reassoc_fmf(ptr %A, ptr %B) {
+; CHECK-LABEL: @slp_not_profitable_with_reassoc_fmf(
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
+; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[B_0]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[A_0]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul reassoc <2 x float> [[TMP1]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub reassoc <2 x float> [[TMP7]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd reassoc <2 x float> [[TMP7]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[TMP10]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    store float [[TMP11]], ptr [[B]], align 4
+; CHECK-NEXT:    ret void
+;
+  %gep.B.1 = getelementptr inbounds float, ptr %B, i64 1
+  %A.0 = load float, ptr %A, align 4
+  %B.1 = load float, ptr %gep.B.1, align 4
+  %mul.0 = fmul reassoc float %B.1, %A.0
+  %B.0 = load float, ptr %B, align 4
+  %gep.B.2 = getelementptr inbounds float, ptr %B, i64 2
+  %B.2 = load float, ptr %gep.B.2, align 4
+  %mul.1 = fmul float %B.2, %B.0
+  %sub = fsub reassoc float %mul.0, %mul.1
+  %mul.2  = fmul float %B.0, %B.1
+  %mul.3 = fmul reassoc float %B.2, %A.0
+  %add = fadd reassoc float %mul.3, %mul.2
+  store float %sub, ptr %A, align 4
+  %gep.A.1 = getelementptr inbounds float, ptr %A, i64 1
+  store float %add, ptr %gep.A.1, align 4
+  store float %B.2, ptr %B, align 4
+  ret void
+}
+
+; FMA cannot be used due to missing fast-math flags, so SLP should kick in.
+define void @slp_profitable_missing_fmf_on_fadd_fsub(ptr %A, ptr %B) {
+; CHECK-LABEL: @slp_profitable_missing_fmf_on_fadd_fsub(
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
+; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[B_0]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x float> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[A_0]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x float> [[TMP7]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[TMP7]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[TMP10]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    store float [[TMP11]], ptr [[B]], align 4
+; CHECK-NEXT:    ret void
+;
+  %gep.B.1 = getelementptr inbounds float, ptr %B, i64 1
+  %A.0 = load float, ptr %A, align 4
+  %B.1 = load float, ptr %gep.B.1, align 4
+  %mul.0 = fmul fast float %B.1, %A.0
+  %B.0 = load float, ptr %B, align 4
+  %gep.B.2 = getelementptr inbounds float, ptr %B, i64 2
+  %B.2 = load float, ptr %gep.B.2, align 4
+  %mul.1 = fmul fast float %B.2, %B.0
+  %sub = fsub float %mul.0, %mul.1
+  %mul.2  = fmul fast float %B.0, %B.1
+  %mul.3 = fmul fast float %B.2, %A.0
+  %add = fadd float %mul.3, %mul.2
+  store float %sub, ptr %A, align 4
+  %gep.A.1 = getelementptr inbounds float, ptr %A, i64 1
+  store float %add, ptr %gep.A.1, align 4
+  store float %B.2, ptr %B, align 4
+  ret void
+}
+
+; FMA cannot be used due to missing fast-math flags, so SLP should kick in.
+define void @slp_profitable_missing_fmf_on_fmul_fadd_fsub(ptr %A, ptr %B) {
+; CHECK-LABEL: @slp_profitable_missing_fmf_on_fmul_fadd_fsub(
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
+; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[B_0]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[A_0]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP1]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x float> [[TMP7]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[TMP7]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[TMP10]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    store float [[TMP11]], ptr [[B]], align 4
+; CHECK-NEXT:    ret void
+;
+  %gep.B.1 = getelementptr inbounds float, ptr %B, i64 1
+  %A.0 = load float, ptr %A, align 4
+  %B.1 = load float, ptr %gep.B.1, align 4
+  %mul.0 = fmul float %B.1, %A.0
+  %B.0 = load float, ptr %B, align 4
+  %gep.B.2 = getelementptr inbounds float, ptr %B, i64 2
+  %B.2 = load float, ptr %gep.B.2, align 4
+  %mul.1 = fmul float %B.2, %B.0
+  %sub = fsub float %mul.0, %mul.1
+  %mul.2  = fmul float %B.0, %B.1
+  %mul.3 = fmul float %B.2, %A.0
+  %add = fadd float %mul.3, %mul.2
+  store float %sub, ptr %A, align 4
+  %gep.A.1 = getelementptr inbounds float, ptr %A, i64 1
+  store float %add, ptr %gep.A.1, align 4
+  store float %B.2, ptr %B, align 4
+  ret void
+}
+
+; FMA cannot be used due to missing fast-math flags, so SLP should kick in.
+define void @slp_profitable_missing_fmf_nnans_only(ptr %A, ptr %B) {
+; CHECK-LABEL: @slp_profitable_missing_fmf_nnans_only(
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
+; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[B_0]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul nnan <2 x float> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[A_0]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul nnan <2 x float> [[TMP1]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub nnan <2 x float> [[TMP7]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd nnan <2 x float> [[TMP7]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> [[TMP9]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[TMP10]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    store float [[TMP11]], ptr [[B]], align 4
+; CHECK-NEXT:    ret void
+;
+  %gep.B.1 = getelementptr inbounds float, ptr %B, i64 1
+  %A.0 = load float, ptr %A, align 4
+  %B.1 = load float, ptr %gep.B.1, align 4
+  %mul.0 = fmul nnan float %B.1, %A.0
+  %B.0 = load float, ptr %B, align 4
+  %gep.B.2 = getelementptr inbounds float, ptr %B, i64 2
+  %B.2 = load float, ptr %gep.B.2, align 4
+  %mul.1 = fmul nnan float %B.2, %B.0
+  %sub = fsub nnan float %mul.0, %mul.1
+  %mul.2  = fmul nnan float %B.0, %B.1
+  %mul.3 = fmul nnan float %B.2, %A.0
+  %add = fadd nnan float %mul.3, %mul.2
   store float %sub, ptr %A, align 4
   %gep.A.1 = getelementptr inbounds float, ptr %A, i64 1
   store float %add, ptr %gep.A.1, align 4

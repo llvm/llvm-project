@@ -6,6 +6,8 @@
 ; as opposed to scalar loads, inserts and splats as that is how
 ; getShuffleCost currently recognizes them.
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define void @shuffle() {
 ; CHECK-LABEL: 'shuffle'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %lv2i8 = load <2 x i8>, ptr undef, align 2

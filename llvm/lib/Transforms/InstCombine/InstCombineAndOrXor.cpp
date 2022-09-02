@@ -3844,6 +3844,21 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
           MaskedValueIsZero(X, *C, 0, &I))
         return BinaryOperator::CreateXor(X, ConstantInt::get(Ty, *C ^ *RHSC));
 
+      // When X is a power-of-two or zero and zero input is poison:
+      // ctlz(i32 X) ^ 31 --> cttz(X)
+      // cttz(i32 X) ^ 31 --> ctlz(X)
+      auto *II = dyn_cast<IntrinsicInst>(Op0);
+      if (II && II->hasOneUse() && *RHSC == Ty->getScalarSizeInBits() - 1) {
+        Intrinsic::ID IID = II->getIntrinsicID();
+        if ((IID == Intrinsic::ctlz || IID == Intrinsic::cttz) &&
+            match(II->getArgOperand(1), m_One()) &&
+            isKnownToBeAPowerOfTwo(II->getArgOperand(0), /*OrZero */ true)) {
+          IID = (IID == Intrinsic::ctlz) ? Intrinsic::cttz : Intrinsic::ctlz;
+          Function *F = Intrinsic::getDeclaration(II->getModule(), IID, Ty);
+          return CallInst::Create(F, {II->getArgOperand(0), Builder.getTrue()});
+        }
+      }
+
       // If RHSC is inverting the remaining bits of shifted X,
       // canonicalize to a 'not' before the shift to help SCEV and codegen:
       // (X << C) ^ RHSC --> ~X << C

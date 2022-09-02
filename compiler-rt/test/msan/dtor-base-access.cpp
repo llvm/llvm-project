@@ -68,17 +68,20 @@ int main() {
   __msan_print_shadow(&g->tb0, sizeof(g->tb0));
   // CHECK: Member fields were destroyed
   // CHECK: {{#0 0x.* in __sanitizer_dtor_callback}}
-  // CHECK: {{#1 0x.* in .*~Derived.*cpp:}}[[@LINE-20]]:
+  // CHECK: {{#1 0x.* in .*~Derived.*cpp:}}[[@LINE-56]]:
+  // CHECK: {{#2 0x.* in .*~Derived.*cpp:}}[[@LINE-21]]:
 
   __msan_print_shadow(&g->b, sizeof(g->b));
   // CHECK: Member fields were destroyed
   // CHECK: {{#0 0x.* in __sanitizer_dtor_callback}}
-  // CHECK: {{#1 0x.* in .*~Base.*cpp:}}[[@LINE-33]]:
+  // CHECK: {{#1 0x.* in .*~Base.*cpp:}}[[@LINE-67]]:
+  // CHECK: {{#2 0x.* in .*~Base.*cpp:}}[[@LINE-35]]:
 
   __msan_print_shadow(&g->tb1, sizeof(g->tb1));
   // CHECK: Member fields were destroyed
   // CHECK: {{#0 0x.* in __sanitizer_dtor_callback}}
-  // CHECK: {{#1 0x.* in .*~Derived.*cpp:}}[[@LINE-30]]:
+  // CHECK: {{#1 0x.* in .*~Derived.*cpp:}}[[@LINE-62]]:
+  // CHECK: {{#2 0x.* in .*~Derived.*cpp:}}[[@LINE-33]]:
 
   return 0;
 }

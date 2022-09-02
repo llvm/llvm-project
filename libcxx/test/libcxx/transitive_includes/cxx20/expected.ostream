@@ -5,7 +5,6 @@ bit
 bitset
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -31,7 +30,6 @@ memory
 mutex
 new
 optional
-ostream
 ratio
 stdexcept
 streambuf

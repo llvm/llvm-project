@@ -734,7 +734,7 @@ class ImageFormat<string name, bits<32> value> {
 }
 
 multiclass ImageFormatOperand<bits<32> value, list<Capability> reqCapabilities> {
-  def : ImageFormat<NAME, value>;
+  def NAME : ImageFormat<NAME, value>;
   defm : SymbolicOperandWithRequirements<ImageFormatOperand, value, NAME, 0, 0, [], reqCapabilities>;
 }
 

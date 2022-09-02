@@ -16,6 +16,7 @@
 
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRV.h"
+#include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -479,10 +480,10 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   if (IsConst)
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Constant, {});
 
-  if (GVar && GVar->getAlign().valueOrOne().value() != 1)
-    buildOpDecorate(
-        Reg, MIRBuilder, SPIRV::Decoration::Alignment,
-        {static_cast<uint32_t>(GVar->getAlign().valueOrOne().value())});
+  if (GVar && GVar->getAlign().valueOrOne().value() != 1) {
+    unsigned Alignment = (unsigned)GVar->getAlign().valueOrOne().value();
+    buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Alignment, {Alignment});
+  }
 
   if (HasLinkageTy)
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
@@ -563,6 +564,20 @@ static bool isSpecialType(const Type *Ty) {
   return false;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateSpecialType(
+    const Type *Ty, MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccQual) {
+  // Some OpenCL and SPIRV builtins like image2d_t are passed in as
+  // pointers, but should be treated as custom types like OpTypeImage.
+  if (auto PType = dyn_cast<PointerType>(Ty)) {
+    assert(!PType->isOpaque());
+    Ty = PType->getNonOpaquePointerElementType();
+  }
+  auto SType = cast<StructType>(Ty);
+  assert(isOpenCLBuiltinType(SType) || isSPIRVBuiltinType(SType));
+  return SPIRV::lowerBuiltinType(SType, AccQual, MIRBuilder, this);
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOpTypePointer(
     SPIRV::StorageClass::StorageClass SC, SPIRVType *ElemType,
     MachineIRBuilder &MIRBuilder, Register Reg) {
@@ -624,7 +639,8 @@ Register SPIRVGlobalRegistry::getSPIRVTypeID(const SPIRVType *SpirvType) const {
 SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual, bool EmitIR) {
-  assert(!isSpecialType(Ty));
+  if (isSpecialType(Ty))
+    return getOrCreateSpecialType(Ty, MIRBuilder, AccQual);
   auto &TypeToSPIRVTypeMap = DT.getTypes()->getAllUses();
   auto t = TypeToSPIRVTypeMap.find(Ty);
   if (t != TypeToSPIRVTypeMap.end()) {
@@ -729,7 +745,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
-  if (Reg.isValid())
+  if (Reg.isValid() && !isSpecialType(Ty))
     return getSPIRVTypeForVReg(Reg);
   TypesInProcessing.clear();
   SPIRVType *STy = restOfCreateSPIRVType(Ty, MIRBuilder, AccessQual, EmitIR);
@@ -804,6 +820,53 @@ SPIRVGlobalRegistry::getPointerStorageClass(Register VReg) const {
       Type->getOperand(1).getImm());
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
+    MachineIRBuilder &MIRBuilder, SPIRVType *SampledType, SPIRV::Dim::Dim Dim,
+    uint32_t Depth, uint32_t Arrayed, uint32_t Multisampled, uint32_t Sampled,
+    SPIRV::ImageFormat::ImageFormat ImageFormat,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual) {
+  SPIRV::ImageTypeDescriptor TD(SPIRVToLLVMType.lookup(SampledType), Dim, Depth,
+                                Arrayed, Multisampled, Sampled, ImageFormat,
+                                AccessQual);
+  if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
+    return Res;
+  Register ResVReg = createTypeVReg(MIRBuilder);
+  DT.add(TD, &MIRBuilder.getMF(), ResVReg);
+  return MIRBuilder.buildInstr(SPIRV::OpTypeImage)
+      .addDef(ResVReg)
+      .addUse(getSPIRVTypeID(SampledType))
+      .addImm(Dim)
+      .addImm(Depth)        // Depth (whether or not it is a Depth image).
+      .addImm(Arrayed)      // Arrayed.
+      .addImm(Multisampled) // Multisampled (0 = only single-sample).
+      .addImm(Sampled)      // Sampled (0 = usage known at runtime).
+      .addImm(ImageFormat)
+      .addImm(AccessQual);
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder) {
+  SPIRV::SamplerTypeDescriptor TD;
+  if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
+    return Res;
+  Register ResVReg = createTypeVReg(MIRBuilder);
+  DT.add(TD, &MIRBuilder.getMF(), ResVReg);
+  return MIRBuilder.buildInstr(SPIRV::OpTypeSampler).addDef(ResVReg);
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypePipe(
+    MachineIRBuilder &MIRBuilder,
+    SPIRV::AccessQualifier::AccessQualifier AccessQual) {
+  SPIRV::PipeTypeDescriptor TD(AccessQual);
+  if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
+    return Res;
+  Register ResVReg = createTypeVReg(MIRBuilder);
+  DT.add(TD, &MIRBuilder.getMF(), ResVReg);
+  return MIRBuilder.buildInstr(SPIRV::OpTypePipe)
+      .addDef(ResVReg)
+      .addImm(AccessQual);
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(
     SPIRVType *ImageType, MachineIRBuilder &MIRBuilder) {
   SPIRV::SampledImageTypeDescriptor TD(
@@ -813,11 +876,20 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
-  auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeSampledImage)
-                 .addDef(ResVReg)
-                 .addUse(getSPIRVTypeID(ImageType));
   DT.add(TD, &MIRBuilder.getMF(), ResVReg);
-  return MIB;
+  return MIRBuilder.buildInstr(SPIRV::OpTypeSampledImage)
+      .addDef(ResVReg)
+      .addUse(getSPIRVTypeID(ImageType));
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(
+    const Type *Ty, MachineIRBuilder &MIRBuilder, unsigned Opcode) {
+  Register ResVReg = DT.find(Ty, &MIRBuilder.getMF());
+  if (ResVReg.isValid())
+    return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
+  ResVReg = createTypeVReg(MIRBuilder);
+  DT.add(Ty, &MIRBuilder.getMF(), ResVReg);
+  return MIRBuilder.buildInstr(Opcode).addDef(ResVReg);
 }
 
 const MachineInstr *
@@ -939,6 +1011,24 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
                  .addDef(createTypeVReg(CurMF->getRegInfo()))
                  .addUse(getSPIRVTypeID(BaseType))
                  .addImm(NumElements);
+  return finishCreatingSPIRVType(LLVMTy, MIB);
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVArrayType(
+    SPIRVType *BaseType, unsigned NumElements, MachineInstr &I,
+    const SPIRVInstrInfo &TII) {
+  Type *LLVMTy = ArrayType::get(
+      const_cast<Type *>(getTypeForSPIRVType(BaseType)), NumElements);
+  Register Reg = DT.find(LLVMTy, CurMF);
+  if (Reg.isValid())
+    return getSPIRVTypeForVReg(Reg);
+  MachineBasicBlock &BB = *I.getParent();
+  SPIRVType *SpirvType = getOrCreateSPIRVIntegerType(32, I, TII);
+  Register Len = getOrCreateConstInt(NumElements, I, SpirvType, TII);
+  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpTypeArray))
+                 .addDef(createTypeVReg(CurMF->getRegInfo()))
+                 .addUse(getSPIRVTypeID(BaseType))
+                 .addUse(Len);
   return finishCreatingSPIRVType(LLVMTy, MIB);
 }
 

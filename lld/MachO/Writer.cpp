@@ -246,6 +246,7 @@ public:
     c->vmsize = seg->vmSize;
     c->filesize = seg->fileSize;
     c->nsects = seg->numNonHiddenSections();
+    c->flags = seg->flags;
 
     for (const OutputSection *osec : seg->getSections()) {
       if (osec->isHidden())

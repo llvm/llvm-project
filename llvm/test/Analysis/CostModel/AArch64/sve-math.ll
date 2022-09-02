@@ -4,6 +4,8 @@
 ; RUN: opt -mtriple=aarch64-- -mattr=+sve -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size    < %s | FileCheck %s --check-prefix=SIZE
 ; RUN: opt -mtriple=aarch64-- -mattr=+sve -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency < %s | FileCheck %s --check-prefix=SIZE_LATE
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 declare <vscale x 2 x double> @llvm.sqrt.v2f64(<vscale x 2 x double>)
 
 define <vscale x 2 x double> @fadd_v2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {

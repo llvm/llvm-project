@@ -56,14 +56,6 @@ cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
 // of this option.  Note that this option has no effect without -print-changed.
-static cl::list<std::string>
-    PrintPassesList("filter-passes", cl::value_desc("pass names"),
-                    cl::desc("Only consider IR changes for passes whose names "
-                             "match for the print-changed option"),
-                    cl::CommaSeparated, cl::Hidden);
-// An option that supports the -print-changed option.  See
-// the description for -print-changed for an explanation of the use
-// of this option.  Note that this option has no effect without -print-changed.
 static cl::opt<bool>
     PrintChangedBefore("print-before-changed",
                        cl::desc("Print before passes that change them"),
@@ -321,19 +313,10 @@ bool isInterestingFunction(const Function &F) {
   return isFunctionInPrintList(F.getName());
 }
 
-bool isInterestingPass(StringRef PassID) {
-  if (isIgnored(PassID))
-    return false;
-
-  static std::unordered_set<std::string> PrintPassNames(PrintPassesList.begin(),
-                                                        PrintPassesList.end());
-  return PrintPassNames.empty() || PrintPassNames.count(PassID.str());
-}
-
 // Return true when this is a pass on IR for which printing
 // of changes is desired.
 bool isInteresting(Any IR, StringRef PassID) {
-  if (!isInterestingPass(PassID))
+  if (isIgnored(PassID) || !isPassInPrintList(PassID))
     return false;
   if (any_isa<const Function *>(IR))
     return isInterestingFunction(*any_cast<const Function *>(IR));

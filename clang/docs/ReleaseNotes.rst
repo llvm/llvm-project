@@ -106,9 +106,13 @@ Improvements to Clang's diagnostics
 - ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of
   functions and ``%B`` for the ``printf`` family of functions. Fixes
   `Issue 56885: <https://github.com/llvm/llvm-project/issues/56885>`_.
-- ``-Wbitfield-constant-conversion`` now diagnoses implicit truncation when 1 is
-  assigned to a 1-bit signed integer bitfield. This fixes
-  `Issue 53253 <https://github.com/llvm/llvm-project/issues/53253>`_.
+- Introduced ``-Wsingle-bit-bitfield-constant-conversion``, grouped under
+  ``-Wbitfield-constant-conversion``, which diagnoses implicit truncation when
+  ``1`` is assigned to a 1-bit signed integer bitfield. This fixes
+  `Issue 53253 <https://github.com/llvm/llvm-project/issues/53253>`_. To reduce
+  potential false positives, this diagnostic will not diagnose use of the
+  ``true`` macro (from ``<stdbool.h>>`) in C language mode despite the macro
+  being defined to expand to ``1``.
 - ``-Wincompatible-function-pointer-types`` now defaults to an error in all C
   language modes. It may be downgraded to a warning with
   ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
@@ -123,10 +127,9 @@ Improvements to Clang's diagnostics
   supports both c and c++ language.
 - When diagnosing multi-level pack expansions of mismatched lengths, Clang will
   now, in most cases, be able to point to the relevant outer parameter.
-
-Non-comprehensive list of changes in this release
--------------------------------------------------
-
+- no_sanitize("...") on a global variable for known but not relevant sanitizers
+  is now just a warning. It now says that this will be ignored instead of
+  incorrectly saying no_sanitize only applies to functions and methods.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -170,6 +173,10 @@ AIX Support
 
 C Language Changes in Clang
 ---------------------------
+
+- Adjusted ``-Wformat`` warnings according to `WG14 N2562 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2562.pdf>`_.
+  Clang will now consider default argument promotions in printf, and remove unnecessary warnings.
+  Especially ``int`` argument with specifier ``%hhd`` and ``%hd``.
 
 C2x Feature Support
 -------------------

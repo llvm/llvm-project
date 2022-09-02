@@ -27,7 +27,6 @@ memory
 new
 optional
 ratio
-shared_mutex
 stdexcept
 string
 string_view

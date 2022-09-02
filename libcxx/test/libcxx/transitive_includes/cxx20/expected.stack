@@ -2,7 +2,6 @@ algorithm
 array
 atomic
 bit
-chrono
 climits
 cmath
 compare
@@ -23,7 +22,6 @@ memory
 new
 optional
 ratio
-stack
 stdexcept
 tuple
 type_traits

@@ -1124,6 +1124,20 @@ gentbl_cc_library(
     tbl_outs = [
         (
             [
+                "-gen-attrdef-decls",
+                "-dialect=amdgpu",
+            ],
+            "include/mlir/Dialect/AMDGPU/AMDGPUAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-dialect=amdgpu",
+            ],
+            "include/mlir/Dialect/AMDGPU/AMDGPUAttributes.cpp.inc",
+        ),
+        (
+            [
                 "-gen-dialect-decls",
                 "-dialect=amdgpu",
             ],
@@ -1135,6 +1149,14 @@ gentbl_cc_library(
                 "-dialect=amdgpu",
             ],
             "include/mlir/Dialect/AMDGPU/AMDGPUDialect.cpp.inc",
+        ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/AMDGPU/AMDGPUEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/AMDGPU/AMDGPUEnums.cpp.inc",
         ),
         (
             ["-gen-op-decls"],
@@ -3781,6 +3803,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":IR",
         ":LLVMCommonConversion",
+        ":LLVMDialect",
         ":Pass",
         ":ROCDLDialect",
         ":Support",

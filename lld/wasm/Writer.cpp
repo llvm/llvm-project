@@ -624,7 +624,7 @@ void Writer::calculateImports() {
       shouldImport(WasmSym::indirectFunctionTable))
     out.importSec->addImport(WasmSym::indirectFunctionTable);
 
-  for (Symbol *sym : symtab->getSymbols()) {
+  for (Symbol *sym : symtab->symbols()) {
     if (!shouldImport(sym))
       continue;
     if (sym == WasmSym::indirectFunctionTable)
@@ -645,7 +645,7 @@ void Writer::calculateExports() {
   unsigned globalIndex =
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
-  for (Symbol *sym : symtab->getSymbols()) {
+  for (Symbol *sym : symtab->symbols()) {
     if (!sym->isExported())
       continue;
     if (!sym->isLive())
@@ -689,7 +689,7 @@ void Writer::populateSymtab() {
   if (!config->relocatable && !config->emitRelocs)
     return;
 
-  for (Symbol *sym : symtab->getSymbols())
+  for (Symbol *sym : symtab->symbols())
     if (sym->isUsedInRegularObj && sym->isLive())
       out.linkingSec->addToSymtab(sym);
 
@@ -743,7 +743,7 @@ void Writer::createCommandExportWrappers() {
 
   std::vector<DefinedFunction *> toWrap;
 
-  for (Symbol *sym : symtab->getSymbols())
+  for (Symbol *sym : symtab->symbols())
     if (sym->isExported())
       if (auto *f = dyn_cast<DefinedFunction>(sym))
         toWrap.push_back(f);

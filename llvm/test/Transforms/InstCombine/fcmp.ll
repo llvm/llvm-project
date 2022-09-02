@@ -1275,3 +1275,16 @@ define i1 @bitcast_gt0(i32 %x) {
   %r = fcmp ogt float %f, 0.0
   ret i1 %r
 }
+
+; negative test - this could be transformed, but requires a new bitcast
+
+define <1 x i1> @bitcast_1vec_eq0(i32 %x) {
+; CHECK-LABEL: @bitcast_1vec_eq0(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to <1 x float>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <1 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    ret <1 x i1> [[CMP]]
+;
+  %f = bitcast i32 %x to <1 x float>
+  %cmp = fcmp oeq <1 x float> %f, zeroinitializer
+  ret <1 x i1> %cmp
+}

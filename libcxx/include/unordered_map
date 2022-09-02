@@ -531,7 +531,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <tuple>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
 #  include <bit>
 #  include <iterator>

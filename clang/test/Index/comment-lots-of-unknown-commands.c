@@ -1,5 +1,7 @@
 // RUN: c-index-test -test-load-source-reparse 1 local %s | FileCheck %s
 
+// XFAIL: *
+
 // See PR 21254. We had too few bits to encode command IDs so if you created
 // enough of them the ID codes would wrap around. This test creates commands up
 // to an ID of 258. Ideally we should check for large numbers, but that would

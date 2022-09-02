@@ -443,3 +443,42 @@ func.func @invalid_concat_size_mismatch(%arg0: tensor<2x4xf64, #DC>,
   return %0 : tensor<9x4xf64, #DC>
 }
 
+// -----
+
+func.func @sparse_storage_get(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>) -> memref<?xf64> {
+  // expected-error@+1{{Out-of-bound access}}
+  %0 = sparse_tensor.storage_get %arg0[3]
+       : tuple<memref<?xf64>, memref<?xf64>, f64> to
+         memref<?xf64>
+  return %0 : memref<?xf64>
+}
+
+// -----
+
+func.func @sparse_storage_get(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>) -> memref<?xf64> {
+  // expected-error@+1{{Type mismatch}}
+  %0 = sparse_tensor.storage_get %arg0[2]
+       : tuple<memref<?xf64>, memref<?xf64>, f64> to
+         memref<?xf64>
+  return %0 : memref<?xf64>
+}
+
+// -----
+
+func.func @sparse_storage_set(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>, %arg1: memref<?xf64>) -> tuple<memref<?xf64>, memref<?xf64>, f64> {
+  // expected-error@+1{{Out-of-bound access}}
+  %0 = sparse_tensor.storage_set %arg0[3], %arg1
+       : tuple<memref<?xf64>, memref<?xf64>, f64>, memref<?xf64> to
+         tuple<memref<?xf64>, memref<?xf64>, f64>
+  return %0 : tuple<memref<?xf64>, memref<?xf64>, f64>
+}
+
+// -----
+
+func.func @sparse_storage_set(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>, %arg1: memref<?xf64>) -> tuple<memref<?xf64>, memref<?xf64>, f64> {
+  // expected-error@+1{{Type mismatch}}
+  %0 = sparse_tensor.storage_set %arg0[2], %arg1
+       : tuple<memref<?xf64>, memref<?xf64>, f64>, memref<?xf64> to
+         tuple<memref<?xf64>, memref<?xf64>, f64>
+  return %0 : tuple<memref<?xf64>, memref<?xf64>, f64>
+}

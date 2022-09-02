@@ -4502,6 +4502,8 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
         ExpectedNumOperands = IBI->getNumDestinations();
       else if (isa<SelectInst>(&I))
         ExpectedNumOperands = 2;
+      else if (CallBrInst *CI = dyn_cast<CallBrInst>(&I))
+        ExpectedNumOperands = CI->getNumSuccessors();
       else
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);

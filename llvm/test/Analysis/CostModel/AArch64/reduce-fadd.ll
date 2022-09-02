@@ -2,6 +2,8 @@
 ; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu < %s | FileCheck %s
 ; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+fullfp16 < %s | FileCheck %s
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define void @strict_fp_reductions() {
 ; CHECK-LABEL: 'strict_fp_reductions'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %fadd_v4f16 = call half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> undef)

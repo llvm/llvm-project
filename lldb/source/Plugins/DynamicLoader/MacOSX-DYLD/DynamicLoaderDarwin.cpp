@@ -567,8 +567,27 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
                 exe_module_sp->GetFileSpec().GetPath().c_str());
       target.GetImages().AppendIfNeeded(exe_module_sp);
       UpdateImageLoadAddress(exe_module_sp.get(), image_infos[exe_idx]);
-      if (exe_module_sp.get() != target.GetExecutableModulePointer()) {
+      if (exe_module_sp.get() != target.GetExecutableModulePointer())
         target.SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+
+      // Update the target executable's arch if necessary.
+      auto exe_triple = exe_module_sp->GetArchitecture().GetTriple();
+      if (target_arch.GetTriple().isArm64e() &&
+          exe_triple.getArch() == llvm::Triple::aarch64 &&
+          !exe_triple.isArm64e()) {
+        // On arm64e-capable Apple platforms, the system libraries are
+        // always arm64e, but applications often are arm64. When a
+        // target is created from a file, LLDB recognizes it as an
+        // arm64 target, but debugserver will still (technically
+        // correct) report the process as being arm64e. For
+        // consistency, set the target to arm64 here, so attaching to
+        // a live process behaves the same as creating a process from
+        // file.
+        auto triple = target_arch.GetTriple();
+        triple.setArchName(exe_triple.getArchName());
+        target_arch.SetTriple(triple);
+        target.SetArchitecture(target_arch, /*set_platform=*/false,
+                               /*merge=*/false);
       }
     }
   }

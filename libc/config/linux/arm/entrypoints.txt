@@ -48,6 +48,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
     libc.src.inttypes.imaxdiv
@@ -74,6 +75,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # sys/mman.h entrypoints
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

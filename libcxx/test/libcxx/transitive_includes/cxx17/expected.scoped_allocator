@@ -17,7 +17,6 @@ limits
 memory
 new
 ratio
-scoped_allocator
 stdexcept
 tuple
 type_traits

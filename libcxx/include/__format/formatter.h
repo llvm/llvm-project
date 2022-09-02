@@ -11,7 +11,6 @@
 #define _LIBCPP___FORMAT_FORMATTER_H
 
 #include <__availability>
-#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/format_fwd.h>
 
@@ -38,14 +37,6 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter {
   formatter(const formatter&) = delete;
   formatter& operator=(const formatter&) = delete;
 };
-
-namespace __formatter {
-
-/** The character types that formatters are specialized for. */
-template <class _CharT>
-concept __char_type = same_as<_CharT, char> || same_as<_CharT, wchar_t>;
-
-} // namespace __formatter
 
 #endif //_LIBCPP_STD_VER > 17
 

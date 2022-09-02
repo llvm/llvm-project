@@ -5,7 +5,6 @@ bit
 bitset
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -24,7 +23,6 @@ functional
 initializer_list
 ios
 iosfwd
-istream
 iterator
 limits
 locale
