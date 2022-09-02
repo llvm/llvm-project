@@ -793,13 +793,10 @@ define <4 x i8> @smul_neg1_vec(<4 x i8> %x, <4 x i1>* %p) {
   ret <4 x i8> %r
 }
 
-; TODO: partly failed to match vector constant with poison element
-
 define <4 x i8> @smul_neg1_vec_poison(<4 x i8> %x, <4 x i1>* %p) {
 ; CHECK-LABEL: @smul_neg1_vec_poison(
-; CHECK-NEXT:    [[M:%.*]] = tail call { <4 x i8>, <4 x i1> } @llvm.smul.with.overflow.v4i8(<4 x i8> [[X:%.*]], <4 x i8> <i8 -1, i8 -1, i8 poison, i8 -1>)
-; CHECK-NEXT:    [[R:%.*]] = sub <4 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { <4 x i8>, <4 x i1> } [[M]], 1
+; CHECK-NEXT:    [[R:%.*]] = sub <4 x i8> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp eq <4 x i8> [[X]], <i8 -128, i8 -128, i8 -128, i8 -128>
 ; CHECK-NEXT:    store <4 x i1> [[OV]], <4 x i1>* [[P:%.*]], align 1
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
@@ -853,13 +850,10 @@ define <4 x i8> @umul_neg1_vec(<4 x i8> %x, <4 x i1>* %p) {
   ret <4 x i8> %r
 }
 
-; TODO: partly failed to match vector constant with poison element
-
 define <4 x i8> @umul_neg1_vec_poison(<4 x i8> %x, <4 x i1>* %p) {
 ; CHECK-LABEL: @umul_neg1_vec_poison(
-; CHECK-NEXT:    [[M:%.*]] = tail call { <4 x i8>, <4 x i1> } @llvm.umul.with.overflow.v4i8(<4 x i8> [[X:%.*]], <4 x i8> <i8 poison, i8 -1, i8 -1, i8 poison>)
-; CHECK-NEXT:    [[R:%.*]] = sub <4 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { <4 x i8>, <4 x i1> } [[M]], 1
+; CHECK-NEXT:    [[R:%.*]] = sub <4 x i8> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ugt <4 x i8> [[X]], <i8 1, i8 1, i8 1, i8 1>
 ; CHECK-NEXT:    store <4 x i1> [[OV]], <4 x i1>* [[P:%.*]], align 1
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
@@ -868,6 +862,17 @@ define <4 x i8> @umul_neg1_vec_poison(<4 x i8> %x, <4 x i1>* %p) {
   %ov = extractvalue { <4 x i8>, <4 x i1> } %m, 1
   store <4 x i1> %ov, <4 x i1>* %p
   ret <4 x i8> %r
+}
+
+define <4 x i1> @smul_not_neg1_vec(<4 x i8> %x) {
+; CHECK-LABEL: @smul_not_neg1_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[X:%.*]], <i8 -43, i8 -43, i8 -43, i8 -43>
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult <4 x i8> [[TMP1]], <i8 -85, i8 -85, i8 -85, i8 -85>
+; CHECK-NEXT:    ret <4 x i1> [[OV]]
+;
+  %m = call { <4 x i8>, <4 x i1> } @llvm.smul.with.overflow.v4i8(<4 x i8> %x, <4 x i8> <i8 -3, i8 -3, i8 poison, i8 -3>)
+  %ov = extractvalue { <4 x i8>, <4 x i1> } %m, 1
+  ret <4 x i1> %ov
 }
 
 ; TODO: this could be 'shl' and 'icmp'
