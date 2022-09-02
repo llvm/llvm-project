@@ -76,10 +76,6 @@ Pass <arg> to fatbinary invocation
 
 Pass <arg> to the ptxas assembler
 
-.. option:: -Z<arg>
-
-.. option:: -a<arg>, --profile-blocks
-
 .. option:: -all\_load
 
 .. option:: -allowable\_client <arg>
@@ -579,10 +575,6 @@ Print the library path for the currently used compiler runtime library ("libgcc.
 
 .. option:: -print-multi-lib, --print-multi-lib
 
-.. option:: -print-multiarch, --print-multiarch
-
-Print the multiarch target triple
-
 .. option:: -print-prog-name=<name>, --print-prog-name=<name>, --print-prog-name <arg>
 
 Print the full program path of <name>
@@ -859,9 +851,9 @@ no effect during actions that do not perform compilation.
 
 Pass <arg> to the assembler
 
-.. option:: -Xclang <arg>
+.. option:: -Xclang <arg>, -Xclang=<arg>
 
-Pass <arg> to the clang compiler
+Pass <arg> to clang -cc1
 
 .. option:: -Xopenmp-target <arg>
 
@@ -946,10 +938,6 @@ Inline suitable functions
 .. option:: -finline-hint-functions
 
 Inline functions which are (explicitly or implicitly) marked inline
-
-.. option:: -finline-max-stacksize=<arg>
-
-Suppress inlining of functions with a stacksize larger than <arg> bytes.
 
 .. option:: -fno-legacy-pass-manager, -fexperimental-new-pass-manager
 
@@ -1913,6 +1901,10 @@ Implicitly search the file system for module map files.
 
 .. option:: -fimplicit-modules, -fno-implicit-modules
 
+.. option:: -finline-max-stacksize=<arg>
+
+Suppress inlining of functions whose stack size exceeds the given value
+
 .. option:: -finput-charset=<arg>
 
 Specify the default character set for source files
@@ -2785,11 +2777,7 @@ Only instrument 1 of N groups
 
 Don't instrument functions with loops unless they also meet the minimum function size
 
-.. option:: -fxray-instruction-threshold<arg>
-
-.. program:: clang1
 .. option:: -fxray-instruction-threshold=<arg>
-.. program:: clang
 
 Sets the minimum function size to instrument with XRay
 
@@ -3204,6 +3192,10 @@ Not emit the visibility attribute for asm in AIX OS or give all symbols 'unspeci
 .. option:: -mincremental-linker-compatible, -mno-incremental-linker-compatible
 
 (integrated-as) Emit an object file which can be used with an incremental linker
+
+.. option:: -mindirect-branch-cs-prefix
+
+Add cs prefix to call and jmp to indirect thunk
 
 .. option:: -mios-version-min=<arg>, -miphoneos-version-min=<arg>
 
@@ -4301,9 +4293,7 @@ Pass <arg> to the linker
 
 Pass <arg> to the offload linkers or the ones idenfied by -<triple>
 
-.. program:: clang1
 .. option:: -Z
-.. program:: clang
 
 .. option:: -b<arg>
 
@@ -4390,18 +4380,28 @@ CL.EXE COMPATIBILITY OPTIONS
 dxc compatibility options
 
 .. program:: clang4
+.. option:: --E<arg>, /E<arg>, -E<arg>
+.. program:: clang
+
+Entry point name
+
+.. program:: clang5
 .. option:: /T<profile>, -T<profile>
 .. program:: clang
 
 Set target profile. <profile> must be 'ps_6_0', ' ps_6_1', ' ps_6_2', ' ps_6_3', ' ps_6_4', ' ps_6_5', ' ps_6_6', ' ps_6_7', 'vs_6_0', ' vs_6_1', ' vs_6_2', ' vs_6_3', ' vs_6_4', ' vs_6_5', ' vs_6_6', ' vs_6_7', 'gs_6_0', ' gs_6_1', ' gs_6_2', ' gs_6_3', ' gs_6_4', ' gs_6_5', ' gs_6_6', ' gs_6_7', 'hs_6_0', ' hs_6_1', ' hs_6_2', ' hs_6_3', ' hs_6_4', ' hs_6_5', ' hs_6_6', ' hs_6_7', 'ds_6_0', ' ds_6_1', ' ds_6_2', ' ds_6_3', ' ds_6_4', ' ds_6_5', ' ds_6_6', ' ds_6_7', 'cs_6_0', ' cs_6_1', ' cs_6_2', ' cs_6_3', ' cs_6_4', ' cs_6_5', ' cs_6_6', ' cs_6_7', 'lib_6_3', ' lib_6_4', ' lib_6_5', ' lib_6_6', ' lib_6_7', ' lib_6_x', 'ms_6_5', ' ms_6_6', ' ms_6_7', 'as_6_5', ' as_6_6' or ' as_6_7'.
 
-.. program:: clang5
+.. program:: clang6
 .. option:: /emit-pristine-llvm, -emit-pristine-llvm, /fcgl, -fcgl
 .. program:: clang
 
 Emit pristine LLVM IR from the frontend by not running any LLVM passes at all.Same as -S + -emit-llvm + -disable-llvm-passes.
 
-.. program:: clang6
+.. option:: -hlsl-entry <arg>
+
+Entry point name for hlsl
+
+.. program:: clang7
 .. option:: /hlsl-no-stdinc, -hlsl-no-stdinc
 .. program:: clang
 
