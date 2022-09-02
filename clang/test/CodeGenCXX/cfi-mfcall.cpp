@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-mfcall -fsanitize-trap=cfi-mfcall -fvisibility hidden -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-mfcall -fsanitize-trap=cfi-mfcall -fvisibility default -emit-llvm -o - %s | FileCheck --check-prefix=DEFAULT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-mfcall -fsanitize-trap=cfi-mfcall -fvisibility=hidden -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-mfcall -fsanitize-trap=cfi-mfcall -fvisibility=default -emit-llvm -o - %s | FileCheck --check-prefix=DEFAULT %s
 // With -fwhole-program-vtables we should get the member function pointer type
 // test, even without hidden visibility.
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck %s --check-prefix=WPV
