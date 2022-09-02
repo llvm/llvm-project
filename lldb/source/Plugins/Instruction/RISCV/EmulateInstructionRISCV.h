@@ -48,8 +48,6 @@ public:
     case eInstructionTypePrologueEpilogue:
     case eInstructionTypeAll:
       return false;
-    default:
-      llvm_unreachable("Unhandled instruction type");
     }
     llvm_unreachable("Fully covered switch above!");
   }
