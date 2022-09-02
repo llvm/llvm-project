@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPV_AssumeTrueKHROp : SPV_Op<"AssumeTrueKHR", []> {
+def SPV_KHRAssumeTrueOp : SPV_KhrVendorOp<"AssumeTrue", []> {
   let summary = "TBD";
 
   let description = [{
