@@ -152,21 +152,21 @@ static constinit __libcpp_mutex_t mut_back[__sp_mut_count] =
 };
 
 _LIBCPP_CONSTEXPR __sp_mut::__sp_mut(void* p) noexcept
-   : __lx(p)
+   : __lx_(p)
 {
 }
 
 void
 __sp_mut::lock() noexcept
 {
-    auto m = static_cast<__libcpp_mutex_t*>(__lx);
+    auto m = static_cast<__libcpp_mutex_t*>(__lx_);
     __libcpp_mutex_lock(m);
 }
 
 void
 __sp_mut::unlock() noexcept
 {
-    __libcpp_mutex_unlock(static_cast<__libcpp_mutex_t*>(__lx));
+    __libcpp_mutex_unlock(static_cast<__libcpp_mutex_t*>(__lx_));
 }
 
 __sp_mut&

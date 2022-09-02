@@ -210,7 +210,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <stdexcept>
 #include <type_traits>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <iterator>
 #endif
 

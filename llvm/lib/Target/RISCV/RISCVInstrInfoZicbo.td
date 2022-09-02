@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard Base Cache
-// Management Operation ISA Extensions document (Zicbop, Zicboz, and Zicbop).
+// Management Operation ISA Extensions document (Zicbom, Zicboz, and Zicbop).
 //
 //===----------------------------------------------------------------------===//
 

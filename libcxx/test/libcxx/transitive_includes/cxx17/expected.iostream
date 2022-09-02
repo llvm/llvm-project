@@ -24,7 +24,6 @@ functional
 initializer_list
 ios
 iosfwd
-iostream
 istream
 iterator
 limits

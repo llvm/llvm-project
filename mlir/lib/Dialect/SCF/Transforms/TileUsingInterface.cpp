@@ -257,8 +257,8 @@ scf::TileUsingSCFForOp::returningMatchAndRewrite(
     if (!tilingResult.loops.empty())
       rewriter.setInsertionPoint(
           tilingResult.loops.back().getBody()->getTerminator());
-    SmallVector<Operation *> tiledImplementation = op.getTiledImplementation(
-        rewriter, op.getDestinationOperands(rewriter), offsets, sizes, true);
+    SmallVector<Operation *> tiledImplementation =
+        op.getTiledImplementation(rewriter, offsets, sizes);
     if (tiledImplementation.size() != 1) {
       return rewriter.notifyMatchFailure(
           op, "expected tiled implementation to return a single op");

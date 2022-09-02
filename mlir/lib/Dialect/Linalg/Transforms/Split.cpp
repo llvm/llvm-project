@@ -42,8 +42,7 @@ createSplitPart(RewriterBase &b, Location loc, TilingInterface op,
 
   // Create the part as it it were a single tile.
   SmallVector<Operation *> tiled =
-      op.getTiledImplementation(b, resultOperands, offsetsCopy, sizesCopy,
-                                /*tileDestOperands=*/true);
+      op.getTiledImplementation(b, offsetsCopy, sizesCopy);
   assert(tiled.size() == 1 && "expected a single result from tiling");
   auto part = cast<TilingInterface>(tiled.front());
 

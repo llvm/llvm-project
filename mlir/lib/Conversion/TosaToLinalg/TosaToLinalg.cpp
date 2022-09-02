@@ -365,16 +365,16 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   // tosa::ClampOp
   if (isa<tosa::ClampOp>(op) && elementTy.isa<FloatType>()) {
     bool losesInfo = false;
-    APFloat min_apf = op->getAttr("min_fp").cast<FloatAttr>().getValue();
-    APFloat max_apf = op->getAttr("max_fp").cast<FloatAttr>().getValue();
-    min_apf.convert(elementTy.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &losesInfo);
-    max_apf.convert(elementTy.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &losesInfo);
+    APFloat minApf = op->getAttr("min_fp").cast<FloatAttr>().getValue();
+    APFloat maxApf = op->getAttr("max_fp").cast<FloatAttr>().getValue();
+    minApf.convert(elementTy.cast<FloatType>().getFloatSemantics(),
+                   APFloat::rmNearestTiesToEven, &losesInfo);
+    maxApf.convert(elementTy.cast<FloatType>().getFloatSemantics(),
+                   APFloat::rmNearestTiesToEven, &losesInfo);
     auto min = rewriter.create<arith::ConstantOp>(
-        loc, elementTy, rewriter.getFloatAttr(elementTy, min_apf));
+        loc, elementTy, rewriter.getFloatAttr(elementTy, minApf));
     auto max = rewriter.create<arith::ConstantOp>(
-        loc, elementTy, rewriter.getFloatAttr(elementTy, max_apf));
+        loc, elementTy, rewriter.getFloatAttr(elementTy, maxApf));
     return clampFloatHelper(loc, args[0], min, max, rewriter);
   }
 

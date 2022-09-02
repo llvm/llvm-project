@@ -2,6 +2,8 @@
 ; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck %s --check-prefixes=CHECK,CHECK-NOF16
 ; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -mattr=+fullfp16 -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output | FileCheck %s --check-prefixes=CHECK,CHECK-F16
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define void @reduce_umin() {
 ; CHECK-LABEL: 'reduce_umin'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1i8 = call i8 @llvm.vector.reduce.umin.v1i8(<1 x i8> undef)

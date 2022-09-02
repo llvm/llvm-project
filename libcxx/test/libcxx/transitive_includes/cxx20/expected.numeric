@@ -2,7 +2,6 @@ algorithm
 array
 atomic
 bit
-chrono
 climits
 cmath
 compare
@@ -20,7 +19,6 @@ iterator
 limits
 memory
 new
-numeric
 optional
 ratio
 stdexcept

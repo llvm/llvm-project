@@ -1009,9 +1009,14 @@ public:
   ///     currently selected platform isn't compatible (in case it might be
   ///     manually set following this function call).
   ///
+  /// \param[in] merged
+  ///     If true, arch_spec is merged with the current
+  ///     architecture. Otherwise it's replaced.
+  ///
   /// \return
   ///     \b true if the architecture was successfully set, \b false otherwise.
-  bool SetArchitecture(const ArchSpec &arch_spec, bool set_platform = false);
+  bool SetArchitecture(const ArchSpec &arch_spec, bool set_platform = false,
+                       bool merge = true);
 
   bool MergeArchitecture(const ArchSpec &arch_spec);
 

@@ -10,6 +10,7 @@
 #define AMDGPU
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 def AMDGPU_Dialect : Dialect {
@@ -23,6 +24,7 @@ def AMDGPU_Dialect : Dialect {
   }];
 
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+  let useDefaultAttributePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -182,5 +184,92 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",
+    "The possible permutations of the lanes storing B available in an MFMA",
+    [
+      I32EnumAttrCase<"none",            0>,
+      I32EnumAttrCase<"bcast_first_32",  1>,
+      I32EnumAttrCase<"bcast_second_32", 2>,
+      I32EnumAttrCase<"rotate_16_right", 3>,
+      I32EnumAttrCase<"bcast_first_16",  4>,
+      I32EnumAttrCase<"bcast_second_16", 5>,
+      I32EnumAttrCase<"bcast_third_16",  6>,
+      I32EnumAttrCase<"bcast_fourth_16", 7>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_MFMAPermBAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_MFMAPermB,
+  "mfma_perm_b">;
+
+// mfma
+def MFMAInTypes : AnyTypeOf<[F32, F64, I32, I64,
+                             VectorOfLengthAndType<[2], [F32]>,
+                             VectorOfLengthAndType<[4], [F16]>,
+                             VectorOfLengthAndType<[2, 4], [BF16]>,
+                             VectorOfLengthAndType<[4, 8], [I8]>]>;
+def MFMAOutTypes : AnyTypeOf<[F64,
+                              VectorOfLengthAndType<[4, 16, 32], [F32]>,
+                              VectorOfLengthAndType<[4, 16, 32], [I32]>,
+                              VectorOfLengthAndType<[4], [F64]>]>;
+
+def AMDGPU_MFMAOp :
+    AMDGPU_Op<"mfma", [AllTypesMatch<["sourceA", "sourceB"]>,
+                        AllTypesMatch<["destC", "destD"]>,
+                        NoSideEffect]>,
+    Arguments<(ins
+                   I32Attr:$m,
+                   I32Attr:$n,
+                   I32Attr:$k,
+                   I32Attr:$blocks,
+                   MFMAInTypes:$sourceA,
+                   MFMAInTypes:$sourceB,
+                   MFMAOutTypes:$destC,
+                   DefaultValuedAttr<I32Attr, "0">:$cbsz,
+                   DefaultValuedAttr<I32Attr, "0">:$abid,
+                   DefaultValuedAttr<AMDGPU_MFMAPermBAttr,
+                    "::mlir::amdgpu::MFMAPermB::none">:$blgp,
+                   UnitAttr:$reducePrecision,
+                   UnitAttr:$negateA,
+                   UnitAttr:$negateB,
+                   UnitAttr:$negateC)>,
+    Results<(outs MFMAOutTypes: $destD)> {
+  let summary = "MLIR wrapper for CDNA mfma instructions";
+  let description = [{
+    The `amdgpu.mfma` op is an MLIR wrapper around intrinsics
+    for various `mfma` instructions in the CDNA architecture, which perform
+    multiple outer products in order to allow fast matrix multiplication.
+
+    The wrapper will select an appropriate `mfma` instruction, if one is available,
+    based on the provided `m`, `k`, `n`, and `nBlks` attributes, along with the
+    types of the source and destination arguments.
+
+    For information on the layouts of the input and output matrces (which are stored
+    in `sourceA`, `sourceB`, `destC`, and `destD`), see the CDNA ISA documentation.
+
+    The `cbsz`, `abid`, and `blgp` parameters control how the lanes of the wave
+    are permuted when matrix data is being loaded: `blgp` can be any number of
+    fixed permutations, `cbsz` specifies the log_2 of the number of chunks the lanes
+    holding sourceA are split into, and `abid` selects one of those chunks.
+
+    Note, this wrapper allows specifying `vector<4Kxi8>` arguments to MFMA
+    intrinsics that take an integer type of width `4K`. For example,
+    one can provide a vector<4xi8> as an argument to an MFMA instruction that
+    logically takes 4 i8s but whose intrinsics are specified to take an i32.
+    In these cases, the bytes in the vector will be concatenated in little-endian
+    order (that is, v[0] will go to arg[7:0], v[1] to arg[15:8] and so on).
+
+    The negateA, negateB, and negateC flags are only supported for double-precision
+    operations on gfx940+.
+  }];
+  let assemblyFormat = [{
+    $sourceA `*` $sourceB `+` $destC
+    attr-dict
+    `blgp` `=` $blgp
+    `:` type($sourceA) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
 
 #endif // AMDGPU

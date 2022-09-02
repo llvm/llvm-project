@@ -34,6 +34,7 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/Factory.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
+#include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -41,6 +42,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Runtime/support.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -54,6 +56,8 @@
 #include <algorithm>
 
 #define DEBUG_TYPE "flang-lower-expr"
+
+using namespace Fortran::runtime;
 
 //===----------------------------------------------------------------------===//
 // The composition and structure of Fortran::evaluate::Expr is defined in
@@ -1053,6 +1057,8 @@ public:
     auto recTy = ty.cast<fir::RecordType>();
     auto fieldTy = fir::FieldType::get(ty.getContext());
     mlir::Value res = builder.createTemporary(loc, recTy);
+    mlir::Value box = builder.createBox(loc, fir::ExtendedValue{res});
+    fir::runtime::genDerivedTypeInitialize(builder, loc, box);
 
     for (const auto &value : ctor.values()) {
       const Fortran::semantics::Symbol &sym = *value.first;
@@ -1445,6 +1451,14 @@ public:
       const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>>
           &value) {
     if constexpr (TC == Fortran::common::TypeCategory::Integer) {
+      if (KIND == 16) {
+        mlir::Type ty =
+            converter.genType(Fortran::common::TypeCategory::Integer, KIND);
+        auto bigInt =
+            llvm::APInt(ty.getIntOrFloatBitWidth(), value.SignedDecimal(), 10);
+        return builder.create<mlir::arith::ConstantOp>(
+            getLoc(), ty, mlir::IntegerAttr::get(ty, bigInt));
+      }
       return genIntegerConstant<KIND>(builder.getContext(), value.ToInt64());
     } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
       return genBoolConstant(value.IsTrue());
@@ -2186,6 +2200,12 @@ public:
   ExtValue lowerIntrinsicArgumentAsBox(const Fortran::lower::SomeExpr &expr) {
     mlir::Location loc = getLoc();
     ExtValue exv = genBoxArg(expr);
+    auto exvTy = fir::getBase(exv).getType();
+    if (exvTy.isa<mlir::FunctionType>()) {
+      auto boxProcTy = builder.getBoxProcType(exvTy.cast<mlir::FunctionType>());
+      return builder.create<fir::EmboxProcOp>(loc, boxProcTy,
+                                              fir::getBase(exv));
+    }
     mlir::Value box = builder.createBox(loc, exv);
     return fir::BoxValue(
         box, fir::factory::getNonDefaultLowerBounds(builder, loc, exv),
@@ -2830,35 +2850,114 @@ public:
                      bool byValue) {
     const bool doCopyOut = !byValue && arg.mayBeModifiedByCall();
     llvm::StringRef tempName = byValue ? ".copy" : ".copyinout";
-    if (!restrictCopyAtRuntime) {
+    mlir::Location loc = getLoc();
+    bool isActualArgBox = fir::isa_box_type(fir::getBase(actualArg).getType());
+    mlir::Value isContiguousResult;
+    mlir::Type addrType = fir::HeapType::get(
+        fir::unwrapPassByRefType(fir::getBase(actualArg).getType()));
+
+    if (isActualArgBox) {
+      // Check at runtime if the argument is contiguous so no copy is needed.
+      mlir::func::FuncOp isContiguousFct =
+          fir::runtime::getRuntimeFunc<mkRTKey(IsContiguous)>(loc, builder);
+      fir::CallOp isContiguous = builder.create<fir::CallOp>(
+          loc, isContiguousFct,
+          mlir::ValueRange{builder.createConvert(
+              loc, isContiguousFct.getFunctionType().getInput(0),
+              fir::getBase(actualArg))});
+      isContiguousResult = isContiguous.getResult(0);
+    }
+
+    auto doCopyIn = [&]() -> ExtValue {
       ExtValue temp = genArrayTempFromMold(actualArg, tempName);
       if (arg.mayBeReadByCall())
         genArrayCopy(temp, actualArg);
-      copyOutPairs.emplace_back(
-          CopyOutPair{actualArg, temp, doCopyOut, restrictCopyAtRuntime});
+      return temp;
+    };
+
+    auto noCopy = [&]() {
+      mlir::Value box = fir::getBase(actualArg);
+      mlir::Value boxAddr = builder.create<fir::BoxAddrOp>(loc, addrType, box);
+      builder.create<fir::ResultOp>(loc, boxAddr);
+    };
+
+    auto combinedCondition = [&]() {
+      if (isActualArgBox) {
+        mlir::Value zero =
+            builder.createIntegerConstant(loc, builder.getI1Type(), 0);
+        mlir::Value notContiguous = builder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::eq, isContiguousResult, zero);
+        if (!restrictCopyAtRuntime) {
+          restrictCopyAtRuntime = notContiguous;
+        } else {
+          mlir::Value cond = builder.create<mlir::arith::AndIOp>(
+              loc, *restrictCopyAtRuntime, notContiguous);
+          restrictCopyAtRuntime = cond;
+        }
+      }
+    };
+
+    if (!restrictCopyAtRuntime) {
+      if (isActualArgBox) {
+        // isContiguousResult = genIsContiguousCall();
+        mlir::Value addr =
+            builder
+                .genIfOp(loc, {addrType}, isContiguousResult,
+                         /*withElseRegion=*/true)
+                .genThen([&]() { noCopy(); })
+                .genElse([&] {
+                  ExtValue temp = doCopyIn();
+                  builder.create<fir::ResultOp>(loc, fir::getBase(temp));
+                })
+                .getResults()[0];
+        fir::ExtendedValue temp =
+            fir::substBase(readIfBoxValue(actualArg), addr);
+        combinedCondition();
+        copyOutPairs.emplace_back(
+            CopyOutPair{actualArg, temp, doCopyOut, restrictCopyAtRuntime});
+        return temp;
+      }
+
+      ExtValue temp = doCopyIn();
+      copyOutPairs.emplace_back(CopyOutPair{actualArg, temp, doCopyOut, {}});
       return temp;
     }
+
     // Otherwise, need to be careful to only copy-in if allowed at runtime.
-    mlir::Location loc = getLoc();
-    auto addrType = fir::HeapType::get(
-        fir::unwrapPassByRefType(fir::getBase(actualArg).getType()));
     mlir::Value addr =
         builder
             .genIfOp(loc, {addrType}, *restrictCopyAtRuntime,
                      /*withElseRegion=*/true)
             .genThen([&]() {
-              auto temp = genArrayTempFromMold(actualArg, tempName);
-              if (arg.mayBeReadByCall())
-                genArrayCopy(temp, actualArg);
-              builder.create<fir::ResultOp>(loc, fir::getBase(temp));
+              if (isActualArgBox) {
+                // isContiguousResult = genIsContiguousCall();
+                // Avoid copyin if the argument is contiguous at runtime.
+                mlir::Value addr1 =
+                    builder
+                        .genIfOp(loc, {addrType}, isContiguousResult,
+                                 /*withElseRegion=*/true)
+                        .genThen([&]() { noCopy(); })
+                        .genElse([&]() {
+                          ExtValue temp = doCopyIn();
+                          builder.create<fir::ResultOp>(loc,
+                                                        fir::getBase(temp));
+                        })
+                        .getResults()[0];
+                builder.create<fir::ResultOp>(loc, addr1);
+              } else {
+                ExtValue temp = doCopyIn();
+                builder.create<fir::ResultOp>(loc, fir::getBase(temp));
+              }
             })
             .genElse([&]() {
-              auto nullPtr = builder.createNullConstant(loc, addrType);
+              mlir::Value nullPtr = builder.createNullConstant(loc, addrType);
               builder.create<fir::ResultOp>(loc, nullPtr);
             })
             .getResults()[0];
-    // Associate the temp address with actualArg lengths and extents.
+    // Associate the temp address with actualArg lengths and extents if a
+    // temporary is generated. Otherwise the same address is associated.
     fir::ExtendedValue temp = fir::substBase(readIfBoxValue(actualArg), addr);
+    combinedCondition();
     copyOutPairs.emplace_back(
         CopyOutPair{actualArg, temp, doCopyOut, restrictCopyAtRuntime});
     return temp;
@@ -2874,6 +2973,7 @@ public:
       builder.create<fir::FreeMemOp>(loc, fir::getBase(copyOutPair.temp));
       return;
     }
+
     builder.genIfThen(loc, *copyOutPair.restrictCopyAndFreeAtRuntime)
         .genThen([&]() {
           if (copyOutPair.argMayBeModifiedByCall)

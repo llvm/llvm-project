@@ -47,7 +47,6 @@ add_entrypoint_object(
   HDRS
     fmaf.h
   DEPENDS
-    libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
     -O3
@@ -60,7 +59,6 @@ add_entrypoint_object(
   HDRS
     fma.h
   DEPENDS
-    libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
     -O3

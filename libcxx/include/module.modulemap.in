@@ -834,6 +834,7 @@ module std [system] {
 
     module __memory {
       module addressof                       { private header "__memory/addressof.h" }
+      module align                           { private header "__memory/align.h" }
       module allocate_at_least               { private header "__memory/allocate_at_least.h" }
       module allocation_guard                { private header "__memory/allocation_guard.h" }
       module allocator                       { private header "__memory/allocator.h" }
@@ -841,15 +842,18 @@ module std [system] {
       module allocator_traits                { private header "__memory/allocator_traits.h" }
       module assume_aligned                  { private header "__memory/assume_aligned.h" }
       module auto_ptr                        { private header "__memory/auto_ptr.h" }
+      module builtin_new_allocator           { private header "__memory/builtin_new_allocator.h" }
       module compressed_pair                 { private header "__memory/compressed_pair.h" }
       module concepts                        { private header "__memory/concepts.h" }
       module construct_at                    { private header "__memory/construct_at.h" }
+      module destruct_n                      { private header "__memory/destruct_n.h" }
       module pointer_traits                  { private header "__memory/pointer_traits.h" }
       module ranges_construct_at             { private header "__memory/ranges_construct_at.h" }
       module ranges_uninitialized_algorithms { private header "__memory/ranges_uninitialized_algorithms.h" }
       module raw_storage_iterator            { private header "__memory/raw_storage_iterator.h" }
       module shared_ptr                      { private header "__memory/shared_ptr.h" }
       module swap_allocator                  { private header "__memory/swap_allocator.h" }
+      module temp_value                      { private header "__memory/temp_value.h" }
       module temporary_buffer                { private header "__memory/temporary_buffer.h" }
       module uninitialized_algorithms        { private header "__memory/uninitialized_algorithms.h" }
       module unique_ptr                      { private header "__memory/unique_ptr.h" }
@@ -1129,6 +1133,7 @@ module std [system] {
     module integral_constant                   { private header "__type_traits/integral_constant.h" }
     module is_abstract                         { private header "__type_traits/is_abstract.h" }
     module is_aggregate                        { private header "__type_traits/is_aggregate.h" }
+    module is_allocator                        { private header "__type_traits/is_allocator.h" }
     module is_arithmetic                       { private header "__type_traits/is_arithmetic.h" }
     module is_array                            { private header "__type_traits/is_array.h" }
     module is_assignable                       { private header "__type_traits/is_assignable.h" }
@@ -1211,6 +1216,7 @@ module std [system] {
     module maybe_const                         { private header "__type_traits/maybe_const.h" }
     module nat                                 { private header "__type_traits/nat.h" }
     module negation                            { private header "__type_traits/negation.h" }
+    module noexcept_move_assign_container      { private header "__type_traits/noexcept_move_assign_container.h" }
     module promote                             { private header "__type_traits/promote.h" }
     module rank                                { private header "__type_traits/rank.h" }
     module remove_all_extents                  { private header "__type_traits/remove_all_extents.h" }

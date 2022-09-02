@@ -18,7 +18,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <tuple>
+#include <type_traits>
 #include <utility>
+#include <variant>
 
 namespace llvm {
 
@@ -288,6 +290,37 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   }
 };
 
+// Provide DenseMapInfo for variants whose all alternatives have DenseMapInfo.
+template <typename... Ts> struct DenseMapInfo<std::variant<Ts...>> {
+  using Variant = std::variant<Ts...>;
+  using FirstT = std::variant_alternative_t<0, Variant>;
+
+  static inline Variant getEmptyKey() {
+    return Variant(std::in_place_index<0>, DenseMapInfo<FirstT>::getEmptyKey());
+  }
+
+  static inline Variant getTombstoneKey() {
+    return Variant(std::in_place_index<0>,
+                   DenseMapInfo<FirstT>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const Variant &Val) {
+    return std::visit(
+        [&Val](auto &&Alternative) {
+          using T = std::decay_t<decltype(Alternative)>;
+          // Include index in hash to make sure same value as different
+          // alternatives don't collide.
+          return detail::combineHashValue(
+              DenseMapInfo<size_t>::getHashValue(Val.index()),
+              DenseMapInfo<T>::getHashValue(Alternative));
+        },
+        Val);
+  }
+
+  static bool isEqual(const Variant &LHS, const Variant &RHS) {
+    return LHS == RHS;
+  }
+};
 } // end namespace llvm
 
 #endif // LLVM_ADT_DENSEMAPINFO_H

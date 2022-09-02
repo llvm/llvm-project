@@ -49,8 +49,9 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 #----------------------------------------------------------------------
 # If OS is not defined, use 'uname -s' to determine the OS name.
 #
-# uname on Windows gives "windows32" or "server version windows32", but most
-# environments standardize on "Windows_NT", so we'll make it consistent here.
+# GNUWin32 uname gives "windows32" or "server version windows32" while
+# some versions of MSYS uname return "MSYS_NT*", but most environments
+# standardize on "Windows_NT", so we'll make it consistent here. 
 # When running tests from Visual Studio, the environment variable isn't
 # inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
@@ -58,6 +59,11 @@ HOST_OS := $(shell uname -s)
 ifneq (,$(findstring windows32,$(HOST_OS)))
 	HOST_OS := Windows_NT
 endif
+
+ifneq (,$(findstring MSYS_NT,$(HOST_OS)))
+	HOST_OS := Windows_NT
+endif
+
 ifeq "$(OS)" ""
 	OS := $(HOST_OS)
 endif
@@ -68,9 +74,12 @@ endif
 # Some versions of make on Windows will search for other shells such as
 # C:\cygwin\bin\sh.exe. This shell fails for numerous different reasons
 # so default to using cmd.exe.
+# Also reset BUILDDIR value because "pwd" returns cygwin or msys path
+# which needs to be converted to windows path.
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Windows_NT"
 	SHELL = $(WINDIR)\system32\cmd.exe
+	BUILDDIR := $(shell echo %cd%)
 endif
 
 #----------------------------------------------------------------------

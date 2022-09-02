@@ -17,6 +17,21 @@ using namespace mlir;
 /// Include the definitions of the loop-like interfaces.
 #include "mlir/Interfaces/ViewLikeInterface.cpp.inc"
 
+std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
+           SmallVector<OpFoldResult>>
+mlir::getOffsetsSizesAndStrides(ArrayRef<Range> ranges) {
+  SmallVector<OpFoldResult> offsets, sizes, strides;
+  offsets.reserve(ranges.size());
+  sizes.reserve(ranges.size());
+  strides.reserve(ranges.size());
+  for (const auto &[offset, size, stride] : ranges) {
+    offsets.push_back(offset);
+    sizes.push_back(size);
+    strides.push_back(stride);
+  }
+  return std::make_tuple(offsets, sizes, strides);
+}
+
 LogicalResult mlir::verifyListOfOperandsOrIntegers(
     Operation *op, StringRef name, unsigned numElements, ArrayAttr attr,
     ValueRange values, llvm::function_ref<bool(int64_t)> isDynamic) {

@@ -81,9 +81,9 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf8<wchar_t>
     : public codecvt<wchar_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
+    unsigned long __maxcode_;
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    codecvt_mode _Mode_;
+    codecvt_mode __mode_;
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 public:
     typedef wchar_t   intern_type;
@@ -94,8 +94,8 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<wchar_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     result do_out(state_type& __st,
@@ -118,8 +118,8 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf8<char16_t>
     : public codecvt<char16_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
-    codecvt_mode _Mode_;
+    unsigned long __maxcode_;
+    codecvt_mode __mode_;
 public:
     typedef char16_t  intern_type;
     typedef char      extern_type;
@@ -128,8 +128,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<char16_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -152,8 +152,8 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf8<char32_t>
     : public codecvt<char32_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
-    codecvt_mode _Mode_;
+    unsigned long __maxcode_;
+    codecvt_mode __mode_;
 public:
     typedef char32_t  intern_type;
     typedef char      extern_type;
@@ -162,8 +162,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<char32_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -206,9 +206,9 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf16<wchar_t, false>
     : public codecvt<wchar_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
+    unsigned long __maxcode_;
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    codecvt_mode _Mode_;
+    codecvt_mode __mode_;
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 public:
     typedef wchar_t   intern_type;
@@ -219,8 +219,8 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<wchar_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
      result do_out(state_type& __st,
@@ -242,9 +242,9 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf16<wchar_t, true>
     : public codecvt<wchar_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
+    unsigned long __maxcode_;
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    codecvt_mode _Mode_;
+    codecvt_mode __mode_;
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 public:
     typedef wchar_t   intern_type;
@@ -255,8 +255,8 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<wchar_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
      result do_out(state_type& __st,
@@ -279,8 +279,8 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf16<char16_t, false>
     : public codecvt<char16_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
-    codecvt_mode _Mode_;
+    unsigned long __maxcode_;
+    codecvt_mode __mode_;
 public:
     typedef char16_t  intern_type;
     typedef char      extern_type;
@@ -289,8 +289,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<char16_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -313,8 +313,8 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf16<char16_t, true>
     : public codecvt<char16_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
-    codecvt_mode _Mode_;
+    unsigned long __maxcode_;
+    codecvt_mode __mode_;
 public:
     typedef char16_t  intern_type;
     typedef char      extern_type;
@@ -323,8 +323,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<char16_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -347,8 +347,8 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf16<char32_t, false>
     : public codecvt<char32_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
-    codecvt_mode _Mode_;
+    unsigned long __maxcode_;
+    codecvt_mode __mode_;
 public:
     typedef char32_t  intern_type;
     typedef char      extern_type;
@@ -357,8 +357,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<char32_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -381,8 +381,8 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf16<char32_t, true>
     : public codecvt<char32_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
-    codecvt_mode _Mode_;
+    unsigned long __maxcode_;
+    codecvt_mode __mode_;
 public:
     typedef char32_t  intern_type;
     typedef char      extern_type;
@@ -391,8 +391,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<char32_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -435,9 +435,9 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf8_utf16<wchar_t>
     : public codecvt<wchar_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
+    unsigned long __maxcode_;
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    codecvt_mode _Mode_;
+    codecvt_mode __mode_;
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 public:
     typedef wchar_t   intern_type;
@@ -448,8 +448,8 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<wchar_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<wchar_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
      result do_out(state_type& __st,
@@ -472,8 +472,8 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf8_utf16<char32_t>
     : public codecvt<char32_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
-    codecvt_mode _Mode_;
+    unsigned long __maxcode_;
+    codecvt_mode __mode_;
 public:
     typedef char32_t  intern_type;
     typedef char      extern_type;
@@ -482,8 +482,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<char32_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<char32_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
@@ -506,8 +506,8 @@ template <>
 class _LIBCPP_TYPE_VIS __codecvt_utf8_utf16<char16_t>
     : public codecvt<char16_t, char, mbstate_t>
 {
-    unsigned long _Maxcode_;
-    codecvt_mode _Mode_;
+    unsigned long __maxcode_;
+    codecvt_mode __mode_;
 public:
     typedef char16_t  intern_type;
     typedef char      extern_type;
@@ -516,8 +516,8 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
-        : codecvt<char16_t, char, mbstate_t>(__refs), _Maxcode_(__maxcode),
-          _Mode_(__mode) {}
+        : codecvt<char16_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
+          __mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:

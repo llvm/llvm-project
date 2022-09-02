@@ -22,7 +22,6 @@ limits
 memory
 new
 optional
-queue
 ratio
 stdexcept
 tuple

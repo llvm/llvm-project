@@ -77,7 +77,7 @@ int seek_func(File *f, long offset, int whence) {
   long ret = __llvm_libc::syscall(SYS_lseek, lf->get_fd(), offset, whence);
 #elif defined(SYS__llseek)
   long result;
-  long ret = __llvm_libc::syscall(SYS__lseek, lf->get_fd(), offset >> 32,
+  long ret = __llvm_libc::syscall(SYS__llseek, lf->get_fd(), offset >> 32,
                                   offset, &result, whence);
 #else
 #error "lseek and _llseek syscalls not available to perform a seek operation."

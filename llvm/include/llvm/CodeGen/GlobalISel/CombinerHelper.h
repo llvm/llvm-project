@@ -647,6 +647,13 @@ public:
   bool matchUDivByConst(MachineInstr &MI);
   void applyUDivByConst(MachineInstr &MI);
 
+  /// Given an G_SDIV \p MI expressing a signed divide by constant, return an
+  /// expression that implements it by multiplying by a magic number.
+  /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
+  MachineInstr *buildSDivUsingMul(MachineInstr &MI);
+  bool matchSDivByConst(MachineInstr &MI);
+  void applySDivByConst(MachineInstr &MI);
+
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI);
   void applyUMulHToLShr(MachineInstr &MI);

@@ -3,6 +3,5 @@ cstdint
 cstdlib
 exception
 iosfwd
-stdexcept
 type_traits
 version

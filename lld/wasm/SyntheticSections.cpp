@@ -88,7 +88,7 @@ void DylinkSection::writeBody() {
   // so that knows not to report an error for such symbols.
   std::vector<const Symbol *> importInfo;
   std::vector<const Symbol *> exportInfo;
-  for (const Symbol *sym : symtab->getSymbols()) {
+  for (const Symbol *sym : symtab->symbols()) {
     if (sym->isLive()) {
       if (sym->isExported() && sym->isTLS() && isa<DefinedData>(sym)) {
         exportInfo.push_back(sym);

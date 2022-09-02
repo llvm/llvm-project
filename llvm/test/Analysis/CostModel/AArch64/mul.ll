@@ -3,6 +3,8 @@
 
 ; Verify the cost of (vector) multiply instructions.
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define <2 x i8> @t1(<2 x i8> %a, <2 x i8> %b)  {
 ; THROUGHPUT-LABEL: 't1'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = mul <2 x i8> %a, %b

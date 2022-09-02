@@ -1475,7 +1475,8 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   }
 }
 
-bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
+bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
+                             bool merge) {
   Log *log = GetLog(LLDBLog::Target);
   bool missing_local_arch = !m_arch.GetSpec().IsValid();
   bool replace_local_arch = true;
@@ -1503,7 +1504,7 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
   }
 
   if (!missing_local_arch) {
-    if (m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
+    if (merge && m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
       other.MergeFrom(m_arch.GetSpec());
 
       if (m_arch.GetSpec().IsCompatibleMatch(other)) {

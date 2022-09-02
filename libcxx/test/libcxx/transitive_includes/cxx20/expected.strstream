@@ -5,7 +5,6 @@ bit
 bitset
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -38,7 +37,6 @@ stdexcept
 streambuf
 string
 string_view
-strstream
 system_error
 tuple
 type_traits

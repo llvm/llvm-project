@@ -13,7 +13,6 @@ cstdlib
 cstring
 ctime
 exception
-experimental/map
 experimental/memory_resource
 experimental/utility
 functional

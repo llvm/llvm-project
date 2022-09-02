@@ -52,7 +52,7 @@ func.func @group_non_uniform_broadcast_vector(%value: vector<4xf32>) -> vector<4
 
 func.func @group_non_uniform_broadcast_negative_scope(%value: f32, %localid: i32 ) -> f32 {
   %one = spv.Constant 1 : i32
-  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}} 
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
   %0 = spv.GroupNonUniformBroadcast <Device> %value, %one : f32, i32
   return %0: f32
 }
@@ -251,6 +251,150 @@ func.func @group_non_uniform_smin_reduce(%val: i32) -> i32 {
   // CHECK: %{{.+}} = spv.GroupNonUniformSMin "Workgroup" "Reduce" %{{.+}} : i32
   %0 = spv.GroupNonUniformSMin "Workgroup" "Reduce" %val : i32
   return %0: i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GroupNonUniformShuffle
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_shuffle1
+func.func @group_non_uniform_shuffle1(%val: f32, %id: i32) -> f32 {
+  // CHECK: %{{.+}} = spv.GroupNonUniformShuffle <Subgroup> %{{.+}}, %{{.+}} : f32, i32
+  %0 = spv.GroupNonUniformShuffle <Subgroup> %val, %id : f32, i32
+  return %0: f32
+}
+
+// CHECK-LABEL: @group_non_uniform_shuffle2
+func.func @group_non_uniform_shuffle2(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
+  // CHECK: %{{.+}} = spv.GroupNonUniformShuffle <Subgroup> %{{.+}}, %{{.+}} : vector<2xf32>, i32
+  %0 = spv.GroupNonUniformShuffle <Subgroup> %val, %id : vector<2xf32>, i32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spv.GroupNonUniformShuffle <Device> %val, %id : vector<2xf32>, i32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: si32) -> vector<2xf32> {
+  // expected-error @+1 {{second operand must be a singless/unsigned integer}}
+  %0 = spv.GroupNonUniformShuffle <Subgroup> %val, %id : vector<2xf32>, si32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GroupNonUniformShuffleXor
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_shuffle1
+func.func @group_non_uniform_shuffle1(%val: f32, %id: i32) -> f32 {
+  // CHECK: %{{.+}} = spv.GroupNonUniformShuffleXor <Subgroup> %{{.+}}, %{{.+}} : f32, i32
+  %0 = spv.GroupNonUniformShuffleXor <Subgroup> %val, %id : f32, i32
+  return %0: f32
+}
+
+// CHECK-LABEL: @group_non_uniform_shuffle2
+func.func @group_non_uniform_shuffle2(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
+  // CHECK: %{{.+}} = spv.GroupNonUniformShuffleXor <Subgroup> %{{.+}}, %{{.+}} : vector<2xf32>, i32
+  %0 = spv.GroupNonUniformShuffleXor <Subgroup> %val, %id : vector<2xf32>, i32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spv.GroupNonUniformShuffleXor <Device> %val, %id : vector<2xf32>, i32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: si32) -> vector<2xf32> {
+  // expected-error @+1 {{second operand must be a singless/unsigned integer}}
+  %0 = spv.GroupNonUniformShuffleXor <Subgroup> %val, %id : vector<2xf32>, si32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GroupNonUniformShuffleUp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_shuffle1
+func.func @group_non_uniform_shuffle1(%val: f32, %id: i32) -> f32 {
+  // CHECK: %{{.+}} = spv.GroupNonUniformShuffleUp <Subgroup> %{{.+}}, %{{.+}} : f32, i32
+  %0 = spv.GroupNonUniformShuffleUp <Subgroup> %val, %id : f32, i32
+  return %0: f32
+}
+
+// CHECK-LABEL: @group_non_uniform_shuffle2
+func.func @group_non_uniform_shuffle2(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
+  // CHECK: %{{.+}} = spv.GroupNonUniformShuffleUp <Subgroup> %{{.+}}, %{{.+}} : vector<2xf32>, i32
+  %0 = spv.GroupNonUniformShuffleUp <Subgroup> %val, %id : vector<2xf32>, i32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spv.GroupNonUniformShuffleUp <Device> %val, %id : vector<2xf32>, i32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: si32) -> vector<2xf32> {
+  // expected-error @+1 {{second operand must be a singless/unsigned integer}}
+  %0 = spv.GroupNonUniformShuffleUp <Subgroup> %val, %id : vector<2xf32>, si32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GroupNonUniformShuffleDown
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_shuffle1
+func.func @group_non_uniform_shuffle1(%val: f32, %id: i32) -> f32 {
+  // CHECK: %{{.+}} = spv.GroupNonUniformShuffleDown <Subgroup> %{{.+}}, %{{.+}} : f32, i32
+  %0 = spv.GroupNonUniformShuffleDown <Subgroup> %val, %id : f32, i32
+  return %0: f32
+}
+
+// CHECK-LABEL: @group_non_uniform_shuffle2
+func.func @group_non_uniform_shuffle2(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
+  // CHECK: %{{.+}} = spv.GroupNonUniformShuffleDown <Subgroup> %{{.+}}, %{{.+}} : vector<2xf32>, i32
+  %0 = spv.GroupNonUniformShuffleDown <Subgroup> %val, %id : vector<2xf32>, i32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: i32) -> vector<2xf32> {
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spv.GroupNonUniformShuffleDown <Device> %val, %id : vector<2xf32>, i32
+  return %0: vector<2xf32>
+}
+
+// -----
+
+func.func @group_non_uniform_shuffle(%val: vector<2xf32>, %id: si32) -> vector<2xf32> {
+  // expected-error @+1 {{second operand must be a singless/unsigned integer}}
+  %0 = spv.GroupNonUniformShuffleDown <Subgroup> %val, %id : vector<2xf32>, si32
+  return %0: vector<2xf32>
 }
 
 // -----

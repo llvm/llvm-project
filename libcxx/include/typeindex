@@ -51,7 +51,7 @@ struct hash<type_index>
 #include <typeinfo>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <iosfwd>
 #  include <new>
 #  include <utility>

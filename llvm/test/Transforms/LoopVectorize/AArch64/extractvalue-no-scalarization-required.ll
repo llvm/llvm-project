@@ -32,8 +32,8 @@
 ; FORCED-NEXT:    %6 = bitcast i64* %5 to <2 x i64>*
 ; FORCED-NEXT:    store <2 x i64> %4, <2 x i64>* %6, align 4
 ; FORCED-NEXT:    %index.next = add nuw i32 %index, 2
-; FORCED-NEXT:    %7 = icmp eq i32 %index.next, 0
-; FORCED-NEXT:    br i1 %7, label %middle.block, label %vector.body, !llvm.loop !0
+; FORCED-NEXT:    %7 = icmp eq i32 %index.next, 1000
+; FORCED-NEXT:    br i1 %7, label %middle.block, label %vector.body
 
 define void @test1(i64* %dst, {i64, i64} %sv) {
 entry:
@@ -47,7 +47,7 @@ loop.body:
   %add = add i64 %a, %b
   store i64 %add, i64* %addr
   %iv.next = add nsw i32 %iv, 1
-  %cond = icmp ne i32 %iv.next, 0
+  %cond = icmp ne i32 %iv.next, 1000
   br i1 %cond, label %loop.body, label %exit
 
 exit:
@@ -82,8 +82,8 @@ declare float @powf(float, float) readnone nounwind
 ; FORCED-NEXT:    %6 = bitcast float* %5 to <2 x float>*
 ; FORCED-NEXT:    store <2 x float> %4, <2 x float>* %6, align 4
 ; FORCED-NEXT:    %index.next = add nuw i32 %index, 2
-; FORCED-NEXT:    %7 = icmp eq i32 %index.next, 0
-; FORCED-NEXT:    br i1 %7, label %middle.block, label %vector.body, !llvm.loop !4
+; FORCED-NEXT:    %7 = icmp eq i32 %index.next, 1000
+; FORCED-NEXT:    br i1 %7, label %middle.block, label %vector.body
 
 define void @test_getVectorCallCost(float* %dst, {float, float} %sv) {
 entry:
@@ -97,7 +97,7 @@ loop.body:
   %p = call float @powf(float %a, float %b)
   store float %p, float* %addr
   %iv.next = add nsw i32 %iv, 1
-  %cond = icmp ne i32 %iv.next, 0
+  %cond = icmp ne i32 %iv.next, 1000
   br i1 %cond, label %loop.body, label %exit
 
 exit:

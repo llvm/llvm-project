@@ -31,7 +31,8 @@
 ! CHECK:               fir.store %[[VAL_16]] to %[[PRIV_X]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_17:.*]] = arith.addi %[[VAL_13]], %[[VAL_11]] : index
 ! CHECK:               %[[STEPCAST:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
-! CHECK:               %[[IVINC:.*]] = arith.addi %[[IV]], %[[STEPCAST]]
+! CHECK:               %[[IVLOAD:.*]] = fir.load %[[PRIV_J]] : !fir.ref<i32>
+! CHECK:               %[[IVINC:.*]] = arith.addi %[[IVLOAD]], %[[STEPCAST]]
 ! CHECK:               fir.result %[[VAL_17]], %[[IVINC]] : index, i32
 ! CHECK:             }
 ! CHECK:             fir.store %[[VAL_12]]#1 to %[[PRIV_J]] : !fir.ref<i32>

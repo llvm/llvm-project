@@ -5,7 +5,7 @@
 ; RUN: opt -aarch64-insert-extract-base-cost=100000 -passes="print<cost-model>" 2>&1 -disable-output -S < %s | FileCheck --check-prefix=CHECK-HIGH %s
 
 target triple = "aarch64-unknown-linux-gnu"
-
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @ins_el0() #0 {
 ; CHECK-DEFAULT-LABEL: 'ins_el0'

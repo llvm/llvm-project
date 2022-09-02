@@ -225,10 +225,6 @@ static void InitializeFlags() {
   if (f->store_context_size < 1) f->store_context_size = 1;
 }
 
-void PrintWarning(uptr pc, uptr bp) {
-  PrintWarningWithOrigin(pc, bp, __msan_origin_tls);
-}
-
 void PrintWarningWithOrigin(uptr pc, uptr bp, u32 origin) {
   if (msan_expect_umr) {
     // Printf("Expected UMR\n");
@@ -386,7 +382,7 @@ MSAN_MAYBE_STORE_ORIGIN(u64, 8)
 void __msan_warning() {
   GET_CALLER_PC_BP_SP;
   (void)sp;
-  PrintWarning(pc, bp);
+  PrintWarningWithOrigin(pc, bp, 0);
   if (__msan::flags()->halt_on_error) {
     if (__msan::flags()->print_stats)
       ReportStats();
@@ -398,7 +394,7 @@ void __msan_warning() {
 void __msan_warning_noreturn() {
   GET_CALLER_PC_BP_SP;
   (void)sp;
-  PrintWarning(pc, bp);
+  PrintWarningWithOrigin(pc, bp, 0);
   if (__msan::flags()->print_stats)
     ReportStats();
   Printf("Exiting\n");

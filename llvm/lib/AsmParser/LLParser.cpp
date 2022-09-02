@@ -6979,21 +6979,22 @@ int LLParser::parsePHI(Instruction *&Inst, PerFunctionState &PFS) {
   Type *Ty = nullptr;  LocTy TypeLoc;
   Value *Op0, *Op1;
 
-  if (parseType(Ty, TypeLoc) ||
-      parseToken(lltok::lsquare, "expected '[' in phi value list") ||
-      parseValue(Ty, Op0, PFS) ||
-      parseToken(lltok::comma, "expected ',' after insertelement value") ||
-      parseValue(Type::getLabelTy(Context), Op1, PFS) ||
-      parseToken(lltok::rsquare, "expected ']' in phi value list"))
+  if (parseType(Ty, TypeLoc))
     return true;
 
+  if (!Ty->isFirstClassType())
+    return error(TypeLoc, "phi node must have first class type");
+
+  bool First = true;
   bool AteExtraComma = false;
   SmallVector<std::pair<Value*, BasicBlock*>, 16> PHIVals;
 
   while (true) {
-    PHIVals.push_back(std::make_pair(Op0, cast<BasicBlock>(Op1)));
-
-    if (!EatIfPresent(lltok::comma))
+    if (First) {
+      if (Lex.getKind() != lltok::lsquare)
+        break;
+      First = false;
+    } else if (!EatIfPresent(lltok::comma))
       break;
 
     if (Lex.getKind() == lltok::MetadataVar) {
@@ -7007,10 +7008,9 @@ int LLParser::parsePHI(Instruction *&Inst, PerFunctionState &PFS) {
         parseValue(Type::getLabelTy(Context), Op1, PFS) ||
         parseToken(lltok::rsquare, "expected ']' in phi value list"))
       return true;
-  }
 
-  if (!Ty->isFirstClassType())
-    return error(TypeLoc, "phi node must have first class type");
+    PHIVals.push_back(std::make_pair(Op0, cast<BasicBlock>(Op1)));
+  }
 
   PHINode *PN = PHINode::Create(Ty, PHIVals.size());
   for (unsigned i = 0, e = PHIVals.size(); i != e; ++i)

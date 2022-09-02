@@ -20,7 +20,7 @@
 
 namespace mlir {
 namespace transform {
-#define GEN_PASS_DEF_CHECKUSES
+#define GEN_PASS_DEF_CHECKUSESPASS
 #include "mlir/Dialect/Transform/Transforms/Passes.h.inc"
 } // namespace transform
 } // namespace mlir
@@ -371,7 +371,7 @@ private:
 
 //// A simple pass that warns about any use of a value by a transform operation
 // that may be using the value after it has been freed.
-class CheckUsesPass : public transform::impl::CheckUsesBase<CheckUsesPass> {
+class CheckUsesPass : public transform::impl::CheckUsesPassBase<CheckUsesPass> {
 public:
   void runOnOperation() override {
     auto &analysis = getAnalysis<TransformOpMemFreeAnalysis>();
@@ -397,10 +397,3 @@ public:
 
 } // namespace
 
-namespace mlir {
-namespace transform {
-std::unique_ptr<Pass> createCheckUsesPass() {
-  return std::make_unique<CheckUsesPass>();
-}
-} // namespace transform
-} // namespace mlir

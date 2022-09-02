@@ -212,6 +212,8 @@ public:
   ///
   /// There are several different cost models that can be customized by the
   /// target. The normalization of each cost model may be target specific.
+  /// e.g. TCK_SizeAndLatency should be comparable to target thresholds such as
+  /// those derived from MCSchedModel::LoopMicroOpBufferSize etc.
   enum TargetCostKind {
     TCK_RecipThroughput, ///< Reciprocal throughput.
     TCK_Latency,         ///< The latency of instruction.
@@ -602,7 +604,7 @@ public:
                              unsigned AddrSpace = 0,
                              Instruction *I = nullptr) const;
 
-  /// Return true if LSR cost of C1 is lower than C1.
+  /// Return true if LSR cost of C1 is lower than C2.
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const;
 

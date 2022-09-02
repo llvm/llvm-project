@@ -178,15 +178,15 @@ define i32 @test4(i32 %out1, i32 %out2) {
 ; CHECK-NEXT:  # %bb.2: # %asm.fallthrough2
 ; CHECK-NEXT:    addl %edx, %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:  .LBB3_4: # Block address taken
+; CHECK-NEXT:    # %return
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB3_3: # Block address taken
 ; CHECK-NEXT:    # %label_true
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $-2, %eax
-; CHECK-NEXT:  .LBB3_4: # Block address taken
-; CHECK-NEXT:    # %return
-; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:    retl
+; CHECK-NEXT:    jmp .LBB3_4
 entry:
   %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "=r,=r,r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %out1)
           to label %asm.fallthrough [label %label_true, label %return]

@@ -1,11 +1,9 @@
-algorithm
 array
 atomic
 bit
 cctype
 cerrno
 charconv
-chrono
 climits
 cmath
 compare
@@ -20,12 +18,9 @@ ctime
 cwchar
 cwctype
 exception
-format
-functional
 initializer_list
 ios
 iosfwd
-iterator
 limits
 locale
 memory
@@ -41,8 +36,4 @@ system_error
 tuple
 type_traits
 typeinfo
-unordered_map
-utility
-variant
-vector
 version

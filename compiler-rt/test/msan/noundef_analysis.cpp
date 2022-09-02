@@ -2,7 +2,7 @@
 // RUN: FileCheck %s --check-prefix=MISSED --allow-empty < %t.out
 // RUN: %clangxx_msan %s -mllvm -msan-eager-checks=1 -o %t && not %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out
-// RUN: %clangxx_msan %s -disable-noundef-analysis -s -fsanitize-memory-param-retval -o %t && not %run %t >%t.out 2>&1
+// RUN: %clangxx_msan %s -disable-noundef-analysis -fsanitize-memory-param-retval -o %t && not %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out
 
 struct SimpleStruct {
