@@ -10,6 +10,8 @@
 ! RUN: %flang_fc1 -emit-mlir emit-mlir.f90 && ls emit-mlir.mlir
 
 ! CHECK: module attributes {
+! CHECK-SAME: dlti.dl_spec =
+! CHECK-SAME: llvm.data_layout =
 ! CHECK-LABEL: func @_QQmain() {
 ! CHECK-NEXT:  return
 ! CHECK-NEXT: }
