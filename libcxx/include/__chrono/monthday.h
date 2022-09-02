@@ -29,26 +29,26 @@ namespace chrono
 
 class month_day {
 private:
-   chrono::month __m;
-   chrono::day   __d;
+   chrono::month __m_;
+   chrono::day   __d_;
 public:
     _LIBCPP_HIDE_FROM_ABI month_day() = default;
     _LIBCPP_HIDE_FROM_ABI constexpr month_day(const chrono::month& __mval, const chrono::day& __dval) noexcept
-        : __m{__mval}, __d{__dval} {}
-    _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::day   day()   const noexcept { return __d; }
+        : __m_{__mval}, __d_{__dval} {}
+    _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }
+    _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::day   day()   const noexcept { return __d_; }
     _LIBCPP_HIDE_FROM_ABI constexpr bool ok() const noexcept;
 };
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
 bool month_day::ok() const noexcept
 {
-    if (!__m.ok()) return false;
-    const unsigned __dval = static_cast<unsigned>(__d);
+    if (!__m_.ok()) return false;
+    const unsigned __dval = static_cast<unsigned>(__d_);
     if (__dval < 1 || __dval > 31) return false;
     if (__dval <= 29) return true;
 //  Now we've got either 30 or 31
-    const unsigned __mval = static_cast<unsigned>(__m);
+    const unsigned __mval = static_cast<unsigned>(__m_);
     if (__mval == 2) return false;
     if (__mval == 4 || __mval == 6 || __mval == 9 || __mval == 11)
         return __dval == 30;
@@ -87,12 +87,12 @@ month_day operator/(const day& __lhs, int __rhs) noexcept
 
 class month_day_last {
 private:
-    chrono::month __m;
+    chrono::month __m_;
 public:
     _LIBCPP_HIDE_FROM_ABI explicit constexpr month_day_last(const chrono::month& __val) noexcept
-        : __m{__val} {}
-    _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m; }
-    _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept { return __m.ok(); }
+        : __m_{__val} {}
+    _LIBCPP_HIDE_FROM_ABI inline constexpr chrono::month month() const noexcept { return __m_; }
+    _LIBCPP_HIDE_FROM_ABI inline constexpr bool ok() const noexcept { return __m_.ok(); }
 };
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr
