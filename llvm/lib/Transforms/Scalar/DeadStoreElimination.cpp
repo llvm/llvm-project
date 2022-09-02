@@ -1864,16 +1864,8 @@ struct DSEState {
           // We are searching for the definition of the store's destination.
           // So, if that is the same definition as the load, then this is a
           // noop. Otherwise, fail.
-          if (LoadAccess != Current) {
-            auto *CurrentStoreI =
-                dyn_cast<StoreInst>(cast<MemoryDef>(Current)->getMemoryInst());
-            if (CurrentStoreI && CurrentStoreI->getOperand(0) == LoadI) {
-              // This is a potentially clobbering store, but it writes the same value,
-              // so we can safely ignore it.
-              continue;
-            }
+          if (LoadAccess != Current)
             return false;
-          }
         }
         return true;
       }
