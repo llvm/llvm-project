@@ -411,6 +411,14 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
         LocCookie, Msg, DiagnosticSeverity::DS_Warning));
     MMI->getModule()->getContext().diagnose(
         DiagnosticInfoInlineAsm(LocCookie, Note, DiagnosticSeverity::DS_Note));
+
+    for (const Register RR : RestrRegs) {
+      if (llvm::Optional<std::string> reason =
+              TRI->explainReservedReg(*MF, RR)) {
+        MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
+            LocCookie, *reason, DiagnosticSeverity::DS_Note));
+      }
+    }
   }
 
   emitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,
