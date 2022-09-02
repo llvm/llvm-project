@@ -288,7 +288,7 @@ define i4 @shuf_bitcast_twice_4bits(i4 %x) {
   ret i4 %cast2
 }
 
-; Negtive tests - not reverse
+; Negative tests - not reverse
 define i4 @shuf_4bits_not_reverse(<4 x i1> %x) {
 ; CHECK-LABEL: @shuf_4bits_not_reverse(
 ; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
