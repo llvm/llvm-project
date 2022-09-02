@@ -25,7 +25,7 @@ class SPV_CLOp<string mnemonic, int opcode, list<Trait> traits = []> :
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
     Capability<[SPV_C_Kernel]>
   ];

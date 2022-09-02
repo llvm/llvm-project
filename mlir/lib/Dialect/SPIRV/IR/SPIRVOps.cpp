@@ -2614,6 +2614,35 @@ LogicalResult spirv::GroupNonUniformBroadcastOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.GroupNonUniformShuffle*
+//===----------------------------------------------------------------------===//
+
+template <typename OpTy>
+static LogicalResult verifyGroupNonUniformShuffleOp(OpTy op) {
+  spirv::Scope scope = op.execution_scope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return op.emitOpError("execution scope must be 'Workgroup' or 'Subgroup'");
+
+  if (op.getOperands().back().getType().isSignedInteger())
+    return op.emitOpError("second operand must be a singless/unsigned integer");
+
+  return success();
+}
+
+LogicalResult spirv::GroupNonUniformShuffleOp::verify() {
+  return verifyGroupNonUniformShuffleOp(*this);
+}
+LogicalResult spirv::GroupNonUniformShuffleDownOp::verify() {
+  return verifyGroupNonUniformShuffleOp(*this);
+}
+LogicalResult spirv::GroupNonUniformShuffleUpOp::verify() {
+  return verifyGroupNonUniformShuffleOp(*this);
+}
+LogicalResult spirv::GroupNonUniformShuffleXorOp::verify() {
+  return verifyGroupNonUniformShuffleOp(*this);
+}
+
+//===----------------------------------------------------------------------===//
 // spv.SubgroupBlockReadINTEL
 //===----------------------------------------------------------------------===//
 
