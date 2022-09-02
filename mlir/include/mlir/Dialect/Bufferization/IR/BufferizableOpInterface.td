@@ -360,6 +360,29 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
               value, options, fixedTypes);
         }]
       >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given region of this op is repetitive. By default
+          this information is queried from the `RegionBranchOpInterface`. Ops
+          that do not implement this inferface can override this method to
+          declare regions as repetitive.
+
+          The RaW conflict detection of One-Shot Analysis is more strict inside
+          repetitive regions: Op dominance cannot always be used to rule out
+          certain potential conflicts (e.g., a conflicting write happening after
+          a read), because there may not be a meaningful ordering of certain ops
+          that are executed multiple times. This is described in more detail in
+          documentation of One-Shot Analysis.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isRepetitiveRegion",
+        /*args=*/(ins "unsigned":$index),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return mlir::bufferization::detail::defaultIsRepetitiveRegion(
+              cast<BufferizableOpInterface>($_op.getOperation()), index);
+        }]
+      >
   ];
 
   let extraClassDeclaration = [{

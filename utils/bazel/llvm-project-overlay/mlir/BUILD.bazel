@@ -9088,6 +9088,7 @@ cc_library(
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationBaseIncGen",
         ":BufferizationOpsIncGen",
+        ":ControlFlowInterfaces",
         ":CopyOpInterface",
         ":FuncDialect",
         ":IR",
