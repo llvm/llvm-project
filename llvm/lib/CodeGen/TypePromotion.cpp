@@ -857,18 +857,18 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
   unsigned ToPromote = 0;
   unsigned NonFreeArgs = 0;
   SmallPtrSet<BasicBlock *, 4> Blocks;
-  for (auto *V : CurrentVisited) {
-    if (auto *I = dyn_cast<Instruction>(V))
+  for (auto *CV : CurrentVisited) {
+    if (auto *I = dyn_cast<Instruction>(CV))
       Blocks.insert(I->getParent());
 
-    if (Sources.count(V)) {
-      if (auto *Arg = dyn_cast<Argument>(V))
+    if (Sources.count(CV)) {
+      if (auto *Arg = dyn_cast<Argument>(CV))
         if (!Arg->hasZExtAttr() && !Arg->hasSExtAttr())
           ++NonFreeArgs;
       continue;
     }
 
-    if (Sinks.count(cast<Instruction>(V)))
+    if (Sinks.count(cast<Instruction>(CV)))
       continue;
     ++ToPromote;
   }
