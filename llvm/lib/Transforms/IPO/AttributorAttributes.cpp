@@ -1280,26 +1280,15 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         UsrOI = PtrOI;
 
         // TODO: Use range information.
+        APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
         if (PtrOI.Offset == OffsetAndSize::Unknown ||
-            !GEP->hasAllConstantIndices()) {
+            !GEP->accumulateConstantOffset(DL, GEPOffset)) {
           UsrOI.Offset = OffsetAndSize::Unknown;
           Follow = true;
           return true;
         }
 
-        SmallVector<Value *, 8> Indices;
-        for (Use &Idx : GEP->indices()) {
-          if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
-            Indices.push_back(CIdx);
-            continue;
-          }
-
-          LLVM_DEBUG(dbgs() << "[AAPointerInfo] Non constant GEP index " << *GEP
-                            << " : " << *Idx << "\n");
-          return false;
-        }
-        UsrOI.Offset = PtrOI.Offset + DL.getIndexedOffsetInType(
-                                          GEP->getSourceElementType(), Indices);
+        UsrOI.Offset = PtrOI.Offset + GEPOffset.getZExtValue();
         Follow = true;
         return true;
       }
