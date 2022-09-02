@@ -80,9 +80,8 @@ TEST(LlvmLibcAtExit, Many) {
 
 TEST(LlvmLibcAtExit, HandlerCallsAtExit) {
   auto test = [] {
-    __llvm_libc::atexit(+[] {
-      __llvm_libc::atexit(+[] { __llvm_libc::exit(1); });
-    });
+    __llvm_libc::atexit(
+        +[] { __llvm_libc::atexit(+[] { __llvm_libc::exit(1); }); });
     __llvm_libc::exit(0);
   };
   EXPECT_EXITS(test, 1);
