@@ -323,10 +323,10 @@ func.func @simple_example(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   // CHECK-NEXT:  }
   // CHECK-NEXT:  }
   // CHECK-NEXT:  return
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> tensor<100xf32> {
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> tensor<100xf32> {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.foreach_thread.perform_concurrently {
-        tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+        tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
   }
@@ -340,7 +340,7 @@ func.func @elide_terminator() -> () {
   //      CHECK:    scf.foreach_thread
   // CHECK-NEXT:  } {thread_dim_mapping = [42]}
   // CHECK-NEXT:  return
-  scf.foreach_thread (%thread_idx) in (%num_threads) -> () {
+  scf.foreach_thread (%thread_idx) in (%num_threads) {
     scf.foreach_thread.perform_concurrently {
     }
   } {thread_dim_mapping = [42]}
