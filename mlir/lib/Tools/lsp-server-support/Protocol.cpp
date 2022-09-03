@@ -15,6 +15,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -116,7 +117,16 @@ static std::string percentDecode(StringRef content) {
   return result;
 }
 
-static bool isValidScheme(StringRef scheme) {
+/// Return the set containing the supported URI schemes.
+static StringSet<> &getSupportedSchemes() {
+  static StringSet<> schemes({"file", "test"});
+  return schemes;
+}
+
+/// Returns true if the given scheme is structurally valid, i.e. it does not
+/// contain any invalid scheme characters. This does not check that the scheme
+/// is actually supported.
+static bool isStructurallyValidScheme(StringRef scheme) {
   if (scheme.empty())
     return false;
   if (!llvm::isAlpha(scheme[0]))
@@ -126,7 +136,8 @@ static bool isValidScheme(StringRef scheme) {
   });
 }
 
-static llvm::Expected<std::string> uriFromAbsolutePath(StringRef absolutePath) {
+static llvm::Expected<std::string> uriFromAbsolutePath(StringRef absolutePath,
+                                                       StringRef scheme) {
   std::string body;
   StringRef authority;
   StringRef root = llvm::sys::path::root_name(absolutePath);
@@ -140,7 +151,7 @@ static llvm::Expected<std::string> uriFromAbsolutePath(StringRef absolutePath) {
   }
   body += llvm::sys::path::convert_to_slash(absolutePath);
 
-  std::string uri = "file:";
+  std::string uri = scheme.str() + ":";
   if (authority.empty() && body.empty())
     return uri;
 
@@ -186,7 +197,7 @@ static llvm::Expected<std::string> parseFilePathFromURI(StringRef origUri) {
                                        origUri);
   StringRef schemeStr = uri.substr(0, pos);
   std::string uriScheme = percentDecode(schemeStr);
-  if (!isValidScheme(uriScheme))
+  if (!isStructurallyValidScheme(uriScheme))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Invalid scheme: " + schemeStr +
                                        " (decoded: " + uriScheme + ")");
@@ -204,10 +215,10 @@ static llvm::Expected<std::string> parseFilePathFromURI(StringRef origUri) {
   std::string uriBody = percentDecode(uri);
 
   // Compute the absolute path for this uri.
-  if (uriScheme != "file" && uriScheme != "test") {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "mlir-lsp-server only supports 'file' URI scheme for workspace files");
+  if (!getSupportedSchemes().contains(uriScheme)) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "unsupported URI scheme `" + uriScheme +
+                                       "' for workspace files");
   }
   return getAbsolutePath(uriAuthority, uriBody);
 }
@@ -219,11 +230,19 @@ llvm::Expected<URIForFile> URIForFile::fromURI(StringRef uri) {
   return URIForFile(std::move(*filePath), uri.str());
 }
 
-llvm::Expected<URIForFile> URIForFile::fromFile(StringRef absoluteFilepath) {
-  llvm::Expected<std::string> uri = uriFromAbsolutePath(absoluteFilepath);
+llvm::Expected<URIForFile> URIForFile::fromFile(StringRef absoluteFilepath,
+                                                StringRef scheme) {
+  llvm::Expected<std::string> uri =
+      uriFromAbsolutePath(absoluteFilepath, scheme);
   if (!uri)
     return uri.takeError();
   return fromURI(*uri);
+}
+
+StringRef URIForFile::scheme() const { return uri().split(':').first; }
+
+void URIForFile::registerSupportedScheme(StringRef scheme) {
+  getSupportedSchemes().insert(scheme);
 }
 
 bool mlir::lsp::fromJSON(const llvm::json::Value &value, URIForFile &result,

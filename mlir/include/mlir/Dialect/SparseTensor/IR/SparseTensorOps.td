@@ -629,6 +629,29 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
 // sparse tensor codegen to progressively lower sparse tensors.
 //===----------------------------------------------------------------------===//
 
+def SparseTensor_StorageNewOp : SparseTensor_Op<"storage", []>,
+    Arguments<(ins Variadic<AnyType>:$inputs)>,
+    Results<(outs AnyTuple:$result)> {
+  let summary = "Pack a list of value into one sparse tensor storage value";
+  let description = [{
+     Pack a list of value into one sparse tensor storage value (represented as
+     a tuple) at the given index.
+
+     The result tuple elements' type should match the corresponding type in the
+     input array.
+
+     Example:
+
+     ```mlir
+     %0 = sparse_tensor.storage(%1, %2): memref<?xf64>, memref<?xf64>
+                                to tuple<memref<?xf64>, memref<?xf64>>
+     ```
+   }];
+
+  let assemblyFormat = " attr-dict `(` $inputs `)``:` type($inputs) `to` type($result)";
+  let hasVerifier = 1;
+}
+
 def SparseTensor_StorageGetOp : SparseTensor_Op<"storage_get", []>,
     Arguments<(ins AnyTuple:$storage,
                    IndexAttr:$idx)>,
