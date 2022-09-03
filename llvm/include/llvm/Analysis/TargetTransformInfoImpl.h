@@ -374,6 +374,8 @@ public:
 
   bool haveFastSqrt(Type *Ty) const { return false; }
 
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I) { return true; }
+
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const { return true; }
 
   InstructionCost getFPOpCost(Type *Ty) const {
@@ -1269,6 +1271,14 @@ public:
     // By default, just classify everything as 'basic' or -1 to represent that
     // don't know the throughput cost.
     return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
+  }
+
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I) {
+    auto *TargetTTI = static_cast<T *>(this);
+    SmallVector<const Value *, 4> Ops(I->operand_values());
+    InstructionCost Cost = TargetTTI->getInstructionCost(
+        I, Ops, TargetTransformInfo::TCK_SizeAndLatency);
+    return Cost >= TargetTransformInfo::TCC_Expensive;
   }
 };
 } // namespace llvm
