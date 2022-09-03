@@ -86,7 +86,6 @@
 
 #include <functional>
 #include <cassert>
-#include <new>
 
 #include "test_macros.h"
 

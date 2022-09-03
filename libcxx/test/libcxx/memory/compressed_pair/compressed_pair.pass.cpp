@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <memory>
-#include <new>
 
 #include "test_macros.h"
 

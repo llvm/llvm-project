@@ -21,6 +21,8 @@
     "tablegen"
   ],
   "activationEvents": [
+    "onFileSystem:mlir.bytecode-mlir",
+    "onCustomEditor:mlir.bytecode",
     "onLanguage:mlir",
     "onLanguage:pdll",
     "onLanguage:tablegen"
@@ -35,6 +37,7 @@
     "git-clang-format": "git-clang-format"
   },
   "dependencies": {
+    "base64-js": "^1.5.1",
     "chokidar": "3.5.2",
     "vscode-languageclient": "^8.0.2-next.5"
   },
@@ -52,6 +55,18 @@
     "url": "https://github.com/llvm/vscode-mlir.git"
   },
   "contributes": {
+    "customEditors": [
+      {
+        "viewType": "mlir.bytecode",
+        "displayName": "MLIR Bytecode",
+        "priority": "default",
+        "selector": [
+          {
+            "filenamePattern": "*.mlirbc"
+          }
+        ]
+      }
+    ],
     "languages": [
       {
         "id": "mlir",
@@ -60,7 +75,8 @@
           "mlir"
         ],
         "extensions": [
-          ".mlir"
+          ".mlir",
+          ".mlirbc"
         ],
         "configuration": "./language-configuration.json"
       },

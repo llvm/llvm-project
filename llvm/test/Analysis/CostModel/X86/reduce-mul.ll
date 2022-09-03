@@ -118,8 +118,8 @@ define i32 @reduce_i32(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2 = call i32 @llvm.vector.reduce.mul.v2i32(<2 x i32> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4 = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8 = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16 = call i32 @llvm.vector.reduce.mul.v16i32(<16 x i32> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32 = call i32 @llvm.vector.reduce.mul.v32i32(<32 x i32> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V16 = call i32 @llvm.vector.reduce.mul.v16i32(<16 x i32> undef)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V32 = call i32 @llvm.vector.reduce.mul.v32i32(<32 x i32> undef)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'reduce_i32'

@@ -151,8 +151,9 @@ void FunctionLayout::eraseBasicBlocks(
   };
   const FragmentListType::iterator EmptyTailBegin =
       llvm::find_if_not(reverse(Fragments), IsEmpty).base();
-  std::for_each(EmptyTailBegin, Fragments.end(),
-                [](FunctionFragment *const FF) { delete FF; });
+  for (FunctionFragment *const FF :
+       llvm::make_range(EmptyTailBegin, Fragments.end()))
+    delete FF;
   Fragments.erase(EmptyTailBegin, Fragments.end());
 
   updateLayoutIndices();
@@ -208,8 +209,8 @@ void FunctionLayout::clear() {
   // be written to the output stream at its original file offset (see
   // `RewriteInstance::rewriteFile`). Hence, when the layout is cleared, retain
   // the main fragment, so that this information is not lost.
-  std::for_each(Fragments.begin() + 1, Fragments.end(),
-                [](FunctionFragment *const FF) { delete FF; });
+  for (FunctionFragment *const FF : llvm::drop_begin(Fragments))
+    delete FF;
   Fragments = FragmentListType{Fragments.front()};
   getMainFragment().Size = 0;
 }

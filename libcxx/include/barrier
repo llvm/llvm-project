@@ -48,19 +48,10 @@ namespace std
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
-#include <__memory/unique_ptr.h>
 #include <__thread/timed_backoff_policy.h>
-#include <__utility/move.h>
 #include <atomic>
 #include <limits>
-
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <concepts>
-#  include <iterator>
-#  include <memory>
-#  include <stdexcept>
-#  include <variant>
-#endif
+#include <memory>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

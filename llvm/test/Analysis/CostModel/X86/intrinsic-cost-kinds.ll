@@ -133,8 +133,8 @@ define void @fmuladd(float %a, float %b, float %c, <16 x float> %va, <16 x float
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'fmuladd'
-; LATE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %s = call float @llvm.fmuladd.f32(float %a, float %b, float %c)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> %va, <16 x float> %vb, <16 x float> %vc)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %s = call float @llvm.fmuladd.f32(float %a, float %b, float %c)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> %va, <16 x float> %vb, <16 x float> %vc)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'fmuladd'
@@ -144,7 +144,7 @@ define void @fmuladd(float %a, float %b, float %c, <16 x float> %va, <16 x float
 ;
 ; SIZE_LATE-LABEL: 'fmuladd'
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call float @llvm.fmuladd.f32(float %a, float %b, float %c)
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> %va, <16 x float> %vb, <16 x float> %vc)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> %va, <16 x float> %vb, <16 x float> %vc)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s = call float @llvm.fmuladd.f32(float %a, float %b, float %c)
@@ -377,7 +377,7 @@ define void @reduce_fmul(<16 x float> %va) {
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'reduce_fmul'
-; LATE-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v = call float @llvm.vector.reduce.fmul.v16f32(float 4.200000e+01, <16 x float> %va)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %v = call float @llvm.vector.reduce.fmul.v16f32(float 4.200000e+01, <16 x float> %va)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'reduce_fmul'

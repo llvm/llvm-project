@@ -28,7 +28,6 @@
 #include <array>
 #include <cassert>
 #include <functional>
-#include <memory>
 #include <ranges>
 
 #include "test_iterators.h"

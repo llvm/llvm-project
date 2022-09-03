@@ -17,7 +17,6 @@
 #include <tuple>
 #include <utility>
 #include <cassert>
-#include <memory>
 
 #include "test_macros.h"
 #include "MoveOnly.h"

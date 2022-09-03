@@ -2372,6 +2372,9 @@ private:
         !PrevToken->MatchingParen)
       return TT_PointerOrReference;
 
+    if (PrevToken->endsSequence(tok::r_square, tok::l_square, tok::kw_delete))
+      return TT_UnaryOperator;
+
     if (PrevToken->Tok.isLiteral() ||
         PrevToken->isOneOf(tok::r_paren, tok::r_square, tok::kw_true,
                            tok::kw_false, tok::r_brace)) {

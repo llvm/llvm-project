@@ -832,6 +832,14 @@ public:
   /// Return true if the hardware has a fast square-root instruction.
   bool haveFastSqrt(Type *Ty) const;
 
+  /// Return true if the cost of the instruction is too high to speculatively
+  /// execute and should be kept behind a branch.
+  /// This normally just wraps around a getInstructionCost() call, but some
+  /// targets might report a low TCK_SizeAndLatency value that is incompatible
+  /// with the fixed TCC_Expensive value.
+  /// NOTE: This assumes the instruction passes isSafeToSpeculativelyExecute().
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I) const;
+
   /// Return true if it is faster to check if a floating-point value is NaN
   /// (or not-NaN) versus a comparison against a constant FP zero value.
   /// Targets should override this if materializing a 0.0 for comparison is
@@ -1672,6 +1680,7 @@ public:
                                               bool *Fast) = 0;
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
+  virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) = 0;
   virtual bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) = 0;
   virtual InstructionCost getFPOpCost(Type *Ty) = 0;
   virtual InstructionCost getIntImmCodeSizeCost(unsigned Opc, unsigned Idx,
@@ -2163,6 +2172,10 @@ public:
     return Impl.getPopcntSupport(IntTyWidthInBit);
   }
   bool haveFastSqrt(Type *Ty) override { return Impl.haveFastSqrt(Ty); }
+
+  bool isExpensiveToSpeculativelyExecute(const Instruction* I) override {
+    return Impl.isExpensiveToSpeculativelyExecute(I);
+  }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) override {
     return Impl.isFCmpOrdCheaperThanFCmpZero(Ty);

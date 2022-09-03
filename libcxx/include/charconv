@@ -97,10 +97,6 @@ namespace std {
 #include <limits>
 #include <type_traits>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iosfwd>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -823,5 +819,9 @@ to_chars_result to_chars(char* __first, char* __last, long double __value, chars
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iosfwd>
+#endif
 
 #endif // _LIBCPP_CHARCONV
