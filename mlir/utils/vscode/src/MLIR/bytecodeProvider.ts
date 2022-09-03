@@ -70,16 +70,40 @@ class BytecodeFS implements vscode.FileSystemProvider {
       throw new Error(
           'Failed to activate mlir language server to read bytecode');
     }
+
     // Ask the client to do the conversion.
-    let convertParams: ConvertBytecodeParams = {uri : uri.toString()};
+    let result: ConvertBytecodeResult;
     try {
-      const result: ConvertBytecodeResult =
-          await client.sendRequest('mlir/convertFromBytecode', convertParams);
-      return new TextEncoder().encode(result.output);
+      let params: ConvertBytecodeParams = {uri : uri.toString()};
+      result = await client.sendRequest('mlir/convertFromBytecode', params);
     } catch (e) {
       vscode.window.showErrorMessage(e.message);
       throw new Error(`Failed to read bytecode file: ${e}`);
     }
+    let resultBuffer = new TextEncoder().encode(result.output);
+
+    // NOTE: VSCode does not allow for extensions to manage files above 50mb.
+    // Detect that here and if our result is too large for us to manage, alert
+    // the user and open it as a new temporary .mlir file.
+    if (resultBuffer.length > (50 * 1024 * 1024)) {
+      const openAsTempInstead: vscode.MessageItem = {
+        title : 'Open as temporary .mlir instead',
+      };
+      const message: string = `Failed to open bytecode file "${
+          uri.toString()}". Cannot edit converted bytecode files larger than 50MB.`;
+      const errorResult: vscode.MessageItem|undefined =
+          await vscode.window.showErrorMessage(message, openAsTempInstead);
+      if (errorResult === openAsTempInstead) {
+        let tempFile = await vscode.workspace.openTextDocument({
+          language : 'mlir',
+          content : result.output,
+        });
+        await vscode.window.showTextDocument(tempFile);
+      }
+      throw new Error(message);
+    }
+
+    return resultBuffer;
   }
 
   /*
