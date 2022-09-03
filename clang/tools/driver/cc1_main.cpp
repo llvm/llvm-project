@@ -256,10 +256,17 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
-    SmallString<128> TracePath(Clang->getFrontendOpts().TimeTracePath);
-    assert(!TracePath.empty() && "`-ftime-trace=<path>` is empty");
+    SmallString<128> Path(Clang->getFrontendOpts().OutputFile);
+    llvm::sys::path::replace_extension(Path, "json");
+    if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
+      // replace the suffix to '.json' directly
+      SmallString<128> TracePath(Clang->getFrontendOpts().TimeTracePath);
+      if (llvm::sys::fs::is_directory(TracePath))
+        llvm::sys::path::append(TracePath, llvm::sys::path::filename(Path));
+      Path.assign(TracePath);
+    }
     if (auto profilerOutput = Clang->createOutputFile(
-            TracePath.str(), /*Binary=*/false, /*RemoveFileOnSignal=*/false,
+            Path.str(), /*Binary=*/false, /*RemoveFileOnSignal=*/false,
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
       profilerOutput.reset();
