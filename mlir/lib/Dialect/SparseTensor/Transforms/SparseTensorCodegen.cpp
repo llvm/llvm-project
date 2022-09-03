@@ -34,6 +34,16 @@ namespace {
 // Helper methods.
 //===----------------------------------------------------------------------===//
 
+/// Reorders stored dimension to original dimension.
+static unsigned toOrig(const SparseTensorEncodingAttr &enc, unsigned i) {
+  auto order = enc.getDimOrdering();
+  if (order) {
+    assert(order.isPermutation());
+    return order.getDimPosition(i);
+  }
+  return i;
+}
+
 /// Reorders original dimension to stored dimension.
 static unsigned toStored(const SparseTensorEncodingAttr &enc, unsigned i) {
   auto order = enc.getDimOrdering();
@@ -87,7 +97,7 @@ static Optional<Type> convertSparseTensorType(Type type) {
     // tensor type.
     switch (enc.getDimLevelType()[r]) {
     case SparseTensorEncodingAttr::DimLevelType::Dense:
-      break;
+      break; // no fields
     case SparseTensorEncodingAttr::DimLevelType::Compressed:
     case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
     case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
@@ -111,7 +121,7 @@ static Optional<Type> convertSparseTensorType(Type type) {
   return TupleType::get(context, fields);
 }
 
-// Returns field index for pointers (d), indices (d) for set field.
+// Returns field index of sparse tensor type for pointers/indices, when set.
 static unsigned getFieldIndex(Type type, unsigned ptrDim, unsigned idxDim) {
   auto enc = getSparseTensorEncoding(type);
   assert(enc);
@@ -159,6 +169,94 @@ static Value createTupleGet(OpBuilder &builder, Location loc, Value tuple,
   Type indexType = builder.getIndexType();
   return builder.create<StorageGetOp>(loc, getFieldType(tuple, field), tuple,
                                       builder.getIntegerAttr(indexType, field));
+}
+
+/// Creates tuple.
+static Value createTupleMake(OpBuilder &builder, Location loc, Type type,
+                             ValueRange values) {
+  return builder.create<StorageNewOp>(loc, type, values);
+}
+
+/// Create allocation operation.
+static Value createAllocation(OpBuilder &builder, Location loc, Type type,
+                              Value sz) {
+  auto memType = MemRefType::get({ShapedType::kDynamicSize}, type);
+  return builder.create<memref::AllocOp>(loc, memType, sz);
+}
+
+/// Creates allocation tuple for sparse tensor type.
+///
+/// TODO: for efficiency, we will need heuristis to make educated guesses
+///       on the required final sizes; also, we will need an improved
+///       memory allocation scheme with capacity and reallocation
+///
+static Value createAllocTuple(OpBuilder &builder, Location loc, Type type,
+                              ValueRange dynSizes) {
+  auto enc = getSparseTensorEncoding(type);
+  assert(enc);
+  // Construct the basic types.
+  unsigned idxWidth = enc.getIndexBitWidth();
+  unsigned ptrWidth = enc.getPointerBitWidth();
+  RankedTensorType rType = type.cast<RankedTensorType>();
+  Type indexType = builder.getIndexType();
+  Type idxType = idxWidth ? builder.getIntegerType(idxWidth) : indexType;
+  Type ptrType = ptrWidth ? builder.getIntegerType(ptrWidth) : indexType;
+  Type eltType = rType.getElementType();
+  // Build the allocation tuple, using heuristics for pre-allocation.
+  auto shape = rType.getShape();
+  unsigned rank = shape.size();
+  SmallVector<Value, 8> fields;
+  bool allDense = true;
+  Value one = constantIndex(builder, loc, 1);
+  Value linear = one;
+  Value heuristic = one; // FIX, see TODO above
+  // Build original sizes.
+  SmallVector<Value, 8> sizes;
+  for (unsigned r = 0, o = 0; r < rank; r++) {
+    if (ShapedType::isDynamic(shape[r]))
+      sizes.push_back(dynSizes[o++]);
+    else
+      sizes.push_back(constantIndex(builder, loc, shape[r]));
+  }
+  // The dimSizes array.
+  Value dimSizes =
+      builder.create<memref::AllocOp>(loc, MemRefType::get({rank}, indexType));
+  fields.push_back(dimSizes);
+  // Per-dimension storage.
+  for (unsigned r = 0; r < rank; r++) {
+    // Get the original dimension (ro) for the current stored dimension.
+    unsigned ro = toOrig(enc, r);
+    builder.create<memref::StoreOp>(loc, sizes[ro], dimSizes,
+                                    constantIndex(builder, loc, r));
+    linear = builder.create<arith::MulIOp>(loc, linear, sizes[ro]);
+    // Allocate fiels.
+    switch (enc.getDimLevelType()[r]) {
+    case SparseTensorEncodingAttr::DimLevelType::Dense:
+      break; // no fields
+    case SparseTensorEncodingAttr::DimLevelType::Compressed:
+    case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
+    case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
+    case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+      fields.push_back(createAllocation(builder, loc, ptrType, heuristic));
+      fields.push_back(createAllocation(builder, loc, idxType, heuristic));
+      allDense = false;
+      break;
+    case SparseTensorEncodingAttr::DimLevelType::Singleton:
+    case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
+    case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
+    case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+      fields.push_back(createAllocation(builder, loc, idxType, heuristic));
+      allDense = false;
+      break;
+    }
+  }
+  // The values array. For all-dense, the full length is required.
+  // In all other case, we resort to the heuristical initial value.
+  Value valuesSz = allDense ? linear : heuristic;
+  fields.push_back(createAllocation(builder, loc, eltType, valuesSz));
+  // Construct tuple allocation.
+  Type tupleType = *convertSparseTensorType(type);
+  return createTupleMake(builder, loc, tupleType, fields);
 }
 
 /// Returns integral constant, if defined.
@@ -229,6 +327,28 @@ public:
     if (!encDst || encDst != encSrc)
       return failure();
     rewriter.replaceOp(op, adaptor.getOperands());
+    return success();
+  }
+};
+
+/// Sparse codgen rule for the alloc operator.
+class SparseTensorAllocConverter
+    : public OpConversionPattern<bufferization::AllocTensorOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(bufferization::AllocTensorOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    RankedTensorType resType = op.getType();
+    auto enc = getSparseTensorEncoding(resType);
+    if (!enc)
+      return failure();
+    if (op.getCopy())
+      return rewriter.notifyMatchFailure(op, "tensor copy not implemented");
+    // Construct allocation tuple.
+    Value tuple = createAllocTuple(rewriter, op->getLoc(), resType,
+                                   adaptor.getOperands());
+    rewriter.replaceOp(op, tuple);
     return success();
   }
 };
@@ -311,6 +431,22 @@ public:
   }
 };
 
+/// Sparse codegen rule for tensor rematerialization.
+class SparseTensorLoadConverter : public OpConversionPattern<LoadOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(LoadOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getHasInserts()) {
+      // Finalize any pending insertions.
+      // TODO: implement
+    }
+    rewriter.replaceOp(op, adaptor.getOperands());
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -331,7 +467,8 @@ mlir::SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
 void mlir::populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                                                RewritePatternSet &patterns) {
   patterns.add<SparseReturnConverter, SparseDimOpConverter, SparseCastConverter,
-               SparseTensorDeallocConverter, SparseToPointersConverter,
-               SparseToIndicesConverter, SparseToValuesConverter>(
+               SparseTensorAllocConverter, SparseTensorDeallocConverter,
+               SparseToPointersConverter, SparseToIndicesConverter,
+               SparseToValuesConverter, SparseTensorLoadConverter>(
       typeConverter, patterns.getContext());
 }

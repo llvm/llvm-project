@@ -156,7 +156,7 @@ struct SparseTensorCodegenPass
     ConversionTarget target(*ctx);
     // Almost everything in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
-    target.addLegalOp<StorageGetOp, StorageSetOp>();
+    target.addLegalOp<StorageGetOp, StorageSetOp, StorageNewOp>();
     // All dynamic rules below accept new function, call, return, and various
     // tensor and bufferization operations as legal output of the rewriting
     // provided that all sparse tensor types have been fully rewritten.
@@ -169,6 +169,10 @@ struct SparseTensorCodegenPass
     target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
       return converter.isLegal(op.getOperandTypes());
     });
+    target.addDynamicallyLegalOp<bufferization::AllocTensorOp>(
+        [&](bufferization::AllocTensorOp op) {
+          return converter.isLegal(op.getType());
+        });
     target.addDynamicallyLegalOp<bufferization::DeallocTensorOp>(
         [&](bufferization::DeallocTensorOp op) {
           return converter.isLegal(op.getTensor().getType());
