@@ -563,6 +563,12 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
   // FIXME: Try to preserve type sugar here, which is hard
   // because of the unresolved template arguments.
   const auto *TP = UP.getCanonicalType()->castAs<TemplateSpecializationType>();
+  TemplateName TNP = TP->getTemplateName();
+
+  // If the parameter is an alias template, there is nothing to deduce.
+  if (const auto *TD = TNP.getAsTemplateDecl(); TD && TD->isTypeAlias())
+    return Sema::TDK_Success;
+
   ArrayRef<TemplateArgument> PResolved = TP->template_arguments();
 
   QualType UA = A;
@@ -574,10 +580,15 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
   // FIXME: Should not lose sugar here.
   if (const auto *SA =
           dyn_cast<TemplateSpecializationType>(UA.getCanonicalType())) {
+    TemplateName TNA = SA->getTemplateName();
+
+    // If the argument is an alias template, there is nothing to deduce.
+    if (const auto *TD = TNA.getAsTemplateDecl(); TD && TD->isTypeAlias())
+      return Sema::TDK_Success;
+
     // Perform template argument deduction for the template name.
     if (auto Result =
-            DeduceTemplateArguments(S, TemplateParams, TP->getTemplateName(),
-                                    SA->getTemplateName(), Info, Deduced))
+            DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info, Deduced))
       return Result;
     // Perform template argument deduction on each template
     // argument. Ignore any missing/extra arguments, since they could be

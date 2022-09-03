@@ -122,6 +122,9 @@ Bug Fixes
 - Clang will now no longer treat a C 'overloadable' function without a prototype as
   a variadic function with the attribute.  This should make further diagnostics more
   clear.
+- Fixes to builtin template emulation of regular templates.
+  `Issue 42102 <https://github.com/llvm/llvm-project/issues/42102>`_
+  `Issue 51928 <https://github.com/llvm/llvm-project/issues/51928>`_
 
 
 Improvements to Clang's diagnostics
