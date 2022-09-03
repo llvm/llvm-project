@@ -21,6 +21,7 @@
 
 namespace mlir {
 class AsmResourcePrinter;
+class AsmDialectResourceHandle;
 class Operation;
 
 namespace detail {
@@ -455,6 +456,9 @@ public:
   AsmState(Operation *op,
            const OpPrintingFlags &printerFlags = OpPrintingFlags(),
            LocationMap *locationMap = nullptr);
+  AsmState(MLIRContext *ctx,
+           const OpPrintingFlags &printerFlags = OpPrintingFlags(),
+           LocationMap *locationMap = nullptr);
   ~AsmState();
 
   /// Get the printer flags.
@@ -479,6 +483,11 @@ public:
     attachResourcePrinter(AsmResourcePrinter::fromCallable(
         name, std::forward<CallableT>(printFn)));
   }
+
+  /// Returns a map of dialect resources that were referenced when using this
+  /// state to print IR.
+  DenseMap<Dialect *, SetVector<AsmDialectResourceHandle>> &
+  getDialectResources() const;
 
 private:
   AsmState() = delete;
