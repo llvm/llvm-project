@@ -8,7 +8,7 @@
 
 #include "lldb/API/SBCommunication.h"
 #include "lldb/API/SBBroadcaster.h"
-#include "lldb/Core/Communication.h"
+#include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -19,7 +19,8 @@ using namespace lldb_private;
 SBCommunication::SBCommunication() { LLDB_INSTRUMENT_VA(this); }
 
 SBCommunication::SBCommunication(const char *broadcaster_name)
-    : m_opaque(new Communication(broadcaster_name)), m_opaque_owned(true) {
+    : m_opaque(new ThreadedCommunication(broadcaster_name)),
+      m_opaque_owned(true) {
   LLDB_INSTRUMENT_VA(this, broadcaster_name);
 }
 
@@ -169,5 +170,5 @@ SBBroadcaster SBCommunication::GetBroadcaster() {
 const char *SBCommunication::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return Communication::GetStaticBroadcasterClass().AsCString();
+  return ThreadedCommunication::GetStaticBroadcasterClass().AsCString();
 }
