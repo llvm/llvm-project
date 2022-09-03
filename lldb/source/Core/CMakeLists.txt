@@ -54,6 +54,7 @@ add_lldb_library(lldbCore
   SourceManager.cpp
   StreamAsynchronousIO.cpp
   StreamFile.cpp
+  ThreadedCommunication.cpp
   UserSettingsController.cpp
   Value.cpp
   ValueObject.cpp
