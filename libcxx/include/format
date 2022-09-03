@@ -308,22 +308,12 @@ __compile_time_validate_argument(basic_format_parse_context<_CharT>& __parse_ctx
   // exception of type format_error is thrown.
   //
   // Validate whether the arguments are integrals.
-  if constexpr (requires(formatter<_Tp, _CharT> __f) { __f.__width_needs_substitution(); }) {
-    // TODO FMT Remove this when parser v1 has been phased out.
-    if (__formatter.__width_needs_substitution())
-      __format::__compile_time_validate_integral(__ctx.arg(__formatter.__width));
+  if (__formatter.__parser_.__width_as_arg_)
+    __format::__compile_time_validate_integral(__ctx.arg(__formatter.__parser_.__width_));
 
-    if constexpr (_HasPrecision)
-      if (__formatter.__precision_needs_substitution())
-        __format::__compile_time_validate_integral(__ctx.arg(__formatter.__precision));
-  } else {
-    if (__formatter.__parser_.__width_as_arg_)
-      __format::__compile_time_validate_integral(__ctx.arg(__formatter.__parser_.__width_));
-
-    if constexpr (_HasPrecision)
-      if (__formatter.__parser_.__precision_as_arg_)
-        __format::__compile_time_validate_integral(__ctx.arg(__formatter.__parser_.__precision_));
-  }
+  if constexpr (_HasPrecision)
+    if (__formatter.__parser_.__precision_as_arg_)
+      __format::__compile_time_validate_integral(__ctx.arg(__formatter.__parser_.__precision_));
 }
 
 template <class _CharT>

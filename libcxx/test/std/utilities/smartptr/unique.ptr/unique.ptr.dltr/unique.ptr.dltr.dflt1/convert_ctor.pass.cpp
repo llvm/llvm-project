@@ -11,7 +11,7 @@
 // default_delete[]
 
 // template <class U>
-//   default_delete(const default_delete<U[]>&);
+//   constexpr default_delete(const default_delete<U[]>&); // constexpr since C++23
 //
 // This constructor shall not participate in overload resolution unless
 //   U(*)[] is convertible to T(*)[].
@@ -21,11 +21,19 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::default_delete<int[]> d1;
-    std::default_delete<const int[]> d2 = d1;
-    ((void)d2);
+TEST_CONSTEXPR_CXX23 bool test() {
+  std::default_delete<int[]> d1;
+  std::default_delete<const int[]> d2 = d1;
+  ((void)d2);
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }

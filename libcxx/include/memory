@@ -406,16 +406,17 @@ template <class T>
 struct default_delete
 {
     constexpr default_delete() noexcept = default;
-    template <class U> default_delete(const default_delete<U>&) noexcept;
+    template <class U> constexpr default_delete(const default_delete<U>&) noexcept; // constexpr since C++23
 
-    void operator()(T*) const noexcept;
+    constexpr void operator()(T*) const noexcept;                                   // constexpr since C++23
 };
 
 template <class T>
 struct default_delete<T[]>
 {
     constexpr default_delete() noexcept = default;
-    void operator()(T*) const noexcept;
+    template <class U> constexpr default_delete(const default_delete <U[]>&) noexcept; // constexpr since C++23
+    constexpr void operator()(T*) const noexcept;                                      // constexpr since C++23
     template <class U> void operator()(U*) const = delete;
 };
 
@@ -429,36 +430,37 @@ public:
 
     // constructors
     constexpr unique_ptr() noexcept;
-    explicit unique_ptr(pointer p) noexcept;
-    unique_ptr(pointer p, see below d1) noexcept;
-    unique_ptr(pointer p, see below d2) noexcept;
-    unique_ptr(unique_ptr&& u) noexcept;
-    unique_ptr(nullptr_t) noexcept : unique_ptr() { }
+    constexpr explicit unique_ptr(pointer p) noexcept;           // constexpr since C++23
+    constexpr unique_ptr(pointer p, see below d1) noexcept;      // constexpr since C++23
+    constexpr unique_ptr(pointer p, see below d2) noexcept;      // constexpr since C++23
+    constexpr unique_ptr(unique_ptr&& u) noexcept;               // constexpr since C++23
+    constexpr unique_ptr(nullptr_t) noexcept : unique_ptr() { }
     template <class U, class E>
-        unique_ptr(unique_ptr<U, E>&& u) noexcept;
+        constexpr unique_ptr(unique_ptr<U, E>&& u) noexcept;     // constexpr since C++23
     template <class U>
-        unique_ptr(auto_ptr<U>&& u) noexcept;       // removed in C++17
+        unique_ptr(auto_ptr<U>&& u) noexcept;                    // removed in C++17
 
     // destructor
-    ~unique_ptr();
+    constexpr ~unique_ptr();                                     // constexpr since C++23
 
     // assignment
-    unique_ptr& operator=(unique_ptr&& u) noexcept;
-    template <class U, class E> unique_ptr& operator=(unique_ptr<U, E>&& u) noexcept;
-    unique_ptr& operator=(nullptr_t) noexcept;
+    constexpr unique_ptr& operator=(unique_ptr&& u) noexcept;                         // constexpr since C++23
+    template <class U, class E>
+    constexpr unique_ptr& operator=(unique_ptr<U, E>&& u) noexcept;                   // constexpr since C++23
+    constexpr unique_ptr& operator=(nullptr_t) noexcept;                              // constexpr since C++23
 
     // observers
-    typename add_lvalue_reference<T>::type operator*() const;
-    pointer operator->() const noexcept;
-    pointer get() const noexcept;
-    deleter_type& get_deleter() noexcept;
-    const deleter_type& get_deleter() const noexcept;
-    explicit operator bool() const noexcept;
+    typename constexpr add_lvalue_reference<T>::type operator*() const;               // constexpr since C++23
+    constexpr pointer operator->() const noexcept;                                    // constexpr since C++23
+    constexpr pointer get() const noexcept;                                           // constexpr since C++23
+    constexpr deleter_type& get_deleter() noexcept;                                   // constexpr since C++23
+    constexpr const deleter_type& get_deleter() const noexcept;                       // constexpr since C++23
+    constexpr explicit operator bool() const noexcept;                                // constexpr since C++23
 
     // modifiers
-    pointer release() noexcept;
-    void reset(pointer p = pointer()) noexcept;
-    void swap(unique_ptr& u) noexcept;
+    constexpr pointer release() noexcept;                                             // constexpr since C++23
+    constexpr void reset(pointer p = pointer()) noexcept;                             // constexpr since C++23
+    constexpr void swap(unique_ptr& u) noexcept;                                      // constexpr since C++23
 };
 
 template <class T, class D>
@@ -471,41 +473,45 @@ public:
 
     // constructors
     constexpr unique_ptr() noexcept;
-    explicit unique_ptr(pointer p) noexcept;
-    unique_ptr(pointer p, see below d) noexcept;
-    unique_ptr(pointer p, see below d) noexcept;
-    unique_ptr(unique_ptr&& u) noexcept;
-    unique_ptr(nullptr_t) noexcept : unique_ptr() { }
+    constexpr explicit unique_ptr(pointer p) noexcept;          // constexpr since C++23
+    constexpr unique_ptr(pointer p, see below d) noexcept;      // constexpr since C++23
+    constexpr unique_ptr(pointer p, see below d) noexcept;      // constexpr since C++23
+    constexpr unique_ptr(unique_ptr&& u) noexcept;              // constexpr since C++23
+    template <class U, class E>
+    constexpr unique_ptr(unique_ptr <U, E>&& u) noexcept;       // constexpr since C++23
+    constexpr unique_ptr(nullptr_t) noexcept : unique_ptr() { }
 
     // destructor
-    ~unique_ptr();
+    constexpr ~unique_ptr();                                    // constexpr since C++23
 
     // assignment
-    unique_ptr& operator=(unique_ptr&& u) noexcept;
-    unique_ptr& operator=(nullptr_t) noexcept;
+    constexpr unique_ptr& operator=(unique_ptr&& u) noexcept;        // constexpr since C++23
+    template <class U, class E>
+    constexpr unique_ptr& operator=(unique_ptr <U, E>&& u) noexcept; // constexpr since C++23
+    constexpr unique_ptr& operator=(nullptr_t) noexcept;             // constexpr since C++23
 
     // observers
-    T& operator[](size_t i) const;
-    pointer get() const noexcept;
-    deleter_type& get_deleter() noexcept;
-    const deleter_type& get_deleter() const noexcept;
-    explicit operator bool() const noexcept;
+    constexpr T& operator[](size_t i) const;                    // constexpr since C++23
+    constexpr pointer get() const noexcept;                     // constexpr since C++23
+    constexpr deleter_type& get_deleter() noexcept;             // constexpr since C++23
+    constexpr const deleter_type& get_deleter() const noexcept; // constexpr since C++23
+    constexpr explicit operator bool() const noexcept;          // constexpr since C++23
 
     // modifiers
-    pointer release() noexcept;
-    void reset(pointer p = pointer()) noexcept;
-    void reset(nullptr_t) noexcept;
+    constexpr pointer release() noexcept;                       // constexpr since C++23
+    constexpr void reset(pointer p = pointer()) noexcept;       // constexpr since C++23
+    constexpr void reset(nullptr_t) noexcept;                   // constexpr since C++23
   template <class U> void reset(U) = delete;
-    void swap(unique_ptr& u) noexcept;
+    constexpr void swap(unique_ptr& u) noexcept;                // constexpr since C++23
 };
 
 template <class T, class D>
-    void swap(unique_ptr<T, D>& x, unique_ptr<T, D>& y) noexcept;
+    constexpr void swap(unique_ptr<T, D>& x, unique_ptr<T, D>& y) noexcept;                 // constexpr since C++23
 
 template <class T1, class D1, class T2, class D2>
-    bool operator==(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+    constexpr bool operator==(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);    // constexpr since C++23
 template <class T1, class D1, class T2, class D2>
-    bool operator!=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);    // removed in C++20
+    bool operator!=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);              // removed in C++20
 template <class T1, class D1, class T2, class D2>
     bool operator<(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
 template <class T1, class D1, class T2, class D2>
@@ -522,34 +528,34 @@ template<class T1, class D1, class T2, class D2>
     operator<=>(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);      // C++20
 
 template <class T, class D>
-    bool operator==(const unique_ptr<T, D>& x, nullptr_t) noexcept;
+    constexpr bool operator==(const unique_ptr<T, D>& x, nullptr_t) noexcept;   // constexpr since C++23
 template <class T, class D>
-    bool operator==(nullptr_t, const unique_ptr<T, D>& y) noexcept;     // removed in C++20
+    bool operator==(nullptr_t, const unique_ptr<T, D>& y) noexcept;             // removed in C++20
 template <class T, class D>
-    bool operator!=(const unique_ptr<T, D>& x, nullptr_t) noexcept;     // removed in C++20
+    bool operator!=(const unique_ptr<T, D>& x, nullptr_t) noexcept;             // removed in C++20
 template <class T, class D>
-    bool operator!=(nullptr_t, const unique_ptr<T, D>& y) noexcept;     // removed in C++20
+    bool operator!=(nullptr_t, const unique_ptr<T, D>& y) noexcept;             // removed in C++20
 
 template <class T, class D>
-    bool operator<(const unique_ptr<T, D>& x, nullptr_t);
+    constexpr bool operator<(const unique_ptr<T, D>& x, nullptr_t);     // constexpr since C++23
 template <class T, class D>
-    bool operator<(nullptr_t, const unique_ptr<T, D>& y);
+    constexpr bool operator<(nullptr_t, const unique_ptr<T, D>& y);     // constexpr since C++23
 template <class T, class D>
-    bool operator<=(const unique_ptr<T, D>& x, nullptr_t);
+    constexpr bool operator<=(const unique_ptr<T, D>& x, nullptr_t);    // constexpr since C++23
 template <class T, class D>
-    bool operator<=(nullptr_t, const unique_ptr<T, D>& y);
+    constexpr bool operator<=(nullptr_t, const unique_ptr<T, D>& y);    // constexpr since C++23
 template <class T, class D>
-    bool operator>(const unique_ptr<T, D>& x, nullptr_t);
+    constexpr bool operator>(const unique_ptr<T, D>& x, nullptr_t);     // constexpr since C++23
 template <class T, class D>
-    bool operator>(nullptr_t, const unique_ptr<T, D>& y);
+    constexpr bool operator>(nullptr_t, const unique_ptr<T, D>& y);     // constexpr since C++23
 template <class T, class D>
-    bool operator>=(const unique_ptr<T, D>& x, nullptr_t);
+    constexpr bool operator>=(const unique_ptr<T, D>& x, nullptr_t);    // constexpr since C++23
 template <class T, class D>
-    bool operator>=(nullptr_t, const unique_ptr<T, D>& y);
+    constexpr bool operator>=(nullptr_t, const unique_ptr<T, D>& y);    // constexpr since C++23
 template<class T, class D>
   requires three_way_comparable<typename unique_ptr<T, D>::pointer>
   compare_three_way_result_t<typename unique_ptr<T, D>::pointer>
-    operator<=>(const unique_ptr<T, D>& x, nullptr_t);                          // C++20
+    constexpr operator<=>(const unique_ptr<T, D>& x, nullptr_t);        // C++20, constexpr since C++23
 
 class bad_weak_ptr
     : public std::exception
@@ -557,8 +563,10 @@ class bad_weak_ptr
     bad_weak_ptr() noexcept;
 };
 
-template<class T, class... Args> unique_ptr<T> make_unique(Args&&... args);     // C++14
-template<class T>                unique_ptr<T> make_unique(size_t n);           // C++14
+template<class T, class... Args>
+constexpr unique_ptr<T> make_unique(Args&&... args);                            // C++14, constexpr since C++23
+template<class T>
+constexpr unique_ptr<T> make_unique(size_t n);                                  // C++14, constexpr since C++23
 template<class T, class... Args> unspecified   make_unique(Args&&...) = delete; // C++14, T == U[N]
 
 template<class E, class T, class Y, class D>

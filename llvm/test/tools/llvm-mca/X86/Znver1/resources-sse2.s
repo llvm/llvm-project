@@ -510,10 +510,10 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        movupd	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     0.50           *            movupd	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   movupd	(%rax), %xmm2
-# CHECK-NEXT:  1      3     0.50                        mulpd	%xmm0, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   mulpd	(%rax), %xmm2
-# CHECK-NEXT:  1      3     0.50                        mulsd	%xmm0, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   mulsd	(%rax), %xmm2
+# CHECK-NEXT:  1      4     0.50                        mulpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      11    0.50    *                   mulpd	(%rax), %xmm2
+# CHECK-NEXT:  1      4     0.50                        mulsd	%xmm0, %xmm2
+# CHECK-NEXT:  1      11    0.50    *                   mulsd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        orpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   orpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        packssdw	%xmm0, %xmm2
