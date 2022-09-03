@@ -5,9 +5,7 @@
 define <4 x i32> @freeze_insert_subvector(<8 x i32> %a0) nounwind {
 ; CHECK-LABEL: freeze_insert_subvector:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps %xmm0, %xmm0
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = shufflevector <8 x i32> %a0, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
   %y = freeze <8 x i32> %x
