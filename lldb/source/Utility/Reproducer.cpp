@@ -225,6 +225,6 @@ llvm::Error Loader::LoadIndex() {
 
 bool Loader::HasFile(StringRef file) {
   assert(m_loaded);
-  auto it = std::lower_bound(m_files.begin(), m_files.end(), file.str());
+  auto it = llvm::lower_bound(m_files, file.str());
   return (it != m_files.end()) && (*it == file);
 }

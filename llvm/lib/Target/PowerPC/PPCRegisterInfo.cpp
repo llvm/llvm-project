@@ -404,9 +404,8 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve Altivec registers when Altivec is unavailable.
   if (!Subtarget.hasAltivec())
-    for (TargetRegisterClass::iterator I = PPC::VRRCRegClass.begin(),
-         IE = PPC::VRRCRegClass.end(); I != IE; ++I)
-      markSuperRegs(Reserved, *I);
+    for (MCRegister Reg : PPC::VRRCRegClass)
+      markSuperRegs(Reserved, Reg);
 
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
       !TM.getAIXExtendedAltivecABI()) {
@@ -465,13 +464,13 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
   // The callee saved info is valid so it can be traversed.
   // Checking for registers that need saving that do not have load or store
   // forms where the address offset is an immediate.
-  for (unsigned i = 0; i < Info.size(); i++) {
+  for (const CalleeSavedInfo &CSI : Info) {
     // If the spill is to a register no scavenging is required.
-    if (Info[i].isSpilledToReg())
+    if (CSI.isSpilledToReg())
       continue;
 
-    int FrIdx = Info[i].getFrameIdx();
-    Register Reg = Info[i].getReg();
+    int FrIdx = CSI.getFrameIdx();
+    Register Reg = CSI.getReg();
 
     const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
     unsigned Opcode = InstrInfo->getStoreOpcodeForSpill(RC);

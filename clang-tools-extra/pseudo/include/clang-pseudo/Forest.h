@@ -157,7 +157,7 @@ private:
   // An array of ForestNode* following the object.
 };
 // ForestNode may not be destroyed (for BumpPtrAllocator).
-static_assert(std::is_trivially_destructible<ForestNode>(), "");
+static_assert(std::is_trivially_destructible<ForestNode>());
 
 // A memory arena for the parse forest.
 class ForestArena {
