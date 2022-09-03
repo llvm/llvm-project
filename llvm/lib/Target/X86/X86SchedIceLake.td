@@ -286,12 +286,12 @@ defm : ICXWriteResPair<WriteFMul64Y,   [ICXPort01],  4, [1], 1, 7>;
 defm : ICXWriteResPair<WriteFMul64Z,   [ICXPort05],  4, [1], 1, 7>;
 
 defm : ICXWriteResPair<WriteFDiv,     [ICXPort0,ICXFPDivider], 11, [1,3], 1, 5>; // 10-14 cycles. // Floating point division.
-//defm : ICXWriteResPair<WriteFDivX,    [ICXPort0,ICXFPDivider], 11, [1,3], 1, 6>; // 10-14 cycles.
+defm : ICXWriteResPair<WriteFDivX,    [ICXPort0,ICXFPDivider], 11, [1,3], 1, 6>; // 10-14 cycles.
 defm : ICXWriteResPair<WriteFDivY,    [ICXPort0,ICXFPDivider], 11, [1,5], 1, 7>; // 10-14 cycles.
 defm : ICXWriteResPair<WriteFDivZ,    [ICXPort0,ICXPort5,ICXFPDivider], 18, [2,1,10], 3, 7>; // 10-14 cycles.
-//defm : ICXWriteResPair<WriteFDiv64,   [ICXPort0,ICXFPDivider], 14, [1,3], 1, 5>; // 10-14 cycles. // Floating point division.
-//defm : ICXWriteResPair<WriteFDiv64X,  [ICXPort0,ICXFPDivider], 14, [1,3], 1, 6>; // 10-14 cycles.
-//defm : ICXWriteResPair<WriteFDiv64Y,  [ICXPort0,ICXFPDivider], 14, [1,5], 1, 7>; // 10-14 cycles.
+defm : ICXWriteResPair<WriteFDiv64,   [ICXPort0,ICXFPDivider], 14, [1,4], 1, 5>; // 10-14 cycles. // Floating point division.
+defm : ICXWriteResPair<WriteFDiv64X,  [ICXPort0,ICXFPDivider], 14, [1,4], 1, 6>; // 10-14 cycles.
+defm : ICXWriteResPair<WriteFDiv64Y,  [ICXPort0,ICXFPDivider], 14, [1,8], 1, 7>; // 10-14 cycles.
 defm : ICXWriteResPair<WriteFDiv64Z,  [ICXPort0,ICXPort5,ICXFPDivider], 23, [2,1,16], 3, 7>; // 10-14 cycles.
 
 defm : ICXWriteResPair<WriteFSqrt,    [ICXPort0,ICXFPDivider], 12, [1,3], 1, 5>; // Floating point square root.
@@ -1893,13 +1893,6 @@ def ICXWriteResGroup157 : SchedWriteRes<[ICXPort4,ICXPort6,ICXPort23,ICXPort237,
 }
 def: InstRW<[ICXWriteResGroup157], (instregex "XCHG(8|16|32|64)rm")>;
 
-def ICXWriteResGroup159 : SchedWriteRes<[ICXPort0,ICXFPDivider]> {
-  let Latency = 11;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1,3];
-}
-def : SchedAlias<WriteFDivX,  ICXWriteResGroup159>; // TODO - convert to ZnWriteResFpuPair
-
 def ICXWriteResGroup160 : SchedWriteRes<[ICXPort0,ICXPort23]> {
   let Latency = 11;
   let NumMicroOps = 2;
@@ -2063,21 +2056,6 @@ def ICXWriteResGroup183 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
 def: InstRW<[ICXWriteResGroup183], (instregex "VPERMI2W128rm(b?)",
                                               "VPERMT2W128rm(b?)")>;
 
-def ICXWriteResGroup184 : SchedWriteRes<[ICXPort0,ICXFPDivider]> {
-  let Latency = 14;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1,3];
-}
-def : SchedAlias<WriteFDiv64,  ICXWriteResGroup184>; // TODO - convert to ZnWriteResFpuPair
-def : SchedAlias<WriteFDiv64X, ICXWriteResGroup184>; // TODO - convert to ZnWriteResFpuPair
-
-def ICXWriteResGroup184_1 : SchedWriteRes<[ICXPort0,ICXFPDivider]> {
-  let Latency = 14;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1,5];
-}
-def : SchedAlias<WriteFDiv64Y, ICXWriteResGroup184_1>; // TODO - convert to ZnWriteResFpuPair
-
 def ICXWriteResGroup187 : SchedWriteRes<[ICXPort0,ICXPort5,ICXPort23]> {
   let Latency = 14;
   let NumMicroOps = 3;
@@ -2150,13 +2128,6 @@ def ICXWriteResGroup200 : SchedWriteRes<[ICXPort1, ICXPort05, ICXPort6]> {
 }
 def: InstRW<[ICXWriteResGroup200], (instrs VZEROALL)>;
 
-def ICXWriteResGroup201 : SchedWriteRes<[ICXPort0,ICXPort23,ICXFPDivider]> {
-  let Latency = 17;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1,5];
-}
-def : SchedAlias<WriteFDivXLd, ICXWriteResGroup201>; // TODO - convert to ZnWriteResFpuPair
-
 def ICXWriteResGroup202 : SchedWriteRes<[ICXPort0,ICXPort1,ICXPort5,ICXPort6,ICXPort05,ICXPort0156]> {
   let Latency = 17;
   let NumMicroOps = 15;
@@ -2185,13 +2156,6 @@ def ICXWriteResGroup208 : SchedWriteRes<[ICXPort1,ICXPort23,ICXPort237,ICXPort06
 }
 def: InstRW<[ICXWriteResGroup208], (instregex "RCR(8|16|32|64)mCL")>;
 
-def ICXWriteResGroup209 : SchedWriteRes<[ICXPort0,ICXPort23,ICXFPDivider]> {
-  let Latency = 19;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1,4];
-}
-def : SchedAlias<WriteFDiv64Ld,  ICXWriteResGroup209>; // TODO - convert to ZnWriteResFpuPair
-
 def ICXWriteResGroup211 : SchedWriteRes<[ICXPort23,ICXPort01]> {
   let Latency = 22;
   let NumMicroOps = 4;
@@ -2212,13 +2176,6 @@ def ICXWriteResGroup215 : SchedWriteRes<[ICXPort0]> {
   let ResourceCycles = [1];
 }
 def: InstRW<[ICXWriteResGroup215], (instregex "DIV_(FPrST0|FST0r|FrST0)")>;
-
-def ICXWriteResGroup216 : SchedWriteRes<[ICXPort0,ICXPort23,ICXFPDivider]> {
-  let Latency = 20;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1,4];
-}
-def : SchedAlias<WriteFDiv64XLd, ICXWriteResGroup216>; // TODO - convert to ZnWriteResFpuPair
 
 def ICXWriteGatherEVEX2 : SchedWriteRes<[ICXPort0,ICXPort23,ICXPort015,ICXPort0156]> {
   let Latency = 17;
@@ -2269,13 +2226,6 @@ def ICXWriteResGroup220 : SchedWriteRes<[ICXPort5,ICXPort6,ICXPort0156]> {
   let ResourceCycles = [1,2,7];
 }
 def: InstRW<[ICXWriteResGroup220], (instrs MWAITrr)>;
-
-def ICXWriteResGroup222 : SchedWriteRes<[ICXPort0,ICXPort23,ICXFPDivider]> {
-  let Latency = 21;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1,8];
-}
-def : SchedAlias<WriteFDiv64YLd, ICXWriteResGroup222>; // TODO - convert to ZnWriteResFpuPair
 
 def ICXWriteResGroup223 : SchedWriteRes<[ICXPort0,ICXPort23]> {
   let Latency = 22;

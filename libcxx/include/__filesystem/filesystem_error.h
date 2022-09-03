@@ -14,7 +14,6 @@
 #include <__config>
 #include <__filesystem/path.h>
 #include <__memory/shared_ptr.h>
-#include <__utility/forward.h>
 #include <iosfwd>
 #include <new>
 #include <system_error>

@@ -38,7 +38,7 @@ class UseEqualsDefaultCheck : public ClangTidyCheck {
 public:
   UseEqualsDefaultCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
+    return LangOpts.CPlusPlus11;
   }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

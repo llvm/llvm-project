@@ -224,12 +224,6 @@ namespace std {
 #include <type_traits>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <algorithm>
-#  include <functional>
-#  include <iterator>
-#endif
-
 // standard-mandated includes
 
 // [iterator.range]
@@ -1033,5 +1027,11 @@ inline namespace literals
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <algorithm>
+#  include <functional>
+#  include <iterator>
+#endif
 
 #endif // _LIBCPP_STRING_VIEW

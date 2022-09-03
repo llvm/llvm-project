@@ -2339,10 +2339,8 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
   // Emit epilog unwind instructions
   for (auto &I : info->EpilogMap) {
     auto &EpilogInstrs = I.second.Instructions;
-    for (uint32_t i = 0; i < EpilogInstrs.size(); i++) {
-      WinEH::Instruction inst = EpilogInstrs[i];
+    for (const WinEH::Instruction &inst : EpilogInstrs)
       ARMEmitUnwindCode(streamer, inst);
-    }
   }
 
   int32_t BytesMod = CodeWords * 4 - TotalCodeBytes;

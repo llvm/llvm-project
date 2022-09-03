@@ -445,8 +445,8 @@ nearestMatchesForCodepointName(StringRef Pattern, std::size_t MaxMatchesCount) {
       return Name;
     };
 
-    auto It = std::lower_bound(
-        Matches.begin(), Matches.end(), Distance,
+    auto It = llvm::lower_bound(
+        Matches, Distance,
         [&](const MatchForCodepointName &a, std::size_t Distance) {
           if (Distance == a.Distance)
             return a.Name < GetName();

@@ -172,6 +172,4 @@ else() # not Apple
   endforeach()
 endif() # not Apple
 
-if(COMPILER_RT_INCLUDE_TESTS)
-  add_subdirectory(unittests)
-endif()
+add_subdirectory(tests)

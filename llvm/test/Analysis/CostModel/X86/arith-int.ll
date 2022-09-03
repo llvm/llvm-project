@@ -999,8 +999,8 @@ define i32 @mul(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = mul <4 x i32> undef, undef
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = mul <8 x i32> undef, undef
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = mul <16 x i32> undef, undef
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = mul <8 x i32> undef, undef
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = mul <16 x i32> undef, undef
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = mul i16 undef, undef
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = mul <8 x i16> undef, undef
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = mul <16 x i16> undef, undef

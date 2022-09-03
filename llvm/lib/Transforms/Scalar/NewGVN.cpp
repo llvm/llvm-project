@@ -2929,14 +2929,13 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
 }
 
 void NewGVN::cleanupTables() {
-  for (unsigned i = 0, e = CongruenceClasses.size(); i != e; ++i) {
-    LLVM_DEBUG(dbgs() << "Congruence class " << CongruenceClasses[i]->getID()
-                      << " has " << CongruenceClasses[i]->size()
-                      << " members\n");
+  for (CongruenceClass *&CC : CongruenceClasses) {
+    LLVM_DEBUG(dbgs() << "Congruence class " << CC->getID() << " has "
+                      << CC->size() << " members\n");
     // Make sure we delete the congruence class (probably worth switching to
     // a unique_ptr at some point.
-    delete CongruenceClasses[i];
-    CongruenceClasses[i] = nullptr;
+    delete CC;
+    CC = nullptr;
   }
 
   // Destroy the value expressions

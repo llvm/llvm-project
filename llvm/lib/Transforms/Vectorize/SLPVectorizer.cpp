@@ -6947,13 +6947,12 @@ namespace {
 /// value, otherwise.
 struct ValueSelect {
   template <typename U>
-  static typename std::enable_if<std::is_same<Value *, U>::value, Value *>::type
+  static std::enable_if_t<std::is_same<Value *, U>::value, Value *>
   get(Value *V) {
     return V;
   }
   template <typename U>
-  static typename std::enable_if<!std::is_same<Value *, U>::value, U>::type
-  get(Value *) {
+  static std::enable_if_t<!std::is_same<Value *, U>::value, U> get(Value *) {
     return U();
   }
 };

@@ -444,6 +444,13 @@ IL &WRT::operator=(const WRT &Other) {
   return *this;
 }
 
+// Wrong return type.
+struct WRTConstRef {
+  const WRTConstRef &operator = (const WRTConstRef &) {
+    return *this;
+  }
+};
+
 // Try-catch.
 struct ITC {
   ITC(const ITC &Other)

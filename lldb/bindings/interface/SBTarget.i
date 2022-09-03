@@ -1000,10 +1000,10 @@ public:
 
             def __getitem__(self, key):
                 num_modules = self.sbtarget.GetNumModules()
-                if type(key) is int:
+                if isinstance(key, int):
                     if key < num_modules:
                         return self.sbtarget.GetModuleAtIndex(key)
-                elif type(key) is str:
+                elif isinstance(key, str):
                     if key.find('/') == -1:
                         for idx in range(num_modules):
                             module = self.sbtarget.GetModuleAtIndex(idx)
@@ -1024,16 +1024,16 @@ public:
                                     return module
                     except:
                         return None
-                elif type(key) is uuid.UUID:
+                elif isinstance(key, uuid.UUID):
                     for idx in range(num_modules):
                         module = self.sbtarget.GetModuleAtIndex(idx)
                         if module.uuid == key:
                             return module
-                elif type(key) is re.SRE_Pattern:
+                elif isinstance(key, re.Pattern):
                     matching_modules = []
                     for idx in range(num_modules):
                         module = self.sbtarget.GetModuleAtIndex(idx)
-                        re_match = key.search(module.path.fullpath)
+                        re_match = key.search(module.file.fullpath)
                         if re_match:
                             matching_modules.append(module)
                     return matching_modules

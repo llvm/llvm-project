@@ -15,7 +15,6 @@
 //     bad_weak_ptr();
 // };
 
-#include <exception>
 #include <memory>
 #include <type_traits>
 #include <cassert>

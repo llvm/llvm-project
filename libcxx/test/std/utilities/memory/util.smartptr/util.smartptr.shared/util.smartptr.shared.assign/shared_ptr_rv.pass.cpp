@@ -17,7 +17,6 @@
 #include <memory>
 #include <type_traits>
 #include <cassert>
-#include <utility>
 
 #include "test_macros.h"
 

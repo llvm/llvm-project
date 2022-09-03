@@ -1094,8 +1094,7 @@ void TypeMerger::mergeTypesWithGHash() {
               entries.size(), tableSize));
 
   // Find out how many type and item indices there are.
-  auto mid =
-      std::lower_bound(entries.begin(), entries.end(), GHashCell(true, 0, 0));
+  auto mid = llvm::lower_bound(entries, GHashCell(true, 0, 0));
   assert((mid == entries.end() || mid->isItem()) &&
          (mid == entries.begin() || !std::prev(mid)->isItem()) &&
          "midpoint is not midpoint");

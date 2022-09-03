@@ -591,7 +591,7 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
 // Produces an integer that sorts in the same order as F.
 // That is: a < b <==> encodeFloat(a) < encodeFloat(b).
 static uint32_t encodeFloat(float F) {
-  static_assert(std::numeric_limits<float>::is_iec559, "");
+  static_assert(std::numeric_limits<float>::is_iec559);
   constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
 
   // Get the bits of the float. Endianness is the same as for integers.

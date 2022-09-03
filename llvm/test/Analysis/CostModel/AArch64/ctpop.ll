@@ -156,6 +156,22 @@ define <32 x i8> @test_ctpop_v32i8(<32 x i8> %a) {
   ret <32 x i8> %ctpop
 }
 
+define i64 @test_ctpop_noneon_i64(i64 %a) "target-features"="-fp-armv8,-neon" {
+; CHECK-LABEL: 'test_ctpop_noneon_i64'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctpop = call i64 @llvm.ctpop.i64(i64 %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %ctpop
+  %ctpop = call i64 @llvm.ctpop.i64(i64 %a)
+  ret i64 %ctpop
+}
+
+define <2 x i64> @test_ctpop_noneon_v2i64(<2 x i64> %a) "target-features"="-fp-armv8,-neon" {
+; CHECK-LABEL: 'test_ctpop_noneon_v2i64'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %ctpop
+  %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
+  ret <2 x i64> %ctpop
+}
+
 declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)
