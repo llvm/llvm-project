@@ -618,11 +618,10 @@ public:
     if (!m_entries.empty()) {
       typename Collection::const_iterator begin = m_entries.begin();
       typename Collection::const_iterator end = m_entries.end();
-      typename Collection::const_iterator pos =
-          std::lower_bound(m_entries.begin(), end, addr,
-                           [](const Entry &lhs, B rhs_base) -> bool {
-                             return lhs.GetRangeEnd() <= rhs_base;
-                           });
+      typename Collection::const_iterator pos = llvm::lower_bound(
+          m_entries, addr, [](const Entry &lhs, B rhs_base) -> bool {
+            return lhs.GetRangeEnd() <= rhs_base;
+          });
 
       while (pos != begin && pos[-1].Contains(addr))
         --pos;
@@ -794,7 +793,7 @@ public:
       typename Collection::iterator begin = m_entries.begin();
       typename Collection::iterator end = m_entries.end();
       typename Collection::iterator pos =
-          std::lower_bound(begin, end, entry, BaseLessThan);
+          llvm::lower_bound(m_entries, entry, BaseLessThan);
 
       while (pos != begin && pos[-1].addr == addr)
         --pos;
