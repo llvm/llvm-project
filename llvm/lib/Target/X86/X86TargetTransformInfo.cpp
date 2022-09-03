@@ -907,7 +907,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::ADD,  MVT::v4i64,   {  1,  1, 1, 2 } }, // paddq
 
     { ISD::MUL,  MVT::v16i16,  {  1 } }, // pmullw
-    { ISD::MUL,  MVT::v8i32,   {  2 } }, // pmulld (Haswell from agner.org)
+    { ISD::MUL,  MVT::v8i32,   {  4 } }, // pmulld
     { ISD::MUL,  MVT::v4i64,   {  6 } }, // 3*pmuludq/3*shift/2*add
 
     { ISD::FNEG, MVT::v4f64,   {  1,  1, 1, 2 } }, // vxorpd
