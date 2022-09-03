@@ -2726,8 +2726,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
 
     // Emit constructors that takes no arguments if none already exists.
     // This is used for delaying arguments.
-    bool HasRequiredArgs = std::count_if(
-        Args.begin(), Args.end(), [=](const std::unique_ptr<Argument> &arg) {
+    bool HasRequiredArgs =
+        llvm::count_if(Args, [=](const std::unique_ptr<Argument> &arg) {
           return !arg->isFake() && !arg->isOptional();
         });
     if (DelayedArgs && HasRequiredArgs)
