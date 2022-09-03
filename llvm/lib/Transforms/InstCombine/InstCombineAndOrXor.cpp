@@ -3012,6 +3012,19 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         (match(Op0, m_Not(m_Specific(A))) || match(Op0, m_Not(m_Specific(B)))))
       return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
+    // Same as above, but peek through an 'and' to the common operand:
+    // ~(A & ?) | (A ^ B) --> ~((A & ?) & B)
+    // ~(B & ?) | (A ^ B) --> ~((B & ?) & A)
+    Instruction *And;
+    if ((Op0->hasOneUse() || Op1->hasOneUse()) &&
+        match(Op0, m_Not(m_CombineAnd(m_Instruction(And),
+                                      m_c_And(m_Specific(A), m_Value())))))
+      return BinaryOperator::CreateNot(Builder.CreateAnd(And, B));
+    if ((Op0->hasOneUse() || Op1->hasOneUse()) &&
+        match(Op0, m_Not(m_CombineAnd(m_Instruction(And),
+                                      m_c_And(m_Specific(B), m_Value())))))
+      return BinaryOperator::CreateNot(Builder.CreateAnd(And, A));
+
     // (~A | C) | (A ^ B) --> ~(A & B) | C
     // (~B | C) | (A ^ B) --> ~(A & B) | C
     if (Op0->hasOneUse() && Op1->hasOneUse() &&
