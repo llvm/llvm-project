@@ -755,31 +755,30 @@ private:
   /// blocks. Then it verifies if flow rebalancing is feasible and applies it.
   void rebalanceUnknownSubgraphs() {
     // Try to find unknown subgraphs from each block
-    for (uint64_t I = 0; I < Func.Blocks.size(); I++) {
-      auto SrcBlock = &Func.Blocks[I];
+    for (const FlowBlock &SrcBlock : Func.Blocks) {
       // Verify if rebalancing rooted at SrcBlock is feasible
-      if (!canRebalanceAtRoot(SrcBlock))
+      if (!canRebalanceAtRoot(&SrcBlock))
         continue;
 
       // Find an unknown subgraphs starting at SrcBlock. Along the way,
       // fill in known destinations and intermediate unknown blocks.
       std::vector<FlowBlock *> UnknownBlocks;
       std::vector<FlowBlock *> KnownDstBlocks;
-      findUnknownSubgraph(SrcBlock, KnownDstBlocks, UnknownBlocks);
+      findUnknownSubgraph(&SrcBlock, KnownDstBlocks, UnknownBlocks);
 
       // Verify if rebalancing of the subgraph is feasible. If the search is
       // successful, find the unique destination block (which can be null)
       FlowBlock *DstBlock = nullptr;
-      if (!canRebalanceSubgraph(SrcBlock, KnownDstBlocks, UnknownBlocks,
+      if (!canRebalanceSubgraph(&SrcBlock, KnownDstBlocks, UnknownBlocks,
                                 DstBlock))
         continue;
 
       // We cannot rebalance subgraphs containing cycles among unknown blocks
-      if (!isAcyclicSubgraph(SrcBlock, DstBlock, UnknownBlocks))
+      if (!isAcyclicSubgraph(&SrcBlock, DstBlock, UnknownBlocks))
         continue;
 
       // Rebalance the flow
-      rebalanceUnknownSubgraph(SrcBlock, DstBlock, UnknownBlocks);
+      rebalanceUnknownSubgraph(&SrcBlock, DstBlock, UnknownBlocks);
     }
   }
 
