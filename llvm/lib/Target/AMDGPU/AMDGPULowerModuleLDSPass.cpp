@@ -218,8 +218,7 @@ public:
 
       // Replace all constant uses with instructions if they belong to the
       // current kernel. Unnecessary, removing will cause test churn.
-      for (size_t I = 0; I < KernelUsedVariables.size(); I++) {
-        GlobalVariable *GV = KernelUsedVariables[I];
+      for (GlobalVariable *GV : KernelUsedVariables) {
         for (User *U : make_early_inc_range(GV->users())) {
           if (ConstantExpr *C = dyn_cast<ConstantExpr>(U))
             AMDGPU::replaceConstantUsesInFunction(C, &F);
