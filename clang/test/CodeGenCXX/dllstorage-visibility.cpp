@@ -2,7 +2,7 @@
 
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-msvc -fdeclspec -fvisibility-inlines-hidden -o - %s | FileCheck %s --check-prefix=MSVC
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-gnu -fdeclspec -fvisibility-inlines-hidden -o - %s | FileCheck %s --check-prefix=GNU
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-gnu -fdeclspec -fvisibility hidden -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-windows-gnu -fdeclspec -fvisibility=hidden -o - %s | FileCheck %s --check-prefix=GNU
 
 #define CONCAT2(x, y) x##y
 #define CONCAT(x, y) CONCAT2(x, y)

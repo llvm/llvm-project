@@ -118,10 +118,6 @@ Type SPIRVTypeConverter::getIndexType() const {
   return IntegerType::get(getContext(), options.use64bitIndex ? 64 : 32);
 }
 
-const SPIRVTypeConverter::Options &SPIRVTypeConverter::getOptions() const {
-  return options;
-}
-
 MLIRContext *SPIRVTypeConverter::getContext() const {
   return targetEnv.getAttr().getContext();
 }
@@ -239,7 +235,7 @@ static Type convertVectorType(const spirv::TargetEnv &targetEnv,
                               const SPIRVTypeConverter::Options &options,
                               VectorType type,
                               Optional<spirv::StorageClass> storageClass = {}) {
-  if (type.getRank() == 1 && type.getNumElements() == 1)
+  if (type.getRank() <= 1 && type.getNumElements() == 1)
     return type.getElementType();
 
   if (!spirv::CompositeType::isValid(type)) {

@@ -2174,7 +2174,7 @@ QualType Sema::BuildPointerType(QualType T,
     return QualType();
   }
 
-  if (getLangOpts().HLSL) {
+  if (getLangOpts().HLSL && Loc.isValid()) {
     Diag(Loc, diag::err_hlsl_pointers_unsupported) << 0;
     return QualType();
   }
@@ -2244,7 +2244,7 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
     return QualType();
   }
 
-  if (getLangOpts().HLSL) {
+  if (getLangOpts().HLSL && Loc.isValid()) {
     Diag(Loc, diag::err_hlsl_pointers_unsupported) << 1;
     return QualType();
   }
@@ -3008,7 +3008,7 @@ QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
     return QualType();
   }
 
-  if (getLangOpts().HLSL) {
+  if (getLangOpts().HLSL && Loc.isValid()) {
     Diag(Loc, diag::err_hlsl_pointers_unsupported) << 0;
     return QualType();
   }

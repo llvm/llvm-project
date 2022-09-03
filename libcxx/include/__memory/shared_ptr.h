@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <cstdlib> // abort
 #include <iosfwd>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <typeinfo>
@@ -1799,7 +1800,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, shared_ptr<_Yp> const& __p);
 
 class _LIBCPP_TYPE_VIS __sp_mut
 {
-    void* __lx;
+    void* __lx_;
 public:
     void lock() _NOEXCEPT;
     void unlock() _NOEXCEPT;

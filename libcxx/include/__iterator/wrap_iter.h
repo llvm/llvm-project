@@ -38,17 +38,17 @@ public:
 #endif
 
 private:
-    iterator_type __i;
+    iterator_type __i_;
 public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT
-                : __i()
+                : __i_()
     {
         _VSTD::__debug_db_insert_i(this);
     }
     template <class _Up> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
         __wrap_iter(const __wrap_iter<_Up>& __u,
             typename enable_if<is_convertible<_Up, iterator_type>::value>::type* = nullptr) _NOEXCEPT
-            : __i(__u.base())
+            : __i_(__u.base())
     {
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
       if (!__libcpp_is_constant_evaluated())
@@ -58,7 +58,7 @@ public:
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
     __wrap_iter(const __wrap_iter& __x)
-        : __i(__x.base())
+        : __i_(__x.base())
     {
       if (!__libcpp_is_constant_evaluated())
         __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
@@ -70,7 +70,7 @@ public:
         {
             if (!__libcpp_is_constant_evaluated())
                 __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
-            __i = __x.__i;
+            __i_ = __x.__i_;
         }
         return *this;
     }
@@ -85,19 +85,19 @@ public:
     {
         _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                              "Attempted to dereference a non-dereferenceable iterator");
-        return *__i;
+        return *__i_;
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pointer operator->() const _NOEXCEPT
     {
         _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                              "Attempted to dereference a non-dereferenceable iterator");
-        return _VSTD::__to_address(__i);
+        return _VSTD::__to_address(__i_);
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter& operator++() _NOEXCEPT
     {
         _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                              "Attempted to increment a non-incrementable iterator");
-        ++__i;
+        ++__i_;
         return *this;
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter  operator++(int) _NOEXCEPT
@@ -107,7 +107,7 @@ public:
     {
         _LIBCPP_DEBUG_ASSERT(__get_const_db()->__decrementable(this),
                              "Attempted to decrement a non-decrementable iterator");
-        --__i;
+        --__i_;
         return *this;
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter  operator--(int) _NOEXCEPT
@@ -118,7 +118,7 @@ public:
     {
         _LIBCPP_DEBUG_ASSERT(__get_const_db()->__addable(this, __n),
                              "Attempted to add/subtract an iterator outside its valid range");
-        __i += __n;
+        __i_ += __n;
         return *this;
     }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter  operator- (difference_type __n) const _NOEXCEPT
@@ -129,14 +129,14 @@ public:
     {
         _LIBCPP_DEBUG_ASSERT(__get_const_db()->__subscriptable(this, __n),
                              "Attempted to subscript an iterator outside its valid range");
-        return __i[__n];
+        return __i_[__n];
     }
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 iterator_type base() const _NOEXCEPT {return __i;}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 iterator_type base() const _NOEXCEPT {return __i_;}
 
 private:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-    explicit __wrap_iter(const void* __p, iterator_type __x) _NOEXCEPT : __i(__x)
+    explicit __wrap_iter(const void* __p, iterator_type __x) _NOEXCEPT : __i_(__x)
     {
         (void)__p;
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE

@@ -525,7 +525,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__iterator/erase_if_container.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
+#include <__memory/allocator.h>
 #include <__node_handle>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
 #include <stdexcept>
 #include <tuple>
@@ -822,16 +824,16 @@ struct _LIBCPP_STANDALONE_DEBUG __hash_value_type
     typedef pair<key_type&&, mapped_type&&>          __nc_rref_pair_type;
 
 private:
-    value_type __cc;
+    value_type __cc_;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
     value_type& __get_value()
     {
 #if _LIBCPP_STD_VER > 14
-        return *_VSTD::launder(_VSTD::addressof(__cc));
+        return *_VSTD::launder(_VSTD::addressof(__cc_));
 #else
-        return __cc;
+        return __cc_;
 #endif
     }
 
@@ -839,9 +841,9 @@ public:
     const value_type& __get_value() const
     {
 #if _LIBCPP_STD_VER > 14
-        return *_VSTD::launder(_VSTD::addressof(__cc));
+        return *_VSTD::launder(_VSTD::addressof(__cc_));
 #else
-        return __cc;
+        return __cc_;
 #endif
     }
 
@@ -904,13 +906,13 @@ struct __hash_value_type
     typedef pair<const key_type, mapped_type>        value_type;
 
 private:
-    value_type __cc;
+    value_type __cc_;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-    value_type& __get_value() { return __cc; }
+    value_type& __get_value() { return __cc_; }
     _LIBCPP_INLINE_VISIBILITY
-    const value_type& __get_value() const { return __cc; }
+    const value_type& __get_value() const { return __cc_; }
 
 private:
    ~__hash_value_type();
