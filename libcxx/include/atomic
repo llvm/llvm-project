@@ -534,15 +534,6 @@ template <class T>
 # include <__threading_support>
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <chrono> // IGNORE-CYCLE due to <format>
-#endif
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <cmath>
-#  include <compare>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -2706,5 +2697,14 @@ typedef atomic<__libcpp_unsigned_lock_free> atomic_unsigned_lock_free;
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  include <chrono> // IGNORE-CYCLE due to <format>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cmath>
+#  include <compare>
+#endif
 
 #endif // _LIBCPP_ATOMIC

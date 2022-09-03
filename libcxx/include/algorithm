@@ -1899,15 +1899,6 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/upper_bound.h>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <chrono> // IGNORE-CYCLE due to <format>
-#endif
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iterator>
-#  include <utility>
-#endif
-
 // standard-mandated includes
 #include <initializer_list>
 
@@ -1917,6 +1908,15 @@ template <class BidirectionalIterator, class Compare>
 
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
 #   include <__pstl_algorithm>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  include <chrono> // IGNORE-CYCLE due to <format>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iterator>
+#  include <utility>
 #endif
 
 #endif // _LIBCPP_ALGORITHM
