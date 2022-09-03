@@ -3264,8 +3264,10 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AsmParser",
+        ":BytecodeWriter",
         ":IR",
         ":MlirLspServerSupportLib",
+        ":Parser",
         ":Support",
         "//llvm:Support",
     ],
