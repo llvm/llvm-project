@@ -290,12 +290,12 @@ fyl2xp1
 # CHECK-NEXT:  1      8     0.50                  U     fldz
 # CHECK-NEXT:  1      3     0.50                  U     fmul	%st, %st(1)
 # CHECK-NEXT:  1      3     0.50                  U     fmul	%st(2), %st
-# CHECK-NEXT:  2      10    0.50    *             U     fmuls	(%ecx)
-# CHECK-NEXT:  2      10    0.50    *             U     fmull	(%eax)
+# CHECK-NEXT:  1      10    0.50    *             U     fmuls	(%ecx)
+# CHECK-NEXT:  1      10    0.50    *             U     fmull	(%eax)
 # CHECK-NEXT:  1      3     0.50                  U     fmulp	%st, %st(1)
 # CHECK-NEXT:  1      3     0.50                  U     fmulp	%st, %st(2)
-# CHECK-NEXT:  2      10    0.50    *             U     fimuls	(%ecx)
-# CHECK-NEXT:  2      10    0.50    *             U     fimull	(%eax)
+# CHECK-NEXT:  1      10    0.50    *             U     fimuls	(%ecx)
+# CHECK-NEXT:  1      10    0.50    *             U     fimull	(%eax)
 # CHECK-NEXT:  1      1     1.00                  U     fnop
 # CHECK-NEXT:  1      100   0.25                  U     fpatan
 # CHECK-NEXT:  1      100   0.25                  U     fprem
