@@ -1877,9 +1877,9 @@ void replace(Container &Cont, typename Container::iterator ContIt,
 /// \endcode
 template <typename ForwardIterator, typename UnaryFunctor,
           typename NullaryFunctor,
-          typename = typename std::enable_if<
+          typename = std::enable_if_t<
               !std::is_constructible<StringRef, UnaryFunctor>::value &&
-              !std::is_constructible<StringRef, NullaryFunctor>::value>::type>
+              !std::is_constructible<StringRef, NullaryFunctor>::value>>
 inline void interleave(ForwardIterator begin, ForwardIterator end,
                        UnaryFunctor each_fn, NullaryFunctor between_fn) {
   if (begin == end)
@@ -1893,9 +1893,9 @@ inline void interleave(ForwardIterator begin, ForwardIterator end,
 }
 
 template <typename Container, typename UnaryFunctor, typename NullaryFunctor,
-          typename = typename std::enable_if<
+          typename = std::enable_if_t<
               !std::is_constructible<StringRef, UnaryFunctor>::value &&
-              !std::is_constructible<StringRef, NullaryFunctor>::value>::type>
+              !std::is_constructible<StringRef, NullaryFunctor>::value>>
 inline void interleave(const Container &c, UnaryFunctor each_fn,
                        NullaryFunctor between_fn) {
   interleave(c.begin(), c.end(), each_fn, between_fn);
