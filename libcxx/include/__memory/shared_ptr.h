@@ -34,7 +34,6 @@
 #include <cstddef>
 #include <cstdlib> // abort
 #include <iosfwd>
-#include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <typeinfo>

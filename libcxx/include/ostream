@@ -165,11 +165,9 @@ basic_ostream<wchar_t, traits>& operator<<(basic_ostream<wchar_t, traits>&, cons
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <__memory/unique_ptr.h>
 #include <bitset>
 #include <ios>
 #include <locale>
-#include <new>
 #include <streambuf>
 #include <version>
 

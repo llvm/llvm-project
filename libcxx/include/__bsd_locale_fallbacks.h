@@ -13,6 +13,7 @@
 #ifndef _LIBCPP___BSD_LOCALE_FALLBACKS_H
 #define _LIBCPP___BSD_LOCALE_FALLBACKS_H
 
+#include <memory>
 #include <stdarg.h>
 #include <stdlib.h>
 
