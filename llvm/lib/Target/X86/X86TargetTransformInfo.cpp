@@ -1165,13 +1165,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,  MVT::i16, {  1 } }, // Pentium III from http://www.agner.org/
     { ISD::SUB,  MVT::i32, {  1 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::FNEG, MVT::f32, {  2,  2, 1, 3 } }, // (x87)
     { ISD::FNEG, MVT::f64, {  2,  2, 1, 3 } }, // (x87)
-
-    { ISD::FADD, MVT::f32, {  2,  3, 1, 1 } }, // (x87)
     { ISD::FADD, MVT::f64, {  2,  3, 1, 1 } }, // (x87)
-
-    { ISD::FSUB, MVT::f32, {  2,  3, 1, 1 } }, // (x87)
     { ISD::FSUB, MVT::f64, {  2,  3, 1, 1 } }, // (x87)
   };
 
