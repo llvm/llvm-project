@@ -82,6 +82,7 @@ __cpp_lib_execution                                     201902L <execution>
                                                         201603L // C++17
 __cpp_lib_filesystem                                    201703L <filesystem>
 __cpp_lib_format                                        202106L <format>
+__cpp_lib_forward_like                                  202207L <utility>
 __cpp_lib_gcd_lcm                                       201606L <numeric>
 __cpp_lib_generic_associative_lookup                    201304L <map> <set>
 __cpp_lib_generic_unordered_lookup                      201811L <unordered_map> <unordered_set>
@@ -384,6 +385,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_bitset                     202207L
 // # define __cpp_lib_constexpr_cmath                      202202L
 // # define __cpp_lib_constexpr_typeinfo                   202106L
+# define __cpp_lib_forward_like                         202207L
 // # define __cpp_lib_invoke_r                             202106L
 # define __cpp_lib_is_scoped_enum                       202011L
 // # define __cpp_lib_move_only_function                   202110L

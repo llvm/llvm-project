@@ -293,11 +293,7 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__memory/allocate_at_least.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
-#include <__memory/temp_value.h>
-#include <__memory/uninitialized_algorithms.h>
 #include <__split_buffer>
-#include <__type_traits/is_allocator.h>
-#include <__type_traits/noexcept_move_assign_container.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -306,6 +302,7 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <cstring>
 #include <iosfwd> // for forward declaration of vector
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <type_traits>
 #include <version>

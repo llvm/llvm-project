@@ -60,8 +60,7 @@ public:
 
 #include <__assert>
 #include <__config>
-#include <__memory/allocator_traits.h>
-#include <__memory/pointer_traits.h>
+#include <memory>
 #include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -42,6 +42,10 @@ swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b)));
 template <class T> T&& forward(typename remove_reference<T>::type& t) noexcept;  // constexpr in C++14
 template <class T> T&& forward(typename remove_reference<T>::type&& t) noexcept; // constexpr in C++14
 
+template <typename T>
+[[nodiscard]] constexpr
+auto forward_like(auto&& x) noexcept -> see below;                               // since C++23
+
 template <class T> typename remove_reference<T>::type&& move(T&&) noexcept;      // constexpr in C++14
 
 template <class T>
@@ -229,6 +233,7 @@ template <class T>
 #include <__utility/declval.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
+#include <__utility/forward_like.h>
 #include <__utility/in_place.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
