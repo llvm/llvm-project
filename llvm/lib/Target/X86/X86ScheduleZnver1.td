@@ -319,13 +319,13 @@ defm : ZnWriteResFpuPair<WriteCvtI2SD,   [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtI2PD,   [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtI2PDY,  [ZnFPU3],  5>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PDZ>;
-defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 15>;
-defm : ZnWriteResFpuPair<WriteFDivX,     [ZnFPU3], 15>;
-//defm : ZnWriteResFpuPair<WriteFDivY,     [ZnFPU3], 15>;
+defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 10, [3]>;
+defm : ZnWriteResFpuPair<WriteFDivX,     [ZnFPU3], 10, [3]>;
+defm : ZnWriteResFpuPair<WriteFDivY,     [ZnFPU3], 10, [6], 2>;
 defm : X86WriteResPairUnsupported<WriteFDivZ>;
-defm : ZnWriteResFpuPair<WriteFDiv64,    [ZnFPU3], 15>;
-defm : ZnWriteResFpuPair<WriteFDiv64X,   [ZnFPU3], 15>;
-//defm : ZnWriteResFpuPair<WriteFDiv64Y,   [ZnFPU3], 15>;
+defm : ZnWriteResFpuPair<WriteFDiv64,    [ZnFPU3], 13, [5]>;
+defm : ZnWriteResFpuPair<WriteFDiv64X,   [ZnFPU3], 13, [5]>;
+defm : ZnWriteResFpuPair<WriteFDiv64Y,   [ZnFPU3], 15, [9], 2>;
 defm : X86WriteResPairUnsupported<WriteFDiv64Z>;
 defm : ZnWriteResFpuPair<WriteFSign,     [ZnFPU3],  2>;
 defm : ZnWriteResFpuPair<WriteFRnd,      [ZnFPU3],  4, [1], 1, 7, 1>; // FIXME: Should folds require 1 extra uops?
@@ -1429,40 +1429,6 @@ def ZnWriteSHA256RNDS2Ld : SchedWriteRes<[ZnAGU, ZnFPU1]> {
 def : InstRW<[ZnWriteSHA256RNDS2Ld], (instrs SHA256RNDS2rm)>;
 
 //-- Arithmetic instructions --//
-
-// VDIVPS.
-// TODO - convert to ZnWriteResFpuPair
-// y,y,y.
-def ZnWriteVDIVPSYr : SchedWriteRes<[ZnFPU3]> {
-  let Latency = 12;
-  let ResourceCycles = [12];
-}
-def : SchedAlias<WriteFDivY,   ZnWriteVDIVPSYr>;
-
-// y,y,m256.
-def ZnWriteVDIVPSYLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
-  let Latency = 19;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1, 19];
-}
-def : SchedAlias<WriteFDivYLd,  ZnWriteVDIVPSYLd>;
-
-// VDIVPD.
-// TODO - convert to ZnWriteResFpuPair
-// y,y,y.
-def ZnWriteVDIVPDY : SchedWriteRes<[ZnFPU3]> {
-  let Latency = 15;
-  let ResourceCycles = [15];
-}
-def : SchedAlias<WriteFDiv64Y, ZnWriteVDIVPDY>;
-
-// y,y,m256.
-def ZnWriteVDIVPDYLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
-  let Latency = 22;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,22];
-}
-def : SchedAlias<WriteFDiv64YLd, ZnWriteVDIVPDYLd>;
 
 // DPPS.
 // x,x,i / v,v,v,i.
