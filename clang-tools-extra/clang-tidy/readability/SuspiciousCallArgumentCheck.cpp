@@ -90,7 +90,7 @@ struct AllHeuristicsBoundsWellConfigured {
                                   1>::Value;
 };
 
-static_assert(AllHeuristicsBoundsWellConfigured::Value, "");
+static_assert(AllHeuristicsBoundsWellConfigured::Value);
 } // namespace
 
 static constexpr llvm::StringLiteral DefaultAbbreviations = "addr=address;"

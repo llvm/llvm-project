@@ -2342,7 +2342,7 @@ struct CS_CodeDirectory {
   uint64_t execSegFlags; /* executable segment flags */
 };
 
-static_assert(sizeof(CS_CodeDirectory) == 88, "");
+static_assert(sizeof(CS_CodeDirectory) == 88);
 
 struct CS_BlobIndex {
   uint32_t type;   /* type of entry */
