@@ -13,7 +13,6 @@
 
 #include <forward_list>
 #include <cassert>
-#include <exception>
 
 #include "test_macros.h"
 
