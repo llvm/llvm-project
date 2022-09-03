@@ -470,16 +470,9 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__iterator/erase_if_container.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
-#include <__memory/allocator.h>
 #include <__node_handle>
-#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
 #include <version>
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <functional>
-#  include <iterator>
-#endif
 
 // standard-mandated includes
 
@@ -1802,5 +1795,10 @@ operator!=(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <functional>
+#  include <iterator>
+#endif
 
 #endif // _LIBCPP_UNORDERED_SET

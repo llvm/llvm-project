@@ -272,7 +272,7 @@ Retry:
             << Tok.getIdentifierInfo()->getName() << 0;
         goto ParseIdentifier;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       return ParseExprStatement(StmtCtx);
     }

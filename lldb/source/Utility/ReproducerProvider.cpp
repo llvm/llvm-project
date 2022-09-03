@@ -161,8 +161,8 @@ SymbolFileLoader::GetPaths(const UUID *uuid) const {
   if (!uuid)
     return {};
 
-  auto it = std::lower_bound(m_symbol_files.begin(), m_symbol_files.end(),
-                             SymbolFileProvider::Entry(uuid->GetAsString()));
+  auto it = llvm::lower_bound(m_symbol_files,
+                              SymbolFileProvider::Entry(uuid->GetAsString()));
   if (it == m_symbol_files.end())
     return {};
   return std::make_pair<FileSpec, FileSpec>(FileSpec(it->module_path),

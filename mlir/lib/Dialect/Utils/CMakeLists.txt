@@ -6,5 +6,4 @@ add_mlir_library(MLIRDialectUtils
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRViewLikeInterface
 )

@@ -711,16 +711,23 @@ private:
       if (Tok && Tok->is(tok::colon))
         return 0;
     }
-    if (Line.First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while, tok::kw_do,
-                            tok::kw_try, tok::kw___try, tok::kw_catch,
-                            tok::kw___finally, tok::kw_for, TT_ForEachMacro,
-                            tok::r_brace, Keywords.kw___except)) {
-      if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
+
+    auto IsCtrlStmt = [](const auto &Line) {
+      return Line.First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
+                                 tok::kw_do, tok::kw_for, TT_ForEachMacro);
+    };
+
+    const bool IsSplitBlock =
+        Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never ||
+        (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Empty &&
+         I[1]->First->isNot(tok::r_brace));
+
+    if (IsCtrlStmt(Line) ||
+        Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch,
+                            tok::kw___finally, tok::r_brace,
+                            Keywords.kw___except)) {
+      if (IsSplitBlock)
         return 0;
-      if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Empty &&
-          !I[1]->First->is(tok::r_brace)) {
-        return 0;
-      }
       // Don't merge when we can't except the case when
       // the control statement block is empty
       if (!Style.AllowShortIfStatementsOnASingleLine &&
@@ -763,6 +770,11 @@ private:
     }
 
     if (Line.Last->is(tok::l_brace)) {
+      if (IsSplitBlock && Line.First == Line.Last &&
+          I > AnnotatedLines.begin() &&
+          (I[-1]->endsWith(tok::kw_else) || IsCtrlStmt(*I[-1]))) {
+        return 0;
+      }
       FormatToken *Tok = I[1]->First;
       auto ShouldMerge = [Tok]() {
         if (Tok->isNot(tok::r_brace) || Tok->MustBreakBefore)

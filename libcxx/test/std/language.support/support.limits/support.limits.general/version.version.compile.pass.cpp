@@ -59,6 +59,7 @@
     __cpp_lib_constexpr_functional                 201907L [C++20]
     __cpp_lib_constexpr_iterator                   201811L [C++20]
     __cpp_lib_constexpr_memory                     201811L [C++20]
+                                                   202202L [C++2b]
     __cpp_lib_constexpr_numeric                    201911L [C++20]
     __cpp_lib_constexpr_string                     201907L [C++20]
     __cpp_lib_constexpr_string_view                201811L [C++20]
@@ -76,6 +77,7 @@
                                                    201902L [C++20]
     __cpp_lib_filesystem                           201703L [C++17]
     __cpp_lib_format                               202106L [C++20]
+    __cpp_lib_forward_like                         202207L [C++2b]
     __cpp_lib_gcd_lcm                              201606L [C++17]
     __cpp_lib_generic_associative_lookup           201304L [C++14]
     __cpp_lib_generic_unordered_lookup             201811L [C++20]
@@ -415,6 +417,10 @@
 
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_forward_like
+#   error "__cpp_lib_forward_like should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_gcd_lcm
@@ -1050,6 +1056,10 @@
 
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_forward_like
+#   error "__cpp_lib_forward_like should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_gcd_lcm
@@ -1799,6 +1809,10 @@
 
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_forward_like
+#   error "__cpp_lib_forward_like should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_gcd_lcm
@@ -2845,6 +2859,10 @@
 #   ifdef __cpp_lib_format
 #     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_forward_like
+#   error "__cpp_lib_forward_like should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_gcd_lcm
@@ -3933,8 +3951,8 @@
 # ifndef __cpp_lib_constexpr_memory
 #   error "__cpp_lib_constexpr_memory should be defined in c++2b"
 # endif
-# if __cpp_lib_constexpr_memory != 201811L
-#   error "__cpp_lib_constexpr_memory should have the value 201811L in c++2b"
+# if __cpp_lib_constexpr_memory != 202202L
+#   error "__cpp_lib_constexpr_memory should have the value 202202L in c++2b"
 # endif
 
 # ifndef __cpp_lib_constexpr_numeric
@@ -4083,6 +4101,13 @@
 #   ifdef __cpp_lib_format
 #     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_forward_like
+#   error "__cpp_lib_forward_like should be defined in c++2b"
+# endif
+# if __cpp_lib_forward_like != 202207L
+#   error "__cpp_lib_forward_like should have the value 202207L in c++2b"
 # endif
 
 # ifndef __cpp_lib_gcd_lcm

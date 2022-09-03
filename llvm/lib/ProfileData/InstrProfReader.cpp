@@ -1042,8 +1042,7 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
   bool CSBitMatch = false;
   auto getFuncSum = [](const std::vector<uint64_t> &Counts) {
     uint64_t ValueSum = 0;
-    for (unsigned I = 0, S = Counts.size(); I < S; I++) {
-      uint64_t CountValue = Counts[I];
+    for (uint64_t CountValue : Counts) {
       if (CountValue == (uint64_t)-1)
         continue;
       // Handle overflow -- if that happens, return max.

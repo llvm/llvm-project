@@ -281,7 +281,7 @@ public:
   /// add(Arg2)
   /// ```
   template <typename T, typename... Ts>
-  typename std::enable_if<(sizeof...(Ts) >= 1), HashBuilderImpl &>::type
+  std::enable_if_t<(sizeof...(Ts) >= 1), HashBuilderImpl &>
   add(const T &FirstArg, const Ts &...Args) {
     add(FirstArg);
     add(Args...);

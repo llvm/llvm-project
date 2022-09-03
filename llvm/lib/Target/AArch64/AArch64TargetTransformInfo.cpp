@@ -383,6 +383,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::ctpop: {
+    if (!ST->hasNEON()) {
+      // 32-bit or 64-bit ctpop without NEON is 12 instructions.
+      return getTypeLegalizationCost(RetTy).first * 12;
+    }
     static const CostTblEntry CtpopCostTbl[] = {
         {ISD::CTPOP, MVT::v2i64, 4},
         {ISD::CTPOP, MVT::v4i32, 3},

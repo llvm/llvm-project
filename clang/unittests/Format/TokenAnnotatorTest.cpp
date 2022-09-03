@@ -120,6 +120,17 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   Tokens = annotate("int i = int{42} * 2;");
   EXPECT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("delete[] *ptr;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_UnaryOperator);
+  Tokens = annotate("delete[] **ptr;");
+  EXPECT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_UnaryOperator);
+  Tokens = annotate("delete[] *(ptr);");
+  EXPECT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_UnaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {

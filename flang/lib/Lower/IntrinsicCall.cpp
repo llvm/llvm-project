@@ -1015,8 +1015,7 @@ static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
   auto compare = [](const IntrinsicHandler &handler, llvm::StringRef name) {
     return name.compare(handler.name) > 0;
   };
-  auto result =
-      std::lower_bound(std::begin(handlers), std::end(handlers), name, compare);
+  auto result = llvm::lower_bound(handlers, name, compare);
   return result != std::end(handlers) && result->name == name ? result
                                                               : nullptr;
 }

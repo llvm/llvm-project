@@ -360,11 +360,6 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <new>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <algorithm>
-#  include <functional>
-#endif
-
 // standard-mandated includes
 #include <initializer_list>
 
@@ -4931,5 +4926,10 @@ end(const valarray<_Tp>& __v)
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <algorithm>
+#  include <functional>
+#endif
 
 #endif // _LIBCPP_VALARRAY

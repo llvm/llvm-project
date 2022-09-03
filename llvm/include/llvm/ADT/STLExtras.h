@@ -67,13 +67,11 @@ using ValueOfRange = typename std::remove_reference<decltype(
 //===----------------------------------------------------------------------===//
 
 template <typename T> struct make_const_ptr {
-  using type =
-      typename std::add_pointer<typename std::add_const<T>::type>::type;
+  using type = typename std::add_pointer<std::add_const_t<T>>::type;
 };
 
 template <typename T> struct make_const_ref {
-  using type = typename std::add_lvalue_reference<
-      typename std::add_const<T>::type>::type;
+  using type = typename std::add_lvalue_reference<std::add_const_t<T>>::type;
 };
 
 namespace detail {
@@ -786,9 +784,8 @@ auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
 }
 
 template <typename Iter> struct ZipLongestItemType {
-  using type =
-      llvm::Optional<typename std::remove_const<typename std::remove_reference<
-          decltype(*std::declval<Iter>())>::type>::type>;
+  using type = llvm::Optional<std::remove_const_t<
+      typename std::remove_reference<decltype(*std::declval<Iter>())>::type>>;
 };
 
 template <typename... Iters> struct ZipLongestTupleType {
@@ -1879,9 +1876,9 @@ void replace(Container &Cont, typename Container::iterator ContIt,
 /// \endcode
 template <typename ForwardIterator, typename UnaryFunctor,
           typename NullaryFunctor,
-          typename = typename std::enable_if<
+          typename = std::enable_if_t<
               !std::is_constructible<StringRef, UnaryFunctor>::value &&
-              !std::is_constructible<StringRef, NullaryFunctor>::value>::type>
+              !std::is_constructible<StringRef, NullaryFunctor>::value>>
 inline void interleave(ForwardIterator begin, ForwardIterator end,
                        UnaryFunctor each_fn, NullaryFunctor between_fn) {
   if (begin == end)
@@ -1895,9 +1892,9 @@ inline void interleave(ForwardIterator begin, ForwardIterator end,
 }
 
 template <typename Container, typename UnaryFunctor, typename NullaryFunctor,
-          typename = typename std::enable_if<
+          typename = std::enable_if_t<
               !std::is_constructible<StringRef, UnaryFunctor>::value &&
-              !std::is_constructible<StringRef, NullaryFunctor>::value>::type>
+              !std::is_constructible<StringRef, NullaryFunctor>::value>>
 inline void interleave(const Container &c, UnaryFunctor each_fn,
                        NullaryFunctor between_fn) {
   interleave(c.begin(), c.end(), each_fn, between_fn);

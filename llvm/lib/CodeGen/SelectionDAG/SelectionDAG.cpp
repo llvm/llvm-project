@@ -4603,6 +4603,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::AssertSext:
   case ISD::AssertZext:
   case ISD::FREEZE:
+  case ISD::INSERT_SUBVECTOR:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:

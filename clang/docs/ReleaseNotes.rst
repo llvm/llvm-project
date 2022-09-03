@@ -89,6 +89,8 @@ Bug Fixes
 - Fix a crash when attempting to default a virtual constexpr non-special member
   function in a derived class. This fixes
   `Issue 57431 <https://github.com/llvm/llvm-project/issues/57431>`_
+- Fix a crash where we attempt to define a deleted destructor. This fixes
+  `Issue 57516 <https://github.com/llvm/llvm-project/issues/57516>`_
 
 
 Improvements to Clang's diagnostics
