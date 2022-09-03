@@ -460,9 +460,9 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  2      6     1.00                        cvttsd2si	%xmm0, %rcx
 # CHECK-NEXT:  3      11    1.00    *                   cvttsd2si	(%rax), %ecx
 # CHECK-NEXT:  3      11    1.00    *                   cvttsd2si	(%rax), %rcx
-# CHECK-NEXT:  1      14    3.00                        divpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      14    4.00                        divpd	%xmm0, %xmm2
 # CHECK-NEXT:  2      20    4.00    *                   divpd	(%rax), %xmm2
-# CHECK-NEXT:  1      14    3.00                        divsd	%xmm0, %xmm2
+# CHECK-NEXT:  1      14    4.00                        divsd	%xmm0, %xmm2
 # CHECK-NEXT:  2      19    4.00    *                   divsd	(%rax), %xmm2
 # CHECK-NEXT:  2      2     0.50    *      *      U     lfence
 # CHECK-NEXT:  2      1     1.00    *      *      U     maskmovdqu	%xmm0, %xmm1
@@ -689,7 +689,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     38.00  110.92 78.92  63.50  63.50  14.00  96.92  2.25   5.00
+# CHECK-NEXT:  -     40.00  110.92 78.92  63.50  63.50  14.00  96.92  2.25   5.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -746,9 +746,9 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.50   0.50    -      -      -      -      -      -     cvttsd2si	%xmm0, %rcx
 # CHECK-NEXT:  -      -     1.50   0.50   0.50   0.50    -      -      -      -     cvttsd2si	(%rax), %ecx
 # CHECK-NEXT:  -      -     1.50   0.50   0.50   0.50    -      -      -      -     cvttsd2si	(%rax), %rcx
-# CHECK-NEXT:  -     3.00   1.00    -      -      -      -      -      -      -     divpd	%xmm0, %xmm2
+# CHECK-NEXT:  -     4.00   1.00    -      -      -      -      -      -      -     divpd	%xmm0, %xmm2
 # CHECK-NEXT:  -     4.00   1.00    -     0.50   0.50    -      -      -      -     divpd	(%rax), %xmm2
-# CHECK-NEXT:  -     3.00   1.00    -      -      -      -      -      -      -     divsd	%xmm0, %xmm2
+# CHECK-NEXT:  -     4.00   1.00    -      -      -      -      -      -      -     divsd	%xmm0, %xmm2
 # CHECK-NEXT:  -     4.00   1.00    -     0.50   0.50    -      -      -      -     divsd	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.50   0.50    -     lfence
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33   maskmovdqu	%xmm0, %xmm1

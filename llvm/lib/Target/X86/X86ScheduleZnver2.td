@@ -318,11 +318,13 @@ defm : Zn2WriteResFpuPair<WriteCvtI2SD,   [Zn2FPU3],  5>;
 defm : Zn2WriteResFpuPair<WriteCvtI2PD,   [Zn2FPU3],  5>;
 defm : Zn2WriteResFpuPair<WriteCvtI2PDY,  [Zn2FPU3],  5>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PDZ>;
-defm : Zn2WriteResFpuPair<WriteFDiv,      [Zn2FPU3], 15>;
-defm : Zn2WriteResFpuPair<WriteFDivX,     [Zn2FPU3], 15>;
+defm : Zn2WriteResFpuPair<WriteFDiv,      [Zn2FPU3], 10, [5]>;
+defm : Zn2WriteResFpuPair<WriteFDivX,     [Zn2FPU3], 10, [5]>;
+defm : Zn2WriteResFpuPair<WriteFDivY,     [Zn2FPU3], 10, [5]>;
 defm : X86WriteResPairUnsupported<WriteFDivZ>;
-defm : Zn2WriteResFpuPair<WriteFDiv64,    [Zn2FPU3], 15>;
-defm : Zn2WriteResFpuPair<WriteFDiv64X,   [Zn2FPU3], 15>;
+defm : Zn2WriteResFpuPair<WriteFDiv64,    [Zn2FPU3], 13, [6]>;
+defm : Zn2WriteResFpuPair<WriteFDiv64X,   [Zn2FPU3], 13, [6]>;
+defm : Zn2WriteResFpuPair<WriteFDiv64Y,   [Zn2FPU3], 13, [6]>;
 defm : X86WriteResPairUnsupported<WriteFDiv64Z>;
 defm : Zn2WriteResFpuPair<WriteFSign,     [Zn2FPU3],  2>;
 defm : Zn2WriteResFpuPair<WriteFRnd,      [Zn2FPU3],  3, [1], 1, 7, 0>;
@@ -1443,40 +1445,6 @@ def Zn2WriteSHA256RNDS2Ld : SchedWriteRes<[Zn2AGU, Zn2FPU1]> {
 def : InstRW<[Zn2WriteSHA256RNDS2Ld], (instregex "SHA256RNDS2rm")>;
 
 //-- Arithmetic instructions --//
-
-// VDIVPS.
-// TODO - convert to Zn2WriteResFpuPair
-// y,y,y.
-def Zn2WriteVDIVPSYr : SchedWriteRes<[Zn2FPU3]> {
-  let Latency = 10;
-  let ResourceCycles = [10];
-}
-def : SchedAlias<WriteFDivY,   Zn2WriteVDIVPSYr>;
-
-// y,y,m256.
-def Zn2WriteVDIVPSYLd : SchedWriteRes<[Zn2AGU, Zn2FPU3]> {
-  let Latency = 17;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1, 17];
-}
-def : SchedAlias<WriteFDivYLd,  Zn2WriteVDIVPSYLd>;
-
-// VDIVPD.
-// TODO - convert to Zn2WriteResFpuPair
-// y,y,y.
-def Zn2WriteVDIVPDY : SchedWriteRes<[Zn2FPU3]> {
-  let Latency = 13;
-  let ResourceCycles = [13];
-}
-def : SchedAlias<WriteFDiv64Y, Zn2WriteVDIVPDY>;
-
-// y,y,m256.
-def Zn2WriteVDIVPDYLd : SchedWriteRes<[Zn2AGU, Zn2FPU3]> {
-  let Latency = 20;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,20];
-}
-def : SchedAlias<WriteFDiv64YLd, Zn2WriteVDIVPDYLd>;
 
 // DPPS.
 // x,x,i / v,v,v,i.
