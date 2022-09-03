@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <numeric>
 
 using namespace llvm;
 
@@ -43,22 +44,6 @@ bool TargetSchedModel::hasInstrItineraries() const {
   return EnableSchedItins && !InstrItins.isEmpty();
 }
 
-static unsigned gcd(unsigned Dividend, unsigned Divisor) {
-  // Dividend and Divisor will be naturally swapped as needed.
-  while (Divisor) {
-    unsigned Rem = Dividend % Divisor;
-    Dividend = Divisor;
-    Divisor = Rem;
-  };
-  return Dividend;
-}
-
-static unsigned lcm(unsigned A, unsigned B) {
-  unsigned LCM = (uint64_t(A) * B) / gcd(A, B);
-  assert((LCM >= A && LCM >= B) && "LCM overflow");
-  return LCM;
-}
-
 void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
   STI = TSInfo;
   SchedModel = TSInfo->getSchedModel();
@@ -71,7 +56,7 @@ void TargetSchedModel::init(const TargetSubtargetInfo *TSInfo) {
   for (unsigned Idx = 0; Idx < NumRes; ++Idx) {
     unsigned NumUnits = SchedModel.getProcResource(Idx)->NumUnits;
     if (NumUnits > 0)
-      ResourceLCM = lcm(ResourceLCM, NumUnits);
+      ResourceLCM = std::lcm(ResourceLCM, NumUnits);
   }
   MicroOpFactor = ResourceLCM / SchedModel.IssueWidth;
   for (unsigned Idx = 0; Idx < NumRes; ++Idx) {
