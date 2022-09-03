@@ -3501,45 +3501,70 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
                            SourceLocation TemplateLoc,
                            TemplateArgumentListInfo &TemplateArgs) {
   ASTContext &Context = SemaRef.getASTContext();
+
+  TemplateParameterList *TPL = BTD->getTemplateParameters();
+
+  // Wrap the type in substitution sugar.
+  auto getSubstType = [&](unsigned IndexReplaced, QualType Replacement) {
+    QualType TTP = SemaRef.Context.getTemplateTypeParmType(
+        0, IndexReplaced, false,
+        cast<TemplateTypeParmDecl>(TPL->getParam(IndexReplaced)));
+    return SemaRef.Context.getSubstTemplateTypeParmType(
+        cast<TemplateTypeParmType>(TTP), Replacement.getCanonicalType());
+  };
+
   switch (BTD->getBuiltinTemplateKind()) {
   case BTK__make_integer_seq: {
     // Specializations of __make_integer_seq<S, T, N> are treated like
     // S<T, 0, ..., N-1>.
 
+    QualType OrigType = Converted[1].getAsType();
     // C++14 [inteseq.intseq]p1:
     //   T shall be an integer type.
-    if (!Converted[1].getAsType()->isIntegralType(Context)) {
+    if (!OrigType->isDependentType() && !OrigType->isIntegralType(Context)) {
       SemaRef.Diag(TemplateArgs[1].getLocation(),
                    diag::err_integer_sequence_integral_element_type);
       return QualType();
     }
 
-    // C++14 [inteseq.make]p1:
-    //   If N is negative the program is ill-formed.
     TemplateArgument NumArgsArg = Converted[2];
-    llvm::APSInt NumArgs = NumArgsArg.getAsIntegral();
-    if (NumArgs < 0) {
+    if (NumArgsArg.isDependent())
+      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
+                                                            Converted);
+
+    TemplateArgumentListInfo SyntheticTemplateArgs;
+    // The type argument, wrapped in substitution sugar, gets reused as the
+    // first template argument in the synthetic template argument list.
+    QualType SyntheticType = getSubstType(1, OrigType);
+    SyntheticTemplateArgs.addArgument(
+        TemplateArgumentLoc(TemplateArgument(SyntheticType),
+                            SemaRef.Context.getTrivialTypeSourceInfo(
+                                SyntheticType, TemplateArgs[1].getLocation())));
+
+    if (llvm::APSInt NumArgs = NumArgsArg.getAsIntegral(); NumArgs >= 0) {
+      // Expand N into 0 ... N-1.
+      for (llvm::APSInt I(NumArgs.getBitWidth(), NumArgs.isUnsigned());
+           I < NumArgs; ++I) {
+        TemplateArgument TA(Context, I, SyntheticType);
+        SyntheticTemplateArgs.addArgument(SemaRef.getTrivialTemplateArgumentLoc(
+            TA, SyntheticType, TemplateArgs[2].getLocation()));
+      }
+    } else {
+      // C++14 [inteseq.make]p1:
+      //   If N is negative the program is ill-formed.
       SemaRef.Diag(TemplateArgs[2].getLocation(),
                    diag::err_integer_sequence_negative_length);
       return QualType();
     }
 
-    QualType ArgTy = NumArgsArg.getIntegralType();
-    TemplateArgumentListInfo SyntheticTemplateArgs;
-    // The type argument gets reused as the first template argument in the
-    // synthetic template argument list.
-    SyntheticTemplateArgs.addArgument(TemplateArgs[1]);
-    // Expand N into 0 ... N-1.
-    for (llvm::APSInt I(NumArgs.getBitWidth(), NumArgs.isUnsigned());
-         I < NumArgs; ++I) {
-      TemplateArgument TA(Context, I, ArgTy);
-      SyntheticTemplateArgs.addArgument(SemaRef.getTrivialTemplateArgumentLoc(
-          TA, ArgTy, TemplateArgs[2].getLocation()));
-    }
+    // Wrap the template in substitution sugar.
+    TemplateName TN = SemaRef.Context.getSubstTemplateTemplateParm(
+        cast<TemplateTemplateParmDecl>(TPL->getParam(0)),
+        Converted[0].getAsTemplate());
+
     // The first template argument will be reused as the template decl that
     // our synthetic template arguments will be applied to.
-    return SemaRef.CheckTemplateIdType(Converted[0].getAsTemplate(),
-                                       TemplateLoc, SyntheticTemplateArgs);
+    return SemaRef.CheckTemplateIdType(TN, TemplateLoc, SyntheticTemplateArgs);
   }
 
   case BTK__type_pack_element:
@@ -3549,11 +3574,15 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     assert(Converted.size() == 2 &&
       "__type_pack_element should be given an index and a parameter pack");
 
-    // If the Index is out of bounds, the program is ill-formed.
     TemplateArgument IndexArg = Converted[0], Ts = Converted[1];
+    if (IndexArg.isDependent() || Ts.isDependent())
+      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
+                                                            Converted);
+
     llvm::APSInt Index = IndexArg.getAsIntegral();
     assert(Index >= 0 && "the index used with __type_pack_element should be of "
                          "type std::size_t, and hence be non-negative");
+    // If the Index is out of bounds, the program is ill-formed.
     if (Index >= Ts.pack_size()) {
       SemaRef.Diag(TemplateArgs[0].getLocation(),
                    diag::err_type_pack_element_out_of_bounds);
@@ -3562,7 +3591,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
 
     // We simply return the type at index `Index`.
     auto Nth = std::next(Ts.pack_begin(), Index.getExtValue());
-    return Nth->getAsType();
+    return getSubstType(1, Nth->getAsType());
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }
@@ -3730,7 +3759,8 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     // We might have a substituted template template parameter pack. If so,
     // build a template specialization type for it.
     if (Name.getAsSubstTemplateTemplateParmPack())
-      return Context.getTemplateSpecializationType(Name, TemplateArgs);
+      return Context.getTemplateSpecializationType(Name,
+                                                   TemplateArgs.arguments());
 
     Diag(TemplateLoc, diag::err_template_id_not_a_type)
       << Name;
@@ -3808,6 +3838,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
 
       return QualType();
     }
+  } else if (auto *BTD = dyn_cast<BuiltinTemplateDecl>(Template)) {
+    CanonType = checkBuiltinTemplateIdType(*this, BTD, Converted, TemplateLoc,
+                                           TemplateArgs);
   } else if (Name.isDependent() ||
              TemplateSpecializationType::anyDependentTemplateArguments(
                  TemplateArgs, Converted)) {
@@ -3857,8 +3890,8 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
         break;
       }
     }
-  } else if (ClassTemplateDecl *ClassTemplate
-               = dyn_cast<ClassTemplateDecl>(Template)) {
+  } else if (ClassTemplateDecl *ClassTemplate =
+                 dyn_cast<ClassTemplateDecl>(Template)) {
     // Find the class template specialization declaration that
     // corresponds to these arguments.
     void *InsertPos = nullptr;
@@ -3895,15 +3928,15 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     CanonType = Context.getTypeDeclType(Decl);
     assert(isa<RecordType>(CanonType) &&
            "type of non-dependent specialization is not a RecordType");
-  } else if (auto *BTD = dyn_cast<BuiltinTemplateDecl>(Template)) {
-    CanonType = checkBuiltinTemplateIdType(*this, BTD, Converted, TemplateLoc,
-                                           TemplateArgs);
+  } else {
+    llvm_unreachable("Unhandled template kind");
   }
 
   // Build the fully-sugared type for this class template
   // specialization, which refers back to the class template
   // specialization we created or found.
-  return Context.getTemplateSpecializationType(Name, TemplateArgs, CanonType);
+  return Context.getTemplateSpecializationType(Name, TemplateArgs.arguments(),
+                                               CanonType);
 }
 
 void Sema::ActOnUndeclaredTypeTemplateName(Scope *S, TemplateTy &ParsedName,
