@@ -572,6 +572,11 @@ bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
 }
 
+bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
+    const Instruction *I) const {
+  return TTIImpl->isExpensiveToSpeculativelyExecute(I);
+}
+
 bool TargetTransformInfo::isFCmpOrdCheaperThanFCmpZero(Type *Ty) const {
   return TTIImpl->isFCmpOrdCheaperThanFCmpZero(Ty);
 }

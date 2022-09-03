@@ -527,10 +527,10 @@ define i32 @fdiv(i32 %arg) {
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %V4F32 = fdiv <4 x float> undef, undef
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V8F32 = fdiv <8 x float> undef, undef
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %V16F32 = fdiv <16 x float> undef, undef
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = fdiv double undef, undef
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = fdiv <2 x double> undef, undef
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = fdiv <4 x double> undef, undef
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F64 = fdiv <8 x double> undef, undef
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %F64 = fdiv double undef, undef
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %V2F64 = fdiv <2 x double> undef, undef
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %V4F64 = fdiv <4 x double> undef, undef
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 304 for instruction: %V8F64 = fdiv <8 x double> undef, undef
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE2-LABEL: 'fdiv'

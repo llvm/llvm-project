@@ -1189,6 +1189,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::FADD, MVT::f64, {  2,  3, 1, 1 } }, // (x87)
     { ISD::FSUB, MVT::f64, {  2,  3, 1, 1 } }, // (x87)
     { ISD::FMUL, MVT::f64, {  2,  5, 1, 1 } }, // (x87)
+    { ISD::FDIV, MVT::f64, { 38 } }, // (x87)
   };
 
   if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, LT.second))
