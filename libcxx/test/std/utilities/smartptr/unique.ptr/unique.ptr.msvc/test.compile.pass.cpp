@@ -6,29 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <memory>
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// unique_ptr
+// Includes Microsoft's test that tests the entire header.
 
-// test op*()
-
-#include <memory>
-#include <cassert>
-
-#include "test_macros.h"
-
-TEST_CONSTEXPR_CXX23 bool test() {
-  std::unique_ptr<int> p(new int(3));
-  assert(*p == 3);
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 23
-  static_assert(test());
-#endif
-
-  return 0;
-}
+#include "test.cpp"
