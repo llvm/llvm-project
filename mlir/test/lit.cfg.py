@@ -46,12 +46,6 @@ llvm_config.use_default_substitutions()
 config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt',
                    'lit.cfg.py', 'lit.site.cfg.py']
 
-# test_source_root: The root path where tests are located.
-config.test_source_root = os.path.dirname(__file__)
-
-# test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.mlir_obj_root, 'test')
-
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment('PATH', config.mlir_tools_dir, append_path=True)
 llvm_config.with_environment('PATH', config.llvm_tools_dir, append_path=True)
@@ -82,11 +76,13 @@ tools.extend([
     ToolSubst('toy-ch3', unresolved='ignore'),
     ToolSubst('toy-ch4', unresolved='ignore'),
     ToolSubst('toy-ch5', unresolved='ignore'),
-    ToolSubst('%linalg_test_lib_dir', config.linalg_test_lib_dir, unresolved='ignore'),
-    ToolSubst('%mlir_runner_utils_dir', config.mlir_runner_utils_dir, unresolved='ignore'),
-    ToolSubst('%spirv_wrapper_library_dir', config.spirv_wrapper_library_dir, unresolved='ignore'),
-    ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore'),
-    ToolSubst('%mlir_integration_test_dir', config.mlir_integration_test_dir, unresolved='ignore'),
+    ToolSubst('%mlir_lib_dir', config.mlir_lib_dir, unresolved='ignore'),
+    # The substitutions below will be replaced by '%mlir_lib_dir' shortly.
+    ToolSubst('%linalg_test_lib_dir', config.mlir_lib_dir, unresolved='ignore'),
+    ToolSubst('%mlir_runner_utils_dir', config.mlir_lib_dir, unresolved='ignore'),
+    ToolSubst('%spirv_wrapper_library_dir', config.mlir_lib_dir, unresolved='ignore'),
+    ToolSubst('%vulkan_wrapper_library_dir', config.mlir_lib_dir, unresolved='ignore'),
+    ToolSubst('%mlir_integration_test_dir', config.mlir_lib_dir, unresolved='ignore'),
 ])
 
 python_executable = config.python_executable

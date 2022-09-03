@@ -10,15 +10,8 @@ endif()
 set(MLIR_CMAKE_DIR
   "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/mlir")
 
-# Passed to lit.site.cfg.py.in to set up the path where to find the libraries
-# for linalg integration tests.
-set(MLIR_DIALECT_LINALG_INTEGRATION_TEST_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-set(MLIR_RUNNER_UTILS_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-
-# Passed to lit.site.cfg.py.in to set up the path where to find the libraries
-# for the mlir spirv / vulkan runner tests.
-set(MLIR_SPIRV_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-set(MLIR_VULKAN_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+# Passed to lit.site.cfg.py.in to set up the path where to find libraries.
+set(MLIR_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 if (MLIR_INCLUDE_INTEGRATION_TESTS)
   set(INTEL_SDE_EXECUTABLE "" CACHE STRING
@@ -35,8 +28,6 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
-  # Passed to lit.site.cfg.py.in to set up the path where to find the libraries.
-  set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 
   # The native target may not be enabled when cross compiling, raise an error.
@@ -45,13 +36,14 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   endif()
 
   # Copy test data over.
+  # TODO: drop copy and load files relative to MLIR_SOURCE_DIR / %mlir_src_root.
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric_complex.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
-          DESTINATION ${MLIR_INTEGRATION_TEST_DIR}/data/)
+          DESTINATION ${MLIR_LIB_DIR}/data/)
 endif()
 
 llvm_canonicalize_cmake_booleans(
