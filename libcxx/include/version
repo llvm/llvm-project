@@ -62,7 +62,8 @@ __cpp_lib_constexpr_complex                             201711L <complex>
 __cpp_lib_constexpr_dynamic_alloc                       201907L <memory>
 __cpp_lib_constexpr_functional                          201907L <functional>
 __cpp_lib_constexpr_iterator                            201811L <iterator>
-__cpp_lib_constexpr_memory                              201811L <memory>
+__cpp_lib_constexpr_memory                              202202L <memory>
+                                                        201811L // C++20
 __cpp_lib_constexpr_numeric                             201911L <numeric>
 __cpp_lib_constexpr_string                              201907L <string>
 __cpp_lib_constexpr_string_view                         201811L <string_view>
@@ -384,6 +385,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_byteswap                             202110L
 # define __cpp_lib_constexpr_bitset                     202207L
 // # define __cpp_lib_constexpr_cmath                      202202L
+# undef  __cpp_lib_constexpr_memory
+# define __cpp_lib_constexpr_memory                     202202L
 // # define __cpp_lib_constexpr_typeinfo                   202106L
 # define __cpp_lib_forward_like                         202207L
 // # define __cpp_lib_invoke_r                             202106L

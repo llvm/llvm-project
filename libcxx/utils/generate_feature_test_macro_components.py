@@ -242,7 +242,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["iterator"],
   }, {
     "name": "__cpp_lib_constexpr_memory",
-    "values": { "c++20": 201811 },
+    "values": { "c++20": 201811, "c++2b": 202202 },
     "headers": ["memory"],
   }, {
     "name": "__cpp_lib_constexpr_numeric",
