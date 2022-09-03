@@ -581,7 +581,7 @@ public:
   using UInt128 = std::pair<uint64_t, uint64_t>;
   // I don't think the standard guarantees the size of a pair, so let's make
   // sure it's exact -- that way we can construct it via `mmap`.
-  static_assert(sizeof(UInt128) == 16, "");
+  static_assert(sizeof(UInt128) == 16);
 
   WordLiteralSection();
   void addInput(WordLiteralInputSection *);

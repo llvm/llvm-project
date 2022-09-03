@@ -82,7 +82,7 @@ public:
     }
   };
 
-  static_assert(sizeof(uint64_t) == sizeof(LocalVarDef), "");
+  static_assert(sizeof(uint64_t) == sizeof(LocalVarDef));
 
 private:
   MCStreamer &OS;
