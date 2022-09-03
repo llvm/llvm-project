@@ -960,9 +960,8 @@ define i8 @or_not_xor_common_op_use2(i8 %x, i8 %y, i8 %z) {
 define i4 @or_nand_xor_common_op_commute0(i4 %x, i4 %y, i4 %z) {
 ; CHECK-LABEL: @or_nand_xor_common_op_commute0(
 ; CHECK-NEXT:    [[AND:%.*]] = and i4 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[NAND:%.*]] = xor i4 [[AND]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i4 [[XOR]], [[NAND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[AND]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[TMP1]], -1
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %and = and i4 %x, %z
@@ -975,9 +974,8 @@ define i4 @or_nand_xor_common_op_commute0(i4 %x, i4 %y, i4 %z) {
 define <2 x i4> @or_nand_xor_common_op_commute1(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
 ; CHECK-LABEL: @or_nand_xor_common_op_commute1(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i4> [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i4> [[AND]], <i4 poison, i4 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[XOR]], [[NAND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[AND]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[TMP1]], <i4 -1, i4 -1>
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %and = and <2 x i4> %z, %x
@@ -991,9 +989,8 @@ define i8 @or_nand_xor_common_op_commute2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_nand_xor_common_op_commute2(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
-; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[AND]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[XOR]], [[NAND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[AND]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %x, %z
@@ -1009,8 +1006,8 @@ define i8 @or_nand_xor_common_op_commute3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Z:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[AND]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NAND]])
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[XOR]], [[NAND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[AND]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %z, %x
@@ -1024,10 +1021,10 @@ define i8 @or_nand_xor_common_op_commute3(i8 %x, i8 %y, i8 %z) {
 define i8 @or_nand_xor_common_op_commute3_use2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_nand_xor_common_op_commute3_use2(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Z:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[AND]], -1
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i8 [[XOR]])
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[XOR]], [[NAND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[AND]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %z, %x
@@ -1037,6 +1034,8 @@ define i8 @or_nand_xor_common_op_commute3_use2(i8 %x, i8 %y, i8 %z) {
   %r = or i8 %xor, %nand
   ret i8 %r
 }
+
+; negative test - too many extra uses
 
 define i8 @or_nand_xor_common_op_commute3_use3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_nand_xor_common_op_commute3_use3(
