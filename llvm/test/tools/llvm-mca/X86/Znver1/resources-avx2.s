@@ -657,8 +657,8 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      11    1.00    *                   vpmulhuw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      4     1.00                        vpmulhw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      11    1.00    *                   vpmulhw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      5     2.00                        vpmulld	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      12    2.00    *                   vpmulld	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  2      4     4.00                        vpmulld	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  2      11    4.00    *                   vpmulld	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      4     1.00                        vpmullw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      11    1.00    *                   vpmullw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      4     1.00                        vpmuludq	%ymm0, %ymm1, %ymm2
@@ -778,7 +778,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 67.00  67.00   -      -      -      -      -     96.67  183.17 164.50 64.67   -
+# CHECK-NEXT: 67.00  67.00   -      -      -      -      -     100.67 183.17 164.50 64.67   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -979,8 +979,8 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     vpmulhuw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpmulhw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     vpmulhw	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmulld	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     2.00    -      -      -      -     vpmulld	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     4.00    -      -      -      -     vpmulld	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     4.00    -      -      -      -     vpmulld	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpmullw	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     vpmullw	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpmuludq	%ymm0, %ymm1, %ymm2

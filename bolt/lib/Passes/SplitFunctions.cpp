@@ -129,11 +129,11 @@ struct SplitProfile2 {
   }
 
   template <typename It> void partition(const It Start, const It End) const {
-    std::for_each(Start, End, [](BinaryBasicBlock *const BB) {
+    for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
       assert(BB->canOutline() &&
              "Moving a block that is not outlineable to cold fragment");
       BB->setFragmentNum(FragmentNum::cold());
-    });
+    }
   }
 };
 
@@ -155,9 +155,8 @@ struct SplitRandom2 {
     std::uniform_int_distribution<DiffT> Dist(MinimumSplit,
                                               NumOutlineableBlocks);
     const DiffT NumColdBlocks = Dist(*Gen);
-    std::for_each(End - NumColdBlocks, End, [](BinaryBasicBlock *BB) {
+    for (BinaryBasicBlock *BB : llvm::make_range(End - NumColdBlocks, End))
       BB->setFragmentNum(FragmentNum::cold());
-    });
 
     LLVM_DEBUG(dbgs() << formatv("BOLT-DEBUG: randomly chose last {0} (out of "
                                  "{1} possible) blocks to split\n",
@@ -216,11 +215,11 @@ struct SplitAll {
 
   template <typename It> void partition(It Start, It End) const {
     unsigned Fragment = 1;
-    std::for_each(Start, End, [&](BinaryBasicBlock *const BB) {
+    for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
       assert(BB->canOutline() &&
              "Moving a block that is not outlineable to cold fragment");
       BB->setFragmentNum(FragmentNum(Fragment++));
-    });
+    }
   }
 };
 } // namespace

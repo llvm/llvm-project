@@ -16,8 +16,6 @@
 #include <cstring>
 #include <cstdint>
 #include <cassert>
-#include <new>
-
 #include "test_macros.h"
 #include "type_id.h"
 

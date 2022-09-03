@@ -86,7 +86,6 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__functional/hash.h>
-#include <__memory/unique_ptr.h>
 #include <__mutex_base>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
@@ -94,18 +93,11 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <__utility/forward.h>
 #include <cstddef>
 #include <iosfwd>
+#include <memory>
 #include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <version>
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <chrono> // IGNORE-CYCLE due to <format>
-#endif
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <functional>
-#endif
 
 // standard-mandated includes
 #include <compare>
@@ -415,5 +407,13 @@ void yield() _NOEXCEPT {__libcpp_thread_yield();}
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  include <chrono> // IGNORE-CYCLE due to <format>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <functional>
+#endif
 
 #endif // _LIBCPP_THREAD

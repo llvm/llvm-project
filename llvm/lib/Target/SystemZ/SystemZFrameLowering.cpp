@@ -1141,13 +1141,13 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Restore FPRs in the normal TargetInstrInfo way.
-  for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-    Register Reg = CSI[I].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
-      TII->loadRegFromStackSlot(MBB, MBBI, Reg, CSI[I].getFrameIdx(),
+      TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
                                 &SystemZ::FP64BitRegClass, TRI);
     if (SystemZ::VR128BitRegClass.contains(Reg))
-      TII->loadRegFromStackSlot(MBB, MBBI, Reg, CSI[I].getFrameIdx(),
+      TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
                                 &SystemZ::VR128BitRegClass, TRI);
   }
 
@@ -1175,8 +1175,8 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
       MIB.addImm(Regs.getStackPointerBias() + RestoreGPRs.GPROffset);
 
       // Do a second scan adding regs as being defined by instruction
-      for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-        Register Reg = CSI[I].getReg();
+      for (const CalleeSavedInfo &I : CSI) {
+        Register Reg = I.getReg();
         if (Reg > RestoreGPRs.LowGPR && Reg < RestoreGPRs.HighGPR)
           MIB.addReg(Reg, RegState::ImplicitDefine);
       }

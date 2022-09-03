@@ -445,6 +445,26 @@ func.func @invalid_concat_size_mismatch(%arg0: tensor<2x4xf64, #DC>,
 
 // -----
 
+func.func @sparse_storage_new(%arg0: memref<?xf64>, %arg1: memref<?xf64>, %arg2: f64) ->
+                               tuple<memref<?xf64>, memref<?xf64>> {
+  // expected-error@+1{{The number of inputs is inconsistent with output}}
+  %0 = sparse_tensor.storage(%arg0, %arg1, %arg2)
+       : memref<?xf64>, memref<?xf64>, f64 to tuple<memref<?xf64>, memref<?xf64>>
+  return %0 : tuple<memref<?xf64>, memref<?xf64>>
+}
+
+// -----
+
+func.func @sparse_storage_new(%arg0: memref<?xf64>, %arg1: memref<?xf64>, %arg2: f64) ->
+                               tuple<memref<?xi64>, memref<?xf64>, f64> {
+  // expected-error@+1{{Type mismatch between}}
+  %0 = sparse_tensor.storage(%arg0, %arg1, %arg2)
+       : memref<?xf64>, memref<?xf64>, f64 to tuple<memref<?xi64>, memref<?xf64>, f64>
+  return %0 : tuple<memref<?xi64>, memref<?xf64>, f64>
+}
+
+// -----
+
 func.func @sparse_storage_get(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>) -> memref<?xf64> {
   // expected-error@+1{{Out-of-bound access}}
   %0 = sparse_tensor.storage_get %arg0[3]

@@ -620,9 +620,8 @@ bool GlobalMerge::doInitialization(Module &M) {
   LLVM_DEBUG({
       dbgs() << "Number of GV that must be kept:  " <<
                 MustKeepGlobalVariables.size() << "\n";
-      for (auto KeptGV = MustKeepGlobalVariables.begin();
-           KeptGV != MustKeepGlobalVariables.end(); KeptGV++)
-        dbgs() << "Kept: " << **KeptGV << "\n";
+      for (const GlobalVariable *KeptGV : MustKeepGlobalVariables)
+        dbgs() << "Kept: " << *KeptGV << "\n";
   });
   // Grab all non-const globals.
   for (auto &GV : M.globals()) {

@@ -2,13 +2,19 @@ include(CompilerRTCompile)
 
 include_directories(..)
 
+# Unit tests target.
 add_custom_target(OrcRTUnitTests)
 set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "OrcRT unittests")
 
+# Testing tools target.
+add_custom_target(OrcRTTools)
+set_target_properties(OrcRTTools PROPERTIES FOLDER "OrcRT tools")
+
 set(ORC_UNITTEST_CFLAGS
+# FIXME: This should be set for all unit tests.
+  -std=c++17
   ${ORC_CFLAGS}
   ${COMPILER_RT_UNITTEST_CFLAGS}
-  ${COMPILER_RT_GTEST_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/lib/orc
   )
 
@@ -47,10 +53,10 @@ else()
   append_list_if(COMPILER_RT_HAS_LIBEXECINFO -lexecinfo ORC_UNITTEST_LINK_FLAGS)
 endif()
 
-set(ORC_DEPS llvm_gtest orc)
+set(ORC_DEPS orc)
 # ORC uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
-  set(ORC_DEPS cxx-headers)
+  list(APPEND ORC_DEPS cxx-headers)
 endif()
 
 macro(add_orc_unittest testname)
@@ -64,6 +70,24 @@ macro(add_orc_unittest testname)
         SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         RUNTIME "${ORC_RUNTIME_LIBS}"
         COMPILE_DEPS ${TEST_HEADERS} ${ORC_HEADERS}
+        DEPS llvm_gtest ${ORC_DEPS}
+        CFLAGS ${ORC_UNITTEST_CFLAGS} ${COMPILER_RT_GTEST_CFLAGS}
+        LINK_FLAGS ${ORC_UNITTEST_LINK_FLAGS})
+    endforeach()
+  endif()
+endmacro()
+
+macro(add_orc_tool toolname)
+  cmake_parse_arguments(TOOL "" "" "SOURCES;HEADERS" ${ARGN})
+  if(UNIX)
+    foreach(arch ${ORC_TEST_ARCH})
+      set(TOOL_OBJECTS)
+      get_orc_lib_for_arch(${arch} ORC_RUNTIME_LIBS)
+      generate_compiler_rt_tests(TOOL_OBJECTS
+        OrcRTTools "${toolname}-${arch}" "${arch}"
+        SOURCES ${TOOL_SOURCES}
+        RUNTIME "${ORC_RUNTIME_LIBS}"
+        COMPILE_DEPS ${TOOL_HEADERS} ${ORC_HEADERS}
         DEPS ${ORC_DEPS}
         CFLAGS ${ORC_UNITTEST_CFLAGS}
         LINK_FLAGS ${ORC_UNITTEST_LINK_FLAGS})
@@ -71,30 +95,17 @@ macro(add_orc_unittest testname)
   endif()
 endmacro()
 
-set(UNITTEST_SOURCES
-  adt_test.cpp
-  c_api_test.cpp
-  endian_test.cpp
-  error_test.cpp
-  executor_address_test.cpp
-  extensible_rtti_test.cpp
-  orc_unit_test_main.cpp
-  wrapper_function_utils_test.cpp
-  simple_packed_serialization_test.cpp
-  )
-
-if (COMPILER_RT_CAN_EXECUTE_TESTS)
-
-  if (APPLE)
-    add_orc_lib("RTOrc.test.osx"
-      $<TARGET_OBJECTS:RTOrc.osx>)
-  else()
-    foreach(arch ${ORC_SUPPORTED_ARCH})
-      add_orc_lib("RTOrc.test.${arch}"
-        $<TARGET_OBJECTS:RTOrc.${arch}>)
-    endforeach()
-  endif()
-
-  add_orc_unittest(OrcUnitTest SOURCES ${UNITTEST_SOURCES})
-
+if (APPLE)
+  add_orc_lib("RTOrc.test.osx"
+    $<TARGET_OBJECTS:RTOrc.osx>)
+else()
+  foreach(arch ${ORC_SUPPORTED_ARCH})
+    add_orc_lib("RTOrc.test.${arch}"
+      $<TARGET_OBJECTS:RTOrc.${arch}>)
+  endforeach()
 endif()
+
+if(COMPILER_RT_INCLUDE_TESTS)
+  add_subdirectory(unit)
+endif()
+add_subdirectory(tools)

@@ -134,11 +134,11 @@ void DWARFUnitVector::addUnitsImpl(
 }
 
 DWARFUnit *DWARFUnitVector::addUnit(std::unique_ptr<DWARFUnit> Unit) {
-  auto I = std::upper_bound(begin(), end(), Unit,
-                            [](const std::unique_ptr<DWARFUnit> &LHS,
-                               const std::unique_ptr<DWARFUnit> &RHS) {
-                              return LHS->getOffset() < RHS->getOffset();
-                            });
+  auto I = llvm::upper_bound(*this, Unit,
+                             [](const std::unique_ptr<DWARFUnit> &LHS,
+                                const std::unique_ptr<DWARFUnit> &RHS) {
+                               return LHS->getOffset() < RHS->getOffset();
+                             });
   return this->insert(I, std::move(Unit))->get();
 }
 

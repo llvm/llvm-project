@@ -435,7 +435,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   } else {
     // Verify segments are loaded consecutively.
     const auto &Offsets = Binary->getTextSegmentOffsets();
-    auto It = std::lower_bound(Offsets.begin(), Offsets.end(), Event.Offset);
+    auto It = llvm::lower_bound(Offsets, Event.Offset);
     if (It != Offsets.end() && *It == Event.Offset) {
       // The event is for loading a separate executable segment.
       auto I = std::distance(Offsets.begin(), It);

@@ -148,11 +148,6 @@ template<class R>
 #include <type_traits>  // for remove_cv, etc
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <functional>
-#  include <iterator>
-#endif
-
 // standard-mandated includes
 
 // [iterator.range]
@@ -593,5 +588,10 @@ template<ranges::contiguous_range _Range>
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <functional>
+#  include <iterator>
+#endif
 
 #endif // _LIBCPP_SPAN

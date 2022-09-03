@@ -21,7 +21,6 @@
 #include <cassert>
 #include <vector>
 #include <deque>
-#include <utility>
 
 #include "test_macros.h"
 

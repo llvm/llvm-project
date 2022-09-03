@@ -100,7 +100,7 @@ static constexpr GV AMDGPUGridValues32 = {
 };
 
 template <unsigned wavesize> constexpr const GV &getAMDGPUGridValues() {
-  static_assert(wavesize == 32 || wavesize == 64, "");
+  static_assert(wavesize == 32 || wavesize == 64);
   return wavesize == 32 ? AMDGPUGridValues32 : AMDGPUGridValues64;
 }
 

@@ -1482,8 +1482,8 @@ void JITDylib::dump(raw_ostream &OS) {
 void JITDylib::MaterializingInfo::addQuery(
     std::shared_ptr<AsynchronousSymbolQuery> Q) {
 
-  auto I = std::lower_bound(
-      PendingQueries.rbegin(), PendingQueries.rend(), Q->getRequiredState(),
+  auto I = llvm::lower_bound(
+      llvm::reverse(PendingQueries), Q->getRequiredState(),
       [](const std::shared_ptr<AsynchronousSymbolQuery> &V, SymbolState S) {
         return V->getRequiredState() <= S;
       });

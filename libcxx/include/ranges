@@ -303,11 +303,13 @@ namespace std {
 #include <__ranges/views.h>
 #include <__ranges/zip_view.h>
 #include <__tuple> // TODO: <ranges> has to export std::tuple_size. Replace this, once <tuple> is granularized.
-#include <compare>          // Required by the standard.
-#include <initializer_list> // Required by the standard.
-#include <iterator>         // Required by the standard.
 #include <type_traits>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
+#include <initializer_list>
+#include <iterator>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
