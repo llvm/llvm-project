@@ -26,9 +26,3 @@ void *dont_ignore_volatile_ptrs(void * volatile x) {
 void *ignore_volatiles(volatile void * x) {
   return __builtin_assume_aligned(x, 1);
 }
-
-// CHECK-LABEL: ignore_array_volatiles
-void *ignore_array_volatiles() {
-  volatile int arr[] = {1};
-  return __builtin_assume_aligned(arr, 4);
-}
