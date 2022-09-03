@@ -259,9 +259,9 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50           *            movups	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   movups	(%rax), %xmm2
 # CHECK-NEXT:  1      3     0.50                        mulps	%xmm0, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   mulps	(%rax), %xmm2
+# CHECK-NEXT:  1      10    0.50    *                   mulps	(%rax), %xmm2
 # CHECK-NEXT:  1      3     0.50                        mulss	%xmm0, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   mulss	(%rax), %xmm2
+# CHECK-NEXT:  1      10    0.50    *                   mulss	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        orps	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   orps	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        pavgb	%mm0, %mm2
