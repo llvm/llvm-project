@@ -42,3 +42,21 @@ bb32:
 bb45:
   unreachable
 }
+
+define void @multiple_unreachable_uses(ptr %A, ptr %B) {
+entry:
+  br label %loop
+
+loop:
+  %gep.A = getelementptr inbounds float, ptr %A, i64 10
+  %gep.B = getelementptr inbounds ptr, ptr %B, i64 20
+  br i1 false, label %exit, label %loop
+
+dead:                 ; No predecessors!
+  %l1 = load float, ptr %gep.A, align 4
+  %l2 = load ptr, ptr %gep.B, align 8
+  br label %exit
+
+exit:
+  ret void
+}
