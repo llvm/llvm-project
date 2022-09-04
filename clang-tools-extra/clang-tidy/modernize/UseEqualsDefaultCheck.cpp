@@ -8,6 +8,7 @@
 
 #include "UseEqualsDefaultCheck.h"
 #include "../utils/LexerUtils.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -247,7 +248,12 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
                     // isCopyAssignmentOperator() allows the parameter to be
                     // passed by value, and in this case it cannot be
                     // defaulted.
-                    hasParameter(0, hasType(lValueReferenceType())))
+                    hasParameter(0, hasType(lValueReferenceType())),
+                    // isCopyAssignmentOperator() allows non lvalue reference
+                    // return types, and in this case it cannot be defaulted.
+                    returns(qualType(hasCanonicalType(
+                        allOf(lValueReferenceType(pointee(type())),
+                              unless(matchers::isReferenceToConst()))))))
           .bind(SpecialFunction),
       this);
 }

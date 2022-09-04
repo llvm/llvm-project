@@ -220,6 +220,8 @@ typedef std::function<ErrorOr<DWARFFile &>(StringRef ContainerName,
 typedef std::map<std::string, std::string> swiftInterfacesMap;
 typedef std::map<std::string, std::string> objectPrefixMap;
 
+typedef function_ref<void(const DWARFUnit &Unit)> CompileUnitHandler;
+
 /// The core of the Dwarf linking logic.
 ///
 /// The generation of the dwarf information from the object files will be
@@ -240,8 +242,15 @@ public:
               DwarfLinkerClient ClientID = DwarfLinkerClient::General)
       : TheDwarfEmitter(Emitter), DwarfLinkerClientID(ClientID) {}
 
-  /// Add object file to be linked.
-  void addObjectFile(DWARFFile &File);
+  /// Add object file to be linked. Pre-load compile unit die. Call
+  /// \p OnCUDieLoaded for each compile unit die. If specified \p File
+  /// has reference to the Clang module then such module would be
+  /// pre-loaded by \p Loader for !Update case.
+  ///
+  /// \pre NoODR, Update options should be set before call to addObjectFile.
+  void addObjectFile(
+      DWARFFile &File, objFileLoader Loader = nullptr,
+      CompileUnitHandler OnCUDieLoaded = [](const DWARFUnit &) {});
 
   /// Link debug info for added objFiles. Object
   /// files are linked all together.
@@ -302,12 +311,6 @@ public:
   /// Set error handler which would be used to report errors.
   void setErrorHandler(messageHandler Handler) {
     Options.ErrorHandler = Handler;
-  }
-
-  /// Set object files loader which would be used to load
-  /// additional objects for splitted dwarf.
-  void setObjFileLoader(objFileLoader Loader) {
-    Options.ObjFileLoader = Loader;
   }
 
   /// Set map for Swift interfaces.
@@ -410,10 +413,25 @@ private:
 
   void copyInvariantDebugSection(DWARFContext &Dwarf);
 
+  /// Keep information for referenced clang module: already loaded DWARF info
+  /// of the clang module and a CompileUnit of the module.
+  struct RefModuleUnit {
+    RefModuleUnit(DWARFFile &File, std::unique_ptr<CompileUnit> Unit)
+        : File(File), Unit(std::move(Unit)) {}
+    RefModuleUnit(RefModuleUnit &&Other)
+        : File(Other.File), Unit(std::move(Other.Unit)) {}
+    RefModuleUnit(const RefModuleUnit &) = delete;
+
+    DWARFFile &File;
+    std::unique_ptr<CompileUnit> Unit;
+  };
+  using ModuleUnitListTy = std::vector<RefModuleUnit>;
+
   /// Keeps track of data associated with one object during linking.
   struct LinkContext {
     DWARFFile &File;
     UnitListTy CompileUnits;
+    ModuleUnitListTy ModuleUnits;
     bool Skip = false;
 
     LinkContext(DWARFFile &File) : File(File) {}
@@ -464,30 +482,38 @@ private:
                          const DWARFFile &File, CompileUnit &CU,
                          unsigned Flags);
 
+  /// Check whether specified \p CUDie is a Clang module reference.
+  /// if \p Quiet is false then display error messages.
+  /// \return first == true if CUDie is a Clang module reference.
+  ///         second == true if module is already loaded.
+  std::pair<bool, bool> isClangModuleRef(const DWARFDie &CUDie,
+                                         std::string &PCMFile,
+                                         LinkContext &Context, unsigned Indent,
+                                         bool Quiet);
+
   /// If this compile unit is really a skeleton CU that points to a
   /// clang module, register it in ClangModules and return true.
   ///
   /// A skeleton CU is a CU without children, a DW_AT_gnu_dwo_name
   /// pointing to the module, and a DW_AT_gnu_dwo_id with the module
   /// hash.
-  bool registerModuleReference(DWARFDie CUDie, const DWARFUnit &Unit,
-                               const DWARFFile &File,
-                               OffsetsStringPool &OffsetsStringPool,
-                               DeclContextTree &ODRContexts,
-                               uint64_t ModulesEndOffset, unsigned &UnitID,
-                               bool IsLittleEndian, unsigned Indent = 0,
-                               bool Quiet = false);
+  bool registerModuleReference(const DWARFDie &CUDie, LinkContext &Context,
+                               objFileLoader Loader,
+                               CompileUnitHandler OnCUDieLoaded,
+                               unsigned Indent = 0);
 
   /// Recursively add the debug info in this clang module .pcm
   /// file (and all the modules imported by it in a bottom-up fashion)
-  /// to Units.
-  Error loadClangModule(DWARFDie CUDie, StringRef FilePath,
-                        StringRef ModuleName, uint64_t DwoId,
-                        const DWARFFile &File,
+  /// to ModuleUnits.
+  Error loadClangModule(objFileLoader Loader, const DWARFDie &CUDie,
+                        const std::string &PCMFile, LinkContext &Context,
+                        CompileUnitHandler OnCUDieLoaded, unsigned Indent = 0);
+
+  /// Clone specified Clang module unit \p Unit.
+  Error cloneModuleUnit(LinkContext &Context, RefModuleUnit &Unit,
+                        DeclContextTree &ODRContexts,
                         OffsetsStringPool &OffsetsStringPool,
-                        DeclContextTree &ODRContexts, uint64_t ModulesEndOffset,
-                        unsigned &UnitID, bool IsLittleEndian,
-                        unsigned Indent = 0, bool Quiet = false);
+                        unsigned Indent = 0);
 
   /// Mark the passed DIE as well as all the ones it depends on as kept.
   void keepDIEAndDependencies(AddressesMap &RelocMgr, RangesTy &Ranges,
@@ -762,6 +788,9 @@ private:
 
   std::function<StringRef(StringRef)> StringsTranslator = nullptr;
 
+  /// A unique ID that identifies each compile unit.
+  unsigned UniqueUnitID = 0;
+
   /// linking options
   struct DWARFLinkerOptions {
     /// Generate processing log to the standard output.
@@ -801,8 +830,6 @@ private:
 
     // error handler
     messageHandler ErrorHandler = nullptr;
-
-    objFileLoader ObjFileLoader = nullptr;
 
     /// A list of all .swiftinterface files referenced by the debug
     /// info, mapping Module name to path on disk. The entries need to

@@ -71,10 +71,6 @@ namespace std {
 #include <type_traits>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iosfwd>
-#endif
-
 #if defined(_LIBCPP_COMPILER_MSVC)
 #  include <intrin.h>
 #endif
@@ -255,5 +251,9 @@ enum class endian {
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iosfwd>
+#endif
 
 #endif // _LIBCPP_BIT

@@ -166,7 +166,7 @@
 # define TEST_CONSTEXPR_CXX20
 #endif
 
-#if TEST_STD_VER > 20
+#if TEST_STD_VER >= 23
 #  define TEST_CONSTEXPR_CXX23 constexpr
 #else
 #  define TEST_CONSTEXPR_CXX23

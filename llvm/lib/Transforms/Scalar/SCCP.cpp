@@ -154,6 +154,41 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   return true;
 }
 
+/// Try to replace signed instructions with their unsigned equivalent.
+static bool replaceSignedInst(SCCPSolver &Solver,
+                              SmallPtrSetImpl<Value *> &InsertedValues,
+                              Instruction &Inst) {
+  // Determine if a signed value is known to be >= 0.
+  auto isNonNegative = [&Solver](Value *V) {
+    const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
+    return IV.isConstantRange(/*UndefAllowed=*/false) &&
+           IV.getConstantRange().isAllNonNegative();
+  };
+
+  Instruction *NewInst = nullptr;
+  switch (Inst.getOpcode()) {
+  case Instruction::SExt: {
+    // If the source value is not negative, this is a zext.
+    Value *Op0 = Inst.getOperand(0);
+    if (isa<Constant>(Op0) || InsertedValues.count(Op0) || !isNonNegative(Op0))
+      return false;
+    NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    break;
+  }
+  default:
+    return false;
+  }
+
+  // Wire up the new instruction and update state.
+  assert(NewInst && "Expected replacement instruction");
+  NewInst->takeName(&Inst);
+  InsertedValues.insert(NewInst);
+  Inst.replaceAllUsesWith(NewInst);
+  Solver.removeLatticeValueFor(&Inst);
+  Inst.eraseFromParent();
+  return true;
+}
+
 static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
                                  SmallPtrSetImpl<Value *> &InsertedValues,
                                  Statistic &InstRemovedStat,
@@ -168,23 +203,9 @@ static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
 
       MadeChanges = true;
       ++InstRemovedStat;
-    } else if (isa<SExtInst>(&Inst)) {
-      Value *ExtOp = Inst.getOperand(0);
-      if (isa<Constant>(ExtOp) || InsertedValues.count(ExtOp))
-        continue;
-      const ValueLatticeElement &IV = Solver.getLatticeValueFor(ExtOp);
-      if (!IV.isConstantRange(/*UndefAllowed=*/false))
-        continue;
-      if (IV.getConstantRange().isAllNonNegative()) {
-        auto *ZExt = new ZExtInst(ExtOp, Inst.getType(), "", &Inst);
-        ZExt->takeName(&Inst);
-        InsertedValues.insert(ZExt);
-        Inst.replaceAllUsesWith(ZExt);
-        Solver.removeLatticeValueFor(&Inst);
-        Inst.eraseFromParent();
-        InstReplacedStat++;
-        MadeChanges = true;
-      }
+    } else if (replaceSignedInst(Solver, InsertedValues, Inst)) {
+      MadeChanges = true;
+      ++InstReplacedStat;
     }
   }
   return MadeChanges;

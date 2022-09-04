@@ -15,11 +15,7 @@
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
-#include <__memory/destruct_n.h>
-#include <__memory/temporary_buffer.h>
-#include <__memory/unique_ptr.h>
-#include <__utility/pair.h>
-#include <new>
+#include <memory>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

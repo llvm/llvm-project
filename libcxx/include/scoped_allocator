@@ -111,32 +111,9 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <__memory/allocator_traits.h>
-#include <__type_traits/common_type.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
-#include <__utility/piecewise_construct.h>
-#include <tuple>
+#include <memory>
 #include <version>
-
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <atomic>
-#  include <chrono>
-#  include <climits>
-#  include <concepts>
-#  include <cstring>
-#  include <ctime>
-#  include <iterator>
-#  include <memory>
-#  include <ratio>
-#  include <stdexcept>
-#  include <variant>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

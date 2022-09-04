@@ -283,11 +283,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     // Build an ExtractSliceOp with dynamic entries and inferred result type.
     OpBuilder<(ins "RankedTensorType":$resultType, "Value":$source,
       "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    // Build an ExtractSliceOp with mixed static and dynamic entries packed in
-    // a Range vector.
-    OpBuilder<(ins "Value":$source, "ArrayRef<Range>":$ranges,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,    
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -605,11 +601,6 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     // Build a InsertSliceOp with dynamic entries.
     OpBuilder<(ins "Value":$source, "Value":$dest,
       "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    // Build an InsertSliceOp with mixed static and dynamic entries packed in
-    // a Range vector.
-    OpBuilder<(ins "Value":$source, "Value":$dest,
-      "ArrayRef<Range>":$ranges,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
@@ -1208,11 +1199,7 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
       "ArrayRef<OpFoldResult>":$offsets, "ArrayRef<OpFoldResult>":$sizes,
       "ArrayRef<OpFoldResult>":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    // Build a ParallelInsertSliceOp with mixed static and dynamic entries
-    // packed into a Range vector.
-    OpBuilder<(ins "Value":$source, "Value":$dest,
-      "ArrayRef<Range>":$ranges,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+
     // Build a ParallelInsertSliceOp with dynamic entries.
     OpBuilder<(ins "Value":$source, "Value":$dest,
       "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,

@@ -1430,8 +1430,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // Try to lookup the instruction number, and find the machine value number
   // that it defines. It could be an instruction, or a PHI.
   auto InstrIt = DebugInstrNumToInstr.find(InstNo);
-  auto PHIIt = std::lower_bound(DebugPHINumToValue.begin(),
-                                DebugPHINumToValue.end(), InstNo);
+  auto PHIIt = llvm::lower_bound(DebugPHINumToValue, InstNo);
   if (InstrIt != DebugInstrNumToInstr.end()) {
     const MachineInstr &TargetInstr = *InstrIt->second.first;
     uint64_t BlockNo = TargetInstr.getParent()->getNumber();

@@ -1483,3 +1483,12 @@ class D : B {
   virtual int constexpr f() = default; // expected-error {{only special member functions and comparison operators may be defaulted}}
 };
 }
+
+namespace GH57516 {
+class B{
+  virtual constexpr ~B() = 0; // expected-note {{overridden virtual function is here}}
+};
+
+class D : B{}; // expected-error {{deleted function '~D' cannot override a non-deleted function}}
+// expected-note@-1 {{destructor of 'D' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+}
