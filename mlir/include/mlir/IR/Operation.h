@@ -569,8 +569,8 @@ public:
   ///       });
   template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<
-      llvm::function_traits<std::decay_t<FnT>>::num_args == 1, RetT>::type
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 1,
+                   RetT>
   walk(FnT &&callback) {
     return detail::walk<Order>(this, std::forward<FnT>(callback));
   }
@@ -597,8 +597,8 @@ public:
   ///         return WalkResult::advance();
   ///       });
   template <typename FnT, typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<
-      llvm::function_traits<std::decay_t<FnT>>::num_args == 2, RetT>::type
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 2,
+                   RetT>
   walk(FnT &&callback) {
     return detail::walk(this, std::forward<FnT>(callback));
   }

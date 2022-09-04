@@ -94,7 +94,7 @@ public:
     bool operator==(const iterator& I) const { return L == I.L; }
     bool operator!=(const iterator& I) const { return L != I.L; }
     const value_type& operator*() const { return L->getHead(); }
-    const typename std::remove_reference<value_type>::type* operator->() const {
+    const std::remove_reference_t<value_type> *operator->() const {
       return &L->getHead();
     }
 

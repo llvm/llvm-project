@@ -57,8 +57,8 @@ template <typename RangeT>
 using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
 
 template <typename RangeT>
-using ValueOfRange = typename std::remove_reference<decltype(
-    *std::begin(std::declval<RangeT &>()))>::type;
+using ValueOfRange =
+    std::remove_reference_t<decltype(*std::begin(std::declval<RangeT &>()))>;
 
 } // end namespace detail
 
@@ -67,11 +67,11 @@ using ValueOfRange = typename std::remove_reference<decltype(
 //===----------------------------------------------------------------------===//
 
 template <typename T> struct make_const_ptr {
-  using type = typename std::add_pointer<std::add_const_t<T>>::type;
+  using type = std::add_pointer_t<std::add_const_t<T>>;
 };
 
 template <typename T> struct make_const_ref {
-  using type = typename std::add_lvalue_reference<std::add_const_t<T>>::type;
+  using type = std::add_lvalue_reference_t<std::add_const_t<T>>;
 };
 
 namespace detail {
@@ -112,7 +112,7 @@ struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
 
   /// The type of an argument to this function.
   template <size_t Index>
-  using arg_t = typename std::tuple_element<Index, std::tuple<Args...>>::type;
+  using arg_t = std::tuple_element_t<Index, std::tuple<Args...>>;
 };
 /// Overload for class function types.
 template <typename ClassType, typename ReturnType, typename... Args>
@@ -129,7 +129,7 @@ struct function_traits<ReturnType (*)(Args...), false> {
 
   /// The type of an argument to this function.
   template <size_t i>
-  using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
+  using arg_t = std::tuple_element_t<i, std::tuple<Args...>>;
 };
 template <typename ReturnType, typename... Args>
 struct function_traits<ReturnType (*const)(Args...), false>
@@ -359,8 +359,7 @@ public:
 
 /// Metafunction to determine if T& or T has a member called rbegin().
 template <typename Ty>
-struct has_rbegin : has_rbegin_impl<typename std::remove_reference<Ty>::type> {
-};
+struct has_rbegin : has_rbegin_impl<std::remove_reference_t<Ty>> {};
 
 // Returns an iterator_range over the given container which iterates in reverse.
 template <typename ContainerTy> auto reverse(ContainerTy &&C) {
@@ -619,13 +618,14 @@ template<typename... Iters> struct ZipTupleType {
 
 template <typename ZipType, typename... Iters>
 using zip_traits = iterator_facade_base<
-    ZipType, typename std::common_type<std::bidirectional_iterator_tag,
-                                       typename std::iterator_traits<
-                                           Iters>::iterator_category...>::type,
+    ZipType,
+    typename std::common_type<
+        std::bidirectional_iterator_tag,
+        typename std::iterator_traits<Iters>::iterator_category...>::type,
     // ^ TODO: Implement random access methods.
     typename ZipTupleType<Iters...>::type,
-    typename std::iterator_traits<typename std::tuple_element<
-        0, std::tuple<Iters...>>::type>::difference_type,
+    typename std::iterator_traits<
+        std::tuple_element_t<0, std::tuple<Iters...>>>::difference_type,
     // ^ FIXME: This follows boost::make_zip_iterator's assumption that all
     // inner iterators have the same difference_type. It would fail if, for
     // instance, the second field's difference_type were non-numeric while the
@@ -785,7 +785,7 @@ auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
 
 template <typename Iter> struct ZipLongestItemType {
   using type = llvm::Optional<std::remove_const_t<
-      typename std::remove_reference<decltype(*std::declval<Iter>())>::type>>;
+      std::remove_reference_t<decltype(*std::declval<Iter>())>>>;
 };
 
 template <typename... Iters> struct ZipLongestTupleType {
@@ -800,8 +800,8 @@ class zip_longest_iterator
               std::forward_iterator_tag,
               typename std::iterator_traits<Iters>::iterator_category...>::type,
           typename ZipLongestTupleType<Iters...>::type,
-          typename std::iterator_traits<typename std::tuple_element<
-              0, std::tuple<Iters...>>::type>::difference_type,
+          typename std::iterator_traits<
+              std::tuple_element_t<0, std::tuple<Iters...>>>::difference_type,
           typename ZipLongestTupleType<Iters...>::type *,
           typename ZipLongestTupleType<Iters...>::type> {
 public:

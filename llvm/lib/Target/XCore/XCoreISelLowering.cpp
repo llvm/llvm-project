@@ -1383,23 +1383,21 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
   // Aggregates passed "byVal" need to be copied by the callee.
   // The callee will use a pointer to this copy, rather than the original
   // pointer.
-  for (SmallVectorImpl<ArgDataPair>::const_iterator ArgDI = ArgData.begin(),
-                                                    ArgDE = ArgData.end();
-       ArgDI != ArgDE; ++ArgDI) {
-    if (ArgDI->Flags.isByVal() && ArgDI->Flags.getByValSize()) {
-      unsigned Size = ArgDI->Flags.getByValSize();
+  for (const ArgDataPair &ArgDI : ArgData) {
+    if (ArgDI.Flags.isByVal() && ArgDI.Flags.getByValSize()) {
+      unsigned Size = ArgDI.Flags.getByValSize();
       Align Alignment =
-          std::max(Align(StackSlotSize), ArgDI->Flags.getNonZeroByValAlign());
+          std::max(Align(StackSlotSize), ArgDI.Flags.getNonZeroByValAlign());
       // Create a new object on the stack and copy the pointee into it.
       int FI = MFI.CreateStackObject(Size, Alignment, false);
       SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(
-          Chain, dl, FIN, ArgDI->SDV, DAG.getConstant(Size, dl, MVT::i32),
+          Chain, dl, FIN, ArgDI.SDV, DAG.getConstant(Size, dl, MVT::i32),
           Alignment, false, false, false, MachinePointerInfo(),
           MachinePointerInfo()));
     } else {
-      InVals.push_back(ArgDI->SDV);
+      InVals.push_back(ArgDI.SDV);
     }
   }
 

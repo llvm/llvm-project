@@ -1271,8 +1271,8 @@ inline size_t capacity_in_bytes(const SmallVector<T, N> &X) {
 
 template <typename RangeType>
 using ValueTypeFromRangeType =
-    std::remove_const_t<typename std::remove_reference<decltype(*std::begin(
-        std::declval<RangeType &>()))>::type>;
+    std::remove_const_t<std::remove_reference_t<decltype(*std::begin(
+        std::declval<RangeType &>()))>>;
 
 /// Given a range of type R, iterate the entire range and return a
 /// SmallVector with elements of the vector.  This is useful, for example,

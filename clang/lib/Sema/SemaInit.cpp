@@ -5977,7 +5977,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
        !Context.hasSameUnqualifiedType(SourceType, DestType))) {
 
     llvm::SmallVector<Expr *> InitArgs;
-    for (auto Arg : Args) {
+    for (auto *Arg : Args) {
       if (Arg->getType()->isExtVectorType()) {
         const auto *VTy = Arg->getType()->castAs<ExtVectorType>();
         unsigned Elm = VTy->getNumElements();

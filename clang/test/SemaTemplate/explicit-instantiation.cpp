@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fexceptions -fcxx-exceptions %s
-// RUN: %clang_cc1 -fsyntax-only -verify -fexceptions -fcxx-exceptions -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fexceptions -fcxx-exceptions -Wno-dynamic-exception-spec %std_cxx11- %s
 
 template void *; // expected-error{{expected unqualified-id}}
 

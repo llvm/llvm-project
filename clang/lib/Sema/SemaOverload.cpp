@@ -14204,7 +14204,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
                                                     MultiExprArg ArgExpr) {
   SmallVector<Expr *, 2> Args;
   Args.push_back(Base);
-  for (auto e : ArgExpr) {
+  for (auto *e : ArgExpr) {
     Args.push_back(e);
   }
   DeclarationName OpName =

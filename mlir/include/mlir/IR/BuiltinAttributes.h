@@ -109,9 +109,9 @@ public:
   /// or floating-point values. Each value is expected to be the same bitwidth
   /// of the element type of 'type'. 'type' must be a vector or tensor with
   /// static shape.
-  template <typename T, typename = typename std::enable_if<
-                            std::numeric_limits<T>::is_integer ||
-                            is_valid_cpp_fp_type<T>::value>::type>
+  template <typename T,
+            typename = std::enable_if_t<std::numeric_limits<T>::is_integer ||
+                                        is_valid_cpp_fp_type<T>::value>>
   static DenseElementsAttr get(const ShapedType &type, ArrayRef<T> values) {
     const char *data = reinterpret_cast<const char *>(values.data());
     return getRawIntOrFloat(
@@ -120,10 +120,10 @@ public:
   }
 
   /// Constructs a dense integer elements attribute from a single element.
-  template <typename T, typename = typename std::enable_if<
-                            std::numeric_limits<T>::is_integer ||
-                            is_valid_cpp_fp_type<T>::value ||
-                            detail::is_complex_t<T>::value>::type>
+  template <typename T,
+            typename = std::enable_if_t<std::numeric_limits<T>::is_integer ||
+                                        is_valid_cpp_fp_type<T>::value ||
+                                        detail::is_complex_t<T>::value>>
   static DenseElementsAttr get(const ShapedType &type, T value) {
     return get(type, llvm::makeArrayRef(value));
   }
@@ -131,11 +131,11 @@ public:
   /// Constructs a dense complex elements attribute from an array of complex
   /// values. Each value is expected to be the same bitwidth of the element type
   /// of 'type'. 'type' must be a vector or tensor with static shape.
-  template <typename T, typename ElementT = typename T::value_type,
-            typename = typename std::enable_if<
-                detail::is_complex_t<T>::value &&
-                (std::numeric_limits<ElementT>::is_integer ||
-                 is_valid_cpp_fp_type<ElementT>::value)>::type>
+  template <
+      typename T, typename ElementT = typename T::value_type,
+      typename = std::enable_if_t<detail::is_complex_t<T>::value &&
+                                  (std::numeric_limits<ElementT>::is_integer ||
+                                   is_valid_cpp_fp_type<ElementT>::value)>>
   static DenseElementsAttr get(const ShapedType &type, ArrayRef<T> values) {
     const char *data = reinterpret_cast<const char *>(values.data());
     return getRawComplex(type, ArrayRef<char>(data, values.size() * sizeof(T)),
@@ -376,18 +376,18 @@ public:
   /// Return the splat value for this attribute. This asserts that the attribute
   /// corresponds to a splat.
   template <typename T>
-  typename std::enable_if<!std::is_base_of<Attribute, T>::value ||
-                              std::is_same<Attribute, T>::value,
-                          T>::type
+  std::enable_if_t<!std::is_base_of<Attribute, T>::value ||
+                       std::is_same<Attribute, T>::value,
+                   T>
   getSplatValue() const {
     assert(isSplat() && "expected the attribute to be a splat");
     return *value_begin<T>();
   }
   /// Return the splat value for derived attribute element types.
   template <typename T>
-  typename std::enable_if<std::is_base_of<Attribute, T>::value &&
-                              !std::is_same<Attribute, T>::value,
-                          T>::type
+  std::enable_if_t<std::is_base_of<Attribute, T>::value &&
+                       !std::is_same<Attribute, T>::value,
+                   T>
   getSplatValue() const {
     return getSplatValue<Attribute>().template cast<T>();
   }
@@ -434,9 +434,9 @@ public:
   /// values.
   template <typename T>
   using IntFloatValueTemplateCheckT =
-      typename std::enable_if<(!std::is_same<T, bool>::value &&
-                               std::numeric_limits<T>::is_integer) ||
-                              is_valid_cpp_fp_type<T>::value>::type;
+      std::enable_if_t<(!std::is_same<T, bool>::value &&
+                        std::numeric_limits<T>::is_integer) ||
+                       is_valid_cpp_fp_type<T>::value>;
   template <typename T, typename = IntFloatValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<ElementIterator<T>>> tryGetValues() const {
     if (!isValidIntOrFloat(sizeof(T), std::numeric_limits<T>::is_integer,
@@ -452,9 +452,9 @@ public:
   /// Try to get the held element values as a range of std::complex.
   template <typename T, typename ElementT>
   using ComplexValueTemplateCheckT =
-      typename std::enable_if<detail::is_complex_t<T>::value &&
-                              (std::numeric_limits<ElementT>::is_integer ||
-                               is_valid_cpp_fp_type<ElementT>::value)>::type;
+      std::enable_if_t<detail::is_complex_t<T>::value &&
+                       (std::numeric_limits<ElementT>::is_integer ||
+                        is_valid_cpp_fp_type<ElementT>::value)>;
   template <typename T, typename ElementT = typename T::value_type,
             typename = ComplexValueTemplateCheckT<T, ElementT>>
   FailureOr<iterator_range_impl<ElementIterator<T>>> tryGetValues() const {
@@ -471,7 +471,7 @@ public:
   /// Try to get the held element values as a range of StringRef.
   template <typename T>
   using StringRefValueTemplateCheckT =
-      typename std::enable_if<std::is_same<T, StringRef>::value>::type;
+      std::enable_if_t<std::is_same<T, StringRef>::value>;
   template <typename T, typename = StringRefValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<ElementIterator<StringRef>>>
   tryGetValues() const {
@@ -486,7 +486,7 @@ public:
   /// Try to get the held element values as a range of Attributes.
   template <typename T>
   using AttributeValueTemplateCheckT =
-      typename std::enable_if<std::is_same<T, Attribute>::value>::type;
+      std::enable_if_t<std::is_same<T, Attribute>::value>;
   template <typename T, typename = AttributeValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<AttributeElementIterator>>
   tryGetValues() const {
@@ -499,8 +499,8 @@ public:
   /// attribute type.
   template <typename T>
   using DerivedAttrValueTemplateCheckT =
-      typename std::enable_if<std::is_base_of<Attribute, T>::value &&
-                              !std::is_same<Attribute, T>::value>::type;
+      std::enable_if_t<std::is_base_of<Attribute, T>::value &&
+                       !std::is_same<Attribute, T>::value>;
   template <typename T>
   struct DerivedAttributeElementIterator
       : public llvm::mapped_iterator_base<DerivedAttributeElementIterator<T>,
@@ -525,7 +525,7 @@ public:
   /// this attribute must be of integer type of bitwidth 1.
   template <typename T>
   using BoolValueTemplateCheckT =
-      typename std::enable_if<std::is_same<T, bool>::value>::type;
+      std::enable_if_t<std::is_same<T, bool>::value>;
   template <typename T, typename = BoolValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<BoolElementIterator>> tryGetValues() const {
     if (!isValidBool())
@@ -539,7 +539,7 @@ public:
   /// of this attribute must be of integer type.
   template <typename T>
   using APIntValueTemplateCheckT =
-      typename std::enable_if<std::is_same<T, APInt>::value>::type;
+      std::enable_if_t<std::is_same<T, APInt>::value>;
   template <typename T, typename = APIntValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<IntElementIterator>> tryGetValues() const {
     if (!getElementType().isIntOrIndex())
@@ -551,8 +551,8 @@ public:
   /// Try to get the held element values as a range of complex APInts. The
   /// element type of this attribute must be a complex of integer type.
   template <typename T>
-  using ComplexAPIntValueTemplateCheckT = typename std::enable_if<
-      std::is_same<T, std::complex<APInt>>::value>::type;
+  using ComplexAPIntValueTemplateCheckT =
+      std::enable_if_t<std::is_same<T, std::complex<APInt>>::value>;
   template <typename T, typename = ComplexAPIntValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<ComplexIntElementIterator>>
   tryGetValues() const {
@@ -563,7 +563,7 @@ public:
   /// of this attribute must be of float type.
   template <typename T>
   using APFloatValueTemplateCheckT =
-      typename std::enable_if<std::is_same<T, APFloat>::value>::type;
+      std::enable_if_t<std::is_same<T, APFloat>::value>;
   template <typename T, typename = APFloatValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<FloatElementIterator>> tryGetValues() const {
     return tryGetFloatValues();
@@ -572,8 +572,8 @@ public:
   /// Try to get the held element values as a range of complex APFloat. The
   /// element type of this attribute must be a complex of float type.
   template <typename T>
-  using ComplexAPFloatValueTemplateCheckT = typename std::enable_if<
-      std::is_same<T, std::complex<APFloat>>::value>::type;
+  using ComplexAPFloatValueTemplateCheckT =
+      std::enable_if_t<std::is_same<T, std::complex<APFloat>>::value>;
   template <typename T, typename = ComplexAPFloatValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<ComplexFloatElementIterator>>
   tryGetValues() const {

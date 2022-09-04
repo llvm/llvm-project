@@ -1033,6 +1033,18 @@ public:
     return getOriginExpr()->getNumPlacementArgs() + getNumImplicitArgs();
   }
 
+  bool isArray() const { return getOriginExpr()->isArray(); }
+
+  Optional<const clang::Expr *> getArraySizeExpr() const {
+    return getOriginExpr()->getArraySize();
+  }
+
+  SVal getArraySizeVal() const {
+    assert(isArray() && "The allocator call doesn't allocate and array!");
+
+    return getState()->getSVal(*getArraySizeExpr(), getLocationContext());
+  }
+
   const Expr *getArgExpr(unsigned Index) const override {
     // The first argument of an allocator call is the size of the allocation.
     if (Index < getNumImplicitArgs())
