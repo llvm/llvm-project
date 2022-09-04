@@ -112,7 +112,7 @@ struct function_traits<ReturnType (ClassType::*)(Args...) const, false> {
 
   /// The type of an argument to this function.
   template <size_t Index>
-  using arg_t = typename std::tuple_element<Index, std::tuple<Args...>>::type;
+  using arg_t = std::tuple_element_t<Index, std::tuple<Args...>>;
 };
 /// Overload for class function types.
 template <typename ClassType, typename ReturnType, typename... Args>
@@ -129,7 +129,7 @@ struct function_traits<ReturnType (*)(Args...), false> {
 
   /// The type of an argument to this function.
   template <size_t i>
-  using arg_t = typename std::tuple_element<i, std::tuple<Args...>>::type;
+  using arg_t = std::tuple_element_t<i, std::tuple<Args...>>;
 };
 template <typename ReturnType, typename... Args>
 struct function_traits<ReturnType (*const)(Args...), false>
@@ -618,13 +618,14 @@ template<typename... Iters> struct ZipTupleType {
 
 template <typename ZipType, typename... Iters>
 using zip_traits = iterator_facade_base<
-    ZipType, typename std::common_type<std::bidirectional_iterator_tag,
-                                       typename std::iterator_traits<
-                                           Iters>::iterator_category...>::type,
+    ZipType,
+    typename std::common_type<
+        std::bidirectional_iterator_tag,
+        typename std::iterator_traits<Iters>::iterator_category...>::type,
     // ^ TODO: Implement random access methods.
     typename ZipTupleType<Iters...>::type,
-    typename std::iterator_traits<typename std::tuple_element<
-        0, std::tuple<Iters...>>::type>::difference_type,
+    typename std::iterator_traits<
+        std::tuple_element_t<0, std::tuple<Iters...>>>::difference_type,
     // ^ FIXME: This follows boost::make_zip_iterator's assumption that all
     // inner iterators have the same difference_type. It would fail if, for
     // instance, the second field's difference_type were non-numeric while the
@@ -799,8 +800,8 @@ class zip_longest_iterator
               std::forward_iterator_tag,
               typename std::iterator_traits<Iters>::iterator_category...>::type,
           typename ZipLongestTupleType<Iters...>::type,
-          typename std::iterator_traits<typename std::tuple_element<
-              0, std::tuple<Iters...>>::type>::difference_type,
+          typename std::iterator_traits<
+              std::tuple_element_t<0, std::tuple<Iters...>>>::difference_type,
           typename ZipLongestTupleType<Iters...>::type *,
           typename ZipLongestTupleType<Iters...>::type> {
 public:
