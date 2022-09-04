@@ -367,14 +367,6 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
   return true;
 }
 
-static uint8_t getMinVisibility(uint8_t va, uint8_t vb) {
-  if (va == STV_DEFAULT)
-    return vb;
-  if (vb == STV_DEFAULT)
-    return va;
-  return std::min(va, vb);
-}
-
 // Merge symbol properties.
 //
 // When we have many symbols of the same name, we choose one of them,
@@ -385,8 +377,10 @@ void Symbol::mergeProperties(const Symbol &other) {
     exportDynamic = true;
 
   // DSO symbols do not affect visibility in the output.
-  if (!other.isShared())
-    visibility = getMinVisibility(visibility, other.visibility);
+  if (!other.isShared() && other.visibility != STV_DEFAULT)
+    visibility = visibility == STV_DEFAULT
+                     ? other.visibility
+                     : std::min(visibility, other.visibility);
 }
 
 void Symbol::resolve(const Symbol &other) {
@@ -535,17 +529,6 @@ bool Symbol::shouldReplace(const Defined &other) const {
   }
   if (!isDefined())
     return true;
-
-  // .symver foo,foo@@VER unfortunately creates two defined symbols: foo and
-  // foo@@VER. In GNU ld, if foo and foo@@VER are in the same file, foo is
-  // ignored. In our implementation, when this is foo, this->getName() may still
-  // contain @@, return true in this case as well.
-  if (LLVM_UNLIKELY(file == other.file)) {
-    if (other.getName().contains("@@"))
-      return true;
-    if (getName().contains("@@"))
-      return false;
-  }
 
   // Incoming STB_GLOBAL overrides STB_WEAK/STB_GNU_UNIQUE. -fgnu-unique changes
   // some vague linkage data in COMDAT from STB_WEAK to STB_GNU_UNIQUE. Treat
