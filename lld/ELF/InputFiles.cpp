@@ -1461,11 +1461,11 @@ template <class ELFT> void SharedFile::parse() {
       continue;
     }
 
-    uint16_t idx = versyms[i] & ~VERSYM_HIDDEN;
+    const uint16_t ver = versyms[i], idx = ver & ~VERSYM_HIDDEN;
     if (sym.isUndefined()) {
       // For unversioned undefined symbols, VER_NDX_GLOBAL makes more sense but
       // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
-      if (idx != VER_NDX_LOCAL && idx != VER_NDX_GLOBAL) {
+      if (ver != VER_NDX_LOCAL && ver != VER_NDX_GLOBAL) {
         if (idx >= verneeds.size()) {
           error("corrupt input file: version need index " + Twine(idx) +
                 " for symbol " + name + " is out of bounds\n>>> defined in " +
@@ -1486,33 +1486,32 @@ template <class ELFT> void SharedFile::parse() {
       continue;
     }
 
-    // In GNU ld < 2.31 (before 3be08ea4728b56d35e136af4e6fd3086ade17764), the
-    // MIPS port puts _gp_disp symbol into DSO files and incorrectly assigns
-    // VER_NDX_LOCAL. Workaround this bug.
-    if (idx == VER_NDX_LOCAL && config->emachine == EM_MIPS &&
-        name == "_gp_disp")
-      continue;
-
-    uint32_t alignment = getAlignment<ELFT>(sections, sym);
-    if (!(versyms[i] & VERSYM_HIDDEN)) {
-      auto *s = symtab.addSymbol(
-          SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
-                       sym.getType(), sym.st_value, sym.st_size, alignment});
-      if (s->file == this)
-        s->verdefIndex = idx;
-    }
-
-    // Also add the symbol with the versioned name to handle undefined symbols
-    // with explicit versions.
-    if (idx == VER_NDX_GLOBAL)
-      continue;
-
-    if (idx >= verdefs.size() || idx == VER_NDX_LOCAL) {
+    if (ver == VER_NDX_LOCAL ||
+        (ver != VER_NDX_GLOBAL && idx >= verdefs.size())) {
+      // In GNU ld < 2.31 (before 3be08ea4728b56d35e136af4e6fd3086ade17764), the
+      // MIPS port puts _gp_disp symbol into DSO files and incorrectly assigns
+      // VER_NDX_LOCAL. Workaround this bug.
+      if (config->emachine == EM_MIPS && name == "_gp_disp")
+        continue;
       error("corrupt input file: version definition index " + Twine(idx) +
             " for symbol " + name + " is out of bounds\n>>> defined in " +
             toString(this));
       continue;
     }
+
+    uint32_t alignment = getAlignment<ELFT>(sections, sym);
+    if (ver == idx) {
+      auto *s = symtab.addSymbol(
+          SharedSymbol{*this, name, sym.getBinding(), sym.st_other,
+                       sym.getType(), sym.st_value, sym.st_size, alignment});
+      if (s->file == this)
+        s->verdefIndex = ver;
+    }
+
+    // Also add the symbol with the versioned name to handle undefined symbols
+    // with explicit versions.
+    if (ver == VER_NDX_GLOBAL)
+      continue;
 
     StringRef verName =
         stringTable.data() +
