@@ -8088,7 +8088,7 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
     if (shadowedVar->isExternC()) {
       // For shadowing external vars, make sure that we point to the global
       // declaration, not a locally scoped extern declaration.
-      for (auto I : shadowedVar->redecls())
+      for (auto *I : shadowedVar->redecls())
         if (I->isFileVarDecl()) {
           ShadowedDecl = I;
           break;
@@ -10463,7 +10463,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
 
     llvm::SmallPtrSet<const Type *, 16> ValidTypes;
-    for (auto Param : NewFD->parameters())
+    for (auto *Param : NewFD->parameters())
       checkIsValidOpenCLKernelParameter(*this, D, Param, ValidTypes);
 
     if (getLangOpts().OpenCLCPlusPlus) {
@@ -11972,7 +11972,7 @@ namespace {
       // Track and increment the index here.
       isInitList = true;
       InitFieldIndex.push_back(0);
-      for (auto Child : InitList->children()) {
+      for (auto *Child : InitList->children()) {
         CheckExpr(cast<Expr>(Child));
         ++InitFieldIndex.back();
       }
@@ -12453,7 +12453,7 @@ void Sema::checkNonTrivialCUnionInInitializer(const Expr *Init,
           InitType.hasNonTrivialToPrimitiveCopyCUnion()) &&
          "shouldn't be called if type doesn't have a non-trivial C struct");
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
-    for (auto I : ILE->inits()) {
+    for (auto *I : ILE->inits()) {
       if (!I->getType().hasNonTrivialToPrimitiveDefaultInitializeCUnion() &&
           !I->getType().hasNonTrivialToPrimitiveCopyCUnion())
         continue;
@@ -14915,7 +14915,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   }
 
   // Introduce our parameters into the function scope
-  for (auto Param : FD->parameters()) {
+  for (auto *Param : FD->parameters()) {
     Param->setOwningFunction(FD);
 
     // If this has an identifier, add it to the scope stack.
