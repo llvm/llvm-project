@@ -1,10 +1,4 @@
-# Flang 15.0.0 (In-Progress) Release Notes
-
-> **warning**
->
-> These are in-progress notes for the upcoming LLVM 15.0.0 release.
-> Release notes for previous releases can be found on [the Download
-> Page](https://releases.llvm.org/download.html).
+# Flang 15.0.0 Release Notes
 
 ## Introduction
 

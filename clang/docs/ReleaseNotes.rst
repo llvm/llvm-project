@@ -8,13 +8,6 @@ Clang |release| |ReleaseNotesTitle|
 
 Written by the `LLVM Team <https://llvm.org/>`_
 
-.. only:: PreRelease
-
-  .. warning::
-     These are in-progress notes for the upcoming Clang |version| release.
-     Release notes for previous releases can be found on
-     `the Download Page <https://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 

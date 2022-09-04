@@ -8,13 +8,6 @@ Extra Clang Tools |release| |ReleaseNotesTitle|
 
 Written by the `LLVM Team <https://llvm.org/>`_
 
-.. only:: PreRelease
-
-  .. warning::
-     These are in-progress notes for the upcoming Extra Clang Tools |version| release.
-     Release notes for previous releases can be found on
-     `the Download Page <https://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 
@@ -259,12 +252,12 @@ Changes in existing checks
 
 - Fixed a false positive in :doc:`misc-unused-parameters
   <clang-tidy/checks/misc/unused-parameters>`
-  where invalid parameters were implicitly being treated as being unused. 
+  where invalid parameters were implicitly being treated as being unused.
   This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
 
 - Fixed false positives in :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` where `using` statements bringing
-  operators into the scope where incorrectly marked as unused. 
+  operators into the scope where incorrectly marked as unused.
   This fixes `issue 55095 <https://github.com/llvm/llvm-project/issues/55095>`_.
 
 - Fixed a false positive in :doc:`modernize-deprecated-headers

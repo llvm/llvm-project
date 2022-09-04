@@ -5,13 +5,6 @@ lld |release| Release Notes
 .. contents::
     :local:
 
-.. only:: PreRelease
-
-  .. warning::
-     These are in-progress notes for the upcoming LLVM |release| release.
-     Release notes for previous releases can be found on
-     `the Download Page <https://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 

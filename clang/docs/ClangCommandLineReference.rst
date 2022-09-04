@@ -1675,7 +1675,7 @@ Prevent optimization remarks from being output if they do not have at least this
 
 .. option:: -fdiagnostics-misexpect-tolerance=<value>
 
-Prevent misexpect diagnostics from being output if the profile counts are within N% of the expected. 
+Prevent misexpect diagnostics from being output if the profile counts are within N% of the expected.
 
 .. option:: -fdiagnostics-show-hotness, -fno-diagnostics-show-hotness
 
@@ -2577,7 +2577,6 @@ Perform ThinLTO importing using provided function summary index
 (For new pass manager) 'per-pass': one report for each pass; 'per-pass-run': one report for each pass invocation. <arg> must be 'per-pass' or 'per-pass-run'.
 
 .. option:: -ftime-trace
-
 
 Turn on time profiler. Generates JSON file based on output filename. Results
 can be analyzed with chrome://tracing or `Speedscope App
