@@ -1,4 +1,3 @@
-atomic
 cctype
 climits
 cmath
@@ -9,19 +8,15 @@ cstdint
 cstdio
 cstdlib
 cstring
-ctime
 cwchar
 cwctype
 exception
 initializer_list
 iosfwd
 limits
-memory
 new
-ratio
 stdexcept
 string_view
 tuple
 type_traits
-typeinfo
 version

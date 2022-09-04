@@ -20,6 +20,7 @@
 
 #include <string>
 #include <cassert>
+#include <new>
 
 #include "test_macros.h"
 #include "min_allocator.h"

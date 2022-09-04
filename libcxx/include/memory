@@ -860,11 +860,10 @@ template<size_t N, class T>
 
 */
 
-#include <__algorithm/copy.h>
-#include <__algorithm/move.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__memory/addressof.h>
+#include <__memory/align.h>
 #include <__memory/allocate_at_least.h>
 #include <__memory/allocation_guard.h>
 #include <__memory/allocator.h>
@@ -884,15 +883,6 @@ template<size_t N, class T>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__memory/uses_allocator.h>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <iosfwd>
-#include <new>
-#include <stdexcept>
-#include <tuple>
-#include <type_traits>
-#include <typeinfo>
 #include <version>
 
 // standard-mandated includes
@@ -902,153 +892,21 @@ template<size_t N, class T>
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-struct __destruct_n
-{
-private:
-    size_t __size_;
-
-    template <class _Tp>
-    _LIBCPP_INLINE_VISIBILITY void __process(_Tp* __p, false_type) _NOEXCEPT
-        {for (size_t __i = 0; __i < __size_; ++__i, ++__p) __p->~_Tp();}
-
-    template <class _Tp>
-    _LIBCPP_INLINE_VISIBILITY void __process(_Tp*, true_type) _NOEXCEPT
-        {}
-
-    _LIBCPP_INLINE_VISIBILITY void __incr(false_type) _NOEXCEPT
-        {++__size_;}
-    _LIBCPP_INLINE_VISIBILITY void __incr(true_type) _NOEXCEPT
-        {}
-
-    _LIBCPP_INLINE_VISIBILITY void __set(size_t __s, false_type) _NOEXCEPT
-        {__size_ = __s;}
-    _LIBCPP_INLINE_VISIBILITY void __set(size_t, true_type) _NOEXCEPT
-        {}
-public:
-    _LIBCPP_INLINE_VISIBILITY explicit __destruct_n(size_t __s) _NOEXCEPT
-        : __size_(__s) {}
-
-    template <class _Tp>
-    _LIBCPP_INLINE_VISIBILITY void __incr() _NOEXCEPT
-        {__incr(integral_constant<bool, is_trivially_destructible<_Tp>::value>());}
-
-    template <class _Tp>
-    _LIBCPP_INLINE_VISIBILITY void __set(size_t __s, _Tp*) _NOEXCEPT
-        {__set(__s, integral_constant<bool, is_trivially_destructible<_Tp>::value>());}
-
-    template <class _Tp>
-    _LIBCPP_INLINE_VISIBILITY void operator()(_Tp* __p) _NOEXCEPT
-        {__process(__p, integral_constant<bool, is_trivially_destructible<_Tp>::value>());}
-};
-
-_LIBCPP_FUNC_VIS void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space);
-
-template <typename _Alloc, typename _Traits=allocator_traits<_Alloc> >
-struct __noexcept_move_assign_container : public integral_constant<bool,
-    _Traits::propagate_on_container_move_assignment::value
-#if _LIBCPP_STD_VER > 14
-        || _Traits::is_always_equal::value
-#else
-        && is_nothrow_move_assignable<_Alloc>::value
-#endif
-    > {};
-
-
-template <class _Tp, class _Alloc>
-struct __temp_value {
-    typedef allocator_traits<_Alloc> _Traits;
-
-#ifdef _LIBCPP_CXX03_LANG
-    typename aligned_storage<sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)>::type __v;
-#else
-    union { _Tp __v; };
-#endif
-    _Alloc &__a;
-
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp *__addr() {
-#ifdef _LIBCPP_CXX03_LANG
-        return reinterpret_cast<_Tp*>(std::addressof(__v));
-#else
-        return std::addressof(__v);
-#endif
-    }
-
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp &   get() { return *__addr(); }
-
-    template<class... _Args>
-    _LIBCPP_NO_CFI
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 __temp_value(_Alloc &__alloc, _Args&& ... __args) : __a(__alloc) {
-      _Traits::construct(__a, __addr(), std::forward<_Args>(__args)...);
-    }
-
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__temp_value() { _Traits::destroy(__a, __addr()); }
-};
-
-template<typename _Alloc, typename = void, typename = void>
-struct __is_allocator : false_type {};
-
-template<typename _Alloc>
-struct __is_allocator<_Alloc,
-       typename __void_t<typename _Alloc::value_type>::type,
-       typename __void_t<decltype(declval<_Alloc&>().allocate(size_t(0)))>::type
-     >
-   : true_type {};
-
-// __builtin_new_allocator -- A non-templated helper for allocating and
-// deallocating memory using __builtin_operator_new and
-// __builtin_operator_delete. It should be used in preference to
-// `std::allocator<T>` to avoid additional instantiations.
-struct __builtin_new_allocator {
-  struct __builtin_new_deleter {
-    typedef void* pointer_type;
-
-    _LIBCPP_CONSTEXPR explicit __builtin_new_deleter(size_t __size, size_t __align)
-        : __size_(__size), __align_(__align) {}
-
-    void operator()(void* __p) const _NOEXCEPT {
-        _VSTD::__libcpp_deallocate(__p, __size_, __align_);
-    }
-
-   private:
-    size_t __size_;
-    size_t __align_;
-  };
-
-  typedef unique_ptr<void, __builtin_new_deleter> __holder_t;
-
-  static __holder_t __allocate_bytes(size_t __s, size_t __align) {
-      return __holder_t(_VSTD::__libcpp_allocate(__s, __align),
-                     __builtin_new_deleter(__s, __align));
-  }
-
-  static void __deallocate_bytes(void* __p, size_t __s,
-                                 size_t __align) _NOEXCEPT {
-      _VSTD::__libcpp_deallocate(__p, __s, __align);
-  }
-
-  template <class _Tp>
-  _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE
-  static __holder_t __allocate_type(size_t __n) {
-      return __allocate_bytes(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
-  }
-
-  template <class _Tp>
-  _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE
-  static void __deallocate_type(void* __p, size_t __n) _NOEXCEPT {
-      __deallocate_bytes(__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
-  }
-};
-
-_LIBCPP_END_NAMESPACE_STD
-
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
 #   include <__pstl_memory>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
+#  include <cstdint>
+#  include <cstring>
+#  include <iosfwd>
 #  include <iterator>
+#  include <new>
+#  include <stdexcept>
+#  include <tuple>
+#  include <type_traits>
+#  include <typeinfo>
 #  include <utility>
 #endif
 

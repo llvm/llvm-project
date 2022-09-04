@@ -201,13 +201,14 @@ template <class charT> class messages_byname;
 #include <__iterator/istreambuf_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale>
+#include <__memory/unique_ptr.h>
 #include <cstdarg> // TODO: Remove this include
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <ios>
 #include <limits>
-#include <memory>
+#include <new>
 #include <streambuf>
 #include <version>
 
