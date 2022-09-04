@@ -280,7 +280,7 @@ TemplateArgument type int
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceVars) {
 
-  auto AST = buildASTFromCode(R"cpp(
+  auto AST = buildASTFromCodeWithArgs(R"cpp(
 
 struct String
 {
@@ -346,7 +346,7 @@ void varDeclCtors() {
   }
 }
 
-)cpp");
+)cpp", {"-std=c++14"});
 
   {
     auto FN =
@@ -715,7 +715,7 @@ FunctionDecl 'foo'
 
 TEST(Traverse, IgnoreUnlessSpelledInSourceReturns) {
 
-  auto AST = buildASTFromCode(R"cpp(
+  auto AST = buildASTFromCodeWithArgs(R"cpp(
 
 struct A
 {
@@ -784,7 +784,7 @@ B func12() {
   return c;
 }
 
-)cpp");
+)cpp", {"-std=c++14"});
 
   auto getFunctionNode = [&AST](const std::string &name) {
     auto BN = ast_matchers::match(functionDecl(hasName(name)).bind("fn"),
