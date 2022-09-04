@@ -201,7 +201,10 @@ static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
   }
 
   bool needBarrier = false;
-  firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+  if (mlir::isa<mlir::omp::SectionOp>(op))
+    firOpBuilder.setInsertionPointToStart(&op.getRegion().back());
+  else
+    firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
   for (auto sym : privatizedSymbols) {
     privatizeSymbol(converter, sym, lastPrivBlock);
     if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) &&
@@ -1326,12 +1329,28 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   auto &firOpBuilder = converter.getFirOpBuilder();
   auto currentLocation = converter.getCurrentLocation();
+  const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
+      eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
+  assert(parentOmpConstruct &&
+         "No enclosing parent OpenMPConstruct on SECTION construct");
+  const Fortran::parser::OpenMPSectionsConstruct *sectionsConstruct =
+      std::get_if<Fortran::parser::OpenMPSectionsConstruct>(
+          &parentOmpConstruct->u);
+  assert(sectionsConstruct && "SECTION construct must have parent"
+                              "SECTIONS construct");
+  const Fortran::parser::OmpClauseList &sectionsClauseList =
+      std::get<Fortran::parser::OmpClauseList>(
+          std::get<Fortran::parser::OmpBeginSectionsDirective>(
+              sectionsConstruct->t)
+              .t);
+  // Currently only private/firstprivate clause is handled, and
+  // all privatization is done within `omp.section` operations.
   mlir::omp::SectionOp sectionOp =
       firOpBuilder.create<mlir::omp::SectionOp>(currentLocation);
-  createBodyOfOp<omp::SectionOp>(sectionOp, converter, currentLocation, eval);
+  createBodyOfOp<omp::SectionOp>(sectionOp, converter, currentLocation, eval,
+                                 &sectionsClauseList);
 }
 
-// TODO: Add support for reduction
 static void
 genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,

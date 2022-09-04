@@ -296,18 +296,18 @@ private:
   /// Used to construct an instance of 'ImplTy::KeyTy' if there is an
   /// 'ImplTy::getKey' function for the provided arguments.
   template <typename ImplTy, typename... Args>
-  static typename std::enable_if<
+  static std::enable_if_t<
       llvm::is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
-      typename ImplTy::KeyTy>::type
+      typename ImplTy::KeyTy>
   getKey(Args &&...args) {
     return ImplTy::getKey(args...);
   }
   /// If there is no 'ImplTy::getKey' method, then we try to directly construct
   /// the 'ImplTy::KeyTy' with the provided arguments.
   template <typename ImplTy, typename... Args>
-  static typename std::enable_if<
+  static std::enable_if_t<
       !llvm::is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
-      typename ImplTy::KeyTy>::type
+      typename ImplTy::KeyTy>
   getKey(Args &&...args) {
     return typename ImplTy::KeyTy(args...);
   }
@@ -319,18 +319,18 @@ private:
   /// Used to generate a hash for the 'ImplTy::KeyTy' of a storage instance if
   /// there is an 'ImplTy::hashKey' overload for 'DerivedKey'.
   template <typename ImplTy, typename DerivedKey>
-  static typename std::enable_if<
+  static std::enable_if_t<
       llvm::is_detected<detail::has_impltype_hash_t, ImplTy, DerivedKey>::value,
-      ::llvm::hash_code>::type
+      ::llvm::hash_code>
   getHash(const DerivedKey &derivedKey) {
     return ImplTy::hashKey(derivedKey);
   }
   /// If there is no 'ImplTy::hashKey' default to using the 'llvm::DenseMapInfo'
   /// definition for 'DerivedKey' for generating a hash.
   template <typename ImplTy, typename DerivedKey>
-  static typename std::enable_if<!llvm::is_detected<detail::has_impltype_hash_t,
-                                                    ImplTy, DerivedKey>::value,
-                                 ::llvm::hash_code>::type
+  static std::enable_if_t<!llvm::is_detected<detail::has_impltype_hash_t,
+                                             ImplTy, DerivedKey>::value,
+                          ::llvm::hash_code>
   getHash(const DerivedKey &derivedKey) {
     return DenseMapInfo<DerivedKey>::getHashValue(derivedKey);
   }

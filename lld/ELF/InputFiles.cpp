@@ -451,16 +451,16 @@ ELFFileBase::ELFFileBase(Kind k, MemoryBufferRef mb) : InputFile(k, mb) {
 
   switch (ekind) {
   case ELF32LEKind:
-    init<ELF32LE>();
+    init<ELF32LE>(k);
     break;
   case ELF32BEKind:
-    init<ELF32BE>();
+    init<ELF32BE>(k);
     break;
   case ELF64LEKind:
-    init<ELF64LE>();
+    init<ELF64LE>(k);
     break;
   case ELF64BEKind:
-    init<ELF64BE>();
+    init<ELF64BE>(k);
     break;
   default:
     llvm_unreachable("getELFKind");
@@ -475,7 +475,7 @@ static const Elf_Shdr *findSection(ArrayRef<Elf_Shdr> sections, uint32_t type) {
   return nullptr;
 }
 
-template <class ELFT> void ELFFileBase::init() {
+template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
   using Elf_Shdr = typename ELFT::Shdr;
   using Elf_Sym = typename ELFT::Sym;
 
@@ -490,10 +490,8 @@ template <class ELFT> void ELFFileBase::init() {
   numELFShdrs = sections.size();
 
   // Find a symbol table.
-  bool isDSO =
-      (identify_magic(mb.getBuffer()) == file_magic::elf_shared_object);
   const Elf_Shdr *symtabSec =
-      findSection(sections, isDSO ? SHT_DYNSYM : SHT_SYMTAB);
+      findSection(sections, k == SharedKind ? SHT_DYNSYM : SHT_SYMTAB);
 
   if (!symtabSec)
     return;

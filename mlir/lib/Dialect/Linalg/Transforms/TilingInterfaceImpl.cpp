@@ -58,7 +58,7 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
 
   Operation *terminator = body->getTerminator();
   Location loc = terminator->getLoc();
-  for (auto operand : llvm::enumerate(terminator->getOperands())) {
+  for (const auto &operand : llvm::enumerate(terminator->getOperands())) {
     Value toStore = map.lookupOrDefault(operand.value());
     OpOperand *storeInto = linalgOp.getOutputOperand(operand.index());
     auto indices = getIndicesForAccess(

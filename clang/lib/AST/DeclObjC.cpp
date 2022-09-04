@@ -864,7 +864,7 @@ bool ObjCMethodDecl::isDesignatedInitializerForTheInterface(
 }
 
 bool ObjCMethodDecl::hasParamDestroyedInCallee() const {
-  for (auto param : parameters()) {
+  for (auto *param : parameters()) {
     if (param->isDestroyedInCallee())
       return true;
   }
@@ -1496,7 +1496,7 @@ ObjCTypeParamList *ObjCTypeParamList::create(
 void ObjCTypeParamList::gatherDefaultTypeArgs(
        SmallVectorImpl<QualType> &typeArgs) const {
   typeArgs.reserve(size());
-  for (auto typeParam : *this)
+  for (auto *typeParam : *this)
     typeArgs.push_back(typeParam->getUnderlyingType());
 }
 

@@ -258,7 +258,7 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
   }
 
   // Mangle in type information for the arguments.
-  for (auto PD : D->parameters()) {
+  for (auto *PD : D->parameters()) {
     Out << '#';
     VisitType(PD->getType());
   }

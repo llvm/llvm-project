@@ -680,14 +680,14 @@ void Writer::scanSymbols() {
 
 // TODO: ld64 enforces the old load commands in a few other cases.
 static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
-  static const std::vector<std::pair<PlatformType, VersionTuple>> minVersion = {
-      {PLATFORM_MACOS, VersionTuple(10, 14)},
-      {PLATFORM_IOS, VersionTuple(12, 0)},
-      {PLATFORM_IOSSIMULATOR, VersionTuple(13, 0)},
-      {PLATFORM_TVOS, VersionTuple(12, 0)},
-      {PLATFORM_TVOSSIMULATOR, VersionTuple(13, 0)},
-      {PLATFORM_WATCHOS, VersionTuple(5, 0)},
-      {PLATFORM_WATCHOSSIMULATOR, VersionTuple(6, 0)}};
+  static const std::array<std::pair<PlatformType, VersionTuple>, 7> minVersion =
+      {{{PLATFORM_MACOS, VersionTuple(10, 14)},
+        {PLATFORM_IOS, VersionTuple(12, 0)},
+        {PLATFORM_IOSSIMULATOR, VersionTuple(13, 0)},
+        {PLATFORM_TVOS, VersionTuple(12, 0)},
+        {PLATFORM_TVOSSIMULATOR, VersionTuple(13, 0)},
+        {PLATFORM_WATCHOS, VersionTuple(5, 0)},
+        {PLATFORM_WATCHOSSIMULATOR, VersionTuple(6, 0)}}};
   auto it = llvm::find_if(minVersion, [&](const auto &p) {
     return p.first == platformInfo.target.Platform;
   });
