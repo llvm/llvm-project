@@ -120,12 +120,10 @@ def main():
         # a *single* sparse tensor. Note that we deliberate do not exhaustively
         # search the full state space to reduce runtime of the test. It is
         # straightforward to adapt the code below to explore more combinations.
-        par = 0
-        vec = 0
         vl = 1
         e = False
-        opt = (f'parallelization-strategy={par} '
-               f'vectorization-strategy={vec} '
+        opt = (f'parallelization-strategy=none '
+               f'vectorization-strategy=none '
                f'vl={vl} enable-simd-index32={e}')
         levels = [[st.DimLevelType.dense, st.DimLevelType.dense],
                   [st.DimLevelType.dense, st.DimLevelType.compressed],
