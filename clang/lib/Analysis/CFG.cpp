@@ -2994,7 +2994,7 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   // If we bind to a tuple-like type, we iterate over the HoldingVars, and
   // create a DeclStmt for each of them.
   if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
-    for (auto BD : llvm::reverse(DD->bindings())) {
+    for (auto *BD : llvm::reverse(DD->bindings())) {
       if (auto *VD = BD->getHoldingVar()) {
         DeclGroupRef DG(VD);
         DeclStmt *DSNew =

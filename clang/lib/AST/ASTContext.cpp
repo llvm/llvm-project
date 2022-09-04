@@ -7568,7 +7568,7 @@ std::string ASTContext::getObjCEncodingForBlock(const BlockExpr *Expr) const {
   // FIXME: There might(should) be a better way of doing this computation!
   CharUnits PtrSize = getTypeSizeInChars(VoidPtrTy);
   CharUnits ParmOffset = PtrSize;
-  for (auto PI : Decl->parameters()) {
+  for (auto *PI : Decl->parameters()) {
     QualType PType = PI->getType();
     CharUnits sz = getObjCEncodingTypeSize(PType);
     if (sz.isZero())
@@ -7583,7 +7583,7 @@ std::string ASTContext::getObjCEncodingForBlock(const BlockExpr *Expr) const {
 
   // Argument types.
   ParmOffset = PtrSize;
-  for (auto PVDecl : Decl->parameters()) {
+  for (auto *PVDecl : Decl->parameters()) {
     QualType PType = PVDecl->getOriginalType();
     if (const auto *AT =
             dyn_cast<ArrayType>(PType->getCanonicalTypeInternal())) {
@@ -7612,7 +7612,7 @@ ASTContext::getObjCEncodingForFunctionDecl(const FunctionDecl *Decl) const {
   getObjCEncodingForType(Decl->getReturnType(), S);
   CharUnits ParmOffset;
   // Compute size of all parameters.
-  for (auto PI : Decl->parameters()) {
+  for (auto *PI : Decl->parameters()) {
     QualType PType = PI->getType();
     CharUnits sz = getObjCEncodingTypeSize(PType);
     if (sz.isZero())
@@ -7626,7 +7626,7 @@ ASTContext::getObjCEncodingForFunctionDecl(const FunctionDecl *Decl) const {
   ParmOffset = CharUnits::Zero();
 
   // Argument types.
-  for (auto PVDecl : Decl->parameters()) {
+  for (auto *PVDecl : Decl->parameters()) {
     QualType PType = PVDecl->getOriginalType();
     if (const auto *AT =
             dyn_cast<ArrayType>(PType->getCanonicalTypeInternal())) {
@@ -9724,7 +9724,7 @@ void getIntersectionOfProtocols(ASTContext &Context,
   llvm::SmallPtrSet<ObjCProtocolDecl *, 8> LHSProtocolSet;
 
   // Start with the protocol qualifiers.
-  for (auto proto : LHS->quals()) {
+  for (auto *proto : LHS->quals()) {
     Context.CollectInheritedProtocols(proto, LHSProtocolSet);
   }
 
@@ -9735,7 +9735,7 @@ void getIntersectionOfProtocols(ASTContext &Context,
   llvm::SmallPtrSet<ObjCProtocolDecl *, 8> RHSProtocolSet;
 
   // Start with the protocol qualifiers.
-  for (auto proto : RHS->quals()) {
+  for (auto *proto : RHS->quals()) {
     Context.CollectInheritedProtocols(proto, RHSProtocolSet);
   }
 
@@ -9743,7 +9743,7 @@ void getIntersectionOfProtocols(ASTContext &Context,
   Context.CollectInheritedProtocols(RHS->getInterface(), RHSProtocolSet);
 
   // Compute the intersection of the collected protocol sets.
-  for (auto proto : LHSProtocolSet) {
+  for (auto *proto : LHSProtocolSet) {
     if (RHSProtocolSet.count(proto))
       IntersectionSet.push_back(proto);
   }

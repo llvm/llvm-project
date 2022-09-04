@@ -418,7 +418,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
     CheckParmsForFunctionDef(Params,
                              /*CheckParameterNames=*/false);
 
-    for (auto P : Method->parameters())
+    for (auto *P : Method->parameters())
       P->setOwningFunction(Method);
   }
 

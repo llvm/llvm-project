@@ -2161,7 +2161,7 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC,
     TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
   } else {
     // Claim "no HIP libraries" arguments if any
-    for (auto Arg : Args.filtered(options::OPT_no_hip_rt)) {
+    for (auto *Arg : Args.filtered(options::OPT_no_hip_rt)) {
       Arg->claim();
     }
   }

@@ -368,7 +368,7 @@ private:
     // (and matching name) as stream functions.
     if (!Call.isGlobalCFunction())
       return nullptr;
-    for (auto P : Call.parameters()) {
+    for (auto *P : Call.parameters()) {
       QualType T = P->getType();
       if (!T->isIntegralOrEnumerationType() && !T->isPointerType())
         return nullptr;

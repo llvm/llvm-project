@@ -1315,7 +1315,7 @@ void Sema::ActOnEndOfTranslationUnit() {
       Consumer.CompleteTentativeDefinition(VD);
   }
 
-  for (auto D : ExternalDeclarations) {
+  for (auto *D : ExternalDeclarations) {
     if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
       continue;
 
@@ -1784,7 +1784,7 @@ void Sema::emitDeferredDiags() {
     return;
 
   DeferredDiagnosticsEmitter DDE(*this);
-  for (auto D : DeclsToCheckForDeferredDiags)
+  for (auto *D : DeclsToCheckForDeferredDiags)
     DDE.checkRecordedDecl(D);
 }
 
