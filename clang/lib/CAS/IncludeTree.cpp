@@ -342,8 +342,10 @@ public:
         : FileEntry(std::move(FE)), Contents(Contents) {}
   };
 
-  llvm::StringMap<FileEntry> Files;
-  llvm::StringMap<llvm::sys::fs::UniqueID> Directories;
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringMap<FileEntry, llvm::BumpPtrAllocator &> Files{Alloc};
+  llvm::StringMap<llvm::sys::fs::UniqueID, llvm::BumpPtrAllocator &>
+      Directories{Alloc};
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
     SmallString<128> FilenameBuffer;
