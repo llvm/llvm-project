@@ -35,15 +35,6 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
     message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
   endif()
 
-  # Copy test data over.
-  # TODO: drop copy and load files relative to MLIR_SOURCE_DIR / %mlir_src_root.
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric.mtx
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric_complex.mtx
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
-          DESTINATION ${MLIR_LIB_DIR}/data/)
 endif()
 
 llvm_canonicalize_cmake_booleans(
