@@ -87,7 +87,7 @@ L27: ldrsb x2, [x1]
 
 ## Unaligned
 L28: adrp x0, _unaligned@PAGE
-L29: add  x1, x0, _close@PAGEOFF
+L29: add  x1, x0, _unaligned@PAGEOFF
 L30: ldr  x2, [x1]
 # CHECK-NEXT: adr x1
 # CHECK-NEXT: nop
