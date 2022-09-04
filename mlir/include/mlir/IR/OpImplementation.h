@@ -272,15 +272,14 @@ operator<<(AsmPrinterT &p, double value) {
 // Support printing anything that isn't convertible to one of the other
 // streamable types, even if it isn't exactly one of them. For example, we want
 // to print FunctionType with the Type version above, not have it match this.
-template <
-    typename AsmPrinterT, typename T,
-    typename std::enable_if<!std::is_convertible<T &, Value &>::value &&
-                                !std::is_convertible<T &, Type &>::value &&
-                                !std::is_convertible<T &, Attribute &>::value &&
-                                !std::is_convertible<T &, ValueRange>::value &&
-                                !std::is_convertible<T &, APFloat &>::value &&
-                                !llvm::is_one_of<T, bool, float, double>::value,
-                            T>::type * = nullptr>
+template <typename AsmPrinterT, typename T,
+          std::enable_if_t<!std::is_convertible<T &, Value &>::value &&
+                               !std::is_convertible<T &, Type &>::value &&
+                               !std::is_convertible<T &, Attribute &>::value &&
+                               !std::is_convertible<T &, ValueRange>::value &&
+                               !std::is_convertible<T &, APFloat &>::value &&
+                               !llvm::is_one_of<T, bool, float, double>::value,
+                           T> * = nullptr>
 inline std::enable_if_t<std::is_base_of<AsmPrinter, AsmPrinterT>::value,
                         AsmPrinterT &>
 operator<<(AsmPrinterT &p, const T &other) {
@@ -429,9 +428,9 @@ inline OpAsmPrinter &operator<<(OpAsmPrinter &p, Value value) {
 }
 
 template <typename T,
-          typename std::enable_if<std::is_convertible<T &, ValueRange>::value &&
-                                      !std::is_convertible<T &, Value &>::value,
-                                  T>::type * = nullptr>
+          std::enable_if_t<std::is_convertible<T &, ValueRange>::value &&
+                               !std::is_convertible<T &, Value &>::value,
+                           T> * = nullptr>
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, const T &values) {
   p.printOperands(values);
   return p;
