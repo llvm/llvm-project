@@ -216,16 +216,113 @@ public:
 
   // Unary Operators.
   mlir::Value VisitUnaryPostDec(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
+    return buildScalarPrePostIncDec(E);
   }
   mlir::Value VisitUnaryPostInc(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
+    return buildScalarPrePostIncDec(E);
   }
   mlir::Value VisitUnaryPreDec(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
+    return buildScalarPrePostIncDec(E);
   }
   mlir::Value VisitUnaryPreInc(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
+    return buildScalarPrePostIncDec(E);
+  }
+  mlir::Value buildScalarPrePostIncDec(const UnaryOperator *E) {
+    QualType type = E->getSubExpr()->getType();
+
+    auto LV = CGF.buildLValue(E->getSubExpr());
+    mlir::Value Value;
+    mlir::Value Input;
+
+    if (const AtomicType *atomicTy = type->getAs<AtomicType>()) {
+      assert(0 && "no atomics inc/dec yet");
+    } else {
+      Value = buildLoadOfLValue(LV, E->getExprLoc());
+      Input = Value;
+    }
+
+    // NOTE: When possible, more frequent cases are handled first.
+
+    // Special case of integer increment that we have to check first: bool++.
+    // Due to promotion rules, we get:
+    //   bool++ -> bool = bool + 1
+    //          -> bool = (int)bool + 1
+    //          -> bool = ((int)bool + 1 != 0)
+    // An interesting aspect of this is that increment is always true.
+    // Decrement does not have this property.
+    if (E->isIncrementOp() && type->isBooleanType()) {
+      assert(0 && "inc simplification for booleans not implemented yet");
+
+      // NOTE: We likely want the code below, but loading/store booleans need to
+      // work first. See CIRGenFunction::buildFromMemory().
+      Value = Builder.create<mlir::cir::ConstantOp>(CGF.getLoc(E->getExprLoc()),
+                                                    CGF.getCIRType(type),
+                                                    Builder.getBoolAttr(true));
+    } else if (type->isIntegerType()) {
+      bool canPerformLossyDemotionCheck = false;
+      if (CGF.getContext().isPromotableIntegerType(type)) {
+        canPerformLossyDemotionCheck = true;
+        assert(0 && "no promotable integer inc/dec yet");
+      }
+
+      if (CGF.SanOpts.hasOneOf(
+              SanitizerKind::ImplicitIntegerArithmeticValueChange) &&
+          canPerformLossyDemotionCheck) {
+        assert(0 &&
+               "perform lossy demotion case for inc/dec not implemented yet");
+      } else if (E->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
+        Value = buildIncDecConsiderOverflowBehavior(E, Value);
+      } else if (E->canOverflow() && type->isUnsignedIntegerType() &&
+                 CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) {
+        assert(0 &&
+               "unsigned integer overflow sanitized inc/dec not implemented");
+      } else {
+        auto Kind = E->isIncrementOp() ? mlir::cir::UnaryOpKind::Inc
+                                       : mlir::cir::UnaryOpKind::Dec;
+        Value = buildUnaryOp(E, Kind, Input);
+      }
+    } else if (const PointerType *ptr = type->getAs<PointerType>()) {
+      assert(0 && "no pointer inc/dec yet");
+    } else if (type->isVectorType()) {
+      assert(0 && "no vector inc/dec yet");
+    } else if (type->isRealFloatingType()) {
+      assert(0 && "no float inc/dec yet");
+    } else if (type->isFixedPointType()) {
+      assert(0 && "no fixed point inc/dec yet");
+    } else {
+      assert(type->castAs<ObjCObjectPointerType>());
+      assert(0 && "no objc pointer type inc/dec yet");
+    }
+
+    CIRGenFunction::SourceLocRAIIObject sourceloc{
+        CGF, CGF.getLoc(E->getSourceRange())};
+
+    if (LV.isBitField())
+      assert(0 && "no bitfield inc/dec yet");
+    else
+      CGF.buildStoreThroughLValue(RValue::get(Value), LV, nullptr);
+
+    return E->isPrefix() ? Value : Input;
+  }
+
+  mlir::Value buildIncDecConsiderOverflowBehavior(const UnaryOperator *E,
+                                                  mlir::Value V) {
+    switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined: {
+      auto Kind = E->isIncrementOp() ? mlir::cir::UnaryOpKind::Inc
+                                     : mlir::cir::UnaryOpKind::Dec;
+      return buildUnaryOp(E, Kind, V);
+      break;
+    }
+    case LangOptions::SOB_Undefined:
+      assert(0 &&
+             "inc/dec overflow behavior SOB_Undefined not implemented yet");
+      break;
+    case LangOptions::SOB_Trapping:
+      assert(0 && "inc/dec overflow behavior SOB_Trapping not implemented yet");
+      break;
+    }
+    llvm_unreachable("Unknown SignedOverflowBehaviorTy");
   }
 
   mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
@@ -254,6 +351,13 @@ public:
   }
   mlir::Value VisitUnaryExtension(const UnaryOperator *E) {
     llvm_unreachable("NYI");
+  }
+
+  mlir::Value buildUnaryOp(const UnaryOperator *E, mlir::cir::UnaryOpKind kind,
+                           mlir::Value input) {
+    return Builder.create<mlir::cir::UnaryOp>(
+        CGF.getLoc(E->getSourceRange().getBegin()),
+        CGF.getCIRType(E->getType()), kind, input);
   }
 
   // C++
