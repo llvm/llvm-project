@@ -8032,7 +8032,7 @@ IdentifierInfo *ASTReader::get(StringRef Name) {
   // lookups). Perform the lookup in PCH files, though, since we don't build
   // a complete initial identifier table if we're carrying on from a PCH.
   if (PP.getLangOpts().CPlusPlus) {
-    for (auto F : ModuleMgr.pch_modules())
+    for (auto *F : ModuleMgr.pch_modules())
       if (Visitor(*F))
         break;
   } else {
@@ -9645,7 +9645,7 @@ void ASTReader::diagnoseOdrViolations() {
     bool Found = false;
     const Decl *DCanon = D->getCanonicalDecl();
 
-    for (auto RI : D->redecls()) {
+    for (auto *RI : D->redecls()) {
       if (RI->getLexicalDeclContext() == CanonDef) {
         Found = true;
         break;

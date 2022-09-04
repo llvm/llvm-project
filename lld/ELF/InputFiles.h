@@ -196,7 +196,7 @@ public:
 
 protected:
   // Initializes this class's member variables.
-  template <typename ELFT> void init();
+  template <typename ELFT> void init(InputFile::Kind k);
 
   StringRef stringTable;
   const void *elfShdrs = nullptr;

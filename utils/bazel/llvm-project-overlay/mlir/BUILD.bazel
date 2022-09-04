@@ -6392,8 +6392,10 @@ cc_binary(
     includes = ["include"],
     deps = [
         ":AllPassesAndDialects",
+        ":BytecodeWriter",
         ":IR",
         ":MlirLspServerLib",
+        ":Parser",
     ],
 )
 
