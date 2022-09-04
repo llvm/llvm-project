@@ -218,6 +218,10 @@ private:
 
   cas::ObjectStore &DB;
   Optional<cas::ObjectRef> PCHRef;
+  bool StartedEnteringIncludes = false;
+  // When a PCH is used this lists the filenames of the included files as they
+  // are recorded in the PCH, ordered by \p FileEntry::UID index.
+  SmallVector<StringRef> PreIncludedFileNames;
   llvm::BitVector SeenIncludeFiles;
   SmallVector<cas::IncludeFileList::FileEntry> IncludedFiles;
   Optional<cas::ObjectRef> PredefinesBufferRef;
@@ -230,6 +234,19 @@ private:
 void IncludeTreePPConsumer::enteredInclude(Preprocessor &PP, FileID FID) {
   if (hasErrorOccurred())
     return;
+
+  if (!StartedEnteringIncludes) {
+    StartedEnteringIncludes = true;
+
+    // Get the included files (coming from a PCH), and keep track of the
+    // filenames that were recorded in the PCH.
+    for (const FileEntry *FE : PP.getIncludedFiles()) {
+      unsigned UID = FE->getUID();
+      if (UID >= PreIncludedFileNames.size())
+        PreIncludedFileNames.resize(UID + 1);
+      PreIncludedFileNames[UID] = FE->getName();
+    }
+  }
 
   Optional<cas::ObjectRef> FileRef = check(getObjectForFile(PP, FID));
   if (!FileRef)
@@ -405,17 +422,14 @@ IncludeTreePPConsumer::addToFileList(FileManager &FM, const FileEntry *FE) {
     return FileNode->getRef();
   };
 
-  StringRef OtherPath = FE->tryGetRealPathName();
-  if (!OtherPath.empty()) {
-    // Check whether another path is associated due to a symlink.
-    llvm::SmallString<128> AbsPath(Filename);
-    FM.makeAbsolutePath(AbsPath);
-    llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
-    if (OtherPath != AbsPath) {
-      auto FileNode = addFile(OtherPath);
-      if (!FileNode)
-        return FileNode.takeError();
-    }
+  // Check whether another path coming from the PCH is associated with the same
+  // file.
+  unsigned UID = FE->getUID();
+  if (UID < PreIncludedFileNames.size() && !PreIncludedFileNames[UID].empty() &&
+      PreIncludedFileNames[UID] != Filename) {
+    auto FileNode = addFile(PreIncludedFileNames[UID]);
+    if (!FileNode)
+      return FileNode.takeError();
   }
 
   return addFile(Filename);
