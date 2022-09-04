@@ -1,10 +1,14 @@
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %std_cxx11-14 %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s --check-prefixes=CHECK,PRE17
+// RUN: %clang_cc1 -no-opaque-pointers %std_cxx17- %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s --check-prefixes=CHECK,CXX17
 // rdar://16254558
 
 typedef float AVX2Float __attribute__((__vector_size__(32)));
 
 
-volatile float TestAlign(void)
+#if __cplusplus < 202002L
+volatile
+#endif
+float TestAlign(void)
 {
        volatile AVX2Float *p = new AVX2Float;
         *p = *p;
@@ -13,7 +17,8 @@ volatile float TestAlign(void)
 }
 
 // CHECK: [[R:%.*]] = alloca <8 x float>, align 32
-// CHECK-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm(i64 noundef 32)
+// PRE17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm(i64 noundef 32)
+// CXX17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull align 32 i8* @_ZnwmSt11align_val_t(i64 noundef 32, i64 noundef 32)
 // CHECK-NEXT:  [[ZERO:%.*]] = bitcast i8* [[CALL]] to <8 x float>*
 // CHECK-NEXT:  store <8 x float>* [[ZERO]], <8 x float>** [[P:%.*]], align 8
 // CHECK-NEXT:  [[ONE:%.*]] = load <8 x float>*, <8 x float>** [[P]], align 8
@@ -33,7 +38,10 @@ typedef AVX2Float_Explicitly_aligned AVX2Float_indirect;
 
 typedef AVX2Float_indirect AVX2Float_use_existing_align;
 
-volatile float TestAlign2(void)
+#if __cplusplus < 202002L
+volatile
+#endif
+float TestAlign2(void)
 {
        volatile AVX2Float_use_existing_align *p = new AVX2Float_use_existing_align;
         *p = *p;
@@ -42,7 +50,8 @@ volatile float TestAlign2(void)
 }
 
 // CHECK: [[R:%.*]] = alloca <8 x float>, align 32
-// CHECK-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm(i64 noundef 32)
+// PRE17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm(i64 noundef 32)
+// CXX17-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull align 32 i8* @_ZnwmSt11align_val_t(i64 noundef 32, i64 noundef 32)
 // CHECK-NEXT:  [[ZERO:%.*]] = bitcast i8* [[CALL]] to <8 x float>*
 // CHECK-NEXT:  store <8 x float>* [[ZERO]], <8 x float>** [[P:%.*]], align 8
 // CHECK-NEXT:  [[ONE:%.*]] = load <8 x float>*, <8 x float>** [[P]], align 8

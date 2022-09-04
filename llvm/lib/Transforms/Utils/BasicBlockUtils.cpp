@@ -1126,13 +1126,13 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     BI->setDebugLoc(BB->getFirstNonPHIOrDbg()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB instead of BB.
-  for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
+  for (BasicBlock *Pred : Preds) {
     // This is slightly more strict than necessary; the minimum requirement
     // is that there be no more than one indirectbr branching to BB. And
     // all BlockAddress uses would need to be updated.
-    assert(!isa<IndirectBrInst>(Preds[i]->getTerminator()) &&
+    assert(!isa<IndirectBrInst>(Pred->getTerminator()) &&
            "Cannot split an edge from an IndirectBrInst");
-    Preds[i]->getTerminator()->replaceSuccessorWith(BB, NewBB);
+    Pred->getTerminator()->replaceSuccessorWith(BB, NewBB);
   }
 
   // Insert a new PHI node into NewBB for every PHI node in BB and that new PHI
@@ -1208,13 +1208,13 @@ static void SplitLandingPadPredecessorsImpl(
   BI1->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB1 instead of OrigBB.
-  for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
+  for (BasicBlock *Pred : Preds) {
     // This is slightly more strict than necessary; the minimum requirement
     // is that there be no more than one indirectbr branching to BB. And
     // all BlockAddress uses would need to be updated.
-    assert(!isa<IndirectBrInst>(Preds[i]->getTerminator()) &&
+    assert(!isa<IndirectBrInst>(Pred->getTerminator()) &&
            "Cannot split an edge from an IndirectBrInst");
-    Preds[i]->getTerminator()->replaceUsesOfWith(OrigBB, NewBB1);
+    Pred->getTerminator()->replaceUsesOfWith(OrigBB, NewBB1);
   }
 
   bool HasLoopExit = false;

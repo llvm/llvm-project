@@ -1171,7 +1171,7 @@ public:
   static ProtocolMethodLists get(const ObjCProtocolDecl *PD) {
     ProtocolMethodLists result;
 
-    for (auto MD : PD->methods()) {
+    for (auto *MD : PD->methods()) {
       size_t index = (2 * size_t(MD->isOptional()))
                    + (size_t(MD->isClassMethod()));
       result.Methods[index].push_back(MD);
@@ -3454,7 +3454,7 @@ static bool hasWeakMember(QualType type) {
   }
 
   if (auto recType = type->getAs<RecordType>()) {
-    for (auto field : recType->getDecl()->fields()) {
+    for (auto *field : recType->getDecl()->fields()) {
       if (hasWeakMember(field->getType()))
         return true;
     }

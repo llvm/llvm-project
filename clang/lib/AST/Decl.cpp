@@ -1527,7 +1527,7 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
   // that all other computed linkages match, check that the one we just
   // computed also does.
   NamedDecl *Old = nullptr;
-  for (auto I : D->redecls()) {
+  for (auto *I : D->redecls()) {
     auto *T = cast<NamedDecl>(I);
     if (T == D)
       continue;
@@ -1825,7 +1825,7 @@ bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
     // Check whether this is actually newer than OldD. We want to keep the
     // newer declaration. This loop will usually only iterate once, because
     // OldD is usually the previous declaration.
-    for (auto D : redecls()) {
+    for (auto *D : redecls()) {
       if (D == OldD)
         break;
 
@@ -2273,7 +2273,7 @@ VarDecl *VarDecl::getActingDefinition() {
 
 VarDecl *VarDecl::getDefinition(ASTContext &C) {
   VarDecl *First = getFirstDecl();
-  for (auto I : First->redecls()) {
+  for (auto *I : First->redecls()) {
     if (I->isThisDeclarationADefinition(C) == Definition)
       return I;
   }
@@ -2284,7 +2284,7 @@ VarDecl::DefinitionKind VarDecl::hasDefinition(ASTContext &C) const {
   DefinitionKind Kind = DeclarationOnly;
 
   const VarDecl *First = getFirstDecl();
-  for (auto I : First->redecls()) {
+  for (auto *I : First->redecls()) {
     Kind = std::max(Kind, I->isThisDeclarationADefinition(C));
     if (Kind == Definition)
       break;
@@ -2294,7 +2294,7 @@ VarDecl::DefinitionKind VarDecl::hasDefinition(ASTContext &C) const {
 }
 
 const Expr *VarDecl::getAnyInitializer(const VarDecl *&D) const {
-  for (auto I : redecls()) {
+  for (auto *I : redecls()) {
     if (auto Expr = I->getInit()) {
       D = I;
       return Expr;
@@ -2330,7 +2330,7 @@ Stmt **VarDecl::getInitAddress() {
 
 VarDecl *VarDecl::getInitializingDeclaration() {
   VarDecl *Def = nullptr;
-  for (auto I : redecls()) {
+  for (auto *I : redecls()) {
     if (I->hasInit())
       return I;
 
@@ -3015,7 +3015,7 @@ FunctionDecl::getDefaultedFunctionInfo() const {
 }
 
 bool FunctionDecl::hasBody(const FunctionDecl *&Definition) const {
-  for (auto I : redecls()) {
+  for (auto *I : redecls()) {
     if (I->doesThisDeclarationHaveABody()) {
       Definition = I;
       return true;
@@ -3686,7 +3686,7 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
 
     // If any declaration is 'inline' but not 'extern', then this definition
     // is externally visible.
-    for (auto Redecl : redecls()) {
+    for (auto *Redecl : redecls()) {
       if (Redecl->isInlineSpecified() &&
           Redecl->getStorageClass() != SC_Extern)
         return true;
@@ -3703,7 +3703,7 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
   //   [...] If all of the file scope declarations for a function in a
   //   translation unit include the inline function specifier without extern,
   //   then the definition in that translation unit is an inline definition.
-  for (auto Redecl : redecls()) {
+  for (auto *Redecl : redecls()) {
     if (RedeclForcesDefC99(Redecl))
       return true;
   }
@@ -4408,7 +4408,7 @@ void TagDecl::startDefinition() {
   if (auto *D = dyn_cast<CXXRecordDecl>(this)) {
     struct CXXRecordDecl::DefinitionData *Data =
       new (getASTContext()) struct CXXRecordDecl::DefinitionData(D);
-    for (auto I : redecls())
+    for (auto *I : redecls())
       cast<CXXRecordDecl>(I)->DefinitionData = Data;
   }
 }
@@ -4441,7 +4441,7 @@ TagDecl *TagDecl::getDefinition() const {
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(this))
     return CXXRD->getDefinition();
 
-  for (auto R : redecls())
+  for (auto *R : redecls())
     if (R->isCompleteDefinition())
       return R;
 

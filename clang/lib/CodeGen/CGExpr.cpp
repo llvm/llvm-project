@@ -3760,7 +3760,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      const llvm::Twine &name = "arrayidx") {
   // All the indices except that last must be zero.
 #ifndef NDEBUG
-  for (auto idx : indices.drop_back())
+  for (auto *idx : indices.drop_back())
     assert(isa<llvm::ConstantInt>(idx) &&
            cast<llvm::ConstantInt>(idx)->isZero());
 #endif
@@ -4297,7 +4297,7 @@ unsigned CodeGenFunction::getDebugInfoFIndex(const RecordDecl *Rec,
                                              unsigned FieldIndex) {
   unsigned I = 0, Skipped = 0;
 
-  for (auto F : Rec->getDefinition()->fields()) {
+  for (auto *F : Rec->getDefinition()->fields()) {
     if (I == FieldIndex)
       break;
     if (F->isUnnamedBitfield())

@@ -245,6 +245,22 @@ Check for uninitialized values being returned to the caller.
    return x; // warn
  }
 
+.. _core-uninitialized-NewArraySize:
+
+core.uninitialized.NewArraySize (C++)
+"""""""""""""""""""""""""""""""""""""
+
+Check if the element count in new[] is garbage or undefined.
+
+.. code-block:: cpp
+
+  void test() {
+    int n;
+    int *arr = new int[n]; // warn: Element count in new[] is a garbage value
+    delete[] arr;
+  }
+
+
 .. _cplusplus-checkers:
 
 

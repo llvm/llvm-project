@@ -301,10 +301,10 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50    *      *      U     sfence
 # CHECK-NEXT:  1      1     0.50                        shufps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   shufps	$1, (%rax), %xmm2
-# CHECK-NEXT:  1      20    20.00                       sqrtps	%xmm0, %xmm2
-# CHECK-NEXT:  1      27    20.00   *                   sqrtps	(%rax), %xmm2
-# CHECK-NEXT:  1      20    20.00                       sqrtss	%xmm0, %xmm2
-# CHECK-NEXT:  1      27    20.00   *                   sqrtss	(%rax), %xmm2
+# CHECK-NEXT:  1      14    5.00                        sqrtps	%xmm0, %xmm2
+# CHECK-NEXT:  1      21    5.00    *                   sqrtps	(%rax), %xmm2
+# CHECK-NEXT:  1      14    5.00                        sqrtss	%xmm0, %xmm2
+# CHECK-NEXT:  1      21    5.00    *                   sqrtss	(%rax), %xmm2
 # CHECK-NEXT:  1      100   0.25           *      U     stmxcsr	(%rax)
 # CHECK-NEXT:  1      3     0.50                        subps	%xmm0, %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   subps	(%rax), %xmm2
@@ -335,7 +335,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 32.50  32.50   -      -      -      -      -     24.50  30.50  28.50  120.50  -
+# CHECK-NEXT: 32.50  32.50   -      -      -      -      -     24.50  30.50  28.50  60.50   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -446,10 +446,10 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     sfence
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     shufps	$1, %xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     shufps	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     20.00   -     sqrtps	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     20.00   -     sqrtps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     20.00   -     sqrtss	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     20.00   -     sqrtss	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     5.00    -     sqrtps	%xmm0, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     5.00    -     sqrtps	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     5.00    -     sqrtss	%xmm0, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     5.00    -     sqrtss	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     stmxcsr	(%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -     subps	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     0.50   0.50    -     subps	(%rax), %xmm2

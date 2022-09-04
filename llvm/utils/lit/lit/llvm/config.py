@@ -567,6 +567,32 @@ class LLVMConfig(object):
             self.config.substitutions.append(
                 ('%target_itanium_abi_host_triple', ''))
 
+        # TODO: Many tests work across many language standards. Before
+        # https://discourse.llvm.org/t/lit-run-a-run-line-multiple-times-with-different-replacements/64932
+        # has a solution, provide substitutions to conveniently try every standard with LIT_CLANG_STD_GROUP.
+        clang_std_group = int(os.environ.get('LIT_CLANG_STD_GROUP', '0'))
+        clang_std_values = ('98', '11', '14', '17', '20', '2b')
+        def add_std_cxx(s):
+            t = s[8:]
+            if t.endswith('-'):
+                t += clang_std_values[-1]
+            l = clang_std_values.index(t[0:2] if t[0:2] != '23' else '2b')
+            h = clang_std_values.index(t[3:5])
+            # Let LIT_CLANG_STD_GROUP=0 pick the highest value (likely the most relevant
+            # standard).
+            l = h - clang_std_group % (h-l+1)
+            self.config.substitutions.append((s, '-std=c++' + clang_std_values[l]))
+
+        add_std_cxx('%std_cxx98-14')
+        add_std_cxx('%std_cxx98-')
+        add_std_cxx('%std_cxx11-14')
+        add_std_cxx('%std_cxx11-')
+        add_std_cxx('%std_cxx14-')
+        add_std_cxx('%std_cxx17-20')
+        add_std_cxx('%std_cxx17-')
+        add_std_cxx('%std_cxx20-')
+        add_std_cxx('%std_cxx23-')
+
         # FIXME: Find nicer way to prohibit this.
         def prefer(this, to):
             return '''\"*** Do not use '%s' in tests, use '%s'. ***\"''' % (

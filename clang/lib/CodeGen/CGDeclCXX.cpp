@@ -707,7 +707,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   }
 
   // Now append the ones without specified priority.
-  for (auto F : CXXGlobalInits)
+  for (auto *F : CXXGlobalInits)
     ModuleInits.push_back(F);
   CXXGlobalInits.clear();
 
@@ -844,7 +844,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
 
       // Prepend the module inits to the highest priority set.
       if (!ModuleInits.empty()) {
-        for (auto F : ModuleInits)
+        for (auto *F : ModuleInits)
           LocalCXXGlobalInits.push_back(F);
         ModuleInits.clear();
       }
@@ -862,7 +862,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
       CXXGlobalInits.empty())
     return;
 
-  for (auto F : CXXGlobalInits)
+  for (auto *F : CXXGlobalInits)
     ModuleInits.push_back(F);
   CXXGlobalInits.clear();
 

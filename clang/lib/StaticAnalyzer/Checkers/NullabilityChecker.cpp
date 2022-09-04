@@ -907,7 +907,7 @@ void NullabilityChecker::checkPostObjCMessage(const ObjCMethodCall &M,
     // this class of methods reduced the emitted diagnostics by about 30% on
     // some projects (and all of that was false positives).
     if (Name.contains("String")) {
-      for (auto Param : M.parameters()) {
+      for (auto *Param : M.parameters()) {
         if (Param->getName() == "encoding") {
           State = State->set<NullabilityMap>(ReturnRegion,
                                              Nullability::Contradicted);

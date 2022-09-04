@@ -167,7 +167,7 @@ namespace clang {
       }
 
       Record.push_back(typeParams->size());
-      for (auto typeParam : *typeParams) {
+      for (auto *typeParam : *typeParams) {
         Record.AddDeclRef(typeParam);
       }
       Record.AddSourceLocation(typeParams->getLAngleLoc());
@@ -661,7 +661,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   Record.push_back(D->param_size());
-  for (auto P : D->parameters())
+  for (auto *P : D->parameters())
     Record.AddDeclRef(P);
   Code = serialization::DECL_FUNCTION;
 }
