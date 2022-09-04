@@ -107,13 +107,15 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     if (ExitBlocks.empty())
       continue;
 
-    for (Use &U : I->uses()) {
+    for (Use &U : make_early_inc_range(I->uses())) {
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UserBB = User->getParent();
 
       // Skip uses in unreachable blocks.
-      if (!DT.isReachableFromEntry(UserBB))
+      if (!DT.isReachableFromEntry(UserBB)) {
+        U.set(PoisonValue::get(I->getType()));
         continue;
+      }
 
       // For practical purposes, we consider that the use in a PHI
       // occurs in the respective predecessor block. For more info,
