@@ -3029,7 +3029,9 @@ void InitializeInterceptors() {
 constexpr u32 kBarrierThreadBits = 10;
 constexpr u32 kBarrierThreads = 1 << kBarrierThreadBits;
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_init(
+extern "C" {
+
+SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_init(
     atomic_uint32_t *barrier, u32 num_threads) {
   if (num_threads >= kBarrierThreads) {
     Printf("barrier_init: count is too large (%d)\n", num_threads);
@@ -3044,7 +3046,7 @@ static u32 barrier_epoch(u32 value) {
   return (value >> kBarrierThreadBits) / (value & (kBarrierThreads - 1));
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_wait(
+SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_wait(
     atomic_uint32_t *barrier) {
   u32 old = atomic_fetch_add(barrier, kBarrierThreads, memory_order_relaxed);
   u32 old_epoch = barrier_epoch(old);
@@ -3058,4 +3060,24 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_wait(
       return;
     FutexWait(barrier, cur);
   }
+}
+
+void *__tsan_memcpy(void *dst, const void *src, uptr size) {
+  void *ctx;
+#if PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE
+  COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);
+#else
+  COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);
+#endif
+}
+
+void *__tsan_memset(void *dst, int c, uptr size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, c, size);
+}
+
+void *__tsan_memmove(void *dst, const void *src, uptr size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);
+}
 }
