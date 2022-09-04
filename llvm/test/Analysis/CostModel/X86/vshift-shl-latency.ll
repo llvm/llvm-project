@@ -754,27 +754,111 @@ define <8 x i64> @constant_shift_v8i64(<8 x i64> %a) {
 }
 
 define <4 x i32> @constant_shift_v4i32(<4 x i32> %a) {
-; CHECK-LABEL: 'constant_shift_v4i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
+; SSE2-LABEL: 'constant_shift_v4i32'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
+;
+; SSE42-LABEL: 'constant_shift_v4i32'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
+;
+; AVX1-LABEL: 'constant_shift_v4i32'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
+;
+; AVX2-LABEL: 'constant_shift_v4i32'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
+;
+; XOPAVX1-LABEL: 'constant_shift_v4i32'
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
+;
+; XOPAVX2-LABEL: 'constant_shift_v4i32'
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
+;
+; AVX512-LABEL: 'constant_shift_v4i32'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
+;
+; BTVER2-LABEL: 'constant_shift_v4i32'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %shift
 ;
   %shift = shl <4 x i32> %a, <i32 4, i32 5, i32 6, i32 7>
   ret <4 x i32> %shift
 }
 
 define <8 x i32> @constant_shift_v8i32(<8 x i32> %a) {
-; CHECK-LABEL: 'constant_shift_v8i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
+; SSE2-LABEL: 'constant_shift_v8i32'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
+;
+; SSE42-LABEL: 'constant_shift_v8i32'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
+;
+; AVX1-LABEL: 'constant_shift_v8i32'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
+;
+; AVX2-LABEL: 'constant_shift_v8i32'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
+;
+; XOPAVX1-LABEL: 'constant_shift_v8i32'
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
+;
+; XOPAVX2-LABEL: 'constant_shift_v8i32'
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
+;
+; AVX512-LABEL: 'constant_shift_v8i32'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
+;
+; BTVER2-LABEL: 'constant_shift_v8i32'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %shift
 ;
   %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   ret <8 x i32> %shift
 }
 
 define <16 x i32> @constant_shift_v16i32(<16 x i32> %a) {
-; CHECK-LABEL: 'constant_shift_v16i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
+; SSE2-LABEL: 'constant_shift_v16i32'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
+;
+; SSE42-LABEL: 'constant_shift_v16i32'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
+;
+; AVX1-LABEL: 'constant_shift_v16i32'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
+;
+; AVX2-LABEL: 'constant_shift_v16i32'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
+;
+; XOPAVX1-LABEL: 'constant_shift_v16i32'
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
+;
+; XOPAVX2-LABEL: 'constant_shift_v16i32'
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
+;
+; AVX512-LABEL: 'constant_shift_v16i32'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
+;
+; BTVER2-LABEL: 'constant_shift_v16i32'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %shift
 ;
   %shift = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i32> %shift
@@ -782,7 +866,7 @@ define <16 x i32> @constant_shift_v16i32(<16 x i32> %a) {
 
 define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: 'constant_shift_v8i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <8 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <8 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %shift
 ;
   %shift = shl <8 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
@@ -790,18 +874,70 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) {
 }
 
 define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) {
-; CHECK-LABEL: 'constant_shift_v16i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+; SSE2-LABEL: 'constant_shift_v16i16'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; SSE42-LABEL: 'constant_shift_v16i16'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; AVX1-LABEL: 'constant_shift_v16i16'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; AVX2-LABEL: 'constant_shift_v16i16'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; XOPAVX1-LABEL: 'constant_shift_v16i16'
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; XOPAVX2-LABEL: 'constant_shift_v16i16'
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; AVX512-LABEL: 'constant_shift_v16i16'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; BTVER2-LABEL: 'constant_shift_v16i16'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
 ;
   %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
   ret <16 x i16> %shift
 }
 
 define <32 x i16> @constant_shift_v32i16(<32 x i16> %a) {
-; CHECK-LABEL: 'constant_shift_v32i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+; SSE2-LABEL: 'constant_shift_v32i16'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; SSE42-LABEL: 'constant_shift_v32i16'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; AVX1-LABEL: 'constant_shift_v32i16'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; AVX2-LABEL: 'constant_shift_v32i16'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; XOPAVX1-LABEL: 'constant_shift_v32i16'
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; XOPAVX2-LABEL: 'constant_shift_v32i16'
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; BTVER2-LABEL: 'constant_shift_v32i16'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
 ;
   %shift = shl <32 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
   ret <32 x i16> %shift
@@ -902,18 +1038,70 @@ define <8 x i16> @splatconstant_shift_v8i16(<8 x i16> %a) {
 }
 
 define <16 x i16> @splatconstant_shift_v16i16(<16 x i16> %a) {
-; CHECK-LABEL: 'splatconstant_shift_v16i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+; SSE2-LABEL: 'splatconstant_shift_v16i16'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; SSE42-LABEL: 'splatconstant_shift_v16i16'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; AVX1-LABEL: 'splatconstant_shift_v16i16'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; AVX2-LABEL: 'splatconstant_shift_v16i16'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; XOPAVX1-LABEL: 'splatconstant_shift_v16i16'
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; XOPAVX2-LABEL: 'splatconstant_shift_v16i16'
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; AVX512-LABEL: 'splatconstant_shift_v16i16'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
+;
+; BTVER2-LABEL: 'splatconstant_shift_v16i16'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %shift
 ;
   %shift = shl <16 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
   ret <16 x i16> %shift
 }
 
 define <32 x i16> @splatconstant_shift_v32i16(<32 x i16> %a) {
-; CHECK-LABEL: 'splatconstant_shift_v32i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+; SSE2-LABEL: 'splatconstant_shift_v32i16'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; SSE42-LABEL: 'splatconstant_shift_v32i16'
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; AVX1-LABEL: 'splatconstant_shift_v32i16'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; AVX2-LABEL: 'splatconstant_shift_v32i16'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; XOPAVX1-LABEL: 'splatconstant_shift_v32i16'
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; XOPAVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; XOPAVX2-LABEL: 'splatconstant_shift_v32i16'
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
+;
+; BTVER2-LABEL: 'splatconstant_shift_v32i16'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %shift
 ;
   %shift = shl <32 x i16> %a, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
   ret <32 x i16> %shift

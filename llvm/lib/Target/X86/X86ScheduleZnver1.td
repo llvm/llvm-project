@@ -422,7 +422,7 @@ defm : ZnWriteResFpuPair<WriteVecALUY,    [ZnFPU],   1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVecALUZ>;
 defm : ZnWriteResFpuPair<WriteVecIMul,    [ZnFPU0],  4>;
 defm : ZnWriteResFpuPair<WriteVecIMulX,   [ZnFPU0],  4>;
-defm : ZnWriteResFpuPair<WriteVecIMulY,   [ZnFPU0],  4>;
+defm : ZnWriteResFpuPair<WriteVecIMulY,   [ZnFPU0],  4, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVecIMulZ>;
 defm : ZnWriteResFpuPair<WritePMULLD,     [ZnFPU0],  4, [2]>;
 defm : ZnWriteResFpuPair<WritePMULLDY,    [ZnFPU0],  4, [4], 2>;
