@@ -765,10 +765,9 @@ void MFMASmallGemmOpt::applyIGLPStrategy(
     DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) {
   // Count the number of MFMA instructions.
   unsigned MFMACount = 0;
-  for (auto I = DAG->begin(), E = DAG->end(); I != E; ++I) {
-    if (TII->isMFMA(*I))
+  for (const MachineInstr &I : *DAG)
+    if (TII->isMFMA(I))
       ++MFMACount;
-  }
 
   const unsigned PipelineSyncID = 0;
   SchedGroup *SG = nullptr;
