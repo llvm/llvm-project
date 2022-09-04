@@ -1362,8 +1362,12 @@ ExpectedType ASTNodeImporter::VisitTypedefType(const TypedefType *T) {
   Expected<TypedefNameDecl *> ToDeclOrErr = import(T->getDecl());
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
+  ExpectedType ToUnderlyingTypeOrErr = import(T->desugar());
+  if (!ToUnderlyingTypeOrErr)
+    return ToUnderlyingTypeOrErr.takeError();
 
-  return Importer.getToContext().getTypeDeclType(*ToDeclOrErr);
+  return Importer.getToContext().getTypedefType(*ToDeclOrErr,
+                                                *ToUnderlyingTypeOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitTypeOfExprType(const TypeOfExprType *T) {

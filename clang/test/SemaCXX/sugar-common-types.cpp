@@ -112,3 +112,22 @@ C1<X2> auto t26_2 = (::SB1){};
 C2<X2> auto t26_3 = (::SB1){};
 N t26 = 0 ? t26_1 : t26_2; // expected-error {{from 'SB1' (aka 'SS1')}}
 N t27 = 0 ? t26_1 : t26_3; // expected-error {{from 'SB1' (aka 'SS1')}}
+
+using RPB1 = X1*;
+using RPX1 = RPB1;
+using RPB1 = Y1*; // redeclared
+using RPY1 = RPB1;
+N t28 = *(RPB1){}; // expected-error {{lvalue of type 'Y1' (aka 'int')}}
+auto t29 = 0 ? (RPX1){} : (RPY1){};
+N t30 = t29;  // expected-error {{lvalue of type 'RPB1' (aka 'int *')}}
+N t31 = *t29; // expected-error {{lvalue of type 'B1' (aka 'int')}}
+
+namespace A { using type1 = X1*; };
+namespace C { using A::type1; };
+using UPX1 = C::type1;
+namespace A { using type1 = Y1*; };  // redeclared
+namespace C { using A::type1; };     // redeclared
+using UPY1 = C::type1;
+auto t32 = 0 ? (UPX1){} : (UPY1){};
+N t33 = t32;  // expected-error {{lvalue of type 'C::type1' (aka 'int *')}}
+N t34 = *t32; // expected-error {{lvalue of type 'B1' (aka 'int')}}
