@@ -71,7 +71,7 @@ template <typename T> struct make_const_ptr {
 };
 
 template <typename T> struct make_const_ref {
-  using type = typename std::add_lvalue_reference<std::add_const_t<T>>::type;
+  using type = std::add_lvalue_reference_t<std::add_const_t<T>>;
 };
 
 namespace detail {
