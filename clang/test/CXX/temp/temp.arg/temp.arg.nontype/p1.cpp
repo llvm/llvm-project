@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -triple=x86_64-linux-gnu %s
-// RUN: %clang_cc1 -fsyntax-only -verify -triple=x86_64-linux-gnu -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -triple=x86_64-linux-gnu -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx17 -triple=x86_64-linux-gnu %std_cxx98-14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17 -triple=x86_64-linux-gnu %std_cxx17- %s
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -triple=x86_64-linux-gnu %s -DCPP11ONLY
 
 // C++11 [temp.arg.nontype]p1:
@@ -32,19 +31,19 @@ namespace non_type_tmpl_param {
 //      omitted if the name refers to a function or array and shall be omitted
 //      if the corresopnding template-parameter is a reference; or
 namespace addr_of_obj_or_func {
-  template <int* p> struct X0 { }; // expected-note 5{{here}}
+  template <int* p> struct X0 { }; // precxx17-note 5{{here}}
 #if __cplusplus >= 201103L
-  // expected-note@-2 2{{template parameter is declared here}}
+  // precxx17-note@-2 2{{template parameter is declared here}}
 #endif
 
   template <int (*fp)(int)> struct X1 { };
-  template <int &p> struct X2 { }; // expected-note 4{{here}}
-  template <const int &p> struct X2k { }; // expected-note {{here}}
-  template <int (&fp)(int)> struct X3 { }; // expected-note 4{{here}}
+  template <int &p> struct X2 { }; // precxx17-note 4{{here}}
+  template <const int &p> struct X2k { }; // precxx17-note {{here}}
+  template <int (&fp)(int)> struct X3 { }; // precxx17-note 4{{here}}
 
   int i = 42;
 #if __cplusplus >= 201103L
-  // expected-note@-2 {{declared here}}
+  // precxx17-note@-2 {{declared here}}
 #endif
 
   int iarr[10];
@@ -54,9 +53,9 @@ namespace addr_of_obj_or_func {
   // expected-note@-2 5{{non-type template argument refers to object here}}
 #endif
 
-  __thread int ti = 100; // expected-note {{here}}
+  __thread int ti = 100; // precxx17-note {{here}}
 #if __cplusplus <= 199711L
-  // expected-note@-2 {{here}}
+  // precxx17-note@-2 {{here}}
 #endif
 
   static int f_internal(int);
@@ -72,18 +71,19 @@ namespace addr_of_obj_or_func {
 #if __cplusplus <= 199711L
     // expected-error@-2 {{non-type template argument for template parameter of pointer type 'int *' must have its address taken}}
 #else
-    // expected-error@-4 {{non-type template argument of type 'int' is not a constant expression}}
-    // expected-note@-5 {{read of non-const variable 'i' is not allowed in a constant expression}}
+    // precxx17-error@-4 {{non-type template argument of type 'int' is not a constant expression}}
+    // precxx17-note@-5 {{read of non-const variable 'i' is not allowed in a constant expression}}
+    // cxx17-error@-6 {{value of type 'int' is not implicitly convertible to 'int *'}}
 #endif
     X0<&i> x0a_addr;
     X0<iarr> x0b;
-    X0<&iarr> x0b_addr; // expected-error {{cannot be converted to a value of type 'int *'}}
-    X0<ki> x0c; // expected-error {{must have its address taken}}
+    X0<&iarr> x0b_addr; // precxx17-error {{cannot be converted to a value of type 'int *'}} cxx17-error {{value of type 'int (*)[10]' is not implicitly convertible to 'int *'}}
+    X0<ki> x0c; // precxx17-error {{must have its address taken}} cxx17-error {{value of type 'const int' is not implicitly convertible to 'int *'}}
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{internal linkage is a C++11 extension}}
 #endif
 
-    X0<&ki> x0c_addr; // expected-error {{cannot be converted to a value of type 'int *'}}
+    X0<&ki> x0c_addr; // precxx17-error {{cannot be converted to a value of type 'int *'}} cxx17-error {{value of type 'const int *' is not implicitly convertible to 'int *'}}
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{internal linkage is a C++11 extension}}
 #endif
@@ -92,7 +92,8 @@ namespace addr_of_obj_or_func {
 #if __cplusplus <= 199711L
     // expected-error@-2 {{non-type template argument refers to thread-local object}}
 #else
-    // expected-error@-4 {{non-type template argument of type 'int *' is not a constant expression}}
+    // precxx17-error@-4 {{non-type template argument of type 'int *' is not a constant expression}}
+    // cxx17-error@-5 {{on-type template argument is not a constant expression}}
 #endif
 
     X1<f> x1a;
@@ -112,10 +113,10 @@ namespace addr_of_obj_or_func {
 #endif
 
     X2<i> x2a;
-    X2<&i> x2a_addr; // expected-error {{address taken}}
-    X2<iarr> x2b; // expected-error {{cannot bind to template argument of type 'int[10]'}}
-    X2<&iarr> x2b_addr; // expected-error {{address taken}}
-    X2<ki> x2c; // expected-error {{ignores qualifiers}}
+    X2<&i> x2a_addr; // precxx17-error {{address taken}} cxx17-error {{value of type 'int *' is not implicitly convertible to 'int &'}}
+    X2<iarr> x2b; // precxx17-error {{cannot bind to template argument of type 'int[10]'}} cxx17-error {{value of type 'int[10]' is not implicitly convertible to 'int &'}}
+    X2<&iarr> x2b_addr; // precxx17-error {{address taken}} cxx17-error {{value of type 'int (*)[10]' is not implicitly convertible to 'int &'}}
+    X2<ki> x2c; // precxx17-error {{ignores qualifiers}} cxx17-error {{value of type 'const int' is not implicitly convertible to 'int &'}}
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{internal linkage is a C++11 extension}}
 #endif
@@ -125,24 +126,24 @@ namespace addr_of_obj_or_func {
     // expected-warning@-2 {{internal linkage is a C++11 extension}}
 #endif
 
-    X2k<&ki> x2kc_addr; // expected-error {{address taken}}
+    X2k<&ki> x2kc_addr; // precxx17-error {{address taken}} cxx17-error {{value of type 'const int *' is not implicitly convertible to 'const int &'}}
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{internal linkage is a C++11 extension}}
 #endif
 
-    X2<ti> x2d_addr; // expected-error {{refers to thread-local object}}
+    X2<ti> x2d_addr; // precxx17-error {{refers to thread-local object}} cxx17-error {{non-type template argument is not a constant expression}}
     X3<f> x3a;
-    X3<&f> x3a_addr; // expected-error {{address taken}}
+    X3<&f> x3a_addr; // precxx17-error {{address taken}} cxx17-error {{value of type 'int (*)(int)' is not implicitly convertible to 'int (&)(int)'}}
     X3<f_tmpl> x3b;
-    X3<&f_tmpl> x3b_addr; // expected-error {{address taken}}
+    X3<&f_tmpl> x3b_addr; // precxx17-error {{address taken}} cxx17-error {{value of type '<overloaded function type>' is not implicitly convertible to 'int (&)(int)'}}
     X3<f_tmpl<int> > x3c;
-    X3<&f_tmpl<int> > x3c_addr; // expected-error {{address taken}}
+    X3<&f_tmpl<int> > x3c_addr; // precxx17-error {{address taken}} cxx17-error {{value of type '<overloaded function type>' is not implicitly convertible to 'int (&)(int)'}}
     X3<f_internal> x3d;
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{internal linkage is a C++11 extension}}
 #endif
 
-    X3<&f_internal> x3d_addr; // expected-error {{address taken}}
+    X3<&f_internal> x3d_addr; // precxx17-error {{address taken}} cxx17-error {{value of type 'int (*)(int)' is not implicitly convertible to 'int (&)(int)'}}
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{internal linkage is a C++11 extension}}
 #endif
@@ -158,13 +159,14 @@ namespace addr_of_obj_or_func {
 #if __cplusplus <= 199711L
     // expected-error@-2 {{non-type template argument refers to object 'n' that does not have linkage}}
 #else
-    // expected-error@-4 {{non-type template argument of type 'int *' is not a constant expression}}
-    // expected-note@-5 {{pointer to 'n' is not a constant expression}}
+    // precxx17-error@-4 {{non-type template argument of type 'int *' is not a constant expression}}
+    // cxx17-error@-5 {{non-type template argument is not a constant expression}}
+    // expected-note@-6 {{pointer to 'n' is not a constant expression}}
 #endif
 
-    struct Local { static int f() {} }; // expected-note {{here}}
-    X1<&Local::f> x1_no_linkage; // expected-error {{non-type template argument refers to function 'f' that does not have linkage}}
-    X0<&S::NonStaticMember> x0_non_static; // expected-error {{non-static data member}}
+    struct Local { static int f() {} }; // precxx17-note {{here}}
+    X1<&Local::f> x1_no_linkage; // precxx17-error {{non-type template argument refers to function 'f' that does not have linkage}} cxx17-error {{value of type 'int (*)()' is not implicitly convertible to 'int (*)(int)'}}
+    X0<&S::NonStaticMember> x0_non_static; // precxx17-error {{non-static data member}} cxx17-error {{value of type 'int addr_of_obj_or_func::S::*' is not implicitly convertible to 'int *'}}
   }
 }
 
@@ -174,9 +176,11 @@ namespace addr_of_obj_or_func {
 //   -- a pointer to member expressed as described in 5.3.1.
 
 namespace bad_args {
-  template <int* N> struct X0 { }; // expected-note 2{{template parameter is declared here}}
+  template <int* N> struct X0 { }; // precxx17-note 2{{template parameter is declared here}}
   int i = 42;
-  X0<&i + 2> x0a; // expected-error{{non-type template argument does not refer to any declaration}}
+  X0<&i + 2> x0a; // precxx17-error{{non-type template argument does not refer to any declaration}} \
+                     cxx17-error {{non-type template argument is not a constant expression}} \
+                     cxx17-note {{cannot refer to element 2 of non-array object in a constant expression}}
   int* iptr = &i;
 #if __cplusplus >= 201103L
   // expected-note@-2 {{declared here}}
@@ -186,8 +190,9 @@ namespace bad_args {
 #if __cplusplus <= 199711L
   // expected-error@-2 {{non-type template argument for template parameter of pointer type 'int *' must have its address taken}}
 #else
-  // expected-error@-4 {{non-type template argument of type 'int *' is not a constant expression}}
-  // expected-note@-5 {{read of non-constexpr variable 'iptr' is not allowed in a constant expression}}
+  // precxx17-error@-4 {{non-type template argument of type 'int *' is not a constant expression}}
+  // cxx17-error@-5 {{non-type template argument is not a constant expression}}
+  // expected-note@-6 {{read of non-constexpr variable 'iptr' is not allowed in a constant expression}}
 #endif
 }
 #endif // CPP11ONLY
