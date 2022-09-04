@@ -275,9 +275,9 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
     }
 
     // Tiled case: compute the offset and size.
-    AffineExpr i, j, M, N, O;
+    AffineExpr i, j, m, n, o;
     bindDims(b.getContext(), i, j);
-    bindSymbols(b.getContext(), M, N, O);
+    bindSymbols(b.getContext(), m, n, o);
     OpFoldResult size = loopRanges[loopIdx].size;
     OpFoldResult offset = loopRanges[loopIdx].offset;
     OpFoldResult threadId = threadIds[threadIdIdx];
@@ -287,19 +287,19 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
         nominalTileSizes.has_value()
             ? (*nominalTileSizes)[loopIdx]
             : makeComposedFoldedAffineApply(
-                  b, loc, M.ceilDiv(N),
+                  b, loc, m.ceilDiv(n),
                   ArrayRef<OpFoldResult>{size, nonZeroNumThreads[threadIdIdx]});
 
     // Dynamic offset shifted by threadId * maxSizePerThread.
     OpFoldResult offsetPerThread = makeComposedFoldedAffineApply(
-        b, loc, i + j * M, {offset, threadId, tileSizePerThread});
+        b, loc, i + j * m, {offset, threadId, tileSizePerThread});
     // Dynamic upper-bound depending on the threadId.
     OpFoldResult residualTileSize = makeComposedFoldedAffineApply(
-        b, loc, i + j * M - N,
+        b, loc, i + j * m - n,
         {offset, nonZeroNumThreads[threadIdIdx], tileSizePerThread, size});
     if (!isConstantIntValue(residualTileSize, 0)) {
       OpFoldResult sizeMinusOffsetPerThread = makeComposedFoldedAffineApply(
-          b, loc, -i + M, {offsetPerThread, size});
+          b, loc, -i + m, {offsetPerThread, size});
       tileSizePerThread =
           buildMin(b, loc, {sizeMinusOffsetPerThread, tileSizePerThread});
     }
