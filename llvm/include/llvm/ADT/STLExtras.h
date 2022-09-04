@@ -67,7 +67,7 @@ using ValueOfRange = typename std::remove_reference<decltype(
 //===----------------------------------------------------------------------===//
 
 template <typename T> struct make_const_ptr {
-  using type = typename std::add_pointer<std::add_const_t<T>>::type;
+  using type = std::add_pointer_t<std::add_const_t<T>>;
 };
 
 template <typename T> struct make_const_ref {
