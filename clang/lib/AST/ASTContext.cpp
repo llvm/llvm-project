@@ -2364,12 +2364,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(cast<UsingType>(T)->desugar().getTypePtr());
 
   case Type::Typedef: {
-    const TypedefNameDecl *Typedef = cast<TypedefType>(T)->getDecl();
-    TypeInfo Info = getTypeInfo(Typedef->getUnderlyingType().getTypePtr());
+    const auto *TT = cast<TypedefType>(T);
+    TypeInfo Info = getTypeInfo(TT->desugar().getTypePtr());
     // If the typedef has an aligned attribute on it, it overrides any computed
     // alignment we have.  This violates the GCC documentation (which says that
     // attribute(aligned) can only round up) but matches its implementation.
-    if (unsigned AttrAlign = Typedef->getMaxAlignment()) {
+    if (unsigned AttrAlign = TT->getDecl()->getMaxAlignment()) {
       Align = AttrAlign;
       AlignRequirement = AlignRequirementKind::RequiredByTypedef;
     } else {
@@ -4638,34 +4638,60 @@ QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
 /// specified typedef name decl.
 QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
                                     QualType Underlying) const {
-  if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
+  if (!Decl->TypeForDecl) {
+    if (Underlying.isNull())
+      Underlying = Decl->getUnderlyingType();
+    auto *NewType = new (*this, TypeAlignment) TypedefType(
+        Type::Typedef, Decl, QualType(), getCanonicalType(Underlying));
+    Decl->TypeForDecl = NewType;
+    Types.push_back(NewType);
+    return QualType(NewType, 0);
+  }
+  if (Underlying.isNull() || Decl->getUnderlyingType() == Underlying)
+    return QualType(Decl->TypeForDecl, 0);
+  assert(hasSameType(Decl->getUnderlyingType(), Underlying));
 
-  if (Underlying.isNull())
-    Underlying = Decl->getUnderlyingType();
-  QualType Canonical = getCanonicalType(Underlying);
-  auto *newType = new (*this, TypeAlignment)
-      TypedefType(Type::Typedef, Decl, Underlying, Canonical);
-  Decl->TypeForDecl = newType;
-  Types.push_back(newType);
-  return QualType(newType, 0);
+  llvm::FoldingSetNodeID ID;
+  TypedefType::Profile(ID, Decl, Underlying);
+
+  void *InsertPos = nullptr;
+  if (TypedefType *T = TypedefTypes.FindNodeOrInsertPos(ID, InsertPos)) {
+    assert(!T->typeMatchesDecl() &&
+           "non-divergent case should be handled with TypeDecl");
+    return QualType(T, 0);
+  }
+
+  void *Mem =
+      Allocate(TypedefType::totalSizeToAlloc<QualType>(true), TypeAlignment);
+  auto *NewType = new (Mem) TypedefType(Type::Typedef, Decl, Underlying,
+                                        getCanonicalType(Underlying));
+  TypedefTypes.InsertNode(NewType, InsertPos);
+  Types.push_back(NewType);
+  return QualType(NewType, 0);
 }
 
 QualType ASTContext::getUsingType(const UsingShadowDecl *Found,
                                   QualType Underlying) const {
   llvm::FoldingSetNodeID ID;
-  UsingType::Profile(ID, Found);
+  UsingType::Profile(ID, Found, Underlying);
 
   void *InsertPos = nullptr;
-  UsingType *T = UsingTypes.FindNodeOrInsertPos(ID, InsertPos);
-  if (T)
+  if (UsingType *T = UsingTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(T, 0);
 
-  assert(!Underlying.hasLocalQualifiers());
-  assert(Underlying == getTypeDeclType(cast<TypeDecl>(Found->getTargetDecl())));
-  QualType Canon = Underlying.getCanonicalType();
+  const Type *TypeForDecl =
+      cast<TypeDecl>(Found->getTargetDecl())->getTypeForDecl();
 
-  UsingType *NewType =
-      new (*this, TypeAlignment) UsingType(Found, Underlying, Canon);
+  assert(!Underlying.hasLocalQualifiers());
+  QualType Canon = Underlying->getCanonicalTypeInternal();
+  assert(TypeForDecl->getCanonicalTypeInternal() == Canon);
+
+  if (Underlying.getTypePtr() == TypeForDecl)
+    Underlying = QualType();
+  void *Mem =
+      Allocate(UsingType::totalSizeToAlloc<QualType>(!Underlying.isNull()),
+               TypeAlignment);
+  UsingType *NewType = new (Mem) UsingType(Found, Underlying, Canon);
   Types.push_back(NewType);
   UsingTypes.InsertNode(NewType, InsertPos);
   return QualType(NewType, 0);

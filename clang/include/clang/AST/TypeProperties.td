@@ -379,16 +379,12 @@ let Class = TypedefType in {
   def : Property<"declaration", DeclRef> {
     let Read = [{ node->getDecl() }];
   }
-  def : Property<"canonicalType", Optional<QualType>> {
-    let Read = [{ makeOptionalFromNullable(node->getCanonicalTypeInternal()) }];
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->desugar() }];
   }
 
   def : Creator<[{
-    QualType finalCanonicalType =
-      canonicalType ? ctx.getCanonicalType(*canonicalType)
-                    : QualType();
-    return ctx.getTypedefType(cast<TypedefNameDecl>(declaration),
-                              finalCanonicalType);
+    return ctx.getTypedefType(cast<TypedefNameDecl>(declaration), underlyingType);
   }]>;
 }
 
