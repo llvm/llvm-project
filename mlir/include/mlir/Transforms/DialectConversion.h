@@ -721,7 +721,7 @@ public:
     addDynamicallyLegalOp<OpT2, OpTs...>(callback);
   }
   template <typename OpT, class Callable>
-  typename std::enable_if<!std::is_invocable_v<Callable, Operation *>>::type
+  std::enable_if_t<!std::is_invocable_v<Callable, Operation *>>
   addDynamicallyLegalOp(Callable &&callback) {
     addDynamicallyLegalOp<OpT>(
         [=](Operation *op) { return callback(cast<OpT>(op)); });
@@ -760,7 +760,7 @@ public:
     markOpRecursivelyLegal<OpT2, OpTs...>(callback);
   }
   template <typename OpT, class Callable>
-  typename std::enable_if<!std::is_invocable_v<Callable, Operation *>>::type
+  std::enable_if_t<!std::is_invocable_v<Callable, Operation *>>
   markOpRecursivelyLegal(Callable &&callback) {
     markOpRecursivelyLegal<OpT>(
         [=](Operation *op) { return callback(cast<OpT>(op)); });

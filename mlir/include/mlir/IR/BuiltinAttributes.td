@@ -926,32 +926,30 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
     /// by the 'iterator' class.
     /// Get a zero for a given attribute type.
     template <typename T>
-    typename std::enable_if<std::is_base_of<Attribute, T>::value, T>::type
+    std::enable_if_t<std::is_base_of<Attribute, T>::value, T>
     getZeroValue() const {
       return getZeroAttr().template cast<T>();
     }
     /// Get a zero for an APInt.
     template <typename T>
-    typename std::enable_if<std::is_same<APInt, T>::value, T>::type
+    std::enable_if_t<std::is_same<APInt, T>::value, T>
     getZeroValue() const {
       return getZeroAPInt();
     }
     template <typename T>
-    typename std::enable_if<std::is_same<std::complex<APInt>, T>::value,
-                            T>::type
+    std::enable_if_t<std::is_same<std::complex<APInt>, T>::value, T>
     getZeroValue() const {
       APInt intZero = getZeroAPInt();
       return {intZero, intZero};
     }
     /// Get a zero for an APFloat.
     template <typename T>
-    typename std::enable_if<std::is_same<APFloat, T>::value, T>::type
+    std::enable_if_t<std::is_same<APFloat, T>::value, T>
     getZeroValue() const {
       return getZeroAPFloat();
     }
     template <typename T>
-    typename std::enable_if<std::is_same<std::complex<APFloat>, T>::value,
-                            T>::type
+    std::enable_if_t<std::is_same<std::complex<APFloat>, T>::value, T>
     getZeroValue() const {
       APFloat floatZero = getZeroAPFloat();
       return {floatZero, floatZero};
@@ -959,14 +957,13 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 
     /// Get a zero for an C++ integer, float, StringRef, or complex type.
     template <typename T>
-    typename std::enable_if<
-        std::numeric_limits<T>::is_integer ||
-            DenseElementsAttr::is_valid_cpp_fp_type<T>::value ||
-            std::is_same<T, StringRef>::value ||
-            (detail::is_complex_t<T>::value &&
-             !llvm::is_one_of<T, std::complex<APInt>,
-                              std::complex<APFloat>>::value),
-        T>::type
+    std::enable_if_t<std::numeric_limits<T>::is_integer ||
+                         DenseElementsAttr::is_valid_cpp_fp_type<T>::value ||
+                         std::is_same<T, StringRef>::value ||
+                         (detail::is_complex_t<T>::value &&
+                          !llvm::is_one_of<T, std::complex<APInt>,
+                                           std::complex<APFloat>>::value),
+                     T>
     getZeroValue() const {
       return T();
     }
