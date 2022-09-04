@@ -323,6 +323,17 @@ public:
     Options.ObjectPrefixMap = Map;
   }
 
+  /// Set target DWARF version.
+  Error setTargetDWARFVersion(uint16_t TargetDWARFVersion) {
+    if (TargetDWARFVersion < 1 || TargetDWARFVersion > 5)
+      return createStringError(std::errc::invalid_argument,
+                               "unsupported DWARF version: %d",
+                               TargetDWARFVersion);
+
+    Options.TargetDWARFVersion = TargetDWARFVersion;
+    return Error::success();
+  }
+
 private:
   /// Flags passed to DwarfLinker::lookForDIEsToKeep
   enum TraversalFlags {
@@ -396,12 +407,6 @@ private:
                    const DWARFDie *DIE = nullptr) const {
     if (Options.ErrorHandler != nullptr)
       Options.ErrorHandler(Warning, File.FileName, DIE);
-  }
-
-  /// Remembers the oldest and newest DWARF version we've seen in a unit.
-  void updateDwarfVersion(unsigned Version) {
-    MaxDwarfVersion = std::max(MaxDwarfVersion, Version);
-    MinDwarfVersion = std::min(MinDwarfVersion, Version);
   }
 
   /// Remembers the kinds of accelerator tables we've seen in a unit.
@@ -759,9 +764,6 @@ private:
   DwarfEmitter *TheDwarfEmitter;
   std::vector<LinkContext> ObjectContexts;
 
-  unsigned MaxDwarfVersion = 0;
-  unsigned MinDwarfVersion = std::numeric_limits<unsigned>::max();
-
   bool AtLeastOneAppleAccelTable = false;
   bool AtLeastOneDwarfAccelTable = false;
 
@@ -793,6 +795,9 @@ private:
 
   /// linking options
   struct DWARFLinkerOptions {
+    /// DWARF version for the output.
+    uint16_t TargetDWARFVersion = 0;
+
     /// Generate processing log to the standard output.
     bool Verbose = false;
 
