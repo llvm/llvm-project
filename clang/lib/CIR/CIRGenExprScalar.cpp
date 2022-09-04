@@ -328,7 +328,9 @@ public:
   mlir::Value VisitBinLAnd(const BinaryOperator *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitBinLOr(const BinaryOperator *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitBinComma(const BinaryOperator *E) {
-    llvm_unreachable("NYI");
+    CGF.buildIgnoredExpr(E->getLHS());
+    // NOTE: We don't need to EnsureInsertPoint() like LLVM codegen.
+    return Visit(E->getRHS());
   }
 
   mlir::Value VisitBinPtrMemD(const Expr *E) { llvm_unreachable("NYI"); }
