@@ -367,14 +367,6 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
   return true;
 }
 
-static uint8_t getMinVisibility(uint8_t va, uint8_t vb) {
-  if (va == STV_DEFAULT)
-    return vb;
-  if (vb == STV_DEFAULT)
-    return va;
-  return std::min(va, vb);
-}
-
 // Merge symbol properties.
 //
 // When we have many symbols of the same name, we choose one of them,
@@ -385,8 +377,10 @@ void Symbol::mergeProperties(const Symbol &other) {
     exportDynamic = true;
 
   // DSO symbols do not affect visibility in the output.
-  if (!other.isShared())
-    visibility = getMinVisibility(visibility, other.visibility);
+  if (!other.isShared() && other.visibility != STV_DEFAULT)
+    visibility = visibility == STV_DEFAULT
+                     ? other.visibility
+                     : std::min(visibility, other.visibility);
 }
 
 void Symbol::resolve(const Symbol &other) {
