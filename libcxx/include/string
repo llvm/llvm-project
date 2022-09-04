@@ -545,9 +545,16 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/allocate_at_least.h>
+#include <__memory/allocator.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/compressed_pair.h>
+#include <__memory/construct_at.h>
+#include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
+#include <__type_traits/is_allocator.h>
+#include <__type_traits/noexcept_move_assign_container.h>
 #include <__utility/auto_cast.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -559,7 +566,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <cstring>
 #include <iosfwd>
 #include <limits>
-#include <memory>
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>

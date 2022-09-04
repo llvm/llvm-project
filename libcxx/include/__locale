@@ -12,10 +12,10 @@
 
 #include <__availability>
 #include <__config>
+#include <__memory/shared_ptr.h>
 #include <cctype>
 #include <cstdint>
 #include <locale.h>
-#include <memory>
 #include <mutex>
 #include <string>
 
