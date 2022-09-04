@@ -4,9 +4,9 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE42
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx | FileCheck %s --check-prefixes=AVX1
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx2 | FileCheck %s --check-prefixes=AVX2
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=AVX512
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX512,AVX512BW
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=AVX512,AVX512F
 ;
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=slm | FileCheck %s --check-prefixes=SLM
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-apple-macosx10.8.0 -mcpu=goldmont | FileCheck %s --check-prefixes=GLM
@@ -268,29 +268,47 @@ define void @mul_zext_vXi8(<4 x i8> %a4, <4 x i8> %b4, <8 x i8> %a8, <8 x i8> %b
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %xa64 = zext <64 x i8> %a64 to <64 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-; AVX512-LABEL: 'mul_zext_vXi8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = zext <4 x i8> %a4 to <4 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = zext <4 x i8> %b4 to <4 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = zext <8 x i8> %a8 to <8 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = zext <8 x i8> %b8 to <8 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = zext <16 x i8> %a16 to <16 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = zext <16 x i8> %b16 to <16 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = zext <32 x i8> %a32 to <32 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = zext <32 x i8> %b32 to <32 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xa64 = zext <64 x i8> %a64 to <64 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; AVX512F-LABEL: 'mul_zext_vXi8'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = zext <4 x i8> %a4 to <4 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = zext <4 x i8> %b4 to <4 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = zext <8 x i8> %a8 to <8 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = zext <8 x i8> %b8 to <8 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = zext <16 x i8> %a16 to <16 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = zext <16 x i8> %b16 to <16 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = zext <32 x i8> %a32 to <32 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = zext <32 x i8> %b32 to <32 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xa64 = zext <64 x i8> %a64 to <64 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512BW-LABEL: 'mul_zext_vXi8'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = zext <4 x i8> %a4 to <4 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = zext <4 x i8> %b4 to <4 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = zext <8 x i8> %a8 to <8 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = zext <8 x i8> %b8 to <8 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = zext <16 x i8> %a16 to <16 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = zext <16 x i8> %b16 to <16 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = zext <32 x i8> %a32 to <32 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = zext <32 x i8> %b32 to <32 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xa64 = zext <64 x i8> %a64 to <64 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SLM-LABEL: 'mul_zext_vXi8'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = zext <4 x i8> %a4 to <4 x i32>
@@ -431,29 +449,47 @@ define void @mul_sext_zext_vXi8(<4 x i8> %a4, <4 x i8> %b4, <8 x i8> %a8, <8 x i
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %xa64 = sext <64 x i8> %a64 to <64 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-; AVX512-LABEL: 'mul_sext_zext_vXi8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = sext <4 x i8> %a4 to <4 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = zext <4 x i8> %b4 to <4 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = sext <8 x i8> %a8 to <8 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = zext <8 x i8> %b8 to <8 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = sext <16 x i8> %a16 to <16 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = zext <16 x i8> %b16 to <16 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = sext <32 x i8> %a32 to <32 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = zext <32 x i8> %b32 to <32 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xa64 = sext <64 x i8> %a64 to <64 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; AVX512F-LABEL: 'mul_sext_zext_vXi8'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = sext <4 x i8> %a4 to <4 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = zext <4 x i8> %b4 to <4 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = sext <8 x i8> %a8 to <8 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = zext <8 x i8> %b8 to <8 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = sext <16 x i8> %a16 to <16 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = zext <16 x i8> %b16 to <16 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = sext <32 x i8> %a32 to <32 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = zext <32 x i8> %b32 to <32 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xa64 = sext <64 x i8> %a64 to <64 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512BW-LABEL: 'mul_sext_zext_vXi8'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = sext <4 x i8> %a4 to <4 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = zext <4 x i8> %b4 to <4 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = sext <8 x i8> %a8 to <8 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = zext <8 x i8> %b8 to <8 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = sext <16 x i8> %a16 to <16 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = zext <16 x i8> %b16 to <16 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = sext <32 x i8> %a32 to <32 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = zext <32 x i8> %b32 to <32 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xa64 = sext <64 x i8> %a64 to <64 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %xb64 = zext <64 x i8> %b64 to <64 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SLM-LABEL: 'mul_sext_zext_vXi8'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = sext <4 x i8> %a4 to <4 x i32>
@@ -598,29 +634,47 @@ define void @mul_sext_vXi16(<4 x i16> %a4, <4 x i16> %b4, <8 x i16> %a8, <8 x i1
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %xa64 = sext <64 x i16> %a64 to <64 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %xb64 = sext <64 x i16> %b64 to <64 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-; AVX512-LABEL: 'mul_sext_vXi16'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = sext <4 x i16> %a4 to <4 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = sext <4 x i16> %b4 to <4 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = sext <8 x i16> %a8 to <8 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = sext <8 x i16> %b8 to <8 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = sext <16 x i16> %a16 to <16 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = sext <16 x i16> %b16 to <16 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = sext <32 x i16> %a32 to <32 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = sext <32 x i16> %b32 to <32 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %xa64 = sext <64 x i16> %a64 to <64 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %xb64 = sext <64 x i16> %b64 to <64 x i32>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; AVX512F-LABEL: 'mul_sext_vXi16'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = sext <4 x i16> %a4 to <4 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = sext <4 x i16> %b4 to <4 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = sext <8 x i16> %a8 to <8 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = sext <8 x i16> %b8 to <8 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = sext <16 x i16> %a16 to <16 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = sext <16 x i16> %b16 to <16 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = sext <32 x i16> %a32 to <32 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = sext <32 x i16> %b32 to <32 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %xa64 = sext <64 x i16> %a64 to <64 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %xb64 = sext <64 x i16> %b64 to <64 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; AVX512BW-LABEL: 'mul_sext_vXi16'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = sext <4 x i16> %a4 to <4 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb4 = sext <4 x i16> %b4 to <4 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa8 = sext <8 x i16> %a8 to <8 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb8 = sext <8 x i16> %b8 to <8 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa16 = sext <16 x i16> %a16 to <16 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xb16 = sext <16 x i16> %b16 to <16 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xa32 = sext <32 x i16> %a32 to <32 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %xb32 = sext <32 x i16> %b32 to <32 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %xa64 = sext <64 x i16> %a64 to <64 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %xb64 = sext <64 x i16> %b64 to <64 x i32>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res4 = mul <4 x i32> %xa4, %xb4
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res8 = mul <8 x i32> %xa8, %xb8
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res16 = mul <16 x i32> %xa16, %xb16
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res32 = mul <32 x i32> %xa32, %xb32
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res64 = mul <64 x i32> %xa64, %xb64
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SLM-LABEL: 'mul_sext_vXi16'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xa4 = sext <4 x i16> %a4 to <4 x i32>
