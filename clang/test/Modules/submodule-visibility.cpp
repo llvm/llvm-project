@@ -6,8 +6,8 @@
 // RUN: %clang_cc1 -fmodule-map-file=%S/Inputs/submodule-visibility/module.modulemap -fmodules-local-submodule-visibility -I%S/Inputs/submodule-visibility -verify %s
 //
 // Ensure the driver forwards the relevant flags when -fmodules is disabled.
-// RUN: %clang -fimplicit-module-maps -Xclang -fmodules-local-submodule-visibility -I%S/Inputs/submodule-visibility -c -o /dev/null -Xclang -verify %s
-// RUN: %clang -fmodule-map-file=%S/Inputs/submodule-visibility/module.modulemap -Xclang -fmodules-local-submodule-visibility -I%S/Inputs/submodule-visibility -c -o /dev/null -Xclang -verify %s
+// RUN: %clang -fimplicit-module-maps -Xclang -fmodules-local-submodule-visibility -I%S/Inputs/submodule-visibility -fsyntax-only -Xclang -verify %s
+// RUN: %clang -fmodule-map-file=%S/Inputs/submodule-visibility/module.modulemap -Xclang -fmodules-local-submodule-visibility -I%S/Inputs/submodule-visibility -fsyntax-only -Xclang -verify %s
 //
 // Explicit module builds.
 // RUN: %clang_cc1 -fmodules -fmodules-local-submodule-visibility -emit-module -x c++-module-map %S/Inputs/submodule-visibility/module.modulemap -fmodule-name=other -o %t/other.pcm
