@@ -260,6 +260,7 @@ class CXXRecordDecl : public RecordDecl {
   friend class ASTWriter;
   friend class DeclContext;
   friend class LambdaExpr;
+  friend class ODRDiagsEmitter;
 
   friend void FunctionDecl::setPure(bool);
   friend void TagDecl::startDefinition();
