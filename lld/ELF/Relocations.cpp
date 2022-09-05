@@ -719,7 +719,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   Undefined &sym = *undef.sym;
 
   auto visibility = [&]() -> std::string {
-    switch (sym.visibility) {
+    switch (sym.visibility()) {
     case STV_INTERNAL:
       return "internal ";
     case STV_HIDDEN:
@@ -831,7 +831,7 @@ static bool maybeReportUndefined(Undefined &sym, InputSectionBase &sec,
   if (sym.isWeak())
     return false;
 
-  bool canBeExternal = !sym.isLocal() && sym.visibility == STV_DEFAULT;
+  bool canBeExternal = !sym.isLocal() && sym.visibility() == STV_DEFAULT;
   if (config->unresolvedSymbols == UnresolvedPolicy::Ignore && canBeExternal)
     return false;
 
@@ -938,9 +938,8 @@ static bool canDefineSymbolInExecutable(Symbol &sym) {
   // If the symbol has default visibility the symbol defined in the
   // executable will preempt it.
   // Note that we want the visibility of the shared symbol itself, not
-  // the visibility of the symbol in the output file we are producing. That is
-  // why we use Sym.stOther.
-  if ((sym.stOther & 0x3) == STV_DEFAULT)
+  // the visibility of the symbol in the output file we are producing.
+  if (!sym.dsoProtected)
     return true;
 
   // If we are allowed to break address equality of functions, defining
