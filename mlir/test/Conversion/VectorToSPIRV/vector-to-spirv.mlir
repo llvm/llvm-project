@@ -121,6 +121,28 @@ func.func @extract_element_size5_vector(%arg0 : vector<5xf32>, %id : i32) -> f32
 
 // -----
 
+// CHECK-LABEL: @extract_element_size1_vector
+//  CHECK-SAME: (%[[S:.+]]: f32
+func.func @extract_element_size1_vector(%arg0 : f32, %i: index) -> f32 {
+  %bcast = vector.broadcast %arg0 : f32 to vector<1xf32>
+  %0 = vector.extractelement %bcast[%i : index] : vector<1xf32>
+  // CHECK: return %[[S]]
+  return %0: f32
+}
+
+// -----
+
+// CHECK-LABEL: @extract_element_0d_vector
+//  CHECK-SAME: (%[[S:.+]]: f32)
+func.func @extract_element_0d_vector(%arg0 : f32) -> f32 {
+  %bcast = vector.broadcast %arg0 : f32 to vector<f32>
+  %0 = vector.extractelement %bcast[] : vector<f32>
+  // CHECK: return %[[S]]
+  return %0: f32
+}
+
+// -----
+
 // CHECK-LABEL: @extract_strided_slice
 //  CHECK-SAME: %[[ARG:.+]]: vector<4xf32>
 //       CHECK:   spv.VectorShuffle [1 : i32, 2 : i32] %[[ARG]] : vector<4xf32>, %[[ARG]] : vector<4xf32> -> vector<2xf32>
@@ -157,6 +179,28 @@ func.func @insert_element_size5_vector(%val: f32, %arg0 : vector<5xf32>, %id : i
   // CHECK: vector.insertelement
   %0 = vector.insertelement %val, %arg0[%id : i32] : vector<5xf32>
   return %0 : vector<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_element_size1_vector
+//  CHECK-SAME: (%[[S:[a-z0-9]+]]: f32
+func.func @insert_element_size1_vector(%scalar: f32, %vector : vector<1xf32>, %i: index) -> vector<1xf32> {
+  %0 = vector.insertelement %scalar, %vector[%i : index] : vector<1xf32>
+  // CHECK: %[[V:.+]] = builtin.unrealized_conversion_cast %arg0 : f32 to vector<1xf32>
+  // CHECK: return %[[V]]
+  return %0: vector<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_element_0d_vector
+//  CHECK-SAME: (%[[S:[a-z0-9]+]]: f32
+func.func @insert_element_0d_vector(%scalar: f32, %vector : vector<f32>) -> vector<f32> {
+  %0 = vector.insertelement %scalar, %vector[] : vector<f32>
+  // CHECK: %[[V:.+]] = builtin.unrealized_conversion_cast %arg0 : f32 to vector<f32>
+  // CHECK: return %[[V]]
+  return %0: vector<f32>
 }
 
 // -----
