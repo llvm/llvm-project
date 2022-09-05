@@ -307,8 +307,8 @@ RetiredFlag<bool> AsyncPreamble("async-preamble");
 RetiredFlag<bool> CollectMainFileRefs("collect-main-file-refs");
 RetiredFlag<bool> CrossFileRename("cross-file-rename");
 RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
-RetiredFlag<std::string> InlayHints("inlay-hints");
-RetiredFlag<std::string> FoldingRanges("folding-ranges");
+RetiredFlag<bool> InlayHints("inlay-hints");
+RetiredFlag<bool> FoldingRanges("folding-ranges");
 
 
 opt<int> LimitResults{
