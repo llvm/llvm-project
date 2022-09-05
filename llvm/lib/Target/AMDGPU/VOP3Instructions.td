@@ -123,7 +123,7 @@ let isReMaterializable = 1 in {
 let mayRaiseFPException = 0 in {
 let SubtargetPredicate = HasMadMacF32Insts in {
 defm V_MAD_LEGACY_F32 : VOP3Inst <"v_mad_legacy_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
-defm V_MAD_F32 : VOP3Inst <"v_mad_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, fmad>;
+defm V_MAD_F32 : VOP3Inst <"v_mad_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fmad>;
 } // End SubtargetPredicate = HasMadMacInsts
 
 let SubtargetPredicate = HasFmaLegacy32 in
@@ -318,7 +318,7 @@ let renamedInGFX9 = 1 in {
   defm V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
   defm V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
   let FPDPRounding = 1 in {
-    defm V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
+    defm V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fmad>;
     let Uses = [MODE, M0, EXEC] in {
     let OtherPredicates = [isNotGFX90APlus] in
     // For some reason the intrinsic operands are in a different order
