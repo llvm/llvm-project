@@ -210,10 +210,6 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <stdexcept>
 #include <type_traits>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iterator>
-#endif
-
 #if defined(__DEPRECATED) && __DEPRECATED
 #if defined(_LIBCPP_WARNING)
     _LIBCPP_WARNING("Use of the header <ext/hash_map> is deprecated.  Migrate to <unordered_map>")
@@ -986,5 +982,9 @@ operator!=(const hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 }
 
 } // namespace __gnu_cxx
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iterator>
+#endif
 
 #endif // _LIBCPP_HASH_MAP

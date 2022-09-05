@@ -307,12 +307,6 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <type_traits>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <algorithm>
-#  include <typeinfo>
-#  include <utility>
-#endif
-
 // standard-mandated includes
 
 // [iterator.range]
@@ -3323,5 +3317,11 @@ inline constexpr bool __format::__enable_insertable<std::vector<wchar_t>> = true
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <algorithm>
+#  include <typeinfo>
+#  include <utility>
+#endif
 
 #endif // _LIBCPP_VECTOR

@@ -778,11 +778,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <vector>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iterator>
-#  include <utility>
-#endif
-
 // standard-mandated includes
 
 // [iterator.range]
@@ -6843,5 +6838,10 @@ regex_replace(const _CharT* __s,
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iterator>
+#  include <utility>
+#endif
 
 #endif // _LIBCPP_REGEX

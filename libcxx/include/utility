@@ -248,16 +248,16 @@ template <class T>
 #include <type_traits>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iosfwd>
-#endif
-
 // standard-mandated includes
 #include <compare>
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iosfwd>
 #endif
 
 #endif // _LIBCPP_UTILITY

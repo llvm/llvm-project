@@ -887,11 +887,6 @@ template<size_t N, class T>
 #include <typeinfo>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iterator>
-#  include <utility>
-#endif
-
 // standard-mandated includes
 #include <compare>
 
@@ -1042,6 +1037,11 @@ _LIBCPP_END_NAMESPACE_STD
 
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
 #   include <__pstl_memory>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iterator>
+#  include <utility>
 #endif
 
 #endif // _LIBCPP_MEMORY
