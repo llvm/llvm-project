@@ -398,6 +398,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":AsmParser",
+        ":BytecodeWriter",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":InferTypeOpInterface",
