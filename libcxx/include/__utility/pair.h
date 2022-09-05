@@ -13,7 +13,12 @@
 #include <__compare/synth_three_way.h>
 #include <__config>
 #include <__functional/unwrap_ref.h>
-#include <__tuple>
+#include <__fwd/get.h>
+#include <__fwd/tuple.h>
+#include <__tuple/sfinae_helpers.h>
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_indices.h>
+#include <__tuple/tuple_size.h>
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
