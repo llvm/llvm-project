@@ -65,6 +65,7 @@ namespace pmr {
  */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__memory/allocator_traits.h>
 #include <__tuple>
 #include <__utility/move.h>
 #include <cstddef>
@@ -72,10 +73,22 @@ namespace pmr {
 #include <experimental/__config>
 #include <experimental/__memory>
 #include <limits>
-#include <memory>
 #include <new>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
+#  include <climits>
+#  include <concepts>
+#  include <cstring>
+#  include <ctime>
+#  include <iterator>
+#  include <memory>
+#  include <ratio>
+#  include <variant>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
