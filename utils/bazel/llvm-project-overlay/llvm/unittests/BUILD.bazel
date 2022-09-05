@@ -4,10 +4,9 @@
 
 load("//llvm:tblgen.bzl", "gentbl")
 
-package(
-    default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
-)
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
 
 cc_test(
     name = "adt_tests",

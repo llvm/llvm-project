@@ -4,8 +4,9 @@
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 cc_binary(
     name = "llvm-bolt-heatmap",
