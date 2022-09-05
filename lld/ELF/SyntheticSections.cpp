@@ -2198,16 +2198,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
     // Set st_name, st_info and st_other.
     eSym->st_name = ent.strTabOffset;
     eSym->setBindingAndType(sym->binding, sym->type);
-    eSym->st_other = sym->visibility;
-
-    // The 3 most significant bits of st_other are used by OpenPOWER ABI.
-    // See getPPC64GlobalEntryToLocalEntryOffset() for more details.
-    if (config->emachine == EM_PPC64)
-      eSym->st_other |= sym->stOther & 0xe0;
-    // The most significant bit of st_other is used by AArch64 ABI for the
-    // variant PCS.
-    else if (config->emachine == EM_AARCH64)
-      eSym->st_other |= sym->stOther & STO_AARCH64_VARIANT_PCS;
+    eSym->st_other = sym->stOther;
 
     if (BssSection *commonSec = getCommonSec(sym)) {
       // When -r is specified, a COMMON symbol is not allocated. Its st_shndx

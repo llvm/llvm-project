@@ -92,7 +92,7 @@ Symbol *SymbolTable::insert(StringRef name) {
   sym->setName(name);
   sym->symbolKind = Symbol::PlaceholderKind;
   sym->partition = 1;
-  sym->visibility = STV_DEFAULT;
+  sym->setVisibility(STV_DEFAULT);
   sym->isUsedInRegularObj = false;
   sym->exportDynamic = false;
   sym->inDynamicList = false;
