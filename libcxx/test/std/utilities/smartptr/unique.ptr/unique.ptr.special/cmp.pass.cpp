@@ -47,26 +47,9 @@
 #include "test_macros.h"
 #include "deleter_types.h"
 #include "test_comparisons.h"
+#include "unique_ptr_test_helper.h"
 
-struct A {
-  static int count;
-  A() { ++count; }
-  A(const A&) { ++count; }
-  virtual ~A() { --count; }
-};
-
-int A::count = 0;
-
-struct B : public A {
-  static int count;
-  B() { ++count; }
-  B(const B& other) : A(other) { ++count; }
-  virtual ~B() { --count; }
-};
-
-int B::count = 0;
-
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
   AssertComparisonsReturnBool<std::unique_ptr<int> >();
 #if TEST_STD_VER > 17
   AssertOrderReturn<std::strong_ordering, std::unique_ptr<int>>();
@@ -81,14 +64,16 @@ int main(int, char**) {
 
     assert(!(p1 == p2));
     assert(p1 != p2);
-    assert((p1 < p2) == (ptr1 < ptr2));
-    assert((p1 <= p2) == (ptr1 <= ptr2));
-    assert((p1 > p2) == (ptr1 > ptr2));
-    assert((p1 >= p2) == (ptr1 >= ptr2));
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert((p1 < p2) == (ptr1 < ptr2));
+      assert((p1 <= p2) == (ptr1 <= ptr2));
+      assert((p1 > p2) == (ptr1 > ptr2));
+      assert((p1 >= p2) == (ptr1 >= ptr2));
 #if TEST_STD_VER > 17
-    assert((p1 <=> p2) != std::strong_ordering::equal);
-    assert((p1 <=> p2) == (ptr1 <=> ptr2));
+      assert((p1 <=> p2) != std::strong_ordering::equal);
+      assert((p1 <=> p2) == (ptr1 <=> ptr2));
 #endif
+    }
   }
   // Pointers of different type
   {
@@ -98,14 +83,16 @@ int main(int, char**) {
     const std::unique_ptr<B, Deleter<B> > p2(ptr2);
     assert(!(p1 == p2));
     assert(p1 != p2);
-    assert((p1 < p2) == (ptr1 < ptr2));
-    assert((p1 <= p2) == (ptr1 <= ptr2));
-    assert((p1 > p2) == (ptr1 > ptr2));
-    assert((p1 >= p2) == (ptr1 >= ptr2));
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert((p1 < p2) == (ptr1 < ptr2));
+      assert((p1 <= p2) == (ptr1 <= ptr2));
+      assert((p1 > p2) == (ptr1 > ptr2));
+      assert((p1 >= p2) == (ptr1 >= ptr2));
 #if TEST_STD_VER > 17
     assert((p1 <=> p2) != std::strong_ordering::equal);
     assert((p1 <=> p2) == (ptr1 <=> ptr2));
 #endif
+    }
   }
   // Pointers of same array type
   {
@@ -115,14 +102,16 @@ int main(int, char**) {
     const std::unique_ptr<A[], Deleter<A[]> > p2(ptr2);
     assert(!(p1 == p2));
     assert(p1 != p2);
-    assert((p1 < p2) == (ptr1 < ptr2));
-    assert((p1 <= p2) == (ptr1 <= ptr2));
-    assert((p1 > p2) == (ptr1 > ptr2));
-    assert((p1 >= p2) == (ptr1 >= ptr2));
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert((p1 < p2) == (ptr1 < ptr2));
+      assert((p1 <= p2) == (ptr1 <= ptr2));
+      assert((p1 > p2) == (ptr1 > ptr2));
+      assert((p1 >= p2) == (ptr1 >= ptr2));
 #if TEST_STD_VER > 17
     assert((p1 <=> p2) != std::strong_ordering::equal);
     assert((p1 <=> p2) == (ptr1 <=> ptr2));
 #endif
+    }
   }
   // Pointers of different array types
   {
@@ -132,14 +121,16 @@ int main(int, char**) {
     const std::unique_ptr<B[], Deleter<B[]> > p2(ptr2);
     assert(!(p1 == p2));
     assert(p1 != p2);
-    assert((p1 < p2) == (ptr1 < ptr2));
-    assert((p1 <= p2) == (ptr1 <= ptr2));
-    assert((p1 > p2) == (ptr1 > ptr2));
-    assert((p1 >= p2) == (ptr1 >= ptr2));
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      assert((p1 < p2) == (ptr1 < ptr2));
+      assert((p1 <= p2) == (ptr1 <= ptr2));
+      assert((p1 > p2) == (ptr1 > ptr2));
+      assert((p1 >= p2) == (ptr1 >= ptr2));
 #if TEST_STD_VER > 17
     assert((p1 <=> p2) != std::strong_ordering::equal);
     assert((p1 <=> p2) == (ptr1 <=> ptr2));
 #endif
+    }
   }
   // Default-constructed pointers of same type
   {
@@ -147,7 +138,8 @@ int main(int, char**) {
     const std::unique_ptr<A, Deleter<A> > p2;
     assert(p1 == p2);
 #if TEST_STD_VER > 17
-    assert((p1 <=> p2) == std::strong_ordering::equal);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert((p1 <=> p2) == std::strong_ordering::equal);
 #endif
   }
   // Default-constructed pointers of different type
@@ -156,9 +148,19 @@ int main(int, char**) {
     const std::unique_ptr<B, Deleter<B> > p2;
     assert(p1 == p2);
 #if TEST_STD_VER > 17
-    assert((p1 <=> p2) == std::strong_ordering::equal);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert((p1 <=> p2) == std::strong_ordering::equal);
 #endif
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }

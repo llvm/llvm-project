@@ -23,6 +23,7 @@
     __cpp_lib_atomic_value_initialization         201911L [C++20]
     __cpp_lib_constexpr_dynamic_alloc             201907L [C++20]
     __cpp_lib_constexpr_memory                    201811L [C++20]
+                                                  202202L [C++2b]
     __cpp_lib_enable_shared_from_this             201603L [C++17]
     __cpp_lib_make_unique                         201304L [C++14]
     __cpp_lib_out_ptr                             202106L [C++2b]
@@ -448,8 +449,8 @@
 # ifndef __cpp_lib_constexpr_memory
 #   error "__cpp_lib_constexpr_memory should be defined in c++2b"
 # endif
-# if __cpp_lib_constexpr_memory != 201811L
-#   error "__cpp_lib_constexpr_memory should have the value 201811L in c++2b"
+# if __cpp_lib_constexpr_memory != 202202L
+#   error "__cpp_lib_constexpr_memory should have the value 202202L in c++2b"
 # endif
 
 # ifndef __cpp_lib_enable_shared_from_this
