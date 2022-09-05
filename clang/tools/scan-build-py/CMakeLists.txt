@@ -87,7 +87,7 @@ foreach(lib ${LibScanbuild})
                        ${CMAKE_BINARY_DIR}/lib/libscanbuild/
                      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/libscanbuild/${lib})
   list(APPEND Depends ${CMAKE_BINARY_DIR}/lib/libscanbuild/${lib})
-  install(PROGRAMS lib/libscanbuild/${lib}
+  install(FILES lib/libscanbuild/${lib}
           DESTINATION lib${CLANG_LIBDIR_SUFFIX}/libscanbuild
           COMPONENT scan-build-py)
 endforeach()
@@ -105,7 +105,7 @@ foreach(resource ${LibScanbuildResources})
                        ${CMAKE_BINARY_DIR}/lib/libscanbuild/resources
                      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/libscanbuild/resources/${resource})
   list(APPEND Depends ${CMAKE_BINARY_DIR}/lib/libscanbuild/resources/${resource})
-  install(PROGRAMS lib/libscanbuild/resources/${resource}
+  install(FILES lib/libscanbuild/resources/${resource}
           DESTINATION lib${CLANG_LIBDIR_SUFFIX}/libscanbuild/resources
           COMPONENT scan-build-py)
 endforeach()
@@ -121,7 +121,7 @@ foreach(lib ${LibEar})
                        ${CMAKE_BINARY_DIR}/lib/libear/
                      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/libear/${lib})
   list(APPEND Depends ${CMAKE_BINARY_DIR}/lib/libear/${lib})
-  install(PROGRAMS lib/libear/${lib}
+  install(FILES lib/libear/${lib}
           DESTINATION lib${CLANG_LIBDIR_SUFFIX}/libear
           COMPONENT scan-build-py)
 endforeach()
