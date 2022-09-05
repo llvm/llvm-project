@@ -1924,7 +1924,7 @@ private:
           !Current.Next->isBinaryOperator() &&
           !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
                                  tok::comma, tok::period, tok::arrow,
-                                 tok::coloncolon)) {
+                                 tok::coloncolon, tok::kw_noexcept)) {
         if (FormatToken *AfterParen = Current.MatchingParen->Next) {
           // Make sure this isn't the return type of an Obj-C block declaration
           if (AfterParen->isNot(tok::caret)) {

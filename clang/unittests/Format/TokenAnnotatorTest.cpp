@@ -788,6 +788,19 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_LambdaLBrace);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
+  auto Tokens = annotate("template <typename T>\n"
+                         "DEPRECATED(\"Use NewClass::NewFunction instead.\")\n"
+                         "string OldFunction(const string &parameter) {}");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_FunctionAnnotationRParen);
+
+  Tokens = annotate("template <typename T>\n"
+                    "A(T) noexcept;");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   auto Annotate = [this](llvm::StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_Verilog));
