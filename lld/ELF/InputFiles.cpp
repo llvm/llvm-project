@@ -1486,10 +1486,10 @@ template <class ELFT> void SharedFile::parse() {
       continue;
     }
 
-    // MIPS BFD linker puts _gp_disp symbol into DSO files and incorrectly
-    // assigns VER_NDX_LOCAL to this section global symbol. Here is a
-    // workaround for this bug.
-    if (config->emachine == EM_MIPS && idx == VER_NDX_LOCAL &&
+    // In GNU ld < 2.31 (before 3be08ea4728b56d35e136af4e6fd3086ade17764), the
+    // MIPS port puts _gp_disp symbol into DSO files and incorrectly assigns
+    // VER_NDX_LOCAL. Workaround this bug.
+    if (idx == VER_NDX_LOCAL && config->emachine == EM_MIPS &&
         name == "_gp_disp")
       continue;
 
