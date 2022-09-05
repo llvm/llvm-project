@@ -202,7 +202,7 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
   if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
                     true))
     return;
-  for (auto A : Args.filtered(options::OPT_fsanitize_EQ)) {
+  for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
     SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
     if (K != SanitizerKind::Address)
       D.getDiags().Report(clang::diag::warn_drv_unsupported_option_for_target)

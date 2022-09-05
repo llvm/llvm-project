@@ -6398,7 +6398,7 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
 
 void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,
                        const MultiLevelTemplateArgumentList &TemplateArgs) {
-  for (auto DD : Pattern->ddiags()) {
+  for (auto *DD : Pattern->ddiags()) {
     switch (DD->getKind()) {
     case DependentDiagnostic::Access:
       HandleDependentAccessCheck(*DD, TemplateArgs);

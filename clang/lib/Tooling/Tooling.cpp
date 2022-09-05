@@ -98,7 +98,7 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
       OffloadCompilation = true;
 
   if (Jobs.size() > 1) {
-    for (auto A : Actions){
+    for (auto *A : Actions){
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();

@@ -1369,7 +1369,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
                   {"/../../../../mips-mti-linux-gnu/lib" + M.gccSuffix()});
             });
   }
-  for (auto Candidate : {&MtiMipsMultilibsV1, &MtiMipsMultilibsV2}) {
+  for (auto *Candidate : {&MtiMipsMultilibsV1, &MtiMipsMultilibsV2}) {
     if (Candidate->select(Flags, Result.SelectedMultilib)) {
       Result.Multilibs = *Candidate;
       return true;
@@ -1462,7 +1462,7 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
                   {"/../../../../mips-img-linux-gnu/lib" + M.gccSuffix()});
             });
   }
-  for (auto Candidate : {&ImgMultilibsV1, &ImgMultilibsV2}) {
+  for (auto *Candidate : {&ImgMultilibsV1, &ImgMultilibsV2}) {
     if (Candidate->select(Flags, Result.SelectedMultilib)) {
       Result.Multilibs = *Candidate;
       return true;

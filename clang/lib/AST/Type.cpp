@@ -3536,7 +3536,7 @@ TagType::TagType(TypeClass TC, const TagDecl *D, QualType can)
       decl(const_cast<TagDecl *>(D)) {}
 
 static TagDecl *getInterestingTagDecl(TagDecl *decl) {
-  for (auto I : decl->redecls()) {
+  for (auto *I : decl->redecls()) {
     if (I->isCompleteDefinition() || I->isBeingDefined())
       return I;
   }
@@ -3777,7 +3777,7 @@ void ObjCObjectTypeImpl::Profile(llvm::FoldingSetNodeID &ID,
   for (auto typeArg : typeArgs)
     ID.AddPointer(typeArg.getAsOpaquePtr());
   ID.AddInteger(protocols.size());
-  for (auto proto : protocols)
+  for (auto *proto : protocols)
     ID.AddPointer(proto);
   ID.AddBoolean(isKindOf);
 }
@@ -3795,7 +3795,7 @@ void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(OTPDecl);
   ID.AddPointer(CanonicalType.getAsOpaquePtr());
   ID.AddInteger(protocols.size());
-  for (auto proto : protocols)
+  for (auto *proto : protocols)
     ID.AddPointer(proto);
 }
 

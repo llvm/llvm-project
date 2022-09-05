@@ -1028,7 +1028,7 @@ static bool hasWrittenStorageAttribute(ObjCPropertyDecl *Prop,
 
   // Find the corresponding property in the primary class definition.
   auto OrigClass = Category->getClassInterface();
-  for (auto Found : OrigClass->lookup(Prop->getDeclName())) {
+  for (auto *Found : OrigClass->lookup(Prop->getDeclName())) {
     if (ObjCPropertyDecl *OrigProp = dyn_cast<ObjCPropertyDecl>(Found))
       return OrigProp->getPropertyAttributesAsWritten() & OwnershipMask;
   }

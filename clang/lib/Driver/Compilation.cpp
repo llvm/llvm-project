@@ -102,7 +102,7 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
     }
 
     // Add allocated arguments to the final DAL.
-    for (auto ArgPtr : AllocatedArgs)
+    for (auto *ArgPtr : AllocatedArgs)
       Entry->AddSynthesizedArg(ArgPtr);
   }
 

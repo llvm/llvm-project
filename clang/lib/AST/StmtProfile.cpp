@@ -472,7 +472,7 @@ void OMPClauseProfiler::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPSizesClause(const OMPSizesClause *C) {
-  for (auto E : C->getSizesRefs())
+  for (auto *E : C->getSizesRefs())
     if (E)
       Profiler->VisitExpr(E);
 }

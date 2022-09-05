@@ -4158,7 +4158,7 @@ static void MaybeAddOverrideCalls(Sema &S, DeclContext *InContext,
 
   // We need to have names for all of the parameters, if we're going to
   // generate a forwarding call.
-  for (auto P : Method->parameters())
+  for (auto *P : Method->parameters())
     if (!P->getDeclName())
       return;
 
@@ -4186,7 +4186,7 @@ static void MaybeAddOverrideCalls(Sema &S, DeclContext *InContext,
         Results.getAllocator().CopyString(Overridden->getNameAsString()));
     Builder.AddChunk(CodeCompletionString::CK_LeftParen);
     bool FirstParam = true;
-    for (auto P : Method->parameters()) {
+    for (auto *P : Method->parameters()) {
       if (FirstParam)
         FirstParam = false;
       else
