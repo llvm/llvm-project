@@ -536,17 +536,6 @@ bool Symbol::shouldReplace(const Defined &other) const {
   if (!isDefined())
     return true;
 
-  // .symver foo,foo@@VER unfortunately creates two defined symbols: foo and
-  // foo@@VER. In GNU ld, if foo and foo@@VER are in the same file, foo is
-  // ignored. In our implementation, when this is foo, this->getName() may still
-  // contain @@, return true in this case as well.
-  if (LLVM_UNLIKELY(file == other.file)) {
-    if (other.getName().contains("@@"))
-      return true;
-    if (getName().contains("@@"))
-      return false;
-  }
-
   // Incoming STB_GLOBAL overrides STB_WEAK/STB_GNU_UNIQUE. -fgnu-unique changes
   // some vague linkage data in COMDAT from STB_WEAK to STB_GNU_UNIQUE. Treat
   // STB_GNU_UNIQUE like STB_WEAK so that we prefer the first among all
