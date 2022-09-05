@@ -7,10 +7,12 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: test_combine_consecutive
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK: $x0 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
@@ -27,10 +29,12 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: test_combine_diff_order
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY]](s32)
-    ; CHECK: $x0 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
@@ -47,11 +51,13 @@ body:             |
     liveins: $w0, $w1, $w2, $w3
 
     ; CHECK-LABEL: name: test_combine_insert_vec_build_vec_idx_1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
-    ; CHECK: $q0 = COPY [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<4 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %6:_(s32) = COPY $w2
@@ -68,14 +74,16 @@ body:             |
     liveins: $w0, $w1, $w2, $w3
 
     ; CHECK-LABEL: name: test_combine_insert_vec_build_vec_idx_oob
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[COPY]](s32), [[C]](s32)
-    ; CHECK: $q0 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[COPY]](s32), [[C]](s32)
+    ; CHECK-NEXT: $q0 = COPY [[IVEC]](<4 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %6:_(s32) = COPY $w2
@@ -92,13 +100,15 @@ body:             |
     liveins: $w0, $w1, $w2, $w3
 
     ; CHECK-LABEL: name: test_combine_insert_vec_build_vec_variable
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[COPY]](s32), [[COPY]](s32)
-    ; CHECK: $q0 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[COPY]](s32), [[COPY]](s32)
+    ; CHECK-NEXT: $q0 = COPY [[IVEC]](<4 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %6:_(s32) = COPY $w2
@@ -115,10 +125,12 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: test_combine_multiple_same_idx_1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK: $x0 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
@@ -136,9 +148,11 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: test_combine_multiple_same_idx_2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32)
-    ; CHECK: $x0 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32)
+    ; CHECK-NEXT: $x0 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<2 x s32>) = G_IMPLICIT_DEF
@@ -156,11 +170,13 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: test_combine_missing_idx
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[DEF]](s32), [[COPY1]](s32), [[COPY]](s32)
-    ; CHECK: $q0 = COPY [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[DEF]](s32), [[COPY1]](s32), [[COPY]](s32)
+    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<4 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(<4 x s32>) = G_IMPLICIT_DEF
@@ -171,4 +187,30 @@ body:             |
     %11:_(<4 x s32>) = G_INSERT_VECTOR_ELT %10, %1(s32), %8(s32)
     %12:_(<4 x s32>) = G_INSERT_VECTOR_ELT %11, %0(s32), %9(s32)
     $q0 = COPY %12
+...
+---
+name:            test_combine_negative_idx
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_combine_negative_idx
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 127
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<32 x s8>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[C1]](s8), [[C2]](s64)
+    ; CHECK-NEXT: G_STORE [[IVEC]](<32 x s8>), [[COPY]](p0) :: (store (<32 x s8>))
+    ; CHECK-NEXT: RET_ReallyLR
+    %3:_(s8) = G_CONSTANT i8 127
+    %2:_(<32 x s8>) = G_BUILD_VECTOR %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8)
+    %4:_(s8) = G_CONSTANT i8 -128
+    %5:_(s64) = G_CONSTANT i64 -1
+    %0:_(p0) = COPY $x0
+    %1:_(<32 x s8>) = G_INSERT_VECTOR_ELT %2, %4(s8), %5(s64)
+    G_STORE %1(<32 x s8>), %0(p0) :: (store (<32 x s8>))
+    RET_ReallyLR
+
 ...
