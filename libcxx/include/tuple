@@ -206,9 +206,9 @@ template <class... Types>
 #include <__compare/synth_three_way.h>
 #include <__config>
 #include <__functional/unwrap_ref.h>
+#include <__fwd/array.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
-#include <__tuple>
 #include <__type_traits/maybe_const.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>

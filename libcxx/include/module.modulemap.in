@@ -446,6 +446,8 @@ module std [system] {
     header "array"
     export initializer_list
     export *
+
+    module array_fwd { private header "__fwd/array.h" }
   }
   module atomic {
     header "atomic"
@@ -1100,6 +1102,17 @@ module std [system] {
   module tuple {
     header "tuple"
     export *
+
+    module apply_cv         { private header "__tuple/apply_cv.h" }
+    module get_fwd          { private header "__fwd/get.h" }
+    module make_tuple_types { private header "__tuple/make_tuple_types.h" }
+    module sfinae_helpers   { private header "__tuple/sfinae_helpers.h" }
+    module tuple_element    { private header "__tuple/tuple_element.h" }
+    module tuple_fwd        { private header "__fwd/tuple.h" }
+    module tuple_indices    { private header "__tuple/tuple_indices.h" }
+    module tuple_like       { private header "__tuple/tuple_like.h" }
+    module tuple_size       { private header "__tuple/tuple_size.h" }
+    module tuple_types      { private header "__tuple/tuple_types.h" }
   }
   module type_traits {
     header "type_traits"
@@ -1325,7 +1338,6 @@ module std [system] {
   }
   module __threading_support {         header "__threading_support" export * }
   module __tree              {         header "__tree"              export * }
-  module __tuple             { private header "__tuple"             export * }
   module __undef_macros      {         header "__undef_macros"      export * }
   module __verbose_abort     {         header "__verbose_abort"     export * }
 
