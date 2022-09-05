@@ -1683,13 +1683,14 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .setMIFlags(MachineInstr::FrameSetup);
     }
 
+    const char* ChkStk = Subtarget.getChkStkName();
     switch (MF.getTarget().getCodeModel()) {
     case CodeModel::Tiny:
     case CodeModel::Small:
     case CodeModel::Medium:
     case CodeModel::Kernel:
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
-          .addExternalSymbol("__chkstk")
+          .addExternalSymbol(ChkStk)
           .addReg(AArch64::X15, RegState::Implicit)
           .addReg(AArch64::X16, RegState::Implicit | RegState::Define | RegState::Dead)
           .addReg(AArch64::X17, RegState::Implicit | RegState::Define | RegState::Dead)
@@ -1704,8 +1705,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     case CodeModel::Large:
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVaddrEXT))
           .addReg(AArch64::X16, RegState::Define)
-          .addExternalSymbol("__chkstk")
-          .addExternalSymbol("__chkstk")
+          .addExternalSymbol(ChkStk)
+          .addExternalSymbol(ChkStk)
           .setMIFlags(MachineInstr::FrameSetup);
       if (NeedsWinCFI) {
         HasWinCFI = true;
