@@ -2,14 +2,14 @@
 ; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=-sse2 | FileCheck %s --check-prefixes=CHECK,SSE1
 ; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE2
 ; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=+sse4.2 | FileCheck %s --check-prefixes=CHECK,SSE42
-; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
-; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
+; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX
+; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX
 ; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512
 ; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=CHECK,AVX512
 ;
 ; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mcpu=slm | FileCheck %s --check-prefixes=CHECK,SLM
 ; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mcpu=goldmont | FileCheck %s --check-prefixes=CHECK,GLM
-; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
+; RUN: opt < %s -enable-no-nans-fp-math  -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=size-latency -mtriple=x86_64-- -mcpu=btver2 | FileCheck %s --check-prefixes=CHECK,AVX
 
 define i32 @fadd(i32 %arg) {
 ; SSE1-LABEL: 'fadd'
@@ -584,10 +584,10 @@ define i32 @frem(i32 %arg) {
 
 define i32 @fsqrt(i32 %arg) {
 ; SSE1-LABEL: 'fsqrt'
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
@@ -595,80 +595,69 @@ define i32 @fsqrt(i32 %arg) {
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SSE2-LABEL: 'fsqrt'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'fsqrt'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
-; AVX1-LABEL: 'fsqrt'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 43 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 86 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
-;
-; AVX2-LABEL: 'fsqrt'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; AVX-LABEL: 'fsqrt'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'fsqrt'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'fsqrt'
-; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 280 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; GLM-LABEL: 'fsqrt'
-; GLM-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
-; GLM-NEXT:  Cost Model: Found an estimated cost of 37 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; GLM-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
-; GLM-NEXT:  Cost Model: Found an estimated cost of 148 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
-; GLM-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
-; GLM-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
-; GLM-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
-; GLM-NEXT:  Cost Model: Found an estimated cost of 268 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call float @llvm.sqrt.f32(float undef)
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; GLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; GLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call double @llvm.sqrt.f64(double undef)
+; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; GLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; GLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
 ; GLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %F32 = call float @llvm.sqrt.f32(float undef)
