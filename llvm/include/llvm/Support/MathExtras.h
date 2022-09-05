@@ -296,8 +296,24 @@ static const unsigned char BitReverseTable256[256] = {
 };
 
 /// Reverse the bits in \p Val.
-template <typename T>
-T reverseBits(T Val) {
+template <typename T> T reverseBits(T Val) {
+#if __has_builtin(__builtin_bitreverse8)
+  if constexpr (std::is_same_v<T, uint8_t>)
+    return __builtin_bitreverse8(Val);
+#endif
+#if __has_builtin(__builtin_bitreverse16)
+  if constexpr (std::is_same_v<T, uint16_t>)
+    return __builtin_bitreverse16(Val);
+#endif
+#if __has_builtin(__builtin_bitreverse32)
+  if constexpr (std::is_same_v<T, uint32_t>)
+    return __builtin_bitreverse32(Val);
+#endif
+#if __has_builtin(__builtin_bitreverse64)
+  if constexpr (std::is_same_v<T, uint64_t>)
+    return __builtin_bitreverse64(Val);
+#endif
+
   unsigned char in[sizeof(Val)];
   unsigned char out[sizeof(Val)];
   std::memcpy(in, &Val, sizeof(Val));
@@ -306,34 +322,6 @@ T reverseBits(T Val) {
   std::memcpy(&Val, out, sizeof(Val));
   return Val;
 }
-
-#if __has_builtin(__builtin_bitreverse8)
-template<>
-inline uint8_t reverseBits<uint8_t>(uint8_t Val) {
-  return __builtin_bitreverse8(Val);
-}
-#endif
-
-#if __has_builtin(__builtin_bitreverse16)
-template<>
-inline uint16_t reverseBits<uint16_t>(uint16_t Val) {
-  return __builtin_bitreverse16(Val);
-}
-#endif
-
-#if __has_builtin(__builtin_bitreverse32)
-template<>
-inline uint32_t reverseBits<uint32_t>(uint32_t Val) {
-  return __builtin_bitreverse32(Val);
-}
-#endif
-
-#if __has_builtin(__builtin_bitreverse64)
-template<>
-inline uint64_t reverseBits<uint64_t>(uint64_t Val) {
-  return __builtin_bitreverse64(Val);
-}
-#endif
 
 // NOTE: The following support functions use the _32/_64 extensions instead of
 // type overloading so that signed and unsigned integers can be used without
