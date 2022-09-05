@@ -372,8 +372,8 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <exception>
+#include <memory>
 #include <mutex>
-#include <new>
 #include <system_error>
 #include <thread>
 #include <version>

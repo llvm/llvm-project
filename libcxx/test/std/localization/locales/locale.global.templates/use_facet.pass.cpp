@@ -12,7 +12,6 @@
 
 #include <locale>
 #include <cassert>
-#include <typeinfo>
 
 #include "test_macros.h"
 

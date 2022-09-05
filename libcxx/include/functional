@@ -533,6 +533,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <__utility/forward.h>
 #include <concepts>
 #include <exception>
+#include <memory>
 #include <tuple>
 #include <type_traits>
 #include <typeinfo>
