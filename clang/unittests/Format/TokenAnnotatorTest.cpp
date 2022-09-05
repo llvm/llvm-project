@@ -375,6 +375,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[16], tok::ampamp, TT_BinaryOperator);
 
   Tokens = annotate("template <typename T>\n"
+                    "concept C = Foo && !Bar;");
+
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[10], tok::exclaim, TT_UnaryOperator);
+
+  Tokens = annotate("template <typename T>\n"
                     "concept C = requires(T t) {\n"
                     "  { t.foo() };\n"
                     "} && Bar<T> && Baz<T>;");
