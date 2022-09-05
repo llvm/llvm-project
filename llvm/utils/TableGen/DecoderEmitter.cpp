@@ -2160,7 +2160,10 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
       // to interpret it.  As a first step, require the target to provide
       // callbacks for decoding register classes.
 
-      OperandInfo OpInfo = getOpInfo(cast<DefInit>(Op.first)->getDef());
+      Init *OpInit = Op.first;
+      if (DagInit *Dag = dyn_cast<DagInit>(OpInit))
+        OpInit = Dag->getOperator();
+      OperandInfo OpInfo = getOpInfo(cast<DefInit>(OpInit)->getDef());
 
       // Some bits of the operand may be required to be 1 depending on the
       // instruction's encoding. Collect those bits.
