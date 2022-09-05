@@ -168,11 +168,8 @@ unsigned char ElCompletionFn(EditLine *EL, int ch) {
         OS << "\n";
 
         // Emit the completions.
-        for (std::vector<std::string>::iterator I = Action.Completions.begin(),
-                                                E = Action.Completions.end();
-             I != E; ++I) {
-          OS << *I << "\n";
-        }
+        for (const std::string &Completion : Action.Completions)
+          OS << Completion << "\n";
 
         // Fool libedit into thinking nothing has changed. Reprint its prompt
         // and the user input. Note that the cursor will remain at the end of
