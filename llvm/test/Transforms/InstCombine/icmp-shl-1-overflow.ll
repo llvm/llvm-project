@@ -6,8 +6,7 @@ declare void @usev4(<4 x i4>)
 
 define i1 @icmp_shl_ugt_1(i8 %x) {
 ; CHECK-LABEL: @icmp_shl_ugt_1(
-; CHECK-NEXT:    [[ADD:%.*]] = shl i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[ADD]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = shl i8 %x, 1
@@ -18,8 +17,7 @@ define i1 @icmp_shl_ugt_1(i8 %x) {
 define <2 x i1> @icmp_shl_ugt_2(<2 x i32> %_x) {
 ; CHECK-LABEL: @icmp_shl_ugt_2(
 ; CHECK-NEXT:    [[X:%.*]] = add <2 x i32> [[_X:%.*]], <i32 42, i32 42>
-; CHECK-NEXT:    [[ADD:%.*]] = shl <2 x i32> [[X]], <i32 1, i32 1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[X]], [[ADD]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = add <2 x i32> <i32 42, i32 42>, %_x ; thwart complexity-based canonicalization
@@ -30,8 +28,7 @@ define <2 x i1> @icmp_shl_ugt_2(<2 x i32> %_x) {
 
 define <3 x i1> @icmp_shl_uge_1(<3 x i7> %x) {
 ; CHECK-LABEL: @icmp_shl_uge_1(
-; CHECK-NEXT:    [[ADD:%.*]] = shl <3 x i7> [[X:%.*]], <i7 1, i7 1, i7 1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge <3 x i7> [[ADD]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i7> [[X:%.*]], <i7 -1, i7 -1, i7 -1>
 ; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
   %add = shl <3 x i7> %x, <i7 1, i7 1, i7 1>
@@ -42,8 +39,7 @@ define <3 x i1> @icmp_shl_uge_1(<3 x i7> %x) {
 define i1 @icmp_shl_uge_2(i5 %_x) {
 ; CHECK-LABEL: @icmp_shl_uge_2(
 ; CHECK-NEXT:    [[X:%.*]] = add i5 [[_X:%.*]], 10
-; CHECK-NEXT:    [[ADD:%.*]] = shl i5 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i5 [[X]], [[ADD]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i5 [[X]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = add i5 42, %_x ; thwart complexity-based canonicalization
@@ -56,7 +52,7 @@ define i1 @icmp_shl_ult_1(i16 %x) {
 ; CHECK-LABEL: @icmp_shl_ult_1(
 ; CHECK-NEXT:    [[ADD:%.*]] = shl i16 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @use16(i16 [[ADD]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[ADD]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = shl i16 %x, 1
@@ -70,7 +66,7 @@ define <4 x i1> @icmp_shl_ult_2(<4 x i4> %_x) {
 ; CHECK-NEXT:    [[X:%.*]] = add <4 x i4> [[_X:%.*]], <i4 -6, i4 -6, i4 -6, i4 -6>
 ; CHECK-NEXT:    [[ADD:%.*]] = shl <4 x i4> [[X]], <i4 1, i4 1, i4 1, i4 1>
 ; CHECK-NEXT:    call void @usev4(<4 x i4> [[ADD]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i4> [[X]], [[ADD]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i4> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %x = add <4 x i4> <i4 42, i4 42, i4 42, i4 42>, %_x ; thwart complexity-based canonicalization
@@ -82,8 +78,7 @@ define <4 x i1> @icmp_shl_ult_2(<4 x i4> %_x) {
 
 define <2 x i1> @icmp_shl_ule_1(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_shl_ule_1(
-; CHECK-NEXT:    [[ADD:%.*]] = shl <2 x i8> [[X:%.*]], <i8 1, i8 poison>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <2 x i8> [[ADD]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = shl <2 x i8> %x, <i8 1, i8 poison>
@@ -94,8 +89,7 @@ define <2 x i1> @icmp_shl_ule_1(<2 x i8> %x) {
 define i1 @icmp_shl_ule_2(i8 %_x) {
 ; CHECK-LABEL: @icmp_shl_ule_2(
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[_X:%.*]], 42
-; CHECK-NEXT:    [[ADD:%.*]] = shl i8 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[X]], [[ADD]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = add i8 42, %_x ; thwart complexity-based canonicalization
@@ -106,8 +100,7 @@ define i1 @icmp_shl_ule_2(i8 %_x) {
 
 define i1 @icmp_shl_eq_1(i8 %x) {
 ; CHECK-LABEL: @icmp_shl_eq_1(
-; CHECK-NEXT:    [[ADD:%.*]] = shl i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ADD]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = shl i8 %x, 1
@@ -117,12 +110,11 @@ define i1 @icmp_shl_eq_1(i8 %x) {
 
 define <2 x i1> @icmp_shl_eq_2(<2 x i8> %_x) {
 ; CHECK-LABEL: @icmp_shl_eq_2(
-; CHECK-NEXT:    [[X:%.*]] = add <2 x i8> [[_X:%.*]], <i8 42, i8 42>
-; CHECK-NEXT:    [[ADD:%.*]] = shl <2 x i8> [[X]], <i8 1, i8 1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X]], [[ADD]]
+; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 42>, [[_X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %x = add <2 x i8> <i8 42, i8 42>, %_x ; thwart complexity-based canonicalization
+  %x = sdiv <2 x i8> <i8 42, i8 42>, %_x ; thwart complexity-based canonicalization
   %add = shl <2 x i8> %x, <i8 1, i8 1>
   %cmp = icmp eq <2 x i8> %x, %add
   ret <2 x i1> %cmp
@@ -130,8 +122,7 @@ define <2 x i1> @icmp_shl_eq_2(<2 x i8> %_x) {
 
 define <2 x i1> @icmp_shl_ne_1(<2 x i8> %x) {
 ; CHECK-LABEL: @icmp_shl_ne_1(
-; CHECK-NEXT:    [[ADD:%.*]] = shl <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[ADD]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = shl <2 x i8> %x, <i8 1, i8 1>
@@ -141,12 +132,11 @@ define <2 x i1> @icmp_shl_ne_1(<2 x i8> %x) {
 
 define i1 @icmp_shl_ne_2(i8 %_x) {
 ; CHECK-LABEL: @icmp_shl_ne_2(
-; CHECK-NEXT:    [[X:%.*]] = add i8 [[_X:%.*]], 42
-; CHECK-NEXT:    [[ADD:%.*]] = shl i8 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], [[ADD]]
+; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[_X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %x = add i8 42, %_x ; thwart complexity-based canonicalization
+  %x = sdiv i8 42, %_x ; thwart complexity-based canonicalization
   %add = shl i8 %x, 1
   %cmp = icmp ne i8 %x, %add
   ret i1 %cmp
