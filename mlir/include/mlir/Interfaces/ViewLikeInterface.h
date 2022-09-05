@@ -30,13 +30,6 @@ struct Range {
   OpFoldResult stride;
 };
 
-/// Given an array of Range values, return a tuple of (offset vector, sizes
-/// vector, and strides vector) formed by separating out the individual elements
-/// of each range.
-std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
-           SmallVector<OpFoldResult>>
-getOffsetsSizesAndStrides(ArrayRef<Range> ranges);
-
 /// Return a vector of OpFoldResults given the special value
 /// that indicates whether of the value is dynamic or not.
 SmallVector<OpFoldResult, 4> getMixedValues(ArrayAttr staticValues,
