@@ -57,8 +57,8 @@ template <typename RangeT>
 using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
 
 template <typename RangeT>
-using ValueOfRange = typename std::remove_reference<decltype(
-    *std::begin(std::declval<RangeT &>()))>::type;
+using ValueOfRange =
+    std::remove_reference_t<decltype(*std::begin(std::declval<RangeT &>()))>;
 
 } // end namespace detail
 
@@ -359,8 +359,7 @@ public:
 
 /// Metafunction to determine if T& or T has a member called rbegin().
 template <typename Ty>
-struct has_rbegin : has_rbegin_impl<typename std::remove_reference<Ty>::type> {
-};
+struct has_rbegin : has_rbegin_impl<std::remove_reference_t<Ty>> {};
 
 // Returns an iterator_range over the given container which iterates in reverse.
 template <typename ContainerTy> auto reverse(ContainerTy &&C) {
@@ -785,7 +784,7 @@ auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
 
 template <typename Iter> struct ZipLongestItemType {
   using type = llvm::Optional<std::remove_const_t<
-      typename std::remove_reference<decltype(*std::declval<Iter>())>::type>>;
+      std::remove_reference_t<decltype(*std::declval<Iter>())>>>;
 };
 
 template <typename... Iters> struct ZipLongestTupleType {
