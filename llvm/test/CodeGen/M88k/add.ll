@@ -53,3 +53,15 @@ define i64 @f6(i64 %a, i64 %b) {
   %sum = sub i64 %a, %b
   ret i64 %sum
 }
+
+; Special case: return (a == 0) + b
+define i32 @f7(i32 %a, i32 %b) {
+; CHECK-LABEL: f7:
+; CHECK:       subu.co %r2, %r4, %r2
+; CHECK-NEXT:  addu.ci %r2, %r3, %r4
+; CHECK-NEXT:  jmp %r1
+  %cmp = icmp eq i32 %a, 0
+  %conv = zext i1 %cmp to i32
+  %sum = add i32 %conv, %b
+  ret i32 %sum
+}

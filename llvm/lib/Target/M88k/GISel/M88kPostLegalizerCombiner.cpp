@@ -42,6 +42,16 @@ using namespace llvm;
 using namespace MIPatternMatch;
 
 /*
+C Expressions to match:
+
+  a + (b == 0)
+  a + (b >= c) (unsigned)
+  a + (b <= c) (unsigned)
+  a - (b < c) (unsigned)
+  a - (b > c) (unsigned)
+  a - (b != 0)
+  a - (b >= 0) (signed)
+
 Match:
 
     %2:gr(s32) = G_CONSTANT i32 0
@@ -83,14 +93,7 @@ bool matchAddCmpToSubAdd(MachineInstr &MI, MachineRegisterInfo &MRI,
     return false;
 
   MatchInfo = std::make_tuple(SrcRegA, SrcRegB, CstValReg->VReg);
-/*
-  MatchInfo = [=](MachineIRBuilder &B) {
-    Register CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(32));
 
-    B.buildInstr(TargetOpcode::G_USUBO, {}, {});
-    B.buildInstr(TargetOpcode::G_UADDE, {}, {});
-  };
-*/
   return true;
 }
 
@@ -114,6 +117,124 @@ bool applyAddCmpToSubAdd(MachineInstr &MI, MachineRegisterInfo &MRI,
   B.buildInstr(TargetOpcode::G_UADDE, {DstReg, UnusedCarry},
                {SrcRegA, ZeroReg, Carry});
   MI.eraseFromParent();
+  return true;
+}
+
+bool matchAddCmpToSubAdd2(MachineInstr &MI, MachineOperand &Src1,
+                          MachineOperand &Src2, MachineOperand &Src3,
+                          MachineOperand &CC, MachineRegisterInfo &MRI,
+                          BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ADD);
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcRegA = Src1.getReg();
+  Register SrcRegB;
+  Register SrcRegC;
+  Register ZeroReg;
+  CmpInst::Predicate Pred = static_cast<CmpInst::Predicate>(CC.getPredicate());
+  switch (Pred) {
+  case CmpInst::ICMP_UGE:
+    SrcRegB = Src3.getReg();
+    SrcRegC = Src2.getReg();
+    ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    break;
+  case CmpInst::ICMP_ULE:
+    SrcRegB = Src2.getReg();
+    SrcRegC = Src3.getReg();
+    ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    break;
+  case CmpInst::ICMP_EQ: {
+    int64_t Cst;
+    if (mi_match(Src2.getReg(), MRI, m_ICst(Cst)) && Cst == 0) {
+      SrcRegB = ZeroReg = Src2.getReg();
+      SrcRegC = Src3.getReg();
+    } else if (mi_match(Src3.getReg(), MRI, m_ICst(Cst)) && Cst == 0) {
+      SrcRegB = ZeroReg = Src3.getReg();
+      SrcRegC = Src2.getReg();
+    } else
+      return false;
+    break;
+  }
+  default:
+    return false;
+  }
+
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    if (Pred != CmpInst::ICMP_EQ)
+      B.buildConstant(ZeroReg, 0);
+    B.buildInstr(TargetOpcode::G_USUBO, {UnusedReg, Carry}, {SrcRegB, SrcRegC});
+    B.buildInstr(TargetOpcode::G_UADDE, {DstReg, UnusedCarry},
+                 {SrcRegA, ZeroReg, Carry});
+  };
+
+  return true;
+}
+
+// Match
+//  Dst = G_ADD SrcA, (G_ZEXT (G_ICMP Pred, SrcB, SrcC)
+// with:
+//  - Pred = unsigned >=
+//  - Pred = unsigned <=
+//  - Pred = equal and either SrcB or SrcC being zero
+// The returned MatchInfo transforms this sequence into
+//  Unused, Carry = G_USUBU SrcB', SrcC'
+//  Dst, UnusedCarry = G_UADDE SrcA, Zero, Carry
+// with SrcB' and SrcC' derived from SrcB and SrcC, inserting a zero constant
+// value if necessary.
+bool matchAddSubFromAddICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ADD);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcRegA;
+  Register SrcRegB;
+  Register SrcRegC;
+  Register ZeroReg;
+  CmpInst::Predicate Pred;
+  if (!mi_match(
+          MI, MRI,
+          m_GAdd(m_Reg(SrcRegA), m_GZExt(m_GICmp(m_Pred(Pred), m_Reg(SrcRegB),
+                                                 m_Reg(SrcRegC))))))
+    return false;
+
+  switch (Pred) {
+  case CmpInst::ICMP_UGE:
+    std::swap(SrcRegB, SrcRegC);
+    ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    break;
+  case CmpInst::ICMP_ULE:
+    ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    break;
+  case CmpInst::ICMP_EQ: {
+    int64_t Cst;
+    if (mi_match(SrcRegB, MRI, m_ICst(Cst)) && Cst == 0) {
+      ZeroReg = SrcRegB;
+    } else if (mi_match(SrcRegC, MRI, m_ICst(Cst)) && Cst == 0) {
+      std::swap(SrcRegB, SrcRegC);
+      ZeroReg = SrcRegB;
+    } else
+      return false;
+    break;
+  }
+  default:
+    return false;
+  }
+
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    if (Pred != CmpInst::ICMP_EQ)
+      B.buildConstant(ZeroReg, 0);
+    B.buildInstr(TargetOpcode::G_USUBO, {UnusedReg, Carry}, {SrcRegB, SrcRegC});
+    B.buildInstr(TargetOpcode::G_UADDE, {DstReg, UnusedCarry},
+                 {SrcRegA, ZeroReg, Carry});
+  };
+
   return true;
 }
 
