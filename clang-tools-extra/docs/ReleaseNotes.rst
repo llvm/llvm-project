@@ -145,7 +145,8 @@ Changes in existing checks
   check.
 
   The check now skips unions since in this case a default constructor with empty body
-  is not equivalent to the explicitly defaulted one. The check is restricted to c++11-or-later.
+  is not equivalent to the explicitly defaulted one. The check also skips copy assignment
+  operators with nonstandard return types. The check is restricted to c++11-or-later.
 
 Removed checks
 ^^^^^^^^^^^^^^
