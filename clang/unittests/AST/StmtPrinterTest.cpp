@@ -31,7 +31,7 @@ using namespace tooling;
 
 namespace {
 
-enum class StdVer { CXX98, CXX11, CXX14, CXX17, CXX2a };
+enum class StdVer { CXX98, CXX11, CXX14, CXX17, CXX20 };
 
 DeclarationMatcher FunctionBodyMatcher(StringRef ContainingFunction) {
   return functionDecl(hasName(ContainingFunction),
@@ -67,7 +67,9 @@ PrintedStmtCXXMatches(StdVer Standard, StringRef Code, const T &NodeMatch,
   case StdVer::CXX11: StdOpt = "-std=c++11"; break;
   case StdVer::CXX14: StdOpt = "-std=c++14"; break;
   case StdVer::CXX17: StdOpt = "-std=c++17"; break;
-  case StdVer::CXX2a: StdOpt = "-std=c++2a"; break;
+  case StdVer::CXX20:
+    StdOpt = "-std=c++20";
+    break;
   }
 
   std::vector<std::string> Args = {
@@ -144,6 +146,35 @@ TEST(StmtPrinter, TestFloatingPointLiteral) {
     FunctionBodyMatcher("A"),
     "1.F , -1.F , 1. , -1. , 1.L , -1.L"));
     // Should be: with semicolon
+}
+
+TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Pack) {
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
+                                    R"cpp(
+    template <char...> constexpr double operator""_c() { return 42; }
+    void A() {
+      constexpr auto waldo = 42_c;
+    }
+)cpp",
+                                    FunctionBodyMatcher("A"),
+                                    "constexpr auto waldo = 42_c;\n"));
+}
+
+TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Class) {
+  ASSERT_TRUE(
+      PrintedStmtCXXMatches(StdVer::CXX20,
+                            R"cpp(
+    struct C {
+      template <unsigned N> constexpr C(const char (&)[N]) : n(N) {}
+      unsigned n;
+    };
+    template <C c> constexpr auto operator""_c() { return c.n; }
+    void A() {
+      constexpr auto waldo = "abc"_c;
+    }
+)cpp",
+                            FunctionBodyMatcher("A"),
+                            "constexpr auto waldo = operator\"\"_c<{4}>();\n"));
 }
 
 TEST(StmtPrinter, TestCXXConversionDeclImplicit) {

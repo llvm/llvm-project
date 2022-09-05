@@ -7031,8 +7031,8 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   }
 
   if (!VT.isVector() && Opcode == ISD::MUL &&
-      DAG.ComputeNumSignBits(LHS) > InnerBitSize &&
-      DAG.ComputeNumSignBits(RHS) > InnerBitSize) {
+      DAG.ComputeMaxSignificantBits(LHS) <= InnerBitSize &&
+      DAG.ComputeMaxSignificantBits(RHS) <= InnerBitSize) {
     // The input values are both sign-extended.
     // TODO non-MUL case?
     if (MakeMUL_LOHI(LL, RL, Lo, Hi, true)) {
@@ -7043,8 +7043,7 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   }
 
   unsigned ShiftAmount = OuterBitSize - InnerBitSize;
-  EVT ShiftAmountTy = getShiftAmountTy(VT, DAG.getDataLayout());
-  SDValue Shift = DAG.getConstant(ShiftAmount, dl, ShiftAmountTy);
+  SDValue Shift = DAG.getShiftAmountConstant(ShiftAmount, VT, dl);
 
   if (!LH.getNode() && !RH.getNode() &&
       isOperationLegalOrCustom(ISD::SRL, VT) &&

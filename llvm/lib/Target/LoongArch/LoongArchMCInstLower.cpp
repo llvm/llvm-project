@@ -42,10 +42,10 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = LoongArchMCExpr::VK_LoongArch_CALL_PLT;
     break;
   case LoongArchII::MO_PCREL_HI:
-    Kind = LoongArchMCExpr::VK_LoongArch_PCREL_HI;
+    Kind = LoongArchMCExpr::VK_LoongArch_PCALA_HI20;
     break;
   case LoongArchII::MO_PCREL_LO:
-    Kind = LoongArchMCExpr::VK_LoongArch_PCREL_LO;
+    Kind = LoongArchMCExpr::VK_LoongArch_PCALA_LO12;
     break;
     // TODO: Handle more target-flags.
   }

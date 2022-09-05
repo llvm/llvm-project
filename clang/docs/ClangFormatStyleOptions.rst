@@ -3670,7 +3670,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**ReflowComments** (``Boolean``) :versionbadge:`clang-format 4`
+**ReflowComments** (``Boolean``) :versionbadge:`clang-format 3.8`
   If ``true``, clang-format will attempt to re-flow comments.
 
   .. code-block:: c++
@@ -3910,7 +3910,7 @@ the configuration (without a prefix: ``Auto``).
        int bar;                           int bar;
      } // namespace b                   } // namespace b
 
-**SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 4`
+**SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 3.8`
   Controls if and how clang-format will sort ``#includes``.
   If ``Never``, includes are never sorted.
   If ``CaseInsensitive``, includes are sorted in an ASCIIbetical or case
