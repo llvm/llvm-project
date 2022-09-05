@@ -893,7 +893,7 @@ public:
       optimizeTransposes();
       if (PrintAfterTransposeOpt) {
         dbgs() << "Dump after matrix transpose optimization:\n";
-        Func.dump();
+        Func.print(dbgs());
       }
     }
 
