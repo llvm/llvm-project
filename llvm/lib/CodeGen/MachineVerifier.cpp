@@ -2290,8 +2290,18 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
                                          bool SubRangeCheck,
                                          LaneBitmask LaneMask) {
   if (const VNInfo *VNI = LR.getVNInfoAt(DefIdx)) {
-    assert(VNI && "NULL valno is not allowed");
-    if (VNI->def != DefIdx) {
+    // The LR can correspond to the whole reg and its def slot is not obliged
+    // to be the same as the MO' def slot. E.g. when we check here "normal"
+    // subreg MO but there is other EC subreg MO in the same instruction so the
+    // whole reg has EC def slot and differs from the currently checked MO' def
+    // slot. For example:
+    // %0 [16e,32r:0) 0@16e  L..3 [16e,32r:0) 0@16e  L..C [16r,32r:0) 0@16r
+    // Check that there is an early-clobber def of the same superregister
+    // somewhere is performed in visitMachineFunctionAfter()
+    if (((SubRangeCheck || MO->getSubReg() == 0) && VNI->def != DefIdx) ||
+        !SlotIndex::isSameInstr(VNI->def, DefIdx) ||
+        (VNI->def != DefIdx &&
+         (!VNI->def.isEarlyClobber() || !DefIdx.isRegister()))) {
       report("Inconsistent valno->def", MO, MONum);
       report_context_liverange(LR);
       report_context_vreg_regunit(VRegOrUnit);
