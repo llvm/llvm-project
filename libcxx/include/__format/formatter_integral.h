@@ -18,6 +18,7 @@
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__utility/unreachable.h>
+#include <array>
 #include <charconv>
 #include <limits>
 #include <string>

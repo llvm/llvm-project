@@ -1326,7 +1326,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   bool PassAlignment = false;
   SmallVector<Expr *, 1> PlacementArgs;
 
-  bool PromiseContainsNew = [this, &PromiseType]() -> bool {
+  const bool PromiseContainsNew = [this, &PromiseType]() -> bool {
     DeclarationName NewName =
         S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
     LookupResult R(S, NewName, Loc, Sema::LookupOrdinaryName);
@@ -1337,22 +1337,22 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return !R.empty() && !R.isAmbiguous();
   }();
 
-  auto LookupAllocationFunction = [&]() {
+  auto LookupAllocationFunction = [&](Sema::AllocationFunctionScope NewScope =
+                                          Sema::AFS_Both) {
     // [dcl.fct.def.coroutine]p9
     //   The allocation function's name is looked up by searching for it in the
     // scope of the promise type.
     // - If any declarations are found, ...
     // - If no declarations are found in the scope of the promise type, a search
     // is performed in the global scope.
-    Sema::AllocationFunctionScope NewScope =
-        PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
+    if (NewScope == Sema::AFS_Both)
+      NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
+
     FunctionDecl *UnusedResult = nullptr;
-    S.FindAllocationFunctions(Loc, SourceRange(),
-                              NewScope,
+    S.FindAllocationFunctions(Loc, SourceRange(), NewScope,
                               /*DeleteScope*/ Sema::AFS_Both, PromiseType,
                               /*isArray*/ false, PassAlignment, PlacementArgs,
-                              OperatorNew, UnusedResult,
-                              /*Diagnose*/ false);
+                              OperatorNew, UnusedResult, /*Diagnose*/ false);
   };
 
   // We don't expect to call to global operator new with (size, p0, …, pn).
@@ -1383,16 +1383,14 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
       return false;
     PlacementArgs = {StdNoThrow};
     OperatorNew = nullptr;
-    FunctionDecl *UnusedResult = nullptr;
-    S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Both,
-                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-                              /*isArray*/ false, PassAlignment, PlacementArgs,
-                              OperatorNew, UnusedResult);
+    LookupAllocationFunction(Sema::AFS_Global);
   }
 
   if (!OperatorNew) {
     if (PromiseContainsNew)
       S.Diag(Loc, diag::err_coroutine_unusable_new) << PromiseType << &FD;
+    else if (RequiresNoThrowAlloc)
+      S.Diag(Loc, diag::err_coroutine_unfound_nothrow_new) << &FD;
 
     return false;
   }

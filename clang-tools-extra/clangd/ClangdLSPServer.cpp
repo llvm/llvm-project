@@ -466,32 +466,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Server)
     return Reply(llvm::make_error<LSPError>("server already initialized",
                                             ErrorCode::InvalidRequest));
-  if (Opts.UseDirBasedCDB) {
-    DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
-    if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
-      CDBOpts.CompileCommandsDir = Dir;
-    CDBOpts.ContextProvider = Opts.ContextProvider;
-    BaseCDB =
-        std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
-    BaseCDB = getQueryDriverDatabase(llvm::makeArrayRef(Opts.QueryDriverGlobs),
-                                     std::move(BaseCDB));
-  }
-  auto Mangler = CommandMangler::detect();
-  if (Opts.ResourceDir)
-    Mangler.ResourceDir = *Opts.ResourceDir;
-  CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
-              tooling::ArgumentsAdjuster(std::move(Mangler)));
-  {
-    // Switch caller's context with LSPServer's background context. Since we
-    // rather want to propagate information from LSPServer's context into the
-    // Server, CDB, etc.
-    WithContext MainContext(BackgroundContext.clone());
-    llvm::Optional<WithContextValue> WithOffsetEncoding;
-    if (Opts.Encoding)
-      WithOffsetEncoding.emplace(kCurrentOffsetEncoding, *Opts.Encoding);
-    Server.emplace(*CDB, TFS, Opts,
-                   static_cast<ClangdServer::Callbacks *>(this));
-  }
 
   Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
   Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
@@ -520,6 +494,33 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
   BackgroundIndexSkipCreate = Params.capabilities.ImplicitProgressCreation;
   Opts.ImplicitCancellation = !Params.capabilities.CancelsStaleRequests;
+
+  if (Opts.UseDirBasedCDB) {
+    DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
+    if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
+      CDBOpts.CompileCommandsDir = Dir;
+    CDBOpts.ContextProvider = Opts.ContextProvider;
+    BaseCDB =
+        std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
+    BaseCDB = getQueryDriverDatabase(llvm::makeArrayRef(Opts.QueryDriverGlobs),
+                                     std::move(BaseCDB));
+  }
+  auto Mangler = CommandMangler::detect();
+  if (Opts.ResourceDir)
+    Mangler.ResourceDir = *Opts.ResourceDir;
+  CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
+              tooling::ArgumentsAdjuster(std::move(Mangler)));
+  {
+    // Switch caller's context with LSPServer's background context. Since we
+    // rather want to propagate information from LSPServer's context into the
+    // Server, CDB, etc.
+    WithContext MainContext(BackgroundContext.clone());
+    llvm::Optional<WithContextValue> WithOffsetEncoding;
+    if (Opts.Encoding)
+      WithOffsetEncoding.emplace(kCurrentOffsetEncoding, *Opts.Encoding);
+    Server.emplace(*CDB, TFS, Opts,
+                   static_cast<ClangdServer::Callbacks *>(this));
+  }
 
   llvm::json::Object ServerCaps{
       {"textDocumentSync",

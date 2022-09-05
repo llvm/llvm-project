@@ -125,7 +125,7 @@ struct JumpInstrMod {
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations(InputSectionBase &);
+template <class ELFT> void scanRelocations();
 void reportUndefinedSymbols();
 void postScanRelocations();
 

@@ -115,7 +115,7 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__iterator/reverse_iterator.h>
-#include <__tuple>
+#include <__tuple/sfinae_helpers.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
@@ -135,6 +135,10 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 // [array.syn]
 #include <compare>
 #include <initializer_list>
+
+// [tuple.helper]
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_size.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -12,8 +12,9 @@ load("//mlir:tblgen.bzl", "gentbl_filegroup", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 ##---------------------------------------------------------------------------##
 # Core IR modules.

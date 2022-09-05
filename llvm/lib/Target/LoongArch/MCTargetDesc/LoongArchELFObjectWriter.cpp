@@ -67,12 +67,28 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_LARCH_32;
   case FK_Data_8:
     return ELF::R_LARCH_64;
-  case LoongArch::fixup_loongarch_pcala_hi20:
-    return ELF::R_LARCH_PCALA_HI20;
-  case LoongArch::fixup_loongarch_pcala_lo12:
-    return ELF::R_LARCH_PCALA_LO12;
+  case LoongArch::fixup_loongarch_b16:
+    return ELF::R_LARCH_B16;
+  case LoongArch::fixup_loongarch_b21:
+    return ELF::R_LARCH_B21;
   case LoongArch::fixup_loongarch_b26:
     return ELF::R_LARCH_B26;
+  case LoongArch::fixup_loongarch_abs_hi20:
+    return ELF::R_LARCH_ABS_HI20;
+  case LoongArch::fixup_loongarch_abs_lo12:
+    return ELF::R_LARCH_ABS_LO12;
+  case LoongArch::fixup_loongarch_abs64_lo20:
+    return ELF::R_LARCH_ABS64_LO20;
+  case LoongArch::fixup_loongarch_abs64_hi12:
+    return ELF::R_LARCH_ABS64_HI12;
+  case LoongArch::fixup_loongarch_tls_le_hi20:
+    return ELF::R_LARCH_TLS_LE_HI20;
+  case LoongArch::fixup_loongarch_tls_le_lo12:
+    return ELF::R_LARCH_TLS_LE_LO12;
+  case LoongArch::fixup_loongarch_tls_le64_lo20:
+    return ELF::R_LARCH_TLS_LE64_LO20;
+  case LoongArch::fixup_loongarch_tls_le64_hi12:
+    return ELF::R_LARCH_TLS_LE64_HI12;
     // TODO: Handle more fixup-kinds.
   }
 }

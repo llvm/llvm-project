@@ -9820,6 +9820,7 @@ void ASTReader::diagnoseOdrViolations() {
     }
 
     assert(Context.hasSameType(FirstField->getType(), SecondField->getType()));
+    (void)Context;
 
     QualType FirstType = FirstField->getType();
     QualType SecondType = SecondField->getType();

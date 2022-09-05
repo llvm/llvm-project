@@ -1,4 +1,3 @@
-array
 atomic
 climits
 cmath
@@ -11,18 +10,14 @@ cstring
 ctime
 deque
 exception
-functional
 initializer_list
 iosfwd
 limits
-memory
 new
-optional
 ratio
 stdexcept
 tuple
 type_traits
 typeinfo
-unordered_map
 vector
 version

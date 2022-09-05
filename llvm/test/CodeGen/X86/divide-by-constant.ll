@@ -934,3 +934,31 @@ entry:
   %rem = udiv i64 %x, 12
   ret i64 %rem
 }
+
+define i64 @urem_i64_3_optsize(i64 %x) nounwind optsize {
+; X32-LABEL: urem_i64_3_optsize:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    subl $12, %esp
+; X32-NEXT:    pushl $0
+; X32-NEXT:    pushl $3
+; X32-NEXT:    pushl {{[0-9]+}}(%esp)
+; X32-NEXT:    pushl {{[0-9]+}}(%esp)
+; X32-NEXT:    calll __umoddi3
+; X32-NEXT:    addl $28, %esp
+; X32-NEXT:    retl
+;
+; X64-LABEL: urem_i64_3_optsize:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movabsq $-6148914691236517205, %rcx # imm = 0xAAAAAAAAAAAAAAAB
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    shrq %rdx
+; X64-NEXT:    leaq (%rdx,%rdx,2), %rax
+; X64-NEXT:    subq %rax, %rdi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    retq
+entry:
+  %rem = urem i64 %x, 3
+  ret i64 %rem
+}
+

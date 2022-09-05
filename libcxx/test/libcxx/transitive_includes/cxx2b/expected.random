@@ -17,7 +17,6 @@ exception
 initializer_list
 iosfwd
 limits
-memory
 new
 numeric
 ratio

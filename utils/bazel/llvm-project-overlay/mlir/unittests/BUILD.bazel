@@ -6,8 +6,9 @@ load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 cc_test(
     name = "ir_tests",
