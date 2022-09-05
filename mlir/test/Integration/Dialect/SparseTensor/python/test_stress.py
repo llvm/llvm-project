@@ -183,8 +183,6 @@ def main():
   # CHECK-LABEL: TEST: test_stress
   print("\nTEST: test_stress")
   with ir.Context() as ctx, ir.Location.unknown():
-    par = 0
-    vec = 0
     vl = 1
     e = False
     # Disable direct sparse2sparse conversion, because it doubles the time!
@@ -193,8 +191,8 @@ def main():
     # `s2s=0` on a regular basis, to ensure that it does continue to work.
     s2s = 1
     sparsification_options = (
-        f'parallelization-strategy={par} '
-        f'vectorization-strategy={vec} '
+        f'parallelization-strategy=none '
+        f'vectorization-strategy=none '
         f'vl={vl} '
         f'enable-simd-index32={e} '
         f's2s-strategy={s2s}')
