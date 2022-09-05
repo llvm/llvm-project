@@ -408,7 +408,7 @@ requires is_object_v<_Tp>
 struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*>
 {
     typedef ptrdiff_t difference_type;
-    typedef typename remove_cv<_Tp>::type value_type;
+    typedef __remove_cv_t<_Tp> value_type;
     typedef _Tp* pointer;
     typedef _Tp& reference;
     typedef random_access_iterator_tag iterator_category;
@@ -493,7 +493,7 @@ template<class _InputIterator>
 using __iter_value_type = typename iterator_traits<_InputIterator>::value_type;
 
 template<class _InputIterator>
-using __iter_key_type = typename remove_const<typename iterator_traits<_InputIterator>::value_type::first_type>::type;
+using __iter_key_type = __remove_const_t<typename iterator_traits<_InputIterator>::value_type::first_type>;
 
 template<class _InputIterator>
 using __iter_mapped_type = typename iterator_traits<_InputIterator>::value_type::second_type;

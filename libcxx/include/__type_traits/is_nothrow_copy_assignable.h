@@ -25,8 +25,8 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_assignable
     : public integral_constant<
           bool,
           __is_nothrow_assignable(
-              typename add_lvalue_reference<_Tp>::type,
-              typename add_lvalue_reference<typename add_const<_Tp>::type>::type)> {};
+              __add_lvalue_reference_t<_Tp>,
+              __add_lvalue_reference_t<typename add_const<_Tp>::type>)> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>

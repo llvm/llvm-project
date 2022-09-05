@@ -365,7 +365,7 @@ _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT
 {
     static_assert (!(is_function<_Tp>::value), "can't launder functions" );
-    static_assert (!(is_same<void, typename remove_cv<_Tp>::type>::value), "can't launder cv-void" );
+    static_assert (!(is_same<void, __remove_cv_t<_Tp> >::value), "can't launder cv-void" );
     return __builtin_launder(__p);
 }
 

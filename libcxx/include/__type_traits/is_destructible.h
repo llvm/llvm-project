@@ -63,7 +63,7 @@ struct __destructible_imp;
 template <class _Tp>
 struct __destructible_imp<_Tp, false>
    : public integral_constant<bool,
-        __is_destructor_wellformed<typename remove_all_extents<_Tp>::type>::value> {};
+        __is_destructor_wellformed<__remove_all_extents_t<_Tp> >::value> {};
 
 template <class _Tp>
 struct __destructible_imp<_Tp, true>

@@ -309,7 +309,7 @@ template <class _AlgPolicy, class _Predicate, class _ForwardIterator, class _Ite
 _LIBCPP_HIDE_FROM_ABI
 _ForwardIterator __stable_partition(
     _ForwardIterator __first, _ForwardIterator __last, _Predicate&& __pred, _IterCategory __iter_category) {
-  return std::__stable_partition_impl<_AlgPolicy, __uncvref_t<_Predicate>&>(
+  return std::__stable_partition_impl<_AlgPolicy, __remove_cvref_t<_Predicate>&>(
       std::move(__first), std::move(__last), __pred, __iter_category);
 }
 

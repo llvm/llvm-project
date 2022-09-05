@@ -753,11 +753,11 @@ __num_get_signed_integral(const char* __a, const char* __a_end,
 {
     if (__a != __a_end)
     {
-        typename remove_reference<decltype(errno)>::type __save_errno = errno;
+        __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
         errno = 0;
         char *__p2;
         long long __ll = strtoll_l(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
-        typename remove_reference<decltype(errno)>::type __current_errno = errno;
+        __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
         if (__current_errno == 0)
             errno = __save_errno;
         if (__p2 != __a_end)
@@ -793,11 +793,11 @@ __num_get_unsigned_integral(const char* __a, const char* __a_end,
           __err = ios_base::failbit;
           return 0;
         }
-        typename remove_reference<decltype(errno)>::type __save_errno = errno;
+        __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
         errno = 0;
         char *__p2;
         unsigned long long __ll = strtoull_l(__a, &__p2, __base, _LIBCPP_GET_C_LOCALE);
-        typename remove_reference<decltype(errno)>::type __current_errno = errno;
+        __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
         if (__current_errno == 0)
             errno = __save_errno;
         if (__p2 != __a_end)
@@ -847,11 +847,11 @@ __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err)
 {
     if (__a != __a_end)
     {
-        typename remove_reference<decltype(errno)>::type __save_errno = errno;
+        __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
         errno = 0;
         char *__p2;
         _Tp __ld = __do_strtod<_Tp>(__a, &__p2);
-        typename remove_reference<decltype(errno)>::type __current_errno = errno;
+        __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
         if (__current_errno == 0)
             errno = __save_errno;
         if (__p2 != __a_end)
