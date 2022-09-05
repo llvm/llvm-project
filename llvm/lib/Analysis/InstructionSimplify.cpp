@@ -3131,9 +3131,9 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
   if (match(LBO, m_Sub(m_APInt(C), m_Specific(RHS)))) {
     if ((*C & 1) == 1) {
       if (Pred == CmpInst::ICMP_EQ)
-        return ConstantInt::getFalse(getCompareTy(RHS));
+        return getFalse(ITy);
       if (Pred == CmpInst::ICMP_NE)
-        return ConstantInt::getTrue(getCompareTy(RHS));
+        return getTrue(ITy);
     }
   }
 
