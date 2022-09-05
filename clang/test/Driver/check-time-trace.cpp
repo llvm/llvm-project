@@ -1,5 +1,3 @@
-// UNSUPPORTED: ps4, ps5, hexagon
-
 // RUN: rm -rf %T/exe && mkdir %T/exe
 // RUN: %clangxx -ftime-trace -ftime-trace-granularity=0 -o %T/exe/check-time-trace %s
 // RUN: cat %T/exe/check-time-trace*.json \
