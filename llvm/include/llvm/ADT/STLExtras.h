@@ -784,9 +784,8 @@ auto deref_or_none(const Iter &I, const Iter &End) -> llvm::Optional<
 }
 
 template <typename Iter> struct ZipLongestItemType {
-  using type =
-      llvm::Optional<typename std::remove_const<typename std::remove_reference<
-          decltype(*std::declval<Iter>())>::type>::type>;
+  using type = llvm::Optional<std::remove_const_t<
+      typename std::remove_reference<decltype(*std::declval<Iter>())>::type>>;
 };
 
 template <typename... Iters> struct ZipLongestTupleType {
