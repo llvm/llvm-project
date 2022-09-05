@@ -360,8 +360,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     //       3X4 (addq throughput) = 17
     { ISD::MUL,   MVT::v2i64, { 17 } },
     // slm addq\subq throughput is 4
-    { ISD::ADD,   MVT::v2i64, {  4 } },
-    { ISD::SUB,   MVT::v2i64, {  4 } },
+    { ISD::ADD,   MVT::v2i64, {  4,  2, 1, 2 } },
+    { ISD::SUB,   MVT::v2i64, {  4,  2, 1, 2 } },
   };
 
   if (ST->useSLMArithCosts())
@@ -645,11 +645,21 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRL,   MVT::v64i8,   { 11 } }, // vpblendvb sequence.
     { ISD::SRA,   MVT::v64i8,   { 24 } }, // vpblendvb sequence.
 
-    { ISD::ADD,   MVT::v64i8,   {  1 } },
-    { ISD::ADD,   MVT::v32i16,  {  1 } },
+    { ISD::ADD,   MVT::v64i8,   {  1,  1, 1, 1 } }, // paddb
+    { ISD::ADD,   MVT::v32i16,  {  1,  1, 1, 1 } }, // paddw
 
-    { ISD::SUB,   MVT::v64i8,   {  1 } },
-    { ISD::SUB,   MVT::v32i16,  {  1 } },
+    { ISD::ADD,   MVT::v32i8,   {  1,  1, 1, 1 } }, // paddb
+    { ISD::ADD,   MVT::v16i16,  {  1,  1, 1, 1 } }, // paddw
+    { ISD::ADD,   MVT::v8i32,   {  1,  1, 1, 1 } }, // paddd
+    { ISD::ADD,   MVT::v4i64,   {  1,  1, 1, 1 } }, // paddq
+
+    { ISD::SUB,   MVT::v64i8,   {  1,  1, 1, 1 } }, // psubb
+    { ISD::SUB,   MVT::v32i16,  {  1,  1, 1, 1 } }, // psubw
+
+    { ISD::SUB,   MVT::v32i8,   {  1,  1, 1, 1 } }, // psubb
+    { ISD::SUB,   MVT::v16i16,  {  1,  1, 1, 1 } }, // psubw
+    { ISD::SUB,   MVT::v8i32,   {  1,  1, 1, 1 } }, // psubd
+    { ISD::SUB,   MVT::v4i64,   {  1,  1, 1, 1 } }, // psubq
   };
 
   // Look for AVX512BW lowering tricks for custom cases.
@@ -680,11 +690,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,     MVT::v4i64,   {  1 } },
     { ISD::SRA,     MVT::v8i64,   {  1 } },
 
-    { ISD::ADD,     MVT::v64i8,   {  3 } }, // 2*paddb + split
-    { ISD::ADD,     MVT::v32i16,  {  3 } }, // 2*paddw + split
+    { ISD::ADD,     MVT::v64i8,   {  3,  7, 5, 5 } }, // 2*paddb + split
+    { ISD::ADD,     MVT::v32i16,  {  3,  7, 5, 5 } }, // 2*paddw + split
 
-    { ISD::SUB,     MVT::v64i8,   {  3 } }, // 2*psubb + split
-    { ISD::SUB,     MVT::v32i16,  {  3 } }, // 2*psubw + split
+    { ISD::SUB,     MVT::v64i8,   {  3,  7, 5, 5 } }, // 2*psubb + split
+    { ISD::SUB,     MVT::v32i16,  {  3,  7, 5, 5 } }, // 2*psubw + split
 
     { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 1 } },
     { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 1 } },
@@ -887,14 +897,14 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v2i64,   {  2 } }, // srl/xor/sub sequence.
     { ISD::SRA,  MVT::v4i64,   {  2 } }, // srl/xor/sub sequence.
 
-    { ISD::SUB,  MVT::v32i8,   {  1 } }, // psubb
-    { ISD::ADD,  MVT::v32i8,   {  1 } }, // paddb
-    { ISD::SUB,  MVT::v16i16,  {  1 } }, // psubw
-    { ISD::ADD,  MVT::v16i16,  {  1 } }, // paddw
-    { ISD::SUB,  MVT::v8i32,   {  1 } }, // psubd
-    { ISD::ADD,  MVT::v8i32,   {  1 } }, // paddd
-    { ISD::SUB,  MVT::v4i64,   {  1 } }, // psubq
-    { ISD::ADD,  MVT::v4i64,   {  1 } }, // paddq
+    { ISD::SUB,  MVT::v32i8,   {  1,  1, 1, 2 } }, // psubb
+    { ISD::ADD,  MVT::v32i8,   {  1,  1, 1, 2 } }, // paddb
+    { ISD::SUB,  MVT::v16i16,  {  1,  1, 1, 2 } }, // psubw
+    { ISD::ADD,  MVT::v16i16,  {  1,  1, 1, 2 } }, // paddw
+    { ISD::SUB,  MVT::v8i32,   {  1,  1, 1, 2 } }, // psubd
+    { ISD::ADD,  MVT::v8i32,   {  1,  1, 1, 2 } }, // paddd
+    { ISD::SUB,  MVT::v4i64,   {  1,  1, 1, 2 } }, // psubq
+    { ISD::ADD,  MVT::v4i64,   {  1,  1, 1, 2 } }, // paddq
 
     { ISD::MUL,  MVT::v16i16,  {  1 } }, // pmullw
     { ISD::MUL,  MVT::v8i32,   {  2 } }, // pmulld (Haswell from agner.org)
@@ -961,14 +971,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::XOR,     MVT::v8i32,   {  1,  1, 1, 2 } }, // vxorps
     { ISD::XOR,     MVT::v4i64,   {  1,  1, 1, 2 } }, // vxorps
 
-    { ISD::SUB,     MVT::v32i8,   {  4 } },
-    { ISD::ADD,     MVT::v32i8,   {  4 } },
-    { ISD::SUB,     MVT::v16i16,  {  4 } },
-    { ISD::ADD,     MVT::v16i16,  {  4 } },
-    { ISD::SUB,     MVT::v8i32,   {  4 } },
-    { ISD::ADD,     MVT::v8i32,   {  4 } },
-    { ISD::SUB,     MVT::v4i64,   {  4 } },
-    { ISD::ADD,     MVT::v4i64,   {  4 } },
+    { ISD::SUB,     MVT::v32i8,   {  4,  2, 5, 6 } }, // psubb + split
+    { ISD::ADD,     MVT::v32i8,   {  4,  2, 5, 6 } }, // paddb + split
+    { ISD::SUB,     MVT::v16i16,  {  4,  2, 5, 6 } }, // psubw + split
+    { ISD::ADD,     MVT::v16i16,  {  4,  2, 5, 6 } }, // paddw + split
+    { ISD::SUB,     MVT::v8i32,   {  4,  2, 5, 6 } }, // psubd + split
+    { ISD::ADD,     MVT::v8i32,   {  4,  2, 5, 6 } }, // paddd + split
+    { ISD::SUB,     MVT::v4i64,   {  4,  2, 5, 6 } }, // psubq + split
+    { ISD::ADD,     MVT::v4i64,   {  4,  2, 5, 6 } }, // paddq + split
+    { ISD::SUB,     MVT::v2i64,   {  1,  1, 1, 1 } }, // psubq
+    { ISD::ADD,     MVT::v2i64,   {  1,  1, 1, 1 } }, // paddq
 
     { ISD::SHL,     MVT::v32i8,   { 22 } }, // pblendvb sequence + split.
     { ISD::SHL,     MVT::v8i16,   {  6 } }, // pblendvb sequence.
@@ -1097,20 +1109,23 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v4i32,  { 12 } }, // Shift each lane + blend.
     { ISD::SRA,  MVT::v2i64,  {  8 } }, // srl/xor/sub splat+shuffle sequence.
 
-    { ISD::AND,  MVT::v16i8,  {  1, 1, 1, 1 } }, // pand
-    { ISD::AND,  MVT::v8i16,  {  1, 1, 1, 1 } }, // pand
-    { ISD::AND,  MVT::v4i32,  {  1, 1, 1, 1 } }, // pand
-    { ISD::AND,  MVT::v2i64,  {  1, 1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v16i8,  {  1,  1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v8i16,  {  1,  1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v4i32,  {  1,  1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v2i64,  {  1,  1, 1, 1 } }, // pand
 
-    { ISD::OR,   MVT::v16i8,  {  1, 1, 1, 1 } }, // por
-    { ISD::OR,   MVT::v8i16,  {  1, 1, 1, 1 } }, // por
-    { ISD::OR,   MVT::v4i32,  {  1, 1, 1, 1 } }, // por
-    { ISD::OR,   MVT::v2i64,  {  1, 1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v16i8,  {  1,  1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v8i16,  {  1,  1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v4i32,  {  1,  1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v2i64,  {  1,  1, 1, 1 } }, // por
 
-    { ISD::XOR,  MVT::v16i8,  {  1, 1, 1, 1 } }, // pxor
-    { ISD::XOR,  MVT::v8i16,  {  1, 1, 1, 1 } }, // pxor
-    { ISD::XOR,  MVT::v4i32,  {  1, 1, 1, 1 } }, // pxor
-    { ISD::XOR,  MVT::v2i64,  {  1, 1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v16i8,  {  1,  1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v8i16,  {  1,  1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v4i32,  {  1,  1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v2i64,  {  1,  1, 1, 1 } }, // pxor
+
+    { ISD::ADD,  MVT::v2i64,  {  1,  2, 1, 2 } }, // paddq
+    { ISD::SUB,  MVT::v2i64,  {  1,  2, 1, 2 } }, // psubq
 
     { ISD::MUL,  MVT::v8i16,  {  1 } }, // pmullw
     { ISD::MUL,  MVT::v4i32,  {  6 } }, // 3*pmuludq/4*shuffle
