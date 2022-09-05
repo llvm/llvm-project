@@ -481,19 +481,19 @@ Then it is problematic if we remove ``foo.h`` before import `foo` module.
 
 .. code-block:: console
 
-  clang++ -std=c++20 foo.cppm --precompile  -o foo.pcm
-	mv foo.h foo.orig.h
+  $ clang++ -std=c++20 foo.cppm --precompile  -o foo.pcm
+  $ mv foo.h foo.orig.h
   # The following one is rejected
-	clang++ -std=c++20 Use.cpp -fmodule-file=foo.pcm -c
+  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo.pcm -c
 
 The above case will rejected. And we're still able to workaround it by ``-Xclang -fmodules-embed-all-files`` option:
 
 .. code-block:: console
 
-  clang++ -std=c++20 foo.cppm --precompile  -Xclang -fmodules-embed-all-files -o foo.pcm
-	mv foo.h foo.orig.h
-	clang++ -std=c++20 Use.cpp -fmodule-file=foo.pcm -c -o Use.o
-	clang++ Use.o foo.pcm
+  $ clang++ -std=c++20 foo.cppm --precompile  -Xclang -fmodules-embed-all-files -o foo.pcm
+  $ mv foo.h foo.orig.h
+  $ clang++ -std=c++20 Use.cpp -fmodule-file=foo.pcm -c -o Use.o
+  $ clang++ Use.o foo.pcm
 
 ABI Impacts
 -----------
