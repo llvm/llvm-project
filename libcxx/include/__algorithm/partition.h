@@ -79,7 +79,7 @@ template <class _AlgPolicy, class _ForwardIterator, class _Sentinel, class _Pred
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 pair<_ForwardIterator, _ForwardIterator> __partition(
     _ForwardIterator __first, _Sentinel __last, _Predicate&& __pred, _IterCategory __iter_category) {
-  return std::__partition_impl<__uncvref_t<_Predicate>&, _AlgPolicy>(
+  return std::__partition_impl<__remove_cvref_t<_Predicate>&, _AlgPolicy>(
       std::move(__first), std::move(__last), __pred, __iter_category);
 }
 

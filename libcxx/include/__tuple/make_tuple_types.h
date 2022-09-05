@@ -56,13 +56,13 @@ struct __make_tuple_types_flat<array<_Vt, _Np>, __tuple_indices<_Idx...>> {
     >;
 };
 
-template <class _Tp, size_t _Ep = tuple_size<typename remove_reference<_Tp>::type>::value,
+template <class _Tp, size_t _Ep = tuple_size<__libcpp_remove_reference_t<_Tp> >::value,
           size_t _Sp = 0,
-          bool _SameSize = (_Ep == tuple_size<typename remove_reference<_Tp>::type>::value)>
+          bool _SameSize = (_Ep == tuple_size<__libcpp_remove_reference_t<_Tp> >::value)>
 struct __make_tuple_types
 {
     static_assert(_Sp <= _Ep, "__make_tuple_types input error");
-    using _RawTp = typename remove_cv<typename remove_reference<_Tp>::type>::type;
+    using _RawTp = __remove_cv_t<__libcpp_remove_reference_t<_Tp> >;
     using _Maker = __make_tuple_types_flat<_RawTp, typename __make_tuple_indices<_Ep, _Sp>::type>;
     using type = typename _Maker::template __apply_quals<_Tp>;
 };

@@ -44,7 +44,7 @@ template <class _AlgPolicy, class _Tp, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 typename enable_if
 <
-    is_same<typename remove_const<_Tp>::type, _Up>::value &&
+    is_same<__remove_const_t<_Tp>, _Up>::value &&
     is_trivially_move_assignable<_Up>::value,
     _Up*
 >::type

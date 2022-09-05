@@ -558,7 +558,7 @@ struct __allocator_has_trivial_copy_construct<allocator<_Type>, _Type> : true_ty
 
 template <class _Alloc,
           class _Type,
-          class _RawType = typename remove_const<_Type>::type,
+          class _RawType = __remove_const_t<_Type>,
           __enable_if_t<
               // using _RawType because of the allocator<T const> extension
               is_trivially_copy_constructible<_RawType>::value && is_trivially_copy_assignable<_RawType>::value &&
