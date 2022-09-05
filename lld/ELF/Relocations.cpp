@@ -396,6 +396,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &ss) {
 namespace {
 class OffsetGetter {
 public:
+  OffsetGetter() = default;
   explicit OffsetGetter(InputSectionBase &sec) {
     if (auto *eh = dyn_cast<EhInputSection>(&sec)) {
       cies = eh->cies;
@@ -438,16 +439,13 @@ private:
 // InputSectionBase.
 class RelocationScanner {
 public:
-  explicit RelocationScanner(InputSectionBase &sec)
-      : sec(sec), getter(sec), config(elf::config.get()), target(*elf::target) {
-  }
-  template <class ELFT, class RelTy> void scan(ArrayRef<RelTy> rels);
+  template <class ELFT> void scanSection(InputSectionBase &s);
 
 private:
-  InputSectionBase &sec;
+  InputSectionBase *sec;
   OffsetGetter getter;
-  const Configuration *const config;
-  const TargetInfo &target;
+  const Configuration *const config = elf::config.get();
+  const TargetInfo &target = *elf::target;
 
   // End of relocations, used by Mips/PPC64.
   const void *end = nullptr;
@@ -462,6 +460,7 @@ private:
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
                   int64_t addend) const;
   template <class ELFT, class RelTy> void scanOne(RelTy *&i);
+  template <class ELFT, class RelTy> void scan(ArrayRef<RelTy> rels);
 };
 } // namespace
 
@@ -473,7 +472,7 @@ template <class ELFT, class RelTy>
 int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
                                              bool isLocal) const {
   if (expr == R_MIPS_GOTREL && isLocal)
-    return sec.getFile<ELFT>()->mipsGp0;
+    return sec->getFile<ELFT>()->mipsGp0;
 
   // The ABI says that the paired relocation is used only for REL.
   // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
@@ -485,7 +484,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
   if (pairTy == R_MIPS_NONE)
     return 0;
 
-  const uint8_t *buf = sec.rawData.data();
+  const uint8_t *buf = sec->rawData.data();
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
 
   // To make things worse, paired relocations might not be contiguous in
@@ -512,7 +511,7 @@ int64_t RelocationScanner::computeAddend(const RelTy &rel, RelExpr expr,
   if (RelTy::IsRela) {
     addend = getAddend<ELFT>(rel);
   } else {
-    const uint8_t *buf = sec.rawData.data();
+    const uint8_t *buf = sec->rawData.data();
     addend = target.getImplicitAddend(buf + rel.r_offset, type);
   }
 
@@ -1012,7 +1011,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
       return true;
 
   error("relocation " + toString(type) + " cannot refer to absolute symbol: " +
-        toString(sym) + getLocation(sec, sym, relOff));
+        toString(sym) + getLocation(*sec, sym, relOff));
   return true;
 }
 
@@ -1047,21 +1046,21 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // handling of GOT-generating relocations.
   if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
       (!config->isPic && sym.isUndefWeak())) {
-    sec.relocations.push_back({expr, type, offset, addend, &sym});
-    return;
+      sec->relocations.push_back({expr, type, offset, addend, &sym});
+      return;
   }
 
-  bool canWrite = (sec.flags & SHF_WRITE) || !config->zText;
+  bool canWrite = (sec->flags & SHF_WRITE) || !config->zText;
   if (canWrite) {
     RelType rel = target.getDynRel(type);
     if (expr == R_GOT || (rel == target.symbolicRel && !sym.isPreemptible)) {
-      addRelativeReloc(sec, offset, sym, addend, expr, type);
+      addRelativeReloc(*sec, offset, sym, addend, expr, type);
       return;
     } else if (rel != 0) {
       if (config->emachine == EM_MIPS && rel == target.symbolicRel)
         rel = target.relativeRel;
-      sec.getPartition().relaDyn->addSymbolReloc(rel, sec, offset, sym, addend,
-                                                 type);
+      sec->getPartition().relaDyn->addSymbolReloc(rel, *sec, offset, sym,
+                                                  addend, type);
 
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
@@ -1079,7 +1078,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       // a dynamic relocation.
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
       if (config->emachine == EM_MIPS)
-        in.mipsGot->addEntry(*sec.file, sym, addend, expr);
+        in.mipsGot->addEntry(*sec->file, sym, addend, expr);
       return;
     }
   }
@@ -1089,7 +1088,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   if (!config->shared) {
     if (!canDefineSymbolInExecutable(sym)) {
       errorOrWarn("cannot preempt symbol: " + toString(sym) +
-                  getLocation(sec, sym, offset));
+                  getLocation(*sec, sym, offset));
       return;
     }
 
@@ -1100,10 +1099,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           error("unresolvable relocation " + toString(type) +
                 " against symbol '" + toString(*ss) +
                 "'; recompile with -fPIC or remove '-z nocopyreloc'" +
-                getLocation(sec, sym, offset));
+                getLocation(*sec, sym, offset));
         sym.needsCopy = true;
       }
-      sec.relocations.push_back({expr, type, offset, addend, &sym});
+      sec->relocations.push_back({expr, type, offset, addend, &sym});
       return;
     }
 
@@ -1138,10 +1137,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       if (config->pie && config->emachine == EM_386)
         errorOrWarn("symbol '" + toString(sym) +
                     "' cannot be preempted; recompile with -fPIE" +
-                    getLocation(sec, sym, offset));
+                    getLocation(*sec, sym, offset));
       sym.needsCopy = true;
       sym.needsPlt = true;
-      sec.relocations.push_back({expr, type, offset, addend, &sym});
+      sec->relocations.push_back({expr, type, offset, addend, &sym});
       return;
     }
   }
@@ -1149,7 +1148,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   errorOrWarn("relocation " + toString(type) + " cannot be used against " +
               (sym.getName().empty() ? "local symbol"
                                      : "symbol '" + toString(sym) + "'") +
-              "; recompile with -fPIC" + getLocation(sec, sym, offset));
+              "; recompile with -fPIC" + getLocation(*sec, sym, offset));
 }
 
 // This function is similar to the `handleTlsRelocation`. MIPS does not
@@ -1300,7 +1299,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   const RelTy &rel = *i;
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
-  Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+  Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIndex);
   RelType type;
 
   // Deal with MIPS oddity.
@@ -1319,10 +1318,10 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
   if (sym.isUndefined() && symIndex != 0 &&
-      maybeReportUndefined(cast<Undefined>(sym), sec, offset))
+      maybeReportUndefined(cast<Undefined>(sym), *sec, offset))
     return;
 
-  const uint8_t *relocatedAddr = sec.rawData.begin() + offset;
+  const uint8_t *relocatedAddr = sec->rawData.begin() + offset;
   RelExpr expr = target.getRelExpr(type, sym, relocatedAddr);
 
   // Ignore R_*_NONE and other marker relocations.
@@ -1342,7 +1341,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     // after the end of the linker allocated .got section and we do sort those
     // so sections addressed with small code model relocations come first.
     if (type == R_PPC64_TOC16 || type == R_PPC64_TOC16_DS)
-      sec.file->ppc64SmallCodeModelTocRelocs = true;
+      sec->file->ppc64SmallCodeModelTocRelocs = true;
 
     // Record the TOC entry (.toc + addend) as not relaxable. See the comment in
     // InputSectionBase::relocateAlloc().
@@ -1355,7 +1354,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
       if (i == end) {
         errorOrWarn("R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
                     "relocation" +
-                    getLocation(sec, sym, offset));
+                    getLocation(*sec, sym, offset));
         return;
       }
 
@@ -1384,11 +1383,11 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     if (config->shared) {
       errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
                   " cannot be used with -shared" +
-                  getLocation(sec, sym, offset));
+                  getLocation(*sec, sym, offset));
       return;
     }
   } else if (unsigned processed =
-                 handleTlsRelocation(type, sym, sec, offset, addend, expr)) {
+                 handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
     i += (processed - 1);
     return;
   }
@@ -1424,7 +1423,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   // direct relocation on through.
   if (LLVM_UNLIKELY(isIfunc) && config->zIfuncNoplt) {
     sym.exportDynamic = true;
-    mainPart->relaDyn->addSymbolReloc(type, sec, offset, sym, addend, type);
+    mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
     return;
   }
 
@@ -1437,7 +1436,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
       // See "Global Offset Table" in Chapter 5 in the following document
       // for detailed description:
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-      in.mipsGot->addEntry(*sec.file, sym, addend, expr);
+      in.mipsGot->addEntry(*sec->file, sym, addend, expr);
     } else {
       sym.needsGot = true;
     }
@@ -1489,11 +1488,11 @@ static void checkPPC64TLSRelax(InputSectionBase &sec, ArrayRef<RelTy> rels) {
 
 template <class ELFT, class RelTy>
 void RelocationScanner::scan(ArrayRef<RelTy> rels) {
-  // Not all relocations end up in Sec.Relocations, but a lot do.
-  sec.relocations.reserve(rels.size());
+  // Not all relocations end up in Sec->Relocations, but a lot do.
+  sec->relocations.reserve(rels.size());
 
   if (config->emachine == EM_PPC64)
-    checkPPC64TLSRelax<RelTy>(sec, rels);
+    checkPPC64TLSRelax<RelTy>(*sec, rels);
 
   // For EhInputSection, OffsetGetter expects the relocations to be sorted by
   // r_offset. In rare cases (.eh_frame pieces are reordered by a linker
@@ -1509,20 +1508,21 @@ void RelocationScanner::scan(ArrayRef<RelTy> rels) {
   // Sort relocations by offset for more efficient searching for
   // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
   if (config->emachine == EM_RISCV ||
-      (config->emachine == EM_PPC64 && sec.name == ".toc"))
-    llvm::stable_sort(sec.relocations,
+      (config->emachine == EM_PPC64 && sec->name == ".toc"))
+    llvm::stable_sort(sec->relocations,
                       [](const Relocation &lhs, const Relocation &rhs) {
                         return lhs.offset < rhs.offset;
                       });
 }
 
-template <class ELFT> static void scanSection(InputSectionBase &s) {
-  RelocationScanner scanner(s);
+template <class ELFT> void RelocationScanner::scanSection(InputSectionBase &s) {
+  sec = &s;
+  getter = OffsetGetter(s);
   const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    scanner.template scan<ELFT>(rels.rels);
+    scan<ELFT>(rels.rels);
   else
-    scanner.template scan<ELFT>(rels.relas);
+    scan<ELFT>(rels.relas);
 }
 
 template <class ELFT> void elf::scanRelocations() {
@@ -1530,15 +1530,16 @@ template <class ELFT> void elf::scanRelocations() {
   // determine if it needs special treatment, such as creating GOT, PLT,
   // copy relocations, etc. Note that relocations for non-alloc sections are
   // directly processed by InputSection::relocateNonAlloc.
+  RelocationScanner scanner;
   for (InputSectionBase *sec : inputSections)
     if (sec->isLive() && (sec->flags & SHF_ALLOC))
-      scanSection<ELFT>(*sec);
+      scanner.template scanSection<ELFT>(*sec);
   for (Partition &part : partitions) {
     for (EhInputSection *sec : part.ehFrame->sections)
-      scanSection<ELFT>(*sec);
+      scanner.template scanSection<ELFT>(*sec);
     if (part.armExidx && part.armExidx->isLive())
       for (InputSection *sec : part.armExidx->exidxSections)
-        scanSection<ELFT>(*sec);
+        scanner.template scanSection<ELFT>(*sec);
   }
 }
 
