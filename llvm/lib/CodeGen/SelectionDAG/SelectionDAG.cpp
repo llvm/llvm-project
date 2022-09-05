@@ -5235,7 +5235,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::FREEZE:
     assert(VT == Operand.getValueType() && "Unexpected VT!");
-    if (isGuaranteedNotToBeUndefOrPoison(Operand))
+    if (isGuaranteedNotToBeUndefOrPoison(Operand, /*PoisonOnly*/ false,
+                                         /*Depth*/ 1))
       return Operand;
     break;
   case ISD::TokenFactor:
