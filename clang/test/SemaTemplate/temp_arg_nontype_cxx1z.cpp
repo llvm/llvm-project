@@ -597,4 +597,9 @@ namespace PR47792 {
   const I &r3 = m;
   static_assert(&a<r1> == &a<r3>, "should have different types");
   static_assert(&a<r2> != &a<r3>, "should have different types");
+
+  void foo();
+  template <void () = foo> void bar() {}
+  template void bar<>();    // expected-note {{previous explicit instantiation is here}}
+  template void bar<foo>(); // expected-error {{duplicate explicit instantiation of 'bar<&PR47792::foo>'}}
 }
