@@ -12,12 +12,14 @@
 
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -117,6 +119,16 @@ public:
 
   LogicalResult
   matchAndRewrite(gpu::BarrierOp barrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Pattern to convert a gpu.shuffle op into a spv.GroupNonUniformShuffle op.
+class GPUShuffleConversion final : public OpConversionPattern<gpu::ShuffleOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -363,6 +375,44 @@ LogicalResult GPUBarrierConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// Shuffle
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUShuffleConversion::matchAndRewrite(
+    gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  // Require the shuffle width to be the same as the target's subgroup size,
+  // given that for SPIR-V non-uniform subgroup ops, we cannot select
+  // participating invocations.
+  auto targetEnv = getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
+  unsigned subgroupSize =
+      targetEnv.getAttr().getResourceLimits().getSubgroupSize();
+  IntegerAttr widthAttr;
+  if (!matchPattern(shuffleOp.width(), m_Constant(&widthAttr)) ||
+      widthAttr.getValue().getZExtValue() != subgroupSize)
+    return rewriter.notifyMatchFailure(
+        shuffleOp, "shuffle width and target subgroup size mismatch");
+
+  Location loc = shuffleOp.getLoc();
+  Value trueVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                            shuffleOp.getLoc(), rewriter);
+  auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  Value result;
+
+  switch (shuffleOp.mode()) {
+  case gpu::ShuffleMode::XOR:
+    result = rewriter.create<spirv::GroupNonUniformShuffleXorOp>(
+        loc, scope, adaptor.value(), adaptor.offset());
+    break;
+  default:
+    return rewriter.notifyMatchFailure(shuffleOp, "unimplemented shuffle mode");
+  }
+
+  rewriter.replaceOp(shuffleOp, {result, trueVal});
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
@@ -370,7 +420,7 @@ void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
       GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
-      GPUModuleEndConversion, GPUReturnOpConversion,
+      GPUModuleEndConversion, GPUReturnOpConversion, GPUShuffleConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
