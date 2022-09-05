@@ -24218,6 +24218,15 @@ TEST_F(FormatTest, Concepts) {
                "sizeof(T) <= 8;");
 
   verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = Unit<T> && !DerivedUnit<T>;");
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = Unit<T> && !(DerivedUnit<T>);");
+
+  verifyFormat("template <typename T>\n"
+               "concept DelayedCheck = Unit<T> && !!DerivedUnit<T>;");
+
+  verifyFormat("template <typename T>\n"
                "concept DelayedCheck = !!false || requires(T t) { t.bar(); } "
                "&& sizeof(T) <= 8;");
 
