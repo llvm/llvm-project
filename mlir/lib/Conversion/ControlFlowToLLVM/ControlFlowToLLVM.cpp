@@ -103,7 +103,7 @@ static LogicalResult verifyMatchingValues(ConversionPatternRewriter &rewriter,
           diag << "mismatched types from operand # " << i << " ";
           diag << operandType;
           diag << " not compatible with destination block argument type ";
-          diag << argValue.getType();
+          diag << op.getOperandTypes().front();
           diag << " which should be converted with the parent op.";
         });
       }
