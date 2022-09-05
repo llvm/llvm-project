@@ -1908,21 +1908,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // a linker-script-defined symbol is absolute.
     ppc64noTocRelax.clear();
     if (!config->relocatable) {
-      // Scan all relocations. Each relocation goes through a series of tests to
-      // determine if it needs special treatment, such as creating GOT, PLT,
-      // copy relocations, etc. Note that relocations for non-alloc sections are
-      // directly processed by InputSection::relocateNonAlloc.
-      for (InputSectionBase *sec : inputSections)
-        if (sec->isLive() && (sec->flags & SHF_ALLOC))
-          scanRelocations<ELFT>(*sec);
-      for (Partition &part : partitions) {
-        for (EhInputSection *sec : part.ehFrame->sections)
-          scanRelocations<ELFT>(*sec);
-        if (part.armExidx && part.armExidx->isLive())
-          for (InputSection *sec : part.armExidx->exidxSections)
-            scanRelocations<ELFT>(*sec);
-      }
-
+      scanRelocations<ELFT>();
       reportUndefinedSymbols();
       postScanRelocations();
     }
