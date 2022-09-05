@@ -834,6 +834,7 @@ def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
 def SMRDSgprImm     : ComplexPattern<iPTR, 3, "SelectSMRDSgprImm">;
 def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
+def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
 
 multiclass SMRD_Pattern <string Instr, ValueType vt> {
 
@@ -889,9 +890,18 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
 
   // 3. Offset loaded in an 32bit SGPR
   def : GCNPat <
-    (SIsbuffer_load v4i32:$sbase, i32:$offset, timm:$cachepolicy),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") SReg_128:$sbase, SReg_32:$offset, (extract_cpol $cachepolicy)))
+    (SIsbuffer_load v4i32:$sbase, i32:$soffset, timm:$cachepolicy),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") SReg_128:$sbase, SReg_32:$soffset, (extract_cpol $cachepolicy)))
   >;
+
+  // 4. Offset as an 32-bit SGPR + immediate
+  def : GCNPat <
+    (SIsbuffer_load v4i32:$sbase, (SMRDBufferSgprImm i32:$soffset, i32:$offset),
+                    timm:$cachepolicy),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") SReg_128:$sbase, SReg_32:$soffset, i32imm:$offset,
+                                             (extract_cpol $cachepolicy)))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
 }
 
 // Global and constant loads can be selected to either MUBUF or SMRD
