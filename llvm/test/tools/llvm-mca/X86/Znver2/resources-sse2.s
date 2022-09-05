@@ -460,10 +460,10 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00                        cvttsd2si	%xmm0, %rcx
 # CHECK-NEXT:  1      11    1.00    *                   cvttsd2si	(%rax), %ecx
 # CHECK-NEXT:  1      11    1.00    *                   cvttsd2si	(%rax), %rcx
-# CHECK-NEXT:  1      15    1.00                        divpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      22    1.00    *                   divpd	(%rax), %xmm2
-# CHECK-NEXT:  1      15    1.00                        divsd	%xmm0, %xmm2
-# CHECK-NEXT:  1      22    1.00    *                   divsd	(%rax), %xmm2
+# CHECK-NEXT:  1      13    6.00                        divpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      20    6.00    *                   divpd	(%rax), %xmm2
+# CHECK-NEXT:  1      13    6.00                        divsd	%xmm0, %xmm2
+# CHECK-NEXT:  1      20    6.00    *                   divsd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.33    *      *      U     lfence
 # CHECK-NEXT:  1      100   0.25    *      *      U     maskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  1      1     0.50                        maxpd	%xmm0, %xmm2
@@ -692,7 +692,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 44.33  44.33  44.33   -      -      -      -      -     53.92  47.92  87.25  154.92  -
+# CHECK-NEXT: 44.33  44.33  44.33   -      -      -      -      -     53.92  47.92  87.25  174.92  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -749,10 +749,10 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00    -     cvttsd2si	%xmm0, %rcx
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -     1.00   1.00    -     cvttsd2si	(%rax), %ecx
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -     1.00   1.00    -     cvttsd2si	(%rax), %rcx
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     divpd	%xmm0, %xmm2
-# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -     1.00    -     divpd	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     divsd	%xmm0, %xmm2
-# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -     1.00    -     divsd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     6.00    -     divpd	%xmm0, %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -     6.00    -     divpd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     6.00    -     divsd	%xmm0, %xmm2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -     6.00    -     divsd	(%rax), %xmm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -      -      -      -      -      -     lfence
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     maskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     maxpd	%xmm0, %xmm2
