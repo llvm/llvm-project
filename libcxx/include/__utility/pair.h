@@ -49,12 +49,8 @@ struct _LIBCPP_TEMPLATE_VIS pair
     _T1 first;
     _T2 second;
 
-#if !defined(_LIBCPP_CXX03_LANG)
     pair(pair const&) = default;
     pair(pair&&) = default;
-#else
-  // Use the implicitly declared copy constructor in C++03
-#endif
 
 #ifdef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
@@ -421,8 +417,6 @@ swap(pair<_T1, _T2>& __x, pair<_T1, _T2>& __y)
     __x.swap(__y);
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>
@@ -431,18 +425,6 @@ make_pair(_T1&& __t1, _T2&& __t2)
     return pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>
                (_VSTD::forward<_T1>(__t1), _VSTD::forward<_T2>(__t2));
 }
-
-#else  // _LIBCPP_CXX03_LANG
-
-template <class _T1, class _T2>
-inline _LIBCPP_INLINE_VISIBILITY
-pair<_T1,_T2>
-make_pair(_T1 __x, _T2 __y)
-{
-    return pair<_T1, _T2>(__x, __y);
-}
-
-#endif // _LIBCPP_CXX03_LANG
 
 template <class _T1, class _T2>
   struct _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> >
@@ -483,7 +465,6 @@ struct __get_pair<0>
     const _T1&
     get(const pair<_T1, _T2>& __p) _NOEXCEPT {return __p.first;}
 
-#ifndef _LIBCPP_CXX03_LANG
     template <class _T1, class _T2>
     static
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
@@ -495,7 +476,6 @@ struct __get_pair<0>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
     const _T1&&
     get(const pair<_T1, _T2>&& __p) _NOEXCEPT {return _VSTD::forward<const _T1>(__p.first);}
-#endif // _LIBCPP_CXX03_LANG
 };
 
 template <>
@@ -513,7 +493,6 @@ struct __get_pair<1>
     const _T2&
     get(const pair<_T1, _T2>& __p) _NOEXCEPT {return __p.second;}
 
-#ifndef _LIBCPP_CXX03_LANG
     template <class _T1, class _T2>
     static
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
@@ -525,7 +504,6 @@ struct __get_pair<1>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
     const _T2&&
     get(const pair<_T1, _T2>&& __p) _NOEXCEPT {return _VSTD::forward<const _T2>(__p.second);}
-#endif // _LIBCPP_CXX03_LANG
 };
 
 template <size_t _Ip, class _T1, class _T2>
@@ -544,7 +522,6 @@ get(const pair<_T1, _T2>& __p) _NOEXCEPT
     return __get_pair<_Ip>::get(__p);
 }
 
-#ifndef _LIBCPP_CXX03_LANG
 template <size_t _Ip, class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
@@ -560,7 +537,6 @@ get(const pair<_T1, _T2>&& __p) _NOEXCEPT
 {
     return __get_pair<_Ip>::get(_VSTD::move(__p));
 }
-#endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 11
 template <class _T1, class _T2>
@@ -619,7 +595,7 @@ constexpr _T1 const && get(pair<_T2, _T1> const&& __p) _NOEXCEPT
     return __get_pair<1>::get(_VSTD::move(__p));
 }
 
-#endif
+#endif // _LIBCPP_STD_VER > 11
 
 _LIBCPP_END_NAMESPACE_STD
 
