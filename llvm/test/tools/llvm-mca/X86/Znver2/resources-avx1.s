@@ -1340,17 +1340,17 @@ vzeroupper
 # CHECK-NEXT:  1      100   0.25                        vmpsadbw	$1, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      100   0.25    *                   vmpsadbw	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      3     0.50                        vmulpd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   vmulpd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      10    0.50    *                   vmulpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      3     0.50                        vmulpd	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      10    0.50    *                   vmulpd	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    0.50    *                   vmulpd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     0.50                        vmulps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   vmulps	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      10    0.50    *                   vmulps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      3     0.50                        vmulps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  2      10    0.50    *                   vmulps	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      10    0.50    *                   vmulps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     0.50                        vmulsd	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   vmulsd	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      10    0.50    *                   vmulsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      3     0.50                        vmulss	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      10    0.50    *                   vmulss	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      10    0.50    *                   vmulss	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.25                        vorpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     0.33    *                   vorpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.25                        vorpd	%ymm0, %ymm1, %ymm2
