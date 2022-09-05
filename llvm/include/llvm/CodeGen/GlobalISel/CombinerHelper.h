@@ -431,6 +431,9 @@ public:
   /// Return true if a G_SELECT instruction \p MI has an undef comparison.
   bool matchUndefSelectCmp(MachineInstr &MI);
 
+  /// Return true if a G_{EXTRACT,INSERT}_VECTOR_ELT has an out of range index.
+  bool matchInsertExtractVecEltOutOfBounds(MachineInstr &MI);
+
   /// Return true if a G_SELECT instruction \p MI has a constant comparison. If
   /// true, \p OpIdx will store the operand index of the known selected value.
   bool matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx);
