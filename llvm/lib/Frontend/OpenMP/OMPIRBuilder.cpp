@@ -3394,9 +3394,10 @@ OpenMPIRBuilder::createOrderedDepend(const LocationDescription &Loc,
                                      InsertPointTy AllocaIP, unsigned NumLoops,
                                      ArrayRef<llvm::Value *> StoreValues,
                                      const Twine &Name, bool IsDependSource) {
-  for (const llvm::Value *SV : StoreValues)
-    assert(SV->getType()->isIntegerTy(64) &&
-           "OpenMP runtime requires depend vec with i64 type");
+  assert(
+      llvm::all_of(StoreValues,
+                   [](Value *SV) { return SV->getType()->isIntegerTy(64); }) &&
+      "OpenMP runtime requires depend vec with i64 type");
 
   if (!updateToLocation(Loc))
     return Loc.IP;
