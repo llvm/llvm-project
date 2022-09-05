@@ -12,6 +12,7 @@ add_mlir_upstream_c_api_library(MLIRCAPIIR
   Support.cpp
 
   LINK_LIBS PUBLIC
+  MLIRBytecodeWriter
   MLIRIR
   MLIRParser
   MLIRSupport

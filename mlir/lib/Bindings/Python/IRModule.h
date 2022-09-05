@@ -512,6 +512,9 @@ public:
                           bool printGenericOpForm, bool useLocalScope,
                           bool assumeVerified);
 
+  // Implement the bound 'writeBytecode' method.
+  void writeBytecode(pybind11::object fileObject);
+
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
   void moveBefore(PyOperationBase &other);
