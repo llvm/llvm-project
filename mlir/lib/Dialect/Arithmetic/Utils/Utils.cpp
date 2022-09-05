@@ -93,24 +93,29 @@ Value ArithBuilder::_and(Value lhs, Value rhs) {
   return b.create<arith::AndIOp>(loc, lhs, rhs);
 }
 Value ArithBuilder::add(Value lhs, Value rhs) {
-  if (lhs.getType().isa<IntegerType>())
-    return b.create<arith::AddIOp>(loc, lhs, rhs);
-  return b.create<arith::AddFOp>(loc, lhs, rhs);
+  if (lhs.getType().isa<FloatType>())
+    return b.create<arith::AddFOp>(loc, lhs, rhs);
+  return b.create<arith::AddIOp>(loc, lhs, rhs);
+}
+Value ArithBuilder::sub(Value lhs, Value rhs) {
+  if (lhs.getType().isa<FloatType>())
+    return b.create<arith::SubFOp>(loc, lhs, rhs);
+  return b.create<arith::SubIOp>(loc, lhs, rhs);
 }
 Value ArithBuilder::mul(Value lhs, Value rhs) {
-  if (lhs.getType().isa<IntegerType>())
-    return b.create<arith::MulIOp>(loc, lhs, rhs);
-  return b.create<arith::MulFOp>(loc, lhs, rhs);
+  if (lhs.getType().isa<FloatType>())
+    return b.create<arith::MulFOp>(loc, lhs, rhs);
+  return b.create<arith::MulIOp>(loc, lhs, rhs);
 }
 Value ArithBuilder::sgt(Value lhs, Value rhs) {
-  if (lhs.getType().isa<IndexType, IntegerType>())
-    return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, lhs, rhs);
-  return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGT, lhs, rhs);
+  if (lhs.getType().isa<FloatType>())
+    return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGT, lhs, rhs);
+  return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sgt, lhs, rhs);
 }
 Value ArithBuilder::slt(Value lhs, Value rhs) {
-  if (lhs.getType().isa<IndexType, IntegerType>())
-    return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, lhs, rhs);
-  return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT, lhs, rhs);
+  if (lhs.getType().isa<FloatType>())
+    return b.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OLT, lhs, rhs);
+  return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, lhs, rhs);
 }
 Value ArithBuilder::select(Value cmp, Value lhs, Value rhs) {
   return b.create<arith::SelectOp>(loc, cmp, lhs, rhs);
