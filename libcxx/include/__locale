@@ -350,7 +350,7 @@ template <>
 class _LIBCPP_TYPE_VIS collate_byname<char>
     : public collate<char>
 {
-    locale_t __l;
+    locale_t __l_;
 public:
     typedef char char_type;
     typedef basic_string<char_type> string_type;
@@ -370,7 +370,7 @@ template <>
 class _LIBCPP_TYPE_VIS collate_byname<wchar_t>
     : public collate<wchar_t>
 {
-    locale_t __l;
+    locale_t __l_;
 public:
     typedef wchar_t char_type;
     typedef basic_string<char_type> string_type;
@@ -792,7 +792,7 @@ template <>
 class _LIBCPP_TYPE_VIS ctype_byname<char>
     : public ctype<char>
 {
-    locale_t __l;
+    locale_t __l_;
 
 public:
     explicit ctype_byname(const char*, size_t = 0);
@@ -811,7 +811,7 @@ template <>
 class _LIBCPP_TYPE_VIS ctype_byname<wchar_t>
     : public ctype<wchar_t>
 {
-    locale_t __l;
+    locale_t __l_;
 
 public:
     explicit ctype_byname(const char*, size_t = 0);
@@ -1045,7 +1045,7 @@ class _LIBCPP_TYPE_VIS codecvt<wchar_t, char, mbstate_t>
     : public locale::facet,
       public codecvt_base
 {
-    locale_t __l;
+    locale_t __l_;
 public:
     typedef wchar_t   intern_type;
     typedef char      extern_type;
