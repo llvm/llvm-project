@@ -30,43 +30,12 @@ namespace sparse_tensor {
 struct SparseCompilerOptions
     : public PassPipelineOptions<SparseCompilerOptions> {
   // These options must be kept in sync with `SparsificationBase`.
-  // TODO(57514): These options are duplicated in Passes.td.
-  PassOptions::Option<mlir::SparseParallelizationStrategy> parallelization{
+  PassOptions::Option<int32_t> parallelization{
       *this, "parallelization-strategy",
-      ::llvm::cl::desc("Set the parallelization strategy"),
-      ::llvm::cl::init(mlir::SparseParallelizationStrategy::kNone),
-      llvm::cl::values(
-          clEnumValN(mlir::SparseParallelizationStrategy::kNone, "none",
-                     "Turn off sparse parallelization."),
-          clEnumValN(mlir::SparseParallelizationStrategy::kDenseOuterLoop,
-                     "dense-outer-loop",
-                     "Enable dense outer loop sparse parallelization."),
-          clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageOuterLoop,
-                     "any-storage-outer-loop",
-                     "Enable sparse parallelization regardless of storage for "
-                     "the outer loop."),
-          clEnumValN(mlir::SparseParallelizationStrategy::kDenseAnyLoop,
-                     "dense-any-loop",
-                     "Enable dense parallelization for any loop."),
-          clEnumValN(
-              mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
-              "any-storage-any-loop",
-              "Enable sparse parallelization for any storage and loop."))};
-  PassOptions::Option<mlir::SparseVectorizationStrategy> vectorization{
-      *this, "vectorization-strategy",
-      ::llvm::cl::desc("Set the vectorization strategy"),
-      ::llvm::cl::init(mlir::SparseVectorizationStrategy::kNone),
-      llvm::cl::values(
-          clEnumValN(mlir::SparseVectorizationStrategy::kNone, "none",
-                     "Turn off sparse vectorization."),
-          clEnumValN(mlir::SparseVectorizationStrategy::kDenseInnerLoop,
-                     "dense-inner-loop",
-                     "Enable vectorization for dense inner loops."),
-          clEnumValN(mlir::SparseVectorizationStrategy::kAnyStorageInnerLoop,
-                     "any-storage-inner-loop",
-                     "Enable sparse vectorization for inner loops with any "
-                     "storage."))};
-
+      desc("Set the parallelization strategy"), init(0)};
+  PassOptions::Option<int32_t> vectorization{
+      *this, "vectorization-strategy", desc("Set the vectorization strategy"),
+      init(0)};
   PassOptions::Option<int32_t> vectorLength{
       *this, "vl", desc("Set the vector length"), init(1)};
   PassOptions::Option<bool> enableSIMDIndex32{
@@ -81,8 +50,10 @@ struct SparseCompilerOptions
 
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, vectorization, vectorLength,
-                                 enableSIMDIndex32, enableVLAVectorization);
+    return SparsificationOptions(sparseParallelizationStrategy(parallelization),
+                                 sparseVectorizationStrategy(vectorization),
+                                 vectorLength, enableSIMDIndex32,
+                                 enableVLAVectorization);
   }
 
   // These options must be kept in sync with `SparseTensorConversionBase`.
