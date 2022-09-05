@@ -68,7 +68,7 @@ define i64 @umod128(i128 %x) nounwind {
 ; X86-64-LABEL: umod128:
 ; X86-64:       # %bb.0:
 ; X86-64-NEXT:    pushq %rax
-; X86-64-NEXT:    movl $3, %edx
+; X86-64-NEXT:    movl $11, %edx
 ; X86-64-NEXT:    xorl %ecx, %ecx
 ; X86-64-NEXT:    callq __umodti3@PLT
 ; X86-64-NEXT:    popq %rcx
@@ -79,7 +79,7 @@ define i64 @umod128(i128 %x) nounwind {
 ; WIN64-NEXT:    subq $72, %rsp
 ; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq $3, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $11, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
@@ -89,7 +89,7 @@ define i64 @umod128(i128 %x) nounwind {
 ; WIN64-NEXT:    retq
 
 
-  %1 = urem i128 %x, 3
+  %1 = urem i128 %x, 11
   %2 = trunc i128 %1 to i64
   ret i64 %2
 }
@@ -661,5 +661,36 @@ define i128 @udiv_i128_12(i128 %x) nounwind {
 ; WIN64-NEXT:    retq
 entry:
   %rem = udiv i128 %x, 12
+  ret i128 %rem
+}
+
+define i128 @urem_i128_3_optsize(i128 %x) nounwind optsize {
+; X86-64-LABEL: urem_i128_3_optsize:
+; X86-64:       # %bb.0: # %entry
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movl $3, %edx
+; X86-64-NEXT:    xorl %ecx, %ecx
+; X86-64-NEXT:    callq __umodti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: urem_i128_3_optsize:
+; WIN64:       # %bb.0: # %entry
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; WIN64-NEXT:    movq %rdx, 8(%rax)
+; WIN64-NEXT:    movq %rcx, (%rax)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    movq $3, (%rdx)
+; WIN64-NEXT:    movq $0, 8(%rdx)
+; WIN64-NEXT:    movq %rax, %rcx
+; WIN64-NEXT:    callq __umodti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+entry:
+  %rem = urem i128 %x, 3
   ret i128 %rem
 }

@@ -181,13 +181,6 @@ static bool isReserved(InputSectionBase *sec) {
 
 template <class ELFT>
 void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset) {
-  // Skip over discarded sections. This in theory shouldn't happen, because
-  // the ELF spec doesn't allow a relocation to point to a deduplicated
-  // COMDAT section directly. Unfortunately this happens in practice (e.g.
-  // .eh_frame) so we need to add a check.
-  if (sec == &InputSection::discarded)
-    return;
-
   // Usually, a whole section is marked as live or dead, but in mergeable
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.

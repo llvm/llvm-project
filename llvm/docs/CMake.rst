@@ -278,7 +278,7 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 
 **CMAKE_CXX_STANDARD**:STRING
   Sets the C++ standard to conform to when building LLVM.  Possible values are
-  14, 17, 20.  LLVM Requires C++ 14 or higher.  This defaults to 14.
+  17 and 20.  LLVM Requires C++ 17 or higher.  This defaults to 17.
 
 **CMAKE_INSTALL_BINDIR**:PATH
   The path to install executables, relative to the *CMAKE_INSTALL_PREFIX*.
