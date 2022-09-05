@@ -3234,6 +3234,41 @@ TEST(Hover, HideBigInitializers) {
   EXPECT_EQ(H->Definition, "int arr[]");
 }
 
+TEST(Hover, GlobalVarEnumeralCastNoCrash) {
+  Annotations T(R"cpp(
+    using uintptr_t = __UINTPTR_TYPE__;
+    enum Test : uintptr_t {};
+    unsigned global_var;
+    void foo() {
+      Test v^al = static_cast<Test>(reinterpret_cast<uintptr_t>(&global_var));
+    }
+  )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.PredefineMacros = true;
+  auto AST = TU.build();
+  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(HI);
+  EXPECT_EQ(*HI->Value, "&global_var");
+}
+
+TEST(Hover, GlobalVarIntCastNoCrash) {
+  Annotations T(R"cpp(
+    using uintptr_t = __UINTPTR_TYPE__;
+    unsigned global_var;
+    void foo() {
+      uintptr_t a^ddress = reinterpret_cast<uintptr_t>(&global_var);
+    }
+  )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.PredefineMacros = true;
+  auto AST = TU.build();
+  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(HI);
+  EXPECT_EQ(*HI->Value, "&global_var");
+}
+
 TEST(Hover, Typedefs) {
   Annotations T(R"cpp(
   template <bool X, typename T, typename F>
