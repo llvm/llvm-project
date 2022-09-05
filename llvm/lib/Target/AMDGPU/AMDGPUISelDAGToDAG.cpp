@@ -1987,7 +1987,8 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
 
   // A 32-bit (address + offset) should not cause unsigned 32-bit integer
   // wraparound, because s_load instructions perform the addition in 64 bits.
-  if (Addr.getValueType() == MVT::i32 && !Addr->getFlags().hasNoUnsignedWrap())
+  if (Addr.getValueType() == MVT::i32 && Addr.getOpcode() == ISD::ADD &&
+      !Addr->getFlags().hasNoUnsignedWrap())
     return false;
 
   SDValue N0, N1;
