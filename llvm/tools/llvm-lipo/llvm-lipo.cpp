@@ -176,12 +176,12 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     exit(EXIT_SUCCESS);
   }
 
-  for (auto Arg : InputArgs.filtered(LIPO_UNKNOWN))
+  for (auto *Arg : InputArgs.filtered(LIPO_UNKNOWN))
     reportError("unknown argument '" + Arg->getAsString(InputArgs) + "'");
 
-  for (auto Arg : InputArgs.filtered(LIPO_INPUT))
+  for (auto *Arg : InputArgs.filtered(LIPO_INPUT))
     C.InputFiles.push_back({None, Arg->getValue()});
-  for (auto Arg : InputArgs.filtered(LIPO_arch)) {
+  for (auto *Arg : InputArgs.filtered(LIPO_arch)) {
     validateArchitectureName(Arg->getValue(0));
     assert(Arg->getValue(1) && "file_name is missing");
     C.InputFiles.push_back({StringRef(Arg->getValue(0)), Arg->getValue(1)});
@@ -193,7 +193,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
   if (InputArgs.hasArg(LIPO_output))
     C.OutputFile = std::string(InputArgs.getLastArgValue(LIPO_output));
 
-  for (auto Segalign : InputArgs.filtered(LIPO_segalign)) {
+  for (auto *Segalign : InputArgs.filtered(LIPO_segalign)) {
     if (!Segalign->getValue(1))
       reportError("segalign is missing an argument: expects -segalign "
                   "arch_type alignment_value");
@@ -237,7 +237,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     std::string Buf;
     raw_string_ostream OS(Buf);
     OS << "only one of the following actions can be specified:";
-    for (auto Arg : ActionArgs)
+    for (auto *Arg : ActionArgs)
       OS << " " << Arg->getSpelling();
     reportError(OS.str());
   }
@@ -291,7 +291,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     return C;
 
   case LIPO_replace:
-    for (auto Action : ActionArgs) {
+    for (auto *Action : ActionArgs) {
       assert(Action->getValue(1) && "file_name is missing");
       validateArchitectureName(Action->getValue(0));
       C.ReplacementFiles.push_back(
