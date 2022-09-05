@@ -1401,7 +1401,8 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   // be resolved within the executable will actually be resolved that way at
   // runtime, because the main executable is always at the beginning of a search
   // list. We can leverage that fact.
-  if (!sym.isPreemptible && (!sym.isGnuIFunc() || config->zIfuncNoplt)) {
+  const bool isIfunc = sym.isGnuIFunc();
+  if (!sym.isPreemptible && (!isIfunc || config->zIfuncNoplt)) {
     if (expr != R_GOT_PC) {
       // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
       // stub type. It should be ignored if optimized to R_PC.
@@ -1421,7 +1422,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
 
   // We were asked not to generate PLT entries for ifuncs. Instead, pass the
   // direct relocation on through.
-  if (sym.isGnuIFunc() && config->zIfuncNoplt) {
+  if (LLVM_UNLIKELY(isIfunc) && config->zIfuncNoplt) {
     sym.exportDynamic = true;
     mainPart->relaDyn->addSymbolReloc(type, sec, offset, sym, addend, type);
     return;
@@ -1442,7 +1443,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     }
   } else if (needsPlt(expr)) {
     sym.needsPlt = true;
-  } else {
+  } else if (LLVM_UNLIKELY(isIfunc)) {
     sym.hasDirectReloc = true;
   }
 
