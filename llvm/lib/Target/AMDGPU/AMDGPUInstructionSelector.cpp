@@ -1438,7 +1438,7 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
       .addImm(0);
   } else {
     std::tie(BaseOffset, ImmOffset) =
-        AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset);
+        AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset, KnownBits);
 
     if (Readfirstlane) {
       // We have the constant offset now, so put the readfirstlane back on the
@@ -2654,15 +2654,14 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
 /// Return the register to use for the index value, and the subregister to use
 /// for the indirectly accessed register.
 static std::pair<Register, unsigned>
-computeIndirectRegIndex(MachineRegisterInfo &MRI,
-                        const SIRegisterInfo &TRI,
-                        const TargetRegisterClass *SuperRC,
-                        Register IdxReg,
-                        unsigned EltSize) {
+computeIndirectRegIndex(MachineRegisterInfo &MRI, const SIRegisterInfo &TRI,
+                        const TargetRegisterClass *SuperRC, Register IdxReg,
+                        unsigned EltSize, GISelKnownBits &KnownBits) {
   Register IdxBaseReg;
   int Offset;
 
-  std::tie(IdxBaseReg, Offset) = AMDGPU::getBaseWithConstantOffset(MRI, IdxReg);
+  std::tie(IdxBaseReg, Offset) =
+      AMDGPU::getBaseWithConstantOffset(MRI, IdxReg, &KnownBits);
   if (IdxBaseReg == AMDGPU::NoRegister) {
     // This will happen if the index is a known constant. This should ordinarily
     // be legalized out, but handle it as a register just in case.
@@ -2713,8 +2712,8 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
   const bool Is64 = DstTy.getSizeInBits() == 64;
 
   unsigned SubReg;
-  std::tie(IdxReg, SubReg) = computeIndirectRegIndex(*MRI, TRI, SrcRC, IdxReg,
-                                                     DstTy.getSizeInBits() / 8);
+  std::tie(IdxReg, SubReg) = computeIndirectRegIndex(
+      *MRI, TRI, SrcRC, IdxReg, DstTy.getSizeInBits() / 8, *KnownBits);
 
   if (SrcRB->getID() == AMDGPU::SGPRRegBankID) {
     if (DstTy.getSizeInBits() != 32 && !Is64)
@@ -2795,7 +2794,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 
   unsigned SubReg;
   std::tie(IdxReg, SubReg) = computeIndirectRegIndex(*MRI, TRI, VecRC, IdxReg,
-                                                     ValSize / 8);
+                                                     ValSize / 8, *KnownBits);
 
   const bool IndexMode = VecRB->getID() == AMDGPU::VGPRRegBankID &&
                          STI.useVGPRIndexMode();
@@ -4918,7 +4917,7 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   Register SOffset;
   unsigned Offset;
   std::tie(SOffset, Offset) =
-      AMDGPU::getBaseWithConstantOffset(*MRI, Root.getReg());
+      AMDGPU::getBaseWithConstantOffset(*MRI, Root.getReg(), KnownBits);
   if (!SOffset)
     return None;
 
