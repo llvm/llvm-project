@@ -69,6 +69,11 @@ void bad_length_modifiers(char *s, void *p, wchar_t *ws, long double *ld) {
   scanf("%#.2Lf", ld); // expected-warning{{invalid conversion specifier '#'}}
 }
 
+void missing_argument_with_length_modifier() {
+  char buf[30];
+  scanf("%s:%900s", buf); // expected-warning{{more '%' conversions than data arguments}}
+}
+
 // Test that the scanf call site is where the warning is attached.  If the
 // format string is somewhere else, point to it in a note.
 void pr9751(void) {
