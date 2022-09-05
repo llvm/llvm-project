@@ -1548,16 +1548,17 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
                           ConstantInt::get(V->getType(), 1));
   }
 
+  Type *SrcTy = X->getType();
   unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
-           SrcBits = X->getType()->getScalarSizeInBits();
+           SrcBits = SrcTy->getScalarSizeInBits();
   if (Cmp.isEquality() && Trunc->hasOneUse()) {
     // Canonicalize to a mask and wider compare if the wide type is suitable:
     // (trunc X to i8) == C --> (X & 0xff) == (zext C)
-    if (!X->getType()->isVectorTy() && shouldChangeType(DstBits, SrcBits)) {
-      Constant *Mask = ConstantInt::get(X->getType(),
-                                        APInt::getLowBitsSet(SrcBits, DstBits));
+    if (!SrcTy->isVectorTy() && shouldChangeType(DstBits, SrcBits)) {
+      Constant *Mask =
+          ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcBits, DstBits));
       Value *And = Builder.CreateAnd(X, Mask);
-      Constant *WideC = ConstantInt::get(X->getType(), C.zext(SrcBits));
+      Constant *WideC = ConstantInt::get(SrcTy, C.zext(SrcBits));
       return new ICmpInst(Pred, And, WideC);
     }
 
@@ -1570,7 +1571,7 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
       // Pull in the high bits from known-ones set.
       APInt NewRHS = C.zext(SrcBits);
       NewRHS |= Known.One & APInt::getHighBitsSet(SrcBits, SrcBits - DstBits);
-      return new ICmpInst(Pred, X, ConstantInt::get(X->getType(), NewRHS));
+      return new ICmpInst(Pred, X, ConstantInt::get(SrcTy, NewRHS));
     }
   }
 
@@ -1583,11 +1584,10 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   if (isSignBitCheck(Pred, C, TrueIfSigned) &&
       match(X, m_Shr(m_Value(ShOp), m_APInt(ShAmtC))) &&
       DstBits == SrcBits - ShAmtC->getZExtValue()) {
-    return TrueIfSigned
-               ? new ICmpInst(ICmpInst::ICMP_SLT, ShOp,
-                              ConstantInt::getNullValue(X->getType()))
-               : new ICmpInst(ICmpInst::ICMP_SGT, ShOp,
-                              ConstantInt::getAllOnesValue(X->getType()));
+    return TrueIfSigned ? new ICmpInst(ICmpInst::ICMP_SLT, ShOp,
+                                       ConstantInt::getNullValue(SrcTy))
+                        : new ICmpInst(ICmpInst::ICMP_SGT, ShOp,
+                                       ConstantInt::getAllOnesValue(SrcTy));
   }
 
   return nullptr;
