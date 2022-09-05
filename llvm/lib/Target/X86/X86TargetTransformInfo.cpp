@@ -3242,6 +3242,14 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FMAXNUM,    MVT::v2f64,   {  2 } },
     { ISD::FMAXNUM,    MVT::v4f64,   {  2 } },
     { ISD::FMAXNUM,    MVT::v8f64,   {  2 } },
+    { ISD::FSQRT,      MVT::f32,     {  3, 12, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f32,   {  3, 12, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v8f32,   {  6, 12, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v16f32,  { 12, 20, 1, 3 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f64,     {  6, 18, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v2f64,   {  6, 18, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f64,   { 12, 18, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v8f64,   { 24, 32, 1, 3 } }, // Skylake from http://www.agner.org/
   };
   static const CostKindTblEntry XOPCostTbl[] = {
     { ISD::BITREVERSE, MVT::v4i64,   {  4 } },
@@ -3321,12 +3329,12 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::USUBSAT,    MVT::v8i32,   {  2 } }, // pmaxud + psubd
     { ISD::FMAXNUM,    MVT::v8f32,   {  3 } }, // MAXPS + CMPUNORDPS + BLENDVPS
     { ISD::FMAXNUM,    MVT::v4f64,   {  3 } }, // MAXPD + CMPUNORDPD + BLENDVPD
-    { ISD::FSQRT,      MVT::f32,     {  7 } }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f32,   {  7 } }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v8f32,   { 14 } }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::f64,     { 14 } }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v2f64,   { 14 } }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f64,   { 28 } }, // Haswell from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f32,     {  7, 15, 1, 1 } }, // vsqrtss
+    { ISD::FSQRT,      MVT::v4f32,   {  7, 15, 1, 1 } }, // vsqrtps
+    { ISD::FSQRT,      MVT::v8f32,   { 14, 21, 1, 3 } }, // vsqrtps
+    { ISD::FSQRT,      MVT::f64,     { 14, 21, 1, 1 } }, // vsqrtsd
+    { ISD::FSQRT,      MVT::v2f64,   { 14, 21, 1, 1 } }, // vsqrtpd
+    { ISD::FSQRT,      MVT::v4f64,   { 28, 35, 1, 3 } }, // vsqrtpd
   };
   static const CostKindTblEntry AVX1CostTbl[] = {
     { ISD::ABS,        MVT::v4i64,   {  5 } }, // VBLENDVPD(X,VPSUBQ(0,X),X)
@@ -3380,30 +3388,30 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FMAXNUM,    MVT::f64,     {  3 } }, // MAXSD + CMPUNORDSD + BLENDVPD
     { ISD::FMAXNUM,    MVT::v2f64,   {  3 } }, // MAXPD + CMPUNORDPD + BLENDVPD
     { ISD::FMAXNUM,    MVT::v4f64,   {  5 } }, // MAXPD + CMPUNORDPD + BLENDVPD + ?
-    { ISD::FSQRT,      MVT::f32,     { 14 } }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f32,   { 14 } }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v8f32,   { 28 } }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::f64,     { 21 } }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v2f64,   { 21 } }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f64,   { 43 } }, // SNB from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f32,     { 21, 21, 1, 1 } }, // vsqrtss
+    { ISD::FSQRT,      MVT::v4f32,   { 21, 21, 1, 1 } }, // vsqrtps
+    { ISD::FSQRT,      MVT::v8f32,   { 42, 42, 1, 3 } }, // vsqrtps
+    { ISD::FSQRT,      MVT::f64,     { 27, 27, 1, 1 } }, // vsqrtsd
+    { ISD::FSQRT,      MVT::v2f64,   { 27, 27, 1, 1 } }, // vsqrtpd
+    { ISD::FSQRT,      MVT::v4f64,   { 54, 54, 1, 3 } }, // vsqrtpd
   };
   static const CostKindTblEntry GLMCostTbl[] = {
-    { ISD::FSQRT,      MVT::f32,     { 19 } }, // sqrtss
-    { ISD::FSQRT,      MVT::v4f32,   { 37 } }, // sqrtps
-    { ISD::FSQRT,      MVT::f64,     { 34 } }, // sqrtsd
-    { ISD::FSQRT,      MVT::v2f64,   { 67 } }, // sqrtpd
+    { ISD::FSQRT,      MVT::f32,     { 19, 20, 1, 1 } }, // sqrtss
+    { ISD::FSQRT,      MVT::v4f32,   { 37, 41, 1, 5 } }, // sqrtps
+    { ISD::FSQRT,      MVT::f64,     { 34, 35, 1, 1 } }, // sqrtsd
+    { ISD::FSQRT,      MVT::v2f64,   { 67, 71, 1, 5 } }, // sqrtpd
   };
   static const CostKindTblEntry SLMCostTbl[] = {
-    { ISD::FSQRT,      MVT::f32,     { 20 } }, // sqrtss
-    { ISD::FSQRT,      MVT::v4f32,   { 40 } }, // sqrtps
-    { ISD::FSQRT,      MVT::f64,     { 35 } }, // sqrtsd
-    { ISD::FSQRT,      MVT::v2f64,   { 70 } }, // sqrtpd
+    { ISD::FSQRT,      MVT::f32,     { 20, 20, 1, 1 } }, // sqrtss
+    { ISD::FSQRT,      MVT::v4f32,   { 40, 41, 1, 5 } }, // sqrtps
+    { ISD::FSQRT,      MVT::f64,     { 35, 35, 1, 1 } }, // sqrtsd
+    { ISD::FSQRT,      MVT::v2f64,   { 70, 71, 1, 5 } }, // sqrtpd
   };
   static const CostKindTblEntry SSE42CostTbl[] = {
     { ISD::USUBSAT,    MVT::v4i32,   {  2 } }, // pmaxud + psubd
     { ISD::UADDSAT,    MVT::v4i32,   {  3 } }, // not + pminud + paddd
-    { ISD::FSQRT,      MVT::f32,     { 18 } }, // Nehalem from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f32,   { 18 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f32,     { 18, 18, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f32,   { 18, 18, 1, 1 } }, // Nehalem from http://www.agner.org/
   };
   static const CostKindTblEntry SSE41CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  2 } }, // BLENDVPD(X,PSUBQ(0,X),X)
@@ -3480,14 +3488,14 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::USUBSAT,    MVT::v16i8,   {  1 } },
     { ISD::FMAXNUM,    MVT::f64,     {  4 } },
     { ISD::FMAXNUM,    MVT::v2f64,   {  4 } },
-    { ISD::FSQRT,      MVT::f64,     { 32 } }, // Nehalem from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v2f64,   { 32 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f64,     { 32, 32, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v2f64,   { 32, 32, 1, 1 } }, // Nehalem from http://www.agner.org/
   };
   static const CostKindTblEntry SSE1CostTbl[] = {
     { ISD::FMAXNUM,    MVT::f32,     {  4 } },
     { ISD::FMAXNUM,    MVT::v4f32,   {  4 } },
-    { ISD::FSQRT,      MVT::f32,     { 28 } }, // Pentium III from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f32,   { 56 } }, // Pentium III from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f32,     { 28, 30, 1, 2 } }, // Pentium III from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f32,   { 56, 56, 1, 2 } }, // Pentium III from http://www.agner.org/
   };
   static const CostKindTblEntry BMI64CostTbl[] = { // 64-bit targets
     { ISD::CTTZ,       MVT::i64,     {  1 } },
