@@ -630,17 +630,31 @@ bool M88kInstructionSelector::selectAddSubWithCarry(
   unsigned NewOpc =
       TargetOpc[3 * IsSub + HasCarryInOut + IsCarryOutUsed];
 
-  MachineInstr *MI = nullptr;
   Register DstReg = I.getOperand(0).getReg();
   Register Src1Reg = I.getOperand(2).getReg();
   Register Src2Reg = I.getOperand(3).getReg();
 
-  MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
+  auto &MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
            .addReg(Src1Reg)
            .addReg(Src2Reg);
+  if (HasCarryInOut) {
+    MIB.addReg(I.getOperand(4).getReg(), RegState::Implicit);
+    if (IsCarryOutUsed) {
+      MIB.addReg(I.getOperand(1).getReg(), RegState::ImplicitDefine);
+    }
+  } else
+    MIB.addReg(I.getOperand(1).getReg(), RegState::ImplicitDefine);
+
+  // The carry bit aka cr1 is not an allocatable register class. Simply replace
+  // the use of the virtual register with the physical carry register.
+  for (auto &OP : MIB->implicit_operands()) {
+    if (Register::isVirtualRegister(OP.getReg())) {
+      MRI.replaceRegWith(OP.getReg(), M88k::CARRY);
+    }
+  }
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectMul(MachineInstr &I, MachineBasicBlock &MBB,

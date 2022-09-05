@@ -39,6 +39,8 @@ M88kRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
     return getRegBank(M88k::GRRegBankID);
   case M88k::XRRCRegClassID:
     return getRegBank(M88k::XRRegBankID);
+  case M88k::CRRCRegClassID:
+    return getRegBank(M88k::CRRegBankID);
   default:
     llvm_unreachable("Unexpected register class");
   }

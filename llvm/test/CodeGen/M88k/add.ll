@@ -18,3 +18,38 @@ define i32 @f2(i32 %a) {
   %sum = add i32 512, %a
   ret i32 %sum
 }
+
+define i32 @f3(i32 %a) {
+; CHECK-LABEL: f3:
+; CHECK:       subu %r2, %r2, 512
+; CHECK-NEXT:  jmp %r1
+  %sum = sub i32 %a, 512
+  ret i32 %sum
+}
+
+define i32 @f4(i32 %a) {
+; CHECK-LABEL: f4:
+; CHECK:       or %r3, %r0, 512
+; CHECK-NEXT:  subu %r2, %r3, %r2
+; CHECK-NEXT:  jmp %r1
+  %sum = sub i32 512, %a
+  ret i32 %sum
+}
+
+define i64 @f5(i64 %a, i64 %b) {
+; CHECK-LABEL: f5:
+; CHECK:       addu.co %r3, %r3, %r5
+; CHECK-NEXT:  addu.ci %r2, %r2, %r4
+; CHECK-NEXT:  jmp %r1
+  %sum = add i64 %a, %b
+  ret i64 %sum
+}
+
+define i64 @f6(i64 %a, i64 %b) {
+; CHECK-LABEL: f6:
+; CHECK:       subu.co %r3, %r3, %r5
+; CHECK-NEXT:  subu.ci %r2, %r2, %r4
+; CHECK-NEXT:  jmp %r1
+  %sum = sub i64 %a, %b
+  ret i64 %sum
+}
