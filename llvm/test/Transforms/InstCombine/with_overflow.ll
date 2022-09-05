@@ -964,15 +964,75 @@ define i8 @umul_3(i8 %x, i1* %p) {
   ret i8 %r
 }
 
-define i8 @smul_2(i8 %x, i1* %p) {
-; CHECK-LABEL: @smul_2(
-; CHECK-NEXT:    [[M:%.*]] = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 2)
+define i8 @smul_4(i8 %x, i1* %p) {
+; CHECK-LABEL: @smul_4(
+; CHECK-NEXT:    [[M:%.*]] = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 4)
 ; CHECK-NEXT:    [[R:%.*]] = extractvalue { i8, i1 } [[M]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[M]], 1
 ; CHECK-NEXT:    store i1 [[OV]], i1* [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %m = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %x, i8 2)
+  %m = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %x, i8 4)
+  %r = extractvalue { i8, i1 } %m, 0
+  %ov = extractvalue { i8, i1 } %m, 1
+  store i1 %ov, i1* %p
+  ret i8 %r
+}
+
+define i8 @smul_16(i8 %x, i1* %p) {
+; CHECK-LABEL: @smul_16(
+; CHECK-NEXT:    [[M:%.*]] = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 16)
+; CHECK-NEXT:    [[R:%.*]] = extractvalue { i8, i1 } [[M]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[M]], 1
+; CHECK-NEXT:    store i1 [[OV]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %x, i8 16)
+  %r = extractvalue { i8, i1 } %m, 0
+  %ov = extractvalue { i8, i1 } %m, 1
+  store i1 %ov, i1* %p
+  ret i8 %r
+}
+
+define i8 @smul_32(i8 %x, i1* %p) {
+; CHECK-LABEL: @smul_32(
+; CHECK-NEXT:    [[M:%.*]] = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 32)
+; CHECK-NEXT:    [[R:%.*]] = extractvalue { i8, i1 } [[M]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[M]], 1
+; CHECK-NEXT:    store i1 [[OV]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %x, i8 32)
+  %r = extractvalue { i8, i1 } %m, 0
+  %ov = extractvalue { i8, i1 } %m, 1
+  store i1 %ov, i1* %p
+  ret i8 %r
+}
+
+define i8 @smul_128(i8 %x, i1* %p) {
+; CHECK-LABEL: @smul_128(
+; CHECK-NEXT:    [[M:%.*]] = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 -128)
+; CHECK-NEXT:    [[R:%.*]] = extractvalue { i8, i1 } [[M]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[M]], 1
+; CHECK-NEXT:    store i1 [[OV]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %x, i8 128)
+  %r = extractvalue { i8, i1 } %m, 0
+  %ov = extractvalue { i8, i1 } %m, 1
+  store i1 %ov, i1* %p
+  ret i8 %r
+}
+
+define i8 @smul_7(i8 %x, i1* %p) {
+; CHECK-LABEL: @smul_7(
+; CHECK-NEXT:    [[M:%.*]] = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 7)
+; CHECK-NEXT:    [[R:%.*]] = extractvalue { i8, i1 } [[M]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[M]], 1
+; CHECK-NEXT:    store i1 [[OV]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = tail call { i8, i1 } @llvm.smul.with.overflow.i8(i8 %x, i8 7)
   %r = extractvalue { i8, i1 } %m, 0
   %ov = extractvalue { i8, i1 } %m, 1
   store i1 %ov, i1* %p
