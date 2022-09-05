@@ -283,7 +283,8 @@ struct VectorReductionPattern final
     Value result = values.front();
     for (Value next : llvm::makeArrayRef(values).drop_front()) {
       switch (reduceOp.getKind()) {
-#define INT_FLOAT_CASE(kind, iop, fop)                                         \
+
+#define INT_AND_FLOAT_CASE(kind, iop, fop)                                     \
   case vector::CombiningKind::kind:                                            \
     if (resultType.isa<IntegerType>()) {                                       \
       result = rewriter.create<spirv::iop>(loc, resultType, result, next);     \
@@ -293,15 +294,21 @@ struct VectorReductionPattern final
     }                                                                          \
     break
 
-        INT_FLOAT_CASE(ADD, IAddOp, FAddOp);
-        INT_FLOAT_CASE(MUL, IMulOp, FMulOp);
+#define INT_OR_FLOAT_CASE(kind, fop)                                           \
+  case vector::CombiningKind::kind:                                            \
+    result = rewriter.create<spirv::fop>(loc, resultType, result, next);       \
+    break
 
-      case vector::CombiningKind::MINUI:
-      case vector::CombiningKind::MINSI:
-      case vector::CombiningKind::MINF:
-      case vector::CombiningKind::MAXUI:
-      case vector::CombiningKind::MAXSI:
-      case vector::CombiningKind::MAXF:
+        INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
+        INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
+
+        INT_OR_FLOAT_CASE(MAXF, GLFMaxOp);
+        INT_OR_FLOAT_CASE(MINF, GLFMinOp);
+        INT_OR_FLOAT_CASE(MINUI, GLUMinOp);
+        INT_OR_FLOAT_CASE(MINSI, GLSMinOp);
+        INT_OR_FLOAT_CASE(MAXUI, GLUMaxOp);
+        INT_OR_FLOAT_CASE(MAXSI, GLSMaxOp);
+
       case vector::CombiningKind::AND:
       case vector::CombiningKind::OR:
       case vector::CombiningKind::XOR:
