@@ -1014,6 +1014,10 @@ module std [system] {
       module enable_view            { private header "__ranges/enable_view.h" }
       module filter_view            { private header "__ranges/filter_view.h" }
       module iota_view              { private header "__ranges/iota_view.h" }
+      module istream_view           {
+        @requires_LIBCXX_ENABLE_LOCALIZATION@
+        private header "__ranges/istream_view.h"
+      }
       module join_view              { private header "__ranges/join_view.h" }
       module lazy_split_view        { private header "__ranges/lazy_split_view.h" }
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
