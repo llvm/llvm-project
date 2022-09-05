@@ -3896,7 +3896,7 @@ def t2TBH_JT : t2PseudoInst<(outs),
         (ins GPR:$base, GPR:$index, i32imm:$jt, i32imm:$pclbl), 0, IIC_Br, []>,
         Sched<[WriteBr]>;
 
-def t2TBB : T2I<(outs), (ins addrmode_tbb:$addr), IIC_Br,
+def t2TBB : T2I<(outs), (ins (addrmode_tbb $Rn, $Rm):$addr), IIC_Br,
                     "tbb", "\t$addr", []>, Sched<[WriteBrTbl]> {
   bits<4> Rn;
   bits<4> Rm;
@@ -3909,7 +3909,7 @@ def t2TBB : T2I<(outs), (ins addrmode_tbb:$addr), IIC_Br,
   let DecoderMethod = "DecodeThumbTableBranch";
 }
 
-def t2TBH : T2I<(outs), (ins addrmode_tbh:$addr), IIC_Br,
+def t2TBH : T2I<(outs), (ins (addrmode_tbh $Rn, $Rm):$addr), IIC_Br,
                    "tbh", "\t$addr", []>, Sched<[WriteBrTbl]> {
   bits<4> Rn;
   bits<4> Rm;

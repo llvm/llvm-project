@@ -2238,6 +2238,7 @@ static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, StringInit *VN,
 
 DagInit *DagInit::get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
                       ArrayRef<StringInit *> NameRange) {
+  assert(ArgRange.size() == NameRange.size());
   FoldingSetNodeID ID;
   ProfileDagInit(ID, V, VN, ArgRange, NameRange);
 
