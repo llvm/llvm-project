@@ -126,7 +126,21 @@ void spirv::BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::CompositeExtractOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 1 && "spv.CompositeExtract expects one operand");
+  if (auto insertOp = composite().getDefiningOp<spirv::CompositeInsertOp>()) {
+    if (indices() == insertOp.indices())
+      return insertOp.object();
+  }
+
+  if (auto constructOp =
+          composite().getDefiningOp<spirv::CompositeConstructOp>()) {
+    auto type = constructOp.getType().cast<spirv::CompositeType>();
+    if (indices().size() == 1 &&
+        constructOp.constituents().size() == type.getNumElements()) {
+      auto i = indices().begin()->cast<IntegerAttr>();
+      return constructOp.constituents()[i.getValue().getSExtValue()];
+    }
+  }
+
   auto indexVector =
       llvm::to_vector<8>(llvm::map_range(indices(), [](Attribute attr) {
         return static_cast<unsigned>(attr.cast<IntegerAttr>().getInt());
