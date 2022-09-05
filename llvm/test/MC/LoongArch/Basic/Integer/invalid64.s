@@ -29,17 +29,19 @@ bstrins.d $a0, $a0, 63, -1
 bstrpick.d $a0, $a0, 64, 0
 # CHECK: :[[#@LINE-1]]:22: error: immediate must be an integer in the range [0, 63]
 
-## simm12
+## simm12_addlike
 addi.d $a0, $a0, -2049
 # CHECK: :[[#@LINE-1]]:18: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
-lu52i.d $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:19: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.wu $a0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.d $a0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 st.d $a0, $a0, 2048
 # CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
+
+## simm12_lu52id
+lu52i.d $a0, $a0, 2048
+# CHECK-LA64: :[[#@LINE-1]]:19: error: operand must be a symbol with modifier (e.g. %pc64_hi12) or an integer in the range [-2048, 2047]
 
 ## simm14_lsl2
 ldptr.w $a0, $a0, -32772
@@ -62,10 +64,12 @@ addu16i.d $a0, $a0, 32768
 # CHECK: :[[#@LINE-1]]:21: error: immediate must be an integer in the range [-32768, 32767]
 
 ## simm20
-lu32i.d $a0, -0x80001
-# CHECK: :[[#@LINE-1]]:14: error: immediate must be an integer in the range [-524288, 524287]
 pcaddu18i $a0, 0x80000
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+
+## simm20_lu32id
+lu32i.d $a0, 0x80000
+# CHECK-LA64: :[[#@LINE-1]]:14: error: operand must be a symbol with modifier (e.g. %abs64_lo20) or an integer in the range [-524288, 524287]
 
 ## msbd < lsbd
 # CHECK: :[[#@LINE+1]]:21: error: msb is less than lsb

@@ -45,9 +45,17 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // LoongArchFixupKinds.h.
       //
       // {name, offset, bits, flags}
-      {"fixup_loongarch_b26", 0, 26, 0},
-      {"fixup_loongarch_pcala_hi20", 5, 20, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_loongarch_pcala_lo12", 10, 12, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_loongarch_b16", 10, 16, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_loongarch_b21", 0, 26, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_loongarch_b26", 0, 26, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_loongarch_abs_hi20", 5, 20, 0},
+      {"fixup_loongarch_abs_lo12", 10, 12, 0},
+      {"fixup_loongarch_abs64_lo20", 5, 20, 0},
+      {"fixup_loongarch_abs64_hi12", 10, 12, 0},
+      {"fixup_loongarch_tls_le_hi20", 5, 20, 0},
+      {"fixup_loongarch_tls_le_lo12", 10, 12, 0},
+      {"fixup_loongarch_tls_le64_lo20", 5, 20, 0},
+      {"fixup_loongarch_tls_le64_hi12", 10, 12, 0},
       // TODO: Add more fixup kinds.
   };
 
