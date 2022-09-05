@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify -ast-dump %s -x c++| FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify -ast-dump %s %std_cxx11-14 | FileCheck %s --check-prefixes=CHECK,CXX11
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fopenmp -verify -ast-dump %s %std_cxx17- | FileCheck %s --check-prefixes=CHECK,CXX17
 // expected-no-diagnostics
 // PR47655
-
 template <typename T> struct S {
   S(int, T *) {}
 };
@@ -53,7 +53,7 @@ int test() {
 // CHECK-NEXT: | | | |-MoveConstructor exists simple trivial needs_implicit
 // CHECK-NEXT: | | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT: | | | |-MoveAssignment exists simple trivial needs_implicit
-// CHECK-NEXT: | | | `-Destructor simple irrelevant trivial needs_implicit
+// CHECK-NEXT: | | | `-Destructor simple irrelevant trivial {{(constexpr )?}}needs_implicit
 // CHECK-NEXT: | | |-CXXRecordDecl [[ADDR_3:0x[a-z0-9]*]] <col:23, col:30> col:30 implicit referenced struct S
 // CHECK-NEXT: | | `-CXXConstructorDecl [[ADDR_4:0x[a-z0-9]*]] <line:6:3, col:16> col:3 S<T> 'void (int, T *)'
 // CHECK-NEXT: | |   |-ParmVarDecl [[ADDR_5:0x[a-z0-9]*]] <col:5> col:8 'int'
@@ -76,10 +76,12 @@ int test() {
 // CHECK-NEXT: | | | `-CompoundStmt [[ADDR_7]] <col:15, col:16>
 // CHECK-NEXT: | | |-CXXConstructorDecl [[ADDR_14:0x[a-z0-9]*]] <line:5:30> col:30 implicit constexpr S 'void (const S<int> &)' inline default trivial noexcept-unevaluated [[ADDR_14]]
 // CHECK-NEXT: | | | `-ParmVarDecl [[ADDR_15:0x[a-z0-9]*]] <col:30> col:30 'const S<int> &'
-// CHECK-NEXT: | | |-CXXConstructorDecl [[ADDR_16:0x[a-z0-9]*]] <col:30> col:30 implicit used constexpr S 'void (S<int> &&) noexcept' inline default trivial
-// CHECK-NEXT: | | | |-ParmVarDecl [[ADDR_17:0x[a-z0-9]*]] <col:30> col:30 'S<int> &&'
-// CHECK-NEXT: | | | `-CompoundStmt [[ADDR_18:0x[a-z0-9]*]] <col:30>
-// CHECK-NEXT: | | `-CXXDestructorDecl [[ADDR_19:0x[a-z0-9]*]] <col:30> col:30 implicit referenced ~S 'void ({{.*}}) noexcept' inline default trivial
+// CXX11-NEXT: | | |-CXXConstructorDecl [[ADDR_16:0x[a-z0-9]*]] <col:30> col:30 implicit used constexpr S 'void (S<int> &&) noexcept' inline default trivial
+// CXX11-NEXT: | | | |-ParmVarDecl [[ADDR_17:0x[a-z0-9]*]] <col:30> col:30 'S<int> &&'
+// CXX11-NEXT: | | | `-CompoundStmt [[ADDR_18:0x[a-z0-9]*]] <col:30>
+// CXX17-NEXT: | | |-CXXConstructorDecl [[ADDR_16:0x[a-z0-9]*]] <col:30> col:30 implicit constexpr S 'void (S<int> &&)' inline default trivial noexcept-unevaluated
+// CXX17-NEXT: | | | `-ParmVarDecl [[ADDR_17:0x[a-z0-9]*]] <col:30> col:30 'S<int> &&'
+// CHECK-NEXT: | | `-CXXDestructorDecl [[ADDR_19:0x[a-z0-9]*]] <col:30> col:30 implicit referenced {{(constexpr )?}}~S 'void ({{.*}}) noexcept' inline default trivial
 // CHECK-NEXT: | `-ClassTemplateSpecializationDecl [[ADDR_20:0x[a-z0-9]*]] <col:1, line:7:1> line:5:30 struct S
 // CHECK-NEXT: |   `-TemplateArgument type 'double'
 // CHECK-NEXT: |     `-BuiltinType [[ADDR_21:0x[a-z0-9]*]] 'double'
@@ -216,7 +218,7 @@ int test() {
 // CHECK-NEXT: `-FunctionDecl [[ADDR_126:0x[a-z0-9]*]] <line:42:1, line:45:1> line:42:5 test 'int ({{.*}})'
 // CHECK-NEXT:   `-CompoundStmt [[ADDR_127:0x[a-z0-9]*]] <col:12, line:45:1>
 // CHECK-NEXT:     `-ReturnStmt [[ADDR_128:0x[a-z0-9]*]] <line:44:3, col:98>
-// CHECK-NEXT:       `-ExprWithCleanups [[ADDR_129:0x[a-z0-9]*]] <col:10, col:98> 'int'
+// CXX11-NEXT:       `-ExprWithCleanups [[ADDR_129:0x[a-z0-9]*]] <col:10, col:98> 'int'
 // CHECK-NEXT:         `-BinaryOperator [[ADDR_130:0x[a-z0-9]*]] <col:10, col:98> 'int' '+'
 // CHECK-NEXT:           |-BinaryOperator [[ADDR_131:0x[a-z0-9]*]] <col:10, col:74> 'int' '+'
 // CHECK-NEXT:           | |-BinaryOperator [[ADDR_132:0x[a-z0-9]*]] <col:10, col:57> 'int' '+'
@@ -241,8 +243,8 @@ int test() {
 // CHECK-NEXT:             |-CallExpr [[ADDR_151:0x[a-z0-9]*]] <col:78, col:98> 'int'
 // CHECK-NEXT:             | |-ImplicitCastExpr [[ADDR_152:0x[a-z0-9]*]] <col:78> 'int (*)(S<int>)' <FunctionToPointerDecay>
 // CHECK-NEXT:             | | `-DeclRefExpr [[ADDR_153:0x[a-z0-9]*]] <col:78> 'int (S<int>)' {{.*}}Function [[ADDR_65]] 'special' 'int (S<int>)' (FunctionTemplate [[ADDR_58]] 'special')
-// CHECK-NEXT:             | `-CXXConstructExpr [[ADDR_154:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' 'void (S<int> &&) noexcept' elidable
-// CHECK-NEXT:             |   `-MaterializeTemporaryExpr [[ADDR_155:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' xvalue
+// CXX11-NEXT:             | `-CXXConstructExpr [[ADDR_154:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' 'void (S<int> &&) noexcept' elidable
+// CXX11-NEXT:             |   `-MaterializeTemporaryExpr [[ADDR_155:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' xvalue
 // CHECK-NEXT:             |     `-CXXTemporaryObjectExpr [[ADDR_156:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' 'void (int, int *)'
 // CHECK-NEXT:             |       |-IntegerLiteral [[ADDR_157:0x[a-z0-9]*]] <col:93> 'int' 0
 // CHECK-NEXT:             |       `-ImplicitCastExpr [[ADDR_158:0x[a-z0-9]*]] <col:96> 'int *' <NullToPointer>
@@ -250,9 +252,10 @@ int test() {
 // CHECK-NEXT:             `-CallExpr [[ADDR_160:0x[a-z0-9]*]] <line:23:1, line:44:98> 'int'
 // CHECK-NEXT:               |-ImplicitCastExpr [[ADDR_161:0x[a-z0-9]*]] <line:23:1> 'int (*)(S<int>)' <FunctionToPointerDecay>
 // CHECK-NEXT:               | `-DeclRefExpr [[ADDR_68]] <col:1> 'int (S<int>)' {{.*}}Function [[ADDR_69]] 'special[implementation={extension(allow_templates)}]' 'int (S<int>)'
-// CHECK-NEXT:               `-CXXConstructExpr [[ADDR_162:0x[a-z0-9]*]] <line:44:86, col:97> 'S<int>':'S<int>' 'void (S<int> &&) noexcept' elidable
-// CHECK-NEXT:                 `-MaterializeTemporaryExpr [[ADDR_163:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' xvalue
-// CHECK-NEXT:                   `-CXXTemporaryObjectExpr [[ADDR_156]] <col:86, col:97> 'S<int>':'S<int>' 'void (int, int *)'
+// CXX11-NEXT:               `-CXXConstructExpr [[ADDR_162:0x[a-z0-9]*]] <line:44:86, col:97> 'S<int>':'S<int>' 'void (S<int> &&) noexcept' elidable
+// CXX11-NEXT:                 `-MaterializeTemporaryExpr [[ADDR_163:0x[a-z0-9]*]] <col:86, col:97> 'S<int>':'S<int>' xvalue
+// CXX11-NEXT:                   `-CXXTemporaryObjectExpr [[ADDR_156]] <col:86, col:97> 'S<int>':'S<int>' 'void (int, int *)'
+// CXX17-NEXT:                   `-CXXTemporaryObjectExpr [[ADDR_156]] <line:[[#]]:86, col:97> 'S<int>':'S<int>' 'void (int, int *)'
 // CHECK-NEXT:                     |-IntegerLiteral [[ADDR_157]] <col:93> 'int' 0
 // CHECK-NEXT:                     `-ImplicitCastExpr [[ADDR_158]] <col:96> 'int *' <NullToPointer>
 // CHECK-NEXT:                       `-IntegerLiteral [[ADDR_159]] <col:96> 'int' 0
