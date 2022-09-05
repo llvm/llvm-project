@@ -662,6 +662,20 @@ Arm and AArch64 Support in Clang
   Operations found in the :ref:`Clang Language Extensions <Vector Operations>`
   document.
 
+RISC-V Support in Clang
+-----------------------
+
+- Updates to the RISC-V vector intrinsics to align with ongoing additions to
+  the RISC-V Vector intrinsics specification. Additionally, these intrinsics
+  are now generated lazily, resulting a substantial improvement in
+  compile-time for code including the vector intrinsics header.
+- Intrinsics added for the RISC-V scalar crypto ('K') extensions.
+- Intrinsics added for the RISC-V CLZ and CTZ instructions in the Zbb
+  extension.
+- An ABI lowering bug (resulting in incorrect LLVM IR generation) was fixed.
+  The bug could be triggered in particular circumstances in C++ when passing a
+  data-only struct that inherits from another struct.
+
 SPIR-V Support in Clang
 -----------------------
 

@@ -195,7 +195,32 @@ AIX improvements:
 Changes to the RISC-V Backend
 -----------------------------
 
-* The Zvfh extension was added.
+* A RISCVRedundantCopyElimination pass was added to remove unnecessary zero
+  copies.
+* A RISC-V specific CodeGenPrepare pass was added.
+* The machine outliner was enabled by default for RISC-V at ``-Oz``.
+  Additionally, the newly introduced RISCVMakeCompressible pass will make
+  modify instructions prior to emission at ``-Oz`` in order to increase
+  opportunities for the compression with the RISC-V C extension.
+* Various bug fixes and improvements to code generation for the RISC-V vector
+  extensions.
+* Various improvements were made to RISC-V specific optimisation passes such
+  as RISCVSExtWRemoval and RISCVMergeBaseOffset.
+* llc now computes the target ABI based on the target architecture using the
+  same logic as Clang if not explicit ABI is given.
+* ``generic`` is now recognized as a valid CPU name and is mapped to
+  ``generic-rv32`` or ``generic-rv64`` depending on the target triple.
+* Support for the experimental Zvfh extension was added, enabling
+  half-precision floating point in vectors.
+* Support for the Zihintpause (Pause Hint) extension.
+* Assembler and disassembler support for the Zfinx and Zdinx (float / double
+  in integer register) extensions.
+* Assembler and disassembler support for the Zicbom, Zicboz, and Zicbop cache
+  management operation extensions.
+* Support for the Zmmul extension (a subextension of the M extension, adding
+  multiplication instructions only).
+* Assembler and disassembler support for the hypervisor extension and for the
+  Sinval supervisor memory-management extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
