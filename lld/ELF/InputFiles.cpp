@@ -1456,8 +1456,8 @@ template <class ELFT> void SharedFile::parse() {
     // symbol, that's a violation of the spec.
     StringRef name = CHECK(sym.getName(stringTable), this);
     if (sym.getBinding() == STB_LOCAL) {
-      warn("found local symbol '" + name +
-           "' in global part of symbol table in file " + toString(this));
+      errorOrWarn(toString(this) + ": invalid local symbol '" + name +
+                  "' in global part of symbol table");
       continue;
     }
 
