@@ -3092,29 +3092,57 @@ SDValue DAGTypeLegalizer::SplitVecOp_INSERT_SUBVECTOR(SDNode *N,
 SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   // We know that the extracted result type is legal.
   EVT SubVT = N->getValueType(0);
-
   SDValue Idx = N->getOperand(1);
   SDLoc dl(N);
   SDValue Lo, Hi;
 
-  if (SubVT.isScalableVector() !=
-      N->getOperand(0).getValueType().isScalableVector())
-    report_fatal_error("Extracting a fixed-length vector from an illegal "
-                       "scalable vector is not yet supported");
-
   GetSplitVector(N->getOperand(0), Lo, Hi);
 
-  uint64_t LoElts = Lo.getValueType().getVectorMinNumElements();
+  uint64_t LoEltsMin = Lo.getValueType().getVectorMinNumElements();
   uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
 
-  if (IdxVal < LoElts) {
-    assert(IdxVal + SubVT.getVectorMinNumElements() <= LoElts &&
+  if (IdxVal < LoEltsMin) {
+    assert(IdxVal + SubVT.getVectorMinNumElements() <= LoEltsMin &&
            "Extracted subvector crosses vector split!");
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
-  } else {
+  } else if (SubVT.isScalableVector() ==
+             N->getOperand(0).getValueType().isScalableVector())
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Hi,
-                       DAG.getVectorIdxConstant(IdxVal - LoElts, dl));
-  }
+                       DAG.getVectorIdxConstant(IdxVal - LoEltsMin, dl));
+
+  // After this point the DAG node only permits extracting fixed-width
+  // subvectors from scalable vectors.
+  assert(SubVT.isFixedLengthVector() &&
+         "Extracting scalable subvector from fixed-width unsupported");
+
+  // If the element type is i1 and we're not promoting the result, then we may
+  // end up loading the wrong data since the bits are packed tightly into
+  // bytes. For example, if we extract a v4i1 (legal) from a nxv4i1 (legal)
+  // type at index 4, then we will load a byte starting at index 0.
+  if (SubVT.getScalarType() == MVT::i1)
+    report_fatal_error("Don't know how to extract fixed-width predicate "
+                       "subvector from a scalable predicate vector");
+
+  // Spill the vector to the stack. We should use the alignment for
+  // the smallest part.
+  SDValue Vec = N->getOperand(0);
+  EVT VecVT = Vec.getValueType();
+  Align SmallestAlign = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
+  SDValue StackPtr =
+      DAG.CreateStackTemporary(VecVT.getStoreSize(), SmallestAlign);
+  auto &MF = DAG.getMachineFunction();
+  auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
+
+  SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, Vec, StackPtr, PtrInfo,
+                               SmallestAlign);
+
+  // Extract the subvector by loading the correct part.
+  StackPtr = TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, SubVT, Idx);
+
+  return DAG.getLoad(
+      SubVT, dl, Store, StackPtr,
+      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
