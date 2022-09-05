@@ -525,7 +525,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__iterator/erase_if_container.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
+#include <__memory/allocator.h>
 #include <__node_handle>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
 #include <stdexcept>
 #include <tuple>

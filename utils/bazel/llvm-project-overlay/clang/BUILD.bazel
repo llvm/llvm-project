@@ -9,8 +9,9 @@ load("//llvm:template_rule.bzl", "template_rule")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 exports_files([
     "tools/clang-format/clang-format.el",

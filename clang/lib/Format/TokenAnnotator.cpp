@@ -1924,7 +1924,7 @@ private:
           !Current.Next->isBinaryOperator() &&
           !Current.Next->isOneOf(tok::semi, tok::colon, tok::l_brace,
                                  tok::comma, tok::period, tok::arrow,
-                                 tok::coloncolon)) {
+                                 tok::coloncolon, tok::kw_noexcept)) {
         if (FormatToken *AfterParen = Current.MatchingParen->Next) {
           // Make sure this isn't the return type of an Obj-C block declaration
           if (AfterParen->isNot(tok::caret)) {
@@ -2153,7 +2153,7 @@ private:
       // before the parentheses, this is unlikely to be a cast.
       if (LeftOfParens->Tok.getIdentifierInfo() &&
           !LeftOfParens->isOneOf(Keywords.kw_in, tok::kw_return, tok::kw_case,
-                                 tok::kw_delete)) {
+                                 tok::kw_delete, tok::kw_throw)) {
         return false;
       }
 
@@ -3313,6 +3313,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                           const FormatToken &Right) const {
   if (Left.is(tok::kw_return) &&
       !Right.isOneOf(tok::semi, tok::r_paren, tok::hashhash)) {
+    return true;
+  }
+  if (Left.is(tok::kw_throw) && Right.is(tok::l_paren) && Right.MatchingParen &&
+      Right.MatchingParen->is(TT_CastRParen)) {
     return true;
   }
   if (Style.isJson() && Left.is(tok::string_literal) && Right.is(tok::colon))

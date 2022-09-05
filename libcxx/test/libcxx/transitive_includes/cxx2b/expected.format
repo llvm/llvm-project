@@ -23,7 +23,6 @@ ios
 iosfwd
 limits
 locale
-memory
 mutex
 new
 optional
