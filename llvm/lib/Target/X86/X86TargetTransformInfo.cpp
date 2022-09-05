@@ -641,10 +641,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVX512BWCostTable[] = {
-    { ISD::SHL,   MVT::v64i8,   { 11 } }, // vpblendvb sequence.
-    { ISD::SRL,   MVT::v64i8,   { 11 } }, // vpblendvb sequence.
-    { ISD::SRA,   MVT::v64i8,   { 24 } }, // vpblendvb sequence.
-
     { ISD::ADD,   MVT::v64i8,   {  1,  1, 1, 1 } }, // paddb
     { ISD::ADD,   MVT::v32i16,  {  1,  1, 1, 1 } }, // paddw
 
