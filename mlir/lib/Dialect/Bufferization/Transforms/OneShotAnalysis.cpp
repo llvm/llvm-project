@@ -1025,10 +1025,15 @@ LogicalResult bufferization::analyzeOp(Operation *op,
 LogicalResult
 bufferization::runOneShotBufferize(Operation *op,
                                    const OneShotBufferizationOptions &options) {
-  OneShotAnalysisState state(op, options);
-  if (failed(insertTensorCopies(op, options)))
-    return failure();
+  assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
+         "invalid combination of bufferization flags");
+  if (!options.copyBeforeWrite) {
+    // If a buffer is copied before every write, no analysis is needed.
+    OneShotAnalysisState state(op, options);
+    if (failed(insertTensorCopies(op, options)))
+      return failure();
+  }
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/false);
+  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite);
 }
