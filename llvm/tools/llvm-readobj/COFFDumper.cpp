@@ -343,6 +343,7 @@ const EnumEntry<COFF::MachineTypes> ImageFileMachineType[] = {
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_AMD64    ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM      ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64    ),
+  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64EC  ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARMNT    ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_EBC      ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_I386     ),
@@ -1670,9 +1671,10 @@ void COFFDumper::printUnwindInfo() {
     break;
   }
   case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
   case COFF::IMAGE_FILE_MACHINE_ARMNT: {
-    ARM::WinEH::Decoder Decoder(W, Obj->getMachine() ==
-                                       COFF::IMAGE_FILE_MACHINE_ARM64);
+    ARM::WinEH::Decoder Decoder(W, Obj->getMachine() !=
+                                       COFF::IMAGE_FILE_MACHINE_ARMNT);
     // TODO Propagate the error.
     consumeError(Decoder.dumpProcedureData(*Obj));
     break;
