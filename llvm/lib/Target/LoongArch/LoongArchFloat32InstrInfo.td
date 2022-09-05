@@ -142,6 +142,7 @@ def : PatFprFpr<fadd, FADD_S, FPR32>;
 def : PatFprFpr<fsub, FSUB_S, FPR32>;
 def : PatFprFpr<fmul, FMUL_S, FPR32>;
 def : PatFprFpr<fdiv, FDIV_S, FPR32>;
+def : PatFprFpr<fcopysign, FCOPYSIGN_S, FPR32>;
 def : PatFpr<fneg, FNEG_S, FPR32>;
 def : PatFpr<fabs, FABS_S, FPR32>;
 def : PatFpr<fsqrt, FSQRT_S, FPR32>;

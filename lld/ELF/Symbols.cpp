@@ -264,8 +264,8 @@ void Symbol::extract() const {
 }
 
 uint8_t Symbol::computeBinding() const {
-  if ((visibility != STV_DEFAULT && visibility != STV_PROTECTED) ||
-      versionId == VER_NDX_LOCAL)
+  auto v = visibility();
+  if ((v != STV_DEFAULT && v != STV_PROTECTED) || versionId == VER_NDX_LOCAL)
     return STB_LOCAL;
   if (binding == STB_GNU_UNIQUE && !config->gnuUnique)
     return STB_GLOBAL;
@@ -344,7 +344,7 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
 
   // Only symbols with default visibility that appear in dynsym can be
   // preempted. Symbols with protected visibility cannot be preempted.
-  if (!sym.includeInDynsym() || sym.visibility != STV_DEFAULT)
+  if (!sym.includeInDynsym() || sym.visibility() != STV_DEFAULT)
     return false;
 
   // At this point copy relocations have not been created yet, so any
@@ -367,14 +367,6 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
   return true;
 }
 
-static uint8_t getMinVisibility(uint8_t va, uint8_t vb) {
-  if (va == STV_DEFAULT)
-    return vb;
-  if (vb == STV_DEFAULT)
-    return va;
-  return std::min(va, vb);
-}
-
 // Merge symbol properties.
 //
 // When we have many symbols of the same name, we choose one of them,
@@ -385,8 +377,10 @@ void Symbol::mergeProperties(const Symbol &other) {
     exportDynamic = true;
 
   // DSO symbols do not affect visibility in the output.
-  if (!other.isShared())
-    visibility = getMinVisibility(visibility, other.visibility);
+  if (!other.isShared() && other.visibility() != STV_DEFAULT) {
+    uint8_t v = visibility(), ov = other.visibility();
+    setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));
+  }
 }
 
 void Symbol::resolve(const Symbol &other) {
@@ -424,7 +418,7 @@ void Symbol::resolveUndefined(const Undefined &other) {
   //
   // If this is a non-weak defined symbol in a discarded section, override the
   // existing undefined symbol for better error message later.
-  if ((isShared() && other.visibility != STV_DEFAULT) ||
+  if ((isShared() && other.visibility() != STV_DEFAULT) ||
       (isUndefined() && other.binding != STB_WEAK && other.discardedSecIdx)) {
     replace(other);
     return;
@@ -535,17 +529,6 @@ bool Symbol::shouldReplace(const Defined &other) const {
   }
   if (!isDefined())
     return true;
-
-  // .symver foo,foo@@VER unfortunately creates two defined symbols: foo and
-  // foo@@VER. In GNU ld, if foo and foo@@VER are in the same file, foo is
-  // ignored. In our implementation, when this is foo, this->getName() may still
-  // contain @@, return true in this case as well.
-  if (LLVM_UNLIKELY(file == other.file)) {
-    if (other.getName().contains("@@"))
-      return true;
-    if (getName().contains("@@"))
-      return false;
-  }
 
   // Incoming STB_GLOBAL overrides STB_WEAK/STB_GNU_UNIQUE. -fgnu-unique changes
   // some vague linkage data in COMDAT from STB_WEAK to STB_GNU_UNIQUE. Treat
@@ -683,7 +666,7 @@ void Symbol::resolveShared(const SharedSymbol &other) {
       cast<CommonSymbol>(this)->size = other.size;
     return;
   }
-  if (visibility == STV_DEFAULT && (isUndefined() || isLazy())) {
+  if (visibility() == STV_DEFAULT && (isUndefined() || isLazy())) {
     // An undefined symbol with non default visibility must be satisfied
     // in the same DSO.
     uint8_t bind = binding;
