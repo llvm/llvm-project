@@ -4323,6 +4323,8 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
   while (NextDepDirectiveTokenIndex == DepDirectives.front().Tokens.size()) {
     if (DepDirectives.front().Kind == pp_eof)
       return LexEndOfFile(Result, BufferEnd);
+    if (DepDirectives.front().Kind == tokens_present_before_eof)
+      MIOpt.ReadToken();
     NextDepDirectiveTokenIndex = 0;
     DepDirectives = DepDirectives.drop_front();
   }
@@ -4398,6 +4400,7 @@ bool Lexer::LexDependencyDirectiveTokenWhileSkipping(Token &Result) {
     case cxx_import_decl:
     case cxx_export_module_decl:
     case cxx_export_import_decl:
+    case tokens_present_before_eof:
       break;
     case pp_if:
     case pp_ifdef:

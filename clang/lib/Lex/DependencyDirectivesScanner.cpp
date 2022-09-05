@@ -87,6 +87,9 @@ private:
   dependency_directives_scan::Token &lexIncludeFilename(const char *&First,
                                                         const char *const End);
 
+  void skipLine(const char *&First, const char *const End);
+  void skipDirective(StringRef Name, const char *&First, const char *const End);
+
   /// Lexes next token and if it is identifier returns its string, otherwise
   /// it skips the current line and returns \p None.
   ///
@@ -150,6 +153,7 @@ private:
   DiagnosticsEngine *Diags;
   SourceLocation InputSourceLoc;
 
+  const char *LastTokenPtr = nullptr;
   /// Keeps track of the tokens for the currently lexed directive. Once a
   /// directive is fully lexed and "committed" then the tokens get appended to
   /// \p Tokens and \p CurDirToks is cleared for the next directive.
@@ -364,7 +368,7 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
   return (Cur + 1) < End && isAsciiIdentifierContinue(*(Cur + 1));
 }
 
-static void skipLine(const char *&First, const char *const End) {
+void Scanner::skipLine(const char *&First, const char *const End) {
   for (;;) {
     assert(First <= End);
     if (First == End)
@@ -379,6 +383,7 @@ static void skipLine(const char *&First, const char *const End) {
       // Iterate over strings correctly to avoid comments and newlines.
       if (*First == '"' ||
           (*First == '\'' && !isQuoteCppDigitSeparator(Start, First, End))) {
+        LastTokenPtr = First;
         if (isRawStringLiteral(Start, First))
           skipRawString(First, End);
         else
@@ -388,6 +393,7 @@ static void skipLine(const char *&First, const char *const End) {
 
       // Iterate over comments correctly.
       if (*First != '/' || End - First < 2) {
+        LastTokenPtr = First;
         ++First;
         continue;
       }
@@ -399,6 +405,7 @@ static void skipLine(const char *&First, const char *const End) {
       }
 
       if (First[1] != '*') {
+        LastTokenPtr = First;
         ++First;
         continue;
       }
@@ -416,8 +423,8 @@ static void skipLine(const char *&First, const char *const End) {
   }
 }
 
-static void skipDirective(StringRef Name, const char *&First,
-                          const char *const End) {
+void Scanner::skipDirective(StringRef Name, const char *&First,
+                            const char *const End) {
   if (llvm::StringSwitch<bool>(Name)
           .Case("warning", true)
           .Case("error", true)
@@ -710,6 +717,8 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
     return false;
   }
 
+  LastTokenPtr = First;
+
   TheLexer.seek(getOffsetAt(First), /*IsAtStartOfLine*/ true);
 
   auto ScEx1 = make_scope_exit([&]() {
@@ -803,6 +812,9 @@ bool Scanner::scan(SmallVectorImpl<Directive> &Directives) {
 
   if (!Error) {
     // Add an EOF on success.
+    if (LastTokenPtr &&
+        (Tokens.empty() || LastTokenPtr > Input.begin() + Tokens.back().Offset))
+      pushDirective(tokens_present_before_eof);
     pushDirective(pp_eof);
   }
 
@@ -851,6 +863,8 @@ void clang::printDependencyDirectivesAsSource(
   };
 
   for (const dependency_directives_scan::Directive &Directive : Directives) {
+    if (Directive.Kind == tokens_present_before_eof)
+      OS << "<TokBeforeEOF>";
     Optional<tok::TokenKind> PrevTokenKind;
     for (const dependency_directives_scan::Token &Tok : Directive.Tokens) {
       if (PrevTokenKind && needsSpaceSeparator(*PrevTokenKind, Tok))
