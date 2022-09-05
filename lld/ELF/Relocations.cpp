@@ -1516,13 +1516,30 @@ void RelocationScanner::scan(ArrayRef<RelTy> rels) {
                       });
 }
 
-template <class ELFT> void elf::scanRelocations(InputSectionBase &s) {
+template <class ELFT> static void scanSection(InputSectionBase &s) {
   RelocationScanner scanner(s);
   const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
     scanner.template scan<ELFT>(rels.rels);
   else
     scanner.template scan<ELFT>(rels.relas);
+}
+
+template <class ELFT> void elf::scanRelocations() {
+  // Scan all relocations. Each relocation goes through a series of tests to
+  // determine if it needs special treatment, such as creating GOT, PLT,
+  // copy relocations, etc. Note that relocations for non-alloc sections are
+  // directly processed by InputSection::relocateNonAlloc.
+  for (InputSectionBase *sec : inputSections)
+    if (sec->isLive() && (sec->flags & SHF_ALLOC))
+      scanSection<ELFT>(*sec);
+  for (Partition &part : partitions) {
+    for (EhInputSection *sec : part.ehFrame->sections)
+      scanSection<ELFT>(*sec);
+    if (part.armExidx && part.armExidx->isLive())
+      for (InputSection *sec : part.armExidx->exidxSections)
+        scanSection<ELFT>(*sec);
+  }
 }
 
 static bool handleNonPreemptibleIfunc(Symbol &sym) {
@@ -2232,7 +2249,7 @@ void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
       });
 }
 
-template void elf::scanRelocations<ELF32LE>(InputSectionBase &);
-template void elf::scanRelocations<ELF32BE>(InputSectionBase &);
-template void elf::scanRelocations<ELF64LE>(InputSectionBase &);
-template void elf::scanRelocations<ELF64BE>(InputSectionBase &);
+template void elf::scanRelocations<ELF32LE>();
+template void elf::scanRelocations<ELF32BE>();
+template void elf::scanRelocations<ELF64LE>();
+template void elf::scanRelocations<ELF64BE>();
