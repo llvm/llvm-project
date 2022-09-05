@@ -2013,8 +2013,7 @@ uint32_t SymbolFilePDB::GetCompilandId(const llvm::pdb::PDBSymbolData &data) {
         auto &sec_cs = m_sec_contribs[sec];
 
         auto offset = SectionContrib->getAddressOffset();
-        auto it =
-            std::upper_bound(sec_cs.begin(), sec_cs.end(), offset, pred_upper);
+        auto it = llvm::upper_bound(sec_cs, offset, pred_upper);
 
         auto size = SectionContrib->getLength();
         sec_cs.insert(it, {offset, size, comp_id});
@@ -2039,8 +2038,7 @@ uint32_t SymbolFilePDB::GetCompilandId(const llvm::pdb::PDBSymbolData &data) {
   if (DataSection) {
     // Search by section contributions
     auto &sec_cs = m_sec_contribs[DataSection];
-    auto it =
-        std::upper_bound(sec_cs.begin(), sec_cs.end(), DataOffset, pred_upper);
+    auto it = llvm::upper_bound(sec_cs, DataOffset, pred_upper);
     if (it != sec_cs.begin()) {
       --it;
       if (DataOffset < it->Offset + it->Size)
