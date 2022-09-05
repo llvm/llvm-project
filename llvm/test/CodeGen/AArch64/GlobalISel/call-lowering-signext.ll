@@ -42,7 +42,7 @@ define i32 @signext_param_i32(i32 signext %x) {
   ret i32 %x
 }
 
-; Zeroext param is passed on the stack. We should still get a G_ASSERT_SEXT.
+; signext param is passed on the stack. We should still get a G_ASSERT_SEXT.
 define i32 @signext_param_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f,
   ; CHECK-LABEL: name: signext_param_stack
   ; CHECK: bb.1 (%ir-block.0):
@@ -61,10 +61,8 @@ define i32 @signext_param_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f,
   ; CHECK-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0, align 8)
   ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[SEXTLOAD]], 1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TRUNC]], 1
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_ZEXT]](s8)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC1]](s1)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
   ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
                                 i64 %g, i64 %h, i64 %i, i1 signext %j) {
@@ -123,4 +121,46 @@ define i8 @s8_assert_zext_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e,
                                         i64 %f, i64 %g, i64 %h, i64 %i,
                                         i8 signext %j) {
   ret i8 %j
+}
+
+define i32 @callee_signext_i1(i1 signext %0) {
+  ; CHECK-LABEL: name: callee_signext_i1
+  ; CHECK: bb.1 (%ir-block.1):
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_SEXT]](s32)
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s1)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %r = sext i1 %0 to i32
+  ret i32 %r
+}
+
+define i32 @caller_signext_i1() {
+  ; CHECK-LABEL: name: caller_signext_i1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s8) = G_SEXT [[C]](s1)
+  ; CHECK-NEXT:   [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[SEXT]](s8)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXT1]](s32)
+  ; CHECK-NEXT:   BL @callee_signext_i1, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   $w0 = COPY [[COPY]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %r = call i32 @callee_signext_i1(i1 signext true)
+  ret i32 %r
+}
+
+define signext i1 @ret_signext_i1() {
+  ; CHECK-LABEL: name: ret_signext_i1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[C]](s1)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ret i1 true
 }

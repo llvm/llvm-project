@@ -383,7 +383,9 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
       // i1 is a special case because SDAG i1 true is naturally zero extended
       // when widened using ANYEXT. We need to do it explicitly here.
-      if (MRI.getType(CurVReg).getSizeInBits() == 1) {
+      auto &Flags = CurArgInfo.Flags[0];
+      if (MRI.getType(CurVReg).getSizeInBits() == 1 && !Flags.isSExt() &&
+          !Flags.isZExt()) {
         CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
       } else if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) ==
                  1) {
@@ -569,7 +571,8 @@ bool AArch64CallLowering::lowerFormalArguments(
              MRI.getType(OrigArg.Regs[0]).getSizeInBits() == 1 &&
              "Unexpected registers used for i1 arg");
 
-      if (!OrigArg.Flags[0].isZExt()) {
+      auto &Flags = OrigArg.Flags[0];
+      if (!Flags.isZExt() && !Flags.isSExt()) {
         // Lower i1 argument as i8, and insert AssertZExt + Trunc later.
         Register OrigReg = OrigArg.Regs[0];
         Register WideReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
@@ -1110,7 +1113,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   for (auto &OrigArg : Info.OrigArgs) {
     splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
     // AAPCS requires that we zero-extend i1 to 8 bits by the caller.
-    if (OrigArg.Ty->isIntegerTy(1)) {
+    auto &Flags = OrigArg.Flags[0];
+    if (OrigArg.Ty->isIntegerTy(1) && !Flags.isSExt() && !Flags.isZExt()) {
       ArgInfo &OutArg = OutArgs.back();
       assert(OutArg.Regs.size() == 1 &&
              MRI.getType(OutArg.Regs[0]).getSizeInBits() == 1 &&
