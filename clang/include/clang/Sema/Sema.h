@@ -362,10 +362,7 @@ class Sema final {
   void operator=(const Sema &) = delete;
 
   ///Source of additional semantic information.
-  ExternalSemaSource *ExternalSource;
-
-  ///Whether Sema has generated a multiplexer and has to delete it.
-  bool isMultiplexExternalSource;
+  IntrusiveRefCntPtr<ExternalSemaSource> ExternalSource;
 
   static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
 
@@ -1644,7 +1641,7 @@ public:
   ASTContext &getASTContext() const { return Context; }
   ASTConsumer &getASTConsumer() const { return Consumer; }
   ASTMutationListener *getASTMutationListener() const;
-  ExternalSemaSource* getExternalSource() const { return ExternalSource; }
+  ExternalSemaSource *getExternalSource() const { return ExternalSource.get(); }
 
   DarwinSDKInfo *getDarwinSDKInfoForAvailabilityChecking(SourceLocation Loc,
                                                          StringRef Platform);

@@ -16,24 +16,30 @@ using namespace clang;
 
 char MultiplexExternalSemaSource::ID;
 
-///Constructs a new multiplexing external sema source and appends the
+/// Constructs a new multiplexing external sema source and appends the
 /// given element to it.
 ///
-MultiplexExternalSemaSource::MultiplexExternalSemaSource(ExternalSemaSource &s1,
-                                                        ExternalSemaSource &s2){
-  Sources.push_back(&s1);
-  Sources.push_back(&s2);
+MultiplexExternalSemaSource::MultiplexExternalSemaSource(
+    ExternalSemaSource *S1, ExternalSemaSource *S2) {
+  S1->Retain();
+  S2->Retain();
+  Sources.push_back(S1);
+  Sources.push_back(S2);
 }
 
 // pin the vtable here.
-MultiplexExternalSemaSource::~MultiplexExternalSemaSource() {}
+MultiplexExternalSemaSource::~MultiplexExternalSemaSource() {
+  for (auto *S : Sources)
+    S->Release();
+}
 
-///Appends new source to the source list.
+/// Appends new source to the source list.
 ///
 ///\param[in] source - An ExternalSemaSource.
 ///
-void MultiplexExternalSemaSource::addSource(ExternalSemaSource &source) {
-  Sources.push_back(&source);
+void MultiplexExternalSemaSource::AddSource(ExternalSemaSource *Source) {
+  Source->Retain();
+  Sources.push_back(Source);
 }
 
 //===----------------------------------------------------------------------===//
