@@ -214,9 +214,7 @@ loop:
 
 define i1 @sub_false(i32 %x) {
 ; CHECK-LABEL: @sub_false(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUB]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %sub = sub i32 1, %x
   %cmp = icmp eq i32 %sub, %x
@@ -225,9 +223,7 @@ define i1 @sub_false(i32 %x) {
 
 define i1 @sub_swap(i8 %x) {
 ; CHECK-LABEL: @sub_swap(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 3, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], [[SUB]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %sub = sub i8 3, %x
   %cmp = icmp ne i8 %x, %sub
@@ -236,9 +232,7 @@ define i1 @sub_swap(i8 %x) {
 
 define <2 x i1> @sub_odd(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_odd(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> <i8 3, i8 3>, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[SUB]], [[X]]
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %sub = sub <2 x i8> <i8 3, i8 3>, %x
   %cmp = icmp ne <2 x i8> %sub, %x
