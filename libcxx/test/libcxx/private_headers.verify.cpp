@@ -410,6 +410,7 @@ END-SCRIPT
 #include <__locale> // expected-error@*:* {{use of private header from outside its module: '__locale'}}
 #include <__mbstate_t.h> // expected-error@*:* {{use of private header from outside its module: '__mbstate_t.h'}}
 #include <__memory/addressof.h> // expected-error@*:* {{use of private header from outside its module: '__memory/addressof.h'}}
+#include <__memory/align.h> // expected-error@*:* {{use of private header from outside its module: '__memory/align.h'}}
 #include <__memory/allocate_at_least.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocate_at_least.h'}}
 #include <__memory/allocation_guard.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocation_guard.h'}}
 #include <__memory/allocator.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator.h'}}
@@ -417,15 +418,18 @@ END-SCRIPT
 #include <__memory/allocator_traits.h> // expected-error@*:* {{use of private header from outside its module: '__memory/allocator_traits.h'}}
 #include <__memory/assume_aligned.h> // expected-error@*:* {{use of private header from outside its module: '__memory/assume_aligned.h'}}
 #include <__memory/auto_ptr.h> // expected-error@*:* {{use of private header from outside its module: '__memory/auto_ptr.h'}}
+#include <__memory/builtin_new_allocator.h> // expected-error@*:* {{use of private header from outside its module: '__memory/builtin_new_allocator.h'}}
 #include <__memory/compressed_pair.h> // expected-error@*:* {{use of private header from outside its module: '__memory/compressed_pair.h'}}
 #include <__memory/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__memory/concepts.h'}}
 #include <__memory/construct_at.h> // expected-error@*:* {{use of private header from outside its module: '__memory/construct_at.h'}}
+#include <__memory/destruct_n.h> // expected-error@*:* {{use of private header from outside its module: '__memory/destruct_n.h'}}
 #include <__memory/pointer_traits.h> // expected-error@*:* {{use of private header from outside its module: '__memory/pointer_traits.h'}}
 #include <__memory/ranges_construct_at.h> // expected-error@*:* {{use of private header from outside its module: '__memory/ranges_construct_at.h'}}
 #include <__memory/ranges_uninitialized_algorithms.h> // expected-error@*:* {{use of private header from outside its module: '__memory/ranges_uninitialized_algorithms.h'}}
 #include <__memory/raw_storage_iterator.h> // expected-error@*:* {{use of private header from outside its module: '__memory/raw_storage_iterator.h'}}
 #include <__memory/shared_ptr.h> // expected-error@*:* {{use of private header from outside its module: '__memory/shared_ptr.h'}}
 #include <__memory/swap_allocator.h> // expected-error@*:* {{use of private header from outside its module: '__memory/swap_allocator.h'}}
+#include <__memory/temp_value.h> // expected-error@*:* {{use of private header from outside its module: '__memory/temp_value.h'}}
 #include <__memory/temporary_buffer.h> // expected-error@*:* {{use of private header from outside its module: '__memory/temporary_buffer.h'}}
 #include <__memory/uninitialized_algorithms.h> // expected-error@*:* {{use of private header from outside its module: '__memory/uninitialized_algorithms.h'}}
 #include <__memory/unique_ptr.h> // expected-error@*:* {{use of private header from outside its module: '__memory/unique_ptr.h'}}
@@ -549,6 +553,7 @@ END-SCRIPT
 #include <__type_traits/integral_constant.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/integral_constant.h'}}
 #include <__type_traits/is_abstract.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_abstract.h'}}
 #include <__type_traits/is_aggregate.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_aggregate.h'}}
+#include <__type_traits/is_allocator.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_allocator.h'}}
 #include <__type_traits/is_arithmetic.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_arithmetic.h'}}
 #include <__type_traits/is_array.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_array.h'}}
 #include <__type_traits/is_assignable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_assignable.h'}}
@@ -631,6 +636,7 @@ END-SCRIPT
 #include <__type_traits/maybe_const.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/maybe_const.h'}}
 #include <__type_traits/nat.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/nat.h'}}
 #include <__type_traits/negation.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/negation.h'}}
+#include <__type_traits/noexcept_move_assign_container.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/noexcept_move_assign_container.h'}}
 #include <__type_traits/promote.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/promote.h'}}
 #include <__type_traits/rank.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/rank.h'}}
 #include <__type_traits/remove_all_extents.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/remove_all_extents.h'}}

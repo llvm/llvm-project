@@ -379,6 +379,7 @@ set(files
   __locale
   __mbstate_t.h
   __memory/addressof.h
+  __memory/align.h
   __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
@@ -386,15 +387,18 @@ set(files
   __memory/allocator_traits.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
+  __memory/builtin_new_allocator.h
   __memory/compressed_pair.h
   __memory/concepts.h
   __memory/construct_at.h
+  __memory/destruct_n.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
+  __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
@@ -537,6 +541,7 @@ set(files
   __type_traits/integral_constant.h
   __type_traits/is_abstract.h
   __type_traits/is_aggregate.h
+  __type_traits/is_allocator.h
   __type_traits/is_arithmetic.h
   __type_traits/is_array.h
   __type_traits/is_assignable.h
@@ -619,6 +624,7 @@ set(files
   __type_traits/maybe_const.h
   __type_traits/nat.h
   __type_traits/negation.h
+  __type_traits/noexcept_move_assign_container.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
