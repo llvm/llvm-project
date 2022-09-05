@@ -297,8 +297,9 @@ public:
 } // namespace
 
 static SmallVector<Value>
-calculateExpandedAccessIndices(AffineMap affineMap, SmallVector<Value> indices,
-                               Location loc, PatternRewriter &rewriter) {
+calculateExpandedAccessIndices(AffineMap affineMap,
+                               const SmallVector<Value> &indices, Location loc,
+                               PatternRewriter &rewriter) {
   SmallVector<Value> expandedIndices;
   for (unsigned i = 0, e = affineMap.getNumResults(); i < e; i++)
     expandedIndices.push_back(
