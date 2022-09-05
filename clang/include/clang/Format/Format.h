@@ -2980,7 +2980,7 @@ struct FormatStyle {
   ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
   ///     * information */
   /// \endcode
-  /// \version 4
+  /// \version 3.8
   bool ReflowComments;
   // clang-format on
 
@@ -3236,7 +3236,7 @@ struct FormatStyle {
   /// insensitive fashion.
   /// If ``CaseSensitive``, includes are sorted in an alphabetical or case
   /// sensitive fashion.
-  /// \version 4
+  /// \version 3.8
   SortIncludesOptions SortIncludes;
 
   /// Position for Java Static imports.

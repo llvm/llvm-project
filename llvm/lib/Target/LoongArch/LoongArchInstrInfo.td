@@ -110,8 +110,17 @@ def uimm8 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<8>;
 }
 
-def uimm12 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<12>(Imm);}]> {
+class UImm12Operand : Operand<GRLenVT>,
+                      ImmLeaf <GRLenVT, [{return isUInt<12>(Imm);}]> {
+  let DecoderMethod = "decodeUImmOperand<12>";
+}
+
+def uimm12 : UImm12Operand {
   let ParserMatchClass = UImmAsmOperand<12>;
+}
+
+def uimm12_ori : UImm12Operand {
+  let ParserMatchClass = UImmAsmOperand<12, "ori">;
 }
 
 def uimm14 : Operand<GRLenVT> {
@@ -122,9 +131,21 @@ def uimm15 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<15>;
 }
 
-def simm12 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isInt<12>(Imm);}]> {
-  let ParserMatchClass = SImmAsmOperand<12>;
+class SImm12Operand : Operand<GRLenVT>,
+                      ImmLeaf <GRLenVT, [{return isInt<12>(Imm);}]> {
   let DecoderMethod = "decodeSImmOperand<12>";
+}
+
+def simm12 : SImm12Operand {
+  let ParserMatchClass = SImmAsmOperand<12>;
+}
+
+def simm12_addlike : SImm12Operand {
+  let ParserMatchClass = SImmAsmOperand<12, "addlike">;
+}
+
+def simm12_lu52id : SImm12Operand {
+  let ParserMatchClass = SImmAsmOperand<12, "lu52id">;
 }
 
 def simm14_lsl2 : Operand<GRLenVT>,
@@ -162,6 +183,14 @@ def simm20 : SImm20Operand {
 
 def simm20_pcalau12i : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "pcalau12i">;
+}
+
+def simm20_lu12iw : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "lu12iw">;
+}
+
+def simm20_lu32id : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "lu32id">;
 }
 
 def simm21_lsl2 : Operand<OtherVT> {
@@ -282,7 +311,7 @@ let mayLoad = 1 in {
 class LOAD_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
 class LOAD_2RI12<bits<10> op, string opstr>
-    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12:$imm12), opstr,
+    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12_addlike:$imm12), opstr,
                "$rd, $rj, $imm12">;
 class LOAD_2RI14<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14), opstr,
@@ -294,7 +323,7 @@ class STORE_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs), (ins GPR:$rd, GPR:$rj, GPR:$rk), opstr,
             "$rd, $rj, $rk">;
 class STORE_2RI12<bits<10> op, string opstr>
-    : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12:$imm12), opstr,
+    : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12_addlike:$imm12), opstr,
                "$rd, $rj, $imm12">;
 class STORE_2RI14<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14), opstr,
@@ -328,9 +357,9 @@ class IOCSRWR<bits<22> op, string opstr>
 // Arithmetic Operation Instructions
 def ADD_W : ALU_3R<0b00000000000100000, "add.w">;
 def SUB_W : ALU_3R<0b00000000000100010, "sub.w">;
-def ADDI_W : ALU_2RI12<0b0000001010, "addi.w", simm12>;
+def ADDI_W : ALU_2RI12<0b0000001010, "addi.w", simm12_addlike>;
 def ALSL_W : ALU_3RI2<0b000000000000010, "alsl.w", uimm2_plus1>;
-def LU12I_W : ALU_1RI20<0b0001010, "lu12i.w", simm20>;
+def LU12I_W : ALU_1RI20<0b0001010, "lu12i.w", simm20_lu12iw>;
 def SLT  : ALU_3R<0b00000000000100100, "slt">;
 def SLTU : ALU_3R<0b00000000000100101, "sltu">;
 def SLTI  : ALU_2RI12<0b0000001000, "slti", simm12>;
@@ -345,7 +374,7 @@ def XOR  : ALU_3R<0b00000000000101011, "xor">;
 def ANDN : ALU_3R<0b00000000000101101, "andn">;
 def ORN  : ALU_3R<0b00000000000101100, "orn">;
 def ANDI : ALU_2RI12<0b0000001101, "andi", uimm12>;
-def ORI  : ALU_2RI12<0b0000001110, "ori", uimm12>;
+def ORI  : ALU_2RI12<0b0000001110, "ori", uimm12_ori>;
 def XORI : ALU_2RI12<0b0000001111, "xori", uimm12>;
 def MUL_W   : ALU_3R<0b00000000000111000, "mul.w">;
 def MULH_W  : ALU_3R<0b00000000000111001, "mulh.w">;
@@ -441,16 +470,16 @@ let Predicates = [IsLA64] in {
 // Arithmetic Operation Instructions for 64-bits
 def ADD_D : ALU_3R<0b00000000000100001, "add.d">;
 def SUB_D : ALU_3R<0b00000000000100011, "sub.d">;
-def ADDI_D : ALU_2RI12<0b0000001011, "addi.d", simm12>;
+def ADDI_D : ALU_2RI12<0b0000001011, "addi.d", simm12_addlike>;
 def ADDU16I_D : ALU_2RI16<0b000100, "addu16i.d", simm16>;
 def ALSL_WU : ALU_3RI2<0b000000000000011, "alsl.wu", uimm2_plus1>;
 def ALSL_D  : ALU_3RI2<0b000000000010110, "alsl.d", uimm2_plus1>;
 let Constraints = "$rd = $dst" in {
 def LU32I_D : Fmt1RI20<0b0001011, (outs GPR:$dst),
-                       (ins GPR:$rd, simm20:$imm20), "lu32i.d",
+                       (ins GPR:$rd, simm20_lu32id:$imm20), "lu32i.d",
                        "$rd, $imm20">;
 }
-def LU52I_D : ALU_2RI12<0b0000001100, "lu52i.d", simm12>;
+def LU52I_D : ALU_2RI12<0b0000001100, "lu52i.d", simm12_lu52id>;
 def PCADDU18I : ALU_1RI20<0b0001111, "pcaddu18i", simm20>;
 def MUL_D     : ALU_3R<0b00000000000111011, "mul.d">;
 def MULH_D    : ALU_3R<0b00000000000111100, "mulh.d">;
