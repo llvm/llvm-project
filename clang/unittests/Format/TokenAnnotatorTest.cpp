@@ -319,6 +319,34 @@ TEST_F(TokenAnnotatorTest, UnderstandsDelete) {
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
+  auto Tokens = annotate("(void)p;");
+  EXPECT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("auto x = (Foo)p;");
+  EXPECT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("(std::vector<int>)p;");
+  EXPECT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("return (Foo)p;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("throw (Foo)p;");
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_CastRParen);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsDynamicExceptionSpecifier) {
+  auto Tokens = annotate("void f() throw(int);");
+  EXPECT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_throw, TT_Unknown);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionRefQualifiers) {
   auto Tokens = annotate("void f() &;");
   EXPECT_EQ(Tokens.size(), 7u) << Tokens;
