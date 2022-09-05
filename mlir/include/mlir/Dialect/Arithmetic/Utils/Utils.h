@@ -99,6 +99,7 @@ struct ArithBuilder {
 
   Value _and(Value lhs, Value rhs);
   Value add(Value lhs, Value rhs);
+  Value sub(Value lhs, Value rhs);
   Value mul(Value lhs, Value rhs);
   Value select(Value cmp, Value lhs, Value rhs);
   Value sgt(Value lhs, Value rhs);
