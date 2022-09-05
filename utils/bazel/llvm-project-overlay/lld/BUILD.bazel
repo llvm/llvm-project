@@ -6,8 +6,9 @@ load("//llvm:tblgen.bzl", "gentbl")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 # TODO: Actually compute version info
 genrule(
