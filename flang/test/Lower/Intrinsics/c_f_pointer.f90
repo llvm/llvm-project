@@ -30,12 +30,12 @@ end
 ! CHECK:         %[[VAL_66:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_65]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_67:.*]] = fir.load %[[VAL_66]] : !fir.ref<i64>
 ! CHECK:         %[[VAL_68:.*]] = fir.convert %[[VAL_67]] : (i64) -> !fir.ptr<!fir.array<?x?xf32>>
-! CHECK:         %[[VAL_69:.*]] = arith.constant 0 : i32
-! CHECK:         %[[VAL_70:.*]] = fir.coordinate_of %[[VAL_53:.*]], %[[VAL_69]] : (!fir.heap<!fir.array<2xi32>>, i32) -> !fir.ref<i32>
+! CHECK:         %[[VAL_69:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_70:.*]] = fir.coordinate_of %[[VAL_53:.*]], %[[VAL_69]] : (!fir.heap<!fir.array<2xi32>>, index) -> !fir.ref<i32>
 ! CHECK:         %[[VAL_71:.*]] = fir.load %[[VAL_70]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_72:.*]] = fir.convert %[[VAL_71]] : (i32) -> index
-! CHECK:         %[[VAL_73:.*]] = arith.constant 1 : i32
-! CHECK:         %[[VAL_74:.*]] = fir.coordinate_of %[[VAL_53]], %[[VAL_73]] : (!fir.heap<!fir.array<2xi32>>, i32) -> !fir.ref<i32>
+! CHECK:         %[[VAL_73:.*]] = arith.constant 1 : index
+! CHECK:         %[[VAL_74:.*]] = fir.coordinate_of %[[VAL_53]], %[[VAL_73]] : (!fir.heap<!fir.array<2xi32>>, index) -> !fir.ref<i32>
 ! CHECK:         %[[VAL_75:.*]] = fir.load %[[VAL_74]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_76:.*]] = fir.convert %[[VAL_75]] : (i32) -> index
 ! CHECK:         %[[VAL_77:.*]] = fir.shape %[[VAL_72]], %[[VAL_76]] : (index, index) -> !fir.shape<2>
@@ -85,12 +85,12 @@ end
 ! CHECK:         %[[VAL_71:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_70]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_72:.*]] = fir.load %[[VAL_71]] : !fir.ref<i64>
 ! CHECK:         %[[VAL_73:.*]] = fir.convert %[[VAL_72]] : (i64) -> !fir.ptr<!fir.array<?x?x!fir.char<1,?>>>
-! CHECK:         %[[VAL_74:.*]] = arith.constant 0 : i32
-! CHECK:         %[[VAL_75:.*]] = fir.coordinate_of %[[VAL_58:.*]], %[[VAL_74]] : (!fir.heap<!fir.array<2xi32>>, i32) -> !fir.ref<i32>
+! CHECK:         %[[VAL_74:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_75:.*]] = fir.coordinate_of %[[VAL_58:.*]], %[[VAL_74]] : (!fir.heap<!fir.array<2xi32>>, index) -> !fir.ref<i32>
 ! CHECK:         %[[VAL_76:.*]] = fir.load %[[VAL_75]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_77:.*]] = fir.convert %[[VAL_76]] : (i32) -> index
-! CHECK:         %[[VAL_78:.*]] = arith.constant 1 : i32
-! CHECK:         %[[VAL_79:.*]] = fir.coordinate_of %[[VAL_58]], %[[VAL_78]] : (!fir.heap<!fir.array<2xi32>>, i32) -> !fir.ref<i32>
+! CHECK:         %[[VAL_78:.*]] = arith.constant 1 : index
+! CHECK:         %[[VAL_79:.*]] = fir.coordinate_of %[[VAL_58]], %[[VAL_78]] : (!fir.heap<!fir.array<2xi32>>, index) -> !fir.ref<i32>
 ! CHECK:         %[[VAL_80:.*]] = fir.load %[[VAL_79]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_81:.*]] = fir.convert %[[VAL_80]] : (i32) -> index
 ! CHECK:         %[[VAL_82:.*]] = fir.shape %[[VAL_77]], %[[VAL_81]] : (index, index) -> !fir.shape<2>
@@ -107,3 +107,40 @@ subroutine test_chararray(cptr, fptr, n)
 
   call c_f_pointer(cptr, fptr, [x, y])
 end
+
+! CHECK-LABEL: func.func @_QPdynamic_shape_size(
+subroutine dynamic_shape_size(cptr, fptr, shape)
+  use iso_c_binding
+  type(c_ptr)  :: cptr
+  real, pointer :: fptr(:, :)
+  integer :: shape(:)
+! CHECK:         %[[VAL_7:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_7]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK:         %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<i32>
+! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
+! CHECK:         %[[VAL_11:.*]] = arith.constant 1 : index
+! CHECK:         %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_11]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK:         %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
+! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> index
+! CHECK:         %[[VAL_15:.*]] = fir.shape %[[VAL_10]], %[[VAL_14]] : (index, index) -> !fir.shape<2>
+  call c_f_pointer(cptr, fptr, shape)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPdynamic_shape_size_2(
+subroutine dynamic_shape_size_2(cptr, fptr, shape, n)
+  use iso_c_binding
+  type(c_ptr)  :: cptr
+  real, pointer :: fptr(:, :)
+  integer :: n
+  integer :: shape(n)
+! CHECK:         %[[VAL_8:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_8]] : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK:         %[[VAL_10:.*]] = fir.load %[[VAL_9]] : !fir.ref<i32>
+! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> index
+! CHECK:         %[[VAL_12:.*]] = arith.constant 1 : index
+! CHECK:         %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_12]] : (!fir.ref<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK:         %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
+! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i32) -> index
+! CHECK:         %[[VAL_16:.*]] = fir.shape %[[VAL_11]], %[[VAL_15]] : (index, index) -> !fir.shape<2>
+  call c_f_pointer(cptr, fptr, shape)
+end subroutine
