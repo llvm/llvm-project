@@ -40,8 +40,8 @@ struct ARM64 : ARM64Common {
                             uint64_t selectorIndex, uint64_t gotAddr,
                             uint64_t msgSendIndex) const override;
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
-  void applyOptimizationHints(uint8_t *, const ConcatInputSection *,
-                              ArrayRef<uint64_t>) const override;
+  void applyOptimizationHints(uint8_t *,
+                              const ConcatInputSection *) const override;
 };
 
 } // namespace
@@ -177,6 +177,7 @@ ARM64::ARM64() : ARM64Common(LP64()) {
 namespace {
 struct Adrp {
   uint32_t destRegister;
+  int64_t addend;
 };
 
 struct Add {
@@ -196,35 +197,21 @@ struct Ldr {
   int64_t offset;
 };
 
-struct PerformedReloc {
-  const Reloc &rel;
-  uint64_t referentVA;
-};
-
 class OptimizationHintContext {
 public:
-  OptimizationHintContext(uint8_t *buf, const ConcatInputSection *isec,
-                          ArrayRef<uint64_t> relocTargets)
-      : buf(buf), isec(isec), relocTargets(relocTargets),
-        relocIt(isec->relocs.rbegin()) {}
+  OptimizationHintContext(uint8_t *buf, const ConcatInputSection *isec)
+      : buf(buf), isec(isec) {}
 
-  void applyAdrpAdd(const OptimizationHint &);
-  void applyAdrpAdrp(const OptimizationHint &);
-  void applyAdrpLdr(const OptimizationHint &);
-  void applyAdrpLdrGot(const OptimizationHint &);
-  void applyAdrpAddLdr(const OptimizationHint &);
-  void applyAdrpLdrGotLdr(const OptimizationHint &);
+  void applyAdrpAdd(uint64_t, uint64_t);
+  void applyAdrpAdrp(uint64_t, uint64_t);
+  void applyAdrpLdr(uint64_t, uint64_t);
+  void applyAdrpLdrGot(uint64_t, uint64_t);
+  void applyAdrpAddLdr(uint64_t, uint64_t, uint64_t);
+  void applyAdrpLdrGotLdr(uint64_t, uint64_t, uint64_t);
 
 private:
   uint8_t *buf;
   const ConcatInputSection *isec;
-  ArrayRef<uint64_t> relocTargets;
-  std::vector<Reloc>::const_reverse_iterator relocIt;
-
-  uint64_t getRelocTarget(const Reloc &);
-
-  Optional<PerformedReloc> findPrimaryReloc(uint64_t offset);
-  Optional<PerformedReloc> findReloc(uint64_t offset);
 };
 } // namespace
 
@@ -232,6 +219,9 @@ static bool parseAdrp(uint32_t insn, Adrp &adrp) {
   if ((insn & 0x9f000000) != 0x90000000)
     return false;
   adrp.destRegister = insn & 0x1f;
+  uint64_t immHi = (insn >> 5) & 0x7ffff;
+  uint64_t immLo = (insn >> 29) & 0x3;
+  adrp.addend = SignExtend64<21>(immLo | (immHi << 2)) * 4096;
   return true;
 }
 
@@ -348,44 +338,6 @@ static void writeImmediateLdr(void *loc, const Ldr &ldr) {
   write32le(loc, opcode | (immBits << 10) | (opc << 22) | (size << 30));
 }
 
-uint64_t OptimizationHintContext::getRelocTarget(const Reloc &reloc) {
-  size_t relocIdx = &reloc - isec->relocs.data();
-  return relocTargets[relocIdx];
-}
-
-// Optimization hints are sorted in a monotonically increasing order by their
-// first address as are relocations (albeit in decreasing order), so if we keep
-// a pointer around to the last found relocation, we don't have to do a full
-// binary search every time.
-Optional<PerformedReloc>
-OptimizationHintContext::findPrimaryReloc(uint64_t offset) {
-  const auto end = isec->relocs.rend();
-  while (relocIt != end && relocIt->offset < offset)
-    ++relocIt;
-  if (relocIt == end || relocIt->offset != offset)
-    return None;
-  return PerformedReloc{*relocIt, getRelocTarget(*relocIt)};
-}
-
-// The second and third addresses of optimization hints have no such
-// monotonicity as the first, so we search the entire range of relocations.
-Optional<PerformedReloc> OptimizationHintContext::findReloc(uint64_t offset) {
-  // Optimization hints often apply to successive relocations, so we check for
-  // that first before doing a full binary search.
-  auto end = isec->relocs.rend();
-  if (relocIt < end - 1 && (relocIt + 1)->offset == offset)
-    return PerformedReloc{*(relocIt + 1), getRelocTarget(*(relocIt + 1))};
-
-  auto reloc = lower_bound(isec->relocs, offset,
-                           [](const Reloc &reloc, uint64_t offset) {
-                             return offset < reloc.offset;
-                           });
-
-  if (reloc == isec->relocs.end() || reloc->offset != offset)
-    return None;
-  return PerformedReloc{*reloc, getRelocTarget(*reloc)};
-}
-
 // Transforms a pair of adrp+add instructions into an adr instruction if the
 // target is within the +/- 1 MiB range allowed by the adr's 21 bit signed
 // immediate offset.
@@ -395,30 +347,24 @@ Optional<PerformedReloc> OptimizationHintContext::findReloc(uint64_t offset) {
 // ->
 //   adr  xM, _foo
 //   nop
-void OptimizationHintContext::applyAdrpAdd(const OptimizationHint &hint) {
-  uint32_t ins1 = read32le(buf + hint.offset0);
-  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+void OptimizationHintContext::applyAdrpAdd(uint64_t offset1, uint64_t offset2) {
+  uint32_t ins1 = read32le(buf + offset1);
+  uint32_t ins2 = read32le(buf + offset2);
   Adrp adrp;
-  if (!parseAdrp(ins1, adrp))
-    return;
   Add add;
-  if (!parseAdd(ins2, add))
+  if (!parseAdrp(ins1, adrp) || !parseAdd(ins2, add))
     return;
   if (adrp.destRegister != add.srcRegister)
     return;
 
-  Optional<PerformedReloc> rel1 = findPrimaryReloc(hint.offset0);
-  Optional<PerformedReloc> rel2 = findReloc(hint.offset0 + hint.delta[0]);
-  if (!rel1 || !rel2)
-    return;
-  if (rel1->referentVA != rel2->referentVA)
-    return;
-  int64_t delta = rel1->referentVA - rel1->rel.offset - isec->getVA();
+  uint64_t addr1 = isec->getVA() + offset1;
+  uint64_t referent = pageBits(addr1) + adrp.addend + add.addend;
+  int64_t delta = referent - addr1;
   if (!isValidAdrOffset(delta))
     return;
 
-  writeAdr(buf + hint.offset0, add.destRegister, delta);
-  writeNop(buf + hint.offset0 + hint.delta[0]);
+  writeAdr(buf + offset1, add.destRegister, delta);
+  writeNop(buf + offset2);
 }
 
 // Transforms two adrp instructions into a single adrp if their referent
@@ -429,23 +375,22 @@ void OptimizationHintContext::applyAdrpAdd(const OptimizationHint &hint) {
 // ->
 //   adrp xN, _foo@PAGE
 //   nop
-void OptimizationHintContext::applyAdrpAdrp(const OptimizationHint &hint) {
-  uint32_t ins1 = read32le(buf + hint.offset0);
-  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+void OptimizationHintContext::applyAdrpAdrp(uint64_t offset1,
+                                            uint64_t offset2) {
+  uint32_t ins1 = read32le(buf + offset1);
+  uint32_t ins2 = read32le(buf + offset2);
   Adrp adrp1, adrp2;
   if (!parseAdrp(ins1, adrp1) || !parseAdrp(ins2, adrp2))
     return;
   if (adrp1.destRegister != adrp2.destRegister)
     return;
 
-  Optional<PerformedReloc> rel1 = findPrimaryReloc(hint.offset0);
-  Optional<PerformedReloc> rel2 = findReloc(hint.offset0 + hint.delta[0]);
-  if (!rel1 || !rel2)
-    return;
-  if ((rel1->referentVA & ~0xfffULL) != (rel2->referentVA & ~0xfffULL))
+  uint64_t page1 = pageBits(offset1 + isec->getVA()) + adrp1.addend;
+  uint64_t page2 = pageBits(offset2 + isec->getVA()) + adrp2.addend;
+  if (page1 != page2)
     return;
 
-  writeNop(buf + hint.offset0 + hint.delta[0]);
+  writeNop(buf + offset2);
 }
 
 // Transforms a pair of adrp+ldr (immediate) instructions into an ldr (literal)
@@ -457,43 +402,39 @@ void OptimizationHintContext::applyAdrpAdrp(const OptimizationHint &hint) {
 // ->
 //   nop
 //   ldr  xM, _foo
-void OptimizationHintContext::applyAdrpLdr(const OptimizationHint &hint) {
-  uint32_t ins1 = read32le(buf + hint.offset0);
-  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+void OptimizationHintContext::applyAdrpLdr(uint64_t offset1, uint64_t offset2) {
+  uint32_t ins1 = read32le(buf + offset1);
+  uint32_t ins2 = read32le(buf + offset2);
   Adrp adrp;
-  if (!parseAdrp(ins1, adrp))
-    return;
   Ldr ldr;
-  if (!parseLdr(ins2, ldr))
+  if (!parseAdrp(ins1, adrp) || !parseLdr(ins2, ldr))
     return;
   if (adrp.destRegister != ldr.baseRegister)
     return;
 
-  Optional<PerformedReloc> rel1 = findPrimaryReloc(hint.offset0);
-  Optional<PerformedReloc> rel2 = findReloc(hint.offset0 + hint.delta[0]);
-  if (!rel1 || !rel2)
-    return;
-  if (ldr.offset != static_cast<int64_t>(rel1->referentVA & 0xfff))
-    return;
-  ldr.offset = rel1->referentVA - rel2->rel.offset - isec->getVA();
+  uint64_t addr1 = isec->getVA() + offset1;
+  uint64_t addr2 = isec->getVA() + offset2;
+  uint64_t referent = pageBits(addr1) + adrp.addend + ldr.offset;
+  ldr.offset = referent - addr2;
   if (!isLiteralLdrEligible(ldr))
     return;
 
-  writeNop(buf + hint.offset0);
-  writeLiteralLdr(buf + hint.offset0 + hint.delta[0], ldr);
+  writeNop(buf + offset1);
+  writeLiteralLdr(buf + offset2, ldr);
 }
 
 // GOT loads are emitted by the compiler as a pair of adrp and ldr instructions,
 // but they may be changed to adrp+add by relaxGotLoad(). This hint performs
 // the AdrpLdr or AdrpAdd transformation depending on whether it was relaxed.
-void OptimizationHintContext::applyAdrpLdrGot(const OptimizationHint &hint) {
-  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+void OptimizationHintContext::applyAdrpLdrGot(uint64_t offset1,
+                                              uint64_t offset2) {
+  uint32_t ins2 = read32le(buf + offset2);
   Add add;
   Ldr ldr;
   if (parseAdd(ins2, add))
-    applyAdrpAdd(hint);
+    applyAdrpAdd(offset1, offset2);
   else if (parseLdr(ins2, ldr))
-    applyAdrpLdr(hint);
+    applyAdrpLdr(offset1, offset2);
 }
 
 // Optimizes an adrp+add+ldr sequence used for loading from a local symbol's
@@ -503,25 +444,21 @@ void OptimizationHintContext::applyAdrpLdrGot(const OptimizationHint &hint) {
 //   adrp x0, _foo@PAGE
 //   add  x1, x0, _foo@PAGEOFF
 //   ldr  x2, [x1, #off]
-void OptimizationHintContext::applyAdrpAddLdr(const OptimizationHint &hint) {
-  uint32_t ins1 = read32le(buf + hint.offset0);
+void OptimizationHintContext::applyAdrpAddLdr(uint64_t offset1,
+                                              uint64_t offset2,
+                                              uint64_t offset3) {
+  uint32_t ins1 = read32le(buf + offset1);
   Adrp adrp;
   if (!parseAdrp(ins1, adrp))
     return;
-  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+  uint32_t ins2 = read32le(buf + offset2);
   Add add;
   if (!parseAdd(ins2, add))
     return;
-  uint32_t ins3 = read32le(buf + hint.offset0 + hint.delta[1]);
+  uint32_t ins3 = read32le(buf + offset3);
   Ldr ldr;
   if (!parseLdr(ins3, ldr))
     return;
-
-  Optional<PerformedReloc> rel1 = findPrimaryReloc(hint.offset0);
-  Optional<PerformedReloc> rel2 = findReloc(hint.offset0 + hint.delta[0]);
-  if (!rel1 || !rel2)
-    return;
-
   if (adrp.destRegister != add.srcRegister)
     return;
   if (add.destRegister != ldr.baseRegister)
@@ -531,13 +468,15 @@ void OptimizationHintContext::applyAdrpAddLdr(const OptimizationHint &hint) {
   //   nop
   //   nop
   //   ldr x2, [_foo + #off]
-  uint64_t rel3VA = hint.offset0 + hint.delta[1] + isec->getVA();
+  uint64_t addr1 = isec->getVA() + offset1;
+  uint64_t addr3 = isec->getVA() + offset3;
+  uint64_t referent = pageBits(addr1) + adrp.addend + add.addend;
   Ldr literalLdr = ldr;
-  literalLdr.offset += rel1->referentVA - rel3VA;
+  literalLdr.offset += referent - addr3;
   if (isLiteralLdrEligible(literalLdr)) {
-    writeNop(buf + hint.offset0);
-    writeNop(buf + hint.offset0 + hint.delta[0]);
-    writeLiteralLdr(buf + hint.offset0 + hint.delta[1], literalLdr);
+    writeNop(buf + offset1);
+    writeNop(buf + offset2);
+    writeLiteralLdr(buf + offset3, literalLdr);
     return;
   }
 
@@ -545,12 +484,12 @@ void OptimizationHintContext::applyAdrpAddLdr(const OptimizationHint &hint) {
   //   adr x1, _foo
   //   nop
   //   ldr x2, [x1, #off]
-  int64_t adrOffset = rel1->referentVA - rel1->rel.offset - isec->getVA();
+  int64_t adrOffset = referent - addr1;
   if (isValidAdrOffset(adrOffset)) {
-    writeAdr(buf + hint.offset0, ldr.baseRegister, adrOffset);
+    writeAdr(buf + offset1, ldr.baseRegister, adrOffset);
     // Note: ld64 moves the offset into the adr instruction for AdrpAddLdr, but
     // not for AdrpLdrGotLdr. Its effect is the same either way.
-    writeNop(buf + hint.offset0 + hint.delta[0]);
+    writeNop(buf + offset2);
     return;
   }
 
@@ -562,8 +501,8 @@ void OptimizationHintContext::applyAdrpAddLdr(const OptimizationHint &hint) {
   immediateLdr.baseRegister = adrp.destRegister;
   immediateLdr.offset += add.addend;
   if (isImmediateLdrEligible(immediateLdr)) {
-    writeNop(buf + hint.offset0 + hint.delta[0]);
-    writeImmediateLdr(buf + hint.offset0 + hint.delta[1], immediateLdr);
+    writeNop(buf + offset2);
+    writeImmediateLdr(buf + offset3, immediateLdr);
     return;
   }
 }
@@ -573,30 +512,27 @@ void OptimizationHintContext::applyAdrpAddLdr(const OptimizationHint &hint) {
 // the GOT entry can be loaded with a single literal ldr instruction.
 // If the referenced symbol is local and thus has been relaxed to adrp+add+ldr,
 // we perform the AdrpAddLdr transformation.
-void OptimizationHintContext::applyAdrpLdrGotLdr(const OptimizationHint &hint) {
-  uint32_t ins2 = read32le(buf + hint.offset0 + hint.delta[0]);
+void OptimizationHintContext::applyAdrpLdrGotLdr(uint64_t offset1,
+                                                 uint64_t offset2,
+                                                 uint64_t offset3) {
+  uint32_t ins2 = read32le(buf + offset2);
   Add add;
   Ldr ldr2;
 
   if (parseAdd(ins2, add)) {
-    applyAdrpAddLdr(hint);
+    applyAdrpAddLdr(offset1, offset2, offset3);
   } else if (parseLdr(ins2, ldr2)) {
     // adrp x1, _foo@GOTPAGE
     // ldr  x2, [x1, _foo@GOTPAGEOFF]
     // ldr  x3, [x2, #off]
 
-    uint32_t ins1 = read32le(buf + hint.offset0);
+    uint32_t ins1 = read32le(buf + offset1);
     Adrp adrp;
     if (!parseAdrp(ins1, adrp))
       return;
-    uint32_t ins3 = read32le(buf + hint.offset0 + hint.delta[1]);
+    uint32_t ins3 = read32le(buf + offset3);
     Ldr ldr3;
     if (!parseLdr(ins3, ldr3))
-      return;
-
-    Optional<PerformedReloc> rel1 = findPrimaryReloc(hint.offset0);
-    Optional<PerformedReloc> rel2 = findReloc(hint.offset0 + hint.delta[0]);
-    if (!rel1 || !rel2)
       return;
 
     if (ldr2.baseRegister != adrp.destRegister)
@@ -607,28 +543,30 @@ void OptimizationHintContext::applyAdrpLdrGotLdr(const OptimizationHint &hint) {
     if (ldr2.p2Size != 3 || ldr2.isFloat)
       return;
 
+    uint64_t addr1 = isec->getVA() + offset1;
+    uint64_t addr2 = isec->getVA() + offset2;
+    uint64_t referent = pageBits(addr1) + adrp.addend + ldr2.offset;
     // Load the GOT entry's address directly.
     //   nop
     //   ldr x2, _foo@GOTPAGE + _foo@GOTPAGEOFF
     //   ldr x3, [x2, #off]
     Ldr literalLdr = ldr2;
-    literalLdr.offset = rel1->referentVA - rel2->rel.offset - isec->getVA();
+    literalLdr.offset = referent - addr2;
     if (isLiteralLdrEligible(literalLdr)) {
-      writeNop(buf + hint.offset0);
-      writeLiteralLdr(buf + hint.offset0 + hint.delta[0], literalLdr);
+      writeNop(buf + offset1);
+      writeLiteralLdr(buf + offset2, literalLdr);
     }
   }
 }
 
-void ARM64::applyOptimizationHints(uint8_t *buf, const ConcatInputSection *isec,
-                                   ArrayRef<uint64_t> relocTargets) const {
+void ARM64::applyOptimizationHints(uint8_t *buf,
+                                   const ConcatInputSection *isec) const {
   assert(isec);
-  assert(relocTargets.size() == isec->relocs.size());
 
   // Note: Some of these optimizations might not be valid when shared regions
   // are in use. Will need to revisit this if splitSegInfo is added.
 
-  OptimizationHintContext ctx1(buf, isec, relocTargets);
+  OptimizationHintContext ctx(buf, isec);
   for (const OptimizationHint &hint : isec->optimizationHints) {
     switch (hint.type) {
     case LOH_ARM64_ADRP_ADRP:
@@ -636,31 +574,32 @@ void ARM64::applyOptimizationHints(uint8_t *buf, const ConcatInputSection *isec,
       // might cause its targets to be turned into NOPs.
       break;
     case LOH_ARM64_ADRP_LDR:
-      ctx1.applyAdrpLdr(hint);
+      ctx.applyAdrpLdr(hint.offset0, hint.offset0 + hint.delta[0]);
       break;
     case LOH_ARM64_ADRP_ADD_LDR:
-      ctx1.applyAdrpAddLdr(hint);
+      ctx.applyAdrpAddLdr(hint.offset0, hint.offset0 + hint.delta[0],
+                          hint.offset0 + hint.delta[1]);
       break;
     case LOH_ARM64_ADRP_LDR_GOT_LDR:
-      ctx1.applyAdrpLdrGotLdr(hint);
+      ctx.applyAdrpLdrGotLdr(hint.offset0, hint.offset0 + hint.delta[0],
+                             hint.offset0 + hint.delta[1]);
       break;
     case LOH_ARM64_ADRP_ADD_STR:
     case LOH_ARM64_ADRP_LDR_GOT_STR:
       // TODO: Implement these
       break;
     case LOH_ARM64_ADRP_ADD:
-      ctx1.applyAdrpAdd(hint);
+      ctx.applyAdrpAdd(hint.offset0, hint.offset0 + hint.delta[0]);
       break;
     case LOH_ARM64_ADRP_LDR_GOT:
-      ctx1.applyAdrpLdrGot(hint);
+      ctx.applyAdrpLdrGot(hint.offset0, hint.offset0 + hint.delta[0]);
       break;
     }
   }
 
-  OptimizationHintContext ctx2(buf, isec, relocTargets);
   for (const OptimizationHint &hint : isec->optimizationHints)
     if (hint.type == LOH_ARM64_ADRP_ADRP)
-      ctx2.applyAdrpAdrp(hint);
+      ctx.applyAdrpAdrp(hint.offset0, hint.offset0 + hint.delta[0]);
 }
 
 TargetInfo *macho::createARM64TargetInfo() {

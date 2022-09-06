@@ -2332,6 +2332,19 @@ bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) {
                       MRI);
 }
 
+bool CombinerHelper::matchInsertExtractVecEltOutOfBounds(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT ||
+         MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT &&
+             "Expected an insert/extract element op");
+  LLT VecTy = MRI.getType(MI.getOperand(1).getReg());
+  unsigned IdxIdx =
+      MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT ? 2 : 3;
+  auto Idx = getIConstantVRegVal(MI.getOperand(IdxIdx).getReg(), MRI);
+  if (!Idx)
+    return false;
+  return Idx->getZExtValue() >= VecTy.getNumElements();
+}
+
 bool CombinerHelper::matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) {
   GSelect &SelMI = cast<GSelect>(MI);
   auto Cst =

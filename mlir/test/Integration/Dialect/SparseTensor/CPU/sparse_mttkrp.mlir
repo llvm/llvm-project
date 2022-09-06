@@ -1,17 +1,17 @@
 // RUN: mlir-opt %s --sparse-compiler | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/mttkrp_b.tns" \
+// RUN: TENSOR0="%mlir_src_dir/test/Integration/data/mttkrp_b.tns" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 //
 // Do the same run, but now with SIMDization as well. This should not change the outcome.
 //
 // RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=any-storage-inner-loop vl=4" | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/mttkrp_b.tns" \
+// RUN: TENSOR0="%mlir_src_dir/test/Integration/data/mttkrp_b.tns" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 !Filename = !llvm.ptr<i8>
