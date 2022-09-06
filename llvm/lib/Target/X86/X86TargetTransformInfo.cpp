@@ -3128,20 +3128,20 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // TODO: Overflow intrinsics (*ADDO, *SUBO, *MULO) with vector types are not
   //       specialized in these tables yet.
   static const CostKindTblEntry AVX512BITALGCostTbl[] = {
-    { ISD::CTPOP,      MVT::v32i16,  {  1 } },
-    { ISD::CTPOP,      MVT::v64i8,   {  1 } },
-    { ISD::CTPOP,      MVT::v16i16,  {  1 } },
-    { ISD::CTPOP,      MVT::v32i8,   {  1 } },
-    { ISD::CTPOP,      MVT::v8i16,   {  1 } },
-    { ISD::CTPOP,      MVT::v16i8,   {  1 } },
+    { ISD::CTPOP,      MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v64i8,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v16i16,  {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v32i8,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v8i16,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v16i8,   {  1,  1,  1,  1 } },
   };
   static const CostKindTblEntry AVX512VPOPCNTDQCostTbl[] = {
-    { ISD::CTPOP,      MVT::v8i64,   {  1 } },
-    { ISD::CTPOP,      MVT::v16i32,  {  1 } },
-    { ISD::CTPOP,      MVT::v4i64,   {  1 } },
-    { ISD::CTPOP,      MVT::v8i32,   {  1 } },
-    { ISD::CTPOP,      MVT::v2i64,   {  1 } },
-    { ISD::CTPOP,      MVT::v4i32,   {  1 } },
+    { ISD::CTPOP,      MVT::v8i64,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v4i64,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v8i32,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v2i64,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v4i32,   {  1,  1,  1,  1 } },
   };
   static const CostKindTblEntry AVX512CDCostTbl[] = {
     { ISD::CTLZ,       MVT::v8i64,   {  1 } },
@@ -3171,10 +3171,18 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::v16i32,  { 22 } },
     { ISD::CTLZ,       MVT::v32i16,  { 18 } },
     { ISD::CTLZ,       MVT::v64i8,   { 17 } },
-    { ISD::CTPOP,      MVT::v8i64,   {  7 } },
-    { ISD::CTPOP,      MVT::v16i32,  { 11 } },
-    { ISD::CTPOP,      MVT::v32i16,  {  9 } },
-    { ISD::CTPOP,      MVT::v64i8,   {  6 } },
+    { ISD::CTPOP,      MVT::v2i64,   {  3,  7, 10, 10 } },
+    { ISD::CTPOP,      MVT::v4i64,   {  3,  7, 10, 10 } },
+    { ISD::CTPOP,      MVT::v8i64,   {  3,  8, 10, 12 } },
+    { ISD::CTPOP,      MVT::v4i32,   {  7, 11, 14, 14 } },
+    { ISD::CTPOP,      MVT::v8i32,   {  7, 11, 14, 14 } },
+    { ISD::CTPOP,      MVT::v16i32,  {  7, 12, 14, 16 } },
+    { ISD::CTPOP,      MVT::v8i16,   {  2,  7, 11, 11 } },
+    { ISD::CTPOP,      MVT::v16i16,  {  2,  7, 11, 11 } },
+    { ISD::CTPOP,      MVT::v32i16,  {  3,  7, 11, 13 } },
+    { ISD::CTPOP,      MVT::v16i8,   {  2,  4,  8,  8 } },
+    { ISD::CTPOP,      MVT::v32i8,   {  2,  4,  8,  8 } },
+    { ISD::CTPOP,      MVT::v64i8,   {  2,  5,  8, 10 } },
     { ISD::CTTZ,       MVT::v8i64,   { 10 } },
     { ISD::CTTZ,       MVT::v16i32,  { 14 } },
     { ISD::CTTZ,       MVT::v32i16,  { 12 } },
@@ -3214,10 +3222,10 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::v16i32,  { 35 } },
     { ISD::CTLZ,       MVT::v32i16,  { 28 } },
     { ISD::CTLZ,       MVT::v64i8,   { 18 } },
-    { ISD::CTPOP,      MVT::v8i64,   { 16 } },
-    { ISD::CTPOP,      MVT::v16i32,  { 24 } },
-    { ISD::CTPOP,      MVT::v32i16,  { 18 } },
-    { ISD::CTPOP,      MVT::v64i8,   { 12 } },
+    { ISD::CTPOP,      MVT::v8i64,   { 16, 16, 19, 19 } },
+    { ISD::CTPOP,      MVT::v16i32,  { 24, 19, 27, 27 } },
+    { ISD::CTPOP,      MVT::v32i16,  { 18, 15, 22, 22 } },
+    { ISD::CTPOP,      MVT::v64i8,   { 12, 11, 16, 16 } },
     { ISD::CTTZ,       MVT::v8i64,   { 20 } },
     { ISD::CTTZ,       MVT::v16i32,  { 28 } },
     { ISD::CTTZ,       MVT::v32i16,  { 24 } },
@@ -3317,14 +3325,14 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::v16i16,  {  4 } },
     { ISD::CTLZ,       MVT::v16i8,   {  3 } },
     { ISD::CTLZ,       MVT::v32i8,   {  3 } },
-    { ISD::CTPOP,      MVT::v2i64,   {  3 } },
-    { ISD::CTPOP,      MVT::v4i64,   {  3 } },
-    { ISD::CTPOP,      MVT::v4i32,   {  7 } },
-    { ISD::CTPOP,      MVT::v8i32,   {  7 } },
-    { ISD::CTPOP,      MVT::v8i16,   {  3 } },
-    { ISD::CTPOP,      MVT::v16i16,  {  3 } },
-    { ISD::CTPOP,      MVT::v16i8,   {  2 } },
-    { ISD::CTPOP,      MVT::v32i8,   {  2 } },
+    { ISD::CTPOP,      MVT::v2i64,   {  3,  9, 10, 10 } },
+    { ISD::CTPOP,      MVT::v4i64,   {  4,  9, 10, 14 } },
+    { ISD::CTPOP,      MVT::v4i32,   {  7, 12, 14, 14 } },
+    { ISD::CTPOP,      MVT::v8i32,   {  7, 12, 14, 18 } },
+    { ISD::CTPOP,      MVT::v8i16,   {  3,  7, 11, 11 } },
+    { ISD::CTPOP,      MVT::v16i16,  {  6,  8, 11, 18 } },
+    { ISD::CTPOP,      MVT::v16i8,   {  2,  5,  8,  8 } },
+    { ISD::CTPOP,      MVT::v32i8,   {  3,  5,  8, 12 } },
     { ISD::CTTZ,       MVT::v2i64,   {  4 } },
     { ISD::CTTZ,       MVT::v4i64,   {  4 } },
     { ISD::CTTZ,       MVT::v4i32,   {  7 } },
@@ -3380,10 +3388,14 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::v8i32,   { 38 } }, // 2 x 128-bit Op + extract/insert
     { ISD::CTLZ,       MVT::v16i16,  { 30 } }, // 2 x 128-bit Op + extract/insert
     { ISD::CTLZ,       MVT::v32i8,   { 20 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTPOP,      MVT::v4i64,   { 16 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTPOP,      MVT::v8i32,   { 24 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTPOP,      MVT::v16i16,  { 20 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTPOP,      MVT::v32i8,   { 14 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v4i64,   { 16, 19, 19, 28 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v2i64,   {  7,  9, 10, 14 } },
+    { ISD::CTPOP,      MVT::v8i32,   { 24, 27, 27, 36 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v4i32,   { 11, 12, 14, 18 } },
+    { ISD::CTPOP,      MVT::v16i16,  { 20, 23, 22, 31 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v8i16,   {  9, 11, 11, 15 } },
+    { ISD::CTPOP,      MVT::v32i8,   { 14, 17, 16, 25 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v16i8,   {  6,  7,  8, 12 } },
     { ISD::CTTZ,       MVT::v4i64,   { 22 } }, // 2 x 128-bit Op + extract/insert
     { ISD::CTTZ,       MVT::v8i32,   { 30 } }, // 2 x 128-bit Op + extract/insert
     { ISD::CTTZ,       MVT::v16i16,  { 26 } }, // 2 x 128-bit Op + extract/insert
@@ -3467,10 +3479,10 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::v4i32,   { 18 } },
     { ISD::CTLZ,       MVT::v8i16,   { 14 } },
     { ISD::CTLZ,       MVT::v16i8,   {  9 } },
-    { ISD::CTPOP,      MVT::v2i64,   {  7 } },
-    { ISD::CTPOP,      MVT::v4i32,   { 11 } },
-    { ISD::CTPOP,      MVT::v8i16,   {  9 } },
-    { ISD::CTPOP,      MVT::v16i8,   {  6 } },
+    { ISD::CTPOP,      MVT::v2i64,   {  7, 19, 12, 18 } },
+    { ISD::CTPOP,      MVT::v4i32,   { 11, 24, 16, 22 } },
+    { ISD::CTPOP,      MVT::v8i16,   {  9, 18, 14, 20 } },
+    { ISD::CTPOP,      MVT::v16i8,   {  6, 12, 10, 16 } },
     { ISD::CTTZ,       MVT::v2i64,   { 10 } },
     { ISD::CTTZ,       MVT::v4i32,   { 14 } },
     { ISD::CTTZ,       MVT::v8i16,   { 12 } },
@@ -3492,10 +3504,10 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::v4i32,   { 26 } },
     { ISD::CTLZ,       MVT::v8i16,   { 20 } },
     { ISD::CTLZ,       MVT::v16i8,   { 17 } },
-    { ISD::CTPOP,      MVT::v2i64,   { 12 } },
-    { ISD::CTPOP,      MVT::v4i32,   { 15 } },
-    { ISD::CTPOP,      MVT::v8i16,   { 13 } },
-    { ISD::CTPOP,      MVT::v16i8,   { 10 } },
+    { ISD::CTPOP,      MVT::v2i64,   { 12, 26, 16, 18 } },
+    { ISD::CTPOP,      MVT::v4i32,   { 15, 29, 21, 23 } },
+    { ISD::CTPOP,      MVT::v8i16,   { 13, 25, 18, 20 } },
+    { ISD::CTPOP,      MVT::v16i8,   { 10, 21, 14, 16 } },
     { ISD::CTTZ,       MVT::v2i64,   { 14 } },
     { ISD::CTTZ,       MVT::v4i32,   { 18 } },
     { ISD::CTTZ,       MVT::v8i16,   { 16 } },
@@ -3542,12 +3554,12 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::i8,      {  1 } },
   };
   static const CostKindTblEntry POPCNT64CostTbl[] = { // 64-bit targets
-    { ISD::CTPOP,      MVT::i64,     {  1 } },
+    { ISD::CTPOP,      MVT::i64,     {  1, 1, 1, 1 } }, // popcnt
   };
   static const CostKindTblEntry POPCNT32CostTbl[] = { // 32 or 64-bit targets
-    { ISD::CTPOP,      MVT::i32,     {  1 } },
-    { ISD::CTPOP,      MVT::i16,     {  1 } },
-    { ISD::CTPOP,      MVT::i8,      {  1 } },
+    { ISD::CTPOP,      MVT::i32,     {  1, 1, 1, 1 } }, // popcnt
+    { ISD::CTPOP,      MVT::i16,     {  1, 1, 2, 2 } }, // popcnt(zext())
+    { ISD::CTPOP,      MVT::i8,      {  1, 1, 2, 2 } }, // popcnt(zext())
   };
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ABS,        MVT::i64,     {  2 } }, // SUB+CMOV
@@ -3555,7 +3567,7 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BSWAP,      MVT::i64,     {  1 } },
     { ISD::CTLZ,       MVT::i64,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTTZ,       MVT::i64,     {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTPOP,      MVT::i64,     { 10 } },
+    { ISD::CTPOP,      MVT::i64,     { 10, 6, 19, 19 } },
     { ISD::SADDO,      MVT::i64,     {  1 } },
     { ISD::UADDO,      MVT::i64,     {  1 } },
     { ISD::UMULO,      MVT::i64,     {  2 } }, // mulq + seto
@@ -3574,9 +3586,9 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::i32,     {  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i16,     {  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i8,      {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTPOP,      MVT::i32,     {  8 } },
-    { ISD::CTPOP,      MVT::i16,     {  9 } },
-    { ISD::CTPOP,      MVT::i8,      {  7 } },
+    { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
+    { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
+    { ISD::CTPOP,      MVT::i8,      {  7,  6, 13, 13 } },
     { ISD::SADDO,      MVT::i32,     {  1 } },
     { ISD::SADDO,      MVT::i16,     {  1 } },
     { ISD::SADDO,      MVT::i8,      {  1 } },
