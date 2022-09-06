@@ -528,4 +528,205 @@ for.body:                                         ; preds = %for.body.preheader1
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+define void @sink_v2z64_1(i32 *%p, i32 *%d, i64 %n, <2 x i32> %a) {
+; CHECK-LABEL: sink_v2z64_1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    dup v0.2d, v0.d[1]
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:  .LBB6_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    add x9, x9, #8
+; CHECK-NEXT:    subs x2, x2, #8
+; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    mov x12, v1.d[1]
+; CHECK-NEXT:    mul x10, x11, x10
+; CHECK-NEXT:    mul x11, x12, x8
+; CHECK-NEXT:    fmov d1, x10
+; CHECK-NEXT:    mov v1.d[1], x11
+; CHECK-NEXT:    shrn v1.2s, v1.2d, #15
+; CHECK-NEXT:    str d1, [x0], #32
+; CHECK-NEXT:    b.ne .LBB6_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  %ext = zext <2 x i32> %a to <2 x i64>
+  %broadcast.splat = shufflevector <2 x i64> %ext, <2 x i64> poison, <2 x i32> <i32 1, i32 1>
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %g = getelementptr inbounds i32, i32 *%p, i64 %index
+  %gb = bitcast i32* %g to <2 x i32>*
+  %l = load <2 x i32>, <2 x i32> *%gb, align 4
+  %e = zext <2 x i32> %l to <2 x i64>
+  %m = mul <2 x i64> %e, %broadcast.splat
+  %s = ashr <2 x i64> %m, <i64 15, i64 15>
+  %t = trunc <2 x i64> %s to <2 x i32>
+  %h = getelementptr inbounds i32, i32 *%d, i64 %index
+  %hb = bitcast i32* %g to <2 x i32>*
+  store <2 x i32> %t, <2 x i32> *%hb, align 4
+  %index.next = add nuw i64 %index, 8
+  %c = icmp eq i64 %index.next, %n
+  br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @sink_v4i64_1(i32 *%p, i32 *%d, i64 %n, <2 x i32> %a) {
+; CHECK-LABEL: sink_v4i64_1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    dup v0.2d, v0.d[1]
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:  .LBB7_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x13, d0
+; CHECK-NEXT:    add x9, x9, #8
+; CHECK-NEXT:    subs x2, x2, #8
+; CHECK-NEXT:    sshll v2.2d, v1.2s, #0
+; CHECK-NEXT:    sshll2 v1.2d, v1.4s, #0
+; CHECK-NEXT:    fmov x11, d2
+; CHECK-NEXT:    mov x12, v2.d[1]
+; CHECK-NEXT:    fmov x14, d1
+; CHECK-NEXT:    mul x10, x11, x10
+; CHECK-NEXT:    mov x11, v1.d[1]
+; CHECK-NEXT:    mul x13, x14, x13
+; CHECK-NEXT:    mul x12, x12, x8
+; CHECK-NEXT:    fmov d1, x10
+; CHECK-NEXT:    mul x10, x11, x8
+; CHECK-NEXT:    fmov d2, x13
+; CHECK-NEXT:    mov v1.d[1], x12
+; CHECK-NEXT:    mov v2.d[1], x10
+; CHECK-NEXT:    shrn v1.2s, v1.2d, #15
+; CHECK-NEXT:    shrn2 v1.4s, v2.2d, #15
+; CHECK-NEXT:    str q1, [x0], #32
+; CHECK-NEXT:    b.ne .LBB7_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  %ext = sext <2 x i32> %a to <2 x i64>
+  %broadcast.splat = shufflevector <2 x i64> %ext, <2 x i64> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %g = getelementptr inbounds i32, i32 *%p, i64 %index
+  %gb = bitcast i32* %g to <4 x i32>*
+  %l = load <4 x i32>, <4 x i32> *%gb, align 4
+  %e = sext <4 x i32> %l to <4 x i64>
+  %m = mul <4 x i64> %e, %broadcast.splat
+  %s = ashr <4 x i64> %m, <i64 15, i64 15, i64 15, i64 15>
+  %t = trunc <4 x i64> %s to <4 x i32>
+  %h = getelementptr inbounds i32, i32 *%d, i64 %index
+  %hb = bitcast i32* %g to <4 x i32>*
+  store <4 x i32> %t, <4 x i32> *%hb, align 4
+  %index.next = add nuw i64 %index, 8
+  %c = icmp eq i64 %index.next, %n
+  br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @sink_v8z16_0(i32 *%p, i32 *%d, i64 %n, <16 x i8> %a) {
+; CHECK-LABEL: sink_v8z16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:  .LBB8_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    subs x2, x2, #8
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    mul v1.8h, v1.8h, v0.8h
+; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-NEXT:    xtn v1.8b, v1.8h
+; CHECK-NEXT:    str d1, [x0], #32
+; CHECK-NEXT:    b.ne .LBB8_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  %ext = zext <16 x i8> %a to <16 x i16>
+  %broadcast.splat = shufflevector <16 x i16> %ext, <16 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %g = getelementptr inbounds i32, i32 *%p, i64 %index
+  %gb = bitcast i32* %g to <8 x i8>*
+  %l = load <8 x i8>, <8 x i8> *%gb, align 4
+  %e = zext <8 x i8> %l to <8 x i16>
+  %m = mul <8 x i16> %e, %broadcast.splat
+  %s = ashr <8 x i16> %m, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %t = trunc <8 x i16> %s to <8 x i8>
+  %h = getelementptr inbounds i32, i32 *%d, i64 %index
+  %hb = bitcast i32* %g to <8 x i8>*
+  store <8 x i8> %t, <8 x i8> *%hb, align 4
+  %index.next = add nuw i64 %index, 8
+  %c = icmp eq i64 %index.next, %n
+  br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @sink_v16s16_8(i32 *%p, i32 *%d, i64 %n, <16 x i8> %a) {
+; CHECK-LABEL: sink_v16s16_8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    dup v0.8h, v0.h[2]
+; CHECK-NEXT:  .LBB9_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    subs x2, x2, #8
+; CHECK-NEXT:    sshll2 v2.8h, v1.16b, #0
+; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    mul v2.8h, v2.8h, v0.8h
+; CHECK-NEXT:    mul v1.8h, v1.8h, v0.8h
+; CHECK-NEXT:    cmlt v2.8h, v2.8h, #0
+; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    str q1, [x0], #32
+; CHECK-NEXT:    b.ne .LBB9_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  %ext = sext <16 x i8> %a to <16 x i16>
+  %broadcast.splat = shufflevector <16 x i16> %ext, <16 x i16> poison, <16 x i32> <i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10>
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %g = getelementptr inbounds i32, i32 *%p, i64 %index
+  %gb = bitcast i32* %g to <16 x i8>*
+  %l = load <16 x i8>, <16 x i8> *%gb, align 4
+  %e = sext <16 x i8> %l to <16 x i16>
+  %m = mul <16 x i16> %e, %broadcast.splat
+  %s = ashr <16 x i16> %m, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %t = trunc <16 x i16> %s to <16 x i8>
+  %h = getelementptr inbounds i32, i32 *%d, i64 %index
+  %hb = bitcast i32* %g to <16 x i8>*
+  store <16 x i8> %t, <16 x i8> *%hb, align 4
+  %index.next = add nuw i64 %index, 8
+  %c = icmp eq i64 %index.next, %n
+  br i1 %c, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
+
