@@ -154,9 +154,9 @@ MODULE_PASS_WITH_PARAMS("asan",
                         parseASanPassOptions,
                         "kernel")
 MODULE_PASS_WITH_PARAMS("msan",
-                        "ModuleMemorySanitizerPass",
+                        "MemorySanitizerPass",
                         [](MemorySanitizerOptions Opts) {
-                          return ModuleMemorySanitizerPass(Opts);
+                          return MemorySanitizerPass(Opts);
                         },
                         parseMSanPassOptions,
                         "recover;kernel;eager-checks;track-origins=N")
