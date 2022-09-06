@@ -974,7 +974,7 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
     __func __f_;
 
     template <class _Fp, bool = _And<
-        _IsNotSame<__uncvref_t<_Fp>, function>,
+        _IsNotSame<__remove_cvref_t<_Fp>, function>,
         __invokable<_Fp, _ArgTypes...>
     >::value>
     struct __callable;

@@ -687,6 +687,11 @@ of generating a delta reduced test case.
   Specify where to write the crash diagnostics files; defaults to the
   usual location for temporary files.
 
+.. envvar:: CLANG_CRASH_DIAGNOSTICS_DIR=<dir>
+
+   Like :option:`-fcrash-diagnostics-dir=<dir>`, specifies where to write the
+   crash diagnostics files, but with lower precedence than the option.
+
 Clang is also capable of generating preprocessed source file(s) and associated
 run script(s) even without a crash. This is specially useful when trying to
 generate a reproducer for warnings or errors while using modules.

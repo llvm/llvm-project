@@ -35,6 +35,7 @@ public:
   }
 
   bool isReservedReg(const MachineFunction &MF, MCRegister Reg) const;
+  bool isStrictlyReservedReg(const MachineFunction &MF, MCRegister Reg) const;
   bool isAnyArgRegReserved(const MachineFunction &MF) const;
   void emitReservedArgRegCallError(const MachineFunction &MF) const;
 
@@ -88,6 +89,7 @@ public:
   /// Stack probing calls preserve different CSRs to the normal CC.
   const uint32_t *getWindowsStackProbePreservedMask() const;
 
+  BitVector getStrictlyReservedRegs(const MachineFunction &MF) const;
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;

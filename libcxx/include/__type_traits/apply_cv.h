@@ -21,8 +21,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class _Up, bool = is_const<typename remove_reference<_Tp>::type>::value,
-                             bool = is_volatile<typename remove_reference<_Tp>::type>::value>
+template <class _Tp, class _Up, bool = is_const<__libcpp_remove_reference_t<_Tp> >::value,
+                             bool = is_volatile<__libcpp_remove_reference_t<_Tp> >::value>
 struct __apply_cv
 {
     typedef _LIBCPP_NODEBUG _Up type;

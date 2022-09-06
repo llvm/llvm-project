@@ -691,11 +691,11 @@ LogicalResult TaskGroupOp::verify() {
 // TaskLoopOp
 //===----------------------------------------------------------------------===//
 SmallVector<Value> TaskLoopOp::getReductionVars() {
-  SmallVector<Value> all_reduction_nvars(in_reduction_vars().begin(),
-                                         in_reduction_vars().end());
-  all_reduction_nvars.insert(all_reduction_nvars.end(),
-                             reduction_vars().begin(), reduction_vars().end());
-  return all_reduction_nvars;
+  SmallVector<Value> allReductionNvars(in_reduction_vars().begin(),
+                                       in_reduction_vars().end());
+  allReductionNvars.insert(allReductionNvars.end(), reduction_vars().begin(),
+                           reduction_vars().end());
+  return allReductionNvars;
 }
 
 LogicalResult TaskLoopOp::verify() {

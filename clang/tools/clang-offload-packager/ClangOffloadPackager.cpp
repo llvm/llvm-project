@@ -14,8 +14,7 @@
 
 #include "clang/Basic/Version.h"
 
-#include "llvm/Object/Binary.h"
-#include "llvm/Object/ObjectFile.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -123,29 +122,6 @@ static Error bundleImages() {
   return Error::success();
 }
 
-static Expected<SmallVector<std::unique_ptr<OffloadBinary>>>
-extractOffloadFiles(MemoryBufferRef Contents) {
-  if (identify_magic(Contents.getBuffer()) != file_magic::offload_binary)
-    return createStringError(inconvertibleErrorCode(),
-                             "Input buffer not an offloading binary");
-  SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
-  uint64_t Offset = 0;
-  // There could be multiple offloading binaries stored at this section.
-  while (Offset < Contents.getBuffer().size()) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
-                                   /*RequiresNullTerminator*/ false);
-    auto BinaryOrErr = OffloadBinary::create(*Buffer);
-    if (!BinaryOrErr)
-      return BinaryOrErr.takeError();
-
-    Offset += (*BinaryOrErr)->getSize();
-    Binaries.emplace_back(std::move(*BinaryOrErr));
-  }
-
-  return std::move(Binaries);
-}
-
 static Error unbundleImages() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFile);
@@ -159,9 +135,9 @@ static Error unbundleImages() {
     Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
                                             Buffer->getBufferIdentifier());
 
-  auto BinariesOrErr = extractOffloadFiles(*Buffer);
-  if (!BinariesOrErr)
-    return BinariesOrErr.takeError();
+  SmallVector<OffloadFile> Binaries;
+  if (Error Err = extractOffloadBinaries(*Buffer, Binaries))
+    return Err;
 
   // Try to extract each device image specified by the user from the input file.
   for (StringRef Image : DeviceImages) {
@@ -169,8 +145,8 @@ static Error unbundleImages() {
     StringSaver Saver(Alloc);
     auto Args = getImageArguments(Image, Saver);
 
-    for (uint64_t I = 0, E = BinariesOrErr->size(); I != E; ++I) {
-      const auto &Binary = (*BinariesOrErr)[I];
+    for (uint64_t I = 0, E = Binaries.size(); I != E; ++I) {
+      const auto *Binary = Binaries[I].getBinary();
       // We handle the 'file' and 'kind' identifiers differently.
       bool Match = llvm::all_of(Args, [&](auto &Arg) {
         const auto [Key, Value] = Arg;

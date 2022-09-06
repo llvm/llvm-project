@@ -1,5 +1,5 @@
 // RUN: mlir-cpu-runner %s -e entry -entry-point-result=void  \
-// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // End-to-end test of all fp reduction intrinsics (not exhaustive unit tests).

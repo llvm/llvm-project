@@ -6471,7 +6471,36 @@ cc_library(
 )
 
 cc_library(
-    name = "mlir_c_runner_utils",
+    name = "mlir_async_runtime_api",
+    hdrs = ["include/mlir/ExecutionEngine/AsyncRuntime.h"],
+    includes = ["include"],
+)
+
+cc_library(
+    name = "_mlir_async_runtime",
+    srcs = ["lib/ExecutionEngine/AsyncRuntime.cpp"],
+    copts = ["-Dmlir_async_runtime_EXPORTS"],
+    deps = [
+        ":mlir_async_runtime_api",
+        "//llvm:Support",
+    ],
+)
+
+# Indirection to avoid output filename clash between cc_library and cc_binary.
+alias(
+    name = "mlir_async_runtime",
+    actual = "_mlir_async_runtime",
+)
+
+cc_binary(
+    name = "libmlir_async_runtime.so",
+    linkshared = True,
+    linkstatic = False,
+    deps = [":mlir_async_runtime"],
+)
+
+cc_library(
+    name = "_mlir_c_runner_utils",
     srcs = [
         "lib/ExecutionEngine/CRunnerUtils.cpp",
         "lib/ExecutionEngine/Float16bits.cpp",
@@ -6486,28 +6515,38 @@ cc_library(
     includes = ["include"],
 )
 
-cc_library(
-    name = "mlir_async_runtime_api",
-    hdrs = ["include/mlir/ExecutionEngine/AsyncRuntime.h"],
-    includes = ["include"],
+# Indirection to avoid output filename clash between cc_library and cc_binary.
+alias(
+    name = "mlir_c_runner_utils",
+    actual = "_mlir_c_runner_utils",
+)
+
+cc_binary(
+    name = "libmlir_c_runner_utils.so",
+    linkshared = True,
+    linkstatic = False,
+    deps = [":mlir_c_runner_utils"],
 )
 
 cc_library(
-    name = "mlir_async_runtime",
-    srcs = ["lib/ExecutionEngine/AsyncRuntime.cpp"],
-    copts = ["-Dmlir_async_runtime_EXPORTS"],
-    deps = [
-        ":mlir_async_runtime_api",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "mlir_runner_utils",
+    name = "_mlir_runner_utils",
     srcs = ["lib/ExecutionEngine/RunnerUtils.cpp"],
     hdrs = ["include/mlir/ExecutionEngine/RunnerUtils.h"],
     includes = ["include"],
     deps = [":mlir_c_runner_utils"],
+)
+
+# Indirection to avoid output filename clash between cc_library and cc_binary.
+alias(
+    name = "mlir_runner_utils",
+    actual = "_mlir_runner_utils",
+)
+
+cc_binary(
+    name = "libmlir_runner_utils.so",
+    linkshared = True,
+    linkstatic = False,
+    deps = [":mlir_runner_utils"],
 )
 
 cc_binary(
@@ -6546,7 +6585,7 @@ cc_headers_only(
 )
 
 cc_library(
-    name = "mlir_cuda_runtime",
+    name = "_mlir_cuda_runtime",
     srcs = ["lib/ExecutionEngine/CudaRuntimeWrappers.cpp"],
     # Prevent needing EnableABIBreakingChecks symbol from LLVMSupport.
     copts = ["-DLLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING=1"],
@@ -6560,6 +6599,27 @@ cc_library(
         "@cuda//:cuda_headers",
         "@cuda//:libcuda",
     ],
+)
+
+# Indirection to avoid output filename clash between cc_library and cc_binary.
+alias(
+    name = "mlir_cuda_runtime",
+    actual = "_mlir_cuda_runtime",
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+)
+
+cc_binary(
+    name = "libmlir_cuda_runtime.so",
+    linkshared = True,
+    linkstatic = False,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [":mlir_cuda_runtime"],
 )
 
 cc_library(
@@ -6583,7 +6643,7 @@ cc_library(
 )
 
 cc_binary(
-    name = "tools/libvulkan-runtime-wrappers.so",
+    name = "libvulkan-runtime-wrappers.so",
     srcs = ["tools/mlir-vulkan-runner/vulkan-runtime-wrappers.cpp"],
     linkshared = True,
     tags = [

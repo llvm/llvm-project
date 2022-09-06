@@ -450,12 +450,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const LoopNest &LN) {
   return OS;
 }
 
-LoopNestAnalysis::Result
-LoopNestAnalysis::run(Loop &L, LoopAnalysisManager &AM,
-                      LoopStandardAnalysisResults &AR) {
-  return LoopNest(L, AR.SE);
-}
-
 //===----------------------------------------------------------------------===//
 // LoopNestPrinterPass implementation
 //

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -68,7 +69,6 @@ class MDNode;
 class Module;
 class PseudoProbeHandler;
 class raw_ostream;
-class StackMaps;
 class StringRef;
 class TargetLoweringObjectFile;
 class TargetMachine;
@@ -201,6 +201,8 @@ protected:
   /// maintains ownership of the emitters.
   std::vector<HandlerInfo> Handlers;
   size_t NumUserHandlers = 0;
+
+  StackMaps SM;
 
 private:
   /// If generated on the fly this own the instance.
@@ -503,7 +505,7 @@ public:
   void emitGlobalGOTEquivs();
 
   /// Emit the stack maps.
-  void emitStackMaps(StackMaps &SM);
+  void emitStackMaps();
 
   //===------------------------------------------------------------------===//
   // Overridable Hooks

@@ -272,13 +272,13 @@ class SelectionDAG {
   using CallSiteInfo = MachineFunction::CallSiteInfo;
   using CallSiteInfoImpl = MachineFunction::CallSiteInfoImpl;
 
-  struct CallSiteDbgInfo {
+  struct NodeExtraInfo {
     CallSiteInfo CSInfo;
     MDNode *HeapAllocSite = nullptr;
     bool NoMerge = false;
   };
-
-  DenseMap<const SDNode *, CallSiteDbgInfo> SDCallSiteDbgInfo;
+  /// Out-of-line extra information for SDNodes.
+  DenseMap<const SDNode *, NodeExtraInfo> SDEI;
 
   /// PersistentId counter to be used when inserting the next
   /// SDNode to this SelectionDAG. We do not place that under
@@ -2168,33 +2168,35 @@ public:
 
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfoImpl &&CallInfo) {
-    SDCallSiteDbgInfo[Node].CSInfo = std::move(CallInfo);
+    SDEI[Node].CSInfo = std::move(CallInfo);
   }
   /// Return CallSiteInfo associated with Node, or a default if none exists.
   CallSiteInfo getCallSiteInfo(const SDNode *Node) {
-    auto I = SDCallSiteDbgInfo.find(Node);
-    return I != SDCallSiteDbgInfo.end() ? std::move(I->second).CSInfo
-                                        : CallSiteInfo();
+    auto I = SDEI.find(Node);
+    return I != SDEI.end() ? std::move(I->second).CSInfo : CallSiteInfo();
   }
   /// Set HeapAllocSite to be associated with Node.
   void addHeapAllocSite(const SDNode *Node, MDNode *MD) {
-    SDCallSiteDbgInfo[Node].HeapAllocSite = MD;
+    SDEI[Node].HeapAllocSite = MD;
   }
   /// Return HeapAllocSite associated with Node, or nullptr if none exists.
   MDNode *getHeapAllocSite(const SDNode *Node) const {
-    auto I = SDCallSiteDbgInfo.find(Node);
-    return I != SDCallSiteDbgInfo.end() ? I->second.HeapAllocSite : nullptr;
+    auto I = SDEI.find(Node);
+    return I != SDEI.end() ? I->second.HeapAllocSite : nullptr;
   }
   /// Set NoMergeSiteInfo to be associated with Node if NoMerge is true.
   void addNoMergeSiteInfo(const SDNode *Node, bool NoMerge) {
     if (NoMerge)
-      SDCallSiteDbgInfo[Node].NoMerge = NoMerge;
+      SDEI[Node].NoMerge = NoMerge;
   }
   /// Return NoMerge info associated with Node.
   bool getNoMergeSiteInfo(const SDNode *Node) const {
-    auto I = SDCallSiteDbgInfo.find(Node);
-    return I != SDCallSiteDbgInfo.end() ? I->second.NoMerge : false;
+    auto I = SDEI.find(Node);
+    return I != SDEI.end() ? I->second.NoMerge : false;
   }
+
+  /// Copy extra info associated with one node to another.
+  void copyExtraInfo(SDNode *From, SDNode *To);
 
   /// Return the current function's default denormal handling kind for the given
   /// floating point type.

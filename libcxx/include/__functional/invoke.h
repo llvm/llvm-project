@@ -248,7 +248,7 @@ struct __member_pointer_traits_imp<_Rp _Class::*, false, true>
 
 template <class _MP>
 struct __member_pointer_traits
-    : public __member_pointer_traits_imp<typename remove_cv<_MP>::type,
+    : public __member_pointer_traits_imp<__remove_cv_t<_MP>,
                     is_member_function_pointer<_MP>::value,
                     is_member_object_pointer<_MP>::value>
 {

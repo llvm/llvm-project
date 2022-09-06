@@ -97,7 +97,7 @@ struct _IterOps<_ClassicAlgPolicy> {
   template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
   static void __validate_iter_reference() {
-    static_assert(is_same<__deref_t<_Iter>, typename iterator_traits<__uncvref_t<_Iter> >::reference>::value,
+    static_assert(is_same<__deref_t<_Iter>, typename iterator_traits<__remove_cvref_t<_Iter> >::reference>::value,
         "It looks like your iterator's `iterator_traits<It>::reference` does not match the return type of "
         "dereferencing the iterator, i.e., calling `*it`. This is undefined behavior according to [input.iterators] "
         "and can lead to dangling reference issues at runtime, so we are flagging this.");
@@ -147,16 +147,16 @@ struct _IterOps<_ClassicAlgPolicy> {
 
   template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX14
-  __uncvref_t<_Iter> next(_Iter&& __it,
-                          typename iterator_traits<__uncvref_t<_Iter> >::difference_type __n = 1) {
+  __remove_cvref_t<_Iter> next(_Iter&& __it,
+                          typename iterator_traits<__remove_cvref_t<_Iter> >::difference_type __n = 1) {
     return std::next(std::forward<_Iter>(__it), __n);
   }
 
   // prev
   template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX14
-  __uncvref_t<_Iter> prev(_Iter&& __iter,
-                 typename iterator_traits<__uncvref_t<_Iter> >::difference_type __n = 1) {
+  __remove_cvref_t<_Iter> prev(_Iter&& __iter,
+                 typename iterator_traits<__remove_cvref_t<_Iter> >::difference_type __n = 1) {
     return std::prev(std::forward<_Iter>(__iter), __n);
   }
 

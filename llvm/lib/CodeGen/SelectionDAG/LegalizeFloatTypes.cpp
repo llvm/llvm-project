@@ -2748,39 +2748,47 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FCOPYSIGN(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FMAD(SDNode *N) {
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
   SDValue Op1 = GetSoftPromotedHalf(N->getOperand(1));
   SDValue Op2 = GetSoftPromotedHalf(N->getOperand(2));
   SDLoc dl(N);
 
   // Promote to the larger FP type.
-  Op0 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op0);
-  Op1 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op1);
-  Op2 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op2);
+  auto PromotionOpcode = GetPromotionOpcode(OVT, NVT);
+  Op0 = DAG.getNode(PromotionOpcode, dl, NVT, Op0);
+  Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
+  Op2 = DAG.getNode(PromotionOpcode, dl, NVT, Op2);
 
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1, Op2);
 
   // Convert back to FP16 as an integer.
-  return DAG.getNode(ISD::FP_TO_FP16, dl, MVT::i16, Res);
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FPOWI(SDNode *N) {
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
   SDValue Op1 = N->getOperand(1);
   SDLoc dl(N);
 
-  Op0 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op0);
+  // Promote to the larger FP type.
+  Op0 = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op0);
 
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1);
 
   // Convert back to FP16 as an integer.
-  return DAG.getNode(ISD::FP_TO_FP16, dl, MVT::i16, Res);
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
+  EVT RVT = N->getValueType(0);
+  EVT SVT = N->getOperand(0).getValueType();
+
   if (N->isStrictFPOpcode()) {
+    assert(RVT == MVT::f16);
     SDValue Res =
         DAG.getNode(ISD::STRICT_FP_TO_FP16, SDLoc(N), {MVT::i16, MVT::Other},
                     {N->getOperand(0), N->getOperand(1)});
@@ -2788,7 +2796,8 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FP_ROUND(SDNode *N) {
     return Res;
   }
 
-  return DAG.getNode(ISD::FP_TO_FP16, SDLoc(N), MVT::i16, N->getOperand(0));
+  return DAG.getNode(GetPromotionOpcode(SVT, RVT), SDLoc(N), MVT::i16,
+                     N->getOperand(0));
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_LOAD(SDNode *N) {
@@ -2823,13 +2832,14 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_SELECT_CC(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_XINT_TO_FP(SDNode *N) {
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDLoc dl(N);
 
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
 
   // Round the value to the softened type.
-  return DAG.getNode(ISD::FP_TO_FP16, dl, MVT::i16, Res);
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UNDEF(SDNode *N) {
@@ -2837,33 +2847,36 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UNDEF(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryOp(SDNode *N) {
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
   SDLoc dl(N);
 
   // Promote to the larger FP type.
-  Op = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op);
+  Op = DAG.getNode(GetPromotionOpcode(OVT, NVT), dl, NVT, Op);
 
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op);
 
   // Convert back to FP16 as an integer.
-  return DAG.getNode(ISD::FP_TO_FP16, dl, MVT::i16, Res);
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BinOp(SDNode *N) {
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
   SDValue Op1 = GetSoftPromotedHalf(N->getOperand(1));
   SDLoc dl(N);
 
   // Promote to the larger FP type.
-  Op0 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op0);
-  Op1 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op1);
+  auto PromotionOpcode = GetPromotionOpcode(OVT, NVT);
+  Op0 = DAG.getNode(PromotionOpcode, dl, NVT, Op0);
+  Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
 
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, Op0, Op1);
 
   // Convert back to FP16 as an integer.
-  return DAG.getNode(ISD::FP_TO_FP16, dl, MVT::i16, Res);
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE(SDNode *N) {
@@ -2947,22 +2960,27 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FCOPYSIGN(SDNode *N,
                                                       unsigned OpNo) {
   assert(OpNo == 1 && "Only Operand 1 must need promotion here");
   SDValue Op1 = N->getOperand(1);
+  EVT RVT = Op1.getValueType();
   SDLoc dl(N);
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op1.getValueType());
 
   Op1 = GetSoftPromotedHalf(Op1);
-  Op1 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op1);
+  Op1 = DAG.getNode(GetPromotionOpcode(RVT, NVT), dl, NVT, Op1);
 
   return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), N->getOperand(0),
                      Op1);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_EXTEND(SDNode *N) {
+  EVT RVT = N->getValueType(0);
   bool IsStrict = N->isStrictFPOpcode();
-  SDValue Op = GetSoftPromotedHalf(N->getOperand(IsStrict ? 1 : 0));
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
+  EVT SVT = Op.getValueType();
+  Op = GetSoftPromotedHalf(N->getOperand(IsStrict ? 1 : 0));
 
   if (IsStrict) {
+    assert(SVT == MVT::f16);
     SDValue Res =
         DAG.getNode(ISD::STRICT_FP16_TO_FP, SDLoc(N),
                     {N->getValueType(0), MVT::Other}, {N->getOperand(0), Op});
@@ -2971,31 +2989,35 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_EXTEND(SDNode *N) {
     return SDValue();
   }
 
-  return DAG.getNode(ISD::FP16_TO_FP, SDLoc(N), N->getValueType(0), Op);
+  return DAG.getNode(GetPromotionOpcode(SVT, RVT), SDLoc(N), RVT, Op);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT(SDNode *N) {
+  EVT RVT = N->getValueType(0);
   SDValue Op = N->getOperand(0);
+  EVT SVT = Op.getValueType();
   SDLoc dl(N);
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
 
   Op = GetSoftPromotedHalf(Op);
 
-  SDValue Res = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op);
+  SDValue Res = DAG.getNode(GetPromotionOpcode(SVT, RVT), dl, NVT, Op);
 
   return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N) {
+  EVT RVT = N->getValueType(0);
   SDValue Op = N->getOperand(0);
+  EVT SVT = Op.getValueType();
   SDLoc dl(N);
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType());
 
   Op = GetSoftPromotedHalf(Op);
 
-  SDValue Res = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op);
+  SDValue Res = DAG.getNode(GetPromotionOpcode(SVT, RVT), dl, NVT, Op);
 
   return DAG.getNode(N->getOpcode(), dl, N->getValueType(0), Res,
                      N->getOperand(1));
@@ -3008,14 +3030,16 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_SELECT_CC(SDNode *N,
   SDValue Op1 = N->getOperand(1);
   SDLoc dl(N);
 
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op0.getValueType());
+  EVT SVT = Op0.getValueType();
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), SVT);
 
   Op0 = GetSoftPromotedHalf(Op0);
   Op1 = GetSoftPromotedHalf(Op1);
 
   // Promote to the larger FP type.
-  Op0 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op0);
-  Op1 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op1);
+  auto PromotionOpcode = GetPromotionOpcode(SVT, NVT);
+  Op0 = DAG.getNode(PromotionOpcode, dl, NVT, Op0);
+  Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
 
   return DAG.getNode(ISD::SELECT_CC, SDLoc(N), N->getValueType(0), Op0, Op1,
                      N->getOperand(2), N->getOperand(3), N->getOperand(4));
@@ -3027,14 +3051,16 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_SETCC(SDNode *N) {
   ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(2))->get();
   SDLoc dl(N);
 
+  EVT SVT = Op0.getValueType();
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Op0.getValueType());
 
   Op0 = GetSoftPromotedHalf(Op0);
   Op1 = GetSoftPromotedHalf(Op1);
 
   // Promote to the larger FP type.
-  Op0 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op0);
-  Op1 = DAG.getNode(ISD::FP16_TO_FP, dl, NVT, Op1);
+  auto PromotionOpcode = GetPromotionOpcode(SVT, NVT);
+  Op0 = DAG.getNode(PromotionOpcode, dl, NVT, Op0);
+  Op1 = DAG.getNode(PromotionOpcode, dl, NVT, Op1);
 
   return DAG.getSetCC(SDLoc(N), N->getValueType(0), Op0, Op1, CCCode);
 }

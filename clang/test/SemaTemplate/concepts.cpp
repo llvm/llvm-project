@@ -256,3 +256,9 @@ C auto **j1 = g();   // expected-error {{deduced type 'int' does not satisfy 'C'
 C auto **&j2 = g();  // expected-error {{deduced type 'int' does not satisfy 'C'}}
 C auto **&&j3 = g(); // expected-error {{deduced type 'int' does not satisfy 'C'}}
 }
+
+namespace GH55567 {
+template<class, template <class> class> concept C = true;
+template <class> struct S {};
+void f(C<GH55567::S> auto);
+} // namespace GH55567

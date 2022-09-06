@@ -285,14 +285,6 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
               __FUNCTION__);
   }
 
-  const uint32_t gdb_event_mask = Communication::eBroadcastBitReadThreadDidExit;
-  if (m_async_listener_sp->StartListeningForEvents(
-          &m_gdb_comm, gdb_event_mask) != gdb_event_mask) {
-    LLDB_LOGF(log,
-              "ProcessGDBRemote::%s failed to listen for m_gdb_comm events",
-              __FUNCTION__);
-  }
-
   const uint64_t timeout_seconds =
       GetGlobalPluginProperties().GetPacketTimeout();
   if (timeout_seconds > 0)
@@ -3564,21 +3556,6 @@ thread_result_t ProcessGDBRemote::AsyncThread() {
                     "ProcessGDBRemote::%s(pid = %" PRIu64
                     ") got eBroadcastBitAsyncThreadShouldExit...",
                     __FUNCTION__, GetID());
-          done = true;
-          break;
-
-        default:
-          LLDB_LOGF(log,
-                    "ProcessGDBRemote::%s(pid = %" PRIu64
-                    ") got unknown event 0x%8.8x",
-                    __FUNCTION__, GetID(), event_type);
-          done = true;
-          break;
-        }
-      } else if (event_sp->BroadcasterIs(&m_gdb_comm)) {
-        switch (event_type) {
-        case Communication::eBroadcastBitReadThreadDidExit:
-          SetExitStatus(-1, "lost connection");
           done = true;
           break;
 

@@ -135,6 +135,9 @@ Improvements to Clang's diagnostics
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- It's now possible to set the crash diagnostics directory through
+  the environment variable ``CLANG_CRASH_DIAGNOSTICS_DIR``.
+  The ``-fcrash-diagnostics-dir`` flag takes precedence.
 
 New Compiler Flags
 ------------------
