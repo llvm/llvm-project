@@ -1100,6 +1100,11 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &DL = F.getParent()->getDataLayout();
   const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+
+  // Arm64EC has extra requirements for varargs calls; bail out for now.
+  if (Info.IsVarArg && Subtarget.isWindowsArm64EC())
+    return false;
 
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs) {
@@ -1153,7 +1158,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
 
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   unsigned Opc = 0;
   // Calls with operand bundle "clang.arc.attachedcall" are special. They should
   // be expanded to the call, directly followed by a special marker sequence and
