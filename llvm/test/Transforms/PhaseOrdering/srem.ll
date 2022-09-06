@@ -3,16 +3,13 @@
 ; RUN: opt -O2 -S < %s | FileCheck %s
 ; RUN: opt -O3 -S < %s | FileCheck %s
 
-; srem should be folded based on branch conditions
-; This can be done by IPSCCP or CVP.
-
 define i32 @PR57472(i32 noundef %x) {
 ; CHECK-LABEL: @PR57472(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[REM:%.*]] = and i32 [[X]], 15
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], i32 [[REM]], i32 42
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[X]], 16
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[REM]], i32 42
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:
   %x.addr = alloca i32, align 4
