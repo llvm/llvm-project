@@ -291,7 +291,7 @@ public:
 
   bool hasDivRemOp(Type *DataType, bool IsSigned) const { return false; }
 
-  bool maxLegalDivRemBitWidth() const {
+  unsigned maxLegalDivRemBitWidth() const {
     return llvm::IntegerType::MAX_INT_BITS;
   }
 
