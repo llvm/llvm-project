@@ -2333,9 +2333,9 @@ bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) {
 }
 
 bool CombinerHelper::matchInsertExtractVecEltOutOfBounds(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT ||
-         MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT &&
-             "Expected an insert/extract element op");
+  assert((MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT ||
+          MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) &&
+         "Expected an insert/extract element op");
   LLT VecTy = MRI.getType(MI.getOperand(1).getReg());
   unsigned IdxIdx =
       MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT ? 2 : 3;
