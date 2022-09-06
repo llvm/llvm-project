@@ -559,6 +559,18 @@ public:
                                       bool IsNonTemporal) const override;
 };
 
+class SIGfx12CacheControl : public SIGfx11CacheControl {
+public:
+  SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
+
+  bool insertWait(MachineBasicBlock::iterator &MI,
+                  SIAtomicScope Scope,
+                  SIAtomicAddrSpace AddrSpace,
+                  SIMemOp Op,
+                  bool IsCrossAddrSpaceOrdering,
+                  Position Pos) const override;
+};
+
 class SIMemoryLegalizer final : public MachineFunctionPass {
 private:
 
@@ -850,7 +862,9 @@ std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
     return std::make_unique<SIGfx7CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX11)
     return std::make_unique<SIGfx10CacheControl>(ST);
-  return std::make_unique<SIGfx11CacheControl>(ST);
+  if (Generation < AMDGPUSubtarget::GFX12)
+    return std::make_unique<SIGfx11CacheControl>(ST);
+  return std::make_unique<SIGfx12CacheControl>(ST);
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
@@ -2119,6 +2133,150 @@ bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
     Changed |= enableDLCBit(MI);
     return Changed;
   }
+
+  return Changed;
+}
+
+bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
+                                     SIAtomicScope Scope,
+                                     SIAtomicAddrSpace AddrSpace,
+                                     SIMemOp Op,
+                                     bool IsCrossAddrSpaceOrdering,
+                                     Position Pos) const {
+  // TODO-GFX12: GDS is not supported on GFX12, so it's an error if ever seen here.
+  // assert((AddrSpace & SIAtomicAddrSpace::GDS) != SIAtomicAddrSpace::NONE);
+
+  bool Changed = false;
+
+  MachineBasicBlock &MBB = *MI->getParent();
+  DebugLoc DL = MI->getDebugLoc();
+
+  bool LOADCnt = false;
+  bool DSCnt = false;
+  bool STORECnt = false;
+
+  if (Pos == Position::AFTER)
+    ++MI;
+
+  if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH)) !=
+      SIAtomicAddrSpace::NONE) {
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
+    case SIAtomicScope::AGENT:
+      if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
+        LOADCnt |= true;
+      if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
+        STORECnt |= true;
+      break;
+    case SIAtomicScope::WORKGROUP:
+      // In WGP mode the waves of a work-group can be executing on either CU of
+      // the WGP. Therefore need to wait for operations to complete to ensure
+      // they are visible to waves in the other CU as the L0 is per CU.
+      // Otherwise in CU mode and all waves of a work-group are on the same CU
+      // which shares the same L0.
+      if (!ST.isCuModeEnabled()) {
+        if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
+          LOADCnt |= true;
+        if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
+          STORECnt |= true;
+      }
+      break;
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // The L0 cache keeps all memory operations in order for
+      // work-items in the same wavefront.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
+    }
+  }
+
+  if ((AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
+    case SIAtomicScope::AGENT:
+    case SIAtomicScope::WORKGROUP:
+      // If no cross address space ordering then an "S_WAITCNT lgkmcnt(0)" is
+      // not needed as LDS operations for all waves are executed in a total
+      // global ordering as observed by all waves. Required if also
+      // synchronizing with global/GDS memory as LDS operations could be
+      // reordered with respect to later global/GDS memory operations of the
+      // same wave.
+      DSCnt |= IsCrossAddrSpaceOrdering;
+      break;
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // The LDS keeps all memory operations in order for
+      // the same wavefront.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
+    }
+  }
+
+  // TODO-GFX12: Remove this as part of general GDS support removal for gfx12
+  if ((AddrSpace & SIAtomicAddrSpace::GDS) != SIAtomicAddrSpace::NONE) {
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
+    case SIAtomicScope::AGENT:
+      // If no cross address space ordering then an GDS "S_WAITCNT lgkmcnt(0)"
+      // is not needed as GDS operations for all waves are executed in a total
+      // global ordering as observed by all waves. Required if also
+      // synchronizing with global/LDS memory as GDS operations could be
+      // reordered with respect to later global/LDS memory operations of the
+      // same wave.
+      DSCnt |= IsCrossAddrSpaceOrdering;
+      break;
+    case SIAtomicScope::WORKGROUP:
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // The GDS keeps all memory operations in order for
+      // the same work-group.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
+    }
+  }
+
+  if (LOADCnt) {
+    unsigned WaitFor = AMDGPU::S_WAIT_LOADCNT; // Default wait instruction.
+    const AMDGPU::MIMGBaseOpcodeInfo *Info = AMDGPU::getMIMGBaseOpcode(MI->getOpcode());
+
+    if (Info) {
+      if (Info->BVH)
+        WaitFor = AMDGPU::S_WAIT_BVHCNT;
+      else if (Info->Gather4 || Info->Sampler) // Does Gather4 imply Sampler?
+        WaitFor = AMDGPU::S_WAIT_SAMPLECNT;
+    }
+
+    if (WaitFor == AMDGPU::S_WAIT_LOADCNT && DSCnt) {
+      WaitFor = AMDGPU::S_WAIT_LOADCNT_DSCNT;
+      DSCnt = false;
+    }
+
+    BuildMI(MBB, MI, DL, TII->get(WaitFor)).addImm(0);
+    Changed = true;
+  }
+
+  if (STORECnt) {
+    unsigned WaitFor = AMDGPU::S_WAIT_STORECNT;
+
+    if (DSCnt) {
+      WaitFor = AMDGPU::S_WAIT_STORECNT_DSCNT;
+      DSCnt = false;
+    }
+
+    BuildMI(MBB, MI, DL, TII->get(WaitFor)).addImm(0);
+    Changed = true;
+  }
+
+  if (DSCnt) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DSCNT)).addImm(0);
+    Changed = true;
+  }
+
+  if (Pos == Position::AFTER)
+    --MI;
 
   return Changed;
 }
