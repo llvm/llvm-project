@@ -486,7 +486,7 @@ LogicalResult YieldOp::verify() {
 // Sparse Tensor Storage Operation.
 //===----------------------------------------------------------------------===//
 
-LogicalResult StorageNewOp::verify() {
+LogicalResult StorageOp::verify() {
   auto retTypes = getResult().getType().getTypes();
   if (retTypes.size() != getInputs().size())
     return emitError("The number of inputs is inconsistent with output tuple");
