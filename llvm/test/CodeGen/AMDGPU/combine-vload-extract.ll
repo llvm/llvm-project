@@ -9,15 +9,9 @@ define amdgpu_kernel void @vectorLoadCombine(<4 x i8>* %in, i32* %out) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_load_dword v2, v[0:1]
-; GCN-NEXT:    s_mov_b32 s0, 0x6050400
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_bfe_u32 v3, v2, 8, 8
-; GCN-NEXT:    v_and_b32_e32 v4, 0xff0000, v2
-; GCN-NEXT:    v_perm_b32 v3, v3, v2, s0
-; GCN-NEXT:    v_and_b32_e32 v2, 0xff000000, v2
-; GCN-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -84,10 +78,7 @@ define i32 @load_2xi16_combine(i16 addrspace(1)* %p) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off
-; GCN-NEXT:    s_mov_b32 s4, 0xffff
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
-; GCN-NEXT:    v_and_or_b32 v0, v0, s4, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 1
   %p.0 = load i16, i16 addrspace(1)* %p, align 4
@@ -162,8 +153,6 @@ define i64 @load_4xi16_combine(i16 addrspace(1)* %p) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v2, 0xffff0000, v1
-; GCN-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 1
   %gep.2p = getelementptr i16, i16 addrspace(1)* %p, i32 2
