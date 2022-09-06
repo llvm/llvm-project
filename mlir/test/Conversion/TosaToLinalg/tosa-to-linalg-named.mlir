@@ -405,7 +405,7 @@ func.func @conv2d_dyn_w_h(%input: tensor<1x?x?x27xf32>, %weights: tensor<28x3x3x
   // CHECK: %[[SUBTRACTED:.+]] = arith.subi %[[ADD_PAD_1]], %[[ADD_ONE]] : index
   // CHECK: %[[STRIDE_H:.+]] = arith.constant 1 : index
   // CHECK: %[[DIVIDED:.+]] = arith.divui %[[SUBTRACTED]], %[[STRIDE_H]] : index
-  // CHECK: %[[H_OUT:.+]] = arith.subi %[[DIVIDED]], %[[ONE]] : index
+  // CHECK: %[[H_OUT:.+]] = arith.addi %[[DIVIDED]], %[[ONE]] : index
 
   // Computing output width
   // CHECK: %[[C2:.+]] = arith.constant 2
@@ -424,7 +424,7 @@ func.func @conv2d_dyn_w_h(%input: tensor<1x?x?x27xf32>, %weights: tensor<28x3x3x
   // CHECK: %[[SUBTRACTED_0:.+]] = arith.subi %[[ADD_PAD_3]], %[[ADD_ONE_0]] : index
   // CHECK: %[[STRIDE_W:.+]] = arith.constant 1 : index
   // CHECK: %[[DIVIDED_0:.+]] = arith.divui %[[SUBTRACTED_0]], %[[STRIDE_W]] : index
-  // CHECK: %[[W_OUT:.+]] = arith.subi %[[DIVIDED_0]], %[[ONE_0]] : index
+  // CHECK: %[[W_OUT:.+]] = arith.addi %[[DIVIDED_0]], %[[ONE_0]] : index
 
   // Running convolution
   // CHECK: %[[PERM:.+]] = arith.constant dense<[1, 2, 3, 0]>
