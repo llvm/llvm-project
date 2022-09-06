@@ -997,6 +997,15 @@ public:
     if (ISelPosition == SelectionDAG::allnodes_iterator(N))
       ++ISelPosition;
   }
+
+  /// NodeInserted - Handle new nodes inserted into the graph: propagate
+  /// metadata from root nodes that also applies to new nodes, in case the root
+  /// is later deleted.
+  void NodeInserted(SDNode *N) override {
+    SDNode *CurNode = &*ISelPosition;
+    if (MDNode *MD = DAG.getPCSections(CurNode))
+      DAG.addPCSections(N, MD);
+  }
 };
 
 } // end anonymous namespace
@@ -1073,7 +1082,7 @@ void SelectionDAGISel::DoInstructionSelection() {
     ++ISelPosition;
 
     // Make sure that ISelPosition gets properly updated when nodes are deleted
-    // in calls made from this function.
+    // in calls made from this function. New nodes inherit relevant metadata.
     ISelUpdater ISU(*CurDAG, ISelPosition);
 
     // The AllNodes list is now topological-sorted. Visit the

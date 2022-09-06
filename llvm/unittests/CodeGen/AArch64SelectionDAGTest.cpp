@@ -601,11 +601,14 @@ TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
   SDValue N2 = DAG->getNode(ISD::SUB, Loc, IntVT, N0, N1);
   EXPECT_FALSE(DAG->getHeapAllocSite(N2.getNode()));
   EXPECT_FALSE(DAG->getNoMergeSiteInfo(N2.getNode()));
+  EXPECT_FALSE(DAG->getPCSections(N2.getNode()));
   MDNode *MD = MDNode::get(Context, None);
   DAG->addHeapAllocSite(N2.getNode(), MD);
   DAG->addNoMergeSiteInfo(N2.getNode(), true);
+  DAG->addPCSections(N2.getNode(), MD);
   EXPECT_EQ(DAG->getHeapAllocSite(N2.getNode()), MD);
   EXPECT_TRUE(DAG->getNoMergeSiteInfo(N2.getNode()));
+  EXPECT_EQ(DAG->getPCSections(N2.getNode()), MD);
 
   SDValue Root = DAG->getNode(ISD::ADD, Loc, IntVT, N2, N2);
   EXPECT_EQ(Root->getOperand(0)->getOpcode(), ISD::SUB);
@@ -613,11 +616,13 @@ TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
   SDValue New = DAG->getNode(ISD::ADD, Loc, IntVT, N1, N1);
   EXPECT_FALSE(DAG->getHeapAllocSite(New.getNode()));
   EXPECT_FALSE(DAG->getNoMergeSiteInfo(New.getNode()));
+  EXPECT_FALSE(DAG->getPCSections(New.getNode()));
 
   DAG->ReplaceAllUsesWith(N2, New);
   EXPECT_EQ(Root->getOperand(0), New);
   EXPECT_EQ(DAG->getHeapAllocSite(New.getNode()), MD);
   EXPECT_TRUE(DAG->getNoMergeSiteInfo(New.getNode()));
+  EXPECT_EQ(DAG->getPCSections(New.getNode()), MD);
 }
 
 } // end namespace llvm
