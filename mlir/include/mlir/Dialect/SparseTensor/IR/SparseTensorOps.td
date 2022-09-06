@@ -629,7 +629,7 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
 // sparse tensor codegen to progressively lower sparse tensors.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_StorageNewOp : SparseTensor_Op<"storage", []>,
+def SparseTensor_StorageOp : SparseTensor_Op<"storage", []>,
     Arguments<(ins Variadic<AnyType>:$inputs)>,
     Results<(outs AnyTuple:$result)> {
   let summary = "Pack a list of value into one sparse tensor storage value";

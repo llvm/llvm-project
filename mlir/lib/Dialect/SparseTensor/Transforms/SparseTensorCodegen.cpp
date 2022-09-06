@@ -174,7 +174,7 @@ static Value createTupleGet(OpBuilder &builder, Location loc, Value tuple,
 /// Creates tuple.
 static Value createTupleMake(OpBuilder &builder, Location loc, Type type,
                              ValueRange values) {
-  return builder.create<StorageNewOp>(loc, type, values);
+  return builder.create<StorageOp>(loc, type, values);
 }
 
 /// Create allocation operation.
