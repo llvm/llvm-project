@@ -4463,9 +4463,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsHostOffloadingAction =
-      (JA.isHostOffloading(Action::OFK_OpenMP) &&
-       Args.hasFlag(options::OPT_fopenmp_new_driver,
-                    options::OPT_no_offload_new_driver, true)) ||
+      JA.isHostOffloading(Action::OFK_OpenMP) ||
       (JA.isHostOffloading(C.getActiveOffloadKinds()) &&
        Args.hasFlag(options::OPT_offload_new_driver,
                     options::OPT_no_offload_new_driver, false));
@@ -4839,9 +4837,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
 
     if (IsUsingLTO) {
       // Only AMDGPU supports device-side LTO.
-      if (IsDeviceOffloadAction &&
-          !Args.hasFlag(options::OPT_fopenmp_new_driver,
-                        options::OPT_no_offload_new_driver, true) &&
+      if (IsDeviceOffloadAction && !JA.isHostOffloading(Action::OFK_OpenMP) &&
           !Args.hasFlag(options::OPT_offload_new_driver,
                         options::OPT_no_offload_new_driver, false) &&
           !Triple.isAMDGPU()) {
