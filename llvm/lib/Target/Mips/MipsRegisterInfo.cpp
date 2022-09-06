@@ -267,6 +267,11 @@ MipsRegisterInfo::requiresRegisterScavenging(const MachineFunction &MF) const {
   return true;
 }
 
+bool MipsRegisterInfo::isNeededForReturn(MCRegister PhysReg, const MachineFunction &MF) const {
+  return PhysReg == Mips::RA || PhysReg == Mips::RA_64 || PhysReg == Mips::RA_NM;
+}
+
+
 // FrameIndex represent objects inside a abstract stack.
 // We must replace FrameIndex with an stack/frame pointer
 // direct reference.

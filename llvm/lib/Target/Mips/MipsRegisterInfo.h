@@ -73,6 +73,8 @@ public:
   /// Return GPR register class.
   virtual const TargetRegisterClass *intRegClass(unsigned Size) const = 0;
 
+  virtual bool isNeededForReturn(MCRegister PhysReg, const MachineFunction &MF) const override;
+
 private:
   virtual void eliminateFI(MachineBasicBlock::iterator II, unsigned OpNo,
                            int FrameIndex, uint64_t StackSize,

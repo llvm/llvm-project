@@ -1990,9 +1990,6 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
 
   // Enable interprocedural register allocation by default on NanoMips
   if (Triple.isNanoMips()) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-enable-ipra");
-
     // Change inlining thresholds.
     if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
       if (A->getOption().matches(options::OPT_O)) {
