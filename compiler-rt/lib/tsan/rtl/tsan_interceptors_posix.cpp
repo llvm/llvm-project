@@ -3059,3 +3059,17 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_wait(
     FutexWait(barrier, cur);
   }
 }
+
+extern "C" {
+__attribute__((alias(SANITIZER_STRINGIFY(WRAP(memcpy))),
+               visibility("default"))) void *
+__tsan_memcpy(void *dst, const void *src, uptr size);
+
+__attribute__((alias(SANITIZER_STRINGIFY(WRAP(memset))),
+               visibility("default"))) void *
+__tsan_memset(void *dst, int c, uptr size);
+
+__attribute__((alias(SANITIZER_STRINGIFY(WRAP(memmove))),
+               visibility("default"))) void *
+__tsan_memmove(void *dst, const void *src, uptr size);
+}
