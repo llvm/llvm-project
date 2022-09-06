@@ -75,3 +75,5 @@ entry:
 ; CHECK-LABEL: @MaybeUninitializedRetNoUndef
 ; CONST: br i1 icmp ne (i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 undef> to <4 x i32>), i64 0), i32 0)
 ; CONST: call void @__msan_warning_with_origin_noreturn
+
+; CHECK: call void @__msan_init()
