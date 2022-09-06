@@ -1,6 +1,5 @@
-// RUN: mlir-opt %s --sparse-tensor-codegen  --canonicalize --cse | FileCheck %s --check-prefix=CHECK-CODEGEN
-// FIXME:
-// R_U_N: mlir-opt %s --sparse-tensor-codegen --sparse-tensor-storage-expansion --canonicalize --cse | FileCheck %s --check-prefix=CHECK-STORAGE
+// RUN: mlir-opt %s --sparse-tensor-codegen  --canonicalize --cse | FileCheck %s --check-prefixes=CHECK,CHECK-CODEGEN
+// RUN: mlir-opt %s --sparse-tensor-codegen --sparse-tensor-storage-expansion --canonicalize --cse | FileCheck %s --check-prefixes=CHECK,CHECK-STORAGE
 
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed" ],
@@ -263,43 +262,49 @@ func.func @sparse_dealloc_csr(%arg0: tensor<?x?xf64, #CSR>) {
   return
 }
 
-// CHECK-CODEGEN-LABEL: func @sparse_alloc_csc(
-//  CHECK-CODEGEN-SAME: %[[A:.*]]: index)
-//   CHECK-CODEGEN-DAG: %[[C0:.*]] = arith.constant 0 : index
-//   CHECK-CODEGEN-DAG: %[[C1:.*]] = arith.constant 1 : index
-//   CHECK-CODEGEN-DAG: %[[C10:.*]] = arith.constant 10 : index
-//      CHECK-CODEGEN:  %[[T0:.*]] = memref.alloc() : memref<2xindex>
-//      CHECK-CODEGEN:  memref.store %[[A]], %[[T0]][%[[C0]]] : memref<2xindex>
-//      CHECK-CODEGEN:  memref.store %[[C10]], %[[T0]][%[[C1]]] : memref<2xindex>
-//      CHECK-CODEGEN:  %[[T1:.*]] = memref.alloc() : memref<1xindex>
-//      CHECK-CODEGEN:  %[[T2:.*]] = memref.cast %[[T1]] : memref<1xindex> to memref<?xindex>
-//      CHECK-CODEGEN:  %[[T3:.*]] = memref.alloc() : memref<1xindex>
-//      CHECK-CODEGEN:  %[[T4:.*]] = memref.cast %[[T3]] : memref<1xindex> to memref<?xindex>
-//      CHECK-CODEGEN:  %[[T5:.*]] = memref.alloc() : memref<1xf64>
-//      CHECK-CODEGEN:  %[[T6:.*]] = memref.cast %[[T5]] : memref<1xf64> to memref<?xf64>
-//      CHECK-CODEGEN:  %[[T:.*]] = sparse_tensor.storage(%[[T0]], %[[T2]], %[[T4]], %[[T6]])
-//      CHECK-CODEGEN:  return %[[T]] : tuple<memref<2xindex>, memref<?xindex>, memref<?xindex>, memref<?xf64>>
+//        CHECK-LABEL: func @sparse_alloc_csc(
+//         CHECK-SAME: %[[A:.*]]: index) ->
+// CHECK-CODEGEN-SAME: tuple<memref<2xindex>, memref<?xindex>, memref<?xindex>, memref<?xf64>>
+// CHECK-STORAGE-SAME: memref<2xindex>, memref<?xindex>, memref<?xindex>, memref<?xf64>
+//          CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//          CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//          CHECK-DAG: %[[C10:.*]] = arith.constant 10 : index
+//              CHECK: %[[T0:.*]] = memref.alloc() : memref<2xindex>
+//              CHECK: memref.store %[[A]], %[[T0]][%[[C0]]] : memref<2xindex>
+//              CHECK: memref.store %[[C10]], %[[T0]][%[[C1]]] : memref<2xindex>
+//              CHECK: %[[T1:.*]] = memref.alloc() : memref<1xindex>
+//              CHECK: %[[T2:.*]] = memref.cast %[[T1]] : memref<1xindex> to memref<?xindex>
+//              CHECK: %[[T3:.*]] = memref.alloc() : memref<1xindex>
+//              CHECK: %[[T4:.*]] = memref.cast %[[T3]] : memref<1xindex> to memref<?xindex>
+//              CHECK: %[[T5:.*]] = memref.alloc() : memref<1xf64>
+//              CHECK: %[[T6:.*]] = memref.cast %[[T5]] : memref<1xf64> to memref<?xf64>
+//      CHECK-CODEGEN: %[[T:.*]] = sparse_tensor.storage(%[[T0]], %[[T2]], %[[T4]], %[[T6]])
+//      CHECK-CODEGEN: return %[[T]]
+//      CHECK-STORAGE: return %[[T0]], %[[T2]], %[[T4]], %[[T6]] 
 func.func @sparse_alloc_csc(%arg0: index) -> tensor<10x?xf64, #CSC> {
   %0 = bufferization.alloc_tensor(%arg0) : tensor<10x?xf64, #CSC>
   %1 = sparse_tensor.load %0 : tensor<10x?xf64, #CSC>
   return %1 : tensor<10x?xf64, #CSC>
 }
 
-// CHECK-CODEGEN-LABEL: func @sparse_alloc_3d() -> tuple<memref<3xindex>, memref<?xf64>>
-//   CHECK-CODEGEN-DAG: %[[C0:.*]] = arith.constant 0 : index
-//   CHECK-CODEGEN-DAG: %[[C1:.*]] = arith.constant 1 : index
-//   CHECK-CODEGEN-DAG: %[[C2:.*]] = arith.constant 2 : index
-//   CHECK-CODEGEN-DAG: %[[C10:.*]] = arith.constant 10 : index
-//   CHECK-CODEGEN-DAG: %[[C20:.*]] = arith.constant 20 : index
-//   CHECK-CODEGEN-DAG: %[[C30:.*]] = arith.constant 30 : index
-//       CHECK-CODEGEN: %[[A0:.*]] = memref.alloc() : memref<3xindex>
-//       CHECK-CODEGEN: memref.store %[[C30]], %[[A0]][%[[C0]]] : memref<3xindex>
-//       CHECK-CODEGEN: memref.store %[[C10]], %[[A0]][%[[C1]]] : memref<3xindex>
-//       CHECK-CODEGEN: memref.store %[[C20]], %[[A0]][%[[C2]]] : memref<3xindex>
-//       CHECK-CODEGEN: %[[A:.*]] = memref.alloc() : memref<6000xf64>
-//       CHECK-CODEGEN: %[[A1:.*]] = memref.cast %[[A]] : memref<6000xf64> to memref<?xf64>
-//       CHECK-CODEGEN: %[[T:.*]] = sparse_tensor.storage(%[[A0]], %[[A1]])
-//       CHECK-CODEGEN: return %[[T]] : tuple<memref<3xindex>, memref<?xf64>>
+//        CHECK-LABEL: func @sparse_alloc_3d() ->
+// CHECK-CODEGEN-SAME: tuple<memref<3xindex>, memref<?xf64>>
+// CHECK-STORAGE-SAME: memref<3xindex>, memref<?xf64>
+//          CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//          CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//          CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+//          CHECK-DAG: %[[C10:.*]] = arith.constant 10 : index
+//          CHECK-DAG: %[[C20:.*]] = arith.constant 20 : index
+//          CHECK-DAG: %[[C30:.*]] = arith.constant 30 : index
+//              CHECK: %[[A0:.*]] = memref.alloc() : memref<3xindex>
+//              CHECK: memref.store %[[C30]], %[[A0]][%[[C0]]] : memref<3xindex>
+//              CHECK: memref.store %[[C10]], %[[A0]][%[[C1]]] : memref<3xindex>
+//              CHECK: memref.store %[[C20]], %[[A0]][%[[C2]]] : memref<3xindex>
+//              CHECK: %[[A:.*]] = memref.alloc() : memref<6000xf64>
+//              CHECK: %[[A1:.*]] = memref.cast %[[A]] : memref<6000xf64> to memref<?xf64>
+//      CHECK-CODEGEN: %[[T:.*]] = sparse_tensor.storage(%[[A0]], %[[A1]])
+//      CHECK-CODEGEN: return %[[T]] : tuple<memref<3xindex>, memref<?xf64>>
+//      CHECK-STORAGE: return %[[A0]], %[[A1]] : memref<3xindex>, memref<?xf64>
 func.func @sparse_alloc_3d() -> tensor<10x20x30xf64, #Dense3D> {
   %0 = bufferization.alloc_tensor() : tensor<10x20x30xf64, #Dense3D>
   %1 = sparse_tensor.load %0 : tensor<10x20x30xf64, #Dense3D>
