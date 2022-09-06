@@ -140,9 +140,8 @@ def main():
         ir.AffineMap.get_permutation([0, 1]),
         ir.AffineMap.get_permutation([1, 0])
     ]
-    vec_strategy = [
-          'none', 'dense-inner-loop'
-        ]for level in levels:
+    vec_strategy = ['none', 'dense-inner-loop']
+    for level in levels:
       for ordering in orderings:
         for pwidth in [32]:
           for iwidth in [32]:
