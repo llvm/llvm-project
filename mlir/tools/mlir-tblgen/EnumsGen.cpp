@@ -134,25 +134,27 @@ getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {
 
 // Emits the following inline function for bit enums:
 //
-// inline <enum-type> operator|(<enum-type> a, <enum-type> b);
-// inline <enum-type> operator&(<enum-type> a, <enum-type> b);
-// inline <enum-type> bitEnumContains(<enum-type> a, <enum-type> b);
+// inline constexpr <enum-type> operator|(<enum-type> a, <enum-type> b);
+// inline constexpr <enum-type> operator&(<enum-type> a, <enum-type> b);
+// inline constexpr bool bitEnumContains(<enum-type> a, <enum-type> b);
 static void emitOperators(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
   std::string underlyingType = std::string(enumAttr.getUnderlyingType());
-  os << formatv("inline {0} operator|({0} lhs, {0} rhs) {{\n", enumName)
+  os << formatv("inline constexpr {0} operator|({0} lhs, {0} rhs) {{\n",
+                enumName)
      << formatv("  return static_cast<{0}>("
                 "static_cast<{1}>(lhs) | static_cast<{1}>(rhs));\n",
                 enumName, underlyingType)
      << "}\n";
-  os << formatv("inline {0} operator&({0} lhs, {0} rhs) {{\n", enumName)
+  os << formatv("inline constexpr {0} operator&({0} lhs, {0} rhs) {{\n",
+                enumName)
      << formatv("  return static_cast<{0}>("
                 "static_cast<{1}>(lhs) & static_cast<{1}>(rhs));\n",
                 enumName, underlyingType)
      << "}\n";
   os << formatv(
-            "inline bool bitEnumContains({0} bits, {0} bit) {{\n"
+            "inline constexpr bool bitEnumContains({0} bits, {0} bit) {{\n"
             "  return (static_cast<{1}>(bits) & static_cast<{1}>(bit)) != 0;\n",
             enumName, underlyingType)
      << "}\n";
