@@ -10,8 +10,8 @@
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext\
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext\
 // RUN: | FileCheck %s --dump-input=always
 
 // RUN:   mlir-opt %s -async-parallel-for                                      \
@@ -25,8 +25,8 @@
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext\
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext\
 // RUN: | FileCheck %s --dump-input=always
 
 // RUN:   mlir-opt %s -async-parallel-for="async-dispatch=false                \
@@ -43,8 +43,8 @@
 // RUN:               -reconcile-unrealized-casts                              \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:  -e entry -entry-point-result=void -O0                                 \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext\
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext\
 // RUN: | FileCheck %s --dump-input=always
 
 func.func @entry() {
