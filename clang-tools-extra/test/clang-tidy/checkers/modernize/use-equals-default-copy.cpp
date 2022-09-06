@@ -44,6 +44,20 @@ union NU {
   IL Field;
 };
 
+// Skip structs/classes containing anonymous unions.
+struct SU {
+  SU(const SU &Other) : Field(Other.Field) {}
+  // CHECK-FIXES: SU(const SU &Other) :
+  SU &operator=(const SU &Other) {
+    Field = Other.Field;
+    return *this;
+  }
+  // CHECK-FIXES: SU &operator=(const SU &Other) {
+  union {
+    IL Field;
+  };
+};
+
 // Wrong type.
 struct WT {
   WT(const IL &Other) {}

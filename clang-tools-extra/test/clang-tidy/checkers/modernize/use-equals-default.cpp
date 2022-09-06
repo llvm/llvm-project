@@ -42,6 +42,17 @@ union NU {
   NE Field;
 };
 
+// Skip structs/classes containing anonymous unions.
+struct SU {
+  SU() {}
+  // CHECK-FIXES: SU() {}
+  ~SU() {}
+  // CHECK-FIXES: ~SU() {}
+  union {
+    NE Field;
+  };
+};
+
 // Initializer or arguments.
 class IA {
 public:
