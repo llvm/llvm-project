@@ -56,6 +56,15 @@ static cl::opt<unsigned> OverrideVectorInsertExtractBaseCost(
     "aarch64-insert-extract-base-cost",
     cl::desc("Base cost of vector insert/extract element"), cl::Hidden);
 
+// Reserve a list of X# registers, so they are unavailable for register
+// allocator, but can still be used as ABI requests, such as passing arguments
+// to function call.
+static cl::list<std::string>
+ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
+                  "registers, so they can't be used by register allocator. "
+                  "Should only be used for testing register allocator."),
+                  cl::CommaSeparated, cl::Hidden);
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -265,6 +274,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
                                    unsigned MaxSVEVectorSizeInBitsOverride)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
+      ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
@@ -287,6 +297,14 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
       *static_cast<const AArch64TargetMachine *>(&TM), *this, *RBI));
 
   RegBankInfo.reset(RBI);
+
+  auto TRI = getRegisterInfo();
+  StringSet<> ReservedRegNames;
+  ReservedRegNames.insert(ReservedRegsForRA.begin(), ReservedRegsForRA.end());
+  for (unsigned i = 0; i < 31; ++i) {
+    if (ReservedRegNames.count(TRI->getName(AArch64::X0 + i)))
+      ReserveXRegisterForRA.set(i);
+  }
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
