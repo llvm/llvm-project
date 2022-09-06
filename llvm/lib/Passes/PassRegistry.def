@@ -119,7 +119,6 @@ MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("view-callgraph", CallGraphViewerPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
-MODULE_PASS("msan-module", ModuleMemorySanitizerPass({}))
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
@@ -154,6 +153,13 @@ MODULE_PASS_WITH_PARAMS("asan-module",
                         },
                         parseASanPassOptions,
                         "kernel")
+MODULE_PASS_WITH_PARAMS("msan",
+                        "ModuleMemorySanitizerPass",
+                        [](MemorySanitizerOptions Opts) {
+                          return ModuleMemorySanitizerPass(Opts);
+                        },
+                        parseMSanPassOptions,
+                        "recover;kernel;eager-checks;track-origins=N")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
@@ -420,13 +426,6 @@ FUNCTION_PASS_WITH_PARAMS("loop-unroll",
                           "no-profile-peeling;profile-peeling;"
                           "no-runtime;runtime;"
                           "no-upperbound;upperbound")
-FUNCTION_PASS_WITH_PARAMS("msan",
-                          "MemorySanitizerPass",
-                           [](MemorySanitizerOptions Opts) {
-                             return MemorySanitizerPass(Opts);
-                           },
-                          parseMSanPassOptions,
-                          "recover;kernel;eager-checks;track-origins=N")
 FUNCTION_PASS_WITH_PARAMS("simplifycfg",
                           "SimplifyCFGPass",
                            [](SimplifyCFGOptions Opts) {
