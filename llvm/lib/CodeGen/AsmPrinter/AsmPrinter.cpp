@@ -355,7 +355,8 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
 
 AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
-      OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)) {
+      OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
+      SM(*this) {
   VerboseAsm = OutStreamer->isVerboseAsm();
 }
 
@@ -2079,6 +2080,12 @@ bool AsmPrinter::doFinalization(Module &M) {
   if (auto *TS = OutStreamer->getTargetStreamer())
     TS->emitConstantPools();
 
+  // Emit Stack maps before any debug info. Mach-O requires that no data or
+  // text sections come after debug info has been emitted. This matters for
+  // stack maps as they are arbitrary data, and may even have a custom format
+  // through user plugins.
+  emitStackMaps();
+
   // Finalize debug and EH information.
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
@@ -3762,7 +3769,7 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
   report_fatal_error("no GCMetadataPrinter registered for GC: " + Twine(Name));
 }
 
-void AsmPrinter::emitStackMaps(StackMaps &SM) {
+void AsmPrinter::emitStackMaps() {
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");
   bool NeedsDefault = false;
