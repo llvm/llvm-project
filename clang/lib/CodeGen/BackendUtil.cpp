@@ -673,8 +673,8 @@ static void addSanitizers(const Triple &TargetTriple,
         Opts.Recover = CodeGenOpts.SanitizeRecover.has(Mask);
         Opts.UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
         Opts.UseAfterReturn = CodeGenOpts.getSanitizeAddressUseAfterReturn();
-        MPM.addPass(ModuleAddressSanitizerPass(
-            Opts, UseGlobalGC, UseOdrIndicator, DestructorKind));
+        MPM.addPass(AddressSanitizerPass(Opts, UseGlobalGC, UseOdrIndicator,
+                                         DestructorKind));
       }
     };
     ASanPass(SanitizerKind::Address, false);
