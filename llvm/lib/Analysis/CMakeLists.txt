@@ -18,7 +18,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
   endif()
 
   if (DEFINED LLVM_HAVE_TF_API)
-    if (DEFINED LLVM_HAVE_TFLITE)
+    if (LLVM_HAVE_TFLITE)
       build_proto(
         tensorflow/core/protobuf/error_codes
         tensorflow/core/example/feature
