@@ -2181,10 +2181,6 @@ Enable all Clang extensions for OpenMP directives and clauses
 
 Set rpath on OpenMP executables
 
-.. option:: -fopenmp-new-driver
-
-Use the new driver for OpenMP offloading.
-
 .. option:: -fopenmp-offload-mandatory
 
 Do not create a host fallback if offloading to the device fails.
