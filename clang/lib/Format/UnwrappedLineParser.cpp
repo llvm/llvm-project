@@ -3544,7 +3544,8 @@ void UnwrappedLineParser::parseConstraintExpression() {
       switch (FormatTok->Previous->Tok.getKind()) {
       case tok::coloncolon:  // Nested identifier.
       case tok::ampamp:      // Start of a function or variable for the
-      case tok::pipepipe:    // constraint expression.
+      case tok::pipepipe:    // constraint expression. (binary)
+      case tok::exclaim:     // The same as above, but unary.
       case tok::kw_requires: // Initial identifier of a requires clause.
       case tok::equal:       // Initial identifier of a concept declaration.
         break;

@@ -663,7 +663,13 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
   if (GV.isDeclarationForLinker())
     Check(!GV.hasComdat(), "Declaration may not be in a Comdat!", &GV);
 
+  if (GV.hasDLLExportStorageClass()) {
+    Check(GV.hasDefaultVisibility(),
+          "dllexport GlobalValue must have default visibility", &GV);
+  }
   if (GV.hasDLLImportStorageClass()) {
+    Check(GV.hasDefaultVisibility(),
+          "dllimport GlobalValue must have default visibility", &GV);
     Check(!GV.isDSOLocal(), "GlobalValue with DLLImport Storage is dso_local!",
           &GV);
 

@@ -85,6 +85,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// stack.
   int VarArgsStackIndex = 0;
 
+  /// Offset of start of varargs area for arguments passed on the stack.
+  unsigned VarArgsStackOffset = 0;
+
   /// FrameIndex for start of varargs area for arguments passed in
   /// general purpose registers.
   int VarArgsGPRIndex = 0;
@@ -328,6 +331,9 @@ public:
 
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
   void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
+
+  unsigned getVarArgsStackOffset() const { return VarArgsStackOffset; }
+  void setVarArgsStackOffset(unsigned Offset) { VarArgsStackOffset = Offset; }
 
   int getVarArgsGPRIndex() const { return VarArgsGPRIndex; }
   void setVarArgsGPRIndex(int Index) { VarArgsGPRIndex = Index; }

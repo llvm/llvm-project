@@ -9,10 +9,9 @@ load(":targets.bzl", "llvm_targets")
 load(":enum_targets_gen.bzl", "enum_targets_gen")
 load(":binary_alias.bzl", "binary_alias")
 
-package(
-    default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
-)
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
 
 exports_files(["LICENSE.TXT"])
 

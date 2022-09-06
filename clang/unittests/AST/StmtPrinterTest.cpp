@@ -232,15 +232,17 @@ TEST(StmtPrinter, TestCXXLamda) {
     "[](auto a, int b, auto c, int, auto) {\n"
     "}"));
 
-  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX2a,
-    "void A() {"
-    "  auto l = []<typename T1, class T2, int I,"
-    "              template<class, typename> class T3>"
-    "           (int a, auto, int, auto d) { };"
-    "}",
-    lambdaExpr(anything()).bind("id"),
-    "[]<typename T1, class T2, int I, template <class, typename> class T3>(int a, auto, int, auto d) {\n"
-    "}"));
+  ASSERT_TRUE(
+      PrintedStmtCXXMatches(StdVer::CXX20,
+                            "void A() {"
+                            "  auto l = []<typename T1, class T2, int I,"
+                            "              template<class, typename> class T3>"
+                            "           (int a, auto, int, auto d) { };"
+                            "}",
+                            lambdaExpr(anything()).bind("id"),
+                            "[]<typename T1, class T2, int I, template <class, "
+                            "typename> class T3>(int a, auto, int, auto d) {\n"
+                            "}"));
 }
 
 TEST(StmtPrinter, TestNoImplicitBases) {

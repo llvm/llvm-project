@@ -119,6 +119,13 @@ Returns:
   argument.
 )";
 
+static const char kOperationPrintBytecodeDocstring[] =
+    R"(Write the bytecode form of the operation to a file like object.
+
+Args:
+  file: The file like object to write to.
+)";
+
 static const char kOperationStrDunderDocstring[] =
     R"(Gets the assembly form of the operation with default options.
 
@@ -1020,6 +1027,14 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
                               accum.getUserData());
   mlirOpPrintingFlagsDestroy(flags);
+}
+
+void PyOperationBase::writeBytecode(py::object fileObject) {
+  PyOperation &operation = getOperation();
+  operation.checkValid();
+  PyFileAccumulator accum(fileObject, /*binary=*/true);
+  mlirOperationWriteBytecode(operation, accum.getCallback(),
+                             accum.getUserData());
 }
 
 py::object PyOperationBase::getAsm(bool binary,
@@ -2627,6 +2642,8 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("print_generic_op_form") = false,
            py::arg("use_local_scope") = false,
            py::arg("assume_verified") = false, kOperationPrintDocstring)
+      .def("write_bytecode", &PyOperationBase::writeBytecode, py::arg("file"),
+           kOperationPrintBytecodeDocstring)
       .def("get_asm", &PyOperationBase::getAsm,
            // Careful: Lots of arguments must match up with get_asm method.
            py::arg("binary") = false,

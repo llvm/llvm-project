@@ -521,6 +521,11 @@ MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
                                                     MlirStringCallback callback,
                                                     void *userData);
 
+/// Same as mlirOperationPrint but writing the bytecode format out.
+MLIR_CAPI_EXPORTED void mlirOperationWriteBytecode(MlirOperation op,
+                                                   MlirStringCallback callback,
+                                                   void *userData);
+
 /// Prints an operation to stderr.
 MLIR_CAPI_EXPORTED void mlirOperationDump(MlirOperation op);
 

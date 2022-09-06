@@ -1223,6 +1223,16 @@ inline unsigned hashSysV(StringRef SymbolName) {
   return h;
 }
 
+/// This function returns the hash value for a symbol in the .dynsym section
+/// for the GNU hash table. The implementation is defined in the GNU hash ABI.
+/// REF : https://sourceware.org/git/?p=binutils-gdb.git;a=blob;f=bfd/elf.c#l222
+inline uint32_t hashGnu(StringRef Name) {
+  uint32_t H = 5381;
+  for (uint8_t C : Name)
+    H = (H << 5) + H + C;
+  return H;
+}
+
 } // end namespace object
 } // end namespace llvm
 

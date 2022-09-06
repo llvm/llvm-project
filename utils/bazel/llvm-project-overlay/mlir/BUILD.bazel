@@ -17,8 +17,9 @@ load(
 package(
     default_visibility = ["//visibility:public"],
     features = ["layering_check"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 exports_files([
     "LICENSE.TXT",
@@ -397,6 +398,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":AsmParser",
+        ":BytecodeWriter",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":InferTypeOpInterface",

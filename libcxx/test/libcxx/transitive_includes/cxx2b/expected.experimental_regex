@@ -21,7 +21,6 @@ experimental/utility
 initializer_list
 iosfwd
 limits
-memory
 mutex
 new
 ratio
