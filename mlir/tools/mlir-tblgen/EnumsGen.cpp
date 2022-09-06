@@ -136,28 +136,42 @@ getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {
 //
 // inline constexpr <enum-type> operator|(<enum-type> a, <enum-type> b);
 // inline constexpr <enum-type> operator&(<enum-type> a, <enum-type> b);
-// inline constexpr bool bitEnumContains(<enum-type> a, <enum-type> b);
+// inline constexpr <enum-type> operator^(<enum-type> a, <enum-type> b);
+// inline constexpr <enum-type> operator~(<enum-type> bits);
+// inline constexpr bool bitEnumContains(<enum-type> bits, <enum-type> bit);
+// inline constexpr <enum-type> bitEnumClear(<enum-type> bits, <enum-type> bit);
+// inline constexpr <enum-type> bitEnumSet(<enum-type> bits, <enum-type> bit,
+// bool value=true);
 static void emitOperators(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
   std::string underlyingType = std::string(enumAttr.getUnderlyingType());
-  os << formatv("inline constexpr {0} operator|({0} lhs, {0} rhs) {{\n",
-                enumName)
-     << formatv("  return static_cast<{0}>("
-                "static_cast<{1}>(lhs) | static_cast<{1}>(rhs));\n",
-                enumName, underlyingType)
-     << "}\n";
-  os << formatv("inline constexpr {0} operator&({0} lhs, {0} rhs) {{\n",
-                enumName)
-     << formatv("  return static_cast<{0}>("
-                "static_cast<{1}>(lhs) & static_cast<{1}>(rhs));\n",
-                enumName, underlyingType)
-     << "}\n";
-  os << formatv(
-            "inline constexpr bool bitEnumContains({0} bits, {0} bit) {{\n"
-            "  return (static_cast<{1}>(bits) & static_cast<{1}>(bit)) != 0;\n",
-            enumName, underlyingType)
-     << "}\n";
+  int64_t validBits = enumDef.getValueAsInt("validBits");
+  const char *const operators = R"(
+inline constexpr {0} operator|({0} a, {0} b) {{
+  return static_cast<{0}>(static_cast<{1}>(a) | static_cast<{1}>(b));
+}
+inline constexpr {0} operator&({0} a, {0} b) {{
+  return static_cast<{0}>(static_cast<{1}>(a) & static_cast<{1}>(b));
+}
+inline constexpr {0} operator^({0} a, {0} b) {{
+  return static_cast<{0}>(static_cast<{1}>(a) ^ static_cast<{1}>(b));
+}
+inline constexpr {0} operator~({0} bits) {{
+  // Ensure only bits that can be present in the enum are set
+  return static_cast<{0}>(~static_cast<{1}>(bits) & static_cast<{1}>({2}u));
+}
+inline constexpr bool bitEnumContains({0} bits, {0} bit) {{
+  return (bits & bit) == bit;
+}
+inline constexpr {0} bitEnumClear({0} bits, {0} bit) {{
+  return bits & ~bit;
+}
+inline constexpr {0} bitEnumSet({0} bits, {0} bit, /*optional*/bool value=true) {{
+  return value ? (bits | bit) : bitEnumClear(bits, bit);
+}
+  )";
+  os << formatv(operators, enumName, underlyingType, validBits);
 }
 
 static void emitSymToStrFnForIntEnum(const Record &enumDef, raw_ostream &os) {
@@ -424,13 +438,9 @@ static void emitUnderlyingToSymFnForBitEnum(const Record &enumDef,
     os << formatv("  if (value == 0) return {0}::{1};\n\n", enumName,
                   makeIdentifier(allBitsUnsetCase->getSymbol()));
   }
-  llvm::SmallVector<std::string, 8> values;
-  for (const auto &enumerant : enumerants) {
-    if (auto val = enumerant.getValue())
-      values.push_back(std::string(formatv("{0}u", val)));
-  }
-  os << formatv("  if (value & ~static_cast<{0}>({1})) return llvm::None;\n",
-                underlyingType, llvm::join(values, " | "));
+  int64_t validBits = enumDef.getValueAsInt("validBits");
+  os << formatv("  if (value & ~static_cast<{0}>({1}u)) return llvm::None;\n",
+                underlyingType, validBits);
   os << formatv("  return static_cast<{0}>(value);\n", enumName);
   os << "}\n";
 }
