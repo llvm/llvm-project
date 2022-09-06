@@ -27,13 +27,13 @@ def SPV_KHRAssumeTrueOp : SPV_KhrVendorOp<"AssumeTrue", []> {
     <!-- End of AutoGen section -->
 
     ```
-    assumetruekhr-op ::= `spv.AssumeTrueKHR` ssa-use
+    assumetruekhr-op ::= `spv.KHR.AssumeTrue` ssa-use
     ```mlir
 
     #### Example:
 
     ```
-    spv.AssumeTrueKHR %arg
+    spv.KHR.AssumeTrue %arg
     ```
   }];
 

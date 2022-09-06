@@ -290,14 +290,14 @@ def SPV_EXTAtomicFAddOp : SPV_ExtVendorOp<"AtomicFAdd", []> {
 
     ```
     atomic-fadd-op ::=
-        `spv.AtomicFAddEXT` scope memory-semantics
+        `spv.EXT.AtomicFAdd` scope memory-semantics
                             ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicFAddEXT "Device" "None" %pointer, %value :
+    %0 = spv.EXT.AtomicFAdd "Device" "None" %pointer, %value :
                            !spv.ptr<f32, StorageBuffer>
     ```mlir
   }];

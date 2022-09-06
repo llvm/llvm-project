@@ -1,12 +1,12 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
-// spv.SubgroupBallotKHR
+// spv.KHR.SubgroupBallot
 //===----------------------------------------------------------------------===//
 
 func.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
-  // CHECK: %{{.*}} = spv.SubgroupBallotKHR %{{.*}} : vector<4xi32>
-  %0 = spv.SubgroupBallotKHR %predicate: vector<4xi32>
+  // CHECK: %{{.*}} = spv.KHR.SubgroupBallot %{{.*}} : vector<4xi32>
+  %0 = spv.KHR.SubgroupBallot %predicate: vector<4xi32>
   return %0: vector<4xi32>
 }
 
@@ -65,50 +65,50 @@ func.func @group_broadcast_negative_locid_vec4(%value: f32, %localid: vector<4xi
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.SubgroupBallotKHR
+// spv.KHR.SubgroupBallot
 //===----------------------------------------------------------------------===//
 
 func.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
-  %0 = spv.SubgroupBallotKHR %predicate: vector<4xi32>
+  %0 = spv.KHR.SubgroupBallot %predicate: vector<4xi32>
   return %0: vector<4xi32>
 }
 
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.SubgroupBlockReadINTEL
+// spv.INTEL.SubgroupBlockRead
 //===----------------------------------------------------------------------===//
 
 func.func @subgroup_block_read_intel(%ptr : !spv.ptr<i32, StorageBuffer>) -> i32 {
-  // CHECK: spv.SubgroupBlockReadINTEL %{{.*}} : i32
-  %0 = spv.SubgroupBlockReadINTEL "StorageBuffer" %ptr : i32
+  // CHECK: spv.INTEL.SubgroupBlockRead %{{.*}} : i32
+  %0 = spv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : i32
   return %0: i32
 }
 
 // -----
 
 func.func @subgroup_block_read_intel_vector(%ptr : !spv.ptr<i32, StorageBuffer>) -> vector<3xi32> {
-  // CHECK: spv.SubgroupBlockReadINTEL %{{.*}} : vector<3xi32>
-  %0 = spv.SubgroupBlockReadINTEL "StorageBuffer" %ptr : vector<3xi32>
+  // CHECK: spv.INTEL.SubgroupBlockRead %{{.*}} : vector<3xi32>
+  %0 = spv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : vector<3xi32>
   return %0: vector<3xi32>
 }
 
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.SubgroupBlockWriteINTEL
+// spv.INTEL.SubgroupBlockWrite
 //===----------------------------------------------------------------------===//
 
 func.func @subgroup_block_write_intel(%ptr : !spv.ptr<i32, StorageBuffer>, %value: i32) -> () {
-  // CHECK: spv.SubgroupBlockWriteINTEL %{{.*}}, %{{.*}} : i32
-  spv.SubgroupBlockWriteINTEL "StorageBuffer" %ptr, %value : i32
+  // CHECK: spv.INTEL.SubgroupBlockWrite %{{.*}}, %{{.*}} : i32
+  spv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : i32
   return
 }
 
 // -----
 
 func.func @subgroup_block_write_intel_vector(%ptr : !spv.ptr<i32, StorageBuffer>, %value: vector<3xi32>) -> () {
-  // CHECK: spv.SubgroupBlockWriteINTEL %{{.*}}, %{{.*}} : vector<3xi32>
-  spv.SubgroupBlockWriteINTEL "StorageBuffer" %ptr, %value : vector<3xi32>
+  // CHECK: spv.INTEL.SubgroupBlockWrite %{{.*}}, %{{.*}} : vector<3xi32>
+  spv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : vector<3xi32>
   return
 }
