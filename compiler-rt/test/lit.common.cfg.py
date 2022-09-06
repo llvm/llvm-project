@@ -538,9 +538,12 @@ def is_binutils_lto_supported():
   # We require both ld.bfd and ld.gold exist and support plugins. They are in
   # the same repository 'binutils-gdb' and usually built together.
   for exe in (config.gnu_ld_executable, config.gold_executable):
-    ld_cmd = subprocess.Popen([exe, '--help'], stdout=subprocess.PIPE, env={'LANG': 'C'})
-    ld_out = ld_cmd.stdout.read().decode()
-    ld_cmd.wait()
+    try:
+      ld_cmd = subprocess.Popen([exe, '--help'], stdout=subprocess.PIPE, env={'LANG': 'C'})
+      ld_out = ld_cmd.stdout.read().decode()
+      ld_cmd.wait()
+    except OSError:
+      return False
     if not '-plugin' in ld_out:
       return False
 
