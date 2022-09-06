@@ -341,13 +341,13 @@ void ThreadSanitizer::initialize(Module &M) {
   }
 
   MemmoveFn =
-      M.getOrInsertFunction("__tsan_memmove", Attr, IRB.getInt8PtrTy(),
+      M.getOrInsertFunction("memmove", Attr, IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
   MemcpyFn =
-      M.getOrInsertFunction("__tsan_memcpy", Attr, IRB.getInt8PtrTy(),
+      M.getOrInsertFunction("memcpy", Attr, IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IntptrTy);
   MemsetFn =
-      M.getOrInsertFunction("__tsan_memset", Attr, IRB.getInt8PtrTy(),
+      M.getOrInsertFunction("memset", Attr, IRB.getInt8PtrTy(),
                             IRB.getInt8PtrTy(), IRB.getInt32Ty(), IntptrTy);
 }
 
