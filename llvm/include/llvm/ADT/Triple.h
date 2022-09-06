@@ -142,6 +142,7 @@ public:
     ARMSubArch_v4t,
 
     AArch64SubArch_arm64e,
+    AArch64SubArch_arm64ec,
 
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
@@ -581,6 +582,12 @@ public:
   bool isWindowsMSVCEnvironment() const {
     return isKnownWindowsMSVCEnvironment() ||
            (isOSWindows() && getEnvironment() == Triple::UnknownEnvironment);
+  }
+
+  // Checks if we're using the Windows Arm64EC ABI.
+  bool isWindowsArm64EC() const {
+    return getArch() == Triple::aarch64 &&
+           getSubArch() == Triple::AArch64SubArch_arm64ec;
   }
 
   bool isWindowsCoreCLREnvironment() const {

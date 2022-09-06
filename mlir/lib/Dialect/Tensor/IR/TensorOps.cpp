@@ -17,8 +17,11 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/StringRef.h"
+#include <algorithm>
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -541,6 +544,89 @@ struct ExtractElementFromIndexCast
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add<ExtractElementFromIndexCast>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// GatherOp
+//===----------------------------------------------------------------------===//
+
+/// Return the inferred result type for a gatherOp where:
+///   - sourceType is the type of the source tensor gathered from
+///   - indicesType is the type of the indices used to gather
+///   - gatherDims are the dims along which the gather occurs.
+/// Return a full rank or ranked-reduced variant of the type depending on
+/// the value of rankReduced.
+///
+/// The leading dimensions of the index tensor give the result tensor its
+/// leading dimensions.
+/// The trailing dimensions of the result tensor are obtained from the source
+/// tensor by setting the dimensions specified in gather_dims to `1` (if
+/// rankedReduced is false), or skipping them (otherwise).
+RankedTensorType GatherOp::inferResultType(RankedTensorType sourceType,
+                                           RankedTensorType indicesType,
+                                           ArrayRef<int64_t> gatherDims,
+                                           bool rankReduced) {
+  SmallVector<int64_t> resultShape(indicesType.getShape().drop_back());
+  resultShape.reserve(resultShape.size() + sourceType.getRank());
+  for (int64_t idx : llvm::seq<int64_t>(0, sourceType.getRank())) {
+    if (std::binary_search(gatherDims.begin(), gatherDims.end(), idx)) {
+      if (!rankReduced)
+        resultShape.push_back(1);
+      continue;
+    }
+    resultShape.push_back(sourceType.getDimSize(idx));
+  }
+  return RankedTensorType::Builder(sourceType).setShape(resultShape);
+}
+
+static LogicalResult
+verifyGatherOrScatterDims(Operation *op, ArrayRef<int64_t> dims, int64_t rank,
+                          StringRef gatherOrScatter, StringRef sourceOrDest) {
+  if (dims.empty())
+    return op->emitOpError(gatherOrScatter) << "_dims must be non-empty";
+
+  int64_t numGatherDims = dims.size();
+  if (numGatherDims > rank)
+    return op->emitOpError(gatherOrScatter)
+           << "_dims overflow " << sourceOrDest << " rank";
+  for (int64_t val : dims) {
+    if (val < 0)
+      return op->emitOpError(gatherOrScatter)
+             << "_dims value must be non-negative";
+    if (val >= rank)
+      return op->emitOpError(gatherOrScatter)
+             << "_dims value must be smaller than " << sourceOrDest << " rank";
+  }
+  for (int64_t i = 1; i < numGatherDims; ++i) {
+    if (dims[i - 1] >= dims[i])
+      return op->emitOpError(gatherOrScatter)
+             << "_dims values must be strictly increasing";
+  }
+  return success();
+}
+
+LogicalResult GatherOp::verify() {
+  int64_t sourceRank = getSourceType().getRank();
+  ArrayRef<int64_t> gatherDims = getGatherDims();
+  if (failed(verifyGatherOrScatterDims(getOperation(), gatherDims, sourceRank,
+                                       "gather", "source")))
+    return failure();
+
+  RankedTensorType expectedResultType = GatherOp::inferResultType(
+      getSourceType(), getIndicesType(), gatherDims, /*rankReduced=*/false);
+  RankedTensorType expectedRankReducedResultType = GatherOp::inferResultType(
+      getSourceType(), getIndicesType(), gatherDims, /*rankReduced=*/true);
+  if (getResultType() != expectedResultType &&
+      getResultType() != expectedRankReducedResultType) {
+    return emitOpError("result type "
+                       "mismatch: "
+                       "expected ")
+           << expectedResultType << " or its rank-reduced variant "
+           << expectedRankReducedResultType << " (got: " << getResultType()
+           << ")";
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2304,6 +2390,42 @@ void ParallelInsertSliceOp::getCanonicalizationPatterns(
   results.add<InsertSliceOpConstantArgumentFolder<ParallelInsertSliceOp>,
               InsertSliceOpCastFolder<ParallelInsertSliceOp>,
               InsertSliceOpSourceCastInserter<ParallelInsertSliceOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// ScatterOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ScatterOp::verify() {
+  int64_t destRank = getDestType().getRank();
+  ArrayRef<int64_t> scatterDims = getScatterDims();
+  if (failed(verifyGatherOrScatterDims(getOperation(), scatterDims, destRank,
+                                       "scatter", "dest")))
+    return failure();
+
+  if (!getUnique())
+    return emitOpError("requires 'unique' attribute to be set");
+  // TODO: we could also check statically that there are fewer leading index
+  // tensor dims than the dest dims. If this is not the case, the unique
+  // attribute cannot be true.
+
+  // Use the GatherOp::inferResultType on the `dest` type and verify the
+  // expected type matches the source type.
+  RankedTensorType expectedSourceType = GatherOp::inferResultType(
+      getDestType(), getIndicesType(), scatterDims, /*rankReduced=*/false);
+  RankedTensorType expectedRankReducedSourceType = GatherOp::inferResultType(
+      getDestType(), getIndicesType(), scatterDims, /*rankReduced=*/true);
+  if (getSourceType() != expectedSourceType &&
+      getSourceType() != expectedRankReducedSourceType) {
+    return emitOpError("source type "
+                       "mismatch: "
+                       "expected ")
+           << expectedSourceType << " or its rank-reduced variant "
+           << expectedRankReducedSourceType << " (got: " << getSourceType()
+           << ")";
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

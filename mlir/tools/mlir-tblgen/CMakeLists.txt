@@ -9,7 +9,6 @@ add_tablegen(mlir-tblgen MLIR
   EXPORT MLIR
   AttrOrTypeDefGen.cpp
   AttrOrTypeFormatGen.cpp
-  CodeGenHelpers.cpp
   DialectGen.cpp
   DirectiveCommonGen.cpp
   EnumsGen.cpp

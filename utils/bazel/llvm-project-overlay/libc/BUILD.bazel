@@ -10,8 +10,9 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 package(
     default_visibility = ["//visibility:public"],
     features = ["-use_header_modules"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 # This empty root library helps us add an include path to this directory
 # using the 'includes' attribute. The strings listed in the includes attribute

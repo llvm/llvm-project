@@ -18,7 +18,7 @@ int main() {
 
   // Positive tests.
   uint8_t t0 = (int32_t)(-1);
-// CHECK: implicit-conversion
+// CHECK: implicit-conversion by 0x{{[[:xdigit:]]+$}}
 // CHECK-NOT: implicit-conversion
 
   return 0;

@@ -1066,6 +1066,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       return llvm::None;
     unsigned NewIndex = *IndexOptional;
 
+    if (NewIndex >= TheCall->getNumArgs())
+      return llvm::None;
+
     const Expr *ObjArg = TheCall->getArg(NewIndex);
     uint64_t Result;
     if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
