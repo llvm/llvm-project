@@ -518,7 +518,7 @@ static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
   InternalScopedString s;
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
     s.append("%s", row == center_row_beg ? "=>" : "  ");
-    s.append("%p:", (void *)row);
+    s.append("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
     for (uptr i = 0; i < row_len; i++) {
       s.append("%s", row + i == tag_ptr ? "[" : " ");
       print_tag(s, &row[i]);
