@@ -240,7 +240,7 @@ ConvertToSubgroupBallot::matchAndRewrite(Operation *op,
                                          PatternRewriter &rewriter) const {
   Value predicate = op->getOperand(0);
 
-  rewriter.replaceOpWithNewOp<spirv::SubgroupBallotKHROp>(
+  rewriter.replaceOpWithNewOp<spirv::KHRSubgroupBallotOp>(
       op, op->getResult(0).getType(), predicate);
   return success();
 }

@@ -92,7 +92,7 @@ def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
 
 // -----
 
-def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
+def SPV_KHRSubgroupBallotOp : SPV_KhrVendorOp<"SubgroupBallot", []> {
   let summary = "See extension SPV_KHR_shader_ballot";
 
   let description = [{
@@ -146,7 +146,7 @@ def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
 
 // -----
 
-def SPV_SubgroupBlockReadINTELOp : SPV_Op<"SubgroupBlockReadINTEL", []> {
+def SPV_INTELSubgroupBlockReadOp : SPV_IntelVendorOp<"SubgroupBlockRead", []> {
   let summary = "See extension SPV_INTEL_subgroups";
 
   let description = [{
@@ -197,7 +197,7 @@ def SPV_SubgroupBlockReadINTELOp : SPV_Op<"SubgroupBlockReadINTEL", []> {
 
 // -----
 
-def SPV_SubgroupBlockWriteINTELOp : SPV_Op<"SubgroupBlockWriteINTEL", []> {
+def SPV_INTELSubgroupBlockWriteOp : SPV_IntelVendorOp<"SubgroupBlockWrite", []> {
   let summary = "See extension SPV_INTEL_subgroups";
 
   let description = [{
