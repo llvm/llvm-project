@@ -3517,19 +3517,17 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
               arg.c_str());
   }
 
-  if (!argv.empty()) {
-    m_process_launch_info.GetExecutableFile().SetFile(
-        m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
-    m_process_launch_error = LaunchProcess();
-    if (m_process_launch_error.Success()) {
-      assert(m_current_process);
-      return SendStopReasonForState(*m_current_process,
-                                    m_current_process->GetState(),
-                                    /*force_synchronous=*/true);
-    }
-    LLDB_LOG(log, "failed to launch exe: {0}", m_process_launch_error);
-  }
-  return SendErrorResponse(8);
+  if (argv.empty())
+    return SendErrorResponse(Status("No arguments"));
+  m_process_launch_info.GetExecutableFile().SetFile(
+      m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
+  m_process_launch_error = LaunchProcess();
+  if (m_process_launch_error.Fail())
+    return SendErrorResponse(m_process_launch_error);
+  assert(m_current_process);
+  return SendStopReasonForState(*m_current_process,
+                                m_current_process->GetState(),
+                                /*force_synchronous=*/true);
 }
 
 GDBRemoteCommunication::PacketResult
