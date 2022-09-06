@@ -23,7 +23,6 @@ iosfwd
 istream
 limits
 locale
-memory
 mutex
 new
 ostream

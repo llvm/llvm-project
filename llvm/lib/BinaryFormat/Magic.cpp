@@ -238,6 +238,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::dxcontainer_object;
     break;
 
+  case 0x41: // ARM64EC windows
+    if (Magic[1] == char(0xA6))
+      return file_magic::coff_object;
+    break;
+
   default:
     break;
   }

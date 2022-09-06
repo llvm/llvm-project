@@ -193,6 +193,7 @@ struct OneShotBufferizePass
       opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
+      opt.copyBeforeWrite = copyBeforeWrite;
       opt.createDeallocs = createDeallocs;
       opt.functionBoundaryTypeConversion =
           parseLayoutMapOption(functionBoundaryTypeConversion);

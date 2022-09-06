@@ -14,6 +14,7 @@ llvm_add_library(MLIRTableGen STATIC
   AttrOrTypeDef.cpp
   Builder.cpp
   Class.cpp
+  CodeGenHelpers.cpp
   Constraint.cpp
   Dialect.cpp
   Format.cpp

@@ -260,3 +260,22 @@ func.func @test_splat_op(%s : f32) {
   %u = "tensor.splat"(%s) : (f32) -> tensor<4xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @gather_scatter
+func.func @gather_scatter(
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x3x2xindex>, %indices_i32: tensor<1x3x2xi32>) {
+  %gathered = tensor.gather %dest[%indices_i32] gather_dims([1, 2]) unique:
+    (tensor<4x5x6xf32>, tensor<1x3x2xi32>) -> tensor<1x3x4x1x1xf32>
+  %rank_reduced_gathered = tensor.gather %dest[%indices] gather_dims([1, 2]) unique:
+    (tensor<4x5x6xf32>, tensor<1x3x2xindex>) -> tensor<1x3x4xf32>
+
+  %scattered = tensor.scatter %gathered into %dest[%indices] 
+      scatter_dims([1, 2]) unique:
+    (tensor<1x3x4x1x1xf32>, tensor<4x5x6xf32>, tensor<1x3x2xindex>) -> tensor<4x5x6xf32>
+  %rank_reduced_scattered = tensor.scatter %rank_reduced_gathered into %dest[%indices_i32] 
+      scatter_dims([1, 2]) unique:
+    (tensor<1x3x4xf32>, tensor<4x5x6xf32>, tensor<1x3x2xi32>) -> tensor<4x5x6xf32>
+  return
+}

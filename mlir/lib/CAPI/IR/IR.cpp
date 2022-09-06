@@ -10,6 +10,7 @@
 #include "mlir-c/Support.h"
 
 #include "mlir/AsmParser/AsmParser.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
@@ -23,7 +24,6 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
 
-#include "llvm/Support/Debug.h"
 #include <cstddef>
 
 using namespace mlir;
@@ -483,6 +483,12 @@ void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
                                  MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(op)->print(stream, *unwrap(flags));
+}
+
+void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
+                                void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  writeBytecodeToFile(unwrap(op), stream);
 }
 
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
