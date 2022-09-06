@@ -15,6 +15,8 @@
 #ifndef LLVM_CODEGEN_ASMPRINTER_H
 #define LLVM_CODEGEN_ASMPRINTER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -188,6 +190,9 @@ private:
 
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
+
+  /// List of symbols to be inserted into PC sections.
+  DenseMap<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
 
   static char ID;
 
@@ -412,6 +417,12 @@ public:
   void emitPseudoProbe(const MachineInstr &MI);
 
   void emitRemarksSection(remarks::RemarkStreamer &RS);
+
+  /// Emits a label as reference for PC sections.
+  void emitPCSectionsLabel(const MachineFunction &MF, const MDNode &MD);
+
+  /// Emits the PC sections collected from instructions.
+  void emitPCSections(const MachineFunction &MF);
 
   /// Get the CFISection type for a function.
   CFISection getFunctionCFISectionType(const Function &F) const;
