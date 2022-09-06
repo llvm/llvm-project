@@ -375,3 +375,21 @@ func.func @cos_fold_vec() -> (vector<4xf32>) {
   %0 = math.cos %v1 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// CHECK-LABEL: @roundeven_fold
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 2.000000e+00 : f32
+// CHECK-NEXT:   return %[[cst]]
+func.func @roundeven_fold() -> f32 {
+  %c = arith.constant 1.5 : f32
+  %r = math.roundeven %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @roundeven_fold_vec
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, -0.000000e+00, 2.000000e+00, -2.000000e+00]> : vector<4xf32>
+// CHECK-NEXT:   return %[[cst]]
+func.func @roundeven_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[0.5, -0.5, 1.5, -1.5]> : vector<4xf32>
+  %0 = math.roundeven %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}

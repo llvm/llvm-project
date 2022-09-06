@@ -769,6 +769,7 @@ def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
     %a = math.roundeven %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
