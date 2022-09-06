@@ -146,6 +146,14 @@ def riscv_fp_to_uint_vl : SDNode<"RISCVISD::FP_TO_UINT_VL", SDT_RISCVFP2IOp_VL>;
 def riscv_sint_to_fp_vl : SDNode<"RISCVISD::SINT_TO_FP_VL", SDT_RISCVI2FPOp_VL>;
 def riscv_uint_to_fp_vl : SDNode<"RISCVISD::UINT_TO_FP_VL", SDT_RISCVI2FPOp_VL>;
 
+def SDT_RISCVVecCvtX2FOp_VL : SDTypeProfile<1, 4, [
+  SDTCisInt<0>, SDTCisFP<1>, SDTCisSameNumEltsAs<0, 1>,
+  SDTCVecEltisVT<2, i1>, SDTCisSameNumEltsAs<1, 2>, SDTCisVT<3, XLenVT>,
+  SDTCisVT<4, XLenVT>
+]>;
+
+def riscv_vfcvt_x_f_vl : SDNode<"RISCVISD::VFCVT_X_F_VL", SDT_RISCVVecCvtX2FOp_VL>;
+
 def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL",
                             SDTypeProfile<1, 6, [SDTCVecEltisVT<0, i1>,
                                                  SDTCisVec<1>,
@@ -642,6 +650,19 @@ multiclass VPatConvertFP2IVL_V<SDNode vop, string instruction_name> {
               (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_MASK")
                   (ivti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
                   (fvti.Mask V0), GPR:$vl, ivti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
+
+multiclass VPatConvertFP2I_RM_VL_V<SDNode vop, string instruction_name> {
+  foreach fvti = AllFloatVectors in {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+    def : Pat<(ivti.Vector (vop (fvti.Vector fvti.RegClass:$rs1),
+                                (fvti.Mask V0), (XLenVT timm:$frm),
+                                VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_MASK")
+                  (ivti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
+                  (fvti.Mask V0), timm:$frm, GPR:$vl, ivti.Log2SEW,
+                  TAIL_AGNOSTIC)>;
   }
 }
 
@@ -1471,6 +1492,7 @@ foreach fvti = AllFloatVectors in {
              GPR:$vl, fvti.Log2SEW)>;
 
   // 14.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
+  defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_x_f_vl,  "PseudoVFCVT_RM_X_F_V">;
   defm : VPatConvertFP2IVL_V<riscv_fp_to_sint_vl, "PseudoVFCVT_RTZ_X_F_V">;
   defm : VPatConvertFP2IVL_V<riscv_fp_to_uint_vl, "PseudoVFCVT_RTZ_XU_F_V">;
   defm : VPatConvertI2FPVL_V<riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;
