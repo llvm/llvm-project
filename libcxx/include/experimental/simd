@@ -1057,7 +1057,7 @@ struct simd_size<_Tp, __simd_abi<__kind, _Np>>
     : std::integral_constant<size_t, _Np> {
   static_assert(
       std::is_arithmetic<_Tp>::value &&
-          !std::is_same<typename std::remove_const<_Tp>::type, bool>::value,
+          !std::is_same<__remove_const_t<_Tp>, bool>::value,
       "Element type should be vectorizable");
 };
 
@@ -1299,7 +1299,7 @@ class const_where_expression {
 public:
   const_where_expression(const const_where_expression&) = delete;
   const_where_expression& operator=(const const_where_expression&) = delete;
-  typename remove_const<_Tp>::type operator-() const&&;
+  __remove_const_t<_Tp> operator-() const&&;
   template <class _Up, class _Flags>
   void copy_to(_Up*, _Flags) const&&;
 };
@@ -1366,8 +1366,8 @@ private:
             __is_non_narrowing_arithmetic_convertible<_Up, _Tp>()) ||
            (!std::is_arithmetic<_Up>::value &&
             std::is_convertible<_Up, _Tp>::value) ||
-           std::is_same<typename std::remove_const<_Up>::type, int>::value ||
-           (std::is_same<typename std::remove_const<_Up>::type,
+           std::is_same<__remove_const_t<_Up>, int>::value ||
+           (std::is_same<__remove_const_t<_Up>,
                          unsigned int>::value &&
             std::is_unsigned<_Tp>::value);
   }

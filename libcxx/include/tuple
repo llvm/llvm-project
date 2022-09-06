@@ -300,7 +300,7 @@ public:
     template <class _Tp,
               class = __enable_if_t<
                   _And<
-                      _IsNotSame<__uncvref_t<_Tp>, __tuple_leaf>,
+                      _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>,
                       is_constructible<_Hp, _Tp>
                     >::value
                 >
@@ -379,7 +379,7 @@ public:
     template <class _Tp,
               class = __enable_if_t<
                   _And<
-                    _IsNotSame<__uncvref_t<_Tp>, __tuple_leaf>,
+                    _IsNotSame<__remove_cvref_t<_Tp>, __tuple_leaf>,
                     is_constructible<_Hp, _Tp>
                   >::value
                 >
@@ -666,7 +666,7 @@ public:
 
     // tuple(U&& ...) constructors (including allocator_arg_t variants)
     template <class ..._Up> struct _IsThisTuple : false_type { };
-    template <class _Up> struct _IsThisTuple<_Up> : is_same<__uncvref_t<_Up>, tuple> { };
+    template <class _Up> struct _IsThisTuple<_Up> : is_same<__remove_cvref_t<_Up>, tuple> { };
 
     template <class ..._Up>
     struct _EnableUTypesCtor : _And<
@@ -761,7 +761,7 @@ public:
 
     // tuple(const tuple<U...>&) constructors (including allocator_arg_t variants)
 
-    template <class _OtherTuple, class _DecayedOtherTuple = __uncvref_t<_OtherTuple>, class = void>
+    template <class _OtherTuple, class _DecayedOtherTuple = __remove_cvref_t<_OtherTuple>, class = void>
     struct _EnableCtorFromUTypesTuple : false_type {};
 
     template <class _OtherTuple, class... _Up>
@@ -913,7 +913,7 @@ public:
 
     // tuple(const pair<U1, U2>&) constructors (including allocator_arg_t variants)
 
-    template <template <class...> class Pred, class _Pair, class _DecayedPair = __uncvref_t<_Pair>, class _Tuple = tuple>
+    template <template <class...> class Pred, class _Pair, class _DecayedPair = __remove_cvref_t<_Pair>, class _Tuple = tuple>
     struct _CtorPredicateFromPair : false_type{};
 
     template <template <class...> class Pred, class _Pair, class _Up1, class _Up2, class _Tp1, class _Tp2>
@@ -928,7 +928,7 @@ public:
     template <class _Pair>
     struct _NothrowConstructibleFromPair : _CtorPredicateFromPair<is_nothrow_constructible, _Pair>{};
 
-    template <class _Pair, class _DecayedPair = __uncvref_t<_Pair>, class _Tuple = tuple>
+    template <class _Pair, class _DecayedPair = __remove_cvref_t<_Pair>, class _Tuple = tuple>
     struct _BothImplicitlyConvertible : false_type{};
 
     template <class _Pair, class _Up1, class _Up2, class _Tp1, class _Tp2>
@@ -1161,7 +1161,7 @@ public:
 #endif // _LIBCPP_STD_VER > 20
 
     template <template<class...> class Pred, bool _Const,
-              class _Pair, class _DecayedPair = __uncvref_t<_Pair>, class _Tuple = tuple>
+              class _Pair, class _DecayedPair = __remove_cvref_t<_Pair>, class _Tuple = tuple>
     struct _AssignPredicateFromPair : false_type {};
 
     template <template<class...> class Pred, bool _Const,
@@ -1631,7 +1631,7 @@ struct __tuple_cat_return_1<tuple<_Types...>, true, _Tuple0>
 {
   using type _LIBCPP_NODEBUG = typename __tuple_cat_type<
       tuple<_Types...>,
-      typename __make_tuple_types<__uncvref_t<_Tuple0> >::type
+      typename __make_tuple_types<__remove_cvref_t<_Tuple0> >::type
     >::type;
 };
 
@@ -1640,9 +1640,9 @@ struct __tuple_cat_return_1<tuple<_Types...>, true, _Tuple0, _Tuple1, _Tuples...
     : public __tuple_cat_return_1<
                  typename __tuple_cat_type<
                      tuple<_Types...>,
-                     typename __make_tuple_types<__uncvref_t<_Tuple0> >::type
+                     typename __make_tuple_types<__remove_cvref_t<_Tuple0> >::type
                  >::type,
-                 __tuple_like<typename remove_reference<_Tuple1>::type>::value,
+                 __tuple_like<__libcpp_remove_reference_t<_Tuple1> >::value,
                  _Tuple1, _Tuples...>
 {
 };
@@ -1652,7 +1652,7 @@ template <class ..._Tuples> struct __tuple_cat_return;
 template <class _Tuple0, class ..._Tuples>
 struct __tuple_cat_return<_Tuple0, _Tuples...>
     : public __tuple_cat_return_1<tuple<>,
-         __tuple_like<typename remove_reference<_Tuple0>::type>::value, _Tuple0,
+         __tuple_like<__libcpp_remove_reference_t<_Tuple0> >::value, _Tuple0,
                                                                      _Tuples...>
 {
 };
@@ -1676,7 +1676,7 @@ struct __tuple_cat_return_ref_imp;
 template <class ..._Types, size_t ..._I0, class _Tuple0>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0>
 {
-    typedef _LIBCPP_NODEBUG typename remove_reference<_Tuple0>::type _T0;
+    typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
     typedef tuple<_Types..., typename __apply_cv<_Tuple0,
                           typename tuple_element<_I0, _T0>::type>::type&&...> type;
 };
@@ -1687,9 +1687,8 @@ struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>,
     : public __tuple_cat_return_ref_imp<
          tuple<_Types..., typename __apply_cv<_Tuple0,
                typename tuple_element<_I0,
-                  typename remove_reference<_Tuple0>::type>::type>::type&&...>,
-         typename __make_tuple_indices<tuple_size<typename
-                                 remove_reference<_Tuple1>::type>::value>::type,
+                  __libcpp_remove_reference_t<_Tuple0> >::type>::type&&...>,
+         typename __make_tuple_indices<tuple_size<__libcpp_remove_reference_t<_Tuple1> >::value>::type,
          _Tuple1, _Tuples...>
 {
 };
@@ -1698,7 +1697,7 @@ template <class _Tuple0, class ..._Tuples>
 struct __tuple_cat_return_ref
     : public __tuple_cat_return_ref_imp<tuple<>,
                typename __make_tuple_indices<
-                        tuple_size<typename remove_reference<_Tuple0>::type>::value
+                        tuple_size<__libcpp_remove_reference_t<_Tuple0> >::value
                >::type, _Tuple0, _Tuples...>
 {
 };
@@ -1726,8 +1725,8 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
     operator()(tuple<_Types...> __t, _Tuple0&& __t0, _Tuple1&& __t1, _Tuples&& ...__tpls)
     {
         (void)__t; // avoid unused parameter warning on GCC when _I0 is empty
-        typedef _LIBCPP_NODEBUG typename remove_reference<_Tuple0>::type _T0;
-        typedef _LIBCPP_NODEBUG typename remove_reference<_Tuple1>::type _T1;
+        typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
+        typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple1> _T1;
         return __tuple_cat<
             tuple<_Types...,
                   typename __apply_cv<_Tuple0, typename tuple_element<
@@ -1747,7 +1746,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 typename __tuple_cat_return<_Tuple0, _Tuples...>::type
 tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls)
 {
-    typedef _LIBCPP_NODEBUG typename remove_reference<_Tuple0>::type _T0;
+    typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
     return __tuple_cat<tuple<>, __tuple_indices<>,
                   typename __make_tuple_indices<tuple_size<_T0>::value>::type>()
                   (tuple<>(), _VSTD::forward<_Tuple0>(__t0),
