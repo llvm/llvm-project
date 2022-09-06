@@ -146,10 +146,10 @@ MODULE_PASS_WITH_PARAMS("hwasan",
                         },
                         parseHWASanPassOptions,
                         "kernel;recover")
-MODULE_PASS_WITH_PARAMS("asan-module",
-                        "ModuleAddressSanitizerPass",
+MODULE_PASS_WITH_PARAMS("asan",
+                        "AddressSanitizerPass",
                         [](AddressSanitizerOptions Opts) {
-                          return ModuleAddressSanitizerPass(Opts);
+                          return AddressSanitizerPass(Opts);
                         },
                         parseASanPassOptions,
                         "kernel")
