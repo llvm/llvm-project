@@ -57,6 +57,9 @@ on support follow.
      ``Zbb``        Supported
      ``Zbc``        Supported
      ``Zbs``        Supported
+     ``Zicbom``     Assembly Support
+     ``Zicbop``     Assembly Support
+     ``Zicboz``     Assembly Support
      ``Zve32x``     Partially Supported
      ``Zve32f``     Partially Supported
      ``Zve64x``     Supported
@@ -76,8 +79,15 @@ on support follow.
      ``Zvl65536b``  Supported
      =============  ========================
 
+Assembly Support
+  LLVM supports the associated instructions in assembly.  All assembly related tools (e.g. assembler, disassembler, llvm-objdump, etc..) are supported.  Compiler and linker will accept extension names, and linked binaries will contain appropriate ELF flags and attributes to reflect use of named extension.
+
+Supported
+  Fully supported by the compiler.  This includes everything in Assembly Support, along with - if relevant - C language intrinsics for the instructions and pattern matching by the compiler to recognize idiomatic patterns which can be lowered to the associated instructions.
+
 ``Zve32x``, ``Zve32f``, ``Zvl32b``
-  LLVM currently assumes a minimum VLEN (vector register width) of 64 bits during compilation, and as a result ``Zve32x`` and ``Zve32f`` are supported only for VLEN>=64.  Assembly tools (e.g. assembler, disassembler, llvm-objdump, etc..) don't have this restriction.
+  LLVM currently assumes a minimum VLEN (vector register width) of 64 bits during compilation, and as a result ``Zve32x`` and ``Zve32f`` are supported only for VLEN>=64.  Assembly support doesn't have this restriction.
+
 
 Specification Documents
 =======================
