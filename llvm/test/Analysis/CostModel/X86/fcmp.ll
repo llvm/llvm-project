@@ -97,28 +97,28 @@ define i32 @cmp_float_oeq(i32 %arg) {
 define i32 @cmp_float_one(i32 %arg) {
 ; SSE2-LABEL: 'cmp_float_one'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp one float undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = fcmp one <2 x float> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = fcmp one <4 x float> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = fcmp one <8 x float> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = fcmp one <16 x float> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F32 = fcmp one <2 x float> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4F32 = fcmp one <4 x float> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8F32 = fcmp one <8 x float> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V16F32 = fcmp one <16 x float> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp one double undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = fcmp one <2 x double> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = fcmp one <4 x double> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = fcmp one <8 x double> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F64 = fcmp one <16 x double> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F64 = fcmp one <2 x double> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4F64 = fcmp one <4 x double> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8F64 = fcmp one <8 x double> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V16F64 = fcmp one <16 x double> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_float_one'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp one float undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp one <2 x float> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp one <4 x float> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = fcmp one <8 x float> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F32 = fcmp one <16 x float> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F32 = fcmp one <2 x float> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = fcmp one <4 x float> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8F32 = fcmp one <8 x float> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16F32 = fcmp one <16 x float> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp one double undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp one <2 x double> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F64 = fcmp one <4 x double> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F64 = fcmp one <8 x double> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F64 = fcmp one <16 x double> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F64 = fcmp one <2 x double> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4F64 = fcmp one <4 x double> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8F64 = fcmp one <8 x double> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V16F64 = fcmp one <16 x double> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_float_one'
@@ -583,28 +583,28 @@ define i32 @cmp_float_olt(i32 %arg) {
 define i32 @cmp_float_ueq(i32 %arg) {
 ; SSE2-LABEL: 'cmp_float_ueq'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ueq float undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F32 = fcmp ueq <2 x float> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F32 = fcmp ueq <4 x float> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F32 = fcmp ueq <8 x float> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F32 = fcmp ueq <16 x float> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F32 = fcmp ueq <2 x float> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4F32 = fcmp ueq <4 x float> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8F32 = fcmp ueq <8 x float> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V16F32 = fcmp ueq <16 x float> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ueq double undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2F64 = fcmp ueq <2 x double> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4F64 = fcmp ueq <4 x double> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8F64 = fcmp ueq <8 x double> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16F64 = fcmp ueq <16 x double> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2F64 = fcmp ueq <2 x double> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4F64 = fcmp ueq <4 x double> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8F64 = fcmp ueq <8 x double> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V16F64 = fcmp ueq <16 x double> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_float_ueq'
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = fcmp ueq float undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F32 = fcmp ueq <2 x float> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = fcmp ueq <4 x float> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = fcmp ueq <8 x float> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F32 = fcmp ueq <16 x float> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F32 = fcmp ueq <2 x float> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = fcmp ueq <4 x float> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8F32 = fcmp ueq <8 x float> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16F32 = fcmp ueq <16 x float> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = fcmp ueq double undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = fcmp ueq <2 x double> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F64 = fcmp ueq <4 x double> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F64 = fcmp ueq <8 x double> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16F64 = fcmp ueq <16 x double> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2F64 = fcmp ueq <2 x double> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4F64 = fcmp ueq <4 x double> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8F64 = fcmp ueq <8 x double> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V16F64 = fcmp ueq <16 x double> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX1-LABEL: 'cmp_float_ueq'
