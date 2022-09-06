@@ -1439,11 +1439,11 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       true:
-      class foo {};
-
-      false:
       class foo
       {};
+
+      false:
+      class foo {};
 
   * ``BraceWrappingAfterControlStatementStyle AfterControlStatement``
     Wrap control statements (``if``/``for``/``while``/``switch``/..).
