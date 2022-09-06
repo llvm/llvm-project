@@ -3902,9 +3902,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   OffloadingActionBuilder OffloadBuilder(C, Args, Inputs);
 
   bool UseNewOffloadingDriver =
-      (C.isOffloadingHostKind(Action::OFK_OpenMP) &&
-       Args.hasFlag(options::OPT_fopenmp_new_driver,
-                    options::OPT_no_offload_new_driver, true)) ||
+      C.isOffloadingHostKind(Action::OFK_OpenMP) ||
       Args.hasFlag(options::OPT_offload_new_driver,
                    options::OPT_no_offload_new_driver, false);
 
