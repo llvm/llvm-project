@@ -7194,10 +7194,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // along to tell the frontend that it is generating code for a device, so that
   // only the relevant declarations are emitted.
   if (IsOpenMPDevice) {
-    // AMDGPUPromoteAllocaToVector causes wrong answers in ACCEL 552, 557, 559
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-disable-promote-alloca-to-vector=true");
-
     CmdArgs.push_back("-fopenmp-is-device");
     if (OpenMPDeviceInput) {
       CmdArgs.push_back("-fopenmp-host-ir-file-path");
