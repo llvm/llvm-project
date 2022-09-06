@@ -146,16 +146,16 @@ def main():
         for pwidth in [32]:
           for iwidth in [32]:
             for vec in vec_strategy:
-                for e in [True]:
-                  vl = 1 if vec == 0 else 16
-                  attr = st.EncodingAttr.get(level, ordering, pwidth, iwidth)
-                  opt = (f'parallelization-strategy=none '
-                         f'vectorization-strategy={vec} '
-                         f'vl={vl} enable-simd-index32={e}')
-                  compiler = sparse_compiler.SparseCompiler(
-                      options=opt, opt_level=0, shared_libs=[support_lib])
-                  build_compile_and_run_SDDMMM(attr, compiler)
-                  count = count + 1
+              for e in [True]:
+                vl = 1 if vec == 0 else 16
+                attr = st.EncodingAttr.get(level, ordering, pwidth, iwidth)
+                opt = (f'parallelization-strategy=none '
+                       f'vectorization-strategy={vec} '
+                       f'vl={vl} enable-simd-index32={e}')
+                compiler = sparse_compiler.SparseCompiler(
+                    options=opt, opt_level=0, shared_libs=[support_lib])
+                build_compile_and_run_SDDMMM(attr, compiler)
+                count = count + 1
   # CHECK: Passed 16 tests
   print('Passed ', count, 'tests')
 
