@@ -168,13 +168,22 @@ public:
                              SmallVectorImpl<StackEntry> &DFSInStack);
 };
 
+/// Represents a (Coefficient * Variable) entry after IR decomposition.
+struct DecompEntry {
+  int64_t Coefficient;
+  Value *Variable;
+
+  DecompEntry(int64_t Coefficient, Value *Variable)
+      : Coefficient(Coefficient), Variable(Variable) {}
+};
+
 } // namespace
 
-// Decomposes \p V into a vector of pairs of the form { c, X } where c * X. The
-// sum of the pairs equals \p V.  The first pair is the constant-factor and X
-// must be nullptr. If the expression cannot be decomposed, returns an empty
-// vector.
-static SmallVector<std::pair<int64_t, Value *>, 4>
+// Decomposes \p V into a vector of entries of the form { Coefficient, Variable
+// } where Coefficient * Variable. The sum of the pairs equals \p V.  The first
+// pair is the constant-factor and X must be nullptr. If the expression cannot
+// be decomposed, returns an empty vector.
+static SmallVector<DecompEntry, 4>
 decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
           bool IsSigned) {
 
@@ -195,7 +204,7 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->uge(MaxConstraintValue))
       return {};
-    return {{CI->getZExtValue(), nullptr}};
+    return {{int64_t(CI->getZExtValue()), nullptr}};
   }
   auto *GEP = dyn_cast<GetElementPtrInst>(V);
   if (GEP && GEP->getNumOperands() == 2 && GEP->isInBounds()) {
@@ -209,7 +218,7 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
           CanUseSExt(CI))
         return {{0, nullptr},
                 {1, GEP->getPointerOperand()},
-                {std::pow(int64_t(2), CI->getSExtValue()), Op1}};
+                {int64_t(std::pow(int64_t(2), CI->getSExtValue())), Op1}};
       if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))) &&
           CanUseSExt(CI))
         return {{CI->getSExtValue(), nullptr},
@@ -222,13 +231,13 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
         !CI->isNegative() && CanUseSExt(CI))
       return {{CI->getSExtValue(), nullptr}, {1, GEP->getPointerOperand()}};
 
-    SmallVector<std::pair<int64_t, Value *>, 4> Result;
+    SmallVector<DecompEntry, 4> Result;
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
               m_NUWShl(m_Value(Op0), m_ConstantInt(CI))) &&
         CanUseSExt(CI))
       Result = {{0, nullptr},
                 {1, GEP->getPointerOperand()},
-                {std::pow(int64_t(2), CI->getSExtValue()), Op0}};
+                {int(std::pow(int64_t(2), CI->getSExtValue())), Op0}};
     else if (match(GEP->getOperand(GEP->getNumOperands() - 1),
                    m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
              CanUseSExt(CI))
@@ -254,7 +263,7 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
       !CI->uge(MaxConstraintValue))
-    return {{CI->getZExtValue(), nullptr}, {1, Op0}};
+    return {{int(CI->getZExtValue()), nullptr}, {1, Op0}};
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
       CanUseSExt(CI)) {
     Preconditions.emplace_back(
@@ -321,8 +330,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (ADec.empty() || BDec.empty())
     return {};
 
-  int64_t Offset1 = ADec[0].first;
-  int64_t Offset2 = BDec[0].first;
+  int64_t Offset1 = ADec[0].Coefficient;
+  int64_t Offset2 = BDec[0].Coefficient;
   Offset1 *= -1;
 
   // Create iterator ranges that skip the constant-factor.
@@ -341,9 +350,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   };
 
   // Make sure all variables have entries in Value2Index or NewIndices.
-  for (const auto &KV :
-       concat<std::pair<int64_t, Value *>>(VariablesA, VariablesB))
-    GetOrAddIndex(KV.second);
+  for (const auto &KV : concat<DecompEntry>(VariablesA, VariablesB))
+    GetOrAddIndex(KV.Variable);
 
   // Build result constraint, by first adding all coefficients from A and then
   // subtracting all coefficients from B.
@@ -353,10 +361,10 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   Res.IsEq = IsEq;
   auto &R = Res.Coefficients;
   for (const auto &KV : VariablesA)
-    R[GetOrAddIndex(KV.second)] += KV.first;
+    R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
 
   for (const auto &KV : VariablesB)
-    R[GetOrAddIndex(KV.second)] -= KV.first;
+    R[GetOrAddIndex(KV.Variable)] -= KV.Coefficient;
 
   int64_t OffsetSum;
   if (AddOverflow(Offset1, Offset2, OffsetSum))
