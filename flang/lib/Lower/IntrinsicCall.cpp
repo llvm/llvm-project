@@ -2527,19 +2527,16 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
       assert(isStaticallyPresent(args[2]) &&
              "FPTR argument must be an array if SHAPE argument exists");
       mlir::Value shape = fir::getBase(args[2]);
-      mlir::Type shapeArrTy = fir::unwrapRefType(shape.getType());
-      auto arrayRank = shapeArrTy.cast<fir::SequenceType>().getShape()[0];
-      assert(arrayRank > 0 && arrayRank <= 15 &&
-             "The rank of array must have been known and in range 1-15");
-      for (int i = 0; i < (int)arrayRank; ++i) {
-        mlir::Value index =
-            builder.createIntegerConstant(loc, builder.getIntegerType(32), i);
+      int arrayRank = box.rank();
+      mlir::Type shapeElementType =
+          fir::unwrapSequenceType(fir::unwrapPassByRefType(shape.getType()));
+      mlir::Type idxType = builder.getIndexType();
+      for (int i = 0; i < arrayRank; ++i) {
+        mlir::Value index = builder.createIntegerConstant(loc, idxType, i);
         mlir::Value var = builder.create<fir::CoordinateOp>(
-            loc, builder.getRefType(fir::unwrapSequenceType(shapeArrTy)), shape,
-            index);
+            loc, builder.getRefType(shapeElementType), shape, index);
         mlir::Value load = builder.create<fir::LoadOp>(loc, var);
-        extents.push_back(
-            builder.createConvert(loc, builder.getIndexType(), load));
+        extents.push_back(builder.createConvert(loc, idxType, load));
       }
     }
     if (box.isCharacter()) {
