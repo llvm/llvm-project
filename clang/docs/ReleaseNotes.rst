@@ -215,7 +215,7 @@ C++20 Feature Support
   `GH55216 <https://github.com/llvm/llvm-project/issues/55216>`_.
 - Correctly set expression evaluation context as 'immediate function context' in
   consteval functions.
-  This fixes `GH51182 <https://github.com/llvm/llvm-project/issues/51182>`
+  This fixes `GH51182 <https://github.com/llvm/llvm-project/issues/51182>`_.
 
 - Fixes an assert crash caused by looking up missing vtable information on ``consteval``
   virtual functions. Fixes `GH55065 <https://github.com/llvm/llvm-project/issues/55065>`_.
