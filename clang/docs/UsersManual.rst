@@ -689,7 +689,7 @@ of generating a delta reduced test case.
 
 .. envvar:: CLANG_CRASH_DIAGNOSTICS_DIR=<dir>
 
-   Like :option:`-fcrash-diagnostics-dir=<dir>`, specifies where to write the
+   Like ``-fcrash-diagnostics-dir=<dir>``, specifies where to write the
    crash diagnostics files, but with lower precedence than the option.
 
 Clang is also capable of generating preprocessed source file(s) and associated
