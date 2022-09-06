@@ -11,6 +11,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/Pipe.h"
 #include "llvm/ADT/DenseMap.h"
 #include <csignal>
 #include <list>
@@ -52,6 +53,8 @@ protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
   void UnregisterSignal(int signo, std::list<Callback>::iterator callback_it);
 
+  void TriggerPendingCallbacks() override;
+
 private:
   void ProcessReadObject(IOObject::WaitableHandle handle);
   void ProcessSignal(int signo);
@@ -83,6 +86,7 @@ private:
 
   llvm::DenseMap<IOObject::WaitableHandle, Callback> m_read_fds;
   llvm::DenseMap<int, SignalInfo> m_signals;
+  Pipe m_trigger_pipe;
 #if HAVE_SYS_EVENT_H
   int m_kqueue;
 #endif
