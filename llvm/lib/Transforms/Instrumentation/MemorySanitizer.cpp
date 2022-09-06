@@ -669,8 +669,8 @@ MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
       Recover(getOptOrDefault(ClKeepGoing, Kernel || R)),
       EagerChecks(getOptOrDefault(ClEagerChecks, EagerChecks)) {}
 
-PreservedAnalyses ModuleMemorySanitizerPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
+PreservedAnalyses MemorySanitizerPass::run(Module &M,
+                                           ModuleAnalysisManager &AM) {
   bool Modified = false;
   if (!Options.Kernel) {
     insertModuleCtor(M);
@@ -688,9 +688,9 @@ PreservedAnalyses ModuleMemorySanitizerPass::run(Module &M,
   return Modified ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
-void ModuleMemorySanitizerPass::printPipeline(
+void MemorySanitizerPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  static_cast<PassInfoMixin<ModuleMemorySanitizerPass> *>(this)->printPipeline(
+  static_cast<PassInfoMixin<MemorySanitizerPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << "<";
   if (Options.Recover)
