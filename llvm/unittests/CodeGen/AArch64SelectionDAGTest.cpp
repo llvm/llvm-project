@@ -591,4 +591,33 @@ TEST_F(AArch64SelectionDAGTest, TestFold_STEP_VECTOR) {
   EXPECT_EQ(Op.getOpcode(), ISD::SPLAT_VECTOR);
 }
 
+TEST_F(AArch64SelectionDAGTest, ReplaceAllUsesWith) {
+  SDLoc Loc;
+  EVT IntVT = EVT::getIntegerVT(Context, 8);
+
+  SDValue N0 = DAG->getConstant(0x42, Loc, IntVT);
+  SDValue N1 = DAG->getRegister(0, IntVT);
+  // Construct node to fill arbitrary ExtraInfo.
+  SDValue N2 = DAG->getNode(ISD::SUB, Loc, IntVT, N0, N1);
+  EXPECT_FALSE(DAG->getHeapAllocSite(N2.getNode()));
+  EXPECT_FALSE(DAG->getNoMergeSiteInfo(N2.getNode()));
+  MDNode *MD = MDNode::get(Context, None);
+  DAG->addHeapAllocSite(N2.getNode(), MD);
+  DAG->addNoMergeSiteInfo(N2.getNode(), true);
+  EXPECT_EQ(DAG->getHeapAllocSite(N2.getNode()), MD);
+  EXPECT_TRUE(DAG->getNoMergeSiteInfo(N2.getNode()));
+
+  SDValue Root = DAG->getNode(ISD::ADD, Loc, IntVT, N2, N2);
+  EXPECT_EQ(Root->getOperand(0)->getOpcode(), ISD::SUB);
+  // Create new node and check that ExtraInfo is propagated on RAUW.
+  SDValue New = DAG->getNode(ISD::ADD, Loc, IntVT, N1, N1);
+  EXPECT_FALSE(DAG->getHeapAllocSite(New.getNode()));
+  EXPECT_FALSE(DAG->getNoMergeSiteInfo(New.getNode()));
+
+  DAG->ReplaceAllUsesWith(N2, New);
+  EXPECT_EQ(Root->getOperand(0), New);
+  EXPECT_EQ(DAG->getHeapAllocSite(New.getNode()), MD);
+  EXPECT_TRUE(DAG->getNoMergeSiteInfo(New.getNode()));
+}
+
 } // end namespace llvm

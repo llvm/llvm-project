@@ -2195,6 +2195,9 @@ public:
     return I != SDEI.end() ? I->second.NoMerge : false;
   }
 
+  /// Copy extra info associated with one node to another.
+  void copyExtraInfo(SDNode *From, SDNode *To);
+
   /// Return the current function's default denormal handling kind for the given
   /// floating point type.
   DenormalMode getDenormalMode(EVT VT) const {
