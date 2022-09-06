@@ -2867,7 +2867,6 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                 Pred == CmpInst::BAD_FCMP_PREDICATE))
         Pred = cast<CmpInst>(I)->getPredicate();
 
-      // TODO: Handle pre-AVX FCMP_ONE/FCMP_UEQ slow cases.
       switch (Pred) {
       case CmpInst::Predicate::ICMP_NE:
         // xor(cmpeq(x,y),-1)
@@ -2895,6 +2894,18 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
           // xor(cmpgt(xor(x,signbit),xor(y,signbit)),-1)
           ExtraCost = 3;
         }
+        break;
+      case CmpInst::Predicate::FCMP_ONE:
+      case CmpInst::Predicate::FCMP_UEQ:
+        // Without AVX we need to expand FCMP_ONE/FCMP_UEQ cases.
+        // Use FCMP_UEQ expansion - FCMP_ONE should be the same.
+        if (CondTy && !ST->hasAVX())
+          return getCmpSelInstrCost(Opcode, ValTy, CondTy,
+                                    CmpInst::Predicate::FCMP_UNO, CostKind) +
+                 getCmpSelInstrCost(Opcode, ValTy, CondTy,
+                                    CmpInst::Predicate::FCMP_OEQ, CostKind) +
+                 getArithmeticInstrCost(Instruction::Or, CondTy, CostKind);
+
         break;
       case CmpInst::Predicate::BAD_ICMP_PREDICATE:
       case CmpInst::Predicate::BAD_FCMP_PREDICATE:
