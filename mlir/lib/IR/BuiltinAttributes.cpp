@@ -1526,7 +1526,12 @@ static ShapedType mappingHelper(Fn mapping, Attr &attr, ShapedType inType,
 
   // Check for the splat case.
   if (attr.isSplat()) {
-    processElt(*attr.begin(), /*index=*/0);
+    if (bitWidth == 1) {
+      // Handle the special encoding of splat of bool.
+      data[0] = mapping(*attr.begin()).isZero() ? 0 : -1;
+    } else {
+      processElt(*attr.begin(), /*index=*/0);
+    }
     return newArrayType;
   }
 
