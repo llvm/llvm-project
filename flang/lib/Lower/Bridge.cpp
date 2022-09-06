@@ -2688,20 +2688,12 @@ private:
   void mapCPtrArgByValue(const Fortran::semantics::Symbol &sym,
                          mlir::Value val) {
     mlir::Type symTy = Fortran::lower::translateSymbolToFIRType(*this, sym);
-    assert(symTy.isa<fir::RecordType>());
-    auto resTy = symTy.dyn_cast<fir::RecordType>();
-    assert(resTy.getTypeList().size() == 1);
-    auto fieldName = resTy.getTypeList()[0].first;
-    auto fieldTy = resTy.getTypeList()[0].second;
     mlir::Location loc = toLocation();
     mlir::Value res = builder->create<fir::AllocaOp>(loc, symTy);
-    auto fieldIndexType = fir::FieldType::get(symTy.getContext());
-    mlir::Value field = builder->create<fir::FieldIndexOp>(
-        loc, fieldIndexType, fieldName, resTy,
-        /*typeParams=*/mlir::ValueRange{});
-    mlir::Value resAddr = builder->create<fir::CoordinateOp>(
-        loc, builder->getRefType(fieldTy), res, field);
-    mlir::Value argAddrVal = builder->createConvert(loc, fieldTy, val);
+    mlir::Value resAddr =
+        fir::factory::genCPtrOrCFunptrAddr(*builder, loc, res, symTy);
+    mlir::Value argAddrVal =
+        builder->createConvert(loc, fir::unwrapRefType(resAddr.getType()), val);
     builder->create<fir::StoreOp>(loc, argAddrVal, resAddr);
     addSymbol(sym, res);
   }
