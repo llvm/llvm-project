@@ -4338,15 +4338,9 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   for (StringRef F : ReqFeatures) {
     SmallVector<StringRef> ReqOpFeatures;
     F.split(ReqOpFeatures, '|');
-    bool HasFeature = false;
-    for (StringRef OF : ReqOpFeatures) {
-      if (TI.hasFeature(OF)) {
-        HasFeature = true;
-        continue;
-      }
-    }
 
-    if (!HasFeature) {
+    if (llvm::none_of(ReqOpFeatures,
+                      [&TI](StringRef OF) { return TI.hasFeature(OF); })) {
       std::string FeatureStrs;
       for (StringRef OF : ReqOpFeatures) {
         // If the feature is 64bit, alter the string so it will print better in
