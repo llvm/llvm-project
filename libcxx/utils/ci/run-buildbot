@@ -358,11 +358,6 @@ generic-debug-mode)
     check-runtimes
     # We don't check the ABI lists because the debug mode ABI is not stable
 ;;
-generic-no-transitive-includes)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-transitive-includes.cmake"
-    check-runtimes
-;;
 generic-with_llvm_unwinder)
     clean
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
