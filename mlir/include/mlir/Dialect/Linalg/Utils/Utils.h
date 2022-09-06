@@ -193,6 +193,8 @@ Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
                               OpFoldResult opFoldResult);
 Value materializeOpFoldResult(OpBuilder &b, Location loc,
                               OpFoldResult opFoldResult);
+Value materializeOpFoldResult(OpBuilder &b, Location loc,
+                              ArrayRef<OpFoldResult> opFoldResults);
 
 /// A struct containg offsets-sizes-strides arguments of the tiled shape.
 struct SliceParameters {
