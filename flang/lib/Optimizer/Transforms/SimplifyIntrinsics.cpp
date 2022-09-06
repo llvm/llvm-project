@@ -29,6 +29,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -44,6 +45,10 @@ namespace fir {
 #define GEN_PASS_DEF_SIMPLIFYINTRINSICS
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
+
+#define RTNAME_STRINGIFY2(x) #x
+#define RTNAME_STRINGIFY(x) RTNAME_STRINGIFY2(x)
+#define RTNAME_STRING(x) RTNAME_STRINGIFY(RTNAME(x))
 
 #define DEBUG_TYPE "flang-simplify-intrinsics"
 
@@ -84,7 +89,7 @@ private:
 
 } // namespace
 
-/// Generate function type for the simplified version of FortranASum and
+/// Generate function type for the simplified version of RTNAME(Sum) and
 /// similar functions with a fir.box<none> type returning \p elementType.
 static mlir::FunctionType genNoneBoxType(fir::FirOpBuilder &builder,
                                          const mlir::Type &elementType) {
@@ -158,21 +163,21 @@ static void genReductionLoop(fir::FirOpBuilder &builder,
   builder.create<mlir::func::ReturnOp>(loc, resultVal);
 }
 
-/// Generate function body of the simplified version of FortranASum
+/// Generate function body of the simplified version of RTNAME(Sum)
 /// with signature provided by \p funcOp. The caller is responsible
 /// for saving/restoring the original insertion point of \p builder.
 /// \p funcOp is expected to be empty on entry to this function.
-static void genFortranASumBody(fir::FirOpBuilder &builder,
-                               mlir::func::FuncOp &funcOp) {
-  // function FortranASum<T>_simplified(arr)
+static void genRuntimeSumBody(fir::FirOpBuilder &builder,
+                              mlir::func::FuncOp &funcOp) {
+  // function RTNAME(Sum)<T>_simplified(arr)
   //   T, dimension(:) :: arr
   //   T sum = 0
   //   integer iter
   //   do iter = 0, extent(arr)
   //     sum = sum + arr[iter]
   //   end do
-  //   FortranASum<T>_simplified = sum
-  // end function FortranASum<T>_simplified
+  //   RTNAME(Sum)<T>_simplified = sum
+  // end function RTNAME(Sum)<T>_simplified
   auto zero = [](fir::FirOpBuilder builder, mlir::Location loc,
                  mlir::Type elementType) {
     return elementType.isa<mlir::FloatType>()
@@ -196,8 +201,8 @@ static void genFortranASumBody(fir::FirOpBuilder &builder,
   genReductionLoop(builder, funcOp, zero, genBodyOp);
 }
 
-static void genFortranAMaxvalBody(fir::FirOpBuilder &builder,
-                                  mlir::func::FuncOp &funcOp) {
+static void genRuntimeMaxvalBody(fir::FirOpBuilder &builder,
+                                 mlir::func::FuncOp &funcOp) {
   auto init = [](fir::FirOpBuilder builder, mlir::Location loc,
                  mlir::Type elementType) {
     if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
@@ -224,35 +229,35 @@ static void genFortranAMaxvalBody(fir::FirOpBuilder &builder,
   genReductionLoop(builder, funcOp, init, genBodyOp);
 }
 
-/// Generate function type for the simplified version of FortranADotProduct
+/// Generate function type for the simplified version of RTNAME(DotProduct)
 /// operating on the given \p elementType.
-static mlir::FunctionType genFortranADotType(fir::FirOpBuilder &builder,
-                                             const mlir::Type &elementType) {
+static mlir::FunctionType genRuntimeDotType(fir::FirOpBuilder &builder,
+                                            const mlir::Type &elementType) {
   mlir::Type boxType = fir::BoxType::get(builder.getNoneType());
   return mlir::FunctionType::get(builder.getContext(), {boxType, boxType},
                                  {elementType});
 }
 
-/// Generate function body of the simplified version of FortranADotProduct
+/// Generate function body of the simplified version of RTNAME(DotProduct)
 /// with signature provided by \p funcOp. The caller is responsible
 /// for saving/restoring the original insertion point of \p builder.
 /// \p funcOp is expected to be empty on entry to this function.
 /// \p arg1ElementTy and \p arg2ElementTy specify elements types
 /// of the underlying array objects - they are used to generate proper
 /// element accesses.
-static void genFortranADotBody(fir::FirOpBuilder &builder,
-                               mlir::func::FuncOp &funcOp,
-                               mlir::Type arg1ElementTy,
-                               mlir::Type arg2ElementTy) {
-  // function FortranADotProduct<T>_simplified(arr1, arr2)
+static void genRuntimeDotBody(fir::FirOpBuilder &builder,
+                              mlir::func::FuncOp &funcOp,
+                              mlir::Type arg1ElementTy,
+                              mlir::Type arg2ElementTy) {
+  // function RTNAME(DotProduct)<T>_simplified(arr1, arr2)
   //   T, dimension(:) :: arr1, arr2
   //   T product = 0
   //   integer iter
   //   do iter = 0, extent(arr1)
   //     product = product + arr1[iter] * arr2[iter]
   //   end do
-  //   FortranADotProduct<T>_simplified = product
-  // end function FortranADotProduct<T>_simplified
+  //   RTNAME(ADotProduct)<T>_simplified = product
+  // end function RTNAME(DotProduct)<T>_simplified
   auto loc = mlir::UnknownLoc::get(builder.getContext());
   mlir::Type resultElementType = funcOp.getResultTypes()[0];
   builder.setInsertionPointToEnd(funcOp.addEntryBlock());
@@ -498,11 +503,11 @@ void SimplifyIntrinsicsPass::runOnOperation() {
         // RTNAME(Sum<T>)(const Descriptor &x, const char *source, int line,
         //                int dim, const Descriptor *mask)
         //
-        if (funcName.startswith("_FortranASum")) {
-          simplifyReduction(call, kindMap, genFortranASumBody);
+        if (funcName.startswith(RTNAME_STRING(Sum))) {
+          simplifyReduction(call, kindMap, genRuntimeSumBody);
           return;
         }
-        if (funcName.startswith("_FortranADotProduct")) {
+        if (funcName.startswith(RTNAME_STRING(DotProduct))) {
           LLVM_DEBUG(llvm::dbgs() << "Handling " << funcName << "\n");
           LLVM_DEBUG(llvm::dbgs() << "Call operation:\n"; op->dump();
                      llvm::dbgs() << "\n");
@@ -533,12 +538,12 @@ void SimplifyIntrinsicsPass::runOnOperation() {
             return;
 
           auto typeGenerator = [&type](fir::FirOpBuilder &builder) {
-            return genFortranADotType(builder, type);
+            return genRuntimeDotType(builder, type);
           };
           auto bodyGenerator = [&arg1Type,
                                 &arg2Type](fir::FirOpBuilder &builder,
                                            mlir::func::FuncOp &funcOp) {
-            genFortranADotBody(builder, funcOp, *arg1Type, *arg2Type);
+            genRuntimeDotBody(builder, funcOp, *arg1Type, *arg2Type);
           };
 
           // Suffix the function name with the element types
@@ -562,8 +567,8 @@ void SimplifyIntrinsicsPass::runOnOperation() {
                      llvm::dbgs() << "\n");
           return;
         }
-        if (funcName.startswith("_FortranAMaxval")) {
-          simplifyReduction(call, kindMap, genFortranAMaxvalBody);
+        if (funcName.startswith(RTNAME_STRING(Maxval))) {
+          simplifyReduction(call, kindMap, genRuntimeMaxvalBody);
           return;
         }
       }

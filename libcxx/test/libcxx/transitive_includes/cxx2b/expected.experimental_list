@@ -15,7 +15,6 @@ initializer_list
 iosfwd
 limits
 list
-memory
 new
 ratio
 stdexcept

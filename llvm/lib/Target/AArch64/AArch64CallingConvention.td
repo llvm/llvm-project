@@ -162,6 +162,46 @@ def CC_AArch64_Win64_VarArg : CallingConv<[
   CCDelegateTo<CC_AArch64_AAPCS>
 ]>;
 
+// Vararg functions on Arm64EC ABI use a different convention, using
+// a stack layout compatible with the x64 calling convention.
+let Entry = 1 in
+def CC_AArch64_Arm64EC_VarArg : CallingConv<[
+  // Convert small floating-point values to integer.
+  CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
+  CCIfType<[f32], CCBitConvertToType<i32>>,
+  CCIfType<[f64, v1f64, v1i64, v2f32, v2i32, v4i16, v4f16, v4bf16, v8i8, iPTR],
+           CCBitConvertToType<i64>>,
+
+  // Larger floating-point/vector values are passed indirectly.
+  CCIfType<[f128, v2f64, v2i64, v4i32, v4f32, v8i16, v8f16, v8bf16, v16i8],
+           CCPassIndirect<i64>>,
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
+           CCPassIndirect<i64>>,
+  CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
+           CCPassIndirect<i64>>,
+
+  // Handle SRet. See comment in CC_AArch64_AAPCS.
+  CCIfInReg<CCIfType<[i64],
+    CCIfSRet<CCIfType<[i64], CCAssignToReg<[X0, X1]>>>>>,
+  CCIfSRet<CCIfType<[i64], CCAssignToReg<[X8]>>>,
+
+  // Put ByVal arguments directly on the stack. Minimum size and alignment of a
+  // slot is 64-bit. (Shouldn't normally come up; the Microsoft ABI doesn't
+  // use byval.)
+  CCIfByVal<CCPassByVal<8, 8>>,
+
+  // Promote small integers to i32
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // Pass first four arguments in x0-x3.
+  CCIfType<[i32], CCAssignToReg<[W0, W1, W2, W3]>>,
+  CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3]>>,
+
+  // Put remaining arguments on stack.
+  CCIfType<[i32, i64], CCAssignToStack<8, 8>>,
+]>;
+
 // Windows Control Flow Guard checks take a single argument (the target function
 // address) and have no return value.
 let Entry = 1 in

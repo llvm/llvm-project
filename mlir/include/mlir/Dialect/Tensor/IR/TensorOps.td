@@ -232,7 +232,7 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
 
     Example:
 
-    ```
+    ```mlir
     // Rank-reducing extract_slice.
     %1 = tensor.extract_slice %0[0, 0, 0][1, 16, 4][1, 1, 1] :
       tensor<8x16x4xf32> to tensor<16x4xf32>
@@ -372,8 +372,8 @@ def Tensor_FromElementsOp : Tensor_Op<"from_elements", [
                    "$_self.cast<ShapedType>().getNumElements(), "
                    "$_self.cast<ShapedType>().getElementType())">
   ]> {
-  string summary = "tensor from elements operation.";
-  string description = [{
+  let summary = "tensor from elements operation.";
+  let description = [{
     Create a N-D tensor from a range of same-type arguments. The number of
     provided `elements` should equal to the number of the elements in the
     result type. The `elements` correspond to a flattened tensor.
@@ -407,6 +407,144 @@ def Tensor_FromElementsOp : Tensor_Op<"from_elements", [
 }
 
 //===----------------------------------------------------------------------===//
+// GatherOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_GatherOp : Tensor_Op<"gather", [
+    NoSideEffect
+  ]> {
+  let summary = "gather a subset of a tensor at specified indices";
+  let description = [{
+    The `gather` operation extracts a subset of the elements from a `source`
+    tensor at the given indices.
+
+    In its most general form, the tensor of indices specifies all the coordinates
+    of every element to extract (i.e. COO format, without the payload). 
+    The indices are expected to be confined to coordinate values that fit the
+    range of the `source` tensor, otherwise the behavior is undefined.
+
+    The leading dimensions of the index tensor give the result tensor its leading
+    dimensions. The trailing dimensions of the result tensor are obtained from 
+    the source tensor by omitting the dimensions specified in `gather_dims` 
+    (rank-reducing semantics) or setting them to `1` (rank-preserving semantics)
+    (see examples).
+    The trailing dimension of the index tensor contains the coordinates and is
+    expected to have its size equal to the number of dimensions being gathered.
+    This convention allows an idiomatic specification and lowering of "gathering
+    multiple N-D slices from the source tensor". 
+
+    Note: in the examples below, we separate out the indexing part of the tensor
+    type by a whitespace for readability purposes.
+
+    Example:
+
+    ```mlir
+        // For each 1x2 triple of coordinates in %indices, extract the 
+        // element (i.e. 0-D subset) at the coordinates triple in %source.
+        //
+        %out = tensor.gather %source[%indices] gather_dims([0, 1, 2]) :
+          (tensor<4x4x4xf32>, tensor<1x2x 3xindex>) -> tensor<1x2x 1x1x1xf32>
+
+        // Note: result type may be further rank-reduced to tensor<1x2x f32>.
+    ```
+
+    A slice variant is provided to allow specifying whole slices of the source
+    tensor.
+
+    Example:
+
+    ```mlir
+        // For each 5x6 singleton of coordinates in %indices, extract the 2-D
+        // slice %source[*, %indices[...]:%indices[...] + 1, *] with the indices
+        // corresponding to the `gather_dims` attribute specified by %indices.
+        //
+        %out = tensor.gather %source[%indices] gather_dims([1]) : 
+          (tensor<3x4x5xf32>, tensor<6x7x 1xindex>) -> tensor<6x7x 3x1x5xf32>
+
+        // Note: result type may be further rank-reduced to tensor<6x7x 3x5xf32>.
+    ```
+
+    The dimensions specified in the gather_dims attribute are ones for which the
+    result tensor has size `1`. 
+    I.e. if the source type is `axbxcxd` and the coordinates are [1, 3], then
+    the shape suffix is `ax1xcx1`.
+    Gather also allows rank-reducing semantics where the shape `ax1xcx1` can be
+    further simplified to `axc`.
+
+    The elemental type of the indices tensor can be any integer type. 
+    In the absence of target-specific or problem specific information the default
+    type one should use is `index`.
+
+    This operation does not support unranked tensors.
+
+    An optional `unique` unit attribute may be specified to indicate that the
+    coordinates in `indices` are statically guaranteed to be unique at runtime.
+    Incorrectly setting the `unique` attribute when the coordinates are not truly
+    unique is undefined behavior.
+
+    Only full slices are meant to be supported by this op, if one desires 
+    partial slices (e.g. strided windows) one should compose this op with other
+    tensor ops (e.g. tensor.extract_slice). This is to avoid a slippery slope of
+    complexity that would make the op unusable in practice.
+
+    At the tensor-level, the index tensor is specified in an AoS form (i.e. 
+    coordinate tuple is the most minor). It is the responsibility of further 
+    lowerings and bufferiation to implement various concrete layouts.
+
+    Note: As currently specified, the operation must lower to an abstraction that
+    performs copies to the output tensor. This is because the buffer type system
+    is currently not rich enough to allow multiple non-contiguous views in the 
+    same type. This is visible more clearly in a notional buffer version of the
+    op:
+
+    ```mlir
+        // memref<?x4x1xf32> is a contiguous buffer of ?x4x1 elements.
+        // gather from random source slices must copy to the contiguous output.
+        %out = memref.gather %source[%indices] gather_dims([1]) : 
+          (memref<4x4xf32>, memref<?x 1xindex>) -> memref<?x 4x1xf32>
+
+        // Nested buffer support would allow gather to directly index into the 
+        // source buffer (i.e. represent a jagged view into the source).
+        %out = memref.gather %source[%indices] gather_dims([1]) : 
+          (memref<4x4xf32>, memref<?x 1xindex>) -> memref<? x memref<4x1xf32>>
+    ```
+  }];
+
+  let arguments = (ins AnyRankedTensor:$source, 
+                       RankedTensorOf<[AnySignlessIntegerOrIndex]>:$indices,
+                       DenseI64ArrayAttr:$gather_dims,
+                       UnitAttr:$unique);
+  let results = (outs AnyRankedTensor:$result);
+
+  let assemblyFormat = [{
+    $source `[` $indices `]` 
+      `gather_dims` `(` $gather_dims `)`
+      (`unique` $unique^)?  
+      attr-dict
+    `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    // TODO: InferTypeOpInterface once enough confidence is built with 
+    // tensor<tensor> and its lwoering to memref<memref>.
+    static RankedTensorType inferResultType(RankedTensorType sourceType,
+                                            RankedTensorType indicesType,
+                                            ArrayRef<int64_t> gatherDims,
+                                            bool rankReduced);
+    RankedTensorType getIndicesType() {
+      return getIndices().getType().cast<RankedTensorType>();
+    }
+    RankedTensorType getSourceType() {
+      return getSource().getType().cast<RankedTensorType>();
+    }
+    RankedTensorType getResultType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GenerateOp
 //===----------------------------------------------------------------------===//
 
@@ -414,8 +552,8 @@ def Tensor_GenerateOp : Tensor_Op<"generate",
     [RecursiveSideEffects,
      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
      SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
-  string summary = "Creates a dynamically sized tensor from elements";
-  string description = [{
+  let summary = "Creates a dynamically sized tensor from elements";
+  let description = [{
     This operation creates a dynamically sized tensor with elements of any type.
     It expects one index operand per dynamic extent of the result tensor.
 
@@ -560,7 +698,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
 
     Example:
 
-    ```
+    ```mlir
     // Rank-altering insert_slice.
     %1 = tensor.insert_slice %t into %0[0, 0, 0][1, 16, 4][1, 1, 1] :
       tensor<16x4xf32> into tensor<8x16x4xf32>
@@ -1207,6 +1345,147 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
   ];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// ScatterOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_ScatterOp : Tensor_Op<"scatter", [
+    NoSideEffect
+  ]> {
+  let summary = 
+    "scatter a tensor into a destination tensor at specified indices";
+  let description = [{
+    The `scatter` operation inserts a `source` tensor into a `dest` tensor at
+    the given indices.
+
+    In its most general form, the tensor of indices specifies all the coordinates
+    of every element to insert (i.e. COO format, without the payload).
+    The indices are expected to be confined to coordinate values that fit the
+    range of the `dest` tensor, otherwise the behavior is undefined.
+
+    The leading dimensions of the index tensor must match that of the dest 
+    tensor. The trailing dimensions of the dest tensor must match those of the
+    source tensor by omitting the dimensions specified in scatter_dims 
+    (rank-reducing semantics) or setting them to `1` (rank-preserving semantics)
+    (see examples). 
+    This convention allows an idiomatic specification and lowering of 
+    "scattering multiple N-D slices into the dest tensor". 
+    The result type must match the type of the dest tensor.
+
+    Note: in the examples below, we separate out the indexing part of the tensor
+    type by a whitespace for readability purposes.
+
+    Example:
+
+    ```mlir
+        // For each 1x2 triple of coordinates in %indices, insert the 
+        // element (i.e. 0-D subset) at the coordinates triple in %dest.
+        //
+        %out = tensor.scatter %source into %dest[%indices]
+            scatter_dims([0, 1, 2]) unique :
+          (tensor<1x2x 1x1x1xf32>, tensor<4x4x4xf32>, tensor<1x2x 3xindex>)
+            -> tensor<4x4x4xf32>
+
+        // Note: source type may be further rank-reduced to tensor<1x2x f32>.
+    ```
+
+    A slice variant is provided to allow specifying insertion of whole tensor
+    slices into the `dest` tensor.
+
+    Example:
+
+    ```mlir
+        // For each 3 singleton of coordinates in %indices, insert the 2-D
+        // slice into %dest[*, %indices[...]:%indices[...] + 1, *] with the
+        // indices corresponding to the scatter_dims attribute specified by
+        // %indices.
+        //
+        %out = tensor.scatter %source into %dest[%indices] scatter_dims([1]) unique : 
+          (tensor<3x 4x1x6xf32>, tensor<4x5x6xf32>, tensor<3x 1xindex>)
+            -> tensor<4x5x6xf32>
+    ```
+
+    The dimensions specified in the scatter_dims attribute are ones for which the
+    source tensor has size `1`. 
+    I.e. if the dest type is `axbxcxd` and the coordinates are [1, 3], then
+    the source type suffix is `ax1xcx1`.
+    Sactter also allows rank-reducing semantics where the shape `ax1xcx1` can be
+    further simplified to `axc`.
+
+    The elemental type of the indices tensor can be any integer type. 
+    In the absence of target-specific or problem specific information the default
+    type one should use is `index`.
+
+    This operation does not support unranked tensors.
+
+    A `unique` unit attribute must be be specified to indicate that the
+    coordinates are statically guaranteed to be unique at runtime. If coordinates
+    are not truly unique at runtime, the behavior is undefined.
+
+    Only full slices are meant to be supported by this op, if one desires 
+    partial slices (e.g. strided windows) one should compose this op with other
+    tensor ops (e.g. tensor.insert_slice). This is to avoid a slippery slope of
+    complexity that would make the op unusable in practice.
+
+    At the tensor-level, the index tensor is specified in an AoS form (i.e. 
+    coordinate tuple is the most minor). It is the responsibility of further 
+    lowerings and bufferiation to implement various concrete layouts.
+
+    Note: As currently specified, the operation must lower to an abstraction that
+    performs copies to the output tensor. This is because the buffer type system
+    is currently not rich enough to allow multiple non-contiguous views in the 
+    same type. This is visible more clearly in a notional buffer version of the
+    op:
+
+    ```mlir
+        // memref<?x 4xf32> is a contiguous buffer of ?x4 elements, scatter into
+        // random dest slices must copy to the contiguous dest.
+        //
+        some_side_effecting_op_writing_into %source, ...: memref<3x 4xf32>
+        memref.scatter %source into %dest[%indices] scatter_dims([1]) unique : 
+          (memref<3x 4xf32>, memref<?x 4xf32>, memref<?x 1xindex>)
+
+        // Nested buffer support in the producing op would allow writing directly
+        // into the dest buffer.
+        %v = some_nested_buffer_view_op %dest[%indices] scatter_dims([1]) unique : 
+          memref<? x memref<4xf32>>
+        some_side_effecting_op_writing_into %v, ...: memref<? x memref<4xf32>>
+    ```
+  }];
+
+  let arguments = (ins AnyRankedTensor:$source, 
+                       AnyRankedTensor:$dest, 
+                       RankedTensorOf<[AnySignlessIntegerOrIndex]>:$indices,
+                       DenseI64ArrayAttr:$scatter_dims,
+                       UnitAttr:$unique);
+  let results = (outs AnyRankedTensor:$result);
+
+  let assemblyFormat = [{
+    $source `into` $dest `[` $indices `]` 
+      `scatter_dims` `(` $scatter_dims `)`
+      (`unique` $unique^)?
+      attr-dict
+    `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    RankedTensorType getDestType() {
+      return getDest().getType().cast<RankedTensorType>();
+    }
+    RankedTensorType getIndicesType() {
+      return getIndices().getType().cast<RankedTensorType>();
+    }
+    RankedTensorType getSourceType() {
+      return getSource().getType().cast<RankedTensorType>();
+    }
+    RankedTensorType getResultType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+  }];
   let hasVerifier = 1;
 }
 

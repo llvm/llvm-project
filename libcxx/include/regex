@@ -770,9 +770,9 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__iterator/wrap_iter.h>
 #include <__locale>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 #include <__utility/swap.h>
 #include <deque>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
