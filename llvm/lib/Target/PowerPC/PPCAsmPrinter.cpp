@@ -140,12 +140,11 @@ protected:
             MCSymbol *>
       TOC;
   const PPCSubtarget *Subtarget = nullptr;
-  StackMaps SM;
 
 public:
   explicit PPCAsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), SM(*this) {}
+      : AsmPrinter(TM, std::move(Streamer)) {}
 
   StringRef getPassName() const override { return "PowerPC Assembly Printer"; }
 
@@ -171,8 +170,6 @@ public:
                        const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
-
-  void emitEndOfAsmFile(Module &M) override;
 
   void LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI);
   void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
@@ -425,10 +422,6 @@ PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym,
   if (!TOCEntry)
     TOCEntry = createTempSymbol("C");
   return TOCEntry;
-}
-
-void PPCAsmPrinter::emitEndOfAsmFile(Module &M) {
-  emitStackMaps(SM);
 }
 
 void PPCAsmPrinter::LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI) {
