@@ -2867,6 +2867,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                 Pred == CmpInst::BAD_FCMP_PREDICATE))
         Pred = cast<CmpInst>(I)->getPredicate();
 
+      // TODO: Handle pre-AVX FCMP_ONE/FCMP_UEQ slow cases.
       switch (Pred) {
       case CmpInst::Predicate::ICMP_NE:
         // xor(cmpeq(x,y),-1)
@@ -2927,10 +2928,13 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   };
 
   static const CostKindTblEntry AVX512CostTbl[] = {
+    { ISD::SETCC,   MVT::v8f64,   { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::v4f64,   { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::v16f32,  { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::v8f32,   { 1, 4, 1, 1 } },
+
     { ISD::SETCC,   MVT::v8i64,   { 1 } },
     { ISD::SETCC,   MVT::v16i32,  { 1 } },
-    { ISD::SETCC,   MVT::v8f64,   { 1 } },
-    { ISD::SETCC,   MVT::v16f32,  { 1 } },
 
     { ISD::SELECT,  MVT::v8i64,   { 1, 1, 1, 1 } },
     { ISD::SELECT,  MVT::v4i64,   { 1, 1, 1, 1 } },
@@ -2959,6 +2963,13 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   };
 
   static const CostKindTblEntry AVX2CostTbl[] = {
+    { ISD::SETCC,   MVT::v4f64,   { 1, 4, 1, 2 } },
+    { ISD::SETCC,   MVT::v2f64,   { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::f64,     { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::v8f32,   { 1, 4, 1, 2 } },
+    { ISD::SETCC,   MVT::v4f32,   { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::f32,     { 1, 4, 1, 1 } },
+
     { ISD::SETCC,   MVT::v4i64,   { 1 } },
     { ISD::SETCC,   MVT::v8i32,   { 1 } },
     { ISD::SETCC,   MVT::v16i16,  { 1 } },
@@ -2973,8 +2984,13 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   };
 
   static const CostKindTblEntry AVX1CostTbl[] = {
-    { ISD::SETCC,   MVT::v4f64,   { 1 } },
-    { ISD::SETCC,   MVT::v8f32,   { 1 } },
+    { ISD::SETCC,   MVT::v4f64,   { 2, 3, 1, 2 } },
+    { ISD::SETCC,   MVT::v2f64,   { 1, 3, 1, 1 } },
+    { ISD::SETCC,   MVT::f64,     { 1, 3, 1, 1 } },
+    { ISD::SETCC,   MVT::v8f32,   { 2, 3, 1, 2 } },
+    { ISD::SETCC,   MVT::v4f32,   { 1, 3, 1, 1 } },
+    { ISD::SETCC,   MVT::f32,     { 1, 3, 1, 1 } },
+
     // AVX1 does not support 8-wide integer compare.
     { ISD::SETCC,   MVT::v4i64,   { 4 } },
     { ISD::SETCC,   MVT::v8i32,   { 4 } },
@@ -2994,8 +3010,8 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   };
 
   static const CostKindTblEntry SSE41CostTbl[] = {
-    { ISD::SETCC,   MVT::v2f64,   { 1 } },
-    { ISD::SETCC,   MVT::v4f32,   { 1 } },
+    { ISD::SETCC,   MVT::v2f64,   { 1, 5, 1, 1 } },
+    { ISD::SETCC,   MVT::v4f32,   { 1, 5, 1, 1 } },
 
     { ISD::SELECT,  MVT::v2f64,   { 2, 2, 1, 2 } }, // blendvpd
     { ISD::SELECT,  MVT::f64,     { 2, 2, 1, 2 } }, // blendvpd
@@ -3008,8 +3024,9 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   };
 
   static const CostKindTblEntry SSE2CostTbl[] = {
-    { ISD::SETCC,   MVT::v2f64,   { 2 } },
-    { ISD::SETCC,   MVT::f64,     { 1 } },
+    { ISD::SETCC,   MVT::v2f64,   { 2, 5, 1, 1 } },
+    { ISD::SETCC,   MVT::f64,     { 1, 5, 1, 1 } },
+
     { ISD::SETCC,   MVT::v2i64,   { 5 } }, // pcmpeqd/pcmpgtd expansion
     { ISD::SETCC,   MVT::v4i32,   { 1 } },
     { ISD::SETCC,   MVT::v8i16,   { 1 } },
@@ -3024,8 +3041,8 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   };
 
   static const CostKindTblEntry SSE1CostTbl[] = {
-    { ISD::SETCC,   MVT::v4f32,   { 2 } },
-    { ISD::SETCC,   MVT::f32,     { 1 } },
+    { ISD::SETCC,   MVT::v4f32,   { 2, 5, 1, 1 } },
+    { ISD::SETCC,   MVT::f32,     { 1, 5, 1, 1 } },
 
     { ISD::SELECT,  MVT::v4f32,   { 2, 2, 3, 3 } }, // andps + andnps + orps
     { ISD::SELECT,  MVT::f32,     { 2, 2, 3, 3 } }, // andps + andnps + orps
