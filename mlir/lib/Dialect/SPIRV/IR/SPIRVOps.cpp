@@ -1332,7 +1332,7 @@ void spirv::AtomicIAddOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.AtomicFAddEXTOp
+// spv.EXT.AtomicFAddOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::EXTAtomicFAddOp::verify() {
@@ -2643,7 +2643,7 @@ LogicalResult spirv::GroupNonUniformShuffleXorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.SubgroupBlockReadINTEL
+// spv.INTEL.SubgroupBlockRead
 //===----------------------------------------------------------------------===//
 
 ParseResult spirv::INTELSubgroupBlockReadOp::parse(OpAsmParser &parser,
@@ -2681,7 +2681,7 @@ LogicalResult spirv::INTELSubgroupBlockReadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.SubgroupBlockWriteINTEL
+// spv.INTEL.SubgroupBlockWrite
 //===----------------------------------------------------------------------===//
 
 ParseResult spirv::INTELSubgroupBlockWriteOp::parse(OpAsmParser &parser,
@@ -3813,7 +3813,7 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.CooperativeMatrixLoadNV
+// spv.NV.CooperativeMatrixLoad
 //===----------------------------------------------------------------------===//
 
 ParseResult spirv::NVCooperativeMatrixLoadOp::parse(OpAsmParser &parser,
@@ -3871,7 +3871,7 @@ LogicalResult spirv::NVCooperativeMatrixLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.CooperativeMatrixStoreNV
+// spv.NV.CooperativeMatrixStore
 //===----------------------------------------------------------------------===//
 
 ParseResult spirv::NVCooperativeMatrixStoreOp::parse(OpAsmParser &parser,
@@ -3911,7 +3911,7 @@ LogicalResult spirv::NVCooperativeMatrixStoreOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.CooperativeMatrixMulAddNV
+// spv.NV.CooperativeMatrixMulAdd
 //===----------------------------------------------------------------------===//
 
 static LogicalResult
@@ -3960,7 +3960,7 @@ verifyPointerAndJointMatrixType(Operation *op, Type pointer, Type jointMatrix) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.JointMatrixLoadINTEL
+// spv.INTEL.JointMatrixLoad
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::INTELJointMatrixLoadOp::verify() {
@@ -3969,7 +3969,7 @@ LogicalResult spirv::INTELJointMatrixLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.JointMatrixStoreINTEL
+// spv.INTEL.JointMatrixStore
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::INTELJointMatrixStoreOp::verify() {
@@ -3978,7 +3978,7 @@ LogicalResult spirv::INTELJointMatrixStoreOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.JointMatrixMadINTEL
+// spv.INTEL.JointMatrixMad
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verifyJointMatrixMad(spirv::INTELJointMatrixMadOp op) {

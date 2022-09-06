@@ -150,7 +150,7 @@ spv.module Logical GLSL450 attributes {
 //===----------------------------------------------------------------------===//
 
 // Test deducing minimal extensions.
-// spv.SubgroupBallotKHR requires the SPV_KHR_shader_ballot extension.
+// spv.KHR.SubgroupBallot requires the SPV_KHR_shader_ballot extension.
 
 // CHECK: requires #spv.vce<v1.0, [SubgroupBallotKHR, Shader], [SPV_KHR_shader_ballot]>
 spv.module Logical GLSL450 attributes {
@@ -159,7 +159,7 @@ spv.module Logical GLSL450 attributes {
              [SPV_KHR_shader_ballot, SPV_KHR_shader_clock, SPV_KHR_variable_pointers]>, #spv.resource_limits<>>
 } {
   spv.func @subgroup_ballot(%predicate : i1) -> vector<4xi32> "None" {
-    %0 = spv.SubgroupBallotKHR %predicate: vector<4xi32>
+    %0 = spv.KHR.SubgroupBallot %predicate: vector<4xi32>
     spv.ReturnValue %0: vector<4xi32>
   }
 }
