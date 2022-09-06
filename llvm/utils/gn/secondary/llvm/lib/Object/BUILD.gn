@@ -6,6 +6,7 @@ static_library("Object") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/IR",
+    "//llvm/lib/IRReader",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",
