@@ -90,13 +90,13 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
     : AsmPrinter(TM, std::move(Streamer)) {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     if (isHsaAbiVersion2(getGlobalSTI())) {
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV2());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerYamlV2());
     } else if (isHsaAbiVersion3(getGlobalSTI())) {
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV3());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV3());
     } else if (isHsaAbiVersion5(getGlobalSTI())) {
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV5());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV5());
     } else {
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV4());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV4());
     }
   }
 }

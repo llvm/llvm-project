@@ -51,11 +51,11 @@ namespace HSAMD {
 //===----------------------------------------------------------------------===//
 // HSAMetadataStreamerV2
 //===----------------------------------------------------------------------===//
-void MetadataStreamerV2::dump(StringRef HSAMetadataString) const {
+void MetadataStreamerYamlV2::dump(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata:\n" << HSAMetadataString << '\n';
 }
 
-void MetadataStreamerV2::verify(StringRef HSAMetadataString) const {
+void MetadataStreamerYamlV2::verify(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata Parser Test: ";
 
   HSAMD::Metadata FromHSAMetadataString;
@@ -79,7 +79,7 @@ void MetadataStreamerV2::verify(StringRef HSAMetadataString) const {
 }
 
 AccessQualifier
-MetadataStreamerV2::getAccessQualifier(StringRef AccQual) const {
+MetadataStreamerYamlV2::getAccessQualifier(StringRef AccQual) const {
   if (AccQual.empty())
     return AccessQualifier::Unknown;
 
@@ -91,8 +91,7 @@ MetadataStreamerV2::getAccessQualifier(StringRef AccQual) const {
 }
 
 AddressSpaceQualifier
-MetadataStreamerV2::getAddressSpaceQualifier(
-    unsigned AddressSpace) const {
+MetadataStreamerYamlV2::getAddressSpaceQualifier(unsigned AddressSpace) const {
   switch (AddressSpace) {
   case AMDGPUAS::PRIVATE_ADDRESS:
     return AddressSpaceQualifier::Private;
@@ -111,8 +110,8 @@ MetadataStreamerV2::getAddressSpaceQualifier(
   }
 }
 
-ValueKind MetadataStreamerV2::getValueKind(Type *Ty, StringRef TypeQual,
-                                           StringRef BaseTypeName) const {
+ValueKind MetadataStreamerYamlV2::getValueKind(Type *Ty, StringRef TypeQual,
+                                               StringRef BaseTypeName) const {
   if (TypeQual.contains("pipe"))
     return ValueKind::Pipe;
 
@@ -139,7 +138,7 @@ ValueKind MetadataStreamerV2::getValueKind(Type *Ty, StringRef TypeQual,
                       ValueKind::ByValue);
 }
 
-std::string MetadataStreamerV2::getTypeName(Type *Ty, bool Signed) const {
+std::string MetadataStreamerYamlV2::getTypeName(Type *Ty, bool Signed) const {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID: {
     if (!Signed)
@@ -177,7 +176,7 @@ std::string MetadataStreamerV2::getTypeName(Type *Ty, bool Signed) const {
 }
 
 std::vector<uint32_t>
-MetadataStreamerV2::getWorkGroupDimensions(MDNode *Node) const {
+MetadataStreamerYamlV2::getWorkGroupDimensions(MDNode *Node) const {
   std::vector<uint32_t> Dims;
   if (Node->getNumOperands() != 3)
     return Dims;
@@ -187,9 +186,8 @@ MetadataStreamerV2::getWorkGroupDimensions(MDNode *Node) const {
   return Dims;
 }
 
-Kernel::CodeProps::Metadata
-MetadataStreamerV2::getHSACodeProps(const MachineFunction &MF,
-                                    const SIProgramInfo &ProgramInfo) const {
+Kernel::CodeProps::Metadata MetadataStreamerYamlV2::getHSACodeProps(
+    const MachineFunction &MF, const SIProgramInfo &ProgramInfo) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
@@ -218,20 +216,19 @@ MetadataStreamerV2::getHSACodeProps(const MachineFunction &MF,
   return HSACodeProps;
 }
 
-Kernel::DebugProps::Metadata
-MetadataStreamerV2::getHSADebugProps(const MachineFunction &MF,
-                                     const SIProgramInfo &ProgramInfo) const {
+Kernel::DebugProps::Metadata MetadataStreamerYamlV2::getHSADebugProps(
+    const MachineFunction &MF, const SIProgramInfo &ProgramInfo) const {
   return HSAMD::Kernel::DebugProps::Metadata();
 }
 
-void MetadataStreamerV2::emitVersion() {
+void MetadataStreamerYamlV2::emitVersion() {
   auto &Version = HSAMetadata.mVersion;
 
   Version.push_back(VersionMajorV2);
   Version.push_back(VersionMinorV2);
 }
 
-void MetadataStreamerV2::emitPrintf(const Module &Mod) {
+void MetadataStreamerYamlV2::emitPrintf(const Module &Mod) {
   auto &Printf = HSAMetadata.mPrintf;
 
   auto Node = Mod.getNamedMetadata("llvm.printf.fmts");
@@ -244,7 +241,7 @@ void MetadataStreamerV2::emitPrintf(const Module &Mod) {
           std::string(cast<MDString>(Op->getOperand(0))->getString()));
 }
 
-void MetadataStreamerV2::emitKernelLanguage(const Function &Func) {
+void MetadataStreamerYamlV2::emitKernelLanguage(const Function &Func) {
   auto &Kernel = HSAMetadata.mKernels.back();
 
   // TODO: What about other languages?
@@ -262,7 +259,7 @@ void MetadataStreamerV2::emitKernelLanguage(const Function &Func) {
       mdconst::extract<ConstantInt>(Op0->getOperand(1))->getZExtValue());
 }
 
-void MetadataStreamerV2::emitKernelAttrs(const Function &Func) {
+void MetadataStreamerYamlV2::emitKernelAttrs(const Function &Func) {
   auto &Attrs = HSAMetadata.mKernels.back().mAttrs;
 
   if (auto Node = Func.getMetadata("reqd_work_group_size"))
@@ -280,15 +277,15 @@ void MetadataStreamerV2::emitKernelAttrs(const Function &Func) {
   }
 }
 
-void MetadataStreamerV2::emitKernelArgs(const Function &Func,
-                                        const GCNSubtarget &ST) {
+void MetadataStreamerYamlV2::emitKernelArgs(const Function &Func,
+                                            const GCNSubtarget &ST) {
   for (auto &Arg : Func.args())
     emitKernelArg(Arg);
 
   emitHiddenKernelArgs(Func, ST);
 }
 
-void MetadataStreamerV2::emitKernelArg(const Argument &Arg) {
+void MetadataStreamerYamlV2::emitKernelArg(const Argument &Arg) {
   auto Func = Arg.getParent();
   auto ArgNo = Arg.getArgNo();
   const MDNode *Node;
@@ -344,12 +341,10 @@ void MetadataStreamerV2::emitKernelArg(const Argument &Arg) {
                 TypeName, BaseTypeName, AccQual, TypeQual);
 }
 
-void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
-                                       Align Alignment, ValueKind ValueKind,
-                                       MaybeAlign PointeeAlign, StringRef Name,
-                                       StringRef TypeName,
-                                       StringRef BaseTypeName,
-                                       StringRef AccQual, StringRef TypeQual) {
+void MetadataStreamerYamlV2::emitKernelArg(
+    const DataLayout &DL, Type *Ty, Align Alignment, ValueKind ValueKind,
+    MaybeAlign PointeeAlign, StringRef Name, StringRef TypeName,
+    StringRef BaseTypeName, StringRef AccQual, StringRef TypeQual) {
   HSAMetadata.mKernels.back().mArgs.push_back(Kernel::Arg::Metadata());
   auto &Arg = HSAMetadata.mKernels.back().mArgs.back();
 
@@ -381,8 +376,8 @@ void MetadataStreamerV2::emitKernelArg(const DataLayout &DL, Type *Ty,
   }
 }
 
-void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func,
-                                              const GCNSubtarget &ST) {
+void MetadataStreamerYamlV2::emitHiddenKernelArgs(const Function &Func,
+                                                  const GCNSubtarget &ST) {
   unsigned HiddenArgNumBytes = ST.getImplicitArgNumBytes(Func);
   if (!HiddenArgNumBytes)
     return;
@@ -433,17 +428,17 @@ void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func,
   }
 }
 
-bool MetadataStreamerV2::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
+bool MetadataStreamerYamlV2::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(getHSAMetadata());
 }
 
-void MetadataStreamerV2::begin(const Module &Mod,
-                               const IsaInfo::AMDGPUTargetID &TargetID) {
+void MetadataStreamerYamlV2::begin(const Module &Mod,
+                                   const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
   emitPrintf(Mod);
 }
 
-void MetadataStreamerV2::end() {
+void MetadataStreamerYamlV2::end() {
   std::string HSAMetadataString;
   if (toString(HSAMetadata, HSAMetadataString))
     return;
@@ -454,8 +449,8 @@ void MetadataStreamerV2::end() {
     verify(HSAMetadataString);
 }
 
-void MetadataStreamerV2::emitKernel(const MachineFunction &MF,
-                                    const SIProgramInfo &ProgramInfo) {
+void MetadataStreamerYamlV2::emitKernel(const MachineFunction &MF,
+                                        const SIProgramInfo &ProgramInfo) {
   auto &Func = MF.getFunction();
   if (Func.getCallingConv() != CallingConv::AMDGPU_KERNEL)
     return;
@@ -480,11 +475,11 @@ void MetadataStreamerV2::emitKernel(const MachineFunction &MF,
 // HSAMetadataStreamerV3
 //===----------------------------------------------------------------------===//
 
-void MetadataStreamerV3::dump(StringRef HSAMetadataString) const {
+void MetadataStreamerMsgPackV3::dump(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata:\n" << HSAMetadataString << '\n';
 }
 
-void MetadataStreamerV3::verify(StringRef HSAMetadataString) const {
+void MetadataStreamerMsgPackV3::verify(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata Parser Test: ";
 
   msgpack::Document FromHSAMetadataString;
@@ -506,7 +501,7 @@ void MetadataStreamerV3::verify(StringRef HSAMetadataString) const {
 }
 
 Optional<StringRef>
-MetadataStreamerV3::getAccessQualifier(StringRef AccQual) const {
+MetadataStreamerMsgPackV3::getAccessQualifier(StringRef AccQual) const {
   return StringSwitch<Optional<StringRef>>(AccQual)
       .Case("read_only", StringRef("read_only"))
       .Case("write_only", StringRef("write_only"))
@@ -514,8 +509,8 @@ MetadataStreamerV3::getAccessQualifier(StringRef AccQual) const {
       .Default(None);
 }
 
-Optional<StringRef>
-MetadataStreamerV3::getAddressSpaceQualifier(unsigned AddressSpace) const {
+Optional<StringRef> MetadataStreamerMsgPackV3::getAddressSpaceQualifier(
+    unsigned AddressSpace) const {
   switch (AddressSpace) {
   case AMDGPUAS::PRIVATE_ADDRESS:
     return StringRef("private");
@@ -534,8 +529,9 @@ MetadataStreamerV3::getAddressSpaceQualifier(unsigned AddressSpace) const {
   }
 }
 
-StringRef MetadataStreamerV3::getValueKind(Type *Ty, StringRef TypeQual,
-                                           StringRef BaseTypeName) const {
+StringRef
+MetadataStreamerMsgPackV3::getValueKind(Type *Ty, StringRef TypeQual,
+                                        StringRef BaseTypeName) const {
   if (TypeQual.contains("pipe"))
     return "pipe";
 
@@ -561,7 +557,8 @@ StringRef MetadataStreamerV3::getValueKind(Type *Ty, StringRef TypeQual,
                    : "by_value");
 }
 
-std::string MetadataStreamerV3::getTypeName(Type *Ty, bool Signed) const {
+std::string MetadataStreamerMsgPackV3::getTypeName(Type *Ty,
+                                                   bool Signed) const {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID: {
     if (!Signed)
@@ -599,7 +596,7 @@ std::string MetadataStreamerV3::getTypeName(Type *Ty, bool Signed) const {
 }
 
 msgpack::ArrayDocNode
-MetadataStreamerV3::getWorkGroupDimensions(MDNode *Node) const {
+MetadataStreamerMsgPackV3::getWorkGroupDimensions(MDNode *Node) const {
   auto Dims = HSAMetadataDoc->getArrayNode();
   if (Node->getNumOperands() != 3)
     return Dims;
@@ -610,14 +607,14 @@ MetadataStreamerV3::getWorkGroupDimensions(MDNode *Node) const {
   return Dims;
 }
 
-void MetadataStreamerV3::emitVersion() {
+void MetadataStreamerMsgPackV3::emitVersion() {
   auto Version = HSAMetadataDoc->getArrayNode();
   Version.push_back(Version.getDocument()->getNode(VersionMajorV3));
   Version.push_back(Version.getDocument()->getNode(VersionMinorV3));
   getRootMetadata("amdhsa.version") = Version;
 }
 
-void MetadataStreamerV3::emitPrintf(const Module &Mod) {
+void MetadataStreamerMsgPackV3::emitPrintf(const Module &Mod) {
   auto Node = Mod.getNamedMetadata("llvm.printf.fmts");
   if (!Node)
     return;
@@ -630,8 +627,8 @@ void MetadataStreamerV3::emitPrintf(const Module &Mod) {
   getRootMetadata("amdhsa.printf") = Printf;
 }
 
-void MetadataStreamerV3::emitKernelLanguage(const Function &Func,
-                                            msgpack::MapDocNode Kern) {
+void MetadataStreamerMsgPackV3::emitKernelLanguage(const Function &Func,
+                                                   msgpack::MapDocNode Kern) {
   // TODO: What about other languages?
   auto Node = Func.getParent()->getNamedMetadata("opencl.ocl.version");
   if (!Node || !Node->getNumOperands())
@@ -649,8 +646,8 @@ void MetadataStreamerV3::emitKernelLanguage(const Function &Func,
   Kern[".language_version"] = LanguageVersion;
 }
 
-void MetadataStreamerV3::emitKernelAttrs(const Function &Func,
-                                         msgpack::MapDocNode Kern) {
+void MetadataStreamerMsgPackV3::emitKernelAttrs(const Function &Func,
+                                                msgpack::MapDocNode Kern) {
 
   if (auto Node = Func.getMetadata("reqd_work_group_size"))
     Kern[".reqd_workgroup_size"] = getWorkGroupDimensions(Node);
@@ -674,8 +671,8 @@ void MetadataStreamerV3::emitKernelAttrs(const Function &Func,
     Kern[".kind"] = Kern.getDocument()->getNode("fini");
 }
 
-void MetadataStreamerV3::emitKernelArgs(const MachineFunction &MF,
-                                        msgpack::MapDocNode Kern) {
+void MetadataStreamerMsgPackV3::emitKernelArgs(const MachineFunction &MF,
+                                               msgpack::MapDocNode Kern) {
   auto &Func = MF.getFunction();
   unsigned Offset = 0;
   auto Args = HSAMetadataDoc->getArrayNode();
@@ -687,8 +684,9 @@ void MetadataStreamerV3::emitKernelArgs(const MachineFunction &MF,
   Kern[".args"] = Args;
 }
 
-void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
-                                       msgpack::ArrayDocNode Args) {
+void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
+                                              unsigned &Offset,
+                                              msgpack::ArrayDocNode Args) {
   auto Func = Arg.getParent();
   auto ArgNo = Arg.getArgNo();
   const MDNode *Node;
@@ -746,7 +744,7 @@ void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
                 PointeeAlign, Name, TypeName, BaseTypeName, AccQual, TypeQual);
 }
 
-void MetadataStreamerV3::emitKernelArg(
+void MetadataStreamerMsgPackV3::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
     unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
@@ -794,9 +792,8 @@ void MetadataStreamerV3::emitKernelArg(
   Args.push_back(Arg);
 }
 
-void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
-                                              unsigned &Offset,
-                                              msgpack::ArrayDocNode Args) {
+void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
+    const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
@@ -862,9 +859,8 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
   }
 }
 
-msgpack::MapDocNode
-MetadataStreamerV3::getHSAKernelProps(const MachineFunction &MF,
-                                      const SIProgramInfo &ProgramInfo) const {
+msgpack::MapDocNode MetadataStreamerMsgPackV3::getHSAKernelProps(
+    const MachineFunction &MF, const SIProgramInfo &ProgramInfo) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   const Function &F = MF.getFunction();
@@ -904,18 +900,18 @@ MetadataStreamerV3::getHSAKernelProps(const MachineFunction &MF,
   return Kern;
 }
 
-bool MetadataStreamerV3::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
+bool MetadataStreamerMsgPackV3::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(*HSAMetadataDoc, true);
 }
 
-void MetadataStreamerV3::begin(const Module &Mod,
-                               const IsaInfo::AMDGPUTargetID &TargetID) {
+void MetadataStreamerMsgPackV3::begin(const Module &Mod,
+                                      const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
   emitPrintf(Mod);
   getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
 }
 
-void MetadataStreamerV3::end() {
+void MetadataStreamerMsgPackV3::end() {
   std::string HSAMetadataString;
   raw_string_ostream StrOS(HSAMetadataString);
   HSAMetadataDoc->toYAML(StrOS);
@@ -926,8 +922,8 @@ void MetadataStreamerV3::end() {
     verify(StrOS.str());
 }
 
-void MetadataStreamerV3::emitKernel(const MachineFunction &MF,
-                                    const SIProgramInfo &ProgramInfo) {
+void MetadataStreamerMsgPackV3::emitKernel(const MachineFunction &MF,
+                                           const SIProgramInfo &ProgramInfo) {
   auto &Func = MF.getFunction();
   auto Kern = getHSAKernelProps(MF, ProgramInfo);
 
@@ -953,20 +949,21 @@ void MetadataStreamerV3::emitKernel(const MachineFunction &MF,
 // HSAMetadataStreamerV4
 //===----------------------------------------------------------------------===//
 
-void MetadataStreamerV4::emitVersion() {
+void MetadataStreamerMsgPackV4::emitVersion() {
   auto Version = HSAMetadataDoc->getArrayNode();
   Version.push_back(Version.getDocument()->getNode(VersionMajorV4));
   Version.push_back(Version.getDocument()->getNode(VersionMinorV4));
   getRootMetadata("amdhsa.version") = Version;
 }
 
-void MetadataStreamerV4::emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID) {
+void MetadataStreamerMsgPackV4::emitTargetID(
+    const IsaInfo::AMDGPUTargetID &TargetID) {
   getRootMetadata("amdhsa.target") =
       HSAMetadataDoc->getNode(TargetID.toString(), /*Copy=*/true);
 }
 
-void MetadataStreamerV4::begin(const Module &Mod,
-                               const IsaInfo::AMDGPUTargetID &TargetID) {
+void MetadataStreamerMsgPackV4::begin(const Module &Mod,
+                                      const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
   emitTargetID(TargetID);
   emitPrintf(Mod);
@@ -977,16 +974,15 @@ void MetadataStreamerV4::begin(const Module &Mod,
 // HSAMetadataStreamerV5
 //===----------------------------------------------------------------------===//
 
-void MetadataStreamerV5::emitVersion() {
+void MetadataStreamerMsgPackV5::emitVersion() {
   auto Version = HSAMetadataDoc->getArrayNode();
   Version.push_back(Version.getDocument()->getNode(VersionMajorV5));
   Version.push_back(Version.getDocument()->getNode(VersionMinorV5));
   getRootMetadata("amdhsa.version") = Version;
 }
 
-void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
-                                              unsigned &Offset,
-                                              msgpack::ArrayDocNode Args) {
+void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
+    const MachineFunction &MF, unsigned &Offset, msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
