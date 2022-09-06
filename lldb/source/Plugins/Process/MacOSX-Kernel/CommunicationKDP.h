@@ -21,8 +21,6 @@
 
 class CommunicationKDP : public lldb_private::Communication {
 public:
-  enum { eBroadcastBitRunPacketSent = kLoUserBroadcastBit };
-
   const static uint32_t kMaxPacketSize = 1200;
   const static uint32_t kMaxDataSize = 1024;
   typedef lldb_private::StreamBuffer<4096> PacketStreamType;
