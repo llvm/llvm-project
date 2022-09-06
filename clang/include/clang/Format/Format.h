@@ -1423,11 +1423,11 @@ struct FormatStyle {
     /// Wrap class definitions.
     /// \code
     ///   true:
-    ///   class foo {};
-    ///
-    ///   false:
     ///   class foo
     ///   {};
+    ///
+    ///   false:
+    ///   class foo {};
     /// \endcode
     bool AfterClass;
 
