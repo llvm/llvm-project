@@ -664,8 +664,9 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
     Check(!GV.hasComdat(), "Declaration may not be in a Comdat!", &GV);
 
   if (GV.hasDLLExportStorageClass()) {
-    Check(GV.hasDefaultVisibility(),
-          "dllexport GlobalValue must have default visibility", &GV);
+    Check(!GV.hasHiddenVisibility(),
+          "dllexport GlobalValue must have default or protected visibility",
+          &GV);
   }
   if (GV.hasDLLImportStorageClass()) {
     Check(GV.hasDefaultVisibility(),
