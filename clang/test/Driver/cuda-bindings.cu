@@ -102,7 +102,6 @@
 // NDSYN-NOT: inputs:
 // NDSYN: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
 // NDSYN-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
-// NDSYN-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: [(nothing), (nothing)], output: "{{.*}}"
 // NDSYN-NEXT: # "powerpc64le-ibm-linux-gnu" - "clang", inputs: [{{.*}}], output: (nothing)
 // NDSYN-NOT: inputs:
 
