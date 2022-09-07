@@ -189,7 +189,7 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
     "}; " #
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     "ArrayRef<::mlir::spirv::Extension> " #
-      "ref(exts, ::llvm::array_lengthof(exts));");
+      "ref(exts, std::size(exts));");
   let instance = "ref";
 }
 
@@ -231,7 +231,7 @@ class Capability<list<I32EnumAttrCase> capabilities> : Availability {
     "}; " #
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     "ArrayRef<::mlir::spirv::Capability> " #
-      "ref(caps, ::llvm::array_lengthof(caps));");
+      "ref(caps, std::size(caps));");
   let instance = "ref";
 }
 
