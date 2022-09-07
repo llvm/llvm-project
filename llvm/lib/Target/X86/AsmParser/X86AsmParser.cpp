@@ -4264,7 +4264,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
     }
   }
 
-  for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I) {
+  for (unsigned I = 0, E = std::size(Match); I != E; ++I) {
     Tmp.back() = Suffixes[I];
     if (MemOp && HasVectorReg)
       MemOp->Mem.Size = MemSize[I];
@@ -4310,7 +4310,7 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   if (NumSuccessfulMatches > 1) {
     char MatchChars[4];
     unsigned NumMatches = 0;
-    for (unsigned I = 0, E = array_lengthof(Match); I != E; ++I)
+    for (unsigned I = 0, E = std::size(Match); I != E; ++I)
       if (Match[I] == Match_Success)
         MatchChars[NumMatches++] = Suffixes[I];
 

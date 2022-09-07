@@ -1105,7 +1105,7 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   }
 
   // FPR32 and FPR64 alias each other.
-  if (State.getFirstUnallocated(ArgFPR32s) == array_lengthof(ArgFPR32s))
+  if (State.getFirstUnallocated(ArgFPR32s) == std::size(ArgFPR32s))
     UseGPRForFloat = true;
 
   if (UseGPRForFloat && ValVT == MVT::f32) {
@@ -1130,7 +1130,7 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
       DL.getTypeAllocSize(OrigTy) == TwoGRLenInBytes) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
-    if (RegIdx != array_lengthof(ArgGPRs) && RegIdx % 2 == 1)
+    if (RegIdx != std::size(ArgGPRs) && RegIdx % 2 == 1)
       State.AllocateReg(ArgGPRs);
   }
 

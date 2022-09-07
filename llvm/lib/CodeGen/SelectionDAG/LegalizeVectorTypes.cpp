@@ -2378,7 +2378,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
                                          &DL](SmallVectorImpl<int> &Mask) {
     // Check if all inputs are shuffles of the same operands or non-shuffles.
     MapVector<std::pair<SDValue, SDValue>, SmallVector<unsigned>> ShufflesIdxs;
-    for (unsigned Idx = 0; Idx < array_lengthof(Inputs); ++Idx) {
+    for (unsigned Idx = 0; Idx < std::size(Inputs); ++Idx) {
       SDValue Input = Inputs[Idx];
       auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Input.getNode());
       if (!Shuffle ||
@@ -2425,7 +2425,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
       ShufflesIdxs[std::make_pair(P.first.second, P.first.first)].clear();
     }
     // Check if any concat_vectors can be simplified.
-    SmallBitVector UsedSubVector(2 * array_lengthof(Inputs));
+    SmallBitVector UsedSubVector(2 * std::size(Inputs));
     for (int &Idx : Mask) {
       if (Idx == UndefMaskElem)
         continue;
@@ -2445,7 +2445,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
     }
     if (UsedSubVector.count() > 1) {
       SmallVector<SmallVector<std::pair<unsigned, int>, 2>> Pairs;
-      for (unsigned I = 0; I < array_lengthof(Inputs); ++I) {
+      for (unsigned I = 0; I < std::size(Inputs); ++I) {
         if (UsedSubVector.test(2 * I) == UsedSubVector.test(2 * I + 1))
           continue;
         if (Pairs.empty() || Pairs.back().size() == 2)
@@ -2489,7 +2489,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
       // Try to remove extra shuffles (except broadcasts) and shuffles with the
       // reused operands.
       Changed = false;
-      for (unsigned I = 0; I < array_lengthof(Inputs); ++I) {
+      for (unsigned I = 0; I < std::size(Inputs); ++I) {
         auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Inputs[I].getNode());
         if (!Shuffle)
           continue;
@@ -2589,7 +2589,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
     }
     // Adjust mask in case of reused inputs. Also, need to insert constant
     // inputs at first, otherwise it affects the final outcome.
-    if (UniqueInputs.size() != array_lengthof(Inputs)) {
+    if (UniqueInputs.size() != std::size(Inputs)) {
       auto &&UniqueVec = UniqueInputs.takeVector();
       auto &&UniqueConstantVec = UniqueConstantInputs.takeVector();
       unsigned ConstNum = UniqueConstantVec.size();
@@ -2627,7 +2627,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
     // Build a shuffle mask for the output, discovering on the fly which
     // input vectors to use as shuffle operands.
     unsigned FirstMaskIdx = High * NewElts;
-    SmallVector<int> Mask(NewElts * array_lengthof(Inputs), UndefMaskElem);
+    SmallVector<int> Mask(NewElts * std::size(Inputs), UndefMaskElem);
     copy(makeArrayRef(OrigMask).slice(FirstMaskIdx, NewElts), Mask.begin());
     assert(!Output && "Expected default initialized initial value.");
     TryPeekThroughShufflesInputs(Mask);
@@ -2647,7 +2647,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
       return SecondIteration;
     };
     processShuffleMasks(
-        Mask, array_lengthof(Inputs), array_lengthof(Inputs),
+        Mask, std::size(Inputs), std::size(Inputs),
         /*NumOfUsedRegs=*/1,
         [&Output, &DAG = DAG, NewVT]() { Output = DAG.getUNDEF(NewVT); },
         [&Output, &DAG = DAG, NewVT, &DL, &Inputs,

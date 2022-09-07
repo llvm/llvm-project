@@ -329,7 +329,7 @@ void GenericDINode::recalculateHash() {
     }                                                                          \
   } while (false)
 #define DEFINE_GETIMPL_STORE(CLASS, ARGS, OPS)                                 \
-  return storeImpl(new (array_lengthof(OPS), Storage)                          \
+  return storeImpl(new (std::size(OPS), Storage)                               \
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_OPS(CLASS, ARGS)                               \
@@ -337,8 +337,7 @@ void GenericDINode::recalculateHash() {
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS)),             \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(CLASS, OPS)                   \
-  return storeImpl(new (array_lengthof(OPS), Storage)                          \
-                       CLASS(Context, Storage, OPS),                           \
+  return storeImpl(new (std::size(OPS), Storage) CLASS(Context, Storage, OPS), \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_N(CLASS, ARGS, OPS, NUM_OPS)                      \
   return storeImpl(new (NUM_OPS, Storage)                                      \
@@ -850,7 +849,7 @@ DICompileUnit *DICompileUnit::getImpl(
                      Macros,
                      SysRoot,
                      SDK};
-  return storeImpl(new (array_lengthof(Ops), Storage) DICompileUnit(
+  return storeImpl(new (std::size(Ops), Storage) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,
                        DebugInfoForProfiling, NameTableKind, RangesBaseAddress,
