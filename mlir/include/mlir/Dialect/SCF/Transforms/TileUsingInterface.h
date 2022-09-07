@@ -60,38 +60,48 @@ struct SCFTilingOptions {
   }
 };
 
+/// Transformation information returned after tiling.
 struct SCFTilingResult {
+  /// The tiled operation generated.
   Operation *tiledOp;
+  /// The `scf.for` operations that iterate over the tiles.
   SmallVector<scf::ForOp> loops;
+  /// Values to use as replacements for the untiled op. Is the same size as the
+  /// number of results of the untiled op.
+  SmallVector<Value> replacements;
 };
 
-/// Pattern to tile an op that implements the `TilingInterface` using
+/// Method to tile an op that implements the `TilingInterface` using
 /// `scf.for` for iterating over the tiles.
-struct TileUsingSCFForOp : public OpInterfaceRewritePattern<TilingInterface> {
-  /// Construct a generic pattern applied to all TilingInterface ops.
-  TileUsingSCFForOp(MLIRContext *context, SCFTilingOptions options,
-                    PatternBenefit benefit = 1);
+FailureOr<SCFTilingResult> tileUsingSCFForOp(RewriterBase &rewriter,
+                                             TilingInterface op,
+                                             SCFTilingOptions options);
 
-  /// Construct a generic pattern applied to `opName`.
-  TileUsingSCFForOp(StringRef opName, MLIRContext *context,
-                    SCFTilingOptions options, PatternBenefit benefit = 1);
-
-  /// `matchAndRewrite` implementation that returns the significant transformed
-  /// pieces of IR.
-  FailureOr<SCFTilingResult>
-  returningMatchAndRewrite(TilingInterface op, PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(TilingInterface op,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(op, rewriter);
+/// Options used to control tile + fuse.
+struct SCFTileAndFuseOptions {
+  /// The tiling options used to control the tiling of the consumer.
+  SCFTilingOptions tilingOptions;
+  SCFTileAndFuseOptions &setTilingOptions(SCFTilingOptions options) {
+    tilingOptions = options;
+    return *this;
   }
-
-private:
-  /// Options to control tiling;
-  SCFTilingOptions options;
 };
 
-/// Pattern to tile and fuse a sequence of operations, by tiling the consumer
+/// Transformation information returned after tile and fuse.
+struct SCFTileAndFuseResult {
+  /// List of untiled operations that were fused with the tiled consumer.
+  llvm::SetVector<Operation *> fusedProducers;
+  /// List of tiled and fused operations generated. The first one in this list
+  /// is guaranteed to be the tiled operations generated during tiling of the
+  /// generated operation.
+  llvm::SetVector<Operation *> tiledAndFusedOps;
+  /// The `scf.for` operations that iterate over the tiles.
+  SmallVector<scf::ForOp> loops;
+  /// The replacement values to use for the tiled and fused operations.
+  llvm::DenseMap<Value, Value> replacements;
+};
+
+/// Method to tile and fuse a sequence of operations, by tiling the consumer
 /// and fusing its producers. Note that this assumes that it is valid to
 /// tile+fuse the producer into the innermost tiled loop. Its up to the caller
 /// to ensure that the tile sizes provided make this fusion valid.
@@ -99,64 +109,32 @@ private:
 /// For example, for the following sequence
 ///
 /// ```mlir
-/// %0 = linalg.fill ...
-/// %1 = linalg.matmul ... outs(%0 : ...) ...
+/// %0 =
+/// %1 = linalg.fill ... outs(%0 : ... )
+/// %2 = linalg.matmul ... outs(%1 : ...) ...
 /// ```
 ///
 /// it is legal to fuse the fill with the matmul only if the matmul is tiled
 /// along the parallel dimensions and not the reduction dimension, i.e. the tile
-/// size for the reduction dimension should be 0.
-struct SCFTileAndFuseResult {
-  SmallVector<Operation *> tiledAndFusedOps;
-  SmallVector<scf::ForOp> loops;
-};
-struct TileConsumerAndFuseProducersUsingSCFForOp
-    : public OpInterfaceRewritePattern<TilingInterface> {
+/// size for the reduction dimension should be 0. The resulting fused
+/// transformation is
+///
+/// ```mlir
+/// %1 = scf.for ... iter_args(%arg0 = %0)
+///   %2 = tensor.extract_slice %arg0
+///   %3 = linalg.fill .. outs(%2 : ... )
+///   %4 = linalg.matmul .. outs(%3 : ...)
+/// }
+/// ```
+FailureOr<SCFTileAndFuseResult>
+tileConsumerAndFuseProducerGreedilyUsingSCFForOp(RewriterBase &rewriter,
+                                                 TilingInterface consumer,
+                                                 SCFTileAndFuseOptions options);
 
-  /// Construct a generic pattern applied to all TilingInterface ops.
-  TileConsumerAndFuseProducersUsingSCFForOp(MLIRContext *context,
-                                            SCFTilingOptions options,
-                                            PatternBenefit benefit = 1);
-
-  /// Construct a generic pattern applied to `opName`.
-  TileConsumerAndFuseProducersUsingSCFForOp(StringRef opName,
-                                            MLIRContext *context,
-                                            SCFTilingOptions options,
-                                            PatternBenefit benefit = 1);
-
-  /// `matchAndRewrite` implementation that returns the significant transformed
-  /// pieces of IR.
-  FailureOr<SCFTileAndFuseResult>
-  returningMatchAndRewrite(TilingInterface op, PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(TilingInterface op,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(op, rewriter);
-  }
-
-private:
-  /// This pattern uses the tiling pattern. Instead of using inheritance, use
-  /// the patterns as private object that is instantiated at the same time as
-  /// this pattern.
-  TileUsingSCFForOp tilingPattern;
-};
-
-/// Pattern to lower operations that implement the `TilingInterface` to
-/// loops/scalar IR using `scf.for`.
-struct LowerToLoopsUsingSCFForOp
-    : public OpInterfaceRewritePattern<TilingInterface> {
-  using OpInterfaceRewritePattern<TilingInterface>::OpInterfaceRewritePattern;
-
-  /// `matchAndRewrite` implementation that returns the significant transformed
-  /// pieces of IR.
-  FailureOr<SmallVector<scf::ForOp>>
-  returningMatchAndRewrite(TilingInterface op, PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(TilingInterface op,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(op, rewriter);
-  }
-};
+/// Method to lower an `op` that implements the `TilingInterface` to
+/// loops/scalars.
+FailureOr<SmallVector<scf::ForOp>>
+lowerToLoopsUsingSCFForOp(RewriterBase &rewriter, TilingInterface op);
 
 } // namespace scf
 } // namespace mlir
