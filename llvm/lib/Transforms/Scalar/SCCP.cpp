@@ -160,6 +160,12 @@ static bool replaceSignedInst(SCCPSolver &Solver,
                               Instruction &Inst) {
   // Determine if a signed value is known to be >= 0.
   auto isNonNegative = [&Solver](Value *V) {
+    // If this value was constant-folded, it may not have a solver entry.
+    // Handle integers. Otherwise, return false.
+    if (auto *C = dyn_cast<Constant>(V)) {
+      auto *CInt = dyn_cast<ConstantInt>(C);
+      return CInt && !CInt->isNegative();
+    }
     const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
     return IV.isConstantRange(/*UndefAllowed=*/false) &&
            IV.getConstantRange().isAllNonNegative();
@@ -173,6 +179,18 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     if (isa<Constant>(Op0) || InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
     NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    break;
+  }
+  case Instruction::SDiv:
+  case Instruction::SRem: {
+    // If both operands are not negative, this is the same as udiv/urem.
+    Value *Op0 = Inst.getOperand(0), *Op1 = Inst.getOperand(1);
+    if (InsertedValues.count(Op0) || InsertedValues.count(Op1) ||
+        !isNonNegative(Op0) || !isNonNegative(Op1))
+      return false;
+    auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
+                                                           : Instruction::URem;
+    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
     break;
   }
   default:

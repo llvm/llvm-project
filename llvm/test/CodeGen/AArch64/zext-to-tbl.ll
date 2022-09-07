@@ -46,6 +46,60 @@ exit:
   ret void
 }
 
+define void @zext_v16i8_to_v16i32_in_loop_not_header(i8* %src, i32* %dst, i1 %c) {
+; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop_not_header:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    b LBB1_2
+; CHECK-NEXT:  LBB1_1: ; %loop.latch
+; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    add x1, x1, #64
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    b.eq LBB1_4
+; CHECK-NEXT:  LBB1_2: ; %loop
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    tbz w2, #0, LBB1_1
+; CHECK-NEXT:  ; %bb.3: ; %then
+; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    ldr q0, [x0, x8]
+; CHECK-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ushll2.4s v2, v1, #0
+; CHECK-NEXT:    ushll.4s v1, v1, #0
+; CHECK-NEXT:    ushll2.4s v3, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    stp q1, q2, [x1, #32]
+; CHECK-NEXT:    stp q0, q3, [x1]
+; CHECK-NEXT:    b LBB1_1
+; CHECK-NEXT:  LBB1_4: ; %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c, label %then, label %loop.latch
+
+then:
+  %src.gep = getelementptr i8, i8* %src, i64 %iv
+  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
+  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %ext = zext <16 x i8> %load to <16 x i32>
+  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
+  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
+  store <16 x i32> %ext, <16 x i32>* %dst.gep.cast
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw i64 %iv, 16
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; Not profitable to use shuffle/tbl, as 4 tbls + materializing the masks
 ; require more instructions than lowering zext directly.
 define void @zext_v16i8_to_v16i32_no_loop(i8* %src, i32* %dst) {
@@ -70,11 +124,95 @@ entry:
   ret void
 }
 
+; Avoid using tbl when optimizing for size.
+define void @zext_v16i8_to_v16i32_in_loop_optsize(i8* %src, i32* %dst) optsize {
+; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop_optsize:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  LBB3_1: ; %loop
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q0, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ushll2.4s v2, v1, #0
+; CHECK-NEXT:    ushll.4s v1, v1, #0
+; CHECK-NEXT:    ushll2.4s v3, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    stp q1, q2, [x1, #32]
+; CHECK-NEXT:    stp q0, q3, [x1], #64
+; CHECK-NEXT:    b.ne LBB3_1
+; CHECK-NEXT:  ; %bb.2: ; %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %src.gep = getelementptr i8, i8* %src, i64 %iv
+  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
+  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %ext = zext <16 x i8> %load to <16 x i32>
+  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
+  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
+  store <16 x i32> %ext, <16 x i32>* %dst.gep.cast
+  %iv.next = add nuw i64 %iv, 16
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Avoid using tbl when optimizing for size.
+define void @zext_v16i8_to_v16i32_in_loop_minsize(i8* %src, i32* %dst) minsize {
+; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop_minsize:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  LBB4_1: ; %loop
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q0, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    ushll2.8h v1, v0, #0
+; CHECK-NEXT:    ushll.8h v0, v0, #0
+; CHECK-NEXT:    ushll2.4s v2, v1, #0
+; CHECK-NEXT:    ushll.4s v1, v1, #0
+; CHECK-NEXT:    ushll2.4s v3, v0, #0
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    stp q1, q2, [x1, #32]
+; CHECK-NEXT:    stp q0, q3, [x1], #64
+; CHECK-NEXT:    b.ne LBB4_1
+; CHECK-NEXT:  ; %bb.2: ; %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %src.gep = getelementptr i8, i8* %src, i64 %iv
+  %src.gep.cast = bitcast i8* %src.gep to <16 x i8>*
+  %load = load <16 x i8>, <16 x i8>* %src.gep.cast
+  %ext = zext <16 x i8> %load to <16 x i32>
+  %dst.gep = getelementptr i32, i32* %dst, i64 %iv
+  %dst.gep.cast = bitcast i32* %dst.gep to <16 x i32>*
+  store <16 x i32> %ext, <16 x i32>* %dst.gep.cast
+  %iv.next = add nuw i64 %iv, 16
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+
 define void @zext_v16i8_to_v16i16_in_loop(i8* %src, i16* %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i16_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  LBB2_1: ; %loop
+; CHECK-NEXT:  LBB5_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q0, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
@@ -82,7 +220,7 @@ define void @zext_v16i8_to_v16i16_in_loop(i8* %src, i16* %dst) {
 ; CHECK-NEXT:    ushll2.8h v1, v0, #0
 ; CHECK-NEXT:    ushll.8h v0, v0, #0
 ; CHECK-NEXT:    stp q0, q1, [x1], #32
-; CHECK-NEXT:    b.ne LBB2_1
+; CHECK-NEXT:    b.ne LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -109,7 +247,7 @@ define void @zext_v8i8_to_v8i32_in_loop(i8* %src, i32* %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  LBB3_1: ; %loop
+; CHECK-NEXT:  LBB6_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d0, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
@@ -118,7 +256,7 @@ define void @zext_v8i8_to_v8i32_in_loop(i8* %src, i32* %dst) {
 ; CHECK-NEXT:    ushll2.4s v1, v0, #0
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    stp q0, q1, [x1], #64
-; CHECK-NEXT:    b.ne LBB3_1
+; CHECK-NEXT:    b.ne LBB6_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -145,7 +283,7 @@ define void @zext_v16i8_to_v16i64_in_loop(i8* %src, i64* %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i64_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  LBB4_1: ; %loop
+; CHECK-NEXT:  LBB7_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q0, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
@@ -168,7 +306,7 @@ define void @zext_v16i8_to_v16i64_in_loop(i8* %src, i64* %dst) {
 ; CHECK-NEXT:    ushll.2d v0, v0, #0
 ; CHECK-NEXT:    stp q2, q3, [x1, #32]
 ; CHECK-NEXT:    stp q0, q1, [x1], #128
-; CHECK-NEXT:    b.ne LBB4_1
+; CHECK-NEXT:    b.ne LBB7_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 entry:
