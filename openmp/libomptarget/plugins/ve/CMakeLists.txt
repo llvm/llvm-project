@@ -29,14 +29,12 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
 
     ADDITIONAL_HEADER_DIRS
     ${LIBOMPTARGET_INCLUDE_DIR}
-    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR}
     ${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR}
 
     LINK_LIBS
     PRIVATE
     elf_common
     ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
-    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
     ${additional_libs}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports -Wl,-z,defs"
 
@@ -50,14 +48,12 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
 
   target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
     ${LIBOMPTARGET_INCLUDE_DIR}
-    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR}
     ${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR})
 
   target_link_libraries(
     "omptarget.rtl.${tmachine_libname}"
     elf_common
     ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
-    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
     ${additional_libs}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports -Wl,-z,defs")
 
