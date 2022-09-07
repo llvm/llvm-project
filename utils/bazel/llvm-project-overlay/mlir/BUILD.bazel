@@ -21,13 +21,6 @@ package(
 
 licenses(["notice"])
 
-exports_files([
-    "LICENSE.TXT",
-    "include/mlir/Dialect/LLVMIR/LLVMOps.td",
-    "run_lit.sh",
-    "utils/textmate/mlir.json",
-])
-
 filegroup(
     name = "c_headers",
     srcs = glob(["include/mlir-c/**/*"]),  # <== i.e. match the entire tree
@@ -6486,7 +6479,7 @@ cc_library(
     ],
 )
 
-# Indirection to avoid output filename clash between cc_library and cc_binary.
+# Indirection to avoid 'libmlir_async_runtime.so' filename clash.
 alias(
     name = "mlir_async_runtime",
     actual = "_mlir_async_runtime",
@@ -6515,7 +6508,7 @@ cc_library(
     includes = ["include"],
 )
 
-# Indirection to avoid output filename clash between cc_library and cc_binary.
+# Indirection to avoid 'libmlir_c_runner_utils.so' filename clash.
 alias(
     name = "mlir_c_runner_utils",
     actual = "_mlir_c_runner_utils",
@@ -6536,7 +6529,7 @@ cc_library(
     deps = [":mlir_c_runner_utils"],
 )
 
-# Indirection to avoid output filename clash between cc_library and cc_binary.
+# Indirection to avoid 'libmlir_runner_utils.so' filename clash.
 alias(
     name = "mlir_runner_utils",
     actual = "_mlir_runner_utils",
@@ -6601,7 +6594,7 @@ cc_library(
     ],
 )
 
-# Indirection to avoid output filename clash between cc_library and cc_binary.
+# Indirection to avoid 'libmlir_cuda_runtime.so' filename clash.
 alias(
     name = "mlir_cuda_runtime",
     actual = "_mlir_cuda_runtime",
