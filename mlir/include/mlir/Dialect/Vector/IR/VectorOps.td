@@ -57,15 +57,10 @@ def CombiningKind : I32BitEnumAttr<
   let genSpecializedAttr = 0;
 }
 
-def Vector_CombiningKindAttr : DialectAttr<
-    Vector_Dialect,
-    CPred<"$_self.isa<::mlir::vector::CombiningKindAttr>()">,
-    "Kind of combining function for contractions and reductions"> {
-  let storageType = "::mlir::vector::CombiningKindAttr";
-  let returnType = "::mlir::vector::CombiningKind";
-  let convertFromStorage = "$_self.getKind()";
-  let constBuilderCall =
-          "::mlir::vector::CombiningKindAttr::get($0, $_builder.getContext())";
+/// An attribute that specifies the combining function for `vector.contract`,
+/// and `vector.reduction`.
+def Vector_CombiningKindAttr : EnumAttr<Vector_Dialect, CombiningKind, "kind"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 // TODO: Add an attribute to specify a different algebra with operators other
