@@ -4059,7 +4059,8 @@ TypeResult Sema::ActOnTemplateIdType(
     TemplateTy TemplateD, IdentifierInfo *TemplateII,
     SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
     ASTTemplateArgsPtr TemplateArgsIn, SourceLocation RAngleLoc,
-    bool IsCtorOrDtorName, bool IsClassName) {
+    bool IsCtorOrDtorName, bool IsClassName,
+    ImplicitTypenameContext AllowImplicitTypename) {
   if (SS.isInvalid())
     return true;
 
@@ -4073,9 +4074,18 @@ TypeResult Sema::ActOnTemplateIdType(
     //   qualified-id denotes a type, forming an
     //   elaborated-type-specifier (7.1.5.3).
     if (!LookupCtx && isDependentScopeSpecifier(SS)) {
-      Diag(SS.getBeginLoc(), diag::err_typename_missing_template)
-        << SS.getScopeRep() << TemplateII->getName();
-      // Recover as if 'typename' were specified.
+      // C++2a relaxes some of those restrictions in [temp.res]p5.
+      if (AllowImplicitTypename == ImplicitTypenameContext::Yes) {
+        if (getLangOpts().CPlusPlus20)
+          Diag(SS.getBeginLoc(), diag::warn_cxx17_compat_implicit_typename);
+        else
+          Diag(SS.getBeginLoc(), diag::ext_implicit_typename)
+              << SS.getScopeRep() << TemplateII->getName()
+              << FixItHint::CreateInsertion(SS.getBeginLoc(), "typename ");
+      } else
+        Diag(SS.getBeginLoc(), diag::err_typename_missing_template)
+            << SS.getScopeRep() << TemplateII->getName();
+
       // FIXME: This is not quite correct recovery as we don't transform SS
       // into the corresponding dependent form (and we don't diagnose missing
       // 'template' keywords within SS as a result).
@@ -10601,10 +10611,11 @@ Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
   return CreateParsedType(Result, TLB.getTypeSourceInfo(Context, Result));
 }
 
-TypeResult
-Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
-                        const CXXScopeSpec &SS, const IdentifierInfo &II,
-                        SourceLocation IdLoc) {
+TypeResult Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
+                                   const CXXScopeSpec &SS,
+                                   const IdentifierInfo &II,
+                                   SourceLocation IdLoc,
+                                   ImplicitTypenameContext IsImplicitTypename) {
   if (SS.isInvalid())
     return true;
 
@@ -10617,9 +10628,13 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
 
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
   TypeSourceInfo *TSI = nullptr;
-  QualType T = CheckTypenameType(TypenameLoc.isValid()? ETK_Typename : ETK_None,
-                                 TypenameLoc, QualifierLoc, II, IdLoc, &TSI,
-                                 /*DeducedTSTContext=*/true);
+  QualType T =
+      CheckTypenameType((TypenameLoc.isValid() ||
+                         IsImplicitTypename == ImplicitTypenameContext::Yes)
+                            ? ETK_Typename
+                            : ETK_None,
+                        TypenameLoc, QualifierLoc, II, IdLoc, &TSI,
+                        /*DeducedTSTContext=*/true);
   if (T.isNull())
     return true;
   return CreateParsedType(T, TSI);

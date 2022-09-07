@@ -358,6 +358,8 @@ C++20 Feature Support
   `Issue 44178 <https://github.com/llvm/llvm-project/issues/44178>`_.
 - Clang implements DR2621, correcting a defect in ``using enum`` handling.  The
   name is found via ordinary lookup so typedefs are found.
+- Implemented `P0634r3 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0634r3.html>`_,
+  which removes the requirement for the ``typename`` keyword in certain contexts.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
