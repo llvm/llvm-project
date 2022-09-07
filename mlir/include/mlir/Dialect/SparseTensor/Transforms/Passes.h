@@ -156,22 +156,6 @@ void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
 std::unique_ptr<Pass> createSparseTensorCodegenPass();
 
 //===----------------------------------------------------------------------===//
-// The SparseTensorStorageExpansion pass.
-//===----------------------------------------------------------------------===//
-
-/// Sparse tensor storage type converter from compound to expanded form.
-class SparseTensorStorageTupleExpander : public TypeConverter {
-public:
-  SparseTensorStorageTupleExpander();
-};
-
-/// Sets up sparse tensor storage expansion rules.
-void populateSparseTensorStorageExpansionPatterns(TypeConverter &typeConverter,
-                                                  RewritePatternSet &patterns);
-
-std::unique_ptr<Pass> createSparseTensorStorageExpansionPass();
-
-//===----------------------------------------------------------------------===//
 // Other rewriting rules and passes.
 //===----------------------------------------------------------------------===//
 
