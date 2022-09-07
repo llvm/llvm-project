@@ -601,8 +601,13 @@ struct ForOpInterface
     SmallVector<Value> castedInitArgs;
     for (const auto &it : llvm::enumerate(initArgs)) {
       Value initArg = it.value();
-      auto targetType =
-          bufferization::getBufferType(forOp->getResult(it.index()), options);
+      Value result = forOp->getResult(it.index());
+      // If the type is not a tensor, bufferization doesn't need to touch it.
+      if (!result.getType().isa<TensorType>()) {
+        castedInitArgs.push_back(initArg);
+        continue;
+      }
+      auto targetType = bufferization::getBufferType(result, options);
       if (failed(targetType))
         return failure();
       castedInitArgs.push_back(castBuffer(rewriter, initArg, *targetType));
@@ -846,8 +851,13 @@ struct WhileOpInterface
     SmallVector<Value> castedInitArgs;
     for (const auto &it : llvm::enumerate(initArgs)) {
       Value initArg = it.value();
-      auto targetType = bufferization::getBufferType(
-          whileOp.getBeforeArguments()[it.index()], options);
+      Value beforeArg = whileOp.getBeforeArguments()[it.index()];
+      // If the type is not a tensor, bufferization doesn't need to touch it.
+      if (!beforeArg.getType().isa<TensorType>()) {
+        castedInitArgs.push_back(initArg);
+        continue;
+      }
+      auto targetType = bufferization::getBufferType(beforeArg, options);
       if (failed(targetType))
         return failure();
       castedInitArgs.push_back(castBuffer(rewriter, initArg, *targetType));
@@ -856,6 +866,8 @@ struct WhileOpInterface
     // The result types of a WhileOp are the same as the "after" bbArg types.
     SmallVector<Type> argsTypesAfter = llvm::to_vector(
         llvm::map_range(whileOp.getAfterArguments(), [&](BlockArgument bbArg) {
+          if (!bbArg.getType().isa<TensorType>())
+            return bbArg.getType();
           // TODO: error handling
           return bufferization::getBufferType(bbArg, options)->cast<Type>();
         }));
