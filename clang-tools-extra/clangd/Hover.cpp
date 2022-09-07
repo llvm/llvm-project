@@ -666,7 +666,8 @@ getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
 }
 
 /// Generate a \p Hover object given the macro \p MacroDecl.
-HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
+HoverInfo getHoverContents(const DefinedMacro &Macro, const syntax::Token &Tok,
+                           ParsedAST &AST) {
   HoverInfo HI;
   SourceManager &SM = AST.getSourceManager();
   HI.Name = std::string(Macro.Name);
@@ -695,6 +696,29 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
         HI.Definition =
             ("#define " + Buffer.substr(StartOffset, EndOffset - StartOffset))
                 .str();
+    }
+  }
+
+  if (auto Expansion = AST.getTokens().expansionStartingAt(&Tok)) {
+    // We drop expansion that's longer than the threshold.
+    // For extremely long expansion text, it's not readable from hover card
+    // anyway.
+    std::string ExpansionText;
+    for (const auto &ExpandedTok : Expansion->Expanded) {
+      ExpansionText += ExpandedTok.text(SM);
+      ExpansionText += " ";
+      if (ExpansionText.size() > 2048) {
+        ExpansionText.clear();
+        break;
+      }
+    }
+
+    if (!ExpansionText.empty()) {
+      if (!HI.Definition.empty()) {
+        HI.Definition += "\n\n";
+      }
+      HI.Definition += "// Expands to\n";
+      HI.Definition += ExpansionText;
     }
   }
   return HI;
@@ -1028,7 +1052,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       // Prefer the identifier token as a fallback highlighting range.
       HighlightRange = Tok.range(SM).toCharRange(SM);
       if (auto M = locateMacroAt(Tok, AST.getPreprocessor())) {
-        HI = getHoverContents(*M, AST);
+        HI = getHoverContents(*M, Tok, AST);
         break;
       }
     } else if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
@@ -1079,11 +1103,15 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (!HI)
     return llvm::None;
 
-  auto Replacements = format::reformat(
-      Style, HI->Definition, tooling::Range(0, HI->Definition.size()));
-  if (auto Formatted =
-          tooling::applyAllReplacements(HI->Definition, Replacements))
-    HI->Definition = *Formatted;
+  // Reformat Definition
+  if (!HI->Definition.empty()) {
+    auto Replacements = format::reformat(
+        Style, HI->Definition, tooling::Range(0, HI->Definition.size()));
+    if (auto Formatted =
+            tooling::applyAllReplacements(HI->Definition, Replacements))
+      HI->Definition = *Formatted;
+  }
+
   HI->DefinitionLanguage = getMarkdownLanguage(AST.getASTContext());
   HI->SymRange = halfOpenToRange(SM, HighlightRange);
 
@@ -1178,25 +1206,31 @@ markup::Document HoverInfo::present() const {
 
   if (!Definition.empty()) {
     Output.addRuler();
-    std::string ScopeComment;
-    // Drop trailing "::".
-    if (!LocalScope.empty()) {
-      // Container name, e.g. class, method, function.
-      // We might want to propagate some info about container type to print
-      // function foo, class X, method X::bar, etc.
-      ScopeComment =
-          "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
-    } else if (NamespaceScope && !NamespaceScope->empty()) {
-      ScopeComment = "// In namespace " +
-                     llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
+    std::string Buffer;
+
+    if (!Definition.empty()) {
+      // Append scope comment, dropping trailing "::".
+      // Note that we don't print anything for global namespace, to not annoy
+      // non-c++ projects or projects that are not making use of namespaces.
+      if (!LocalScope.empty()) {
+        // Container name, e.g. class, method, function.
+        // We might want to propagate some info about container type to print
+        // function foo, class X, method X::bar, etc.
+        Buffer +=
+            "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
+      } else if (NamespaceScope && !NamespaceScope->empty()) {
+        Buffer += "// In namespace " +
+                  llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
+      }
+
+      if (!AccessSpecifier.empty()) {
+        Buffer += AccessSpecifier + ": ";
+      }
+
+      Buffer += Definition;
     }
-    std::string DefinitionWithAccess = !AccessSpecifier.empty()
-                                           ? AccessSpecifier + ": " + Definition
-                                           : Definition;
-    // Note that we don't print anything for global namespace, to not annoy
-    // non-c++ projects or projects that are not making use of namespaces.
-    Output.addCodeBlock(ScopeComment + DefinitionWithAccess,
-                        DefinitionLanguage);
+
+    Output.addCodeBlock(Buffer, DefinitionLanguage);
   }
 
   return Output;
