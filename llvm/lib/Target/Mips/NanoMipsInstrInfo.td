@@ -590,8 +590,8 @@ class TailCallBase : PseudoInstNM<(outs), (ins calltarget:$target), []>,
 }
 def TAILCALL_NM : TailCallBase;
 
-class TailCallRegBase : PseudoInstNM<(outs), (ins GPR32NMOpnd:$rs),
-                                     [(MipsTailCall GPR32NMOpnd:$rs)]>,
+class TailCallRegBase : PseudoInstNM<(outs), (ins RegisterOperand<GPR32NM_TAIL>:$rs),
+                                     [(MipsTailCall RegisterOperand<GPR32NM_TAIL>:$rs)]>,
                         PseudoInstExpansion<(JRC_NM GPR32NMOpnd:$rs)> {
   let isCall = 1;
   let isTerminator = 1;
