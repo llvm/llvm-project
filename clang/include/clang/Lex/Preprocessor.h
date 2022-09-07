@@ -2551,7 +2551,7 @@ public:
   /// Find the module that owns the source or header file that
   /// \p Loc points to. If the location is in a file that was included
   /// into a module, or is outside any module, returns nullptr.
-  Module *getModuleForLocation(SourceLocation Loc);
+  Module *getModuleForLocation(SourceLocation Loc, bool AllowTextual);
 
   /// We want to produce a diagnostic at location IncLoc concerning an
   /// unreachable effect at location MLoc (eg, where a desired entity was
