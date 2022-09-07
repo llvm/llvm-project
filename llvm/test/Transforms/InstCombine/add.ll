@@ -2060,6 +2060,70 @@ define i8 @select_negate_or_nonzero_use(i1 %b, i8 %x, i8 %y) {
   ret i8 %add
 }
 
+define i5 @select_negate_not(i1 %b, i5 %x, i5 %y) {
+; CHECK-LABEL: @select_negate_not(
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i5 0, [[X:%.*]]
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i5 [[Y:%.*]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i5 [[NOTY]], i5 [[NEGX]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[SEL]], [[Y]]
+; CHECK-NEXT:    ret i5 [[ADD]]
+;
+  %negx = sub i5 0, %x
+  %noty = xor i5 %y, -1
+  %sel = select i1 %b, i5 %noty, i5 %negx
+  %add = add i5 %sel, %y
+  ret i5 %add
+}
+
+define i5 @select_negate_not_commute(i1 %b, i5 %x, i5 %p) {
+; CHECK-LABEL: @select_negate_not_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i5 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i5 0, [[X:%.*]]
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i5 [[Y]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i5 [[NOTY]], i5 [[NEGX]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[Y]], [[SEL]]
+; CHECK-NEXT:    ret i5 [[ADD]]
+;
+  %y = mul i5 %p, %p ; thwart complexity-based canonicalization
+  %negx = sub i5 0, %x
+  %noty = xor i5 %y, -1
+  %sel = select i1 %b, i5 %noty, i5 %negx
+  %add = add i5 %y, %sel
+  ret i5 %add
+}
+
+define i5 @select_negate_not_swap(i1 %b, i5 %x, i5 %y) {
+; CHECK-LABEL: @select_negate_not_swap(
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i5 0, [[X:%.*]]
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i5 [[Y:%.*]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i5 [[NEGX]], i5 [[NOTY]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[SEL]], [[Y]]
+; CHECK-NEXT:    ret i5 [[ADD]]
+;
+  %negx = sub i5 0, %x
+  %noty = xor i5 %y, -1
+  %sel = select i1 %b, i5 %negx, i5 %noty
+  %add = add i5 %sel, %y
+  ret i5 %add
+}
+
+define i5 @select_negate_not_swap_commute(i1 %b, i5 %x, i5 %p) {
+; CHECK-LABEL: @select_negate_not_swap_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i5 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i5 0, [[X:%.*]]
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i5 [[Y]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i5 [[NEGX]], i5 [[NOTY]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[Y]], [[SEL]]
+; CHECK-NEXT:    ret i5 [[ADD]]
+;
+  %y = mul i5 %p, %p ; thwart complexity-based canonicalization
+  %negx = sub i5 0, %x
+  %noty = xor i5 %y, -1
+  %sel = select i1 %b, i5 %negx, i5 %noty
+  %add = add i5 %y, %sel
+  ret i5 %add
+}
+
 define i32 @add_select_sub_both_arms_simplify(i1 %b, i32 %a) {
 ; CHECK-LABEL: @add_select_sub_both_arms_simplify(
 ; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[B:%.*]], i32 [[A:%.*]], i32 99
