@@ -2,5 +2,5 @@
 // RUN: %clang_cc1 -triple riscv32 -target-feature +zbb -verify %s -o -
 
 int orc_b_64(int a) {
-  return __builtin_riscv_orc_b_64(a); // expected-error {{builtin requires at least one of the following extensions to be enabled : 'RV64'}}
+  return __builtin_riscv_orc_b_64(a); // expected-error {{builtin requires at least one of the following extensions to be enabled: 'RV64'}}
 }
