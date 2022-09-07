@@ -368,9 +368,14 @@ public:
   }
 
   bool useSVEForFixedLengthVectors() const {
+    if (forceStreamingCompatibleSVE())
+      return true;
+
     // Prefer NEON unless larger SVE registers are available.
     return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
   }
+
+  bool forceStreamingCompatibleSVE() const;
 
   unsigned getVScaleForTuning() const { return VScaleForTuning; }
 
