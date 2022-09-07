@@ -1963,10 +1963,9 @@ define i8 @full_ashr_not_inc(i8 %x) {
 
 define i8 @select_negate_or_zero(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_negate_or_zero(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i8 0, i8 [[NEGX]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SEL]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i8 0, i8 [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[ADD1]]
 ;
   %negx = sub i8 0, %x
   %sel = select i1 %b, i8 0, i8 %negx
@@ -1974,13 +1973,14 @@ define i8 @select_negate_or_zero(i1 %b, i8 %x, i8 %y) {
   ret i8 %add
 }
 
+; commuted add operands - same result
+
 define <2 x i8> @select_negate_or_zero_commute(<2 x i1> %b, <2 x i8> %x, <2 x i8> %p) {
 ; CHECK-LABEL: @select_negate_or_zero_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[NEGX:%.*]] = sub <2 x i8> <i8 poison, i8 0>, [[X:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> <i8 poison, i8 0>, <2 x i8> [[NEGX]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[Y]], [[SEL]]
-; CHECK-NEXT:    ret <2 x i8> [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> zeroinitializer, <2 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub <2 x i8> [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[ADD1]]
 ;
   %y = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
   %negx = sub <2 x i8> <i8 poison, i8 0>, %x
@@ -1989,13 +1989,15 @@ define <2 x i8> @select_negate_or_zero_commute(<2 x i1> %b, <2 x i8> %x, <2 x i8
   ret <2 x i8> %add
 }
 
+; swapped select operands and extra use are ok
+
 define i8 @select_negate_or_zero_swap(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_negate_or_zero_swap(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[NEGX]])
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i8 [[NEGX]], i8 0
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SEL]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i8 [[X]], i8 0
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[ADD1]]
 ;
   %negx = sub i8 0, %x
   call void @use(i8 %negx)
@@ -2004,13 +2006,14 @@ define i8 @select_negate_or_zero_swap(i1 %b, i8 %x, i8 %y) {
   ret i8 %add
 }
 
+; commuted add operands - same result
+
 define i8 @select_negate_or_zero_swap_commute(i1 %b, i8 %x, i8 %p) {
 ; CHECK-LABEL: @select_negate_or_zero_swap_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i8 [[NEGX]], i8 0
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[Y]], [[SEL]]
-; CHECK-NEXT:    ret i8 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i8 [[X:%.*]], i8 0
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i8 [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[ADD1]]
 ;
   %y = mul i8 %p, %p ; thwart complexity-based canonicalization
   %negx = sub i8 0, %x
@@ -2018,6 +2021,8 @@ define i8 @select_negate_or_zero_swap_commute(i1 %b, i8 %x, i8 %p) {
   %add = add i8 %y, %sel
   ret i8 %add
 }
+
+; negative test - one arm of the select must simplify
 
 define i8 @select_negate_or_nonzero(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_negate_or_nonzero(
@@ -2032,6 +2037,8 @@ define i8 @select_negate_or_nonzero(i1 %b, i8 %x, i8 %y) {
   ret i8 %add
 }
 
+; negative test - must have a negate, not any subtract
+
 define i8 @select_nonnegate_or_zero(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_nonnegate_or_zero(
 ; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 42, [[X:%.*]]
@@ -2044,6 +2051,8 @@ define i8 @select_nonnegate_or_zero(i1 %b, i8 %x, i8 %y) {
   %add = add i8 %sel, %y
   ret i8 %add
 }
+
+; negative test - don't create an extra instruction
 
 define i8 @select_negate_or_nonzero_use(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_negate_or_nonzero_use(
@@ -2060,13 +2069,13 @@ define i8 @select_negate_or_nonzero_use(i1 %b, i8 %x, i8 %y) {
   ret i8 %add
 }
 
+; extra reduction because y + ~y -> -1
+
 define i5 @select_negate_not(i1 %b, i5 %x, i5 %y) {
 ; CHECK-LABEL: @select_negate_not(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i5 0, [[X:%.*]]
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i5 [[Y:%.*]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i5 [[NOTY]], i5 [[NEGX]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[SEL]], [[Y]]
-; CHECK-NEXT:    ret i5 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i5 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = select i1 [[B:%.*]], i5 -1, i5 [[TMP1]]
+; CHECK-NEXT:    ret i5 [[ADD1]]
 ;
   %negx = sub i5 0, %x
   %noty = xor i5 %y, -1
@@ -2078,11 +2087,9 @@ define i5 @select_negate_not(i1 %b, i5 %x, i5 %y) {
 define i5 @select_negate_not_commute(i1 %b, i5 %x, i5 %p) {
 ; CHECK-LABEL: @select_negate_not_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i5 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i5 0, [[X:%.*]]
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i5 [[Y]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i5 [[NOTY]], i5 [[NEGX]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[Y]], [[SEL]]
-; CHECK-NEXT:    ret i5 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i5 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = select i1 [[B:%.*]], i5 -1, i5 [[TMP1]]
+; CHECK-NEXT:    ret i5 [[ADD1]]
 ;
   %y = mul i5 %p, %p ; thwart complexity-based canonicalization
   %negx = sub i5 0, %x
@@ -2094,11 +2101,9 @@ define i5 @select_negate_not_commute(i1 %b, i5 %x, i5 %p) {
 
 define i5 @select_negate_not_swap(i1 %b, i5 %x, i5 %y) {
 ; CHECK-LABEL: @select_negate_not_swap(
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i5 0, [[X:%.*]]
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i5 [[Y:%.*]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i5 [[NEGX]], i5 [[NOTY]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[SEL]], [[Y]]
-; CHECK-NEXT:    ret i5 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i5 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = select i1 [[B:%.*]], i5 [[TMP1]], i5 -1
+; CHECK-NEXT:    ret i5 [[ADD1]]
 ;
   %negx = sub i5 0, %x
   %noty = xor i5 %y, -1
@@ -2110,11 +2115,9 @@ define i5 @select_negate_not_swap(i1 %b, i5 %x, i5 %y) {
 define i5 @select_negate_not_swap_commute(i1 %b, i5 %x, i5 %p) {
 ; CHECK-LABEL: @select_negate_not_swap_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i5 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i5 0, [[X:%.*]]
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i5 [[Y]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i5 [[NEGX]], i5 [[NOTY]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i5 [[Y]], [[SEL]]
-; CHECK-NEXT:    ret i5 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i5 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = select i1 [[B:%.*]], i5 [[TMP1]], i5 -1
+; CHECK-NEXT:    ret i5 [[ADD1]]
 ;
   %y = mul i5 %p, %p ; thwart complexity-based canonicalization
   %negx = sub i5 0, %x
