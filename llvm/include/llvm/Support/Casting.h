@@ -585,47 +585,18 @@ template <typename To, typename From>
   return CastInfo<To, std::unique_ptr<From>>::doCast(std::move(Val));
 }
 
-/// dyn_cast<X> - Return the argument parameter cast to the specified type. This
-/// casting operator returns null if the argument is of the wrong type, so it
-/// can be used to test for a type as well as cast if successful. The value
-/// passed in must be present, if not, use dyn_cast_if_present. This should be
-/// used in the context of an if statement like this:
-///
-///  if (const Instruction *I = dyn_cast<Instruction>(myVal)) { ... }
-
-template <typename To, typename From>
-[[nodiscard]] inline decltype(auto) dyn_cast(const From &Val) {
-  return CastInfo<To, const From>::doCastIfPossible(Val);
-}
-
-template <typename To, typename From>
-[[nodiscard]] inline decltype(auto) dyn_cast(From &Val) {
-  return CastInfo<To, From>::doCastIfPossible(Val);
-}
-
-template <typename To, typename From>
-[[nodiscard]] inline decltype(auto) dyn_cast(From *Val) {
-  return CastInfo<To, From *>::doCastIfPossible(Val);
-}
-
-template <typename To, typename From>
-[[nodiscard]] inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
-  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(std::move(Val));
-}
-
 //===----------------------------------------------------------------------===//
 // ValueIsPresent
 //===----------------------------------------------------------------------===//
 
 template <typename T>
-constexpr bool IsNullable = std::is_pointer<T>::value ||
-                            std::is_constructible<T, std::nullptr_t>::value;
+constexpr bool IsNullable =
+    std::is_pointer_v<T> || std::is_constructible_v<T, std::nullptr_t>;
 
 /// ValueIsPresent provides a way to check if a value is, well, present. For
-/// pointers, this is the equivalent of checking against nullptr, for
-/// Optionals this is the equivalent of checking hasValue(). It also
-/// provides a method for unwrapping a value (think dereferencing a
-/// pointer).
+/// pointers, this is the equivalent of checking against nullptr, for Optionals
+/// this is the equivalent of checking hasValue(). It also provides a method for
+/// unwrapping a value (think calling .value() on an optional).
 
 // Generic values can't *not* be present.
 template <typename T, typename Enable = void> struct ValueIsPresent {
@@ -646,7 +617,7 @@ template <typename T> struct ValueIsPresent<Optional<T>> {
 template <typename T>
 struct ValueIsPresent<T, std::enable_if_t<IsNullable<T>>> {
   using UnwrappedType = T;
-  static inline bool isPresent(const T &t) { return t != nullptr; }
+  static inline bool isPresent(const T &t) { return t != T(nullptr); }
   static inline decltype(auto) unwrapValue(T &t) { return t; }
 };
 
@@ -663,6 +634,39 @@ template <typename T> inline decltype(auto) unwrapValue(T &t) {
   return ValueIsPresent<T>::unwrapValue(t);
 }
 } // namespace detail
+
+/// dyn_cast<X> - Return the argument parameter cast to the specified type. This
+/// casting operator returns null if the argument is of the wrong type, so it
+/// can be used to test for a type as well as cast if successful. The value
+/// passed in must be present, if not, use dyn_cast_if_present. This should be
+/// used in the context of an if statement like this:
+///
+///  if (const Instruction *I = dyn_cast<Instruction>(myVal)) { ... }
+
+template <typename To, typename From>
+[[nodiscard]] inline decltype(auto) dyn_cast(const From &Val) {
+  assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
+  return CastInfo<To, const From>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+[[nodiscard]] inline decltype(auto) dyn_cast(From &Val) {
+  assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
+  return CastInfo<To, From>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+[[nodiscard]] inline decltype(auto) dyn_cast(From *Val) {
+  assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
+  return CastInfo<To, From *>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+[[nodiscard]] inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
+  assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
+  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(
+      std::forward<std::unique_ptr<From> &&>(Val));
+}
 
 /// isa_and_present<X> - Functionally identical to isa, except that a null value
 /// is accepted.
