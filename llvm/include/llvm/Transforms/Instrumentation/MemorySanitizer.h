@@ -40,8 +40,8 @@ struct MemorySanitizerOptions {
 /// inserts calls to runtime library functions. If the functions aren't declared
 /// yet, the pass inserts the declarations. Otherwise the existing globals are
 /// used.
-struct ModuleMemorySanitizerPass : public PassInfoMixin<ModuleMemorySanitizerPass> {
-  ModuleMemorySanitizerPass(MemorySanitizerOptions Options) : Options(Options) {}
+struct MemorySanitizerPass : public PassInfoMixin<MemorySanitizerPass> {
+  MemorySanitizerPass(MemorySanitizerOptions Options) : Options(Options) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   void printPipeline(raw_ostream &OS,
