@@ -70,6 +70,24 @@ define <3 x i64> @test_vector() {
   ret <3 x i64> <i64 5, i64 ptrtoint (ptr @g to i64), i64 7>
 }
 
+define [3 x i64] @test_array() {
+; CHECK-LABEL: define [3 x i64] @test_array() {
+; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
+; CHECK-NEXT: %constexpr.ins = insertvalue [3 x i64] poison, i64 5, 0
+; CHECK-NEXT: %constexpr.ins1 = insertvalue [3 x i64] %constexpr.ins, i64 %constexpr, 1
+; CHECK-NEXT: %constexpr.ins2 = insertvalue [3 x i64] %constexpr.ins1, i64 7, 2
+  ret [3 x i64] [i64 5, i64 ptrtoint (ptr @g to i64), i64 7]
+}
+
+define { i64, i64, i64 } @test_struct() {
+; CHECK-LABEL: define { i64, i64, i64 } @test_struct() {
+; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
+; CHECK-NEXT: %constexpr.ins = insertvalue { i64, i64, i64 } poison, i64 5, 0
+; CHECK-NEXT: %constexpr.ins1 = insertvalue { i64, i64, i64 } %constexpr.ins, i64 %constexpr, 1
+; CHECK-NEXT: %constexpr.ins2 = insertvalue { i64, i64, i64 } %constexpr.ins1, i64 7, 2
+  ret { i64, i64, i64 } {i64 5, i64 ptrtoint (ptr @g to i64), i64 7}
+}
+
 define i64 @test_reused_expr() {
 ; CHECK-LABEL: define i64 @test_reused_expr() {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
