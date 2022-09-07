@@ -1100,7 +1100,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
                       roccmPath+ "/lib -lhsa-runtime64 -ldl -lnuma " + toolArgs;
       toolArgs = toolArgTemp;
     } else {
-      toolArgTemp =  toolArgs + " -Wl,--enable-new-dtags -Wl,-rpath=" + hipLibPath + ":"
+      toolArgTemp =  toolArgs + " -Wl,-rpath=" + hipLibPath + ":"
                     + roccmPath+"/lib -lamdhip64 ";
       toolArgs =  toolArgTemp;
     }
