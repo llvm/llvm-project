@@ -505,15 +505,60 @@ class Foo final {})cpp";
          HI.Definition = "Foo<int>";
        }},
 
-      // macro
+      // empty macro
+      {R"cpp(
+        #define MACRO
+        [[MAC^RO]]
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO";
+       }},
+
+      // object-like macro
+      {R"cpp(
+        #define MACRO 41
+        int x = [[MAC^RO]];
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO 41\n\n"
+                         "// Expands to\n"
+                         "41";
+       }},
+
+      // function-like macro
       {R"cpp(
         // Best MACRO ever.
-        #define MACRO(x,y,z) void foo(x, y, z);
+        #define MACRO(x,y,z) void foo(x, y, z)
         [[MAC^RO]](int, double d, bool z = false);
         )cpp",
        [](HoverInfo &HI) {
-         HI.Name = "MACRO", HI.Kind = index::SymbolKind::Macro,
-         HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z);";
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z)\n\n"
+                         "// Expands to\n"
+                         "void foo(int, double d, bool z = false)";
+       }},
+
+      // nested macro
+      {R"cpp(
+        #define STRINGIFY_AUX(s) #s
+        #define STRINGIFY(s) STRINGIFY_AUX(s)
+        #define DECL_STR(NAME, VALUE) const char *v_##NAME = STRINGIFY(VALUE)
+        #define FOO 41
+
+        [[DECL^_STR]](foo, FOO);
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "DECL_STR";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define DECL_STR(NAME, VALUE) const char *v_##NAME = "
+                         "STRINGIFY(VALUE)\n\n"
+                         "// Expands to\n"
+                         "const char *v_foo = \"41\"";
        }},
 
       // constexprs
@@ -1593,7 +1638,9 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "MACRO";
             HI.Kind = index::SymbolKind::Macro;
-            HI.Definition = "#define MACRO 0";
+            HI.Definition = "#define MACRO 0\n\n"
+                            "// Expands to\n"
+                            "0";
           }},
       {
           R"cpp(// Macro
@@ -1604,6 +1651,8 @@ TEST(Hover, All) {
             HI.Name = "MACRO";
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition = "#define MACRO 0";
+            // NOTE MACRO doesn't have expansion since it technically isn't
+            // expanded here
           }},
       {
           R"cpp(// Macro
@@ -1617,7 +1666,10 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition =
                 R"cpp(#define MACRO                                                                  \
-  { return 0; })cpp";
+  { return 0; }
+
+// Expands to
+{ return 0; })cpp";
           }},
       {
           R"cpp(// Forward class declaration
@@ -2988,6 +3040,21 @@ Passed as arg_a (converted to alias_int)
 
 // In test::Bar
 int foo = 3)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Macro;
+            HI.Name = "PLUS_ONE";
+            HI.Definition = "#define PLUS_ONE(X) (X+1)\n\n"
+                            "// Expands to\n"
+                            "(1 + 1)";
+          },
+          R"(macro PLUS_ONE
+
+#define PLUS_ONE(X) (X+1)
+
+// Expands to
+(1 + 1))",
       },
       {
           [](HoverInfo &HI) {
