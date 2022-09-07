@@ -91,6 +91,8 @@ Bug Fixes
   `Issue 57431 <https://github.com/llvm/llvm-project/issues/57431>`_
 - Fix a crash where we attempt to define a deleted destructor. This fixes
   `Issue 57516 <https://github.com/llvm/llvm-project/issues/57516>`_
+- Fix ``__builtin_assume_aligned`` crash when the 1st arg is array type. This fixes
+  `Issue 57169 <https://github.com/llvm/llvm-project/issues/57169>`_
 
 
 Improvements to Clang's diagnostics
