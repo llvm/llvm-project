@@ -54,8 +54,30 @@ static unsigned toStored(const SparseTensorEncodingAttr &enc, unsigned i) {
   return i;
 }
 
+/// Flatten a list of operands that may contain sparse tensors.
+static void flattenOperands(ValueRange operands,
+                            SmallVectorImpl<Value> &flattened) {
+  // In case of
+  // sparse_tensor, c, sparse_tensor
+  // ==>
+  // memref ..., c, memref ...
+  for (auto operand : operands) {
+    if (auto cast =
+            dyn_cast<UnrealizedConversionCastOp>(operand.getDefiningOp());
+        cast && getSparseTensorEncoding(cast->getResultTypes()[0]))
+      // An unrealized_conversion_cast will be inserted by type converter to
+      // inter-mix the gap between 1:N conversion between sparse tensors and
+      // fields. In this case, take the operands in the cast and replace the
+      // sparse tensor output with the flattened type array.
+      flattened.append(cast.getOperands().begin(), cast.getOperands().end());
+    else
+      flattened.push_back(operand);
+  }
+}
+
 /// Maps a sparse tensor type to the appropriate compounded buffers.
-static Optional<Type> convertSparseTensorType(Type type) {
+static Optional<LogicalResult>
+convertSparseTensorType(Type type, SmallVectorImpl<Type> &fields) {
   auto enc = getSparseTensorEncoding(type);
   if (!enc)
     return llvm::None;
@@ -86,7 +108,6 @@ static Optional<Type> convertSparseTensorType(Type type) {
   // };
   //
   unsigned rank = rType.getShape().size();
-  SmallVector<Type, 8> fields;
   // The dimSizes array.
   fields.push_back(MemRefType::get({rank}, indexType));
   // Per-dimension storage.
@@ -115,10 +136,7 @@ static Optional<Type> convertSparseTensorType(Type type) {
   }
   // The values array.
   fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, eltType));
-  // Sparse tensor storage (temporarily) lives in a tuple. This allows a
-  // simple 1:1 type conversion during codegen. A subsequent pass uses
-  // a 1:N type conversion to expand the tuple into its fields.
-  return TupleType::get(context, fields);
+  return success();
 }
 
 // Returns field index of sparse tensor type for pointers/indices, when set.
@@ -158,25 +176,6 @@ static unsigned getFieldIndex(Type type, unsigned ptrDim, unsigned idxDim) {
   return -1;
 }
 
-/// Returns field type in tuple at given index.
-static Type getFieldType(Value tuple, unsigned field) {
-  return tuple.getType().cast<TupleType>().getType(field);
-}
-
-/// Creates tuple get operation at given index.
-static Value createTupleGet(OpBuilder &builder, Location loc, Value tuple,
-                            unsigned field) {
-  Type indexType = builder.getIndexType();
-  return builder.create<StorageGetOp>(loc, getFieldType(tuple, field), tuple,
-                                      builder.getIntegerAttr(indexType, field));
-}
-
-/// Creates tuple.
-static Value createTupleMake(OpBuilder &builder, Location loc, Type type,
-                             ValueRange values) {
-  return builder.create<StorageOp>(loc, type, values);
-}
-
 /// Create allocation operation.
 static Value createAllocation(OpBuilder &builder, Location loc, Type type,
                               Value sz) {
@@ -184,14 +183,15 @@ static Value createAllocation(OpBuilder &builder, Location loc, Type type,
   return builder.create<memref::AllocOp>(loc, memType, sz);
 }
 
-/// Creates allocation tuple for sparse tensor type.
+/// Creates allocation for each field in sparse tensor type.
 ///
 /// TODO: for efficiency, we will need heuristis to make educated guesses
 ///       on the required final sizes; also, we will need an improved
 ///       memory allocation scheme with capacity and reallocation
 ///
-static Value createAllocTuple(OpBuilder &builder, Location loc, Type type,
-                              ValueRange dynSizes) {
+static void createAllocFields(OpBuilder &builder, Location loc, Type type,
+                              ValueRange dynSizes,
+                              SmallVectorImpl<Value> &fields) {
   auto enc = getSparseTensorEncoding(type);
   assert(enc);
   // Construct the basic types.
@@ -202,10 +202,8 @@ static Value createAllocTuple(OpBuilder &builder, Location loc, Type type,
   Type idxType = idxWidth ? builder.getIntegerType(idxWidth) : indexType;
   Type ptrType = ptrWidth ? builder.getIntegerType(ptrWidth) : indexType;
   Type eltType = rType.getElementType();
-  // Build the allocation tuple, using heuristics for pre-allocation.
   auto shape = rType.getShape();
   unsigned rank = shape.size();
-  SmallVector<Value, 8> fields;
   bool allDense = true;
   Value one = constantIndex(builder, loc, 1);
   Value linear = one;
@@ -254,9 +252,6 @@ static Value createAllocTuple(OpBuilder &builder, Location loc, Type type,
   // In all other case, we resort to the heuristical initial value.
   Value valuesSz = allDense ? linear : heuristic;
   fields.push_back(createAllocation(builder, loc, eltType, valuesSz));
-  // Construct tuple allocation.
-  Type tupleType = *convertSparseTensorType(type);
-  return createTupleMake(builder, loc, tupleType, fields);
 }
 
 /// Returns integral constant, if defined.
@@ -270,14 +265,80 @@ static Optional<int64_t> getConstantInt(Value val) {
 // Codegen rules.
 //===----------------------------------------------------------------------===//
 
-/// Sparse codegen rule for returns.
+/// Sparse tensor storage conversion rule for returns.
 class SparseReturnConverter : public OpConversionPattern<func::ReturnOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(func::ReturnOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<func::ReturnOp>(op, adaptor.getOperands());
+    SmallVector<Value, 8> flattened;
+    flattenOperands(adaptor.getOperands(), flattened);
+    // Create a return with the flattened value extracted from sparse tensors.
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(op, flattened);
+    return success();
+  }
+};
+
+/// Sparse tensor storage conversion rule for calls.
+class SparseCallConverter : public OpConversionPattern<func::CallOp> {
+public:
+  // The default CallOp converter can not handle 1:N type conversion.
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(func::CallOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    // In case of:
+    //  sparse_tensor, f, sparse_tensor = call @foo(...)
+    // ==>
+    //  memref..., f, memref = call @foo(...) replace with
+    //  cast(memref...)->sparse_tensor, f, cast(memref...)->sparse_tensor
+    SmallVector<Type, 8> finalRetTy;
+    if (failed(typeConverter->convertTypes(op.getResultTypes(), finalRetTy)))
+      return failure();
+
+    // (1) Genereates new call with flattened return value.
+    SmallVector<Value, 8> flattened;
+    flattenOperands(adaptor.getOperands(), flattened);
+    auto newCall = rewriter.create<func::CallOp>(loc, op.getCallee(),
+                                                 finalRetTy, flattened);
+    // (2) Create cast operation for sparse tensor returns.
+    SmallVector<Value, 4> castedRet;
+    // Tracks the offset of current return value (of the orignal call)
+    // relative to the new call (after sparse tensor flattening);
+    unsigned retOffset = 0;
+    // Temporal buffer to hold the flattened list of type for
+    // a sparse tensor.
+    SmallVector<Type, 8> sparseFlat;
+    for (auto ret : op.getResults()) {
+      assert(retOffset < newCall.getNumResults());
+      auto retType = ret.getType();
+      if (failed(typeConverter->convertType(retType, sparseFlat)))
+        // This should never happen.
+        llvm_unreachable("Failed to convert type in sparse tensor codegen");
+
+      // Converted types can not be empty when the type conversion succeed.
+      assert(!sparseFlat.empty());
+      if (sparseFlat.size() > 1) {
+        auto flatSize = sparseFlat.size();
+        ValueRange sparseElem(iterator_range<ResultRange::iterator>(
+            newCall.result_begin() + retOffset,
+            newCall.result_begin() + retOffset + flatSize));
+        auto castOp = rewriter.create<UnrealizedConversionCastOp>(
+            loc, TypeRange({retType}), sparseElem);
+        castedRet.push_back(castOp.getResult(0));
+        retOffset += flatSize;
+      } else {
+        // If this is an 1:1 conversion, no need for casting.
+        castedRet.push_back(newCall.getResult(retOffset));
+        retOffset++;
+      }
+      sparseFlat.clear();
+    }
+
+    assert(castedRet.size() == op.getNumResults());
+    rewriter.replaceOp(op, castedRet);
     return success();
   }
 };
@@ -306,10 +367,11 @@ public:
     }
     // Any other query can consult the dimSizes array at field 0 using,
     // accounting for the reordering applied to the sparse storage.
-    Value tuple = adaptor.getSource();
-    Value dimSizes = createTupleGet(rewriter, loc, tuple, 0);
+    auto tuple = llvm::cast<UnrealizedConversionCastOp>(
+        adaptor.getSource().getDefiningOp());
     rewriter.replaceOpWithNewOp<memref::LoadOp>(
-        op, dimSizes, constantIndex(rewriter, loc, toStored(enc, *index)));
+        op, tuple.getInputs().front(),
+        constantIndex(rewriter, loc, toStored(enc, *index)));
     return success();
   }
 };
@@ -345,10 +407,13 @@ public:
       return failure();
     if (op.getCopy())
       return rewriter.notifyMatchFailure(op, "tensor copy not implemented");
-    // Construct allocation tuple.
-    Value tuple = createAllocTuple(rewriter, op->getLoc(), resType,
-                                   adaptor.getOperands());
-    rewriter.replaceOp(op, tuple);
+
+    // Construct allocation for each field.
+    Location loc = op.getLoc();
+    SmallVector<Value, 8> fields;
+    createAllocFields(rewriter, loc, resType, adaptor.getOperands(), fields);
+    rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+        op, TypeRange{resType}, fields);
     return success();
   }
 };
@@ -364,69 +429,16 @@ public:
     auto enc = getSparseTensorEncoding(op.getTensor().getType());
     if (!enc)
       return failure();
-    // Replace the tuple deallocation with field deallocations.
-    Location loc = op->getLoc();
-    Value tuple = adaptor.getTensor();
-    for (unsigned i = 0, sz = tuple.getType().cast<TupleType>().size(); i < sz;
-         i++) {
-      Value mem = createTupleGet(rewriter, loc, tuple, i);
-      rewriter.create<memref::DeallocOp>(loc, mem);
-    }
+
+    // Replace the sparse tensor deallocation with field deallocations.
+    Location loc = op.getLoc();
+    auto tuple = llvm::cast<UnrealizedConversionCastOp>(
+        adaptor.getTensor().getDefiningOp());
+    for (auto input : tuple.getInputs())
+      // Deallocate every buffer used to store the sparse tensor handler.
+      rewriter.create<memref::DeallocOp>(loc, input);
+
     rewriter.eraseOp(op);
-    return success();
-  }
-};
-
-/// Sparse codegen rule for pointer accesses.
-class SparseToPointersConverter : public OpConversionPattern<ToPointersOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(ToPointersOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Optional<int64_t> index = getConstantInt(adaptor.getOperands()[1]);
-    if (!index)
-      return failure();
-    // Replace the requested pointer access with corresponding field.
-    Location loc = op->getLoc();
-    Value tuple = adaptor.getTensor();
-    unsigned i = getFieldIndex(op.getTensor().getType(), /*ptrDim=*/*index, -1);
-    rewriter.replaceOp(op, createTupleGet(rewriter, loc, tuple, i));
-    return success();
-  }
-};
-
-/// Sparse codegen rule for index accesses.
-class SparseToIndicesConverter : public OpConversionPattern<ToIndicesOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(ToIndicesOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Optional<int64_t> index = getConstantInt(adaptor.getOperands()[1]);
-    if (!index)
-      return failure();
-    // Replace the requested indices access with corresponding field.
-    Location loc = op->getLoc();
-    Value tuple = adaptor.getTensor();
-    unsigned i = getFieldIndex(op.getTensor().getType(), -1, /*idxDim=*/*index);
-    rewriter.replaceOp(op, createTupleGet(rewriter, loc, tuple, i));
-    return success();
-  }
-};
-
-/// Sparse codegen rule for value accesses.
-class SparseToValuesConverter : public OpConversionPattern<ToValuesOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(ToValuesOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Replace the requested values access with corresponding field.
-    Location loc = op->getLoc();
-    Value tuple = adaptor.getTensor();
-    unsigned i = tuple.getType().cast<TupleType>().size() - 1; // last
-    rewriter.replaceOp(op, createTupleGet(rewriter, loc, tuple, i));
     return success();
   }
 };
@@ -444,6 +456,74 @@ public:
     }
     rewriter.replaceOp(op, adaptor.getOperands());
     return success();
+  }
+};
+
+/// Base class for getter-like operations, e.g., to_indices, to_pointers.
+template <typename SourceOp, typename Base>
+class SparseGetterOpConverter : public OpConversionPattern<SourceOp> {
+public:
+  using OpAdaptor = typename SourceOp::Adaptor;
+  using OpConversionPattern<SourceOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(SourceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Replace the requested pointer access with corresponding field.
+    // The cast_op is inserted by type converter to intermix 1:N type
+    // conversion.
+    auto tuple = llvm::cast<UnrealizedConversionCastOp>(
+        adaptor.getTensor().getDefiningOp());
+    auto idx = Base::getIndexForOp(tuple, op);
+    if (!idx)
+      // Failed to get the index.
+      return failure();
+    auto fields = tuple.getInputs();
+    assert(*idx < fields.size());
+    rewriter.replaceOp(op, fields[*idx]);
+    return success();
+  }
+};
+
+/// Sparse codegen rule for pointer accesses.
+class SparseToPointersConverter
+    : public SparseGetterOpConverter<ToPointersOp, SparseToPointersConverter> {
+public:
+  using SparseGetterOpConverter::SparseGetterOpConverter;
+  // Callback for SparseGetterOpConverter.
+  static Optional<unsigned> getIndexForOp(UnrealizedConversionCastOp /*tuple*/,
+                                          ToPointersOp op) {
+    Optional<int64_t> dim = getConstantInt(op.getDim());
+    if (!dim)
+      return llvm::None; // variable dim
+    return getFieldIndex(op.getTensor().getType(), /*ptrDim=*/*dim, -1);
+  }
+};
+
+/// Sparse codegen rule for index accesses.
+class SparseToIndicesConverter
+    : public SparseGetterOpConverter<ToIndicesOp, SparseToIndicesConverter> {
+public:
+  using SparseGetterOpConverter::SparseGetterOpConverter;
+  // Callback for SparseGetterOpConverter.
+  static Optional<unsigned> getIndexForOp(UnrealizedConversionCastOp /*tuple*/,
+                                          ToIndicesOp op) {
+    Optional<int64_t> dim = getConstantInt(op.getDim());
+    if (!dim)
+      return llvm::None; // variable dim
+    return getFieldIndex(op.getTensor().getType(), -1, /*idxDim=*/*dim);
+  }
+};
+
+/// Sparse codegen rule for value accesses.
+class SparseToValuesConverter
+    : public SparseGetterOpConverter<ToValuesOp, SparseToValuesConverter> {
+public:
+  using SparseGetterOpConverter::SparseGetterOpConverter;
+  // Callback for SparseGetterOpConverter.
+  static Optional<unsigned> getIndexForOp(UnrealizedConversionCastOp tuple,
+                                          ToValuesOp /*op*/) {
+    // The last field holds the value buffer.
+    return tuple.getInputs().size() - 1;
   }
 };
 
@@ -466,9 +546,9 @@ mlir::SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
 /// the sparsification of linear algebra operations.
 void mlir::populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                                                RewritePatternSet &patterns) {
-  patterns.add<SparseReturnConverter, SparseDimOpConverter, SparseCastConverter,
-               SparseTensorAllocConverter, SparseTensorDeallocConverter,
-               SparseToPointersConverter, SparseToIndicesConverter,
-               SparseToValuesConverter, SparseTensorLoadConverter>(
-      typeConverter, patterns.getContext());
+  patterns.add<SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
+               SparseCastConverter, SparseTensorAllocConverter,
+               SparseTensorDeallocConverter, SparseToPointersConverter,
+               SparseToIndicesConverter, SparseToValuesConverter,
+               SparseTensorLoadConverter>(typeConverter, patterns.getContext());
 }
