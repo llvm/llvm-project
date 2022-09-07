@@ -32,8 +32,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "is a large allocated heap chunk; size: 1003520 offset: %d\n",
             offset);
     fprintf(stderr, "Cause: heap-buffer-overflow\n");
-    fprintf(stderr, "is located %s of 1000000-byte region\n",
-            offset == -30 ? "30 bytes to the left" : "0 bytes to the right");
+    fprintf(stderr, "is located %s a 1000000-byte region\n",
+            offset == -30 ? "30 bytes before" : "0 bytes after");
     return -1;
   }
 #endif
