@@ -9,6 +9,7 @@ add_clang_unittest(LexTests
   LexerTest.cpp
   PPCallbacksTest.cpp
   PPConditionalDirectiveRecordTest.cpp
+  PPDependencyDirectivesTest.cpp
   PPMemoryAllocationsTest.cpp
   )
 
@@ -20,4 +21,6 @@ clang_target_link_libraries(LexTests
   clangAPINotes
   clangParse
   clangSema
+
+  LLVMTestingSupport
   )
