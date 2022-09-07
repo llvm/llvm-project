@@ -173,7 +173,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
       "Reserved",
   };
   outs() << "\nThe Data Directory\n";
-  for (uint32_t I = 0; I != array_lengthof(DirName); ++I) {
+  for (uint32_t I = 0; I != std::size(DirName); ++I) {
     uint32_t Addr = 0, Size = 0;
     if (const data_directory *Data = Obj.getDataDirectory(I)) {
       Addr = Data->RelativeVirtualAddress;

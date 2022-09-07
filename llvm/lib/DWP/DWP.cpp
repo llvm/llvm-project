@@ -407,7 +407,7 @@ void writeIndexTable(
     const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
     uint32_t DWARFUnitIndex::Entry::SectionContribution::*Field) {
   for (const auto &E : IndexEntries)
-    for (size_t I = 0; I != array_lengthof(E.second.Contributions); ++I)
+    for (size_t I = 0; I != std::size(E.second.Contributions); ++I)
       if (ContributionOffsets[I])
         Out.emitIntValue(E.second.Contributions[I].*Field, 4);
 }
