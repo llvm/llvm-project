@@ -854,7 +854,8 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         Tok.getLocation());
 }
 
-Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
+Module *Preprocessor::getModuleForLocation(SourceLocation Loc,
+                                           bool AllowTextual) {
   if (!SourceMgr.isInMainFile(Loc)) {
     // Try to determine the module of the include directive.
     // FIXME: Look into directly passing the FileEntry from LookupFile instead.
@@ -862,7 +863,7 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
     if (const FileEntry *EntryOfIncl = SourceMgr.getFileEntryForID(IDOfIncl)) {
       // The include comes from an included file.
       return HeaderInfo.getModuleMap()
-          .findModuleForHeader(EntryOfIncl)
+          .findModuleForHeader(EntryOfIncl, AllowTextual)
           .getModule();
     }
   }
@@ -877,7 +878,8 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc) {
 const FileEntry *
 Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
                                                SourceLocation Loc) {
-  Module *IncM = getModuleForLocation(IncLoc);
+  Module *IncM = getModuleForLocation(
+      IncLoc, LangOpts.ModulesValidateTextualHeaderIncludes);
 
   // Walk up through the include stack, looking through textual headers of M
   // until we hit a non-textual header that we can #include. (We assume textual
@@ -951,7 +953,8 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
   ConstSearchDirIterator CurDirLocal = nullptr;
   ConstSearchDirIterator &CurDir = CurDirArg ? *CurDirArg : CurDirLocal;
 
-  Module *RequestingModule = getModuleForLocation(FilenameLoc);
+  Module *RequestingModule = getModuleForLocation(
+      FilenameLoc, LangOpts.ModulesValidateTextualHeaderIncludes);
   bool RequestingModuleIsModuleInterface = !SourceMgr.isInMainFile(FilenameLoc);
 
   // If the header lookup mechanism may be relative to the current inclusion
