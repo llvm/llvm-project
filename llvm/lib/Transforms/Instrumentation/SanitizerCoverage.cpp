@@ -280,8 +280,8 @@ private:
 };
 } // namespace
 
-PreservedAnalyses ModuleSanitizerCoveragePass::run(Module &M,
-                                                   ModuleAnalysisManager &MAM) {
+PreservedAnalyses SanitizerCoveragePass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
   ModuleSanitizerCoverage ModuleSancov(Options, Allowlist.get(),
                                        Blocklist.get());
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
