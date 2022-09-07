@@ -187,15 +187,6 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
                                     LinalgOp op, ValueRange operands,
                                     ValueRange results);
 
-/// Turns an OpFoldResult into a value, creating an index-typed constant if
-/// necessary.
-Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
-                              OpFoldResult opFoldResult);
-Value materializeOpFoldResult(OpBuilder &b, Location loc,
-                              OpFoldResult opFoldResult);
-Value materializeOpFoldResult(OpBuilder &b, Location loc,
-                              ArrayRef<OpFoldResult> opFoldResults);
-
 /// A struct containg offsets-sizes-strides arguments of the tiled shape.
 struct SliceParameters {
   SmallVector<OpFoldResult> offsets;

@@ -110,7 +110,7 @@ public:
   Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
                       FastMathFlags FMF) const override {
     if (Constant *C = dyn_cast<Constant>(V))
-      return Fold(ConstantExpr::get(Opc, C));
+      return ConstantFoldUnaryOpOperand(Opc, C, DL);
     return nullptr;
   }
 
