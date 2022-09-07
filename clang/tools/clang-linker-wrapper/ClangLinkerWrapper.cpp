@@ -86,22 +86,6 @@ static std::atomic<bool> LTOError;
 
 using OffloadingImage = OffloadBinary::OffloadingImage;
 
-/// A class to contain the binary information for a single OffloadBinary.
-class OffloadFile : public OwningBinary<OffloadBinary> {
-public:
-  using TargetID = std::pair<StringRef, StringRef>;
-
-  OffloadFile(std::unique_ptr<OffloadBinary> Binary,
-              std::unique_ptr<MemoryBuffer> Buffer)
-      : OwningBinary<OffloadBinary>(std::move(Binary), std::move(Buffer)) {}
-
-  /// We use the Triple and Architecture pair to group linker inputs together.
-  /// This conversion function lets us use these files in a hash-map.
-  operator TargetID() const {
-    return std::make_pair(getBinary()->getTriple(), getBinary()->getArch());
-  }
-};
-
 namespace llvm {
 // Provide DenseMapInfo so that OffloadKind can be used in a DenseMap.
 template <> struct DenseMapInfo<OffloadKind> {
@@ -161,9 +145,6 @@ const OptTable &getOptTable() {
   }();
   return *Table;
 }
-
-Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                        SmallVectorImpl<OffloadFile> &DeviceFiles);
 
 void printCommands(ArrayRef<StringRef> CmdArgs) {
   if (CmdArgs.empty())
@@ -282,150 +263,6 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
 
 void printVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-linker-wrapper") << '\n';
-}
-
-/// Attempts to extract all the embedded device images contained inside the
-/// buffer \p Contents. The buffer is expected to contain a valid offloading
-/// binary format.
-Error extractOffloadFiles(MemoryBufferRef Contents,
-                          SmallVectorImpl<OffloadFile> &DeviceFiles) {
-  uint64_t Offset = 0;
-  // There could be multiple offloading binaries stored at this section.
-  while (Offset < Contents.getBuffer().size()) {
-    std::unique_ptr<MemoryBuffer> Buffer =
-        MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
-                                   /*RequiresNullTerminator*/ false);
-    auto BinaryOrErr = OffloadBinary::create(*Buffer);
-    if (!BinaryOrErr)
-      return BinaryOrErr.takeError();
-    OffloadBinary &Binary = **BinaryOrErr;
-
-    // Create a new owned binary with a copy of the original memory.
-    std::unique_ptr<MemoryBuffer> BufferCopy = MemoryBuffer::getMemBufferCopy(
-        Binary.getData().take_front(Binary.getSize()),
-        Contents.getBufferIdentifier());
-    auto NewBinaryOrErr = OffloadBinary::create(*BufferCopy);
-    if (!NewBinaryOrErr)
-      return NewBinaryOrErr.takeError();
-    DeviceFiles.emplace_back(std::move(*NewBinaryOrErr), std::move(BufferCopy));
-
-    Offset += Binary.getSize();
-  }
-
-  return Error::success();
-}
-
-// Extract offloading binaries from an Object file \p Obj.
-Error extractFromBinary(const ObjectFile &Obj,
-                        SmallVectorImpl<OffloadFile> &DeviceFiles) {
-  for (ELFSectionRef Sec : Obj.sections()) {
-    if (Sec.getType() != ELF::SHT_LLVM_OFFLOADING)
-      continue;
-
-    Expected<StringRef> Buffer = Sec.getContents();
-    if (!Buffer)
-      return Buffer.takeError();
-
-    MemoryBufferRef Contents(*Buffer, Obj.getFileName());
-    if (Error Err = extractOffloadFiles(Contents, DeviceFiles))
-      return Err;
-  }
-
-  return Error::success();
-}
-
-Error extractFromBitcode(std::unique_ptr<MemoryBuffer> Buffer,
-                         SmallVectorImpl<OffloadFile> &DeviceFiles) {
-  LLVMContext Context;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = getLazyIRModule(std::move(Buffer), Err, Context);
-  if (!M)
-    return createStringError(inconvertibleErrorCode(),
-                             "Failed to create module");
-
-  // Extract offloading data from globals referenced by the
-  // `llvm.embedded.object` metadata with the `.llvm.offloading` section.
-  auto *MD = M->getNamedMetadata("llvm.embedded.objects");
-  if (!MD)
-    return Error::success();
-
-  for (const MDNode *Op : MD->operands()) {
-    if (Op->getNumOperands() < 2)
-      continue;
-
-    MDString *SectionID = dyn_cast<MDString>(Op->getOperand(1));
-    if (!SectionID || SectionID->getString() != ".llvm.offloading")
-      continue;
-
-    GlobalVariable *GV =
-        mdconst::dyn_extract_or_null<GlobalVariable>(Op->getOperand(0));
-    if (!GV)
-      continue;
-
-    auto *CDS = dyn_cast<ConstantDataSequential>(GV->getInitializer());
-    if (!CDS)
-      continue;
-
-    MemoryBufferRef Contents(CDS->getAsString(), M->getName());
-    if (Error Err = extractOffloadFiles(Contents, DeviceFiles))
-      return Err;
-  }
-
-  return Error::success();
-}
-
-Error extractFromArchive(const Archive &Library,
-                         SmallVectorImpl<OffloadFile> &DeviceFiles) {
-  // Try to extract device code from each file stored in the static archive.
-  Error Err = Error::success();
-  for (auto Child : Library.children(Err)) {
-    auto ChildBufferOrErr = Child.getMemoryBufferRef();
-    if (!ChildBufferOrErr)
-      return ChildBufferOrErr.takeError();
-    std::unique_ptr<MemoryBuffer> ChildBuffer =
-        MemoryBuffer::getMemBuffer(*ChildBufferOrErr, false);
-
-    // Check if the buffer has the required alignment.
-    if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
-                       ChildBuffer->getBufferStart()))
-      ChildBuffer = MemoryBuffer::getMemBufferCopy(
-          ChildBufferOrErr->getBuffer(),
-          ChildBufferOrErr->getBufferIdentifier());
-
-    if (Error Err = extractFromBuffer(std::move(ChildBuffer), DeviceFiles))
-      return Err;
-  }
-
-  if (Err)
-    return Err;
-  return Error::success();
-}
-
-/// Extracts embedded device offloading code from a memory \p Buffer to a list
-/// of \p DeviceFiles.
-Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
-                        SmallVectorImpl<OffloadFile> &DeviceFiles) {
-  file_magic Type = identify_magic(Buffer->getBuffer());
-  switch (Type) {
-  case file_magic::bitcode:
-    return extractFromBitcode(std::move(Buffer), DeviceFiles);
-  case file_magic::elf_relocatable: {
-    Expected<std::unique_ptr<ObjectFile>> ObjFile =
-        ObjectFile::createObjectFile(*Buffer, Type);
-    if (!ObjFile)
-      return ObjFile.takeError();
-    return extractFromBinary(*ObjFile->get(), DeviceFiles);
-  }
-  case file_magic::archive: {
-    Expected<std::unique_ptr<llvm::object::Archive>> LibFile =
-        object::Archive::create(*Buffer);
-    if (!LibFile)
-      return LibFile.takeError();
-    return extractFromArchive(*LibFile->get(), DeviceFiles);
-  }
-  default:
-    return Error::success();
-  }
 }
 
 namespace nvptx {
@@ -1422,8 +1259,8 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
 
     bool IsLazy =
         identify_magic((*BufferOrErr)->getBuffer()) == file_magic::archive;
-    if (Error Err = extractFromBuffer(std::move(*BufferOrErr),
-                                      IsLazy ? LazyInputFiles : InputFiles))
+    if (Error Err = extractOffloadBinaries(
+            **BufferOrErr, IsLazy ? LazyInputFiles : InputFiles))
       return std::move(Err);
   }
 
@@ -1435,8 +1272,7 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
       if (std::error_code EC = BufferOrErr.getError())
         reportError(createFileError(*Library, EC));
 
-      if (Error Err =
-              extractFromBuffer(std::move(*BufferOrErr), LazyInputFiles))
+      if (Error Err = extractOffloadBinaries(**BufferOrErr, LazyInputFiles))
         return std::move(Err);
     }
   }

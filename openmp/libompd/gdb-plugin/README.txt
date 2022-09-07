@@ -16,7 +16,7 @@ Instructions to use OpenMP specific debugging support for debugging C/C++ OpenMP
 
     Debug the binary xyz.out by invoking gdb with the plugin as shown below. Please note that plugin '<..>/ompd/__init__.py' should be used
 
-        $ gdb -x <build_dir/libompd/gdb-plugin/python-module/ompd/__init__.py> or <installed_dir/share/gdb/python/gdb/ompd/__init__.py> ./xyz.out
+        $ gdb -x <build_dir/libompd/gdb-plugin/python-module/ompd/__init__.py> or <installed_dir/share/gdb/python/ompd/__init__.py> ./xyz.out
 
         - The gdb command 'help ompd' lists the subcommands available for OpenMP-specific debugging.
         - The command 'ompd init' needs to be run first to load the libompd.so available in the $LD_LIBRARY_PATH environment variable, and to initialize the OMPD library.

@@ -54,6 +54,7 @@ if(DIST)
       endif()
     endif()
 endif()
+find_package (PythonLibs REQUIRED)
 
 include_directories (${OMPD_INCLUDE_PATH})
 include_directories (${LIBOMP_INCLUDE_DIR})
@@ -70,6 +71,17 @@ add_custom_target(ompd_gdb_plugin ALL
                   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd/__init__.py
                   COMMENT "Building the OMPD GDB plugin")
 
-install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install ${PYSYSFLAG} -U -t ${CMAKE_INSTALL_PREFIX}/share/gdb/python/gdb --no-index --find-links=${CMAKE_CURRENT_BINARY_DIR} ompd)")
+add_library (ompdModule MODULE ompdModule.c ompdAPITests.c)
+include_directories (
+        ${LIBOMP_INCLUDE_DIR}
+        ${LIBOMP_SRC_DIR}
+        ${Python3_INCLUDE_DIRS}
+)
+target_link_libraries (ompdModule ${Python3_LIBRARIES})
+target_link_libraries (ompdModule ${CMAKE_DL_LIBS})
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd  DESTINATION "${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
+set_target_properties (ompdModule PROPERTIES PREFIX "")
+set_target_properties (ompdModule PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd/")
+
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd DESTINATION ${CMAKE_INSTALL_PREFIX}/share/gdb/python/ PATTERN ompdModule.so PERMISSIONS OWNER_READ WORLD_READ GROUP_READ OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
+

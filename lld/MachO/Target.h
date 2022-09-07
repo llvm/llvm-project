@@ -97,9 +97,8 @@ public:
     llvm_unreachable("Unsupported architecture for dtrace symbols");
   }
 
-
-  virtual void applyOptimizationHints(uint8_t *buf, const ConcatInputSection *,
-                                      llvm::ArrayRef<uint64_t>) const {};
+  virtual void applyOptimizationHints(uint8_t *buf,
+                                      const ConcatInputSection *) const {};
 
   uint32_t magic;
   llvm::MachO::CPUType cpuType;

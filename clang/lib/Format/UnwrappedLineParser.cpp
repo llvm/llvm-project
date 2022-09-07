@@ -2210,21 +2210,21 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::l_square:
       parseSquare();
       break;
+    case tok::less:
+      assert(FormatTok->Previous);
+      if (FormatTok->Previous->is(tok::r_square))
+        InTemplateParameterList = true;
+      nextToken();
+      break;
     case tok::kw_auto:
     case tok::kw_class:
     case tok::kw_template:
     case tok::kw_typename:
-      assert(FormatTok->Previous);
-      if (FormatTok->Previous->is(tok::less))
-        InTemplateParameterList = true;
-      nextToken();
-      break;
     case tok::amp:
     case tok::star:
     case tok::kw_const:
     case tok::kw_constexpr:
     case tok::comma:
-    case tok::less:
     case tok::greater:
     case tok::identifier:
     case tok::numeric_constant:

@@ -946,6 +946,16 @@ Value materializeOpFoldResult(OpBuilder &builder, Location loc,
   return materializeOpFoldResult(b, opFoldResult);
 }
 
+SmallVector<Value>
+materializeOpFoldResults(OpBuilder &builder, Location loc,
+                         ArrayRef<OpFoldResult> opFoldResults) {
+  ImplicitLocOpBuilder b(loc, builder);
+  SmallVector<Value> values;
+  for (const auto &opFoldResult : opFoldResults)
+    values.push_back(materializeOpFoldResult(b, opFoldResult));
+  return values;
+}
+
 SmallVector<Optional<SliceParameters>>
 computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
                           ValueRange valuesToTile, ArrayRef<OpFoldResult> ivs,
