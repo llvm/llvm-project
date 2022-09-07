@@ -689,10 +689,6 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
       compileOnly = 1;
       buildDeps = 1;
     }
-    if (trimarg == "-use_fast_math") {
-      HIPCXXFLAGS += " -DHIP_FAST_MATH ";
-      HIPCFLAGS += " -DHIP_FAST_MATH ";
-    }
     if ((trimarg == "-use-staticlib") && (setLinkType == 0)) {
       linkType = 0;
       setLinkType = 1;
