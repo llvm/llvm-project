@@ -420,17 +420,11 @@ OpFoldResult math::TanhOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult math::RoundEvenOp::fold(ArrayRef<Attribute> operands) {
-  return constFoldUnaryOpConditional<FloatAttr>(
-      operands, [](const APFloat &a) -> Optional<APFloat> {
-        switch (a.getSizeInBits(a.getSemantics())) {
-        case 64:
-          return APFloat(roundeven(a.convertToDouble()));
-        case 32:
-          return APFloat(roundevenf(a.convertToFloat()));
-        default:
-          return {};
-        }
-      });
+  return constFoldUnaryOp<FloatAttr>(operands, [](const APFloat &a) {
+    APFloat result(a);
+    result.roundToIntegral(llvm::RoundingMode::NearestTiesToEven);
+    return result;
+  });
 }
 
 /// Materialize an integer or floating point constant.
