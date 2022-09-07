@@ -11,6 +11,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -116,6 +117,12 @@ enum AttributeCode {
   ///   UnknownLoc {
   ///   }
   kUnknownLoc = 15,
+
+  ///   DenseResourceElementsAttr {
+  ///     type: Type,
+  ///     handle: ResourceHandle
+  ///   }
+  kDenseResourceElementsAttr = 16,
 };
 
 /// This enum contains marker codes used to indicate which type is currently
@@ -272,6 +279,8 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
 
   Attribute readAttribute(DialectBytecodeReader &reader) const override;
   ArrayAttr readArrayAttr(DialectBytecodeReader &reader) const;
+  DenseResourceElementsAttr
+  readDenseResourceElementsAttr(DialectBytecodeReader &reader) const;
   DictionaryAttr readDictionaryAttr(DialectBytecodeReader &reader) const;
   FloatAttr readFloatAttr(DialectBytecodeReader &reader) const;
   IntegerAttr readIntegerAttr(DialectBytecodeReader &reader) const;
@@ -289,6 +298,8 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const override;
   void write(ArrayAttr attr, DialectBytecodeWriter &writer) const;
+  void write(DenseResourceElementsAttr attr,
+             DialectBytecodeWriter &writer) const;
   void write(DictionaryAttr attr, DialectBytecodeWriter &writer) const;
   void write(IntegerAttr attr, DialectBytecodeWriter &writer) const;
   void write(FloatAttr attr, DialectBytecodeWriter &writer) const;
@@ -381,6 +392,8 @@ Attribute BuiltinDialectBytecodeInterface::readAttribute(
     return readNameLoc(reader);
   case builtin_encoding::kUnknownLoc:
     return UnknownLoc::get(getContext());
+  case builtin_encoding::kDenseResourceElementsAttr:
+    return readDenseResourceElementsAttr(reader);
   default:
     reader.emitError() << "unknown builtin attribute code: " << code;
     return Attribute();
@@ -390,9 +403,12 @@ Attribute BuiltinDialectBytecodeInterface::readAttribute(
 LogicalResult BuiltinDialectBytecodeInterface::writeAttribute(
     Attribute attr, DialectBytecodeWriter &writer) const {
   return TypeSwitch<Attribute, LogicalResult>(attr)
-      .Case<ArrayAttr, DictionaryAttr, FloatAttr, IntegerAttr, StringAttr,
-            SymbolRefAttr, TypeAttr, CallSiteLoc, FileLineColLoc, FusedLoc,
-            NameLoc>([&](auto attr) {
+      .Case<ArrayAttr, DenseResourceElementsAttr, DictionaryAttr, FloatAttr,
+            IntegerAttr, StringAttr, SymbolRefAttr, TypeAttr>([&](auto attr) {
+        write(attr, writer);
+        return success();
+      })
+      .Case<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc>([&](auto attr) {
         write(attr, writer);
         return success();
       })
@@ -423,6 +439,31 @@ void BuiltinDialectBytecodeInterface::write(
     ArrayAttr attr, DialectBytecodeWriter &writer) const {
   writer.writeVarInt(builtin_encoding::kArrayAttr);
   writer.writeAttributes(attr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// DenseResourceElementsAttr
+
+DenseResourceElementsAttr
+BuiltinDialectBytecodeInterface::readDenseResourceElementsAttr(
+    DialectBytecodeReader &reader) const {
+  ShapedType type;
+  if (failed(reader.readType(type)))
+    return DenseResourceElementsAttr();
+
+  FailureOr<DenseResourceElementsHandle> handle =
+      reader.readResourceHandle<DenseResourceElementsHandle>();
+  if (failed(handle))
+    return DenseResourceElementsAttr();
+
+  return DenseResourceElementsAttr::get(type, *handle);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    DenseResourceElementsAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kDenseResourceElementsAttr);
+  writer.writeType(attr.getType());
+  writer.writeResourceHandle(attr.getRawHandle());
 }
 
 //===----------------------------------------------------------------------===//

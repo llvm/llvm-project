@@ -262,6 +262,17 @@ public:
   }
 };
 
+/// This enum represents the different kinds of resource values.
+enum class AsmResourceEntryKind {
+  /// A blob of data with an accompanying alignment.
+  Blob,
+  /// A boolean value.
+  Bool,
+  /// A string value.
+  String,
+};
+StringRef toString(AsmResourceEntryKind kind);
+
 /// This class represents a single parsed resource entry.
 class AsmParsedResourceEntry {
 public:
@@ -272,6 +283,9 @@ public:
 
   /// Emit an error at the location of this entry.
   virtual InFlightDiagnostic emitError() const = 0;
+
+  /// Return the kind of this value.
+  virtual AsmResourceEntryKind getKind() const = 0;
 
   /// Parse the resource entry represented by a boolean. Returns failure if the
   /// entry does not correspond to a bool.

@@ -14,8 +14,10 @@
 #ifndef LIB_MLIR_BYTECODE_WRITER_IRNUMBERING_H
 #define LIB_MLIR_BYTECODE_WRITER_IRNUMBERING_H
 
-#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace mlir {
 class BytecodeDialectInterface;
@@ -77,6 +79,25 @@ struct OpNameNumbering {
 };
 
 //===----------------------------------------------------------------------===//
+// Dialect Resource Numbering
+//===----------------------------------------------------------------------===//
+
+/// This class represents a numbering entry for a dialect resource.
+struct DialectResourceNumbering {
+  DialectResourceNumbering(std::string key) : key(std::move(key)) {}
+
+  /// The key used to reference this resource.
+  std::string key;
+
+  /// The number assigned to this resource.
+  unsigned number = 0;
+
+  /// A flag indicating if this resource is only a declaration, not a full
+  /// definition.
+  bool isDeclaration = true;
+};
+
+//===----------------------------------------------------------------------===//
 // Dialect Numbering
 //===----------------------------------------------------------------------===//
 
@@ -93,6 +114,15 @@ struct DialectNumbering {
 
   /// The bytecode dialect interface of the dialect if defined.
   const BytecodeDialectInterface *interface = nullptr;
+
+  /// The asm dialect interface of the dialect if defined.
+  const OpAsmDialectInterface *asmInterface = nullptr;
+
+  /// The referenced resources of this dialect.
+  SetVector<AsmDialectResourceHandle> resources;
+
+  /// A mapping from resource key to the corresponding resource numbering entry.
+  llvm::MapVector<StringRef, DialectResourceNumbering *> resourceMap;
 };
 
 //===----------------------------------------------------------------------===//
@@ -134,6 +164,10 @@ public:
     assert(valueIDs.count(value) && "value not numbered");
     return valueIDs[value];
   }
+  unsigned getNumber(const AsmDialectResourceHandle &resource) {
+    assert(dialectResources.count(resource) && "resource not numbered");
+    return dialectResources[resource]->number;
+  }
 
   /// Return the block and value counts of the given region.
   std::pair<unsigned, unsigned> getBlockValueCount(Region *region) {
@@ -162,6 +196,12 @@ private:
   void number(Region &region);
   void number(Type type);
 
+  /// Number the given dialect resources.
+  void number(Dialect *dialect, ArrayRef<AsmDialectResourceHandle> resources);
+
+  /// Finalize the numberings of any dialect resources.
+  void finalizeDialectResourceNumberings(Operation *rootOp);
+
   /// Mapping from IR to the respective numbering entries.
   DenseMap<Attribute, AttributeNumbering *> attrs;
   DenseMap<OperationName, OpNameNumbering *> opNames;
@@ -172,10 +212,16 @@ private:
   std::vector<OpNameNumbering *> orderedOpNames;
   std::vector<TypeNumbering *> orderedTypes;
 
+  /// A mapping from dialect resource handle to the numbering for the referenced
+  /// resource.
+  llvm::DenseMap<AsmDialectResourceHandle, DialectResourceNumbering *>
+      dialectResources;
+
   /// Allocators used for the various numbering entries.
   llvm::SpecificBumpPtrAllocator<AttributeNumbering> attrAllocator;
   llvm::SpecificBumpPtrAllocator<DialectNumbering> dialectAllocator;
   llvm::SpecificBumpPtrAllocator<OpNameNumbering> opNameAllocator;
+  llvm::SpecificBumpPtrAllocator<DialectResourceNumbering> resourceAllocator;
   llvm::SpecificBumpPtrAllocator<TypeNumbering> typeAllocator;
 
   /// The value ID for each Block and Value.

@@ -1271,6 +1271,18 @@ AsmResourceBuilder::~AsmResourceBuilder() = default;
 AsmResourceParser::~AsmResourceParser() = default;
 AsmResourcePrinter::~AsmResourcePrinter() = default;
 
+StringRef mlir::toString(AsmResourceEntryKind kind) {
+  switch (kind) {
+  case AsmResourceEntryKind::Blob:
+    return "blob";
+  case AsmResourceEntryKind::Bool:
+    return "bool";
+  case AsmResourceEntryKind::String:
+    return "string";
+  }
+  llvm_unreachable("unknown AsmResourceEntryKind");
+}
+
 //===----------------------------------------------------------------------===//
 // AsmState
 //===----------------------------------------------------------------------===//
