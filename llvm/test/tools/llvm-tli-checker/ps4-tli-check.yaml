@@ -1,12 +1,12 @@
 # REQUIRES: x86-registered-target
 #
-## This produces the object that matches expectations for PS4/PS5.
-# RUN: yaml2obj %s -DZDAPV=_ZdaPv -o=%t1
+## This produces a static object that matches expectations for PS4/PS5.
+# RUN: yaml2obj %s -DTYPE=ET_REL -DLABEL=Symbols -DZDAPV=_ZdaPv -o=%t1
 # RUN: llvm-tli-checker --triple=x86_64-scei-ps4 %t1 | FileCheck %s
 # RUN: llvm-tli-checker --triple=x86_64-sie-ps5 %t1 | FileCheck %s
 #
-## This produces an object that has _ZdaPvj instead of _ZdaPv.
-# RUN: yaml2obj %s -DZDAPV=_ZdaPvj -o=%t2
+## This produces a dynamic object that has _ZdaPvj instead of _ZdaPv.
+# RUN: yaml2obj %s -DTYPE=ET_DYN -DLABEL=DynamicSymbols -DZDAPV=_ZdaPvj -o=%t2
 # RUN: llvm-tli-checker --triple x86_64-scei-ps4 %t2 | \
 # RUN:     FileCheck %s --check-prefixes=WRONG_SUMMARY,WRONG_DETAIL \
 # RUN:    --implicit-check-not="==" --implicit-check-not="<<" --implicit-check-not=">>"
