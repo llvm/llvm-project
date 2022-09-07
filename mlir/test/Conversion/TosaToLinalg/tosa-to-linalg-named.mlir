@@ -165,15 +165,21 @@ func.func @max_pool_padded(%arg0: tensor<1x6x34x62xf32>) -> () {
 }
 
 // CHECK-LABEL: @max_pool_dyn
-func.func @max_pool_dyn(%arg0: tensor<?x6x34x62xf32>) -> () {
-  // CHECK: %[[C0:.+]] = arith.constant 0
-  // CHECK: %[[BATCH:.+]] = tensor.dim %arg0, %[[C0]]
+func.func @max_pool_dyn(%arg0: tensor<?x?x?x64xf32>) -> () {
+  // CHECK: %[[C0:.+]]  = arith.constant 0 : index
+  // CHECK: %[[DIM0:.+]]  = tensor.dim %arg0, %[[C0]] : tensor<?x?x?x64xf32>
+  // CHECK: %[[C1:.+]]  = arith.constant 1 : index
+  // CHECK: %[[DIM1:.+]]  = tensor.dim %arg0, %[[C1]] : tensor<?x?x?x64xf32>
+  // CHECK: arith.constant 2 : index
+  // CHECK: %[[C2:.+]]  = arith.constant 2 : index
+  // CHECK: %[[DIM2:.+]]  = tensor.dim %arg0, %[[C2]] : tensor<?x?x?x64xf32>
+  // CHECK: %[[PAD:.+]] = tensor.pad %arg0
   // CHECK: %[[CONST:.+]] = arith.constant -3.40282347E+38
-  // CHECK: %[[INIT:.+]] = linalg.init_tensor [%[[BATCH]], 4, 32, 62]
-  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CONST]]{{.*}}outs(%[[INIT]]
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%cst_18 : f32) outs(%20 : tensor<?x?x?x64xf32>) -> tensor<?x?x?x64xf32>
   // CHECK: %[[KERNEL:.+]] = linalg.init_tensor [3, 3]
-  // CHECK: linalg.pooling_nhwc_max {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>} ins(%arg0, %[[KERNEL]] : tensor<?x6x34x62xf32>, tensor<3x3xf32>) outs(%[[FILL]] : tensor<?x4x32x62xf32>)
-  %0 = "tosa.max_pool2d"(%arg0) {pad = [0, 0, 0, 0], kernel = [3, 3], stride = [1, 1]} : (tensor<?x6x34x62xf32>)  -> (tensor<?x4x32x62xf32>)
+  // CHECK: linalg.pooling_nhwc_max {dilations = dense<1> : vector<2xi64>, strides = dense<2> : vector<2xi64>} ins(%[[PAD]], %[[KERNEL]] : tensor<?x?x?x64xf32>, tensor<3x3xf32>) outs(%[[FILL]] : tensor<?x?x?x64xf32>) -> tensor<?x?x?x64xf32>
+  %0 = "tosa.max_pool2d"(%arg0) {kernel = [3, 3], pad = [1, 1, 1, 1], stride = [2, 2]} : (tensor<?x?x?x64xf32>) -> (tensor<?x?x?x64xf32>)
   return
 }
 
@@ -277,6 +283,25 @@ func.func @avg_pool_dyn(%arg0: tensor<?x6x34x62xf32>) -> (tensor<?x5x33x62xf32>)
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[POOL]] : tensor<?x5x33x62xf32>) outs(%[[INIT]] : tensor<?x5x33x62xf32>)
   %0 = "tosa.avg_pool2d"(%arg0) {pad = [1, 1, 1, 1], kernel = [4, 4], stride = [1, 1]} : (tensor<?x6x34x62xf32>)  -> (tensor<?x5x33x62xf32>)
   return %0 : tensor<?x5x33x62xf32>
+}
+
+// CHECK-LABEL: @avg_pool_dyn_h
+func.func @avg_pool_dyn_h(%arg0: tensor<2x?x34x62xf32>) -> (tensor<2x?x33x62xf32>) {
+  // CHECK: %[[C1:.+]] = arith.constant 1
+  // CHECK: %[[DIM1:.+]] = tensor.dim %arg0, %[[C1]]
+  // CHECK: arith.addi
+  // CHECK: arith.addi
+  // CHECK: arith.addi
+  // CHECK: %[[RESULT:.+]] = arith.addi
+  // CHECK: %[[PAD:.+]] = tensor.pad %arg0 low[0, 1, 1, 0] high[0, 1, 1, 0]
+  // CHECK: %[[POOLINIT:.+]] = linalg.init_tensor [2, %[[RESULT]], 33, 62]
+  // CHECK: %[[FILL:.+]] = linalg.fill
+  // CHECK: %[[KERNEL:.+]] = linalg.init_tensor [4, 4]
+  // CHECK: %[[POOL:.+]] = linalg.pooling_nhwc_sum {dilations = dense<1> : vector<2xi64>, strides = dense<1> : vector<2xi64>} ins(%[[PAD]], %[[KERNEL]] : tensor<2x?x36x62xf32>, tensor<4x4xf32>) outs(%[[FILL]] : tensor<2x?x33x62xf32>)
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [2, %[[RESULT]], 33, 62]
+  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[POOL]] : tensor<2x?x33x62xf32>) outs(%[[INIT]] : tensor<2x?x33x62xf32>)
+  %0 = "tosa.avg_pool2d"(%arg0) {pad = [1, 1, 1, 1], kernel = [4, 4], stride = [1, 1]} : (tensor<2x?x34x62xf32>)  -> (tensor<2x?x33x62xf32>)
+  return %0 : tensor<2x?x33x62xf32>
 }
 
 // -----
