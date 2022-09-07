@@ -68,3 +68,14 @@
 // RUN:        --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o %t %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-O %s
 // MULTI-D-ONLY-O: error: cannot specify -o when generating multiple output files
+
+//
+// Check to ensure that we can use '-fsyntax-only' for HIP output with the new
+// driver.
+// 
+// RUN: %clang -### -target x86_64-unknown-linux-gnu --offload-new-driver \
+// RUN:        -fsyntax-only --offload-arch=gfx90a --offload-arch=gfx908 -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=SYNTAX-ONLY %s
+// SYNTAX-ONLY: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-fsyntax-only"
+// SYNTAX-ONLY: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-fsyntax-only"
+// SYNTAX-ONLY: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fsyntax-only"

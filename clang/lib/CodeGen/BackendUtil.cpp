@@ -627,7 +627,7 @@ static void addSanitizers(const Triple &TargetTriple,
                                          OptimizationLevel Level) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-      MPM.addPass(ModuleSanitizerCoveragePass(
+      MPM.addPass(SanitizerCoveragePass(
           SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
           CodeGenOpts.SanitizeCoverageIgnorelistFiles));
     }
@@ -639,7 +639,7 @@ static void addSanitizers(const Triple &TargetTriple,
 
         MemorySanitizerOptions options(TrackOrigins, Recover, CompileKernel,
                                        CodeGenOpts.SanitizeMemoryParamRetval);
-        MPM.addPass(ModuleMemorySanitizerPass(options));
+        MPM.addPass(MemorySanitizerPass(options));
         if (Level != OptimizationLevel::O0) {
           // MemorySanitizer inserts complex instrumentation that mostly
           // follows the logic of the original code, but operates on
