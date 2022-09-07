@@ -1009,6 +1009,117 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
   return pattern_binding;
 }
 
+swift::FuncDecl *SwiftASTManipulator::GetFunctionToInjectVariableInto(
+    const SwiftASTManipulator::VariableInfo &variable, bool is_self) const {
+  // The only variable that we inject in the wrapper is self, so we can
+  // call the function declared in the type extension.
+  return is_self ? m_wrapper_decl : m_function_decl;
+}
+
+llvm::Optional<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
+    const SwiftASTManipulator::VariableInfo &variable, bool is_self) const {
+  auto *type_system_swift =
+      llvm::dyn_cast_or_null<TypeSystemSwift>(variable.m_type.GetTypeSystem());
+
+  if (!type_system_swift)
+    return {};
+
+  // This might be a referenced type, which will confuse the type checker.
+  // The access pattern for these types is the same as for the referent
+  // type, so it is fine to just strip it off.
+  CompilerType referent_type =
+      type_system_swift->GetReferentType(variable.m_type.GetOpaqueQualType());
+
+  swift::Type swift_type = GetSwiftType(referent_type);
+  if (!swift_type)
+    return {};
+
+  // One tricky bit here is that this var may be an argument to the
+  // function whose context we are emulating, and that argument might be
+  // of "inout" type.  We need to strip the inout off the type or the
+  // initial parse will fail.  Fortunately, the variable access goes the
+  // same regardless of whether it is inout or not, so we don't have to do
+  // anything more to get this to work.
+  swift_type = swift_type->getWithoutSpecifierType();
+
+  if (is_self) {
+    // Another tricky bit is that the Metatype types we get have the
+    // "Representation" already attached (i.e.
+    // "@thick", "@thin".)  But the representation is a SIL level thing,
+    // and if it is attached to types that we hand the parser, it throws a
+    // verifier error & aborts.  So we strip it off here:
+    swift::MetatypeType *metatype_type =
+        llvm::dyn_cast<swift::MetatypeType>(swift_type.getPointer());
+    if (metatype_type) {
+      swift_type = swift::Type(
+          swift::MetatypeType::get(metatype_type->getInstanceType()));
+    }
+  }
+
+  if (swift_type->hasArchetype())
+    swift_type = swift_type->mapTypeOutOfContext();
+
+  return {swift_type};
+}
+
+swift::VarDecl *SwiftASTManipulator::GetVarDeclForVariableInFunction(
+    const SwiftASTManipulator::VariableInfo &variable, bool is_self,
+    swift::FuncDecl *containing_function) {
+  const auto maybe_swift_type = GetSwiftTypeForVariable(variable, is_self);
+
+  if (!maybe_swift_type)
+    return {};
+
+  const auto &swift_type = *maybe_swift_type;
+
+  const swift::SourceLoc loc = containing_function->getBody()->getLBraceLoc();
+  const swift::Identifier name = variable.GetName();
+  // We may need to mutate the self variable later, so hardcode it to a var
+  // in that case.
+  const auto introducer =
+      is_self ? swift::VarDecl::Introducer::Var : variable.GetVarIntroducer();
+
+  const swift::ASTContext &ast_context = m_source_file.getASTContext();
+  swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
+      /*is_staic*/ false, introducer, loc, name, containing_function);
+
+  redirected_var_decl->setInterfaceType(swift_type);
+  redirected_var_decl->setDebuggerVar(true);
+  redirected_var_decl->setImplicit(true);
+
+  // This avoids having local variables filtered out by
+  // swift::namelookup::filterForDiscriminator().
+  redirected_var_decl->overwriteAccess(swift::AccessLevel::Public);
+
+  if (swift_type->getAs<swift::WeakStorageType>()) {
+    redirected_var_decl->getAttrs().add(
+        new (ast_context) swift::ReferenceOwnershipAttr(
+            swift::SourceRange(), swift::ReferenceOwnership::Weak));
+  }
+
+  return redirected_var_decl;
+}
+
+/// Adds the new nodes to the beginning of the function.
+static void AddNodesToBeginningFunction(
+    swift::FuncDecl *function,
+    const llvm::SmallVectorImpl<swift::ASTNode> &new_nodes,
+    swift::ASTContext &ast_context) {
+  swift::BraceStmt *body = function->getBody();
+  llvm::ArrayRef<swift::ASTNode> current_elements = body->getElements();
+
+  llvm::SmallVector<swift::ASTNode, 3> new_elements(current_elements.begin(),
+                                                    current_elements.end());
+
+  // Make sure to add the new nodes at the beginning of the function.
+  new_elements.insert(new_elements.begin(), new_nodes.begin(), new_nodes.end());
+  auto *new_function_body = swift::BraceStmt::create(
+      ast_context, body->getLBraceLoc(), ast_context.AllocateCopy(new_elements),
+      body->getRBraceLoc());
+
+  function->setBody(new_function_body, function->getBodyKind());
+}
+
 bool SwiftASTManipulator::AddExternalVariables(
     llvm::MutableArrayRef<VariableInfo> variables) {
   if (!IsValid())
@@ -1043,7 +1154,7 @@ bool SwiftASTManipulator::AddExternalVariables(
 
     swift::VarDecl *redirected_var_decl = new (ast_context)
         swift::VarDecl(is_static, introducer, loc, name,
-                       &m_source_file);
+                       &m_source_file);    
     redirected_var_decl->setInterfaceType(var_type);
     redirected_var_decl->setTopLevelGlobal(true);
 
@@ -1085,127 +1196,29 @@ bool SwiftASTManipulator::AddExternalVariables(
 
     m_variables.push_back(variable);
   } else {
-    swift::BraceStmt *body = m_function_decl->getBody();
-    llvm::ArrayRef<swift::ASTNode> body_elements = body->getElements();
-
-    llvm::SmallVector<swift::ASTNode, 3> elements(body_elements.begin(),
-                                                  body_elements.end());
-    llvm::SmallVectorImpl<swift::ASTNode>::iterator element_iterator =
-        elements.begin();
-    const bool is_static = false;
+    // The new nodes that should be added to each function.
+    std::unordered_map<swift::FuncDecl *, llvm::SmallVector<swift::ASTNode, 3>>
+        injected_nodes;
 
     for (SwiftASTManipulator::VariableInfo &variable : variables) {
-      swift::SourceLoc loc = m_function_decl->getBody()->getLBraceLoc();
-      swift::FuncDecl *containing_function = m_function_decl;
-      swift::Identifier name = variable.m_name;
-      auto introducer = variable.GetVarIntroducer();
-
       bool is_self = !variable.m_name.str().compare("$__lldb_injected_self");
-
-      if (is_self) {
-        if (!m_wrapper_decl)
-          continue;
-
-        // We need to mutate the $__lldb_wrapped_expr_%d member of self later.
-        introducer = swift::VarDecl::Introducer::Var;
-        loc = m_wrapper_decl->getBody()->getLBraceLoc();
-        containing_function = m_wrapper_decl;
-      }
-
-      // This might be a referenced type, which will confuse the type checker.
-      // The access pattern for these types is the same as for the referent
-      // type, so it is fine to
-      // just strip it off.
-      auto *swift_ast_ctx = llvm::dyn_cast_or_null<TypeSystemSwift>(
-          variable.m_type.GetTypeSystem());
-
-      CompilerType referent_type;
-      if (swift_ast_ctx)
-        referent_type =
-            swift_ast_ctx->GetReferentType(variable.m_type.GetOpaqueQualType());
-      if (!referent_type)
+      swift::FuncDecl *containing_function =
+          GetFunctionToInjectVariableInto(variable, is_self);
+      assert(containing_function && "No function to inject variable into!");
+      if (!containing_function)
         continue;
 
-      swift::Type swift_referent_type = GetSwiftType(referent_type);
-      if (!swift_referent_type) 
-        continue;
-      
-      // One tricky bit here is that this var may be an argument to the function
-      // whose context we are
-      // emulating, and that argument might be of "inout" type.  We need to
-      // strip the inout off the type
-      // or the initial parse will fail.  Fortunately, the variable access goes
-      // the same regardless of whether
-      // it is inout or not, so we don't have to do anything more to get this to
-      // work.
-      swift::Type var_type =
-          swift_referent_type->getWithoutSpecifierType();
-      if (is_self) {
-        // Another tricky bit is that the Metatype types we get have the
-        // "Representation" already attached (i.e.
-        // "@thick", "@thin".)  But the representation is a SIL level thing, and
-        // if it is attached to types that
-        // we hand the parser, it throws a verifier error & aborts.  So we strip
-        // it off here:
-        swift::MetatypeType *metatype_type =
-            llvm::dyn_cast<swift::MetatypeType>(var_type.getPointer());
-        if (metatype_type) {
-          var_type = swift::Type(
-              swift::MetatypeType::get(metatype_type->getInstanceType()));
-        }
-      }
-
-      swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
-          is_static, introducer, loc, name,
-          containing_function);
-      auto interface_type = var_type;
-      if (interface_type->hasArchetype())
-        interface_type = interface_type->mapTypeOutOfContext();
-      redirected_var_decl->setInterfaceType(interface_type);
-      redirected_var_decl->setDebuggerVar(true);
-      redirected_var_decl->setImplicit(true);
-      // This avoids having local variables filtered out by
-      // swift::namelookup::filterForDiscriminator().
-      redirected_var_decl->overwriteAccess(swift::AccessLevel::Public);
-
+      swift::VarDecl *redirected_var_decl = GetVarDeclForVariableInFunction(
+          variable, is_self, containing_function);
       swift::PatternBindingDecl *pattern_binding =
           GetPatternBindingForVarDecl(redirected_var_decl, containing_function);
 
-      if (var_type->getAs<swift::WeakStorageType>()) {
-        redirected_var_decl->getAttrs().add(
-            new (ast_context) swift::ReferenceOwnershipAttr(
-                swift::SourceRange(), swift::ReferenceOwnership::Weak));
-      }
-
-      if (is_self) {
-        // we need to inject into the wrapper
-
-        swift::BraceStmt *wrapper_body = m_wrapper_decl->getBody();
-        llvm::ArrayRef<swift::ASTNode> wrapper_elements =
-            wrapper_body->getElements();
-
-        llvm::SmallVector<swift::ASTNode, 3> wrapper_elements_copy(
-            wrapper_elements.begin(), wrapper_elements.end());
-        llvm::SmallVectorImpl<swift::ASTNode>::iterator
-            wrapper_element_iterator = wrapper_elements_copy.begin();
-
-        wrapper_element_iterator = wrapper_elements_copy.insert(
-            wrapper_element_iterator, swift::ASTNode(pattern_binding));
-        wrapper_element_iterator = wrapper_elements_copy.insert(
-            wrapper_element_iterator, swift::ASTNode(redirected_var_decl));
-
-        auto *new_wrapper_body = swift::BraceStmt::create(
-            ast_context, wrapper_body->getLBraceLoc(),
-            ast_context.AllocateCopy(wrapper_elements_copy),
-            wrapper_body->getRBraceLoc());
-        m_wrapper_decl->setBody(new_wrapper_body,
-                                m_wrapper_decl->getBodyKind());
-      } else {
-        element_iterator =
-            elements.insert(element_iterator, swift::ASTNode(pattern_binding));
-        element_iterator = elements.insert(element_iterator,
-                                           swift::ASTNode(redirected_var_decl));
-      }
+      // Push the var decl and pattern binding so we add them to the function
+      // later.
+      injected_nodes[containing_function].push_back(
+          swift::ASTNode(pattern_binding));
+      injected_nodes[containing_function].push_back(
+          swift::ASTNode(redirected_var_decl));
 
       variable.m_decl = redirected_var_decl;
 
@@ -1215,18 +1228,19 @@ bool SwiftASTManipulator::AddExternalVariables(
         variable.m_decl->dump(ss);
         ss.flush();
 
-        log->Printf(
-            "[SwiftASTManipulator::AddExternalVariables] Injected variable %s",
-            s.c_str());
+        log->Printf("[SwiftASTManipulator::AddExternalVariables] Injected "
+                    "variable %s",
+                    s.c_str());
       }
 
       m_variables.push_back(variable);
     }
 
-    auto *new_function_body = swift::BraceStmt::create(
-        ast_context, body->getLBraceLoc(), ast_context.AllocateCopy(elements),
-        body->getRBraceLoc());
-    m_function_decl->setBody(new_function_body, m_function_decl->getBodyKind());
+    for (auto &pair : injected_nodes) {
+      auto *containing_function = pair.first;
+      auto &new_nodes = pair.second;
+      AddNodesToBeginningFunction(containing_function, new_nodes, ast_context);
+    }
   }
 
   return true;
