@@ -886,12 +886,6 @@ TEST(RenameTest, Renameable) {
          @end
        )cpp",
        "not a supported kind", HeaderFile},
-      {R"cpp(// FIXME: rename virtual/override methods is not supported yet.
-         struct A {
-          virtual void f^oo() {}
-         };
-      )cpp",
-       "not a supported kind", !HeaderFile},
       {R"cpp(
          void foo(int);
          void foo(char);
@@ -1490,6 +1484,48 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
         }
       )cpp",
       },
+      {
+          // virtual methods.
+          R"cpp(
+        class Base {
+          virtual void [[foo]]();
+        };
+        class Derived1 : public Base {
+          void [[f^oo]]() override;
+        };
+        class NotDerived {
+          void foo() {};
+        }
+      )cpp",
+          R"cpp(
+        #include "foo.h"
+        void Base::[[foo]]() {}
+        void Derived1::[[foo]]() {}
+
+        class Derived2 : public Derived1 {
+          void [[foo]]() override {};
+        };
+
+        void func(Base* b, Derived1* d1, 
+                  Derived2* d2, NotDerived* nd) {
+          b->[[foo]]();
+          d1->[[foo]]();
+          d2->[[foo]]();
+          nd->foo();
+        }
+      )cpp",
+      },
+      // FIXME: triggers an assertion failure due to a bug in canonicalization.
+      // See https://reviews.llvm.org/D132797
+#if 0
+      {
+          // virtual templated method
+          R"cpp(
+        template <typename> class Foo { virtual void [[m]](); };
+        class Bar : Foo<int> { void [[^m]]() override; };
+      )cpp", ""
+      },
+#endif
       {
           // rename on constructor and destructor.
           R"cpp(
