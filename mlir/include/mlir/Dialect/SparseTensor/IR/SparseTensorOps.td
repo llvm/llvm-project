@@ -91,7 +91,7 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 }
 
 def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
-    Arguments<(ins AnySparseTensor:$tensor, Index:$dim)>,
+    Arguments<(ins AnySparseTensor:$tensor, IndexAttr:$dimension)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts pointers array at given dimension from a tensor";
   let description = [{
@@ -106,17 +106,16 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
     Example:
 
     ```mlir
-    %1 = sparse_tensor.pointers %0, %c1
+    %1 = sparse_tensor.pointers %0 { dimension = 1 : index }
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
-  let assemblyFormat = "$tensor `,` $dim attr-dict `:` type($tensor)"
-      " `to` type($result)";
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
   let hasVerifier = 1;
 }
 
 def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
-    Arguments<(ins AnySparseTensor:$tensor, Index:$dim)>,
+    Arguments<(ins AnySparseTensor:$tensor, IndexAttr:$dimension)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts indices array at given dimension from a tensor";
   let description = [{
@@ -131,12 +130,11 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
     Example:
 
     ```mlir
-    %1 = sparse_tensor.indices %0, %c1
+    %1 = sparse_tensor.indices %0 { dimension = 1 : index }
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
-  let assemblyFormat = "$tensor `,` $dim attr-dict `:` type($tensor)"
-      " `to` type($result)";
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
   let hasVerifier = 1;
 }
 
@@ -164,8 +162,7 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
 }
 
 def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", []>,
-    Arguments<(ins Variadic<AnyRankedTensor>:$inputs,
-                   IndexAttr:$dimension)>,
+    Arguments<(ins Variadic<AnyRankedTensor>:$inputs, IndexAttr:$dimension)>,
     Results<(outs AnyRankedTensor:$result)> {
 
   let summary = "Concatenates a list of tensors into a single tensor.";

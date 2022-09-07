@@ -168,45 +168,45 @@ module {
     // CHECK-NEXT: ( 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0 )
     //
-    %v10 = sparse_tensor.indices %1, %c0 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %v11 = sparse_tensor.indices %1, %c1 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %v12 = sparse_tensor.indices %1, %c2 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %v20 = sparse_tensor.indices %2, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %v21 = sparse_tensor.indices %2, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %v22 = sparse_tensor.indices %2, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %v30 = sparse_tensor.indices %3, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %v31 = sparse_tensor.indices %3, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %v32 = sparse_tensor.indices %3, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %v10 = sparse_tensor.indices %1 { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %v11 = sparse_tensor.indices %1 { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %v12 = sparse_tensor.indices %1 { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %v20 = sparse_tensor.indices %2 { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %v21 = sparse_tensor.indices %2 { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %v22 = sparse_tensor.indices %2 { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %v30 = sparse_tensor.indices %3 { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %v31 = sparse_tensor.indices %3 { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %v32 = sparse_tensor.indices %3 { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
 
-    %a10 = sparse_tensor.indices %a, %c0 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %a11 = sparse_tensor.indices %a, %c1 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %a12 = sparse_tensor.indices %a, %c2 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %b10 = sparse_tensor.indices %b, %c0 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %b11 = sparse_tensor.indices %b, %c1 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %b12 = sparse_tensor.indices %b, %c2 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %c10 = sparse_tensor.indices %c, %c0 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %c11 = sparse_tensor.indices %c, %c1 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
-    %c12 = sparse_tensor.indices %c, %c2 : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %a10 = sparse_tensor.indices %a { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %a11 = sparse_tensor.indices %a { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %a12 = sparse_tensor.indices %a { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %b10 = sparse_tensor.indices %b { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %b11 = sparse_tensor.indices %b { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %b12 = sparse_tensor.indices %b { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %c10 = sparse_tensor.indices %c { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %c11 = sparse_tensor.indices %c { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
+    %c12 = sparse_tensor.indices %c { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor1> to memref<?xindex>
 
-    %d20 = sparse_tensor.indices %d, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %d21 = sparse_tensor.indices %d, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %d22 = sparse_tensor.indices %d, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %e20 = sparse_tensor.indices %e, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %e21 = sparse_tensor.indices %e, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %e22 = sparse_tensor.indices %e, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %f20 = sparse_tensor.indices %f, %c0 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %f21 = sparse_tensor.indices %f, %c1 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
-    %f22 = sparse_tensor.indices %f, %c2 : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %d20 = sparse_tensor.indices %d { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %d21 = sparse_tensor.indices %d { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %d22 = sparse_tensor.indices %d { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %e20 = sparse_tensor.indices %e { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %e21 = sparse_tensor.indices %e { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %e22 = sparse_tensor.indices %e { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %f20 = sparse_tensor.indices %f { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %f21 = sparse_tensor.indices %f { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
+    %f22 = sparse_tensor.indices %f { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor2> to memref<?xindex>
 
-    %g30 = sparse_tensor.indices %g, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %g31 = sparse_tensor.indices %g, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %g32 = sparse_tensor.indices %g, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %h30 = sparse_tensor.indices %h, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %h31 = sparse_tensor.indices %h, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %h32 = sparse_tensor.indices %h, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %i30 = sparse_tensor.indices %i, %c0 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %i31 = sparse_tensor.indices %i, %c1 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
-    %i32 = sparse_tensor.indices %i, %c2 : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %g30 = sparse_tensor.indices %g { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %g31 = sparse_tensor.indices %g { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %g32 = sparse_tensor.indices %g { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %h30 = sparse_tensor.indices %h { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %h31 = sparse_tensor.indices %h { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %h32 = sparse_tensor.indices %h { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %i30 = sparse_tensor.indices %i { dimension = 0 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %i31 = sparse_tensor.indices %i { dimension = 1 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
+    %i32 = sparse_tensor.indices %i { dimension = 2 : index } : tensor<2x3x4xf64, #Tensor3> to memref<?xindex>
 
     call @dumpidx(%v10) : (memref<?xindex>) -> ()
     call @dumpidx(%v11) : (memref<?xindex>) -> ()
