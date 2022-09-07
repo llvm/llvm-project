@@ -20,7 +20,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <ffi.h>
-#include <gelf.h>
 #include <link.h>
 #include <list>
 #include <string>
