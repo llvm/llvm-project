@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis -expand-constant-exprs | FileCheck %s
+; RUN: llvm-dis -expand-constant-exprs < %s.bc | FileCheck %s
 
 @g = extern_weak global i32
 @g2 = extern_weak global i32
