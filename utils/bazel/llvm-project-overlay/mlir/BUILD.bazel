@@ -7759,6 +7759,14 @@ gentbl_cc_library(
             "include/mlir/Dialect/Vector/IR/VectorOpsEnums.cpp.inc",
         ),
         (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/Vector/IR/VectorOpsAttrDefs.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/Vector/IR/VectorOpsAttrDefs.cpp.inc",
+        ),
+        (
             ["-gen-op-doc"],
             "g3doc/Dialects/Vector/VectorOps.md",
         ),

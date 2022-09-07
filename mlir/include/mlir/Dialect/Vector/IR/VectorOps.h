@@ -29,6 +29,9 @@
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/Vector/IR/VectorOpsEnums.h.inc"
 
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Vector/IR/VectorOpsAttrDefs.h.inc"
+
 namespace mlir {
 class MLIRContext;
 class RewritePatternSet;
@@ -112,22 +115,6 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 /// Collect a set of patterns to propagate insert_map/extract_map in the ssa
 /// chain.
 void populatePropagateVectorDistributionPatterns(RewritePatternSet &patterns);
-
-/// An attribute that specifies the combining function for `vector.contract`,
-/// and `vector.reduction`.
-class CombiningKindAttr
-    : public Attribute::AttrBase<CombiningKindAttr, Attribute,
-                                 detail::BitmaskEnumStorage> {
-public:
-  using Base::Base;
-
-  static CombiningKindAttr get(CombiningKind kind, MLIRContext *context);
-
-  CombiningKind getKind() const;
-
-  void print(AsmPrinter &p) const;
-  static Attribute parse(AsmParser &parser, Type type);
-};
 
 /// Collects patterns to progressively lower vector.broadcast ops on high-D
 /// vectors to low-D vector ops.
