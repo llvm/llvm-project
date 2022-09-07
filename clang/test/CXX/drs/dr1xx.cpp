@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr100 { // dr100: yes
   template<const char (*)[4]> struct A {}; // expected-note 0-1{{declared here}}
@@ -73,7 +74,10 @@ namespace dr107 { // dr107: yes
 namespace dr108 { // dr108: yes
   template<typename T> struct A {
     struct B { typedef int X; };
-    B::X x; // expected-error {{missing 'typename'}}
+    B::X x;
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{implicit 'typename' is a C++20 extension}}
+#endif
     struct C : B { X x; }; // expected-error {{unknown type name}}
   };
   template<> struct A<int>::B { int X; };
