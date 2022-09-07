@@ -11655,6 +11655,8 @@ def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not ma
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
+def err_hlsl_init_priority_unsupported : Error<
+  "initializer priorities are not supported in HLSL">;
 
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
