@@ -640,21 +640,18 @@ static void addSanitizers(const Triple &TargetTriple,
         MemorySanitizerOptions options(TrackOrigins, Recover, CompileKernel,
                                        CodeGenOpts.SanitizeMemoryParamRetval);
         MPM.addPass(ModuleMemorySanitizerPass(options));
-        FunctionPassManager FPM;
-        FPM.addPass(MemorySanitizerPass(options));
         if (Level != OptimizationLevel::O0) {
           // MemorySanitizer inserts complex instrumentation that mostly
           // follows the logic of the original code, but operates on
           // "shadow" values. It can benefit from re-running some
           // general purpose optimization passes.
-          FPM.addPass(EarlyCSEPass());
+          MPM.addPass(createModuleToFunctionPassAdaptor(EarlyCSEPass()));
           // TODO: Consider add more passes like in
           // addGeneralOptsForMemorySanitizer. EarlyCSEPass makes visible
           // difference on size. It's not clear if the rest is still
           // usefull. InstCombinePass breakes
           // compiler-rt/test/msan/select_origin.cpp.
         }
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       }
     };
     MSanPass(SanitizerKind::Memory, false);
@@ -676,8 +673,8 @@ static void addSanitizers(const Triple &TargetTriple,
         Opts.Recover = CodeGenOpts.SanitizeRecover.has(Mask);
         Opts.UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
         Opts.UseAfterReturn = CodeGenOpts.getSanitizeAddressUseAfterReturn();
-        MPM.addPass(ModuleAddressSanitizerPass(
-            Opts, UseGlobalGC, UseOdrIndicator, DestructorKind));
+        MPM.addPass(AddressSanitizerPass(Opts, UseGlobalGC, UseOdrIndicator,
+                                         DestructorKind));
       }
     };
     ASanPass(SanitizerKind::Address, false);

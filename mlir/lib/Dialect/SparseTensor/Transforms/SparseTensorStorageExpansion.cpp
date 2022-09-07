@@ -65,6 +65,22 @@ static void flattenOperands(ValueRange operands,
 // Conversion rules.
 //===----------------------------------------------------------------------===//
 
+/// Sparse tensor storage conversion rule for sparse_tensor::storage.
+class SparseStorageConversion : public OpConversionPattern<StorageOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(StorageOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Simply convert it to a unrealize_conversion_cast.
+    // We should guarantee that all uses of sparse_tensor.storage op will
+    // be eventually eliminated by accessing the flattened SSA values directly.
+    rewriter.replaceOpWithNewOp<UnrealizedConversionCastOp>(
+        op, TypeRange{op.getType()}, adaptor.getInputs());
+    return success();
+  }
+};
+
 /// Sparse tensor storage conversion rule for sparse_tensor::storage_get.
 class SparseStorageGetConverter : public OpConversionPattern<StorageGetOp> {
 public:
@@ -195,7 +211,8 @@ mlir::SparseTensorStorageTupleExpander::SparseTensorStorageTupleExpander() {
 /// to expand compounded sparse tensor tuples.
 void mlir::populateSparseTensorStorageExpansionPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
-  patterns.add<SparseStorageGetConverter, SparseStorageSetConverter,
-               SparseStorageReturnConverter, SparseStorageCallConverter>(
-      typeConverter, patterns.getContext());
+  patterns.add<SparseStorageConversion, SparseStorageGetConverter,
+               SparseStorageSetConverter, SparseStorageReturnConverter,
+               SparseStorageCallConverter>(typeConverter,
+                                           patterns.getContext());
 }

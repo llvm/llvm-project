@@ -138,6 +138,13 @@ Non-comprehensive list of changes in this release
 - It's now possible to set the crash diagnostics directory through
   the environment variable ``CLANG_CRASH_DIAGNOSTICS_DIR``.
   The ``-fcrash-diagnostics-dir`` flag takes precedence.
+- When using header modules, inclusion of a private header and violations of
+  the `use-declaration rules
+  <https://clang.llvm.org/docs/Modules.html#use-declaration>`_ are now
+  diagnosed even when the includer is a textual header. This change can be
+  temporarily reversed with ``-Xclang
+  -fno-modules-validate-textual-header-includes``, but this flag will be
+  removed in a future Clang release.
 
 New Compiler Flags
 ------------------
@@ -215,7 +222,7 @@ C++20 Feature Support
   `GH55216 <https://github.com/llvm/llvm-project/issues/55216>`_.
 - Correctly set expression evaluation context as 'immediate function context' in
   consteval functions.
-  This fixes `GH51182 <https://github.com/llvm/llvm-project/issues/51182>`
+  This fixes `GH51182 <https://github.com/llvm/llvm-project/issues/51182>`_.
 
 - Fixes an assert crash caused by looking up missing vtable information on ``consteval``
   virtual functions. Fixes `GH55065 <https://github.com/llvm/llvm-project/issues/55065>`_.

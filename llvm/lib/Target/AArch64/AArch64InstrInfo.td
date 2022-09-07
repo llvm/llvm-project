@@ -2097,7 +2097,7 @@ defm BICS : LogicalRegS<0b11, 1, "bics",
                         BinOpFrag<(AArch64and_flag node:$LHS, (not node:$RHS))>>;
 defm AND  : LogicalReg<0b00, 0, "and", and>;
 defm BIC  : LogicalReg<0b00, 1, "bic",
-                       BinOpFrag<(and node:$LHS, (not node:$RHS))>>;
+                       BinOpFrag<(and node:$LHS, (not node:$RHS))>, 3>;
 defm EON  : LogicalReg<0b10, 1, "eon",
                        BinOpFrag<(not (xor node:$LHS, node:$RHS))>>;
 defm EOR  : LogicalReg<0b10, 0, "eor", xor>;

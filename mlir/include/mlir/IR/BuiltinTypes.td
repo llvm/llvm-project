@@ -875,7 +875,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
     Examples:
 
     ```mlir
-    tensor<*f32>
+    tensor<*xf32>
     ```
   }];
   let parameters = (ins "Type":$elementType);

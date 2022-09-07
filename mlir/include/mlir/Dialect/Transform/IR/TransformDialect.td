@@ -299,7 +299,6 @@ def Transform_Dialect : Dialect {
 
   let name = "transform";
   let cppNamespace = "::mlir::transform";
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 
   let dependentDialects = [
     "::mlir::pdl::PDLDialect",
