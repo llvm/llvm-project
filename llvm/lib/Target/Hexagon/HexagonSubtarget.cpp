@@ -75,11 +75,6 @@ static cl::opt<bool> EnableCheckBankConflict(
     "hexagon-check-bank-conflict", cl::Hidden, cl::init(true),
     cl::desc("Enable checking for cache bank conflicts"));
 
-static cl::opt<bool> EnableV68FloatCodeGen(
-    "force-hvx-float", cl::Hidden,
-    cl::desc(
-        "Enable the code-generation for vector float instructions on v68."));
-
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
     : HexagonGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
@@ -149,19 +144,8 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   std::string FeatureString = Features.getString();
   ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FeatureString);
 
-  // Enable float code generation only if the flag(s) are set and
-  // the feature is enabled. v68 is guarded by additional flags.
-  bool GreaterThanV68 = false;
-  if (useHVXV69Ops())
-    GreaterThanV68 = true;
-
-  // Support for deprecated qfloat/ieee codegen flags
-  if (!GreaterThanV68) {
-    if (EnableV68FloatCodeGen)
-      UseHVXFloatingPoint = true;
-  } else {
-    UseHVXFloatingPoint = true;
-  }
+  if (useHVXV68Ops())
+    UseHVXFloatingPoint = UseHVXIEEEFPOps || UseHVXQFloatOps;
 
   if (UseHVXQFloatOps && UseHVXIEEEFPOps && UseHVXFloatingPoint)
     LLVM_DEBUG(
