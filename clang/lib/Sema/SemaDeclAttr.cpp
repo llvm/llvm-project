@@ -2328,6 +2328,10 @@ static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   uint32_t priority = ConstructorAttr::DefaultPriority;
+  if (S.getLangOpts().HLSL && AL.getNumArgs()) {
+    S.Diag(AL.getLoc(), diag::err_hlsl_init_priority_unsupported);
+    return;
+  }
   if (AL.getNumArgs() &&
       !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
     return;
@@ -3727,6 +3731,11 @@ static FormatAttrKind getFormatAttrKind(StringRef Format) {
 static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.getLangOpts().CPlusPlus) {
     S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+    return;
+  }
+  
+  if (S.getLangOpts().HLSL) {
+    S.Diag(AL.getLoc(), diag::err_hlsl_init_priority_unsupported);
     return;
   }
 
