@@ -309,16 +309,16 @@ static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
       whence = "inside";
     } else if (candidate == left) {
       offset = untagged_addr - chunk.End();
-      whence = "to the right of";
+      whence = "after";
     } else {
       offset = chunk.Beg() - untagged_addr;
-      whence = "to the left of";
+      whence = "before";
     }
     Printf("%s", d.Error());
     Printf("\nCause: heap-buffer-overflow\n");
     Printf("%s", d.Default());
     Printf("%s", d.Location());
-    Printf("%p is located %zd bytes %s %zd-byte region [%p,%p)\n",
+    Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
            untagged_addr, offset, whence, chunk.UsedSize(), chunk.Beg(),
            chunk.End());
     Printf("%s", d.Allocation());
@@ -340,27 +340,27 @@ static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
     Printf("%s", d.Location());
     if (sym->SymbolizeData(mem, &info) && info.start) {
       Printf(
-          "%p is located %zd bytes to the %s of %zd-byte global variable "
+          "%p is located %zd bytes %s a %zd-byte global variable "
           "%s [%p,%p) in %s\n",
           untagged_addr,
           candidate == left ? untagged_addr - (info.start + info.size)
                             : info.start - untagged_addr,
-          candidate == left ? "right" : "left", info.size, info.name,
+          candidate == left ? "after" : "before", info.size, info.name,
           info.start, info.start + info.size, module_name);
     } else {
       uptr size = GetGlobalSizeFromDescriptor(mem);
       if (size == 0)
         // We couldn't find the size of the global from the descriptors.
         Printf(
-            "%p is located to the %s of a global variable in "
+            "%p is located %s a global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            untagged_addr, candidate == left ? "right" : "left", mem,
+            untagged_addr, candidate == left ? "after" : "before", mem,
             module_name, module_address);
       else
         Printf(
-            "%p is located to the %s of a %zd-byte global variable in "
+            "%p is located %s a %zd-byte global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            untagged_addr, candidate == left ? "right" : "left", size, mem,
+            untagged_addr, candidate == left ? "after" : "before", size, mem,
             module_name, module_address);
     }
     Printf("%s", d.Default());
@@ -459,7 +459,7 @@ void PrintAddressDescription(
       Printf("%s", d.Error());
       Printf("\nCause: use-after-free\n");
       Printf("%s", d.Location());
-      Printf("%p is located %zd bytes inside of %zd-byte region [%p,%p)\n",
+      Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
              untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
              har.requested_size, UntagAddr(har.tagged_addr),
              UntagAddr(har.tagged_addr) + har.requested_size);
@@ -660,7 +660,7 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
     s.append("%s ", actual_expected[i] != tail[i] ? "^^" : "  ");
 
   s.append("\nThis error occurs when a buffer overflow overwrites memory\n"
-    "to the right of a heap object, but within the %zd-byte granule, e.g.\n"
+    "after a heap object, but within the %zd-byte granule, e.g.\n"
     "   char *x = new char[20];\n"
     "   x[25] = 42;\n"
     "%s does not detect such bugs in uninstrumented code at the time of write,"
