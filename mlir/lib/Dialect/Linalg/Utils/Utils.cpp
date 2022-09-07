@@ -140,9 +140,11 @@ static void unpackRanges(OpBuilder &builder, Location loc,
                          SmallVectorImpl<Value> &ubs,
                          SmallVectorImpl<Value> &steps) {
   for (Range range : ranges) {
-    lbs.emplace_back(materializeOpFoldResult(builder, loc, range.offset));
-    ubs.emplace_back(materializeOpFoldResult(builder, loc, range.size));
-    steps.emplace_back(materializeOpFoldResult(builder, loc, range.stride));
+    lbs.emplace_back(
+        getValueOrCreateConstantIndexOp(builder, loc, range.offset));
+    ubs.emplace_back(getValueOrCreateConstantIndexOp(builder, loc, range.size));
+    steps.emplace_back(
+        getValueOrCreateConstantIndexOp(builder, loc, range.stride));
   }
 }
 
@@ -929,33 +931,6 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
   return tensorResults;
 }
 
-Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
-                              OpFoldResult opFoldResult) {
-  if (!opFoldResult)
-    return nullptr;
-
-  if (auto value = opFoldResult.dyn_cast<Value>())
-    return value;
-  auto attr = opFoldResult.get<Attribute>().cast<IntegerAttr>();
-  return builder.create<arith::ConstantIndexOp>(attr.getValue().getSExtValue());
-}
-
-Value materializeOpFoldResult(OpBuilder &builder, Location loc,
-                              OpFoldResult opFoldResult) {
-  ImplicitLocOpBuilder b(loc, builder);
-  return materializeOpFoldResult(b, opFoldResult);
-}
-
-SmallVector<Value>
-materializeOpFoldResults(OpBuilder &builder, Location loc,
-                         ArrayRef<OpFoldResult> opFoldResults) {
-  ImplicitLocOpBuilder b(loc, builder);
-  SmallVector<Value> values;
-  for (const auto &opFoldResult : opFoldResults)
-    values.push_back(materializeOpFoldResult(b, opFoldResult));
-  return values;
-}
-
 SmallVector<Optional<SliceParameters>>
 computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
                           ValueRange valuesToTile, ArrayRef<OpFoldResult> ivs,
@@ -1046,7 +1021,8 @@ void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
     OpFoldResult applied = makeComposedFoldedAffineApply(
         b, indexOp.getLoc(), index + offset,
         {getAsOpFoldResult(indexOp.getResult()), offsets[indexOp.getDim()]});
-    Value materialized = materializeOpFoldResult(b, indexOp.getLoc(), applied);
+    Value materialized =
+        getValueOrCreateConstantIndexOp(b, indexOp.getLoc(), applied);
     b.replaceOpWithIf(indexOp, materialized, [&](OpOperand &use) {
       return use.getOwner() != materialized.getDefiningOp();
     });
