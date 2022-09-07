@@ -872,6 +872,28 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   Value *Cond, *True = nullptr, *False = nullptr;
+
+  // Special-case for add/negate combination. Replace the zero in the negation
+  // with the trailing add operand:
+  // (Cond ? TVal : -N) + Z --> Cond ? True : (Z - N)
+  // (Cond ? -N : FVal) + Z --> Cond ? (Z - N) : False
+  auto foldAddNegate = [&](Value *TVal, Value *FVal, Value *Z) -> Value * {
+    // We need an 'add' and exactly 1 arm of the select to have been simplified.
+    if (Opcode != Instruction::Add || (!True && !False) || (True && False))
+      return nullptr;
+
+    Value *N;
+    if (True && match(FVal, m_Neg(m_Value(N)))) {
+      Value *Sub = Builder.CreateSub(Z, N);
+      return Builder.CreateSelect(Cond, True, Sub, I.getName());
+    }
+    if (False && match(TVal, m_Neg(m_Value(N)))) {
+      Value *Sub = Builder.CreateSub(Z, N);
+      return Builder.CreateSelect(Cond, Sub, False, I.getName());
+    }
+    return nullptr;
+  };
+
   if (LHSIsSelect && RHSIsSelect && A == D) {
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
@@ -889,11 +911,15 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     Cond = A;
     True = simplifyBinOp(Opcode, B, RHS, FMF, Q);
     False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
+    if (Value *NewSel = foldAddNegate(B, C, RHS))
+      return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
     True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
+    if (Value *NewSel = foldAddNegate(E, F, LHS))
+      return NewSel;
   }
 
   if (!True || !False)
