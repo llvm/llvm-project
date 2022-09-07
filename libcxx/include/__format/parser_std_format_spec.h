@@ -176,6 +176,7 @@ struct __std {
 
 struct __chrono {
   __alignment __alignment_ : 3;
+  bool __locale_specific_form_ : 1;
   bool __weekday_name_ : 1;
   bool __month_name_ : 1;
 };
@@ -288,12 +289,22 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   __parsed_specifications<_CharT> __get_parsed_std_specifications(auto& __ctx) const {
     return __parsed_specifications<_CharT>{
-        .__std_ =
-            __std{.__alignment_            = __alignment_,
-                  .__sign_                 = __sign_,
-                  .__alternate_form_       = __alternate_form_,
-                  .__locale_specific_form_ = __locale_specific_form_,
-                  .__type_                 = __type_},
+        .__std_ = __std{.__alignment_            = __alignment_,
+                        .__sign_                 = __sign_,
+                        .__alternate_form_       = __alternate_form_,
+                        .__locale_specific_form_ = __locale_specific_form_,
+                        .__type_                 = __type_},
+        .__width_{__get_width(__ctx)},
+        .__precision_{__get_precision(__ctx)},
+        .__fill_{__fill_}};
+  }
+
+  _LIBCPP_HIDE_FROM_ABI __parsed_specifications<_CharT> __get_parsed_chrono_specifications(auto& __ctx) const {
+    return __parsed_specifications<_CharT>{
+        .__chrono_ = __chrono{.__alignment_            = __alignment_,
+                              .__locale_specific_form_ = __locale_specific_form_,
+                              .__weekday_name_         = __weekday_name_,
+                              .__month_name_           = __month_name_},
         .__width_{__get_width(__ctx)},
         .__precision_{__get_precision(__ctx)},
         .__fill_{__fill_}};

@@ -122,6 +122,16 @@ void test_P0645() {
 // enabled.
 template <class CharT>
 void test_P1361() {
+// The chrono formatters require localization support.
+// [time.format]/7
+//   If the chrono-specs is omitted, the chrono object is formatted as if by
+//   streaming it to std::ostringstream os with the formatting
+//   locale imbued and copying os.str() through the output iterator of the
+//   context with additional padding and adjustments as specified by the format
+//   specifiers.
+// In libc++ std:::ostringstream requires localization support.
+#ifndef TEST_HAS_NO_LOCALIZATION
+
   assert_is_not_formattable<std::chrono::microseconds, CharT>();
 
   assert_is_not_formattable<std::chrono::sys_time<std::chrono::microseconds>, CharT>();
@@ -131,7 +141,7 @@ void test_P1361() {
   assert_is_not_formattable<std::chrono::file_time<std::chrono::microseconds>, CharT>();
   assert_is_not_formattable<std::chrono::local_time<std::chrono::microseconds>, CharT>();
 
-  assert_is_not_formattable<std::chrono::day, CharT>();
+  assert_is_formattable<std::chrono::day, CharT>();
   assert_is_not_formattable<std::chrono::month, CharT>();
   assert_is_not_formattable<std::chrono::year, CharT>();
 
@@ -156,6 +166,8 @@ void test_P1361() {
   //assert_is_formattable<std::chrono::local_info, CharT>();
 
   //assert_is_formattable<std::chrono::zoned_time, CharT>();
+
+#endif // TEST_HAS_NO_LOCALIZATION
 }
 
 // Tests for P1636 Formatters for library types
