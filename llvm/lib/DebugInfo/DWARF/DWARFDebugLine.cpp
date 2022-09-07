@@ -1400,6 +1400,7 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   // sys::path::append skips empty strings.
   sys::path::append(FilePath, Style, IncludeDir, FileName);
   Result = std::string(FilePath.str());
+
   return true;
 }
 

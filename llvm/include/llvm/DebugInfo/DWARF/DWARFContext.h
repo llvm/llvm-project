@@ -197,6 +197,8 @@ public:
                                DWOUnits.end());
   }
 
+  virtual StringRef getCompilationDirectory();
+
   /// Get compile units in the DWO context.
   compile_unit_range dwo_compile_units() {
     return make_filter_range(dwo_info_section_units(), isCompileUnit);

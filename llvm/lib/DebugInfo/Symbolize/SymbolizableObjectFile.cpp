@@ -265,28 +265,40 @@ bool SymbolizableObjectFile::shouldOverrideWithSymbolTable(
          isa<DWARFContext>(DebugInfoContext.get());
 }
 
-DILineInfo
-SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
+DILineInfo SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                       DILineInfoSpecifier LineInfoSpecifier,
                                       bool UseSymbolTable) const {
-  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
-    ModuleOffset.SectionIndex =
-        getModuleSectionIndexForAddress(ModuleOffset.Address);
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection) {
+    ModuleOffset.SectionIndex = getModuleSectionIndexForAddress(ModuleOffset.Address);
+  }
   DILineInfo LineInfo =
       DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
 
-  // Override function name from symbol table if necessary.
-  if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
-    std::string FunctionName, FileName;
-    uint64_t Start, Size;
-    if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size,
-                               FileName)) {
-      LineInfo.FunctionName = FunctionName;
-      LineInfo.StartAddress = Start;
-      if (LineInfo.FileName == DILineInfo::BadString && !FileName.empty())
-        LineInfo.FileName = FileName;
+  // HACK: Always provide symbol table function name
+  std::string SymbolTableFunctionName, FileName;
+  uint64_t Start, Size;
+  if (getNameFromSymbolTable(ModuleOffset.Address, SymbolTableFunctionName, Start, Size,
+                              FileName)) {
+    LineInfo.SymbolTableFunctionName = SymbolTableFunctionName;
+    LineInfo.StartAddress = Start;
+    if (LineInfo.FileName == DILineInfo::BadString && !FileName.empty()) {
+      LineInfo.FileName = FileName;
     }
   }
+
+  // HACK:CI This strips projectRoot in the bugsnag-expected manner.
+  // HACK: Upstream doesn't have the getCompilationDirectory() function.
+  std::string FullPath = LineInfo.FileName;
+  std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
+  if (Prefix.back() != '/') {
+    Prefix.push_back('/');
+  }
+
+  if (FullPath.length() > Prefix.length() &&
+      FullPath.substr(0, Prefix.length()) == Prefix) {
+    LineInfo.FileName = FullPath.substr(Prefix.length());
+  }
+
   return LineInfo;
 }
 
@@ -303,20 +315,18 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
   if (InlinedContext.getNumberOfFrames() == 0)
     InlinedContext.addFrame(DILineInfo());
 
-  // Override the function name in lower frame with name from symbol table.
-  if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
-    std::string FunctionName, FileName;
-    uint64_t Start, Size;
-    if (getNameFromSymbolTable(ModuleOffset.Address, FunctionName, Start, Size,
-                               FileName)) {
-      DILineInfo *LI = InlinedContext.getMutableFrame(
-          InlinedContext.getNumberOfFrames() - 1);
-      LI->FunctionName = FunctionName;
-      LI->StartAddress = Start;
-      if (LI->FileName == DILineInfo::BadString && !FileName.empty())
-        LI->FileName = FileName;
-    }
+  // HACK: Always provide symbol table function name
+  std::string SymbolTableFunctionName, FileName;
+  uint64_t Start, Size;
+  if (getNameFromSymbolTable(ModuleOffset.Address, SymbolTableFunctionName, Start, Size, FileName)) {
+    DILineInfo *LI = InlinedContext.getMutableFrame(
+        InlinedContext.getNumberOfFrames() - 1);
+    LI->SymbolTableFunctionName = SymbolTableFunctionName;
+    LI->StartAddress = Start;
+    if (LI->FileName == DILineInfo::BadString && !FileName.empty())
+      LI->FileName = FileName;
   }
+
 
   return InlinedContext;
 }
@@ -325,8 +335,7 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
     object::SectionedAddress ModuleOffset) const {
   DIGlobal Res;
   std::string FileName;
-  getNameFromSymbolTable(ModuleOffset.Address, Res.Name, Res.Start, Res.Size,
-                         FileName);
+  getNameFromSymbolTable(ModuleOffset.Address, Res.Name, Res.Start, Res.Size, FileName);
   Res.DeclFile = FileName;
 
   // Try and get a better filename:lineno pair from the debuginfo, if present.
@@ -338,17 +347,15 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   return Res;
 }
 
-std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(
-    object::SectionedAddress ModuleOffset) const {
-  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
-    ModuleOffset.SectionIndex =
-        getModuleSectionIndexForAddress(ModuleOffset.Address);
+std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(object::SectionedAddress ModuleOffset) const {
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection) {
+    ModuleOffset.SectionIndex = getModuleSectionIndexForAddress(ModuleOffset.Address);
+  }
   return DebugInfoContext->getLocalsForAddress(ModuleOffset);
 }
 
 /// Search for the first occurence of specified Address in ObjectFile.
-uint64_t SymbolizableObjectFile::getModuleSectionIndexForAddress(
-    uint64_t Address) const {
+uint64_t SymbolizableObjectFile::getModuleSectionIndexForAddress(uint64_t Address) const {
 
   for (SectionRef Sec : Module->sections()) {
     if (!Sec.isText() || Sec.isVirtual())
