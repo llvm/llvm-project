@@ -4,6 +4,9 @@ def ConstSigSetPtrType : ConstType<SigSetPtrType>;
 def RestrictedSigSetType : RestrictedPtrType<SigSetType>;
 def ConstRestrictedSigSetType : ConstType<RestrictedSigSetType>;
 
+def SigInfoType : NamedType<"siginfo_t">;
+def UnionSigVal : NamedType<"union sigval">;
+
 def StructSigaction : NamedType<"struct sigaction">;
 def StructSigactionPtr : PtrType<StructSigaction>;
 def ConstStructSigactionPtr : ConstType<StructSigactionPtr>;
@@ -248,8 +251,10 @@ def POSIX : StandardSpec<"POSIX"> {
       "signal.h",
       [], // Macros
       [
+        SigInfoType,
         SigSetType,
         StructSigaction,
+        UnionSigVal,
       ],
       [], // Enumerations
       [

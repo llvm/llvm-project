@@ -355,20 +355,20 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
+    libc.src.stdlib.abort
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
 
     # signal.h entrypoints
-    # TODO: Enable signal.h entrypoints after fixing signal.h
-    # libc.src.signal.raise
-    # libc.src.signal.sigaction
-    # libc.src.signal.sigdelset
-    # libc.src.signal.sigaddset
-    # libc.src.signal.sigemptyset
-    # libc.src.signal.sigprocmask
-    # libc.src.signal.sigfillset
-    # libc.src.signal.signal
+    libc.src.signal.raise
+    libc.src.signal.sigaction
+    libc.src.signal.sigdelset
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.signal.sigfillset
+    libc.src.signal.signal
 
     # threads.h entrypoints
     libc.src.threads.call_once
