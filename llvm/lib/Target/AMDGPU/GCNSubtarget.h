@@ -1091,6 +1091,12 @@ public:
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
+  /// \returns true if the target uses LOADcnt/SAMPLEcnt/BVHcnt, DScnt/KMcnt
+  /// and STOREcnt rather than VMcnt, LGKMcnt and VScnt respectively.
+  bool hasExtendedWaitCounts() const {
+    return getGeneration() >= GFX12;
+  }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
