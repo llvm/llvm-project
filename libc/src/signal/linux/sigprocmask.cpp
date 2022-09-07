@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/sigprocmask.h"
-#include "src/errno/llvmlibc_errno.h"
-#include "src/signal/linux/signal.h"
+#include "include/sys/syscall.h"          // For syscall numbers.
+#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/signal/linux/signal_utils.h"
 
 #include "src/__support/common.h"
+
+#include <errno.h>
+#include <signal.h>
 
 namespace __llvm_libc {
 
@@ -22,7 +26,7 @@ LLVM_LIBC_FUNCTION(int, sigprocmask,
   if (!ret)
     return 0;
 
-  llvmlibc_errno = -ret;
+  errno = -ret;
   return -1;
 }
 
