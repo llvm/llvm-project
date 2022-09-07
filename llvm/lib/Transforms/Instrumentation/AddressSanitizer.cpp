@@ -1110,9 +1110,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
 
 } // end anonymous namespace
 
-void ModuleAddressSanitizerPass::printPipeline(
+void AddressSanitizerPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  static_cast<PassInfoMixin<ModuleAddressSanitizerPass> *>(this)->printPipeline(
+  static_cast<PassInfoMixin<AddressSanitizerPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
   OS << "<";
   if (Options.CompileKernel)
@@ -1120,14 +1120,14 @@ void ModuleAddressSanitizerPass::printPipeline(
   OS << ">";
 }
 
-ModuleAddressSanitizerPass::ModuleAddressSanitizerPass(
+AddressSanitizerPass::AddressSanitizerPass(
     const AddressSanitizerOptions &Options, bool UseGlobalGC,
     bool UseOdrIndicator, AsanDtorKind DestructorKind)
     : Options(Options), UseGlobalGC(UseGlobalGC),
       UseOdrIndicator(UseOdrIndicator), DestructorKind(DestructorKind) {}
 
-PreservedAnalyses ModuleAddressSanitizerPass::run(Module &M,
-                                                  ModuleAnalysisManager &MAM) {
+PreservedAnalyses AddressSanitizerPass::run(Module &M,
+                                            ModuleAnalysisManager &MAM) {
   ModuleAddressSanitizer ModuleSanitizer(M, Options.CompileKernel,
                                          Options.Recover, UseGlobalGC,
                                          UseOdrIndicator, DestructorKind);
