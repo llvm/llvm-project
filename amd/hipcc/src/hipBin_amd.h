@@ -656,6 +656,10 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
       // match arg with the starting of targetOpt
       string pattern = "^" + targetOpt + ".*";
       if (hipBinUtilPtr_->stringRegexMatch(arg, pattern))  {
+        if (targetOpt == "--amdgpu-target=") {
+          cout << "Warning: The --amdgpu-target option has been deprecated and will be removed in the future."
+               << "  Use --offload-arch instead.\n";  
+        }
         // If targets string is not empty,
         // add a comma before adding new target option value.
         targetsStr.size() >0 ? targetsStr += ",": targetsStr += "";
@@ -703,6 +707,8 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     }
     if (hipBinUtilPtr_->substringPresent(
         arg, "--amdhsa-code-object-version=")) {
+      cout << "Warning: The --amdhsa-code-object-version option has been deprecated and will be removed in the future."
+           << "  Use -mllvm -mcode-object-version instead.\n";
       arg = hipBinUtilPtr_->replaceStr(
             arg, "--amdhsa-code-object-version=", "");
       hsacoVersion = arg;
@@ -915,12 +921,11 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
         //# Process HIPCC options here:
         if (hipBinUtilPtr_->stringRegexMatch(arg, "^--hipcc.*")) {
           swallowArg = 1;
-          // if $arg eq "--hipcc_profile") {  # Example argument here, hipcc
-          //
-          // }
           if (arg == "--hipcc-func-supp") {
+            cout << "Warning: The --hipcc-func-supp option has been deprecated and will be removed in the future.\n";
             funcSupp = 1;
           } else if (arg == "--hipcc-no-func-supp") {
+            cout << "Warning: The --hipcc-no-func-supp option has been deprecated and will be removed in the future.\n";
             funcSupp = 0;
           }
         } else {
