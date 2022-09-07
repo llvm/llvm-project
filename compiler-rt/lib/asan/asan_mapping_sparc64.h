@@ -28,6 +28,7 @@
 #define MEM_TO_SHADOW(mem)                                       \
   ((((mem) << HIGH_BITS) >> (HIGH_BITS + (ASAN_SHADOW_SCALE))) + \
    (ASAN_SHADOW_OFFSET))
+#define SHADOW_TO_MEM(ptr) (__asan::ShadowToMemSparc64(ptr))
 
 #define kLowMemBeg 0
 #define kLowMemEnd (ASAN_SHADOW_OFFSET - 1)
@@ -96,6 +97,24 @@ static inline bool AddrIsInShadowGap(uptr a) {
   PROFILE_ASAN_MAPPING();
   return a >= kShadowGapBeg && a <= kShadowGapEnd;
 }
+
+static inline constexpr uptr ShadowToMemSparc64(uptr p) {
+  PROFILE_ASAN_MAPPING();
+  p -= ASAN_SHADOW_OFFSET;
+  p <<= ASAN_SHADOW_SCALE;
+  if (p >= 0x8000000000000) {
+    p |= (~0ULL) << VMA_BITS;
+  }
+  return p;
+}
+
+static_assert(ShadowToMemSparc64(MEM_TO_SHADOW(0x0000000000000000)) ==
+              0x0000000000000000);
+static_assert(ShadowToMemSparc64(MEM_TO_SHADOW(0xfff8000000000000)) ==
+              0xfff8000000000000);
+// Gets aligned down.
+static_assert(ShadowToMemSparc64(MEM_TO_SHADOW(0x0007ffffffffffff)) ==
+              0x0007fffffffffff8);
 
 }  // namespace __asan
 
