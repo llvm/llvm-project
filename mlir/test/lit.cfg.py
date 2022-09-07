@@ -66,7 +66,9 @@ tools = [
     'mlir-cpu-runner',
     'mlir-linalg-ods-yaml-gen',
     'mlir-reduce',
+    'mlir-spirv-cpu-runner',
     'mlir-pdll',
+    'not',
 ]
 
 # The following tools are optional
