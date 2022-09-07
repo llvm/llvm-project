@@ -3,10 +3,10 @@
 
 int zip(int rs1)
 {
-  return __builtin_riscv_zip_32(rs1); // expected-error {{builtin requires at least one of the following extensions support to be enabled : 'RV32'}}
+  return __builtin_riscv_zip_32(rs1); // expected-error {{builtin requires at least one of the following extensions to be enabled : 'RV32'}}
 }
 
 int unzip(int rs1)
 {
-  return __builtin_riscv_unzip_32(rs1); // expected-error {{builtin requires at least one of the following extensions support to be enabled : 'RV32'}}
+  return __builtin_riscv_unzip_32(rs1); // expected-error {{builtin requires at least one of the following extensions to be enabled : 'RV32'}}
 }
