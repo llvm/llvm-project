@@ -451,6 +451,11 @@ public:
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasExtIntType() const override { return true; }
+  unsigned getMinGlobalAlign(uint64_t TypeSize) const override {
+    if (ABI != "p32" || TypeSize < 32)
+      return TargetInfo::getMinGlobalAlign(TypeSize);
+    return 32u;
+  }
 };
 } // namespace targets
 } // namespace clang
