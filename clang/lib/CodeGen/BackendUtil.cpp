@@ -627,7 +627,7 @@ static void addSanitizers(const Triple &TargetTriple,
                                          OptimizationLevel Level) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-      MPM.addPass(ModuleSanitizerCoveragePass(
+      MPM.addPass(SanitizerCoveragePass(
           SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
           CodeGenOpts.SanitizeCoverageIgnorelistFiles));
     }
