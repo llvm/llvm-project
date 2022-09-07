@@ -21,6 +21,8 @@ package(
 
 licenses(["notice"])
 
+exports_files(["LICENSE.TXT"])
+
 filegroup(
     name = "c_headers",
     srcs = glob(["include/mlir-c/**/*"]),  # <== i.e. match the entire tree
