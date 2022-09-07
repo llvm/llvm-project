@@ -281,26 +281,67 @@ void ResourceManager::releaseBuffers(uint64_t ConsumedBuffers) {
 
 uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
   uint64_t BusyResourceMask = 0;
+  uint64_t ConsumedResourceMask = 0;
+  DenseMap<uint64_t, unsigned> AvailableUnits;
+
   for (const std::pair<uint64_t, ResourceUsage> &E : Desc.Resources) {
     unsigned NumUnits = E.second.isReserved() ? 0U : E.second.NumUnits;
-    unsigned Index = getResourceStateIndex(E.first);
-    if (!Resources[Index]->isReady(NumUnits))
+    const ResourceState &RS = *Resources[getResourceStateIndex(E.first)];
+    if (!RS.isReady(NumUnits)) {
       BusyResourceMask |= E.first;
-  }
+      continue;
+    }
 
-  uint64_t ImplicitUses = Desc.ImplicitlyUsedProcResUnits;
-  while (ImplicitUses) {
-    uint64_t Use = ImplicitUses & -ImplicitUses;
-    ImplicitUses ^= Use;
-    unsigned Index = getResourceStateIndex(Use);
-    if (!Resources[Index]->isReady(/* NumUnits */ 1))
-      BusyResourceMask |= Index;
+    if (Desc.HasPartiallyOverlappingGroups && !RS.isAResourceGroup()) {
+      unsigned NumAvailableUnits = countPopulation(RS.getReadyMask());
+      NumAvailableUnits -= NumUnits;
+      AvailableUnits[E.first] = NumAvailableUnits;
+      if (!NumAvailableUnits)
+        ConsumedResourceMask |= E.first;
+    }
   }
 
   BusyResourceMask &= ProcResUnitMask;
   if (BusyResourceMask)
     return BusyResourceMask;
-  return Desc.UsedProcResGroups & ReservedResourceGroups;
+
+  BusyResourceMask = Desc.UsedProcResGroups & ReservedResourceGroups;
+  if (!Desc.HasPartiallyOverlappingGroups || BusyResourceMask)
+    return BusyResourceMask;
+
+  // If this instruction has overlapping groups, make sure that we can
+  // select at least one unit per group.
+  for (const std::pair<uint64_t, ResourceUsage> &E : Desc.Resources) {
+    const ResourceState &RS = *Resources[getResourceStateIndex(E.first)];
+    if (!E.second.isReserved() && RS.isAResourceGroup()) {
+      uint64_t ReadyMask = RS.getReadyMask() & ~ConsumedResourceMask;
+      if (!ReadyMask) {
+        BusyResourceMask |= RS.getReadyMask();
+        continue;
+      }
+
+      uint64_t ResourceMask = PowerOf2Floor(ReadyMask);
+
+      auto it = AvailableUnits.find(ResourceMask);
+      if (it == AvailableUnits.end()) {
+        unsigned Index = getResourceStateIndex(ResourceMask);
+        unsigned NumUnits = countPopulation(Resources[Index]->getReadyMask());
+        it =
+            AvailableUnits.insert(std::make_pair(ResourceMask, NumUnits)).first;
+      }
+
+      if (!it->second) {
+        BusyResourceMask |= it->first;
+        continue;
+      }
+
+      it->second--;
+      if (!it->second)
+        ConsumedResourceMask |= it->first;
+    }
+  }
+
+  return BusyResourceMask;
 }
 
 void ResourceManager::issueInstruction(
