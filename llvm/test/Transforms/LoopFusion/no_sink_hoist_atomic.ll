@@ -2,16 +2,16 @@
 ; REQUIRES: asserts
 ; CHECK: Could not hoist/sink all instructions
 
-declare void @unknown_func()
-
 define void @sink_preheader(i32 %N) {
 ; CHECK:pre1:
+; CHECK-NEXT:   %ptr = alloca i32
 ; CHECK-NEXT:  br label %body1
 pre1:
+  %ptr = alloca i32
   br label %body1
 
 ; CHECK:body1: 
-; CHECK-NOT: call void @unknown_func()
+; CHECK-NOT: store atomic i32 3, i32* %ptr seq_cst, align 4
 body1:  ; preds = %pre1, %body1
   %i = phi i32 [%i_next, %body1], [0, %pre1]
   %i_next = add i32 1, %i
@@ -19,13 +19,13 @@ body1:  ; preds = %pre1, %body1
   br i1 %cond, label %body1, label %pre2
 
 ; CHECK:pre2:
-; CHECK-NEXT: call void @unknown_func()
+; CHECK-NEXT: store atomic i32 3, i32* %ptr seq_cst, align 4
 pre2:
-  call void @unknown_func()
+  store atomic i32 3, i32* %ptr seq_cst, align 4
   br label %body2
 
 ; CHECK: body2:
-; CHECK-NOT: call void @unknown_func()
+; CHECK-NOT:  store atomic i32 3, i32* %ptr seq_cst, align 4
 body2:  ; preds = %pre2, %body2
   %i2 = phi i32 [%i_next2, %body2], [0, %pre2]
   %i_next2 = add i32 1, %i2
