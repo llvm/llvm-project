@@ -105,6 +105,24 @@ OpFoldResult math::CopySignOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// CosOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CosOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(cos(a.convertToDouble()));
+        case 32:
+          return APFloat(cosf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // CountLeadingZerosOp folder
 //===----------------------------------------------------------------------===//
 
@@ -391,6 +409,24 @@ OpFoldResult math::TanhOp::fold(ArrayRef<Attribute> operands) {
           return APFloat(tanh(a.convertToDouble()));
         case 32:
           return APFloat(tanhf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// RoundEvenOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::RoundEvenOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(roundeven(a.convertToDouble()));
+        case 32:
+          return APFloat(roundevenf(a.convertToFloat()));
         default:
           return {};
         }

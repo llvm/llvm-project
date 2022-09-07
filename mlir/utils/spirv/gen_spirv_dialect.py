@@ -730,15 +730,19 @@ def get_op_definition(instruction, opname, doc, existing_info, capability_mappin
                '{{\n  let summary = {summary};\n\n  let description = '
                '[{{\n{description}}}];{availability}\n')
   else:
-    fmt_str = ('def SPV_{opname_src}Op : '
-               'SPV_{inst_category}<"{opname_src}"{category_args}[{traits}]> '
+    fmt_str = ('def SPV_{vendor_name}{opname_src}Op : '
+               'SPV_{inst_category}<"{opname_src}"{category_args}, [{traits}]> '
                '{{\n  let summary = {summary};\n\n  let description = '
                '[{{\n{description}}}];{availability}\n')
 
+  vendor_name = ''
   inst_category = existing_info.get('inst_category', 'Op')
   if inst_category == 'Op':
     fmt_str +='\n  let arguments = (ins{args});\n\n'\
               '  let results = (outs{results});\n'
+  elif inst_category.endswith('VendorOp'):
+    vendor_name = inst_category.split('VendorOp')[0].upper()
+    assert len(vendor_name) != 0, 'Invalid instruction category'
 
   fmt_str +='{extras}'\
             '}}\n'
@@ -746,6 +750,9 @@ def get_op_definition(instruction, opname, doc, existing_info, capability_mappin
   opname_src = instruction['opname']
   if opname.startswith('Op'):
     opname_src = opname_src[2:]
+  if len(vendor_name) > 0:
+    assert opname_src.endswith(vendor_name), "op name does not match the instruction category"
+    opname_src = opname_src[:-len(vendor_name)]
 
   category_args = existing_info.get('category_args', '')
 
@@ -759,7 +766,7 @@ def get_op_definition(instruction, opname, doc, existing_info, capability_mappin
 
   # Format summary. If the summary can fit in the same line, we print it out
   # as a "-quoted string; otherwise, wrap the lines using "[{...}]".
-  summary = summary.strip();
+  summary = summary.strip()
   if len(summary) + len('  let summary = "";') <= 80:
     summary = '"{}"'.format(summary)
   else:
@@ -815,6 +822,7 @@ def get_op_definition(instruction, opname, doc, existing_info, capability_mappin
       opcode=instruction['opcode'],
       category_args=category_args,
       inst_category=inst_category,
+      vendor_name=vendor_name,
       traits=existing_info.get('traits', ''),
       summary=summary,
       description=description,

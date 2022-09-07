@@ -70,7 +70,7 @@ static SmallVector<T> applyPermutationToVector(const SmallVector<T> &vector,
 static SmallVector<unsigned>
 invertPermutationVector(ArrayRef<unsigned> interchange) {
   SmallVector<unsigned> inversion(interchange.size());
-  for (auto pos : llvm::enumerate(interchange)) {
+  for (const auto &pos : llvm::enumerate(interchange)) {
     inversion[pos.value()] = pos.index();
   }
   return inversion;

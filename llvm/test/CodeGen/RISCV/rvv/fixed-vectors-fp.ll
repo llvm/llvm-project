@@ -2171,12 +2171,11 @@ define void @round_v8f16(<8 x half>* %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI100_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI100_0)(a1)
-; CHECK-NEXT:    lui a1, %hi(.LCPI100_1)
-; CHECK-NEXT:    flh ft1, %lo(.LCPI100_1)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
-; CHECK-NEXT:    vfadd.vf v9, v9, ft1, v0.t
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9, v0.t
+; CHECK-NEXT:    fsrmi a1, 4
+; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vse16.v v8, (a0)
@@ -2195,12 +2194,11 @@ define void @round_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI101_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI101_0)(a1)
-; CHECK-NEXT:    lui a1, %hi(.LCPI101_1)
-; CHECK-NEXT:    flw ft1, %lo(.LCPI101_1)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
-; CHECK-NEXT:    vfadd.vf v9, v9, ft1, v0.t
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9, v0.t
+; CHECK-NEXT:    fsrmi a1, 4
+; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -2219,12 +2217,11 @@ define void @round_v2f64(<2 x double>* %x) {
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI102_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI102_0)(a1)
-; CHECK-NEXT:    lui a1, %hi(.LCPI102_1)
-; CHECK-NEXT:    fld ft1, %lo(.LCPI102_1)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
-; CHECK-NEXT:    vfadd.vf v9, v9, ft1, v0.t
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9, v0.t
+; CHECK-NEXT:    fsrmi a1, 4
+; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
+; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vse64.v v8, (a0)

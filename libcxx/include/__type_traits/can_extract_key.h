@@ -29,21 +29,21 @@ struct __extract_key_self_tag {};
 struct __extract_key_first_tag {};
 
 template <class _ValTy, class _Key,
-          class _RawValTy = typename __unconstref<_ValTy>::type>
+          class _RawValTy = __remove_const_ref_t<_ValTy> >
 struct __can_extract_key
     : conditional<_IsSame<_RawValTy, _Key>::value, __extract_key_self_tag,
                   __extract_key_fail_tag>::type {};
 
 template <class _Pair, class _Key, class _First, class _Second>
 struct __can_extract_key<_Pair, _Key, pair<_First, _Second> >
-    : conditional<_IsSame<typename remove_const<_First>::type, _Key>::value,
+    : conditional<_IsSame<__remove_const_t<_First>, _Key>::value,
                   __extract_key_first_tag, __extract_key_fail_tag>::type {};
 
 // __can_extract_map_key uses true_type/false_type instead of the tags.
 // It returns true if _Key != _ContainerValueTy (the container is a map not a set)
 // and _ValTy == _Key.
 template <class _ValTy, class _Key, class _ContainerValueTy,
-          class _RawValTy = typename __unconstref<_ValTy>::type>
+          class _RawValTy = __remove_const_ref_t<_ValTy> >
 struct __can_extract_map_key
     : integral_constant<bool, _IsSame<_RawValTy, _Key>::value> {};
 

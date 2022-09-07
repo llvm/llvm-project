@@ -239,9 +239,9 @@ template <class _Tp, class _VoidPtr> struct __list_node_base;
 
 template <class _Tp, class _VoidPtr>
 struct __list_node_pointer_traits {
-  typedef typename __rebind_pointer<_VoidPtr, __list_node<_Tp, _VoidPtr> >::type
+  typedef __rebind_pointer_t<_VoidPtr, __list_node<_Tp, _VoidPtr> >
         __node_pointer;
-  typedef typename __rebind_pointer<_VoidPtr, __list_node_base<_Tp, _VoidPtr> >::type
+  typedef __rebind_pointer_t<_VoidPtr, __list_node_base<_Tp, _VoidPtr> >
         __base_pointer;
 
 #if defined(_LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB)
@@ -342,7 +342,7 @@ public:
     typedef bidirectional_iterator_tag       iterator_category;
     typedef _Tp                              value_type;
     typedef value_type&                      reference;
-    typedef typename __rebind_pointer<_VoidPtr, value_type>::type pointer;
+    typedef __rebind_pointer_t<_VoidPtr, value_type> pointer;
     typedef typename pointer_traits<pointer>::difference_type difference_type;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -450,7 +450,7 @@ public:
     typedef bidirectional_iterator_tag       iterator_category;
     typedef _Tp                              value_type;
     typedef const value_type&                reference;
-    typedef typename __rebind_pointer<_VoidPtr, const value_type>::type pointer;
+    typedef __rebind_pointer_t<_VoidPtr, const value_type> pointer;
     typedef typename pointer_traits<pointer>::difference_type difference_type;
 
     _LIBCPP_INLINE_VISIBILITY

@@ -892,6 +892,9 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       MI->setFlag(MachineInstr::MIFlag::NoMerge);
     }
 
+    if (MDNode *MD = DAG->getPCSections(Node))
+      MI->setPCSections(MF, MD);
+
     return MI;
   };
 

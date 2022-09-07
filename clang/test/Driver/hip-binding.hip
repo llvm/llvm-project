@@ -66,3 +66,18 @@
 // MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90a:.+]]"
 // MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90a]]"], output: "[[GFX90a_OUT:.+]]"
 //
+// R-UN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings \
+// R-UN:        --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o %t %s 2>&1 \
+// R-UN: | FileCheck -check-prefix=MULTI-D-ONLY-O %s
+// M-ULTI-D-ONLY-O: error: cannot specify -o when generating multiple output files
+
+//
+// Check to ensure that we can use '-fsyntax-only' for HIP output with the new
+// driver.
+// 
+// R-UN: %clang -### -target x86_64-unknown-linux-gnu --offload-new-driver \
+// R-UN:        -fsyntax-only --offload-arch=gfx90a --offload-arch=gfx908 -c %s 2>&1 \
+// R-UN: | FileCheck -check-prefix=SYNTAX-ONLY %s
+// S-YNTAX-ONLY: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-fsyntax-only"
+// S-YNTAX-ONLY: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-fsyntax-only"
+// S-YNTAX-ONLY: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fsyntax-only"

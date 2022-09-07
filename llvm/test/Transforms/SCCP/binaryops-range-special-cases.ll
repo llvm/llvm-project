@@ -130,7 +130,7 @@ define void @srem_cmp_constants() {
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[SREM_3:%.*]] = urem i16 12704, 0
+; CHECK-NEXT:    [[SREM_3:%.*]] = srem i16 12704, 0
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i16 [[SREM_3]], 1
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    ret void

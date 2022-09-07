@@ -366,6 +366,8 @@ public:
 
   MCSection *getPseudoProbeDescSection(StringRef FuncName) const;
 
+  MCSection *getPCSection(StringRef Name, const MCSection *TextSec) const;
+
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }
   const MCSection *getMergeableConst4Section() const {

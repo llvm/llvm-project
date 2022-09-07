@@ -20,6 +20,7 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 def fircg_Dialect : Dialect {
   let name = "fircg";
   let cppNamespace = "::fir::cg";
+  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
 }
 
 // Base class for FIR CG operations.

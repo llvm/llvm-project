@@ -221,6 +221,8 @@ protected:
   // Classes that inherit from CommunicationKDP can see and modify these
   uint32_t m_addr_byte_size;
   lldb::ByteOrder m_byte_order;
+  std::string m_bytes;
+  std::recursive_mutex m_bytes_mutex;
   std::chrono::seconds m_packet_timeout;
   std::recursive_mutex m_sequence_mutex; // Restrict access to sending/receiving
                                          // packets to a single thread at a time

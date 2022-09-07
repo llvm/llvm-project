@@ -13,9 +13,9 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -1453,7 +1453,7 @@ static FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     rewriter.setInsertionPoint(collapsedGenericOp);
     SmallVector<Value> loopBound =
         llvm::to_vector(llvm::map_range(loopRanges, [&](Range range) {
-          return materializeOpFoldResult(rewriter, loc, range.size);
+          return getValueOrCreateConstantIndexOp(rewriter, loc, range.size);
         }));
     generateCollapsedIndexingRegion(loc,
                                     &collapsedGenericOp->getRegion(0).front(),

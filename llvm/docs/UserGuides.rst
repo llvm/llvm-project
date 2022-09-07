@@ -59,6 +59,7 @@ intermediate LLVM representation.
    ReportingGuide
    ResponseGuide
    Remarks
+   RISCVUsage
    SourceLevelDebugging
    SPIRVUsage
    StackSafetyAnalysis
@@ -258,3 +259,7 @@ Additional Topics
 :doc:`DirectXUsage`
    This document describes using the DirectX target to compile GPU code for the
    DirectX runtime.
+
+:doc:`RISCVUsage`
+   This document describes using the RISCV-V target.
+

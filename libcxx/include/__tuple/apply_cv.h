@@ -57,7 +57,7 @@ template <>
 struct __apply_cv_mf<true, true, true> {
   template <class _Tp> using __apply _LIBCPP_NODEBUG = const volatile _Tp&;
 };
-template <class _Tp, class _RawTp = typename remove_reference<_Tp>::type>
+template <class _Tp, class _RawTp = __libcpp_remove_reference_t<_Tp> >
 using __apply_cv_t _LIBCPP_NODEBUG = __apply_cv_mf<
     is_lvalue_reference<_Tp>::value,
     is_const<_RawTp>::value,

@@ -30,16 +30,3 @@ define i32 @bar(i32 %a) {
   %t12 = add i32 %smax, %a
   ret i32 %t12
 }
-
-define i32 @fun(i32 %a) {
-; CHECK-LABEL: @fun(
-; CHECK-NEXT:    [[T16:%.*]] = icmp slt i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[T12:%.*]] = select i1 [[T16]], i32 [[A]], i32 99
-; CHECK-NEXT:    ret i32 [[T12]]
-;
-  %t15 = sub i32 99, %a
-  %t16 = icmp slt i32 %a, 0
-  %smax = select i1 %t16, i32 0, i32 %t15
-  %t12 = add i32 %smax, %a
-  ret i32 %t12
-}

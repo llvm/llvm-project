@@ -669,20 +669,23 @@ MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
       Recover(getOptOrDefault(ClKeepGoing, Kernel || R)),
       EagerChecks(getOptOrDefault(ClEagerChecks, EagerChecks)) {}
 
-PreservedAnalyses MemorySanitizerPass::run(Function &F,
-                                           FunctionAnalysisManager &FAM) {
-  MemorySanitizer Msan(*F.getParent(), Options);
-  if (Msan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
-    return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
-}
+PreservedAnalyses MemorySanitizerPass::run(Module &M,
+                                           ModuleAnalysisManager &AM) {
+  bool Modified = false;
+  if (!Options.Kernel) {
+    insertModuleCtor(M);
+    Modified = true;
+  }
 
-PreservedAnalyses ModuleMemorySanitizerPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
-  if (Options.Kernel)
-    return PreservedAnalyses::all();
-  insertModuleCtor(M);
-  return PreservedAnalyses::none();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    if (F.empty())
+      continue;
+    MemorySanitizer Msan(*F.getParent(), Options);
+    Modified |=
+        Msan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F));
+  }
+  return Modified ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
 void MemorySanitizerPass::printPipeline(

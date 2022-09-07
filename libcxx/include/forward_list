@@ -241,14 +241,13 @@ struct __forward_list_node_value_type<__forward_list_node<_Tp, _VoidPtr> > {
 template <class _NodePtr>
 struct __forward_node_traits {
 
-  typedef typename remove_cv<
-        typename pointer_traits<_NodePtr>::element_type>::type  __node;
+  typedef __remove_cv_t<
+        typename pointer_traits<_NodePtr>::element_type>        __node;
   typedef typename __forward_list_node_value_type<__node>::type __node_value_type;
   typedef _NodePtr                                              __node_pointer;
   typedef __forward_begin_node<_NodePtr>                        __begin_node;
-  typedef typename __rebind_pointer<_NodePtr, __begin_node>::type
-                                                                __begin_node_pointer;
-  typedef typename __rebind_pointer<_NodePtr, void>::type       __void_pointer;
+  typedef __rebind_pointer_t<_NodePtr, __begin_node>            __begin_node_pointer;
+  typedef __rebind_pointer_t<_NodePtr, void>                    __void_pointer;
 
 #if defined(_LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB)
   typedef __begin_node_pointer __iter_node_pointer;
@@ -280,7 +279,7 @@ template <class _NodePtr>
 struct __forward_begin_node
 {
     typedef _NodePtr pointer;
-    typedef typename __rebind_pointer<_NodePtr, __forward_begin_node>::type __begin_node_pointer;
+    typedef __rebind_pointer_t<_NodePtr, __forward_begin_node> __begin_node_pointer;
 
     pointer __next_;
 
@@ -296,7 +295,7 @@ template <class _Tp, class _VoidPtr>
 struct _LIBCPP_HIDDEN __begin_node_of
 {
     typedef __forward_begin_node<
-        typename __rebind_pointer<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> >::type
+        __rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> >
     > type;
 };
 
@@ -355,7 +354,7 @@ public:
     typedef value_type&                                       reference;
     typedef typename pointer_traits<__node_pointer>::difference_type
                                                               difference_type;
-    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
+    typedef __rebind_pointer_t<__node_pointer, value_type> pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_iterator() _NOEXCEPT : __ptr_(nullptr) {}
@@ -436,7 +435,7 @@ public:
     typedef const value_type&                                 reference;
     typedef typename pointer_traits<__node_pointer>::difference_type
                                                               difference_type;
-    typedef typename __rebind_pointer<__node_pointer, const value_type>::type
+    typedef __rebind_pointer_t<__node_pointer, const value_type>
                                                               pointer;
 
     _LIBCPP_INLINE_VISIBILITY

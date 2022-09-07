@@ -25,9 +25,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _Tp>
 struct is_bind_expression : _If<
-    _IsSame<_Tp, __uncvref_t<_Tp> >::value,
+    _IsSame<_Tp, __remove_cvref_t<_Tp> >::value,
     false_type,
-    is_bind_expression<__uncvref_t<_Tp> >
+    is_bind_expression<__remove_cvref_t<_Tp> >
 > {};
 
 #if _LIBCPP_STD_VER > 14
@@ -37,9 +37,9 @@ inline constexpr size_t is_bind_expression_v = is_bind_expression<_Tp>::value;
 
 template<class _Tp>
 struct is_placeholder : _If<
-    _IsSame<_Tp, __uncvref_t<_Tp> >::value,
+    _IsSame<_Tp, __remove_cvref_t<_Tp> >::value,
     integral_constant<int, 0>,
-    is_placeholder<__uncvref_t<_Tp> >
+    is_placeholder<__remove_cvref_t<_Tp> >
 > {};
 
 #if _LIBCPP_STD_VER > 14
@@ -279,7 +279,7 @@ public:
               class = typename enable_if
                                <
                                   is_constructible<_Fd, _Gp>::value &&
-                                  !is_same<typename remove_reference<_Gp>::type,
+                                  !is_same<__libcpp_remove_reference_t<_Gp>,
                                            __bind>::value
                                >::type>
       _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -324,7 +324,7 @@ public:
               class = typename enable_if
                                <
                                   is_constructible<_Fd, _Gp>::value &&
-                                  !is_same<typename remove_reference<_Gp>::type,
+                                  !is_same<__libcpp_remove_reference_t<_Gp>,
                                            __bind_r>::value
                                >::type>
       _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20

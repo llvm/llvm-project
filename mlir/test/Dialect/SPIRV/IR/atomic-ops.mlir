@@ -240,12 +240,12 @@ func.func @atomic_xor(%ptr : !spv.ptr<i32, StorageBuffer>, %value : i32) -> i32 
 // -----
 
 //===----------------------------------------------------------------------===//
-// spv.AtomicFAddEXT
+// spv.EXT.AtomicFAdd
 //===----------------------------------------------------------------------===//
 
 func.func @atomic_fadd(%ptr : !spv.ptr<f32, StorageBuffer>, %value : f32) -> f32 {
-  // CHECK: spv.AtomicFAddEXT "Device" "None" %{{.*}}, %{{.*}} : !spv.ptr<f32, StorageBuffer>
-  %0 = spv.AtomicFAddEXT "Device" "None" %ptr, %value : !spv.ptr<f32, StorageBuffer>
+  // CHECK: spv.EXT.AtomicFAdd "Device" "None" %{{.*}}, %{{.*}} : !spv.ptr<f32, StorageBuffer>
+  %0 = spv.EXT.AtomicFAdd "Device" "None" %ptr, %value : !spv.ptr<f32, StorageBuffer>
   return %0 : f32
 }
 
@@ -253,7 +253,7 @@ func.func @atomic_fadd(%ptr : !spv.ptr<f32, StorageBuffer>, %value : f32) -> f32
 
 func.func @atomic_fadd(%ptr : !spv.ptr<i32, StorageBuffer>, %value : f32) -> f32 {
   // expected-error @+1 {{pointer operand must point to an float value, found 'i32'}}
-  %0 = "spv.AtomicFAddEXT"(%ptr, %value) {memory_scope = #spv.scope<Workgroup>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, StorageBuffer>, f32) -> (f32)
+  %0 = "spv.EXT.AtomicFAdd"(%ptr, %value) {memory_scope = #spv.scope<Workgroup>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, StorageBuffer>, f32) -> (f32)
   return %0 : f32
 }
 
@@ -261,7 +261,7 @@ func.func @atomic_fadd(%ptr : !spv.ptr<i32, StorageBuffer>, %value : f32) -> f32
 
 func.func @atomic_fadd(%ptr : !spv.ptr<f32, StorageBuffer>, %value : f64) -> f64 {
   // expected-error @+1 {{expected value to have the same type as the pointer operand's pointee type 'f32', but found 'f64'}}
-  %0 = "spv.AtomicFAddEXT"(%ptr, %value) {memory_scope = #spv.scope<Device>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<f32, StorageBuffer>, f64) -> (f64)
+  %0 = "spv.EXT.AtomicFAdd"(%ptr, %value) {memory_scope = #spv.scope<Device>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<f32, StorageBuffer>, f64) -> (f64)
   return %0 : f64
 }
 
@@ -269,6 +269,6 @@ func.func @atomic_fadd(%ptr : !spv.ptr<f32, StorageBuffer>, %value : f64) -> f64
 
 func.func @atomic_fadd(%ptr : !spv.ptr<f32, StorageBuffer>, %value : f32) -> f32 {
   // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
-  %0 = spv.AtomicFAddEXT "Device" "Acquire|Release" %ptr, %value : !spv.ptr<f32, StorageBuffer>
+  %0 = spv.EXT.AtomicFAdd "Device" "Acquire|Release" %ptr, %value : !spv.ptr<f32, StorageBuffer>
   return %0 : f32
 }

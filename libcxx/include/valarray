@@ -684,7 +684,7 @@ struct __tanh_expr
 template <class _ValExpr>
 class __slice_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -724,7 +724,7 @@ class __indirect_expr;
 template <class _ValExpr>
 class __shift_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -767,7 +767,7 @@ public:
 template <class _ValExpr>
 class __cshift_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -2242,7 +2242,7 @@ mask_array<_Tp>::operator=(const value_type& __x) const
 template <class _ValExpr>
 class __mask_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -2605,7 +2605,7 @@ indirect_array<_Tp>::operator=(const value_type& __x) const
 template <class _ValExpr>
 class __indirect_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 public:
     typedef typename _RmExpr::value_type value_type;
     typedef value_type __result_type;
@@ -2645,7 +2645,7 @@ public:
 template<class _ValExpr>
 class __val_expr
 {
-    typedef typename remove_reference<_ValExpr>::type  _RmExpr;
+    typedef __libcpp_remove_reference_t<_ValExpr>  _RmExpr;
 
     _ValExpr __expr_;
 public:

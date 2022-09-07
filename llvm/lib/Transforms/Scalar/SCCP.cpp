@@ -175,18 +175,6 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
     break;
   }
-  case Instruction::SDiv:
-  case Instruction::SRem: {
-    // If both operands are not negative, this is the same as udiv/urem.
-    Value *Op0 = Inst.getOperand(0), *Op1 = Inst.getOperand(1);
-    if (InsertedValues.count(Op0) || InsertedValues.count(Op1) ||
-        !isNonNegative(Op0) || !isNonNegative(Op1))
-      return false;
-    auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
-                                                           : Instruction::URem;
-    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
-    break;
-  }
   default:
     return false;
   }
