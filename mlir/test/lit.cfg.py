@@ -82,12 +82,6 @@ tools.extend([
     ToolSubst('toy-ch5', unresolved='ignore'),
     ToolSubst('%mlir_lib_dir', config.mlir_lib_dir, unresolved='ignore'),
     ToolSubst('%mlir_src_dir', config.mlir_src_root, unresolved='ignore'),
-    # The substitutions below will be replaced by '%mlir_lib_dir' shortly.
-    ToolSubst('%linalg_test_lib_dir', config.mlir_lib_dir, unresolved='ignore'),
-    ToolSubst('%mlir_runner_utils_dir', config.mlir_lib_dir, unresolved='ignore'),
-    ToolSubst('%spirv_wrapper_library_dir', config.mlir_lib_dir, unresolved='ignore'),
-    ToolSubst('%vulkan_wrapper_library_dir', config.mlir_lib_dir, unresolved='ignore'),
-    ToolSubst('%mlir_integration_test_dir', config.mlir_lib_dir, unresolved='ignore'),
 ])
 
 python_executable = config.python_executable
