@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
@@ -22,9 +23,11 @@ using namespace lldb_private;
 // BreakpointResolverFileLine:
 BreakpointResolverFileLine::BreakpointResolverFileLine(
     const BreakpointSP &bkpt, lldb::addr_t offset, bool skip_prologue,
-    const SourceLocationSpec &location_spec)
+    const SourceLocationSpec &location_spec,
+    llvm::Optional<llvm::StringRef> removed_prefix_opt)
     : BreakpointResolver(bkpt, BreakpointResolver::FileLineResolver, offset),
-      m_location_spec(location_spec), m_skip_prologue(skip_prologue) {}
+      m_location_spec(location_spec), m_skip_prologue(skip_prologue),
+      m_removed_prefix_opt(removed_prefix_opt) {}
 
 BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
     const BreakpointSP &bkpt, const StructuredData::Dictionary &options_dict,
@@ -187,6 +190,83 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list) {
   }
 }
 
+void BreakpointResolverFileLine::DeduceSourceMapping(
+    SymbolContextList &sc_list) {
+  Target &target = GetBreakpoint()->GetTarget();
+  if (!target.GetAutoSourceMapRelative())
+    return;
+
+  Log *log = GetLog(LLDBLog::Breakpoints);
+  const llvm::StringRef path_separator = llvm::sys::path::get_separator(
+      m_location_spec.GetFileSpec().GetPathStyle());
+  // Check if "b" is a suffix of "a".
+  // And return llvm::None if not or the new path
+  // of "a" after consuming "b" from the back.
+  auto check_suffix =
+      [path_separator](llvm::StringRef a, llvm::StringRef b,
+                       bool case_sensitive) -> llvm::Optional<llvm::StringRef> {
+    if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b)) {
+      if (a.empty() || a.endswith(path_separator)) {
+        return a;
+      }
+    }
+    return llvm::None;
+  };
+
+  FileSpec request_file = m_location_spec.GetFileSpec();
+
+  // Only auto deduce source map if breakpoint is full path.
+  // Note: an existing source map reverse mapping (m_removed_prefix_opt has
+  // value) may make request_file relative.
+  if (!m_removed_prefix_opt.has_value() && request_file.IsRelative())
+    return;
+
+  const bool case_sensitive = request_file.IsCaseSensitive();
+  for (uint32_t i = 0; i < sc_list.GetSize(); ++i) {
+    SymbolContext sc;
+    sc_list.GetContextAtIndex(i, sc);
+
+    FileSpec sc_file = sc.line_entry.file;
+
+    if (FileSpec::Equal(sc_file, request_file, /*full*/true))
+      continue;
+
+    llvm::StringRef sc_file_dir = sc_file.GetDirectory().GetStringRef();
+    llvm::StringRef request_file_dir =
+        request_file.GetDirectory().GetStringRef();
+
+    llvm::StringRef new_mapping_from;
+    llvm::SmallString<256> new_mapping_to;
+
+    // Adding back any potentially reverse mapping stripped prefix.
+    // for new_mapping_to.
+    if (m_removed_prefix_opt.hasValue())
+      llvm::sys::path::append(new_mapping_to, m_removed_prefix_opt.getValue());
+
+    llvm::Optional<llvm::StringRef> new_mapping_from_opt =
+        check_suffix(sc_file_dir, request_file_dir, case_sensitive);
+    if (new_mapping_from_opt) {
+      new_mapping_from = new_mapping_from_opt.getValue();
+      if (new_mapping_to.empty())
+        new_mapping_to = ".";
+    } else {
+      llvm::Optional<llvm::StringRef> new_mapping_to_opt =
+          check_suffix(request_file_dir, sc_file_dir, case_sensitive);
+      if (new_mapping_to_opt) {
+        new_mapping_from = ".";
+        llvm::sys::path::append(new_mapping_to, new_mapping_to_opt.getValue());
+      }
+    }
+
+    if (!new_mapping_from.empty() && !new_mapping_to.empty()) {
+      LLDB_LOG(log, "generating auto source map from {0} to {1}",
+               new_mapping_from, new_mapping_to);
+      target.GetSourcePathMap().AppendUnique(new_mapping_from, new_mapping_to,
+                                             /*notify*/ true);
+    }
+  }
+}
+
 Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
     SearchFilter &filter, SymbolContext &context, Address *addr) {
   SymbolContextList sc_list;
@@ -221,6 +301,8 @@ Searcher::CallbackReturn BreakpointResolverFileLine::SearchCallback(
   }
 
   FilterContexts(sc_list);
+
+  DeduceSourceMapping(sc_list);
 
   StreamString s;
   s.Printf("for %s:%d ",
