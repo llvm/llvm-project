@@ -56,6 +56,9 @@ on support follow.
      ``Zba``          Supported
      ``Zbb``          Supported
      ``Zbc``          Supported
+     ``Zbkb``         Supported (See note)
+     ``Zbkc``         Supported
+     ``Zbkx``         Supported (See note)
      ``Zbs``          Supported
      ``Zdinx``        Assembly Support
      ``Zfh``          Supported
@@ -67,6 +70,16 @@ on support follow.
      ``Zicbop``       Assembly Support
      ``Zicboz``       Assembly Support
      ``Zihintpause``  Assembly Support
+     ``Zkn``          Supported
+     ``Zknd``         Supported (See note)
+     ``Zkne``         Supported (See note)
+     ``Zknh``         Supported (See note)
+     ``Zksed``        Supported (See note)
+     ``Zksh``         Supported (See note)
+     ``Zk``           Supported
+     ``Zkr``          Supported
+     ``Zks``          Supported
+     ``Zkt``          Supported
      ``Zmmul``        Supported
      ``Zve32x``       Partially Supported
      ``Zve32f``       Partially Supported
@@ -120,6 +133,12 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements `this draft text <https://github.com/riscv/riscv-v-spec/pull/780>`_.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
+
+``Zbkb``, ``Zbkx``
+  Pattern matching support for these instructions is incomplete.
+
+``Zknd``, ``Zkne``, ``Zknh``, ``Zksed``, ``Zksh``
+  No pattern matching exists.  As a result, these instructions can only be used from assembler or via intrinsic calls.
 
 Specification Documents
 =======================
