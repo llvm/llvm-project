@@ -2191,6 +2191,10 @@ Set LTO mode for offload compilation. <arg> must be 'thin' or 'full'.
 
 Parse OpenMP pragmas and generate parallel code.
 
+.. option:: -fopenmp-target-fast, -fno-openmp-target-fast
+
+Enables fast optimization options for OpenMP target offloading: -fopenmp-target-ignore-env-vars, -fopenmp-assume-no-thread-state, -fopenmp-assume-no-nested-parallelism.
+
 .. option:: -fopenmp-extensions, -fno-openmp-extensions
 
 Enable all Clang extensions for OpenMP directives and clauses
@@ -2218,6 +2222,18 @@ Enable debugging in the OpenMP offloading device RTL
 .. option:: -fopenmp-version=<arg>
 
 Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50.
+
+.. option:: -fopenmp-target-ignore-env-vars, -fno-openmp-target-ignore-env-vars
+
+Generate code assuming that device related environment variables can be ignored.
+
+.. option:: -fopenmp-assume-no-thread-state, -fno-openmp-assume-no-thread-state
+
+Assume that no thread in a parallel region will modify an ICV.
+
+.. option:: -fopenmp-assume-no-nested-parallelism, -fno-openmp-assume-no-nested-parallelism
+
+Assume that no thread in a parallel region will encounter a parallel region.
 
 .. program:: clang1
 .. option:: -fopenmp=<arg>
