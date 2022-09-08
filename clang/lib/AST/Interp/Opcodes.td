@@ -42,7 +42,7 @@ def ArgSint64 : ArgType { let Name = "int64_t"; }
 def ArgUint64 : ArgType { let Name = "uint64_t"; }
 def ArgBool : ArgType { let Name = "bool"; }
 
-def ArgFunction : ArgType { let Name = "Function *"; }
+def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgRecord : ArgType { let Name = "Record *"; }
 
 def ArgSema : ArgType { let Name = "const fltSemantics *"; }
@@ -152,6 +152,22 @@ def RetValue : Opcode {
 }
 // [] -> EXIT
 def NoRet : Opcode {}
+
+
+def Call : Opcode {
+  let Args = [ArgFunction];
+  let Types = [AllTypeClass];
+  let ChangesPC = 1;
+  let HasCustomEval = 1;
+  let HasGroup = 1;
+}
+
+def CallVoid : Opcode {
+  let Args = [ArgFunction];
+  let Types = [];
+  let ChangesPC = 1;
+  let HasCustomEval = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Frame management
