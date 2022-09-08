@@ -26,11 +26,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-set-wave-priority"
 
+static cl::opt<unsigned> DefaultVALUInstsThreshold(
+    "amdgpu-set-wave-priority-valu-insts-threshold",
+    cl::desc("VALU instruction count threshold for adjusting wave priority"),
+    cl::init(100), cl::Hidden);
+
 namespace {
 
 struct MBBInfo {
   MBBInfo() = default;
+  unsigned NumVALUInstsAtStart = 0;
   bool MayReachVMEMLoad = false;
+  MachineInstr *LastVMEMLoad = nullptr;
 };
 
 using MBBInfoSet = DenseMap<const MachineBasicBlock *, MBBInfo>;
@@ -46,7 +53,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  MachineInstr *BuildSetprioMI(MachineFunction &MF, unsigned priority) const;
+  MachineInstr *BuildSetprioMI(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator I,
+                               unsigned priority) const;
 
   const SIInstrInfo *TII;
 };
@@ -62,9 +71,12 @@ FunctionPass *llvm::createAMDGPUSetWavePriorityPass() {
   return new AMDGPUSetWavePriority();
 }
 
-MachineInstr *AMDGPUSetWavePriority::BuildSetprioMI(MachineFunction &MF,
-                                                    unsigned priority) const {
-  return BuildMI(MF, DebugLoc(), TII->get(AMDGPU::S_SETPRIO)).addImm(priority);
+MachineInstr *
+AMDGPUSetWavePriority::BuildSetprioMI(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator I,
+                                      unsigned priority) const {
+  return BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_SETPRIO))
+      .addImm(priority);
 }
 
 // Checks that for every predecessor Pred that can reach a VMEM load,
@@ -97,21 +109,58 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
 
-  MBBInfoSet MBBInfos;
-  SmallVector<const MachineBasicBlock *, 16> Worklist;
-  for (MachineBasicBlock &MBB : MF) {
-    if (any_of(MBB, isVMEMLoad))
-      Worklist.push_back(&MBB);
-  }
+  unsigned VALUInstsThreshold = DefaultVALUInstsThreshold;
+  Attribute A = F.getFnAttribute("amdgpu-wave-priority-threshold");
+  if (A.isValid())
+    A.getValueAsString().getAsInteger(0, VALUInstsThreshold);
 
-  // Mark blocks from which control may reach VMEM loads.
-  while (!Worklist.empty()) {
-    const MachineBasicBlock *MBB = Worklist.pop_back_val();
+  // Find VMEM loads that may be executed before long-enough sequences of
+  // VALU instructions. We currently assume that backedges/loops, branch
+  // probabilities and other details can be ignored, so we essentially
+  // determine the largest number of VALU instructions along every
+  // possible path from the start of the function that may potentially be
+  // executed provided no backedge is ever taken.
+  MBBInfoSet MBBInfos;
+  for (MachineBasicBlock *MBB : post_order(&MF)) {
     MBBInfo &Info = MBBInfos[MBB];
-    if (!Info.MayReachVMEMLoad) {
-      Info.MayReachVMEMLoad = true;
-      Worklist.append(MBB->pred_begin(), MBB->pred_end());
+    bool AtStart = true;
+    unsigned MaxNumVALUInstsInMiddle = 0;
+    unsigned NumVALUInstsAtEnd = 0;
+    for (MachineInstr &MI : *MBB) {
+      if (isVMEMLoad(MI)) {
+        AtStart = false;
+        Info.NumVALUInstsAtStart = 0;
+        MaxNumVALUInstsInMiddle = 0;
+        NumVALUInstsAtEnd = 0;
+        Info.LastVMEMLoad = &MI;
+      } else if (SIInstrInfo::isDS(MI)) {
+        AtStart = false;
+        MaxNumVALUInstsInMiddle =
+            std::max(MaxNumVALUInstsInMiddle, NumVALUInstsAtEnd);
+        NumVALUInstsAtEnd = 0;
+      } else if (SIInstrInfo::isVALU(MI)) {
+        if (AtStart)
+          ++Info.NumVALUInstsAtStart;
+        ++NumVALUInstsAtEnd;
+      }
     }
+
+    bool SuccsMayReachVMEMLoad = false;
+    unsigned NumFollowingVALUInsts = 0;
+    for (const MachineBasicBlock *Succ : MBB->successors()) {
+      SuccsMayReachVMEMLoad |= MBBInfos[Succ].MayReachVMEMLoad;
+      NumFollowingVALUInsts =
+          std::max(NumFollowingVALUInsts, MBBInfos[Succ].NumVALUInstsAtStart);
+    }
+    if (AtStart)
+      Info.NumVALUInstsAtStart += NumFollowingVALUInsts;
+    NumVALUInstsAtEnd += NumFollowingVALUInsts;
+
+    unsigned MaxNumVALUInsts =
+        std::max(MaxNumVALUInstsInMiddle, NumVALUInstsAtEnd);
+    Info.MayReachVMEMLoad =
+        SuccsMayReachVMEMLoad ||
+        (Info.LastVMEMLoad && MaxNumVALUInsts >= VALUInstsThreshold);
   }
 
   MachineBasicBlock &Entry = MF.front();
@@ -122,10 +171,10 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
   MachineBasicBlock::iterator I = Entry.begin(), E = Entry.end();
   while (I != E && !SIInstrInfo::isVALU(*I) && !I->isTerminator())
     ++I;
-  Entry.insert(I, BuildSetprioMI(MF, HighPriority));
+  BuildSetprioMI(Entry, I, HighPriority);
 
   // Lower the priority on edges where control leaves blocks from which
-  // VMEM loads are reachable.
+  // the VMEM loads are reachable.
   SmallSet<MachineBasicBlock *, 16> PriorityLoweringBlocks;
   for (MachineBasicBlock &MBB : MF) {
     if (MBBInfos[&MBB].MayReachVMEMLoad) {
@@ -152,14 +201,12 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
   }
 
   for (MachineBasicBlock *MBB : PriorityLoweringBlocks) {
-    MachineBasicBlock::iterator I = MBB->end(), B = MBB->begin();
-    while (I != B) {
-      if (isVMEMLoad(*--I)) {
-        ++I;
-        break;
-      }
-    }
-    MBB->insert(I, BuildSetprioMI(MF, LowPriority));
+    BuildSetprioMI(
+        *MBB,
+        MBBInfos[MBB].LastVMEMLoad
+            ? std::next(MachineBasicBlock::iterator(MBBInfos[MBB].LastVMEMLoad))
+            : MBB->begin(),
+        LowPriority);
   }
 
   return true;
