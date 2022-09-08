@@ -62,6 +62,11 @@ and there is no way to suppress this error.
 Changes to the LLVM IR
 ----------------------
 
+* The constant expression variants of the following instructions have been
+  removed:
+
+  * ``fneg``
+
 Changes to building LLVM
 ------------------------
 
@@ -125,6 +130,13 @@ Changes to the OCaml bindings
 
 Changes to the C API
 --------------------
+
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+
+  * ``LLVMConstFNeg``
 
 Changes to the Go bindings
 --------------------------

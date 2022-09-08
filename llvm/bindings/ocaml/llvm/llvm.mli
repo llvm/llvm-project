@@ -1077,10 +1077,6 @@ val const_nsw_neg : llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNUWNeg]. *)
 val const_nuw_neg : llvalue -> llvalue
 
-(** [const_fneg c] returns the arithmetic negation of the constant float [c].
-    See the method [llvm::ConstantExpr::getFNeg]. *)
-val const_fneg : llvalue -> llvalue
-
 (** [const_not c] returns the bitwise inverse of the constant [c].
     See the method [llvm::ConstantExpr::getNot]. *)
 val const_not : llvalue -> llvalue
