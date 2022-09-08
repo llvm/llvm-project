@@ -109,9 +109,9 @@ bool applyAddCmpToSubAdd(MachineInstr &MI, MachineRegisterInfo &MRI,
   std::tie(SrcRegA, SrcRegB, ZeroReg) = MatchInfo;
 
   MachineIRBuilder B(MI);
-  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
   Register UnusedReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(1));
 
   B.buildInstr(TargetOpcode::G_USUBO, {UnusedReg, Carry}, {ZeroReg, SrcRegB});
   B.buildInstr(TargetOpcode::G_UADDE, {DstReg, UnusedCarry},
@@ -158,9 +158,9 @@ bool matchAddCmpToSubAdd2(MachineInstr &MI, MachineOperand &Src1,
     return false;
   }
 
-  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
   Register UnusedReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(1));
 
   MatchInfo = [=](MachineIRBuilder &B) {
     if (Pred != CmpInst::ICMP_EQ)
@@ -223,14 +223,52 @@ bool matchAddSubFromAddICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
     return false;
   }
 
-  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
   Register UnusedReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(1));
 
   MatchInfo = [=](MachineIRBuilder &B) {
     if (Pred != CmpInst::ICMP_EQ)
       B.buildConstant(ZeroReg, 0);
     B.buildInstr(TargetOpcode::G_USUBO, {UnusedReg, Carry}, {SrcRegB, SrcRegC});
+    B.buildInstr(TargetOpcode::G_UADDE, {DstReg, UnusedCarry},
+                 {SrcRegA, ZeroReg, Carry});
+  };
+
+  return true;
+}
+
+// Match
+//  Unused, CarryBit = G_USUBU SrcB, SrcC
+//  Carry = G_ZEXT CarryBit
+//  Dst = G_UADD SrcA, Carry
+// The returned MatchInfo transforms this sequence into
+//  Unused, Carry = G_USUBU SrcB, SrcC
+//  Dst, UnusedCarry = G_UADDE SrcA, Zero, Carry
+// inserting a zero constant value if necessary.
+bool matchAddSubFromAddSub(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ADD);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcRegA;
+  Register Carry;
+  Register ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  MachineInstr *SubMI;
+  if (!mi_match(
+          MI, MRI,
+          m_GAdd(m_Reg(SrcRegA), m_GZExt(m_Reg(Carry)))))
+    return false;
+  SubMI = MRI.getVRegDef(Carry);
+  if (SubMI->getOpcode() != TargetOpcode::G_USUBO)
+    return false;
+  if (SubMI->getOperand(1).getReg() != Carry)
+    return false;
+
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildConstant(ZeroReg, 0);
     B.buildInstr(TargetOpcode::G_UADDE, {DstReg, UnusedCarry},
                  {SrcRegA, ZeroReg, Carry});
   };

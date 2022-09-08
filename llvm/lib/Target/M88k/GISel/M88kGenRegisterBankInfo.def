@@ -23,8 +23,8 @@ RegisterBankInfo::PartialMapping M88kGenRegisterBankInfo::PartMappings[]{
     {0, 32, M88k::GRRegBank},
     // 4: GPR 64-bit value.
     {0, 64, M88k::GRRegBank},
-    // 5: CR 32-bit value.
-    {0, 32, M88k::CRRegBank},
+    // 5: CR 1-bit value.
+    {0, 1, M88k::CRRegBank},
 };
 
 // ValueMappings.

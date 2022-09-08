@@ -65,3 +65,30 @@ define i32 @f7(i32 %a, i32 %b) {
   %sum = add i32 %conv, %b
   ret i32 %sum
 }
+
+; Same, but using intrinsic
+define i32 @f8(i32 %a, i32 %b) {
+; CHECK-LABEL: f8:
+; CHECK:       subu.co %r2, %r4, %r2
+; CHECK-NEXT:  addu.ci %r2, %r3, %r4
+; CHECK-NEXT:  jmp %r1
+  %res = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 0, i32 %a)
+  %carrybit = extractvalue { i32, i1 } %res, 1
+  %carry = zext i1 %carrybit to i32
+  %sum = add i32 %carry, %b
+  ret i32 %sum
+}
+
+declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
+
+; Special case: return (a >= b) + c
+define i32 @f9(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: f9:
+; CHECK:       subu.co %r2, %r3, %r2
+; CHECK-NEXT:  addu.ci %r2, %r4, %r5
+; CHECK-NEXT:  jmp %r1
+  %cmp = icmp uge i32 %a, %b
+  %conv = zext i1 %cmp to i32
+  %sum = add i32 %conv, %c
+  ret i32 %sum
+}

@@ -87,9 +87,10 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
           all(typeInSet(0, {V8S8, V4S16, V2S32}), LegalityPredicate(IsMC88110)))
       .clampScalar(0, S32, S32);
   getActionDefinitionsBuilder({G_UADDO, G_UADDE, G_USUBO, G_USUBE})
-      .legalFor({S32, S32})
+      .legalFor({{S32, S1}})
       .clampScalar(0, S32, S32)
-      .clampScalar(1, S32, S32);
+      .lower();
+  getActionDefinitionsBuilder({G_SADDO, G_SADDE, G_SSUBO, G_SSUBE}).lower();
   getActionDefinitionsBuilder({G_MUL, G_UDIV})
       .legalFor({S32})
       .customIf(all(typeInSet(0, {S64}), LegalityPredicate(IsMC88110)))

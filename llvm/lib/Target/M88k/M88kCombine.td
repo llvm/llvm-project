@@ -93,12 +93,27 @@ def addsub_from_addicmp : GICombineRule<
          [{ return matchAddSubFromAddICmp(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// Combine
+//  Unused, CarryBit = G_USUBU SrcB, SrcC
+//  Carry = G_ZEXT CarryBit
+//  Dst = G_UADD SrcA, Carry
+// into the instruction sequence
+//  Unused, Carry = G_USUBU SrcB, SrcC
+//  Dst, UnusedCarry = G_UADDE SrcA, Zero, Carry
+// inserting a zero constant value if necessary.
+def addsub_from_addsub : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_ADD):$root,
+         [{ return matchAddSubFromAddSub(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // Post-legalization combines which are primarily optimizations.
 def M88kPostLegalizerCombinerHelper: GICombinerHelper<
   "M88kGenPostLegalizerCombinerHelper", [
   //subadd_from_icmpadd1,
   //subadd_from_icmpadd2,
   addsub_from_addicmp,
+  addsub_from_addsub,
   form_bitfield_extract, // Some rules require legalizer
   rotate_out_of_range // Required for left rotates, which produce a negative constant
   ]> {
