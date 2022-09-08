@@ -34,12 +34,21 @@ enum SplitFunctionsStrategy : char {
   All
 };
 
+class SplitStrategy {
+public:
+  using BlockIt = BinaryFunction::BasicBlockOrderType::iterator;
+
+  virtual ~SplitStrategy() = default;
+  virtual bool canSplit(const BinaryFunction &BF) = 0;
+  virtual bool canOutline(const BinaryBasicBlock &BB) { return true; }
+  virtual void fragment(const BlockIt Start, const BlockIt End) = 0;
+};
+
 /// Split function code in multiple parts.
 class SplitFunctions : public BinaryFunctionPass {
 private:
   /// Split function body into fragments.
-  template <typename Strategy>
-  void splitFunction(BinaryFunction &Function, Strategy S = {});
+  void splitFunction(BinaryFunction &Function, SplitStrategy &Strategy);
 
   struct TrampolineKey {
     FragmentNum SourceFN = FragmentNum::main();

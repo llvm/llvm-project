@@ -3825,11 +3825,13 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
     //   - If A is an array type, the pointer type produced by the
     //     array-to-pointer standard conversion (4.2) is used in place of
     //     A for type deduction; otherwise,
+    if (ArgType->isArrayType())
+      ArgType = S.Context.getArrayDecayedType(ArgType);
     //   - If A is a function type, the pointer type produced by the
     //     function-to-pointer standard conversion (4.3) is used in place
     //     of A for type deduction; otherwise,
-    if (ArgType->canDecayToPointerType())
-      ArgType = S.Context.getDecayedType(ArgType);
+    else if (ArgType->isFunctionType())
+      ArgType = S.Context.getPointerType(ArgType);
     else {
       // - If A is a cv-qualified type, the top level cv-qualifiers of A's
       //   type are ignored for type deduction.

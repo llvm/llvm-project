@@ -442,7 +442,7 @@ Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
   DebugCompressionType Type;
   switch (Sec.ChType) {
   case ELFCOMPRESS_ZLIB:
-    Type = DebugCompressionType::Z;
+    Type = DebugCompressionType::Zlib;
     break;
   case ELFCOMPRESS_ZSTD:
     Type = DebugCompressionType::Zstd;
@@ -510,7 +510,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   case DebugCompressionType::None:
     std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
     return Error::success();
-  case DebugCompressionType::Z:
+  case DebugCompressionType::Zlib:
     Chdr.ch_type = ELF::ELFCOMPRESS_ZLIB;
     break;
   case DebugCompressionType::Zstd:

@@ -76,7 +76,7 @@ static cl::opt<DebugCompressionType> CompressDebugSections(
     cl::init(DebugCompressionType::None),
     cl::desc("Choose DWARF debug sections compression:"),
     cl::values(clEnumValN(DebugCompressionType::None, "none", "No compression"),
-               clEnumValN(DebugCompressionType::Z, "zlib", "Use zlib"),
+               clEnumValN(DebugCompressionType::Zlib, "zlib", "Use zlib"),
                clEnumValN(DebugCompressionType::Zstd, "zstd", "Use zstd")),
     cl::cat(MCCategory));
 

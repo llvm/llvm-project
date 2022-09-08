@@ -44,40 +44,61 @@ on support follow.
 
   .. table:: Ratified Extensions by Status
 
-     =============  ========================
-     Extension      Status
-     =============  ========================
-     ``A``          Supported
-     ``C``          Supported
-     ``D``          Supported
-     ``F``          Supported
-     ``M``          Supported
-     ``V``          Supported
-     ``Zba``        Supported
-     ``Zbb``        Supported
-     ``Zbc``        Supported
-     ``Zbs``        Supported
-     ``Zicbom``     Assembly Support
-     ``Zicbop``     Assembly Support
-     ``Zicboz``     Assembly Support
-     ``Zve32x``     Partially Supported
-     ``Zve32f``     Partially Supported
-     ``Zve64x``     Supported
-     ``Zve64f``     Supported
-     ``Zve64d``     Supported
-     ``Zvl32b``     Partially Supported
-     ``Zvl64b``     Supported
-     ``Zvl128b``    Supported
-     ``Zvl256b``    Supported
-     ``Zvl512b``    Supported
-     ``Zvl1024b``   Supported
-     ``Zvl2048b``   Supported
-     ``Zvl4096b``   Supported
-     ``Zvl8192b``   Supported
-     ``Zvl16384b``  Supported
-     ``Zvl32768b``  Supported
-     ``Zvl65536b``  Supported
-     =============  ========================
+     ===============  =========================================================
+     Extension        Status
+     ===============  =========================================================
+     ``A``            Supported
+     ``C``            Supported
+     ``D``            Supported
+     ``F``            Supported
+     ``M``            Supported
+     ``V``            Supported
+     ``Zba``          Supported
+     ``Zbb``          Supported
+     ``Zbc``          Supported
+     ``Zbkb``         Supported (`See note <#riscv-scalar-crypto-note1>`_)
+     ``Zbkc``         Supported
+     ``Zbkx``         Supported (`See note <#riscv-scalar-crypto-note1>`_)
+     ``Zbs``          Supported
+     ``Zdinx``        Assembly Support
+     ``Zfh``          Supported
+     ``Zfhmin``       Supported
+     ``Zfinx``        Assembly Support
+     ``Zhinx``        Assembly Support
+     ``Zhinxmin``     Assembly Support
+     ``Zicbom``       Assembly Support
+     ``Zicbop``       Assembly Support
+     ``Zicboz``       Assembly Support
+     ``Zihintpause``  Assembly Support
+     ``Zkn``          Supported
+     ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`_)
+     ``Zkne``         Supported (`See note <#riscv-scalar-crypto-note2>`_)
+     ``Zknh``         Supported (`See note <#riscv-scalar-crypto-note2>`_)
+     ``Zksed``        Supported (`See note <#riscv-scalar-crypto-note2>`_)
+     ``Zksh``         Supported (`See note <#riscv-scalar-crypto-note2>`_)
+     ``Zk``           Supported
+     ``Zkr``          Supported
+     ``Zks``          Supported
+     ``Zkt``          Supported
+     ``Zmmul``        Supported
+     ``Zve32x``       (`Partially <#riscv-vlen-32-note>`_) Supported
+     ``Zve32f``       (`Partially <#riscv-vlen-32-note>`_) Supported
+     ``Zve64x``       Supported
+     ``Zve64f``       Supported
+     ``Zve64d``       Supported
+     ``Zvl32b``       (`Partially <#riscv-vlen-32-note>`_) Supported
+     ``Zvl64b``       Supported
+     ``Zvl128b``      Supported
+     ``Zvl256b``      Supported
+     ``Zvl512b``      Supported
+     ``Zvl1024b``     Supported
+     ``Zvl2048b``     Supported
+     ``Zvl4096b``     Supported
+     ``Zvl8192b``     Supported
+     ``Zvl16384b``    Supported
+     ``Zvl32768b``    Supported
+     ``Zvl65536b``    Supported
+     ===============  =========================================================
 
 Assembly Support
   LLVM supports the associated instructions in assembly.  All assembly related tools (e.g. assembler, disassembler, llvm-objdump, etc..) are supported.  Compiler and linker will accept extension names, and linked binaries will contain appropriate ELF flags and attributes to reflect use of named extension.
@@ -85,9 +106,20 @@ Assembly Support
 Supported
   Fully supported by the compiler.  This includes everything in Assembly Support, along with - if relevant - C language intrinsics for the instructions and pattern matching by the compiler to recognize idiomatic patterns which can be lowered to the associated instructions.
 
+.. _riscv-scalar-crypto-note1:
+
+``Zbkb``, ``Zbkx``
+  Pattern matching support for these instructions is incomplete.
+
+.. _riscv-scalar-crypto-note2:
+
+``Zknd``, ``Zkne``, ``Zknh``, ``Zksed``, ``Zksh``
+  No pattern matching exists.  As a result, these instructions can only be used from assembler or via intrinsic calls.
+
+.. _riscv-vlen-32-note:
+
 ``Zve32x``, ``Zve32f``, ``Zvl32b``
   LLVM currently assumes a minimum VLEN (vector register width) of 64 bits during compilation, and as a result ``Zve32x`` and ``Zve32f`` are supported only for VLEN>=64.  Assembly support doesn't have this restriction.
-
 
 Experimental Extensions
 =======================

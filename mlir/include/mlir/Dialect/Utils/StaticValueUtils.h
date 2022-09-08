@@ -21,6 +21,14 @@
 
 namespace mlir {
 
+/// Represents a range (offset, size, and stride) where each element of the
+/// triple may be dynamic or static.
+struct Range {
+  OpFoldResult offset;
+  OpFoldResult size;
+  OpFoldResult stride;
+};
+
 /// Helper function to dispatch an OpFoldResult into `staticVec` if:
 ///   a) it is an IntegerAttr
 /// In other cases, the OpFoldResult is dispached to the `dynamicVec`.
