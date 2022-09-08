@@ -1146,7 +1146,14 @@ static void RenderDebugInfoCompressionArgs(const ArgList &Args,
         CmdArgs.push_back(
             Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
       } else {
-        D.Diag(diag::warn_debug_compression_unavailable);
+        D.Diag(diag::warn_debug_compression_unavailable) << "zlib";
+      }
+    } else if (Value == "zstd") {
+      if (llvm::compression::zstd::isAvailable()) {
+        CmdArgs.push_back(
+            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
+      } else {
+        D.Diag(diag::warn_debug_compression_unavailable) << "zstd";
       }
     } else {
       D.Diag(diag::err_drv_unsupported_option_argument)
