@@ -5061,11 +5061,13 @@ cc_library(
         "include/mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Tensor/Transforms/Passes.h",
         "include/mlir/Dialect/Tensor/Transforms/Transforms.h",
+        "include/mlir/Dialect/Tensor/Transforms/TransformUtils.h"
     ],
     includes = ["include"],
     deps = [
         ":AffineDialect",
         ":ArithmeticDialect",
+        ":ArithmeticUtils",
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":DialectUtils",
