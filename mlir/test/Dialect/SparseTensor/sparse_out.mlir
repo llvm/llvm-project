@@ -28,8 +28,8 @@
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 2.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>> to memref<?xf32>
 // CHECK:           %[[VAL_9:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_2]]] : memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = memref.load %[[VAL_4]]{{\[}}%[[VAL_3]]] : memref<?xindex>
@@ -61,8 +61,8 @@ func.func @sparse_simply_dynamic1(%argx: tensor<32x16xf32, #DCSR>) -> tensor<32x
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_3:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_1]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
-// CHECK:           %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK:           %[[VAL_3:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           %[[VAL_6:.*]] = memref.load %[[VAL_3]]{{\[}}%[[VAL_1]]] : memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = memref.load %[[VAL_3]]{{\[}}%[[VAL_2]]] : memref<?xindex>
@@ -107,8 +107,8 @@ func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR>) -> tensor<32x
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_7:.*]] = bufferization.alloc_tensor() : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:           %[[VAL_11:.*]] = memref.alloca(%[[VAL_5]]) : memref<?xindex>
 // CHECK:           %[[BUF:.*]] = memref.alloca() : memref<f32>
@@ -162,19 +162,19 @@ func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20x
 // CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>>
 // CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>>
 // CHECK:           %[[VAL_8:.*]] = bufferization.alloc_tensor(%[[VAL_6]], %[[VAL_7]]) : tensor<?x?xi32, #{{.*}}>>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_14:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_12:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_13:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 2 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_14:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 2 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_15:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xi32>
-// CHECK:           %[[VAL_16:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_17:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_2]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_18:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_19:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_20:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
-// CHECK:           %[[VAL_21:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_16:.*]] = sparse_tensor.pointers %[[VAL_1]] {dimension = 0 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_17:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 0 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_18:.*]] = sparse_tensor.pointers %[[VAL_1]] {dimension = 1 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_19:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 1 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_20:.*]] = sparse_tensor.pointers %[[VAL_1]] {dimension = 2 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
+// CHECK:           %[[VAL_21:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 2 : index} : tensor<?x?x?xi32, #{{.*}}>> to memref<?xindex>
 // CHECK:           %[[VAL_22:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?x?x?xi32, #{{.*}}>> to memref<?xi32>
 // CHECK:           %[[VAL_23:.*]] = memref.alloca(%[[VAL_4]]) : memref<?xindex>
 // CHECK:           %[[BUF:.*]] = memref.alloca() : memref<i32>
@@ -323,15 +323,15 @@ func.func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
 // CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:           %[[VAL_9:.*]] = bufferization.alloc_tensor(%[[VAL_7]], %[[VAL_8]]) : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK:           %[[VAL_10:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_11:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_3]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_3]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_10:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_11:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_12:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_13:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_14:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf32>
-// CHECK:           %[[VAL_15:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_16:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_17:.*]] = sparse_tensor.pointers %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK:           %[[VAL_18:.*]] = sparse_tensor.indices %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_15:.*]] = sparse_tensor.pointers %[[VAL_1]] {dimension = 0 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_16:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 0 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_17:.*]] = sparse_tensor.pointers %[[VAL_1]] {dimension = 1 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
+// CHECK:           %[[VAL_18:.*]] = sparse_tensor.indices %[[VAL_1]] {dimension = 1 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
 // CHECK:           %[[VAL_19:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf32>
 // CHECK:           %[[VAL_20:.*]] = memref.alloca(%[[VAL_4]]) : memref<?xindex>
 // CHECK:           %[[VAL_21:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_2]]] : memref<?xindex>

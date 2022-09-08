@@ -22,10 +22,10 @@
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_4:.*]] = bufferization.alloc_tensor() : tensor<4x3xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.convert %[[VAL_0]] : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>> to tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>>
-// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_5]], %[[VAL_1]] : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_5]], %[[VAL_1]] : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_5]], %[[VAL_2]] : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
-// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_5]], %[[VAL_2]] : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
+// CHECK:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_5]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
+// CHECK:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_5]] {dimension = 0 : index} : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
+// CHECK:           %[[VAL_8:.*]] = sparse_tensor.pointers %[[VAL_5]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
+// CHECK:           %[[VAL_9:.*]] = sparse_tensor.indices %[[VAL_5]] {dimension = 1 : index} : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_5]] : tensor<3x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)> }>> to memref<?xf64>
 // CHECK:           %[[VAL_11:.*]] = memref.alloca(%[[VAL_3]]) : memref<?xindex>
 // CHECK:           %[[VAL_12:.*]] = memref.alloca() : memref<f64>

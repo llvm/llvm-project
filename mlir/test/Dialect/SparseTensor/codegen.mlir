@@ -196,8 +196,7 @@ func.func @sparse_dense_3d_dyn(%arg0: tensor<?x?x?xf64, #Dense3D>) -> index {
 //  CHECK-SAME: %[[A5:.*5]]: memref<?xf64>)
 //       CHECK: return %[[A3]] : memref<?xi32>
 func.func @sparse_pointers_dcsr(%arg0: tensor<?x?xf64, #DCSR>) -> memref<?xi32> {
-  %c = arith.constant 1 : index
-  %0 = sparse_tensor.pointers %arg0, %c : tensor<?x?xf64, #DCSR> to memref<?xi32>
+  %0 = sparse_tensor.pointers %arg0 { dimension = 1 : index } : tensor<?x?xf64, #DCSR> to memref<?xi32>
   return %0 : memref<?xi32>
 }
 
@@ -211,8 +210,7 @@ func.func @sparse_pointers_dcsr(%arg0: tensor<?x?xf64, #DCSR>) -> memref<?xi32> 
 //  CHECK-SAME: %[[A5:.*5]]: memref<?xf64>)
 //       CHECK: return %[[A4]] : memref<?xi64>
 func.func @sparse_indices_dcsr(%arg0: tensor<?x?xf64, #DCSR>) -> memref<?xi64> {
-  %c = arith.constant 1 : index
-  %0 = sparse_tensor.indices %arg0, %c : tensor<?x?xf64, #DCSR> to memref<?xi64>
+  %0 = sparse_tensor.indices %arg0 { dimension = 1 : index } : tensor<?x?xf64, #DCSR> to memref<?xi64>
   return %0 : memref<?xi64>
 }
 
