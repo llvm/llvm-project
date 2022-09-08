@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=i386-pc-linux | FileCheck -check-prefix LINUX %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN32 %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=thumb-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WOA %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=x86_64-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN64 %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=aarch64-windows-msvc -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WOA64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN32 --check-prefix WIN %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=thumb-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WOA --check-prefix WIN %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=x86_64-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN64 --check-prefix WIN %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -emit-llvm %s -o - -triple=aarch64-windows-msvc -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WOA64 --check-prefix WIN %s
 
 struct Empty {};
 
@@ -72,6 +72,10 @@ struct BaseNoByval : Small {
 struct SmallWithPrivate {
 private:
  int i;
+};
+
+struct SmallWithSmallWithPrivate {
+  SmallWithPrivate p;
 };
 
 // WIN32: declare dso_local void @"{{.*take_bools_and_chars.*}}"
@@ -196,6 +200,10 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 // indirectly on ARM64 Windows.
 // WOA64: define dso_local void @"?small_arg_with_private_member@@YA?AUSmallWithPrivate@@U1@@Z"(%struct.SmallWithPrivate* inreg noalias sret(%struct.SmallWithPrivate) align 4 %agg.result, i64 %s.coerce) {{.*}} {
 SmallWithPrivate small_arg_with_private_member(SmallWithPrivate s) { return s; }
+
+// WOA64: define dso_local i32 @"?small_arg_with_small_struct_with_private_member@@YA?AUSmallWithSmallWithPrivate@@U1@@Z"(i64 %s.coerce) {{.*}} {
+// WIN64: define dso_local i32 @"?small_arg_with_small_struct_with_private_member@@YA?AUSmallWithSmallWithPrivate@@U1@@Z"(i32 %s.coerce) {{.*}} {
+SmallWithSmallWithPrivate small_arg_with_small_struct_with_private_member(SmallWithSmallWithPrivate s) { return s; }
 
 void call_small_arg_with_dtor() {
   small_arg_with_dtor(SmallWithDtor());
@@ -467,4 +475,33 @@ void C::g() { return h(SmallWithDtor()); }
 
 // WIN64-LABEL: define dso_local void @"?g@C@pr30293@@QEAAXXZ"(%"struct.pr30293::C"* {{[^,]*}} %this)
 // WIN64: declare dso_local void @"?h@C@pr30293@@UEAAXUSmallWithDtor@@@Z"(i8* noundef, i32)
+}
+
+namespace protected_member_of_member {
+struct field { protected: int i; };
+struct t1 {
+  field f;
+};
+extern const t1& v1;
+t1 f1() { return v1; }
+// WIN: define dso_local {{.*}}i32 @"?f1@protected_member_of_member@@YA?AUt1@1@XZ"()
+}
+
+namespace default_member_initializer {
+struct t1 {
+  int i = 3;
+};
+extern const t1& v1;
+t1 f1() { return v1; }
+// WIN: define dso_local {{.*}}i32 @"?f1@default_member_initializer@@YA?AUt1@1@XZ"()
+}
+
+namespace defaulted_copy_ctor {
+struct t1 {
+  int i;
+  t1(const t1&) = default;
+};
+extern const t1& v1;
+t1 f1() { return v1; }
+// WIN: define dso_local {{.*}}i32 @"?f1@defaulted_copy_ctor@@YA?AUt1@1@XZ"()
 }
