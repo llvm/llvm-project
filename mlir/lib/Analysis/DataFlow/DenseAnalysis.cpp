@@ -74,9 +74,6 @@ void AbstractDenseDataFlowAnalysis::visitOperation(Operation *op) {
     before = getLatticeFor(op, prev);
   else
     before = getLatticeFor(op, op->getBlock());
-  // If the incoming lattice is uninitialized, bail out.
-  if (before->isUninitialized())
-    return;
 
   // Invoke the operation transfer function.
   visitOperationImpl(op, *before, after);

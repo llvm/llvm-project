@@ -115,7 +115,7 @@ static const ARM_MLxEntry ARM_MLxTable[] = {
 ARMBaseInstrInfo::ARMBaseInstrInfo(const ARMSubtarget& STI)
   : ARMGenInstrInfo(ARM::ADJCALLSTACKDOWN, ARM::ADJCALLSTACKUP),
     Subtarget(STI) {
-  for (unsigned i = 0, e = array_lengthof(ARM_MLxTable); i != e; ++i) {
+  for (unsigned i = 0, e = std::size(ARM_MLxTable); i != e; ++i) {
     if (!MLxEntryMap.insert(std::make_pair(ARM_MLxTable[i].MLxOpc, i)).second)
       llvm_unreachable("Duplicated entries?");
     MLxHazardOpcodes.insert(ARM_MLxTable[i].AddSubOpc);

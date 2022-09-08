@@ -53,6 +53,27 @@ static bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   return true;
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+static bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
+  S.Current =
+      new InterpFrame(S, const_cast<Function *>(Func), S.Current, PC, {});
+  APValue CallResult;
+  // Note that we cannot assert(CallResult.hasValue()) here since
+  // Ret() above only sets the APValue if the curent frame doesn't
+  // have a caller set.
+  return Interpret(S, CallResult);
+}
+
+static bool CallVoid(InterpState &S, CodePtr &PC, const Function *Func) {
+  APValue VoidResult;
+  S.Current =
+      new InterpFrame(S, const_cast<Function *>(Func), S.Current, PC, {});
+  bool Success = Interpret(S, VoidResult);
+  assert(VoidResult.isAbsent());
+
+  return Success;
+}
+
 static bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   S.CallStackDepth--;
 
@@ -398,7 +419,13 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
   S.Note(MD->getLocation(), diag::note_declared_at);
   return false;
 }
+
 bool Interpret(InterpState &S, APValue &Result) {
+  // The current stack frame when we started Interpret().
+  // This is being used by the ops to determine wheter
+  // to return from this function and thus terminate
+  // interpretation.
+  const InterpFrame *StartFrame = S.Current;
   assert(!S.Current->isRoot());
   CodePtr PC = S.Current->getPC();
 

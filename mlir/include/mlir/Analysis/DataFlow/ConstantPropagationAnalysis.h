@@ -28,15 +28,24 @@ namespace dataflow {
 /// This lattice value represents a known constant value of a lattice.
 class ConstantValue {
 public:
+  /// Construct a constant value as uninitialized.
+  explicit ConstantValue() = default;
+
   /// Construct a constant value with a known constant.
-  ConstantValue(Attribute knownValue = {}, Dialect *dialect = nullptr)
-      : constant(knownValue), dialect(dialect) {}
+  explicit ConstantValue(Attribute constant, Dialect *dialect)
+      : constant(constant), dialect(dialect) {}
 
   /// Get the constant value. Returns null if no value was determined.
-  Attribute getConstantValue() const { return constant; }
+  Attribute getConstantValue() const {
+    assert(!isUninitialized());
+    return *constant;
+  }
 
   /// Get the dialect instance that can be used to materialize the constant.
-  Dialect *getConstantDialect() const { return dialect; }
+  Dialect *getConstantDialect() const {
+    assert(!isUninitialized());
+    return dialect;
+  }
 
   /// Compare the constant values.
   bool operator==(const ConstantValue &rhs) const {
@@ -46,21 +55,36 @@ public:
   /// Print the constant value.
   void print(raw_ostream &os) const;
 
+  /// The state where the constant value is uninitialized. This happens when the
+  /// state hasn't been set during the analysis.
+  static ConstantValue getUninitialized() { return ConstantValue{}; }
+
+  /// Whether the state is uninitialized.
+  bool isUninitialized() const { return !constant.has_value(); }
+
   /// The state where the constant value is unknown.
-  static ConstantValue getUnknownConstant() { return {}; }
+  static ConstantValue getUnknownConstant() {
+    return ConstantValue{/*constant=*/nullptr, /*dialect=*/nullptr};
+  }
 
   /// The union with another constant value is null if they are different, and
   /// the same if they are the same.
   static ConstantValue join(const ConstantValue &lhs,
                             const ConstantValue &rhs) {
-    return lhs == rhs ? lhs : ConstantValue();
+    if (lhs.isUninitialized())
+      return rhs;
+    if (rhs.isUninitialized())
+      return lhs;
+    if (lhs == rhs)
+      return lhs;
+    return getUnknownConstant();
   }
 
 private:
   /// The constant value.
-  Attribute constant;
-  /// An dialect instance that can be used to materialize the constant.
-  Dialect *dialect;
+  Optional<Attribute> constant;
+  /// A dialect instance that can be used to materialize the constant.
+  Dialect *dialect = nullptr;
 };
 
 //===----------------------------------------------------------------------===//

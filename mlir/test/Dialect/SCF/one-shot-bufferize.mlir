@@ -430,8 +430,8 @@ func.func @scf_while_non_equiv_condition_and_body(%arg0: tensor<5xi1>,
                                                   %idx: index)
   -> (tensor<5xi1>, tensor<5xi1>)
 {
-  // CHECK: %[[clone1:.*]] = bufferization.clone %[[arg1]]
-  // CHECK: %[[clone0:.*]] = bufferization.clone %[[arg0]]
+  // CHECK-DAG: %[[clone1:.*]] = bufferization.clone %[[arg1]]
+  // CHECK-DAG: %[[clone0:.*]] = bufferization.clone %[[arg0]]
   // CHECK: %[[loop:.*]]:2 = scf.while (%[[w0:.*]] = %[[clone0]], %[[w1:.*]] = %[[clone1]]) {{.*}} {
   %r0, %r1 = scf.while (%w0 = %arg0, %w1 = %arg1)
       : (tensor<5xi1>, tensor<5xi1>) -> (tensor<5xi1>, tensor<5xi1>) {
@@ -454,19 +454,13 @@ func.func @scf_while_non_equiv_condition_and_body(%arg0: tensor<5xi1>,
     // CHECK: } do {
     // CHECK: ^bb0(%[[b0:.*]]: memref<5xi1>, %[[b1:.*]]: memref<5xi1>):
     // CHECK: memref.store %{{.*}}, %[[b0]]
-    // CHECK: %[[a3:.*]] = memref.alloc() {{.*}} : memref<5xi1>
-    // CHECK: memref.copy %[[b1]], %[[a3]]
+    // CHECK: %[[casted1:.*]] = memref.cast %[[b1]]
+    // CHECK: %[[casted0:.*]] = memref.cast %[[b0]]
+    // CHECK: %[[cloned1:.*]] = bufferization.clone %[[casted1]]
     // CHECK: memref.dealloc %[[b1]]
-    // CHECK: %[[a2:.*]] = memref.alloc() {{.*}} : memref<5xi1>
-    // CHECK: memref.copy %[[b0]], %[[a2]]
+    // CHECK: %[[cloned0:.*]] = bufferization.clone %[[casted0]]
     // CHECK: memref.dealloc %[[b0]]
-    // CHECK: %[[casted3:.*]] = memref.cast %[[a3]]
-    // CHECK: %[[casted2:.*]] = memref.cast %[[a2]]
-    // CHECK: %[[cloned2:.*]] = bufferization.clone %[[casted2]]
-    // CHECK: memref.dealloc %[[a2]]
-    // CHECK: %[[cloned3:.*]] = bufferization.clone %[[casted3]]
-    // CHECK: memref.dealloc %[[a3]]
-    // CHECK: scf.yield %[[cloned3]], %[[cloned2]]
+    // CHECK: scf.yield %[[cloned1]], %[[cloned0]]
     // CHECK: }
     %pos = "dummy.some_op"() : () -> (index)
     %val = "dummy.another_op"() : () -> (i1)

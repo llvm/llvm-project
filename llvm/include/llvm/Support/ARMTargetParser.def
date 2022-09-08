@@ -47,14 +47,6 @@ ARM_FPU("softvfp", FK_SOFTVFP, FPUVersion::NONE, NeonSupportLevel::None, FPURest
 #endif
 ARM_ARCH("invalid", INVALID, "", "",
           ARMBuildAttrs::CPUArch::Pre_v4, FK_NONE, ARM::AEK_NONE)
-ARM_ARCH("armv2", ARMV2, "2", "v2", ARMBuildAttrs::CPUArch::Pre_v4,
-          FK_NONE, ARM::AEK_NONE)
-ARM_ARCH("armv2a", ARMV2A, "2A", "v2a", ARMBuildAttrs::CPUArch::Pre_v4,
-          FK_NONE, ARM::AEK_NONE)
-ARM_ARCH("armv3", ARMV3, "3", "v3", ARMBuildAttrs::CPUArch::Pre_v4,
-          FK_NONE, ARM::AEK_NONE)
-ARM_ARCH("armv3m", ARMV3M, "3M", "v3m", ARMBuildAttrs::CPUArch::Pre_v4,
-          FK_NONE, ARM::AEK_NONE)
 ARM_ARCH("armv4", ARMV4, "4", "v4", ARMBuildAttrs::CPUArch::v4,
           FK_NONE, ARM::AEK_NONE)
 ARM_ARCH("armv4t", ARMV4T, "4T", "v4t", ARMBuildAttrs::CPUArch::v4T,

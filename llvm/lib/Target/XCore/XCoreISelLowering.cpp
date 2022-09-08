@@ -1345,11 +1345,11 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
     };
     XCoreFunctionInfo *XFI = MF.getInfo<XCoreFunctionInfo>();
     unsigned FirstVAReg = CCInfo.getFirstUnallocated(ArgRegs);
-    if (FirstVAReg < array_lengthof(ArgRegs)) {
+    if (FirstVAReg < std::size(ArgRegs)) {
       int offset = 0;
       // Save remaining registers, storing higher register numbers at a higher
       // address
-      for (int i = array_lengthof(ArgRegs) - 1; i >= (int)FirstVAReg; --i) {
+      for (int i = std::size(ArgRegs) - 1; i >= (int)FirstVAReg; --i) {
         // Create a stack slot
         int FI = MFI.CreateFixedObject(4, offset, true);
         if (i == (int)FirstVAReg) {
