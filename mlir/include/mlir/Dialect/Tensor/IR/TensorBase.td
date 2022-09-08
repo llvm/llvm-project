@@ -50,8 +50,6 @@ def Tensor_Dialect : Dialect {
     "arith::ArithmeticDialect",
     "complex::ComplexDialect",
   ];
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 #endif // TENSOR_BASE

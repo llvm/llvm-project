@@ -24,7 +24,7 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_copy_constructible
     : public integral_constant<
           bool,
-          __is_constructible(_Tp, typename add_lvalue_reference<typename add_const<_Tp>::type>::type)> {};
+          __is_constructible(_Tp, __add_lvalue_reference_t<typename add_const<_Tp>::type>)> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>

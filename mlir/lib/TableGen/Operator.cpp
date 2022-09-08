@@ -727,7 +727,7 @@ getGetterOrSetterNames(bool isGetter, const Operator &op, StringRef name) {
       shouldSkip = true;
     }
     if (newName == "getType") {
-      if (op.getNumResults() == 0)
+      if (op.getNumResults() != 1)
         return false;
       shouldSkip = true;
     }

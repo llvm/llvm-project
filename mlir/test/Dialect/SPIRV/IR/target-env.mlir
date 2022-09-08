@@ -16,7 +16,7 @@
 // spv.GroupNonUniformBallot is available starting from SPIR-V 1.3 under
 // GroupNonUniform capability.
 
-// spv.SubgroupBallotKHR is available under in all SPIR-V versions under
+// spv.KHR.SubgroupBallot is available under in all SPIR-V versions under
 // SubgroupBallotKHR capability and SPV_KHR_shader_ballot extension.
 
 // The GeometryPointSize capability implies the Geometry capability, which
@@ -130,7 +130,7 @@ func.func @bit_reverse_recursively_implied_capability(%operand: i32) -> i32 attr
 func.func @subgroup_ballot_suitable_extension(%predicate: i1) -> vector<4xi32> attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.4, [SubgroupBallotKHR], [SPV_KHR_shader_ballot]>, #spv.resource_limits<>>
 } {
-  // CHECK: spv.SubgroupBallotKHR
+  // CHECK: spv.KHR.SubgroupBallot
   %0 = "test.convert_to_subgroup_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
   return %0: vector<4xi32>
 }

@@ -12,7 +12,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "NS";
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;

@@ -76,14 +76,8 @@ body:             |
     ; CHECK-LABEL: name: test_combine_insert_vec_build_vec_idx_oob
     ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $w3
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[COPY]](s32), [[C]](s32)
-    ; CHECK-NEXT: $q0 = COPY [[IVEC]](<4 x s32>)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $q0 = COPY [[DEF]](<4 x s32>)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %6:_(s32) = COPY $w2
@@ -196,13 +190,6 @@ body:             |
     ; CHECK-LABEL: name: test_combine_negative_idx
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 127
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 -128
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<32 x s8>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[C1]](s8), [[C2]](s64)
-    ; CHECK-NEXT: G_STORE [[IVEC]](<32 x s8>), [[COPY]](p0) :: (store (<32 x s8>))
     ; CHECK-NEXT: RET_ReallyLR
     %3:_(s8) = G_CONSTANT i8 127
     %2:_(<32 x s8>) = G_BUILD_VECTOR %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8)

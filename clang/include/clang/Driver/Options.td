@@ -1673,6 +1673,12 @@ def fsanitize_coverage_ignorelist : Joined<["-"], "fsanitize-coverage-ignorelist
     HelpText<"Disable sanitizer coverage instrumentation for modules and functions "
              "that match the provided special case list, even the allowed ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageIgnorelistFiles">>;
+def fexperimental_sanitize_metadata_EQ : CommaJoined<["-"], "fexperimental-sanitize-metadata=">,
+  Group<f_Group>,
+  HelpText<"Specify the type of metadata to emit for binary analysis sanitizers">;
+def fno_experimental_sanitize_metadata_EQ : CommaJoined<["-"], "fno-experimental-sanitize-metadata=">,
+  Group<f_Group>, Flags<[CoreOption]>,
+  HelpText<"Disable emitting metadata for binary analysis sanitizers">;
 def fsanitize_memory_track_origins_EQ : Joined<["-"], "fsanitize-memory-track-origins=">,
                                         Group<f_clang_Group>,
                                         HelpText<"Enable origins tracking in MemorySanitizer">,
@@ -2273,6 +2279,12 @@ defm modules_validate_system_headers : BoolOption<"f", "modules-validate-system-
   HeaderSearchOpts<"ModulesValidateSystemHeaders">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Validate the system headers that a module depends on when loading the module">,
   NegFlag<SetFalse, [NoXarchOption]>>, Group<i_Group>;
+def fno_modules_validate_textual_header_includes :
+  Flag<["-"], "fno-modules-validate-textual-header-includes">,
+  Group<f_Group>, Flags<[CC1Option, NoXarchOption]>,
+  MarshallingInfoNegativeFlag<LangOpts<"ModulesValidateTextualHeaderIncludes">>,
+  HelpText<"Do not enforce -fmodules-decluse and private header restrictions for textual headers. "
+           "This flag will be removed in a future Clang release.">;
 
 def fvalidate_ast_input_files_content:
   Flag <["-"], "fvalidate-ast-input-files-content">,
@@ -4114,7 +4126,8 @@ defm openmp_implicit_rpath: BoolFOption<"openmp-implicit-rpath",
   LangOpts<"OpenMP">,
   DefaultTrue,
   PosFlag<SetTrue, [], "Set rpath on OpenMP executables">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse>,
+  BothFlags<[NoArgumentUnused]>>;
 def r : Flag<["-"], "r">, Flags<[LinkerInput,NoArgumentUnused]>,
         Group<Link_Group>;
 def save_temps_EQ : Joined<["-", "--"], "save-temps=">, Flags<[CC1Option, FlangOption, NoXarchOption]>,
@@ -5490,6 +5503,14 @@ def fsanitize_coverage_trace_stores
     : Flag<["-"], "fsanitize-coverage-trace-stores">,
       HelpText<"Enable tracing of stores">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceStores">>;
+def fexperimental_sanitize_metadata_EQ_covered
+    : Flag<["-"], "fexperimental-sanitize-metadata=covered">,
+      HelpText<"Emit PCs for code covered with binary analysis sanitizers">,
+      MarshallingInfoFlag<CodeGenOpts<"SanitizeBinaryMetadataCovered">>;
+def fexperimental_sanitize_metadata_EQ_atomics
+    : Flag<["-"], "fexperimental-sanitize-metadata=atomics">,
+      HelpText<"Emit PCs for atomic operations used by binary analysis sanitizers">,
+      MarshallingInfoFlag<CodeGenOpts<"SanitizeBinaryMetadataAtomics">>;
 def fpatchable_function_entry_offset_EQ
     : Joined<["-"], "fpatchable-function-entry-offset=">, MetaVarName<"<M>">,
       HelpText<"Generate M NOPs before function entry">,

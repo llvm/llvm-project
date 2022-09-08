@@ -402,14 +402,14 @@ struct __optional_storage_base<_Tp, true>
 
     template <class _Up>
     static constexpr bool __can_bind_reference() {
-        using _RawUp = typename remove_reference<_Up>::type;
+        using _RawUp = __libcpp_remove_reference_t<_Up>;
         using _UpPtr = _RawUp*;
-        using _RawTp = typename remove_reference<_Tp>::type;
+        using _RawTp = __libcpp_remove_reference_t<_Tp>;
         using _TpPtr = _RawTp*;
         using _CheckLValueArg = integral_constant<bool,
             (is_lvalue_reference<_Up>::value && is_convertible<_UpPtr, _TpPtr>::value)
         ||  is_same<_RawUp, reference_wrapper<_RawTp>>::value
-        ||  is_same<_RawUp, reference_wrapper<typename remove_const<_RawTp>::type>>::value
+        ||  is_same<_RawUp, reference_wrapper<__remove_const_t<_RawTp>>>::value
         >;
         return (is_lvalue_reference<_Tp>::value && _CheckLValueArg::value)
             || (is_rvalue_reference<_Tp>::value && !is_lvalue_reference<_Up>::value &&
@@ -637,9 +637,9 @@ public:
 
 private:
      // Disable the reference extension using this static assert.
-    static_assert(!is_same_v<__uncvref_t<value_type>, in_place_t>,
+    static_assert(!is_same_v<__remove_cvref_t<value_type>, in_place_t>,
         "instantiation of optional with in_place_t is ill-formed");
-    static_assert(!is_same_v<__uncvref_t<value_type>, nullopt_t>,
+    static_assert(!is_same_v<__remove_cvref_t<value_type>, nullopt_t>,
         "instantiation of optional with nullopt_t is ill-formed");
     static_assert(!is_reference_v<value_type>,
         "instantiation of optional with a reference type is ill-formed");
@@ -664,8 +664,8 @@ private:
     };
     template <class _Up>
     using _CheckOptionalArgsCtor = _If<
-        _IsNotSame<__uncvref_t<_Up>, in_place_t>::value &&
-        _IsNotSame<__uncvref_t<_Up>, optional>::value,
+        _IsNotSame<__remove_cvref_t<_Up>, in_place_t>::value &&
+        _IsNotSame<__remove_cvref_t<_Up>, optional>::value,
         _CheckOptionalArgsConstructor,
         __check_tuple_constructor_fail
     >;
@@ -825,9 +825,9 @@ public:
     template <class _Up = value_type,
               class = enable_if_t<
                       _And<
-                          _IsNotSame<__uncvref_t<_Up>, optional>,
+                          _IsNotSame<__remove_cvref_t<_Up>, optional>,
                           _Or<
-                              _IsNotSame<__uncvref_t<_Up>, value_type>,
+                              _IsNotSame<__remove_cvref_t<_Up>, value_type>,
                               _Not<is_scalar<value_type>>
                           >,
                           is_constructible<value_type, _Up>,

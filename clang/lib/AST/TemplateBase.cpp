@@ -321,26 +321,15 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
 
   case Declaration:
     getParamTypeForDecl().Profile(ID);
-    ID.AddPointer(getAsDecl()? getAsDecl()->getCanonicalDecl() : nullptr);
+    ID.AddPointer(getAsDecl());
     break;
 
+  case TemplateExpansion:
+    ID.AddInteger(TemplateArg.NumExpansions);
+    LLVM_FALLTHROUGH;
   case Template:
-  case TemplateExpansion: {
-    TemplateName Template = getAsTemplateOrTemplatePattern();
-    if (TemplateTemplateParmDecl *TTP
-          = dyn_cast_or_null<TemplateTemplateParmDecl>(
-                                                Template.getAsTemplateDecl())) {
-      ID.AddBoolean(true);
-      ID.AddInteger(TTP->getDepth());
-      ID.AddInteger(TTP->getPosition());
-      ID.AddBoolean(TTP->isParameterPack());
-    } else {
-      ID.AddBoolean(false);
-      ID.AddPointer(Context.getCanonicalTemplateName(Template)
-                                                          .getAsVoidPointer());
-    }
+    getAsTemplateOrTemplatePattern().Profile(ID);
     break;
-  }
 
   case Integral:
     getAsIntegral().Profile(ID);

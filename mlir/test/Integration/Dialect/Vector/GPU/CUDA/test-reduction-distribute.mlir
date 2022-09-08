@@ -5,9 +5,9 @@
 // RUN:  -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin)' \
 // RUN:  -gpu-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_cuda_runtime%shlibext \
-// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
-// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_cuda_runtime%shlibext \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // Run a tiled reduction fused with an elementwise op.

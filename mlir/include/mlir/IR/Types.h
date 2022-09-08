@@ -15,6 +15,8 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
+class AsmState;
+
 /// Instances of the Type class are uniqued, have an immutable identifier and an
 /// optional mutable component.  They wrap a pointer to the storage object owned
 /// by MLIRContext.  Therefore, instances of Type are passed around by value.
@@ -162,6 +164,7 @@ public:
 
   /// Print the current type.
   void print(raw_ostream &os) const;
+  void print(raw_ostream &os, AsmState &state) const;
   void dump() const;
 
   friend ::llvm::hash_code hash_value(Type arg);

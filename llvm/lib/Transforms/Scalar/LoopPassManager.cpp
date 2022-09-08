@@ -78,6 +78,13 @@ LoopPassManager::runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
 
   unsigned LoopPassIndex = 0, LoopNestPassIndex = 0;
 
+  // `LoopNestPtr` points to the `LoopNest` object for the current top-level
+  // loop and `IsLoopNestPtrValid` indicates whether the pointer is still valid.
+  // The `LoopNest` object will have to be re-constructed if the pointer is
+  // invalid when encountering a loop-nest pass.
+  std::unique_ptr<LoopNest> LoopNestPtr;
+  bool IsLoopNestPtrValid = false;
+
   for (size_t I = 0, E = IsLoopNestPass.size(); I != E; ++I) {
     Optional<PreservedAnalyses> PassPA;
     if (!IsLoopNestPass[I]) {
@@ -88,8 +95,13 @@ LoopPassManager::runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
       // The `I`-th pass is a loop-nest pass.
       auto &Pass = LoopNestPasses[LoopNestPassIndex++];
 
-      LoopNest &LN = AM.getResult<LoopNestAnalysis>(L, AR);
-      PassPA = runSinglePass(LN, Pass, AM, AR, U, PI);
+      // If the loop-nest object calculated before is no longer valid,
+      // re-calculate it here before running the loop-nest pass.
+      if (!IsLoopNestPtrValid) {
+        LoopNestPtr = LoopNest::getLoopNest(L, AR.SE);
+        IsLoopNestPtrValid = true;
+      }
+      PassPA = runSinglePass(*LoopNestPtr, Pass, AM, AR, U, PI);
     }
 
     // `PassPA` is `None` means that the before-pass callbacks in
@@ -111,6 +123,9 @@ LoopPassManager::runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
     // Finally, we intersect the final preserved analyses to compute the
     // aggregate preserved set for this pass manager.
     PA.intersect(std::move(*PassPA));
+
+    // Check if the current pass preserved the loop-nest object or not.
+    IsLoopNestPtrValid &= PassPA->getChecker<LoopNestAnalysis>().preserved();
 
     // After running the loop pass, the parent loop might change and we need to
     // notify the updater, otherwise U.ParentL might gets outdated and triggers

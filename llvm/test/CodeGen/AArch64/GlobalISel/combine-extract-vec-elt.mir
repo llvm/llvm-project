@@ -78,11 +78,7 @@ body:             |
     ; CHECK-LABEL: name: extract_from_build_vector_idx_invalid
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
-    ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
-    ; CHECK-NEXT: %idx:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
-    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s32)
+    ; CHECK-NEXT: %extract:_(s64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: $x0 = COPY %extract(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %arg1:_(s64) = COPY $x0
@@ -189,6 +185,30 @@ body:             |
     %ins1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %undef, %arg1(s64), %zero(s32)
     %ins2:_(<2 x s64>) = G_INSERT_VECTOR_ELT %ins1, %arg2(s64), %one(s32)
     %extract:_(s64) = G_EXTRACT_VECTOR_ELT %ins2(<2 x s64>), %zero(s32)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_idx_negative
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_idx_negative
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %extract:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s32) = G_CONSTANT i32 -2
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s32)
     $x0 = COPY %extract(s64)
     RET_ReallyLR implicit $x0
 

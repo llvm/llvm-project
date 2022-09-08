@@ -161,7 +161,7 @@ private:
     typedef _Value value_type;
     typedef _Key   key_type;
 
-    typedef typename make_unsigned<key_type>::type unsigned_key_type;
+    typedef __make_unsigned_t<key_type> unsigned_key_type;
     typedef std::array<value_type, 256> skip_map;
     skip_map __table_;
 

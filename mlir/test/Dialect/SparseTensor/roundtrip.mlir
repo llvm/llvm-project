@@ -56,12 +56,10 @@ func.func @sparse_convert_3d_from_sparse(%arg0: tensor<8x8x8xf64, #SparseTensor>
 
 // CHECK-LABEL: func @sparse_pointers(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
-//       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = sparse_tensor.pointers %[[A]], %[[C]] : tensor<128xf64, #{{.*}}> to memref<?xindex>
+//       CHECK: %[[T:.*]] = sparse_tensor.pointers %[[A]] {dimension = 0 : index} : tensor<128xf64, #{{.*}}> to memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_pointers(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = arith.constant 0 : index
-  %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.pointers %arg0 {dimension = 0 : index} : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -71,12 +69,10 @@ func.func @sparse_pointers(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xin
 
 // CHECK-LABEL: func @sparse_indices(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
-//       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[T:.*]] = sparse_tensor.indices %[[A]], %[[C]] : tensor<128xf64, #{{.*}}> to memref<?xindex>
+//       CHECK: %[[T:.*]] = sparse_tensor.indices %[[A]] {dimension = 0 : index} : tensor<128xf64, #{{.*}}> to memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = arith.constant 0 : index
-  %0 = sparse_tensor.indices %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.indices %arg0 {dimension = 0 : index} : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -313,51 +309,4 @@ func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #SparseMatrix>,
          tensor<3x4xf64, #SparseMatrix>,
          tensor<4x4xf64, #SparseMatrix> to tensor<9x4xf64, #SparseMatrix>
   return %0 : tensor<9x4xf64, #SparseMatrix>
-}
-
-// -----
-
-
-// CHECK: func @sparse_storage_new(
-//  CHECK-SAME: %[[A0:.*0]]: memref<?xf64>,
-//  CHECK-SAME: %[[A1:.*1]]: memref<?xf64>,
-//  CHECK-SAME: %[[A2:.*]]: f64
-//       CHECK: %[[TMP_0:.*]] = sparse_tensor.storage(%[[A0]], %[[A1]], %[[A2]])
-//       CHECK: return %[[TMP_0]] : tuple<memref<?xf64>, memref<?xf64>, f64>
-func.func @sparse_storage_new(%arg0: memref<?xf64>, %arg1: memref<?xf64>, %arg2: f64) ->
-                               tuple<memref<?xf64>, memref<?xf64>, f64> {
-  %0 = sparse_tensor.storage(%arg0, %arg1, %arg2)
-       : memref<?xf64>, memref<?xf64>, f64 to tuple<memref<?xf64>, memref<?xf64>, f64>
-  return %0 : tuple<memref<?xf64>, memref<?xf64>, f64>
-}
-
-// -----
-
-// CHECK-LABEL: func @sparse_storage_get(
-//  CHECK-SAME:   %[[A0:.*]]: tuple<memref<?xf64>, memref<?xf64>, f64>
-//       CHECK:   %[[TMP0:.*]] = sparse_tensor.storage_get %[[A0]][0] :
-//  CHECK-SAME:     tuple<memref<?xf64>, memref<?xf64>, f64>
-//  CHECK-SAME:     to memref<?xf64>
-//       CHECK:   return %[[TMP0]] : memref<?xf64>
-func.func @sparse_storage_get(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>) -> memref<?xf64> {
-  %0 = sparse_tensor.storage_get %arg0[0]
-       : tuple<memref<?xf64>, memref<?xf64>, f64> to memref<?xf64>
-  return %0 : memref<?xf64>
-}
-
-// -----
-
-// CHECK-LABEL: func @sparse_storage_set(
-//  CHECK-SAME:   %[[A0:.*]]: tuple<memref<?xf64>, memref<?xf64>, f64>,
-//  CHECK-SAME:   %[[A1:.*]]: memref<?xf64>
-//       CHECK:   %[[TMP0:.*]] = sparse_tensor.storage_set %[[A0]][0], %[[A1]] :
-//  CHECK-SAME:     tuple<memref<?xf64>, memref<?xf64>, f64>,
-//  CHECK-SAME:     memref<?xf64>
-//  CHECK-SAME:     to tuple<memref<?xf64>, memref<?xf64>, f64>
-//       CHECK:   return %0 : tuple<memref<?xf64>, memref<?xf64>, f64>
-func.func @sparse_storage_set(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>, %arg1: memref<?xf64>) -> tuple<memref<?xf64>, memref<?xf64>, f64> {
-  %0 = sparse_tensor.storage_set %arg0[0], %arg1
-       : tuple<memref<?xf64>, memref<?xf64>, f64>, memref<?xf64> to
-         tuple<memref<?xf64>, memref<?xf64>, f64>
-  return %0 : tuple<memref<?xf64>, memref<?xf64>, f64>
 }

@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_trivially_move_constructible
-    : public integral_constant<bool, __is_trivially_constructible(_Tp, typename add_rvalue_reference<_Tp>::type)> {};
+    : public integral_constant<bool, __is_trivially_constructible(_Tp, __add_rvalue_reference_t<_Tp>)> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>

@@ -6,10 +6,10 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq %rdx, %rbx
-; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzwl (%rsi), %eax
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    movzwl (%rsi), %eax
+; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0
@@ -29,10 +29,10 @@ define bfloat @add2(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: add2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movd %xmm1, %ecx
+; CHECK-NEXT:    shll $16, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0
@@ -46,27 +46,31 @@ define bfloat @add2(bfloat %a, bfloat %b) nounwind {
 define void @add_double(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; CHECK-LABEL: add_double:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rdx, %r14
 ; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    callq __truncdfbf2@PLT
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movd %xmm0, %ebp
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    callq __truncdfbf2@PLT
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    shll $16, %ebp
+; CHECK-NEXT:    movd %ebp, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
 ; CHECK-NEXT:    movsd %xmm0, (%r14)
-; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %la = load double, ptr %pa
   %a = fptrunc double %la to bfloat
@@ -81,21 +85,27 @@ define void @add_double(ptr %pa, ptr %pb, ptr %pc) nounwind {
 define double @add_double2(double %da, double %db) nounwind {
 ; CHECK-LABEL: add_double2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $16, %rsp
 ; CHECK-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    callq __truncdfbf2@PLT
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movd %xmm0, %ebx
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
 ; CHECK-NEXT:    callq __truncdfbf2@PLT
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    shll $16, %ebx
+; CHECK-NEXT:    movd %ebx, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %a = fptrunc double %da to bfloat
   %b = fptrunc double %db to bfloat
@@ -174,134 +184,135 @@ define <8 x bfloat> @addv(<8 x bfloat> %a, <8 x bfloat> %b) nounwind {
 ; CHECK-LABEL: addv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $32, %rsp
-; CHECK-NEXT:    movq %xmm1, %rax
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    shll $16, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm2
+; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    movq %xmm0, %rcx
-; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    shrq $32, %rdx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm3
-; CHECK-NEXT:    addss %xmm2, %xmm3
-; CHECK-NEXT:    movss %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    shrq $48, %rdx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    shrq $48, %rdx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm3
-; CHECK-NEXT:    addss %xmm2, %xmm3
-; CHECK-NEXT:    movss %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm3
-; CHECK-NEXT:    addss %xmm2, %xmm3
-; CHECK-NEXT:    movss %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
-; CHECK-NEXT:    movd %eax, %xmm2
-; CHECK-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
-; CHECK-NEXT:    movd %ecx, %xmm3
-; CHECK-NEXT:    addss %xmm2, %xmm3
-; CHECK-NEXT:    movss %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; CHECK-NEXT:    movq %xmm1, %rax
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    shll $16, %ecx
-; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    shrq $32, %rax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %xmm1, %rdx
+; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    shrq $32, %rax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    shrq $48, %rax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    shrq $48, %rax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; CHECK-NEXT:    movq %xmm0, %rcx
-; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    shrq $32, %rdx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    addss %xmm1, %xmm0
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    shrq $48, %rdx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    shrq $48, %rdx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm1
-; CHECK-NEXT:    addss %xmm0, %xmm1
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm0
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    movd %edx, %xmm1
-; CHECK-NEXT:    addss %xmm0, %xmm1
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movq %xmm0, %rbx
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    shrq $32, %rax
+; CHECK-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; CHECK-NEXT:    movq %xmm0, %rbp
+; CHECK-NEXT:    movq %rbp, %r15
+; CHECK-NEXT:    shrq $32, %r15
+; CHECK-NEXT:    movq %rbx, %r13
+; CHECK-NEXT:    shrq $48, %r13
+; CHECK-NEXT:    movq %rbp, %r12
+; CHECK-NEXT:    shrq $48, %r12
+; CHECK-NEXT:    movl %ebp, %eax
 ; CHECK-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
 ; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    andl $-65536, %ecx # imm = 0xFFFF0000
-; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    movd %xmm0, %ebx
-; CHECK-NEXT:    shll $16, %ebx
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movzwl %ax, %r14d
-; CHECK-NEXT:    orl %ebx, %r14d
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq __truncsfbf2@PLT
-; CHECK-NEXT:    movd %xmm0, %ebp
+; CHECK-NEXT:    movd %xmm0, %r14d
+; CHECK-NEXT:    shll $16, %r14d
 ; CHECK-NEXT:    shll $16, %ebp
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movd %ebp, %xmm1
+; CHECK-NEXT:    shll $16, %ebx
+; CHECK-NEXT:    movd %ebx, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movzwl %ax, %ebx
-; CHECK-NEXT:    orl %ebp, %ebx
-; CHECK-NEXT:    shlq $32, %rbx
-; CHECK-NEXT:    orq %r14, %rbx
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    orl %r14d, %ebx
+; CHECK-NEXT:    shll $16, %r12d
+; CHECK-NEXT:    movd %r12d, %xmm1
+; CHECK-NEXT:    shll $16, %r13d
+; CHECK-NEXT:    movd %r13d, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    movd %xmm0, %ebp
 ; CHECK-NEXT:    shll $16, %ebp
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    shll $16, %r15d
+; CHECK-NEXT:    movd %r15d, %xmm1
+; CHECK-NEXT:    movq (%rsp), %rax # 8-byte Reload
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movzwl %ax, %r14d
 ; CHECK-NEXT:    orl %ebp, %r14d
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    shlq $32, %r14
+; CHECK-NEXT:    orq %rbx, %r14
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r15 # 8-byte Reload
+; CHECK-NEXT:    movl %r15d, %eax
+; CHECK-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    andl $-65536, %eax # imm = 0xFFFF0000
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    movd %xmm0, %ebp
 ; CHECK-NEXT:    shll $16, %ebp
-; CHECK-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movq %r15, %rax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movzwl %ax, %ebx
+; CHECK-NEXT:    orl %ebp, %ebx
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    movd %xmm0, %ebp
+; CHECK-NEXT:    shll $16, %ebp
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    orl %ebp, %eax
 ; CHECK-NEXT:    shlq $32, %rax
-; CHECK-NEXT:    orq %r14, %rax
+; CHECK-NEXT:    orq %rbx, %rax
 ; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:    movq %rbx, %xmm1
+; CHECK-NEXT:    movq %r14, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %add = fadd <8 x bfloat> %a, %b

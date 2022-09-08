@@ -23,7 +23,6 @@ def Arithmetic_Dialect : Dialect {
   }];
 
   let hasConstantMaterializer = 1;
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 // The predicate indicates the type of the comparison to perform:

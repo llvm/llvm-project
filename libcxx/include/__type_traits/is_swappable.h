@@ -121,8 +121,8 @@ struct _LIBCPP_TEMPLATE_VIS is_swappable
     : public conditional<
         __libcpp_is_referenceable<_Tp>::value,
         is_swappable_with<
-            typename add_lvalue_reference<_Tp>::type,
-            typename add_lvalue_reference<_Tp>::type>,
+            __add_lvalue_reference_t<_Tp>,
+            __add_lvalue_reference_t<_Tp> >,
         false_type
     >::type
 {
@@ -139,8 +139,8 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_swappable
     : public conditional<
         __libcpp_is_referenceable<_Tp>::value,
         is_nothrow_swappable_with<
-            typename add_lvalue_reference<_Tp>::type,
-            typename add_lvalue_reference<_Tp>::type>,
+            __add_lvalue_reference_t<_Tp>,
+            __add_lvalue_reference_t<_Tp> >,
         false_type
     >::type
 {

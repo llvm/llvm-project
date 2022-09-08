@@ -2848,16 +2848,16 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+# if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_format
 #     error "__cpp_lib_format should be defined in c++20"
 #   endif
 #   if __cpp_lib_format != 202106L
 #     error "__cpp_lib_format should have the value 202106L in c++20"
 #   endif
-# else
+# else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
+#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 
@@ -4090,16 +4090,16 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+# if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_format
 #     error "__cpp_lib_format should be defined in c++2b"
 #   endif
 #   if __cpp_lib_format != 202106L
 #     error "__cpp_lib_format should have the value 202106L in c++2b"
 #   endif
-# else
+# else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
+#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 

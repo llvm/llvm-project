@@ -41,7 +41,6 @@ def ShapeDialect : Dialect {
   let useDefaultTypePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 class Shape_Type<string name, string typeMnemonic> : TypeDef<ShapeDialect, name> {

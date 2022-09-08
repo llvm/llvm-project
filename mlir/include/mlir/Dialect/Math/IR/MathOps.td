@@ -258,6 +258,7 @@ def Math_CosOp : Math_FloatUnaryOp<"cos"> {
     %a = math.cos %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -768,6 +769,7 @@ def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
     %a = math.roundeven %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

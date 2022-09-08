@@ -214,13 +214,6 @@ llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
           IsMainFileOnly))
     return ReasonToReject::NonIndexable;
 
-
-  // FIXME: Renaming virtual methods requires to rename all overridens in
-  // subclasses, our index doesn't have this information.
-  if (const auto *S = llvm::dyn_cast<CXXMethodDecl>(&RenameDecl)) {
-    if (S->isVirtual())
-      return ReasonToReject::UnsupportedSymbol;
-  }
   return None;
 }
 
@@ -551,6 +544,26 @@ Range toRange(const SymbolLocation &L) {
   return R;
 }
 
+// Walk down from a virtual method to overriding methods, we rename them as a
+// group. Note that canonicalRenameDecl() ensures we're starting from the base
+// method.
+void insertTransitiveOverrides(SymbolID Base, llvm::DenseSet<SymbolID> &IDs,
+                               const SymbolIndex &Index) {
+  RelationsRequest Req;
+  Req.Predicate = RelationKind::OverriddenBy;
+
+  llvm::DenseSet<SymbolID> Pending = {Base};
+  while (!Pending.empty()) {
+    Req.Subjects = std::move(Pending);
+    Pending.clear();
+
+    Index.relations(Req, [&](const SymbolID &, const Symbol &Override) {
+      if (IDs.insert(Override.ID).second)
+        Pending.insert(Override.ID);
+    });
+  }
+}
+
 // Return all rename occurrences (using the index) outside of the main file,
 // grouped by the absolute file path.
 llvm::Expected<llvm::StringMap<std::vector<Range>>>
@@ -560,6 +573,10 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   trace::Span Tracer("FindOccurrencesOutsideFile");
   RefsRequest RQuest;
   RQuest.IDs.insert(getSymbolID(&RenameDecl));
+
+  if (const auto *MethodDecl = llvm::dyn_cast<CXXMethodDecl>(&RenameDecl))
+    if (MethodDecl->isVirtual())
+      insertTransitiveOverrides(*RQuest.IDs.begin(), RQuest.IDs, Index);
 
   // Absolute file path => rename occurrences in that file.
   llvm::StringMap<std::vector<Range>> AffectedFiles;

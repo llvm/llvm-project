@@ -716,17 +716,23 @@ TEST(SelectionTest, Implicit) {
     int f(S);
     int x = f("^");
   )cpp";
-  auto AST = TestTU::withCode(Annotations(Test).code()).build();
+  auto TU = TestTU::withCode(Annotations(Test).code());
+  // C++14 AST contains some temporaries that C++17 elides.
+  TU.ExtraArgs.push_back("-std=c++17");
+  auto AST = TU.build();
   auto T = makeSelectionTree(Test, AST);
 
   const SelectionTree::Node *Str = T.commonAncestor();
   EXPECT_EQ("StringLiteral", nodeKind(Str)) << "Implicit selected?";
   EXPECT_EQ("ImplicitCastExpr", nodeKind(Str->Parent));
   EXPECT_EQ("CXXConstructExpr", nodeKind(Str->Parent->Parent));
-  EXPECT_EQ(Str, &Str->Parent->Parent->ignoreImplicit())
-      << "Didn't unwrap " << nodeKind(&Str->Parent->Parent->ignoreImplicit());
+  const SelectionTree::Node *ICE = Str->Parent->Parent->Parent;
+  EXPECT_EQ("ImplicitCastExpr", nodeKind(ICE));
+  EXPECT_EQ("CallExpr", nodeKind(ICE->Parent));
+  EXPECT_EQ(Str, &ICE->ignoreImplicit())
+      << "Didn't unwrap " << nodeKind(&ICE->ignoreImplicit());
 
-  EXPECT_EQ("CXXConstructExpr", nodeKind(&Str->outerImplicit()));
+  EXPECT_EQ(ICE, &Str->outerImplicit());
 }
 
 TEST(SelectionTest, CreateAll) {

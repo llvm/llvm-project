@@ -16,10 +16,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "dwarf2.h"
-#include "Registers.hpp"
 #include "DwarfParser.hpp"
+#include "Registers.hpp"
 #include "config.h"
+#include "dwarf2.h"
+#include "libunwind_ext.h"
 
 
 namespace libunwind {

@@ -186,7 +186,7 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
     unsigned StlrOp, unsigned CmpOp, unsigned ExtendImm, unsigned ZeroReg,
     MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
-  DebugLoc DL = MI.getDebugLoc();
+  MIMetadata MIMD(MI);
   const MachineOperand &Dest = MI.getOperand(0);
   Register StatusReg = MI.getOperand(1).getReg();
   bool StatusDead = MI.getOperand(1).isDead();
@@ -212,15 +212,15 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   //     cmp xDest, xDesired
   //     b.ne .Ldone
   if (!StatusDead)
-    BuildMI(LoadCmpBB, DL, TII->get(AArch64::MOVZWi), StatusReg)
+    BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::MOVZWi), StatusReg)
       .addImm(0).addImm(0);
-  BuildMI(LoadCmpBB, DL, TII->get(LdarOp), Dest.getReg())
+  BuildMI(LoadCmpBB, MIMD, TII->get(LdarOp), Dest.getReg())
       .addReg(AddrReg);
-  BuildMI(LoadCmpBB, DL, TII->get(CmpOp), ZeroReg)
+  BuildMI(LoadCmpBB, MIMD, TII->get(CmpOp), ZeroReg)
       .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
       .addReg(DesiredReg)
       .addImm(ExtendImm);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::Bcc))
+  BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::Bcc))
       .addImm(AArch64CC::NE)
       .addMBB(DoneBB)
       .addReg(AArch64::NZCV, RegState::Implicit | RegState::Kill);
@@ -230,10 +230,10 @@ bool AArch64ExpandPseudo::expandCMP_SWAP(
   // .Lstore:
   //     stlxr wStatus, xNew, [xAddr]
   //     cbnz wStatus, .Lloadcmp
-  BuildMI(StoreBB, DL, TII->get(StlrOp), StatusReg)
+  BuildMI(StoreBB, MIMD, TII->get(StlrOp), StatusReg)
       .addReg(NewReg)
       .addReg(AddrReg);
-  BuildMI(StoreBB, DL, TII->get(AArch64::CBNZW))
+  BuildMI(StoreBB, MIMD, TII->get(AArch64::CBNZW))
       .addReg(StatusReg, getKillRegState(StatusDead))
       .addMBB(LoadCmpBB);
   StoreBB->addSuccessor(LoadCmpBB);
@@ -265,7 +265,7 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
-  DebugLoc DL = MI.getDebugLoc();
+  MIMetadata MIMD(MI);
   MachineOperand &DestLo = MI.getOperand(0);
   MachineOperand &DestHi = MI.getOperand(1);
   Register StatusReg = MI.getOperand(2).getReg();
@@ -318,27 +318,27 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   //     cmp xDestLo, xDesiredLo
   //     sbcs xDestHi, xDesiredHi
   //     b.ne .Ldone
-  BuildMI(LoadCmpBB, DL, TII->get(LdxpOp))
+  BuildMI(LoadCmpBB, MIMD, TII->get(LdxpOp))
       .addReg(DestLo.getReg(), RegState::Define)
       .addReg(DestHi.getReg(), RegState::Define)
       .addReg(AddrReg);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+  BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::SUBSXrs), AArch64::XZR)
       .addReg(DestLo.getReg(), getKillRegState(DestLo.isDead()))
       .addReg(DesiredLoReg)
       .addImm(0);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::CSINCWr), StatusReg)
+  BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::CSINCWr), StatusReg)
     .addUse(AArch64::WZR)
     .addUse(AArch64::WZR)
     .addImm(AArch64CC::EQ);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+  BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::SUBSXrs), AArch64::XZR)
       .addReg(DestHi.getReg(), getKillRegState(DestHi.isDead()))
       .addReg(DesiredHiReg)
       .addImm(0);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::CSINCWr), StatusReg)
+  BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::CSINCWr), StatusReg)
       .addUse(StatusReg, RegState::Kill)
       .addUse(StatusReg, RegState::Kill)
       .addImm(AArch64CC::EQ);
-  BuildMI(LoadCmpBB, DL, TII->get(AArch64::CBNZW))
+  BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::CBNZW))
       .addUse(StatusReg, getKillRegState(StatusDead))
       .addMBB(FailBB);
   LoadCmpBB->addSuccessor(FailBB);
@@ -347,25 +347,25 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   // .Lstore:
   //     stlxp wStatus, xNewLo, xNewHi, [xAddr]
   //     cbnz wStatus, .Lloadcmp
-  BuildMI(StoreBB, DL, TII->get(StxpOp), StatusReg)
+  BuildMI(StoreBB, MIMD, TII->get(StxpOp), StatusReg)
       .addReg(NewLoReg)
       .addReg(NewHiReg)
       .addReg(AddrReg);
-  BuildMI(StoreBB, DL, TII->get(AArch64::CBNZW))
+  BuildMI(StoreBB, MIMD, TII->get(AArch64::CBNZW))
       .addReg(StatusReg, getKillRegState(StatusDead))
       .addMBB(LoadCmpBB);
-  BuildMI(StoreBB, DL, TII->get(AArch64::B)).addMBB(DoneBB);
+  BuildMI(StoreBB, MIMD, TII->get(AArch64::B)).addMBB(DoneBB);
   StoreBB->addSuccessor(LoadCmpBB);
   StoreBB->addSuccessor(DoneBB);
 
   // .Lfail:
   //     stlxp wStatus, xDestLo, xDestHi, [xAddr]
   //     cbnz wStatus, .Lloadcmp
-  BuildMI(FailBB, DL, TII->get(StxpOp), StatusReg)
+  BuildMI(FailBB, MIMD, TII->get(StxpOp), StatusReg)
       .addReg(DestLo.getReg())
       .addReg(DestHi.getReg())
       .addReg(AddrReg);
-  BuildMI(FailBB, DL, TII->get(AArch64::CBNZW))
+  BuildMI(FailBB, MIMD, TII->get(AArch64::CBNZW))
       .addReg(StatusReg, getKillRegState(StatusDead))
       .addMBB(LoadCmpBB);
   FailBB->addSuccessor(LoadCmpBB);

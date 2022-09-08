@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
   int res = x[argc * 10];  // BOOOM
   // CHECK: {{READ of size 1 at 0x.* thread T0}}
   // CHECK: {{    #0 0x.* in main .*heap-overflow.cpp:}}[[@LINE-2]]
-  // CHECK: {{0x.* is located 0 bytes to the right of 10-byte region}}
+  // CHECK: {{0x.* is located 0 bytes after 10-byte region}}
   // CHECK: {{allocated by thread T0 here:}}
 
   // CHECK: {{    #0 0x.* in .*malloc}}

@@ -272,6 +272,8 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 #  else
 #    define MEM_TO_SHADOW(mem) \
       (((mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
+#    define SHADOW_TO_MEM(mem) \
+      (((mem) - (ASAN_SHADOW_OFFSET)) << (ASAN_SHADOW_SCALE))
 
 #    define kLowMemBeg 0
 #    define kLowMemEnd (ASAN_SHADOW_OFFSET ? ASAN_SHADOW_OFFSET - 1 : 0)
@@ -374,6 +376,12 @@ static inline uptr MemToShadow(uptr p) {
 static inline bool AddrIsInShadow(uptr a) {
   PROFILE_ASAN_MAPPING();
   return AddrIsInLowShadow(a) || AddrIsInMidShadow(a) || AddrIsInHighShadow(a);
+}
+
+static inline uptr ShadowToMem(uptr p) {
+  PROFILE_ASAN_MAPPING();
+  CHECK(AddrIsInShadow(p));
+  return SHADOW_TO_MEM(p);
 }
 
 static inline bool AddrIsAlignedByGranularity(uptr a) {

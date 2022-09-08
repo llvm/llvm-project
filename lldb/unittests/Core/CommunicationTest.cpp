@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Communication.h"
+#include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Pipe.h"
@@ -37,7 +38,7 @@ static void CommunicationReadTest(bool use_read_thread) {
   ASSERT_THAT_ERROR(a->Write("test", num_bytes).ToError(), llvm::Succeeded());
   ASSERT_EQ(num_bytes, 4U);
 
-  Communication comm("test");
+  ThreadedCommunication comm("test");
   comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(b.release()));
   comm.SetCloseOnEOF(true);
 
@@ -118,7 +119,7 @@ TEST_F(CommunicationTest, SynchronizeWhileClosing) {
   std::unique_ptr<TCPSocket> a, b;
   ASSERT_TRUE(CreateTCPConnectedSockets("localhost", &a, &b));
 
-  Communication comm("test");
+  ThreadedCommunication comm("test");
   comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(b.release()));
   comm.SetCloseOnEOF(true);
   ASSERT_TRUE(comm.StartReadThread());
@@ -146,7 +147,7 @@ TEST_F(CommunicationTest, WriteAll) {
 
   ConnectionFileDescriptor read_conn{pipe.ReleaseReadFileDescriptor(),
                                      /*owns_fd=*/true};
-  Communication write_comm("test");
+  Communication write_comm;
   write_comm.SetConnection(
       std::make_unique<ConnectionFileDescriptor>(write_fd, /*owns_fd=*/true));
 
