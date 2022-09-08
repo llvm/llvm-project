@@ -203,6 +203,7 @@ def ConstBool : ConstOpcode<Bool, ArgBool>;
 // [] -> [Integer]
 def Zero : Opcode {
   let Types = [AluTypeClass];
+  let HasGroup = 1;
 }
 
 // [] -> [Pointer]

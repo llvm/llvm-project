@@ -224,6 +224,14 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E) {
+  if (Optional<PrimType> T = classify(E))
+    return this->emitZero(*T, E);
+
+  return false;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);
