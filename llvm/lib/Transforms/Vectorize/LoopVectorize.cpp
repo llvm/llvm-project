@@ -366,6 +366,10 @@ cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::init(false), cl::Hidden,
     cl::desc("Use dot format instead of plain text when dumping VPlans"));
 
+cl::opt<cl::boolOrDefault> ForceSafeDivisor(
+    "force-widen-divrem-via-safe-divisor", cl::Hidden,
+    cl::desc("Override cost based safe divisor widening for div/rem instructions"));
+
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
 /// element of the corresponding vector type.
@@ -1436,6 +1440,22 @@ public:
     }));
   }
 
+  /// Given costs for both strategies, return true if the scalar predication
+  /// lowering should be used for div/rem.  This incorporates an override
+  /// option so it is not simply a cost comparison.
+  bool isDivRemScalarWithPredication(InstructionCost ScalarCost,
+                                     InstructionCost SafeDivisorCost) const {
+    switch (ForceSafeDivisor) {
+    case cl::BOU_UNSET:
+      return ScalarCost < SafeDivisorCost;
+    case cl::BOU_TRUE:
+      return false;
+    case cl::BOU_FALSE:
+      return true;
+    };
+    llvm_unreachable("impossible case value");
+  }
+
   /// Returns true if \p I is an instruction which requires predication and
   /// for which our chosen predication strategy is scalarization (i.e. we
   /// don't have an alternate strategy such as masking available).
@@ -1446,6 +1466,14 @@ public:
   /// at runtime.  The result is independent of the predication mechanism.
   /// Superset of instructions that return true for isScalarWithPredication.
   bool isPredicatedInst(Instruction *I) const;
+
+  /// Return the costs for our two available strategies for lowering a
+  /// div/rem operation which requires speculating at least one lane.
+  /// First result is for scalarization (will be invalid for scalable
+  /// vectors); second is for the safe-divisor strategy.
+  std::pair<InstructionCost, InstructionCost>
+  getDivRemSpeculationCost(Instruction *I,
+                           ElementCount VF) const;
 
   /// Returns true if \p I is a memory instruction with consecutive memory
   /// access that can be widened.
@@ -4366,12 +4394,13 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
-  case Instruction::URem:
+  case Instruction::URem: {
     // We have the option to use the safe-divisor idiom to avoid predication.
-    // At the moment this is only used for scalable (which legally can't
-    // scalarize), but long term we want to make a cost based decision
-    // for fixed length vectors as well.
-    return !VF.isScalable();
+    // The cost based decision here will always select safe-divisor for
+    // scalable vectors as scalarization isn't legal.
+    const auto [ScalarCost, SafeDivisorCost] = getDivRemSpeculationCost(I, VF);
+    return isDivRemScalarWithPredication(ScalarCost, SafeDivisorCost);
+  }
   }
 }
 
@@ -4413,6 +4442,71 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
     // context sensitive reasoning
     return !isSafeToSpeculativelyExecute(I);
   }
+}
+
+std::pair<InstructionCost, InstructionCost>
+LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
+                                                    ElementCount VF) const {
+  assert(I->getOpcode() == Instruction::UDiv ||
+         I->getOpcode() == Instruction::SDiv ||
+         I->getOpcode() == Instruction::SRem ||
+         I->getOpcode() == Instruction::URem);
+  assert(!isSafeToSpeculativelyExecute(I));
+
+  const TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  // Scalarization isn't legal for scalable vector types
+  InstructionCost ScalarizationCost = InstructionCost::getInvalid();
+  if (!VF.isScalable()) {
+    // Get the scalarization cost and scale this amount by the probability of
+    // executing the predicated block. If the instruction is not predicated,
+    // we fall through to the next case.
+    ScalarizationCost = 0;
+
+    // These instructions have a non-void type, so account for the phi nodes
+    // that we will create. This cost is likely to be zero. The phi node
+    // cost, if any, should be scaled by the block probability because it
+    // models a copy at the end of each predicated block.
+    ScalarizationCost += VF.getKnownMinValue() *
+      TTI.getCFInstrCost(Instruction::PHI, CostKind);
+
+    // The cost of the non-predicated instruction.
+    ScalarizationCost += VF.getKnownMinValue() *
+      TTI.getArithmeticInstrCost(I->getOpcode(), I->getType(), CostKind);
+
+    // The cost of insertelement and extractelement instructions needed for
+    // scalarization.
+    ScalarizationCost += getScalarizationOverhead(I, VF);
+
+    // Scale the cost by the probability of executing the predicated blocks.
+    // This assumes the predicated block for each vector lane is equally
+    // likely.
+    ScalarizationCost = ScalarizationCost / getReciprocalPredBlockProb();
+  }
+  InstructionCost SafeDivisorCost = 0;
+
+  auto *VecTy = ToVectorTy(I->getType(), VF);
+
+  // The cost of the select guard to ensure all lanes are well defined
+  // after we speculate above any internal control flow.
+  SafeDivisorCost += TTI.getCmpSelInstrCost(
+    Instruction::Select, VecTy,
+    ToVectorTy(Type::getInt1Ty(I->getContext()), VF),
+    CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+  // Certain instructions can be cheaper to vectorize if they have a constant
+  // second vector operand. One example of this are shifts on x86.
+  Value *Op2 = I->getOperand(1);
+  auto Op2Info = TTI.getOperandInfo(Op2);
+  if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue && Legal->isUniform(Op2))
+    Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
+
+  SmallVector<const Value *, 4> Operands(I->operand_values());
+  SafeDivisorCost += TTI.getArithmeticInstrCost(
+    I->getOpcode(), VecTy, CostKind,
+    {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+    Op2Info, Operands, I);
+  return {ScalarizationCost, SafeDivisorCost};
 }
 
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
@@ -6998,56 +7092,9 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
   case Instruction::URem:
   case Instruction::SRem:
     if (VF.isVector() && isPredicatedInst(I)) {
-      // If we're speculating lanes, we have two options - scalarization and
-      // guarded widening.
-      if (isScalarWithPredication(I, VF)) {
-        // Get the scalarization cost and scale this amount by the probability of
-        // executing the predicated block. If the instruction is not predicated,
-        // we fall through to the next case.
-        InstructionCost Cost = 0;
-
-        // These instructions have a non-void type, so account for the phi nodes
-        // that we will create. This cost is likely to be zero. The phi node
-        // cost, if any, should be scaled by the block probability because it
-        // models a copy at the end of each predicated block.
-        Cost += VF.getKnownMinValue() *
-          TTI.getCFInstrCost(Instruction::PHI, CostKind);
-
-        // The cost of the non-predicated instruction.
-        Cost += VF.getKnownMinValue() *
-          TTI.getArithmeticInstrCost(I->getOpcode(), RetTy, CostKind);
-
-        // The cost of insertelement and extractelement instructions needed for
-        // scalarization.
-        Cost += getScalarizationOverhead(I, VF);
-
-        // Scale the cost by the probability of executing the predicated blocks.
-        // This assumes the predicated block for each vector lane is equally
-        // likely.
-        return Cost / getReciprocalPredBlockProb();
-      }
-      InstructionCost Cost = 0;
-
-      // The cost of the select guard to ensure all lanes are well defined
-      // after we speculate above any internal control flow.
-      Cost += TTI.getCmpSelInstrCost(
-                 Instruction::Select, ToVectorTy(I->getType(), VF),
-                 ToVectorTy(Type::getInt1Ty(I->getContext()), VF),
-                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
-
-      // Certain instructions can be cheaper to vectorize if they have a constant
-      // second vector operand. One example of this are shifts on x86.
-      Value *Op2 = I->getOperand(1);
-      auto Op2Info = TTI.getOperandInfo(Op2);
-      if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue && Legal->isUniform(Op2))
-        Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
-
-      SmallVector<const Value *, 4> Operands(I->operand_values());
-      Cost += TTI.getArithmeticInstrCost(
-                I->getOpcode(), VectorTy, CostKind,
-                {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-                Op2Info, Operands, I);
-      return Cost;
+      const auto [ScalarCost, SafeDivisorCost] = getDivRemSpeculationCost(I, VF);
+      return isDivRemScalarWithPredication(ScalarCost, SafeDivisorCost) ?
+        ScalarCost : SafeDivisorCost;
     }
     // We've proven all lanes safe to speculate, fall through.
     [[fallthrough]];
