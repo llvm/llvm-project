@@ -2345,7 +2345,49 @@ HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
 
 SDValue
 HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
-  return getVectorShiftByInt(Op, DAG);
+  const SDLoc &dl(Op);
+
+  // First try to convert the shift (by vector) to a shift by a scalar.
+  // If we first split the shift, the shift amount will become 'extract
+  // subvector', and will no longer be recognized as scalar.
+  SDValue Res = Op;
+  if (SDValue S = getVectorShiftByInt(Op, DAG))
+    Res = S;
+
+  MVT ResTy = ty(Res);
+  if (ResTy.getVectorElementType() != MVT::i8)
+    return Res;
+
+  // For shifts of i8, extend the inputs to i16, then truncate back to i8.
+  assert(ResTy.getVectorElementType() == MVT::i8);
+  unsigned Opc = Res.getOpcode();
+  switch (Opc) {
+  case HexagonISD::VASR:
+  case HexagonISD::VLSR:
+  case HexagonISD::VASL:
+    break;
+  default:
+    // No instructions for shifts by non-scalars.
+    return SDValue();
+  }
+
+  SDValue Val = Res.getOperand(0), Amt = Res.getOperand(1);
+
+  auto ShiftPartI8 = [&dl, &DAG, this](unsigned Opc, SDValue V, SDValue A) {
+    MVT Ty = ty(V);
+    MVT ExtTy = MVT::getVectorVT(MVT::i16, Ty.getVectorNumElements());
+    SDValue ExtV = Opc == HexagonISD::VASR ? DAG.getSExtOrTrunc(V, dl, ExtTy)
+                                           : DAG.getZExtOrTrunc(V, dl, ExtTy);
+    SDValue ExtS = DAG.getNode(Opc, dl, ExtTy, {ExtV, A});
+    return DAG.getZExtOrTrunc(ExtS, dl, Ty);
+  };
+
+  if (ResTy.getSizeInBits() == 32)
+    return ShiftPartI8(Opc, Val, Amt);
+
+  auto [LoV, HiV] = opSplit(Val, dl, DAG);
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResTy,
+                     {ShiftPartI8(Opc, LoV, Amt), ShiftPartI8(Opc, HiV, Amt)});
 }
 
 SDValue
