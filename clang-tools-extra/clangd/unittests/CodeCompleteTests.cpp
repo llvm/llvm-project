@@ -2594,7 +2594,8 @@ TEST(CompletionTest, EnableSpeculativeIndexRequest) {
   Opts.Index = &Requests;
 
   auto CompleteAtPoint = [&](StringRef P) {
-    cantFail(runCodeComplete(Server, File, Test.point(P), Opts));
+    auto CCR = cantFail(runCodeComplete(Server, File, Test.point(P), Opts));
+    EXPECT_TRUE(CCR.HasMore);
   };
 
   CompleteAtPoint("1");
