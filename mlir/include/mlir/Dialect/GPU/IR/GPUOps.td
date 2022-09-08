@@ -919,15 +919,19 @@ def GPU_AllocOp : GPU_Op<"alloc", [
     it does not block until the execution has finished on the device). In
     that case, it also returns a !gpu.async.token.
 
+    If the `host_shared` keyword is present, the memory will be allocated in a
+    memory accessible both on host and on device.
+
     Example:
 
     ```mlir
-    %memref, %token = gpu.alloc async [%dep] (%width) : memref<64x?xf32, 1>
+    %memref, %token = gpu.alloc async [%dep] host_shared (%width) : memref<64x?xf32, 1>
     ```
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                   Variadic<Index>:$dynamicSizes, Variadic<Index>:$symbolOperands);
+                   Variadic<Index>:$dynamicSizes, Variadic<Index>:$symbolOperands,
+                   UnitAttr:$hostShared);
   let results = (outs Res<AnyMemRef, "", [MemAlloc]>:$memref,
                  Optional<GPU_AsyncToken>:$asyncToken);
 
@@ -936,7 +940,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
   }];
 
   let assemblyFormat = [{
-    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) ` `
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) (` ` `host_shared` $hostShared^)? ` `
     `(` $dynamicSizes `)` (`` `[` $symbolOperands^ `]`)? attr-dict `:` type($memref)
   }];
 
