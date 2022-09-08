@@ -1337,9 +1337,6 @@ public:
   /// behavior.
   const char *const_data() const;
 
-  /// Write changes to disk and synchronize. Equivalent to POSIX msync.
-  std::error_code sync() const;
-
   /// \returns The minimum alignment offset must be.
   static int alignment();
 };
