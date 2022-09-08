@@ -575,10 +575,7 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
   Diag(Loc, diag::warn_nullability_lost) << SrcType << DstType;
 }
 
-void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr* E) {
-  if (Diags.isIgnored(diag::warn_zero_as_null_pointer_constant,
-                      E->getBeginLoc()))
-    return;
+void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E) {
   // nullptr only exists from C++11 on, so don't warn on its absence earlier.
   if (!getLangOpts().CPlusPlus11)
     return;
@@ -586,6 +583,10 @@ void Sema::diagnoseZeroToNullptrConversion(CastKind Kind, const Expr* E) {
   if (Kind != CK_NullToPointer && Kind != CK_NullToMemberPointer)
     return;
   if (E->IgnoreParenImpCasts()->getType()->isNullPtrType())
+    return;
+
+  if (Diags.isIgnored(diag::warn_zero_as_null_pointer_constant,
+                      E->getBeginLoc()))
     return;
 
   // Don't diagnose the conversion from a 0 literal to a null pointer argument

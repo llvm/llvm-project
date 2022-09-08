@@ -3280,15 +3280,20 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   if (!WO)
     return nullptr;
 
-  // extractvalue (any_mul_with_overflow X, -1), 0 --> -X
   Intrinsic::ID OvID = WO->getIntrinsicID();
   const APInt *C = nullptr;
   if (match(WO->getRHS(), m_APIntAllowUndef(C))) {
-    if (*EV.idx_begin() == 0 &&
-        (OvID == Intrinsic::smul_with_overflow ||
-         OvID == Intrinsic::umul_with_overflow) &&
-        C->isAllOnes()) {
-      return BinaryOperator::CreateNeg(WO->getArgOperand(0));
+    if (*EV.idx_begin() == 0 && (OvID == Intrinsic::smul_with_overflow ||
+                                 OvID == Intrinsic::umul_with_overflow)) {
+      // extractvalue (any_mul_with_overflow X, -1), 0 --> -X
+      if (C->isAllOnes())
+        return BinaryOperator::CreateNeg(WO->getLHS());
+      // extractvalue (any_mul_with_overflow X, 2^n), 0 --> X << n
+      if (C->isPowerOf2()) {
+        return BinaryOperator::CreateShl(
+            WO->getLHS(),
+            ConstantInt::get(WO->getLHS()->getType(), C->logBase2()));
+      }
     }
   }
 

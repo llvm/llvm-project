@@ -91,7 +91,7 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 }
 
 def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
-    Arguments<(ins AnySparseTensor:$tensor, Index:$dim)>,
+    Arguments<(ins AnySparseTensor:$tensor, IndexAttr:$dimension)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts pointers array at given dimension from a tensor";
   let description = [{
@@ -106,17 +106,16 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
     Example:
 
     ```mlir
-    %1 = sparse_tensor.pointers %0, %c1
+    %1 = sparse_tensor.pointers %0 { dimension = 1 : index }
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
-  let assemblyFormat = "$tensor `,` $dim attr-dict `:` type($tensor)"
-      " `to` type($result)";
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
   let hasVerifier = 1;
 }
 
 def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
-    Arguments<(ins AnySparseTensor:$tensor, Index:$dim)>,
+    Arguments<(ins AnySparseTensor:$tensor, IndexAttr:$dimension)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts indices array at given dimension from a tensor";
   let description = [{
@@ -131,12 +130,11 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
     Example:
 
     ```mlir
-    %1 = sparse_tensor.indices %0, %c1
+    %1 = sparse_tensor.indices %0 { dimension = 1 : index }
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
-  let assemblyFormat = "$tensor `,` $dim attr-dict `:` type($tensor)"
-      " `to` type($result)";
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
   let hasVerifier = 1;
 }
 
@@ -164,8 +162,7 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
 }
 
 def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", []>,
-    Arguments<(ins Variadic<AnyRankedTensor>:$inputs,
-                   IndexAttr:$dimension)>,
+    Arguments<(ins Variadic<AnyRankedTensor>:$inputs, IndexAttr:$dimension)>,
     Results<(outs AnyRankedTensor:$result)> {
 
   let summary = "Concatenates a list of tensors into a single tensor.";
@@ -621,81 +618,6 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
   let assemblyFormat = [{
         $result attr-dict `:` type($result)
   }];
-  let hasVerifier = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// Sparse Tensor Storage Operation. These operations are used internally by
-// sparse tensor codegen to progressively lower sparse tensors.
-//===----------------------------------------------------------------------===//
-
-def SparseTensor_StorageOp : SparseTensor_Op<"storage", []>,
-    Arguments<(ins Variadic<AnyType>:$inputs)>,
-    Results<(outs AnyTuple:$result)> {
-  let summary = "Pack a list of value into one sparse tensor storage value";
-  let description = [{
-     Pack a list of value into one sparse tensor storage value (represented as
-     a tuple) at the given index.
-
-     The result tuple elements' type should match the corresponding type in the
-     input array.
-
-     Example:
-
-     ```mlir
-     %0 = sparse_tensor.storage(%1, %2): memref<?xf64>, memref<?xf64>
-                                to tuple<memref<?xf64>, memref<?xf64>>
-     ```
-   }];
-
-  let assemblyFormat = " attr-dict `(` $inputs `)``:` type($inputs) `to` type($result)";
-  let hasVerifier = 1;
-}
-
-def SparseTensor_StorageGetOp : SparseTensor_Op<"storage_get", []>,
-    Arguments<(ins AnyTuple:$storage,
-                   IndexAttr:$idx)>,
-    Results<(outs AnyType:$result)> {
-  let summary = "Get the data stored in the sparse tensor storage at the given index";
-  let description = [{
-     Get the data stored in the sparse tensor storage (represented as a tuple)
-     at the given index.
-
-     The result type should match the corresponding element type in the tuple.
-
-     Example:
-
-     ```mlir
-     %0 = sparse_tensor.storage_get %arg0[0] : tuple<memref<?xf64>, memref<?xf64>, f64> to memref<?xf64>
-     ```
-   }];
-
-  let assemblyFormat = " $storage attr-dict `[`$idx`]` `:` type($storage) `to` type($result)";
-  let hasVerifier = 1;
-}
-
-def SparseTensor_StorageSetOp : SparseTensor_Op<"storage_set", []>,
-    Arguments<(ins AnyTuple:$storage,
-                   AnyType:$value,
-                   IndexAttr:$idx)>,
-    Results<(outs AnyTuple:$result)> {
-  let summary = "Set the data stored in the sparse tensor storage at given index";
-  let description = [{
-     Set the data stored in the sparse tensor storage (represented as a tuple)
-     at the given index. Return a new SSA value with the corresponding element
-     updated (others remain unchanged).
-
-     The result type should match the original tuple type with only the updated
-     element type changed accordingly.
-
-     Example:
-
-     ```mlir
-     %0 = sparse_tensor.storage_set %arg0, %arg1 at 0 : tuple<memref<?xf64>, memref<?xf64>, f64>, memref<?xf64> to tuple<memref<?xf64>, memref<?xf64>, f64>
-     ```
-   }];
-
-  let assemblyFormat = " $storage attr-dict `[`$idx`]``,` $value `:` type($storage) `,` type($value) `to` type($result)";
   let hasVerifier = 1;
 }
 

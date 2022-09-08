@@ -454,6 +454,13 @@ def HasStdExtZicbop : Predicate<"Subtarget->hasStdExtZicbop()">,
                                 AssemblerPredicate<(all_of FeatureStdExtZicbop),
                                 "'Zicbop' (Cache-Block Prefetch Instructions)">;
 
+def FeatureStdExtZtso
+    : SubtargetFeature<"experimental-ztso", "HasStdExtZtso", "true",
+                       "'Ztso' (Memory Model - Total Store Order)">;
+def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZTso()">,
+                           AssemblerPredicate<(all_of FeatureStdExtZtso),
+                           "'Ztso' (Memory Model - Total Store Order)">;
+
 // Feature32Bit exists to mark CPUs that support RV32 to distinquish them from
 // tuning CPU names.
 def Feature32Bit

@@ -91,6 +91,8 @@ Bug Fixes
   `Issue 57431 <https://github.com/llvm/llvm-project/issues/57431>`_
 - Fix a crash where we attempt to define a deleted destructor. This fixes
   `Issue 57516 <https://github.com/llvm/llvm-project/issues/57516>`_
+- Fix ``__builtin_assume_aligned`` crash when the 1st arg is array type. This fixes
+  `Issue 57169 <https://github.com/llvm/llvm-project/issues/57169>`_
 
 
 Improvements to Clang's diagnostics
@@ -198,6 +200,10 @@ C++ Language Changes in Clang
 
 - Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=15`` option
   to get the old partial ordering behavior regarding packs.
+- Clang's default C++/ObjC++ standard is now ``gnu++17`` instead of ``gnu++14``.
+  This means Clang will by default accept code using features from C++17 and
+  conforming GNU extensions. Projects incompatible with C++17 can add
+  ``-std=gnu++14`` to their build settings to restore the previous behaviour.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

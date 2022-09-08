@@ -131,6 +131,9 @@ if config.clang_default_pie_on_linux:
 if config.clang_enable_opaque_pointers:
     config.available_features.add('enable-opaque-pointers')
 
+if config.clang_default_std_cxx != '':
+    config.available_features.add('default-std-cxx')
+
 # Set available features we allow tests to conditionalize on.
 #
 if config.clang_default_cxx_stdlib != '':

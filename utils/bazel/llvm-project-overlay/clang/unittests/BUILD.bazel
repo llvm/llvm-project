@@ -256,6 +256,7 @@ cc_test(
         "//clang:sema",
         "//clang:serialization",
         "//llvm:Support",
+        "//llvm:TestingSupport",
         "//llvm:gmock",
         "//llvm:gtest",
         "//llvm:gtest_main",
