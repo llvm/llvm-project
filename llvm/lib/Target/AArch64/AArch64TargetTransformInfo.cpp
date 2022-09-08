@@ -2969,10 +2969,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         {TTI::SK_PermuteSingleSrc, MVT::v2f64, 1}, // mov.
         {TTI::SK_PermuteSingleSrc, MVT::v4i16, 3}, // perfectshuffle worst case.
         {TTI::SK_PermuteSingleSrc, MVT::v4f16, 3}, // perfectshuffle worst case.
-        {TTI::SK_PermuteSingleSrc, MVT::v4bf16,
-         3},                                       // perfectshuffle worst case.
-        {TTI::SK_PermuteSingleSrc, MVT::v8i16, 8}, // constpool + load + tbl
-        {TTI::SK_PermuteSingleSrc, MVT::v8f16, 8}, // constpool + load + tbl
+        {TTI::SK_PermuteSingleSrc, MVT::v4bf16, 3}, // same
+        {TTI::SK_PermuteSingleSrc, MVT::v8i16, 8},  // constpool + load + tbl
+        {TTI::SK_PermuteSingleSrc, MVT::v8f16, 8},  // constpool + load + tbl
         {TTI::SK_PermuteSingleSrc, MVT::v8bf16, 8}, // constpool + load + tbl
         {TTI::SK_PermuteSingleSrc, MVT::v8i8, 8},   // constpool + load + tbl
         {TTI::SK_PermuteSingleSrc, MVT::v16i8, 8},  // constpool + load + tbl
