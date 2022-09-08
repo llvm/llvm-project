@@ -89,6 +89,7 @@ inline Format formatFor(DebugCompressionType Type) {
   case DebugCompressionType::Zstd:
     return Format::Zstd;
   }
+  llvm_unreachable("invalid type");
 }
 
 struct Params {
