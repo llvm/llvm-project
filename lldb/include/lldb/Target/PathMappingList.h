@@ -9,10 +9,11 @@
 #ifndef LLDB_TARGET_PATHMAPPINGLIST_H
 #define LLDB_TARGET_PATHMAPPINGLIST_H
 
-#include <map>
-#include <vector>
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/Support/JSON.h"
+#include <map>
+#include <vector>
 
 namespace lldb_private {
 
@@ -40,6 +41,8 @@ public:
 
   // By default, dump all pairs.
   void Dump(Stream *s, int pair_index = -1);
+
+  llvm::json::Value ToJSON();
 
   bool IsEmpty() const { return m_pairs.empty(); }
 
