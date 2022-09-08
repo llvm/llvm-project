@@ -102,6 +102,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  void addPreEmitPass2() override;
 };
 } // end namespace
 
@@ -120,4 +121,11 @@ bool LoongArchPassConfig::addInstSelector() {
   addPass(createLoongArchISelDag(getLoongArchTargetMachine()));
 
   return false;
+}
+
+void LoongArchPassConfig::addPreEmitPass2() {
+  // Schedule the expansion of AtomicPseudos at the last possible moment,
+  // avoiding the possibility for other passes to break the requirements for
+  // forward progress in the LL/SC block.
+  addPass(createLoongArchExpandAtomicPseudoPass());
 }

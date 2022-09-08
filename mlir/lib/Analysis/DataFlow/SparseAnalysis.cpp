@@ -117,9 +117,6 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
   for (Value operand : op->getOperands()) {
     AbstractSparseLattice *operandLattice = getLatticeElement(operand);
     operandLattice->useDefSubscribe(this);
-    // If any of the operand states are not initialized, bail out.
-    if (operandLattice->isUninitialized())
-      return;
     operandLattices.push_back(operandLattice);
   }
 

@@ -285,6 +285,12 @@ def int_wasm_dot_i8x16_i7x16_add_signed:
             [llvm_v16i8_ty, llvm_v16i8_ty, llvm_v4i32_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
+def int_wasm_relaxed_dot_bf16x8_add_f32:
+  Intrinsic<[llvm_v4f32_ty],
+            [llvm_v8i16_ty, llvm_v8i16_ty, llvm_v4f32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+
 //===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics
 //===----------------------------------------------------------------------===//

@@ -42,7 +42,7 @@ def ArgSint64 : ArgType { let Name = "int64_t"; }
 def ArgUint64 : ArgType { let Name = "uint64_t"; }
 def ArgBool : ArgType { let Name = "bool"; }
 
-def ArgFunction : ArgType { let Name = "Function *"; }
+def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgRecord : ArgType { let Name = "Record *"; }
 
 def ArgSema : ArgType { let Name = "const fltSemantics *"; }
@@ -153,6 +153,22 @@ def RetValue : Opcode {
 // [] -> EXIT
 def NoRet : Opcode {}
 
+
+def Call : Opcode {
+  let Args = [ArgFunction];
+  let Types = [AllTypeClass];
+  let ChangesPC = 1;
+  let HasCustomEval = 1;
+  let HasGroup = 1;
+}
+
+def CallVoid : Opcode {
+  let Args = [ArgFunction];
+  let Types = [];
+  let ChangesPC = 1;
+  let HasCustomEval = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Frame management
 //===----------------------------------------------------------------------===//
@@ -187,6 +203,7 @@ def ConstBool : ConstOpcode<Bool, ArgBool>;
 // [] -> [Integer]
 def Zero : Opcode {
   let Types = [AluTypeClass];
+  let HasGroup = 1;
 }
 
 // [] -> [Pointer]
@@ -409,12 +426,16 @@ def Neg: Opcode {
 //===----------------------------------------------------------------------===//
 // TODO: Expand this to handle casts between more types.
 
-def Sint32TypeClass : TypeClass {
-  let Types = [Sint32];
+def FromCastTypeClass : TypeClass {
+  let Types = [Uint32, Sint32, Bool];
+}
+
+def ToCastTypeClass : TypeClass {
+  let Types = [Uint32, Sint32, Bool];
 }
 
 def Cast: Opcode {
-  let Types = [BoolTypeClass, Sint32TypeClass];
+  let Types = [FromCastTypeClass, ToCastTypeClass];
   let HasGroup = 1;
 }
 

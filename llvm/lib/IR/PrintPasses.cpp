@@ -146,6 +146,8 @@ bool llvm::isPassInPrintList(StringRef PassName) {
   return Set.empty() || Set.count(std::string(PassName));
 }
 
+bool llvm::isFilterPassesEmpty() { return FilterPasses.empty(); }
+
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
                                                         PrintFuncsList.end());

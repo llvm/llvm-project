@@ -13,7 +13,7 @@
 // UNSUPPORTED: gcc
 
 // Clang does not support the -fexperimental-library flag before LLVM 15.0
-// UNSUPPORTED: clang-13, clang-14
+// UNSUPPORTED: clang-14
 
 // AppleClang does not support the -fexperimental-library flag yet
 // UNSUPPORTED: apple-clang-13, apple-clang-14.0

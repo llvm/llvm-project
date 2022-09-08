@@ -98,9 +98,7 @@ func.func @scf_while_non_equiv_condition_and_body(%A: tensor<5xi1>,
   ^bb0(%b0: tensor<5xi1>, %b1: tensor<5xi1>):
     // CHECK: } do {
     // CHECK: ^bb0(%[[b0:.*]]: tensor<5xi1>, %[[b1:.*]]: tensor<5xi1>):
-    // CHECK-DAG: %[[yield2:.*]] = bufferization.alloc_tensor() copy(%[[b1]]) {bufferization.escape = [true]} : tensor<5xi1>
-    // CHECK-DAG: %[[yield3:.*]] = bufferization.alloc_tensor() copy(%[[b0]]) {bufferization.escape = [true]} : tensor<5xi1>
-    // CHECK: scf.yield %[[yield2]], %[[yield3]]
+    // CHECK: scf.yield %[[b1]], %[[b0]]
     // CHECK: }
     scf.yield %b1, %b0 : tensor<5xi1>, tensor<5xi1>
   }

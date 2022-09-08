@@ -86,7 +86,7 @@ module @operation_infer_types_from_replaceop {
     %root = operation "foo.op" -> (%rootType, %rootType1 : !pdl.type, !pdl.type)
     rewrite %root {
       %newType1 = type
-      %newOp = operation "foo.op" -> (%rootType, %newType1 : !pdl.type, !pdl.type)
+      %newOp = operation "foo.op"
       replace %root with %newOp
     }
   }

@@ -38,9 +38,6 @@ class Executable : public AnalysisState {
 public:
   using AnalysisState::AnalysisState;
 
-  /// The state is initialized by default.
-  bool isUninitialized() const override { return false; }
-
   /// Set the state of the program point to live.
   ChangeResult setToLive();
 
@@ -94,9 +91,6 @@ private:
 class PredecessorState : public AnalysisState {
 public:
   using AnalysisState::AnalysisState;
-
-  /// The state is initialized by default.
-  bool isUninitialized() const override { return false; }
 
   /// Print the known predecessors.
   void print(raw_ostream &os) const override;

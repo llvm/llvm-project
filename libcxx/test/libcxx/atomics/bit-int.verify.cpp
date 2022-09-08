@@ -13,7 +13,6 @@
 // See https://reviews.llvm.org/D84049 for details.
 
 // UNSUPPORTED: apple-clang-13, apple-clang-14
-// UNSUPPORTED: clang-13
 
 // UNSUPPORTED: c++03
 

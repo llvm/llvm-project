@@ -883,6 +883,38 @@ exit:
   ret void
 }
 
+; TODO: The store can be promoted, as sret memory is writable.
+define void @sret_cond_store(i32* sret(i32) noalias %ptr) {
+; CHECK-LABEL: @sret_cond_store(
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[V_INC1:%.*]] = phi i32 [ [[V_INC:%.*]], [[LOOP_LATCH:%.*]] ], [ [[PTR_PROMOTED]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[V_INC1]], 10
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[V_INC]] = add i32 [[V_INC1]], 1
+; CHECK-NEXT:    store i32 [[V_INC]], i32* [[PTR]], align 4
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop
+
+loop:
+  %v = load i32, i32* %ptr
+  %c = icmp ult i32 %v, 10
+  br i1 %c, label %loop.latch, label %exit
+
+loop.latch:
+  %v.inc = add i32 %v, 1
+  store i32 %v.inc, i32* %ptr
+  br label %loop
+
+exit:
+  ret void
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}

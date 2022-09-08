@@ -27,6 +27,52 @@
 using namespace llvm;
 using namespace llvm::compression;
 
+const char *compression::getReasonIfUnsupported(compression::Format F) {
+  switch (F) {
+  case compression::Format::Zlib:
+    if (zlib::isAvailable())
+      return nullptr;
+    return "LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at "
+           "build time";
+  case compression::Format::Zstd:
+    if (zstd::isAvailable())
+      return nullptr;
+    return "LLVM was not built with LLVM_ENABLE_ZSTD or did not find zstd at "
+           "build time";
+  }
+  llvm_unreachable("");
+}
+
+void compression::compress(Params P, ArrayRef<uint8_t> Input,
+                           SmallVectorImpl<uint8_t> &Output) {
+  switch (P.format) {
+  case compression::Format::Zlib:
+    zlib::compress(Input, Output, P.level);
+    break;
+  case compression::Format::Zstd:
+    zstd::compress(Input, Output, P.level);
+    break;
+  }
+}
+
+Error compression::decompress(compression::Format F, ArrayRef<uint8_t> Input,
+                              SmallVectorImpl<uint8_t> &Output,
+                              size_t UncompressedSize) {
+  switch (F) {
+  case compression::Format::Zlib:
+    return zlib::uncompress(Input, Output, UncompressedSize);
+  case compression::Format::Zstd:
+    return zstd::uncompress(Input, Output, UncompressedSize);
+  }
+  llvm_unreachable("");
+}
+
+Error compression::decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+                              SmallVectorImpl<uint8_t> &Output,
+                              size_t UncompressedSize) {
+  return decompress(formatFor(T), Input, Output, UncompressedSize);
+}
+
 #if LLVM_ENABLE_ZLIB
 
 static StringRef convertZlibCodeToString(int Code) {

@@ -38,11 +38,11 @@ entry:
 attributes #3 = { "target-cpu"="z14" "target-features"="+vector" "use-soft-float"="false" }
 define <2 x double> @fun3(<2 x double>* %A) #3 {
 ; CHECK-LABEL:     fun3:
-; DEFAULT:         vl %v24, 0(%r2), 4
+; DEFAULT:         vl %v24, 0(%r2), 3
 ; SOFT-FLOAT:      lg %r0, 0(%r2)
 ; SOFT-FLOAT-NEXT: lg %r3, 8(%r2)
 ; SOFT-FLOAT-NEXT: lgr %r2, %r0
-; NO-SOFT-FL:      vl %v24, 0(%r2), 4
+; NO-SOFT-FL:      vl %v24, 0(%r2), 3
 ; NO-VECTOR:       ld %f0, 0(%r2)
 ; NO-VECTOR-NEXT:  ld %f2, 8(%r2)
 ; CHECK-NEXT:      br %r14
@@ -111,11 +111,11 @@ entry:
 attributes #7 = { "target-cpu"="zEC12" "target-features"="+vector" "use-soft-float"="false" }
 define <2 x double> @fun7(<2 x double>* %A) #7 {
 ; CHECK-LABEL:     fun7:
-; DEFAULT:         vl %v24, 0(%r2), 4
+; DEFAULT:         vl %v24, 0(%r2), 3
 ; SOFT-FLOAT:      lg %r0, 0(%r2)
 ; SOFT-FLOAT-NEXT: lg %r3, 8(%r2)
 ; SOFT-FLOAT-NEXT: lgr %r2, %r0
-; NO-SOFT-FL:      vl %v24, 0(%r2), 4
+; NO-SOFT-FL:      vl %v24, 0(%r2), 3
 ; NO-VECTOR:       ld %f0, 0(%r2)
 ; NO-VECTOR-NEXT:  ld %f2, 8(%r2)
 ; CHECK-NEXT:      br %r14

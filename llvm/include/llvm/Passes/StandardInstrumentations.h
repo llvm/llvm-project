@@ -177,9 +177,9 @@ public:
 
   // Determine if this pass/IR is interesting and if so, save the IR
   // otherwise it is left on the stack without data.
-  void saveIRBeforePass(Any IR, StringRef PassID);
+  void saveIRBeforePass(Any IR, StringRef PassID, StringRef PassName);
   // Compare the IR from before the pass after the pass.
-  void handleIRAfterPass(Any IR, StringRef PassID);
+  void handleIRAfterPass(Any IR, StringRef PassID, StringRef PassName);
   // Handle the situation where a pass is invalidated.
   void handleInvalidatedPass(StringRef PassID);
 

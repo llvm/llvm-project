@@ -5273,8 +5273,8 @@ def record_command_line : Separate<["-"], "record-command-line">,
   HelpText<"The string to embed in the .LLVM.command.line section.">,
   MarshallingInfoString<CodeGenOpts<"RecordCommandLine">>;
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
-    HelpText<"DWARF debug sections compression type">, Values<"none,zlib">,
-    NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Z"]>,
+    HelpText<"DWARF debug sections compression type">, Values<"none,zlib,zstd">,
+    NormalizedValuesScope<"llvm::DebugCompressionType">, NormalizedValues<["None", "Z", "Zstd"]>,
     MarshallingInfoEnum<CodeGenOpts<"CompressDebugSections">, "None">;
 def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
   Alias<compress_debug_sections_EQ>, AliasArgs<["zlib"]>;

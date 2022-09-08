@@ -721,6 +721,9 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// 1) Pops the value from the stack
+/// 2) Peeks a pointer and gets its index \Idx
+/// 3) Sets the value on the pointer, leaving the pointer on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
@@ -732,6 +735,7 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   return true;
 }
 
+/// The same as InitElem, but pops the pointer as well.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();

@@ -334,14 +334,15 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
       } else {
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
-        Descriptor *Desc =
+        Descriptor *ElemDesc =
             createDescriptor(D, ElemTy.getTypePtr(), IsConst, IsTemporary);
-        if (!Desc)
+        if (!ElemDesc)
           return nullptr;
-        InterpSize ElemSize = Desc->getAllocSize() + sizeof(InlineDescriptor);
+        InterpSize ElemSize =
+            ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};
-        return allocateDescriptor(D, Desc, NumElems, IsConst, IsTemporary,
+        return allocateDescriptor(D, ElemDesc, NumElems, IsConst, IsTemporary,
                                   IsMutable);
       }
     }
