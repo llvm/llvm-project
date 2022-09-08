@@ -1463,33 +1463,6 @@ TEST_F(FileSystemTest, FileMapping) {
   ASSERT_NO_ERROR(fs::remove(TempPath));
 }
 
-TEST_F(FileSystemTest, FileMappingSync) {
-  // Create a temp file.
-  int FD;
-  SmallString<64> TempPath;
-  ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
-  StringRef Content("hello there");
-  ASSERT_NO_ERROR(fs::resize_file_before_mapping_readwrite(FD, Content.size()));
-
-  {
-    // Map in the file and write some content.
-    std::error_code EC;
-    fs::mapped_file_region mfr(fs::convertFDToNativeFile(FD),
-                               fs::mapped_file_region::readwrite,
-                               Content.size(), 0, EC);
-    ASSERT_NO_ERROR(EC);
-    ASSERT_EQ(close(FD), 0);
-    std::copy(Content.begin(), Content.end(), mfr.data());
-
-    // Synchronize and check the contents before unmapping.
-    mfr.sync();
-    auto Buffer = MemoryBuffer::getFile(TempPath);
-    ASSERT_TRUE((bool)Buffer);
-    ASSERT_EQ(Content, Buffer->get()->getBuffer());
-  }
-  ASSERT_NO_ERROR(fs::remove(TempPath));
-}
-
 TEST(Support, NormalizePath) {
   //                           Input,        Expected Win, Expected Posix
   using TestTuple = std::tuple<const char *, const char *, const char *>;
