@@ -21,15 +21,6 @@
 
 namespace mlir {
 
-/// Auxiliary range data structure to unpack the offset, size and stride
-/// operands into a list of triples. Such a list can be more convenient to
-/// manipulate.
-struct Range {
-  OpFoldResult offset;
-  OpFoldResult size;
-  OpFoldResult stride;
-};
-
 /// Return a vector of OpFoldResults given the special value
 /// that indicates whether of the value is dynamic or not.
 SmallVector<OpFoldResult, 4> getMixedValues(ArrayAttr staticValues,
