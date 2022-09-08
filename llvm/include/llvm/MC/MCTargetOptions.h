@@ -10,6 +10,7 @@
 #define LLVM_MC_MCTARGETOPTIONS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compression.h"
 #include <string>
 #include <vector>
 
@@ -23,11 +24,6 @@ enum class ExceptionHandling {
   WinEH,    ///< Windows Exception Handling
   Wasm,     ///< WebAssembly Exception Handling
   AIX,      ///< AIX Exception Handling
-};
-
-enum class DebugCompressionType {
-  None, ///< No compression
-  Z,    ///< zlib style complession
 };
 
 enum class EmitDwarfUnwindType {
