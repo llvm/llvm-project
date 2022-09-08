@@ -1099,6 +1099,16 @@ class PseudoMaskedAM
 
 def PseudoMaskedAtomicSwap32 : PseudoMaskedAM;
 
+class PseudoAM : Pseudo<(outs GPR:$res, GPR:$scratch),
+                        (ins GPR:$addr, GPR:$incr), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoAtomicSwap32 : PseudoAM;
+
 class AtomicPat<Intrinsic intrin, Pseudo AMInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
           (AMInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
@@ -1111,6 +1121,13 @@ def : Pat<(atomic_swap_32 GPR:$addr, GPR:$incr),
 def : Pat<(atomic_swap_64 GPR:$addr, GPR:$incr),
           (AMSWAP_DB_D GPR:$incr, GPR:$addr)>;
 } // Predicates = [IsLA64]
+
+let Predicates = [IsLA32] in {
+def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i32,
+                PseudoMaskedAtomicSwap32>;
+def : Pat<(atomic_swap_32 GPR:$addr, GPR:$incr),
+          (PseudoAtomicSwap32 GPR:$incr, GPR:$addr)>;
+} // Predicates = [IsLA32]
 
 /// Other pseudo-instructions
 

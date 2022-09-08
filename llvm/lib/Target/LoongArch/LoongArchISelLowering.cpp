@@ -1784,6 +1784,26 @@ bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
   return Y.getValueType().isScalarInteger() && !isa<ConstantSDNode>(Y);
 }
 
+bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
+                                                 const CallInst &I,
+                                                 MachineFunction &MF,
+                                                 unsigned Intrinsic) const {
+  switch (Intrinsic) {
+  default:
+    return false;
+  case Intrinsic::loongarch_masked_atomicrmw_xchg_i32:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = Align(4);
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+                 MachineMemOperand::MOVolatile;
+    return true;
+    // TODO: Add more Intrinsics later.
+  }
+}
+
 TargetLowering::AtomicExpansionKind
 LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // TODO: Add more AtomicRMWInst that needs to be extended.
@@ -1802,6 +1822,16 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
       llvm_unreachable("Unexpected AtomicRMW BinOp");
     case AtomicRMWInst::Xchg:
       return Intrinsic::loongarch_masked_atomicrmw_xchg_i64;
+      // TODO: support other AtomicRMWInst.
+    }
+  }
+
+  if (GRLen == 32) {
+    switch (BinOp) {
+    default:
+      llvm_unreachable("Unexpected AtomicRMW BinOp");
+    case AtomicRMWInst::Xchg:
+      return Intrinsic::loongarch_masked_atomicrmw_xchg_i32;
       // TODO: support other AtomicRMWInst.
     }
   }
