@@ -114,7 +114,7 @@
 "`P1207R4 <https://wg21.link/P1207R4>`__","LWG","Movability of Single-pass Iterators","Cologne","|Complete|","15.0"
 "`P1208R6 <https://wg21.link/P1208R6>`__","LWG","Adopt source_location for C++20","Cologne","",""
 "`P1355R2 <https://wg21.link/P1355R2>`__","LWG","Exposing a narrow contract for ceil2","Cologne","|Complete|","9.0"
-"`P1361R2 <https://wg21.link/P1361R2>`__","LWG","Integration of chrono with text formatting","Cologne","",""
+"`P1361R2 <https://wg21.link/P1361R2>`__","LWG","Integration of chrono with text formatting","Cologne","|In Progress|",""
 "`P1423R3 <https://wg21.link/P1423R3>`__","LWG","char8_t backward compatibility remediation","Cologne","|Complete|","15.0"
 "`P1424R1 <https://wg21.link/P1424R1>`__","LWG","'constexpr' feature macro concerns","Cologne","Superseded by `P1902 <https://wg21.link/P1902>`__",""
 "`P1466R3 <https://wg21.link/P1466R3>`__","LWG","Miscellaneous minor fixes for chrono","Cologne","",""

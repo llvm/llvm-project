@@ -374,8 +374,8 @@ bool transform::isHandleConsumed(Value handle,
   auto iface = cast<MemoryEffectOpInterface>(transform.getOperation());
   SmallVector<MemoryEffects::EffectInstance> effects;
   iface.getEffectsOnValue(handle, effects);
-  return hasEffect<MemoryEffects::Read, TransformMappingResource>(effects) &&
-         hasEffect<MemoryEffects::Free, TransformMappingResource>(effects);
+  return ::hasEffect<MemoryEffects::Read, TransformMappingResource>(effects) &&
+         ::hasEffect<MemoryEffects::Free, TransformMappingResource>(effects);
 }
 
 void transform::producesHandle(

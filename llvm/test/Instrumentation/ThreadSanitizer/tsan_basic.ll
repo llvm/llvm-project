@@ -35,7 +35,7 @@ entry:
     tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemCpyTest
-; CHECK: call i8* @memcpy
+; CHECK: call i8* @__tsan_memcpy
 ; CHECK: ret void
 }
 
@@ -44,7 +44,7 @@ entry:
     tail call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemCpyInlineTest
-; CHECK: call i8* @memcpy
+; CHECK: call i8* @__tsan_memcpy
 ; CHECK: ret void
 }
 
@@ -53,7 +53,7 @@ entry:
     tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemMoveTest
-; CHECK: call i8* @memmove
+; CHECK: call i8* @__tsan_memmove
 ; CHECK: ret void
 }
 
@@ -62,7 +62,7 @@ entry:
     tail call void @llvm.memset.p0i8.i64(i8* align 4 %x, i8 77, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemSetTest
-; CHECK: call i8* @memset
+; CHECK: call i8* @__tsan_memset
 ; CHECK: ret void
 }
 
@@ -71,7 +71,7 @@ entry:
     tail call void @llvm.memset.inline.p0i8.i64(i8* align 4 %x, i8 77, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemSetInlineTest
-; CHECK: call i8* @memset
+; CHECK: call i8* @__tsan_memset
 ; CHECK: ret void
 }
 

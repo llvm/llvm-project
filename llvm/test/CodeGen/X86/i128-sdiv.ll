@@ -107,40 +107,8 @@ define i128 @test2(i128 %x) nounwind {
 
 define i128 @test3(i128 %x) nounwind {
 ; X86-LABEL: test3:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 8(%ebp), %esi
-; X86-NEXT:    movl %esp, %eax
-; X86-NEXT:    pushl $-1
-; X86-NEXT:    pushl $-5
-; X86-NEXT:    pushl $-1
-; X86-NEXT:    pushl $-3
-; X86-NEXT:    pushl 24(%ebp)
-; X86-NEXT:    pushl 20(%ebp)
-; X86-NEXT:    pushl 16(%ebp)
-; X86-NEXT:    pushl 12(%ebp)
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    calll __divti3
-; X86-NEXT:    addl $32, %esp
-; X86-NEXT:    movl (%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
-; X86-NEXT:    movl %eax, (%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    leal -8(%ebp), %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    retl $4
+; X86 doesn't have __divti3, so the urem is expanded into a loop.
+; X86: udiv-do-while
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0:

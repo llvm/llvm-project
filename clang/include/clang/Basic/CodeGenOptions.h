@@ -485,6 +485,11 @@ public:
            SanitizeCoverageTraceCmp || SanitizeCoverageTraceLoads ||
            SanitizeCoverageTraceStores;
   }
+
+  // Check if any one of SanitizeBinaryMetadata* is enabled.
+  bool hasSanitizeBinaryMetadata() const {
+    return SanitizeBinaryMetadataCovered || SanitizeBinaryMetadataAtomics;
+  }
 };
 
 }  // end namespace clang

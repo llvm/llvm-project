@@ -43,7 +43,7 @@ struct __fn {
   template <class _InIter, class _Sent, class _OutIter1, class _OutIter2, class _Proj, class _Pred>
   _LIBCPP_HIDE_FROM_ABI constexpr
   static partition_copy_result<
-      __uncvref_t<_InIter>, __uncvref_t<_OutIter1>, __uncvref_t<_OutIter2>
+      __remove_cvref_t<_InIter>, __remove_cvref_t<_OutIter1>, __remove_cvref_t<_OutIter2>
   > __partition_copy_fn_impl( _InIter&& __first, _Sent&& __last, _OutIter1&& __out_true, _OutIter2&& __out_false,
       _Pred& __pred, _Proj& __proj) {
     for (; __first != __last; ++__first) {

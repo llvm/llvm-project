@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 #DCSR  = #sparse_tensor.encoding<{
@@ -114,12 +114,12 @@ module {
     // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, -1 )
     // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, -1 )
     //
-    %i1 = sparse_tensor.indices %1, %c1 : tensor<32x64xf64, #DCSR> to memref<?xi8>
-    %i2 = sparse_tensor.indices %2, %c1 : tensor<32x64xf64, #DCSC> to memref<?xi64>
-    %i3 = sparse_tensor.indices %3, %c1 : tensor<32x64xf64, #CSC>  to memref<?xi32>
-    %i4 = sparse_tensor.indices %4, %c1 : tensor<32x64xf64, #DCSC> to memref<?xi64>
-    %i5 = sparse_tensor.indices %5, %c1 : tensor<32x64xf64, #DCSR> to memref<?xi8>
-    %i6 = sparse_tensor.indices %6, %c1 : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i1 = sparse_tensor.indices %1 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i2 = sparse_tensor.indices %2 { dimension = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
+    %i3 = sparse_tensor.indices %3 { dimension = 1 : index } : tensor<32x64xf64, #CSC>  to memref<?xi32>
+    %i4 = sparse_tensor.indices %4 { dimension = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
+    %i5 = sparse_tensor.indices %5 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i6 = sparse_tensor.indices %6 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
     call @dumpi08(%i1) : (memref<?xi8>)  -> ()
     call @dumpi64(%i2) : (memref<?xi64>) -> ()
     call @dumpi32(%i3) : (memref<?xi32>) -> ()

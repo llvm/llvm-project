@@ -1011,8 +1011,8 @@ define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16
 ; X64-LABEL: test_x86_vcvtps2ph_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvtps2ph $2, %zmm0, %ymm2 {%k1} {z}
-; X64-NEXT:    vcvtps2ph $2, %zmm0, %ymm1 {%k1}
+; X64-NEXT:    vcvtps2ph $3, {sae}, %zmm0, %ymm2 {%k1} {z}
+; X64-NEXT:    vcvtps2ph $4, {sae}, %zmm0, %ymm1 {%k1}
 ; X64-NEXT:    vpaddw %ymm1, %ymm2, %ymm1
 ; X64-NEXT:    vcvtps2ph $2, %zmm0, (%rsi)
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0
@@ -1022,15 +1022,15 @@ define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vcvtps2ph $2, %zmm0, %ymm2 {%k1} {z}
-; X86-NEXT:    vcvtps2ph $2, %zmm0, %ymm1 {%k1}
+; X86-NEXT:    vcvtps2ph $3, {sae}, %zmm0, %ymm2 {%k1} {z}
+; X86-NEXT:    vcvtps2ph $4, {sae}, %zmm0, %ymm1 {%k1}
 ; X86-NEXT:    vpaddw %ymm1, %ymm2, %ymm1
 ; X86-NEXT:    vcvtps2ph $2, %zmm0, (%eax)
 ; X86-NEXT:    vmovdqa %ymm1, %ymm0
 ; X86-NEXT:    retl
   %res1 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> zeroinitializer, i16 -1)
-  %res2 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> zeroinitializer, i16 %mask)
-  %res3 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> %src, i16 %mask)
+  %res2 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 11, <16 x i16> zeroinitializer, i16 %mask)
+  %res3 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 12, <16 x i16> %src, i16 %mask)
   store <16 x i16> %res1, ptr %dst
   %res  = add <16 x i16> %res2, %res3
   ret <16 x i16> %res

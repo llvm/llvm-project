@@ -1077,8 +1077,10 @@ public:
     Type resType = op.getType();
     Type ptrType = resType.cast<ShapedType>().getElementType();
     SmallString<16> name{"sparsePointers", overheadTypeFunctionSuffix(ptrType)};
-    replaceOpWithFuncCall(rewriter, op, name, resType, adaptor.getOperands(),
-                          EmitCInterface::On);
+    Value dim =
+        constantIndex(rewriter, op->getLoc(), op.getDimension().getZExtValue());
+    replaceOpWithFuncCall(rewriter, op, name, resType,
+                          {adaptor.getTensor(), dim}, EmitCInterface::On);
     return success();
   }
 };
@@ -1093,8 +1095,10 @@ public:
     Type resType = op.getType();
     Type indType = resType.cast<ShapedType>().getElementType();
     SmallString<15> name{"sparseIndices", overheadTypeFunctionSuffix(indType)};
-    replaceOpWithFuncCall(rewriter, op, name, resType, adaptor.getOperands(),
-                          EmitCInterface::On);
+    Value dim =
+        constantIndex(rewriter, op->getLoc(), op.getDimension().getZExtValue());
+    replaceOpWithFuncCall(rewriter, op, name, resType,
+                          {adaptor.getTensor(), dim}, EmitCInterface::On);
     return success();
   }
 };

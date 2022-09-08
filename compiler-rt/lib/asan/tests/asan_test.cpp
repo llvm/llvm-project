@@ -313,7 +313,7 @@ TEST(AddressSanitizer, SignalTest) {
 
 static void TestLargeMalloc(size_t size) {
   char buff[1024];
-  sprintf(buff, "is located 1 bytes to the left of %lu-byte", (long)size);
+  sprintf(buff, "is located 1 bytes before %lu-byte", (long)size);
   EXPECT_DEATH(Ident((char*)malloc(size))[-1] = 0, buff);
 }
 
@@ -329,7 +329,7 @@ TEST(AddressSanitizer, HugeMallocTest) {
   if (SANITIZER_WORDSIZE != 64 || ASAN_AVOID_EXPENSIVE_TESTS) return;
   size_t n_megs = 4100;
   EXPECT_DEATH(Ident((char*)malloc(n_megs << 20))[-1] = 0,
-               "is located 1 bytes to the left|"
+               "is located 1 bytes before|"
                "AddressSanitizer failed to allocate");
 }
 #endif
@@ -345,9 +345,9 @@ TEST(AddressSanitizer, memalign) {
   for (int align = 16; align <= (1 << 23); align *= 2) {
     size_t size = align * 5;
     EXPECT_DEATH(MemalignRun(align, size, -1),
-                 "is located 1 bytes to the left");
+                 "is located 1 bytes before");
     EXPECT_DEATH(MemalignRun(align, size, size + 1),
-                 "is located 1 bytes to the right");
+                 "is located 1 bytes after");
   }
 }
 #endif  // SANITIZER_TEST_HAS_MEMALIGN
@@ -734,7 +734,7 @@ TEST(AddressSanitizer, Store128Test) {
   EXPECT_DEATH(_mm_store_si128((__m128i*)p, value_wide),
                "WRITE of size 16");
   EXPECT_DEATH(_mm_store_si128((__m128i*)p, value_wide),
-               "located 0 bytes to the right of 12-byte");
+               "located 0 bytes after 12-byte");
   free(a);
 }
 #endif
@@ -747,7 +747,7 @@ std::string RightOOBErrorMessage(int oob_distance, bool is_write) {
 #if !GTEST_USES_SIMPLE_RE
           "buffer-overflow.*%s.*"
 #endif
-          "located %d bytes to the right",
+          "located %d bytes after",
 #if !GTEST_USES_SIMPLE_RE
           is_write ? "WRITE" : "READ",
 #endif
@@ -771,7 +771,7 @@ std::string LeftOOBErrorMessage(int oob_distance, bool is_write) {
 #if !GTEST_USES_SIMPLE_RE
           ASAN_PCRE_DOTALL "%s.*"
 #endif
-          "located %d bytes to the left",
+          "located %d bytes before",
 #if !GTEST_USES_SIMPLE_RE
           is_write ? "WRITE" : "READ",
 #endif
@@ -790,7 +790,7 @@ std::string LeftOOBReadMessage(int oob_distance) {
 std::string LeftOOBAccessMessage(int oob_distance) {
   assert(oob_distance > 0);
   char expected_str[100];
-  sprintf(expected_str, "located %d bytes to the left", oob_distance);
+  sprintf(expected_str, "located %d bytes before", oob_distance);
   return std::string(expected_str);
 }
 
@@ -812,7 +812,7 @@ char* MallocAndMemsetString(size_t size) {
   EXPECT_DEATH(READ_N_BYTES,                                             \
                ASAN_PCRE_DOTALL                                          \
                "AddressSanitizer: heap-buffer-overflow"                  \
-               ".* is located 0 bytes to the right of 10-byte region");  \
+               ".* is located 0 bytes after 10-byte region");  \
   close(fd);                                                             \
   delete [] x;                                                           \
 
@@ -1013,23 +1013,23 @@ TEST(AddressSanitizer, GlobalTest) {
   glob5[Ident(4)] = 0;
 
   EXPECT_DEATH(glob5[Ident(5)] = 0,
-               "0 bytes to the right of global variable.*glob5.* size 5");
+               "0 bytes after global variable.*glob5.* size 5");
   EXPECT_DEATH(glob5[Ident(5+6)] = 0,
-               "6 bytes to the right of global variable.*glob5.* size 5");
+               "6 bytes after global variable.*glob5.* size 5");
   Ident(static110);  // avoid optimizations
   static110[Ident(0)] = 0;
   static110[Ident(109)] = 0;
   EXPECT_DEATH(static110[Ident(110)] = 0,
-               "0 bytes to the right of global variable");
+               "0 bytes after global variable");
   EXPECT_DEATH(static110[Ident(110+7)] = 0,
-               "7 bytes to the right of global variable");
+               "7 bytes after global variable");
 
   Ident(func_static15);  // avoid optimizations
   func_static15[Ident(0)] = 0;
   EXPECT_DEATH(func_static15[Ident(15)] = 0,
-               "0 bytes to the right of global variable");
+               "0 bytes after global variable");
   EXPECT_DEATH(func_static15[Ident(15 + 9)] = 0,
-               "9 bytes to the right of global variable");
+               "9 bytes after global variable");
 
   Ident(fs1);
   Ident(fs2);
@@ -1037,12 +1037,12 @@ TEST(AddressSanitizer, GlobalTest) {
 
   // We don't create left redzones, so this is not 100% guaranteed to fail.
   // But most likely will.
-  EXPECT_DEATH(fs2[Ident(-1)] = 0, "is located.*of global variable");
+  EXPECT_DEATH(fs2[Ident(-1)] = 0, "is located.* global variable");
 
   EXPECT_DEATH(Ident(Ident(ConstGlob)[8]),
-               "is located 1 bytes to the right of .*ConstGlob");
+               "is located 1 bytes after .*ConstGlob");
   EXPECT_DEATH(Ident(Ident(StaticConstGlob)[5]),
-               "is located 2 bytes to the right of .*StaticConstGlob");
+               "is located 2 bytes after .*StaticConstGlob");
 
   // call stuff from another file.
   GlobalsTest(0);

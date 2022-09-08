@@ -369,10 +369,12 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
+      - "**/crash_diagnostics/*"
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
         LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}"
+        CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
     agents:
       queue: "libcxx-builders"
       os: "linux"

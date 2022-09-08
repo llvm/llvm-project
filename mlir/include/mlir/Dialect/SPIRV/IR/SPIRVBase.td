@@ -189,7 +189,7 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
     "}; " #
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     "ArrayRef<::mlir::spirv::Extension> " #
-      "ref(exts, ::llvm::array_lengthof(exts));");
+      "ref(exts, std::size(exts));");
   let instance = "ref";
 }
 
@@ -231,7 +231,7 @@ class Capability<list<I32EnumAttrCase> capabilities> : Availability {
     "}; " #
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     "ArrayRef<::mlir::spirv::Capability> " #
-      "ref(caps, ::llvm::array_lengthof(caps));");
+      "ref(caps, std::size(caps));");
   let instance = "ref";
 }
 
@@ -4539,6 +4539,30 @@ class SPV_ExtInstOp<string mnemonic, string setPrefix, string setName,
 
   // Name used to import the extended instruction set.
   string extendedInstSetName = setName;
+}
+
+// Base classes for SPIR-V vendor ops. These have opcode in the form of
+// Op<Name><VENDOR>, e.g., OpCooperativeMatrixStoreNV.
+class SPV_VendorOp<string mnemonic, string vendorName,
+                   list<Trait> traits = []> :
+  SPV_Op<vendorName # "." # mnemonic, traits> {
+  string spirvOpName = "Op" # mnemonic # vendorName;
+}
+
+class SPV_ExtVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "EXT", traits> {
+}
+
+class SPV_KhrVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "KHR", traits> {
+}
+
+class SPV_IntelVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "INTEL", traits> {
+}
+
+class SPV_NvVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "NV", traits> {
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

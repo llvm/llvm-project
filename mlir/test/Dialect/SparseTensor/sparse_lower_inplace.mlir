@@ -1,11 +1,11 @@
 // RUN: mlir-opt %s -sparsification | FileCheck %s --check-prefix=CHECK-HIR
 //
-// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion | \
+// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion --cse | \
 // RUN: FileCheck %s --check-prefix=CHECK-MIR
 //
-// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion \
+// RUN: mlir-opt %s -sparsification --sparse-tensor-conversion --cse \
 // RUN: --func-bufferize --arith-bufferize           \
-// RUN: --tensor-bufferize --finalizing-bufferize |            \
+// RUN: --tensor-bufferize --finalizing-bufferize |  \
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
 
 #CSR = #sparse_tensor.encoding<{dimLevelType = [ "dense", "compressed" ]}>
@@ -27,8 +27,8 @@
 // CHECK-HIR-DAG:       %[[VAL_3:.*]] = arith.constant 32 : index
 // CHECK-HIR-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-HIR-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK-HIR:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_5]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-HIR:           %[[VAL_6:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-HIR:           %[[VAL_7:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<64xf64>
 // CHECK-HIR:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<32xf64>

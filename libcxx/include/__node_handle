@@ -91,8 +91,8 @@ class _LIBCPP_TEMPLATE_VIS __basic_node_handle
         _NodeType, __basic_node_handle<_NodeType, _Alloc, _MapOrSetSpecifics>>;
 
     typedef allocator_traits<_Alloc> __alloc_traits;
-    typedef typename __rebind_pointer<typename __alloc_traits::void_pointer,
-                                      _NodeType>::type
+    typedef __rebind_pointer_t<typename __alloc_traits::void_pointer,
+                                      _NodeType>
         __node_pointer_type;
 
 public:

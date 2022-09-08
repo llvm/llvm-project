@@ -2484,21 +2484,12 @@ public:
   static mlir::Value
   genRecordCPtrValueArg(Fortran::lower::AbstractConverter &converter,
                         mlir::Value rec, mlir::Type ty) {
-    assert(fir::isa_derived(ty));
-    auto recTy = ty.dyn_cast<fir::RecordType>();
-    assert(recTy.getTypeList().size() == 1);
-    auto fieldName = recTy.getTypeList()[0].first;
-    mlir::Type fieldTy = recTy.getTypeList()[0].second;
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::Location loc = converter.getCurrentLocation();
-    auto fieldIndexType = fir::FieldType::get(ty.getContext());
-    mlir::Value field =
-        builder.create<fir::FieldIndexOp>(loc, fieldIndexType, fieldName, recTy,
-                                          /*typeParams=*/mlir::ValueRange{});
-    mlir::Value cAddr = builder.create<fir::CoordinateOp>(
-        loc, builder.getRefType(fieldTy), rec, field);
-    mlir::Value val = builder.create<fir::LoadOp>(loc, cAddr);
-    return builder.createConvert(loc, builder.getRefType(fieldTy), val);
+    mlir::Value cAddr =
+        fir::factory::genCPtrOrCFunptrAddr(builder, loc, rec, ty);
+    mlir::Value cVal = builder.create<fir::LoadOp>(loc, cAddr);
+    return builder.createConvert(loc, cAddr.getType(), cVal);
   }
 
   /// Given a call site for which the arguments were already lowered, generate

@@ -30,6 +30,5 @@ def Math_Dialect : Dialect {
     ```
   }];
   let hasConstantMaterializer = 1;
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 #endif // MATH_BASE

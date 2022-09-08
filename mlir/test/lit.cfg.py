@@ -77,6 +77,7 @@ tools.extend([
     ToolSubst('toy-ch4', unresolved='ignore'),
     ToolSubst('toy-ch5', unresolved='ignore'),
     ToolSubst('%mlir_lib_dir', config.mlir_lib_dir, unresolved='ignore'),
+    ToolSubst('%mlir_src_dir', config.mlir_src_root, unresolved='ignore'),
     # The substitutions below will be replaced by '%mlir_lib_dir' shortly.
     ToolSubst('%linalg_test_lib_dir', config.mlir_lib_dir, unresolved='ignore'),
     ToolSubst('%mlir_runner_utils_dir', config.mlir_lib_dir, unresolved='ignore'),
@@ -111,33 +112,33 @@ config.environment['FILECHECK_OPTS'] = "-enable-var-scope --allow-unused-prefixe
 # binaries come from the build tree. This should be unified to the build tree
 # by copying/linking sources to build.
 if config.enable_bindings_python:
-    llvm_config.with_environment('PYTHONPATH', [
-        os.path.join(config.mlir_obj_root, 'python_packages', 'mlir_core'),
-        os.path.join(config.mlir_obj_root, 'python_packages', 'mlir_test'),
-    ], append_path=True)
+  llvm_config.with_environment('PYTHONPATH', [
+      os.path.join(config.mlir_obj_root, 'python_packages', 'mlir_core'),
+      os.path.join(config.mlir_obj_root, 'python_packages', 'mlir_test'),
+  ], append_path=True)
 
 if config.enable_assertions:
-    config.available_features.add('asserts')
+  config.available_features.add('asserts')
 else:
-    config.available_features.add('noasserts')
+  config.available_features.add('noasserts')
 
 def have_host_jit_feature_support(feature_name):
-    mlir_cpu_runner_exe = lit.util.which('mlir-cpu-runner', config.mlir_tools_dir)
+  mlir_cpu_runner_exe = lit.util.which('mlir-cpu-runner', config.mlir_tools_dir)
 
-    if not mlir_cpu_runner_exe:
-        return False
+  if not mlir_cpu_runner_exe:
+    return False
 
-    try:
-        mlir_cpu_runner_cmd = subprocess.Popen(
-            [mlir_cpu_runner_exe, '--host-supports-' + feature_name], stdout=subprocess.PIPE)
-    except OSError:
-        print('could not exec mlir-cpu-runner')
-        return False
+  try:
+    mlir_cpu_runner_cmd = subprocess.Popen(
+        [mlir_cpu_runner_exe, '--host-supports-' + feature_name], stdout=subprocess.PIPE)
+  except OSError:
+    print('could not exec mlir-cpu-runner')
+    return False
 
-    mlir_cpu_runner_out = mlir_cpu_runner_cmd.stdout.read().decode('ascii')
-    mlir_cpu_runner_cmd.wait()
+  mlir_cpu_runner_out = mlir_cpu_runner_cmd.stdout.read().decode('ascii')
+  mlir_cpu_runner_cmd.wait()
 
-    return 'true' in mlir_cpu_runner_out
+  return 'true' in mlir_cpu_runner_out
 
 if have_host_jit_feature_support('jit'):
-    config.available_features.add('host-supports-jit')
+  config.available_features.add('host-supports-jit')

@@ -151,14 +151,13 @@ public:
         {return _VSTD::addressof(__r);}
 };
 
-template <class _From, class _To>
-struct __rebind_pointer {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef typename pointer_traits<_From>::template rebind<_To>        type;
+template <class _From, class _To>
+using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>;
 #else
-    typedef typename pointer_traits<_From>::template rebind<_To>::other type;
+template <class _From, class _To>
+using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>::other;
 #endif
-};
 
 // to_address
 

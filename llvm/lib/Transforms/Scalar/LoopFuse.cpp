@@ -703,7 +703,6 @@ private:
   std::pair<bool, Optional<unsigned>>
   haveIdenticalTripCounts(const FusionCandidate &FC0,
                           const FusionCandidate &FC1) const {
-
     const SCEV *TripCount0 = SE.getBackedgeTakenCount(FC0.L);
     if (isa<SCEVCouldNotCompute>(TripCount0)) {
       UncomputableTripCount++;
@@ -1040,6 +1039,112 @@ private:
     return Fused;
   }
 
+  // Returns true if the instruction \p I can be hoisted to the end of the
+  // preheader of \p FC0. \p SafeToHoist contains the instructions that are
+  // known to be safe to hoist. The instructions encountered that cannot be
+  // hoisted are in \p NotHoisting.
+  // TODO: Move functionality into CodeMoverUtils
+  bool canHoistInst(Instruction &I,
+                    const SmallVector<Instruction *, 4> &SafeToHoist,
+                    const SmallVector<Instruction *, 4> &NotHoisting,
+                    const FusionCandidate &FC0) const {
+    const BasicBlock *FC0PreheaderTarget = FC0.Preheader->getSingleSuccessor();
+    assert(FC0PreheaderTarget &&
+           "Expected single successor for loop preheader.");
+
+    for (Use &Op : I.operands()) {
+      if (auto *OpInst = dyn_cast<Instruction>(Op)) {
+        bool OpHoisted = is_contained(SafeToHoist, OpInst);
+        // Check if we have already decided to hoist this operand. In this
+        // case, it does not dominate FC0 *yet*, but will after we hoist it.
+        if (!(OpHoisted || DT.dominates(OpInst, FC0PreheaderTarget))) {
+          return false;
+        }
+      }
+    }
+
+    // If this isn't a memory inst, hoisting is safe
+    if (!I.mayReadOrWriteMemory())
+      return true;
+
+    LLVM_DEBUG(dbgs() << "Checking if this mem inst can be hoisted.\n");
+    for (Instruction *NotHoistedInst : NotHoisting) {
+      if (auto D = DI.depends(&I, NotHoistedInst, true)) {
+        // Dependency is not read-before-write, write-before-read or
+        // write-before-write
+        if (D->isFlow() || D->isAnti() || D->isOutput()) {
+          LLVM_DEBUG(dbgs() << "Inst depends on an instruction in FC1's "
+                               "preheader that is not being hoisted.\n");
+          return false;
+        }
+      }
+    }
+
+    for (Instruction *ReadInst : FC0.MemReads) {
+      if (auto D = DI.depends(ReadInst, &I, true)) {
+        // Dependency is not read-before-write
+        if (D->isAnti()) {
+          LLVM_DEBUG(dbgs() << "Inst depends on a read instruction in FC0.\n");
+          return false;
+        }
+      }
+    }
+
+    for (Instruction *WriteInst : FC0.MemWrites) {
+      if (auto D = DI.depends(WriteInst, &I, true)) {
+        // Dependency is not write-before-read or write-before-write
+        if (D->isFlow() || D->isOutput()) {
+          LLVM_DEBUG(dbgs() << "Inst depends on a write instruction in FC0.\n");
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // Returns true if the instruction \p I can be sunk to the top of the exit
+  // block of \p FC1.
+  // TODO: Move functionality into CodeMoverUtils
+  bool canSinkInst(Instruction &I, const FusionCandidate &FC1) const {
+    for (User *U : I.users()) {
+      if (auto *UI{dyn_cast<Instruction>(U)}) {
+        // Cannot sink if user in loop
+        // If FC1 has phi users of this value, we cannot sink it into FC1.
+        if (FC1.L->contains(UI)) {
+          // Cannot hoist or sink this instruction. No hoisting/sinking
+          // should take place, loops should not fuse
+          return false;
+        }
+      }
+    }
+
+    // If this isn't a memory inst, sinking is safe
+    if (!I.mayReadOrWriteMemory())
+      return true;
+
+    for (Instruction *ReadInst : FC1.MemReads) {
+      if (auto D = DI.depends(&I, ReadInst, true)) {
+        // Dependency is not write-before-read
+        if (D->isFlow()) {
+          LLVM_DEBUG(dbgs() << "Inst depends on a read instruction in FC1.\n");
+          return false;
+        }
+      }
+    }
+
+    for (Instruction *WriteInst : FC1.MemWrites) {
+      if (auto D = DI.depends(&I, WriteInst, true)) {
+        // Dependency is not write-before-write or read-before-write
+        if (D->isOutput() || D->isAnti()) {
+          LLVM_DEBUG(dbgs() << "Inst depends on a write instruction in FC1.\n");
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   /// Collect instructions in the \p FC1 Preheader that can be hoisted
   /// to the \p FC0 Preheader or sunk into the \p FC1 Body
   bool collectMovablePreheaderInsts(
@@ -1047,6 +1152,10 @@ private:
       SmallVector<Instruction *, 4> &SafeToHoist,
       SmallVector<Instruction *, 4> &SafeToSink) const {
     BasicBlock *FC1Preheader = FC1.Preheader;
+    // Save the instructions that are not being hoisted, so we know not to hoist
+    // mem insts that they dominate.
+    SmallVector<Instruction *, 4> NotHoisting;
+
     for (Instruction &I : *FC1Preheader) {
       // Can't move a branch
       if (&I == FC1Preheader->getTerminator())
@@ -1055,52 +1164,33 @@ private:
       // TODO: The case of mayReadFromMemory we can handle but requires
       // additional work with a dependence analysis so for now we give
       // up on memory reads.
-      if (I.mayHaveSideEffects() || I.mayReadFromMemory()) {
-        LLVM_DEBUG(dbgs() << "Inst: " << I << " may have side-effects.\n");
+      if (I.mayThrow() || !I.willReturn()) {
+        LLVM_DEBUG(dbgs() << "Inst: " << I << " may throw or won't return.\n");
         return false;
       }
 
       LLVM_DEBUG(dbgs() << "Checking Inst: " << I << "\n");
 
-      // First check if can be hoisted
-      // If the operands of this instruction dominate the FC0 Preheader
-      // target block, then it is safe to move them to the end of the FC0
-      const BasicBlock *FC0PreheaderTarget =
-          FC0.Preheader->getSingleSuccessor();
-      assert(FC0PreheaderTarget &&
-             "Expected single successor for loop preheader.");
-      bool CanHoistInst = true;
-      for (Use &Op : I.operands()) {
-        if (auto *OpInst = dyn_cast<Instruction>(Op)) {
-          bool OpHoisted = is_contained(SafeToHoist, OpInst);
-          // Check if we have already decided to hoist this operand. In this
-          // case, it does not dominate FC0 *yet*, but will after we hoist it.
-          if (!(OpHoisted || DT.dominates(OpInst, FC0PreheaderTarget))) {
-            CanHoistInst = false;
-            break;
-          }
-        }
+      if (I.isAtomic() || I.isVolatile()) {
+        LLVM_DEBUG(
+            dbgs() << "\tInstruction is volatile or atomic. Cannot move it.\n");
+        return false;
       }
-      if (CanHoistInst) {
+
+      if (canHoistInst(I, SafeToHoist, NotHoisting, FC0)) {
         SafeToHoist.push_back(&I);
         LLVM_DEBUG(dbgs() << "\tSafe to hoist.\n");
       } else {
         LLVM_DEBUG(dbgs() << "\tCould not hoist. Trying to sink...\n");
+        NotHoisting.push_back(&I);
 
-        for (User *U : I.users()) {
-          if (auto *UI{dyn_cast<Instruction>(U)}) {
-            // Cannot sink if user in loop
-            // If FC1 has phi users of this value, we cannot sink it into FC1.
-            if (FC1.L->contains(UI)) {
-              // Cannot hoist or sink this instruction. No hoisting/sinking
-              // should take place, loops should not fuse
-              LLVM_DEBUG(dbgs() << "\tCould not sink.\n");
-              return false;
-            }
-          }
+        if (canSinkInst(I, FC1)) {
+          SafeToSink.push_back(&I);
+          LLVM_DEBUG(dbgs() << "\tSafe to sink.\n");
+        } else {
+          LLVM_DEBUG(dbgs() << "\tCould not sink.\n");
+          return false;
         }
-        SafeToSink.push_back(&I);
-        LLVM_DEBUG(dbgs() << "\tSafe to sink.\n");
       }
     }
     LLVM_DEBUG(
@@ -1331,7 +1421,6 @@ private:
                           const FusionCandidate &FC1,
                           SmallVector<Instruction *, 4> &HoistInsts,
                           SmallVector<Instruction *, 4> &SinkInsts) const {
-
     // All preheader instructions except the branch must be hoisted or sunk
     assert(HoistInsts.size() + SinkInsts.size() == FC1.Preheader->size() - 1 &&
            "Attempting to sink and hoist preheader instructions, but not all "

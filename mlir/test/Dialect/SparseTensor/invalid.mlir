@@ -9,18 +9,16 @@ func.func @invalid_new_dense(%arg0: !llvm.ptr<i8>) -> tensor<32xf32> {
 // -----
 
 func.func @invalid_pointers_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
-  %c = arith.constant 0 : index
   // expected-error@+1 {{'sparse_tensor.pointers' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
-  %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf64> to memref<?xindex>
+  %0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<128xf64> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
 // -----
 
 func.func @invalid_pointers_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
-  %c = arith.constant 0 : index
   // expected-error@+1 {{'sparse_tensor.pointers' op operand #0 must be sparse tensor of any type values, but got 'tensor<*xf64>'}}
-  %0 = sparse_tensor.pointers %arg0, %c : tensor<*xf64> to memref<?xindex>
+  %0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<*xf64> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -29,9 +27,8 @@ func.func @invalid_pointers_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"], pointerBitWidth=32}>
 
 func.func @mismatch_pointers_types(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = arith.constant 0 : index
   // expected-error@+1 {{unexpected type for pointers}}
-  %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -40,27 +37,24 @@ func.func @mismatch_pointers_types(%arg0: tensor<128xf64, #SparseVector>) -> mem
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func.func @pointers_oob(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = arith.constant 1 : index
   // expected-error@+1 {{requested pointers dimension out of bounds}}
-  %0 = sparse_tensor.pointers %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.pointers %arg0 { dimension = 1 : index } : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
 // -----
 
 func.func @invalid_indices_dense(%arg0: tensor<10x10xi32>) -> memref<?xindex> {
-  %c = arith.constant 1 : index
   // expected-error@+1 {{'sparse_tensor.indices' op operand #0 must be sparse tensor of any type values, but got 'tensor<10x10xi32>'}}
-  %0 = sparse_tensor.indices %arg0, %c : tensor<10x10xi32> to memref<?xindex>
+  %0 = sparse_tensor.indices %arg0 { dimension = 1 : index } : tensor<10x10xi32> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
 // -----
 
 func.func @invalid_indices_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
-  %c = arith.constant 0 : index
   // expected-error@+1 {{'sparse_tensor.indices' op operand #0 must be sparse tensor of any type values, but got 'tensor<*xf64>'}}
-  %0 = sparse_tensor.indices %arg0, %c : tensor<*xf64> to memref<?xindex>
+  %0 = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<*xf64> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -69,9 +63,8 @@ func.func @invalid_indices_unranked(%arg0: tensor<*xf64>) -> memref<?xindex> {
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func.func @mismatch_indices_types(%arg0: tensor<?xf64, #SparseVector>) -> memref<?xi32> {
-  %c = arith.constant 0 : index
   // expected-error@+1 {{unexpected type for indices}}
-  %0 = sparse_tensor.indices %arg0, %c : tensor<?xf64, #SparseVector> to memref<?xi32>
+  %0 = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<?xf64, #SparseVector> to memref<?xi32>
   return %0 : memref<?xi32>
 }
 
@@ -80,9 +73,8 @@ func.func @mismatch_indices_types(%arg0: tensor<?xf64, #SparseVector>) -> memref
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
 func.func @indices_oob(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %c = arith.constant 1 : index
   // expected-error@+1 {{requested indices dimension out of bounds}}
-  %0 = sparse_tensor.indices %arg0, %c : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.indices %arg0 { dimension = 1 : index } : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -441,64 +433,4 @@ func.func @invalid_concat_size_mismatch(%arg0: tensor<2x4xf64, #DC>,
          tensor<3x3xf64, #DC>,
          tensor<4x4xf64, #DC> to tensor<9x4xf64, #DC>
   return %0 : tensor<9x4xf64, #DC>
-}
-
-// -----
-
-func.func @sparse_storage_new(%arg0: memref<?xf64>, %arg1: memref<?xf64>, %arg2: f64) ->
-                               tuple<memref<?xf64>, memref<?xf64>> {
-  // expected-error@+1{{The number of inputs is inconsistent with output}}
-  %0 = sparse_tensor.storage(%arg0, %arg1, %arg2)
-       : memref<?xf64>, memref<?xf64>, f64 to tuple<memref<?xf64>, memref<?xf64>>
-  return %0 : tuple<memref<?xf64>, memref<?xf64>>
-}
-
-// -----
-
-func.func @sparse_storage_new(%arg0: memref<?xf64>, %arg1: memref<?xf64>, %arg2: f64) ->
-                               tuple<memref<?xi64>, memref<?xf64>, f64> {
-  // expected-error@+1{{Type mismatch between}}
-  %0 = sparse_tensor.storage(%arg0, %arg1, %arg2)
-       : memref<?xf64>, memref<?xf64>, f64 to tuple<memref<?xi64>, memref<?xf64>, f64>
-  return %0 : tuple<memref<?xi64>, memref<?xf64>, f64>
-}
-
-// -----
-
-func.func @sparse_storage_get(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>) -> memref<?xf64> {
-  // expected-error@+1{{Out-of-bound access}}
-  %0 = sparse_tensor.storage_get %arg0[3]
-       : tuple<memref<?xf64>, memref<?xf64>, f64> to
-         memref<?xf64>
-  return %0 : memref<?xf64>
-}
-
-// -----
-
-func.func @sparse_storage_get(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>) -> memref<?xf64> {
-  // expected-error@+1{{Type mismatch}}
-  %0 = sparse_tensor.storage_get %arg0[2]
-       : tuple<memref<?xf64>, memref<?xf64>, f64> to
-         memref<?xf64>
-  return %0 : memref<?xf64>
-}
-
-// -----
-
-func.func @sparse_storage_set(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>, %arg1: memref<?xf64>) -> tuple<memref<?xf64>, memref<?xf64>, f64> {
-  // expected-error@+1{{Out-of-bound access}}
-  %0 = sparse_tensor.storage_set %arg0[3], %arg1
-       : tuple<memref<?xf64>, memref<?xf64>, f64>, memref<?xf64> to
-         tuple<memref<?xf64>, memref<?xf64>, f64>
-  return %0 : tuple<memref<?xf64>, memref<?xf64>, f64>
-}
-
-// -----
-
-func.func @sparse_storage_set(%arg0: tuple<memref<?xf64>, memref<?xf64>, f64>, %arg1: memref<?xf64>) -> tuple<memref<?xf64>, memref<?xf64>, f64> {
-  // expected-error@+1{{Type mismatch}}
-  %0 = sparse_tensor.storage_set %arg0[2], %arg1
-       : tuple<memref<?xf64>, memref<?xf64>, f64>, memref<?xf64> to
-         tuple<memref<?xf64>, memref<?xf64>, f64>
-  return %0 : tuple<memref<?xf64>, memref<?xf64>, f64>
 }

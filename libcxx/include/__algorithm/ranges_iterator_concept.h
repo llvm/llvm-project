@@ -26,7 +26,7 @@ namespace ranges {
 
 template <class _IterMaybeQualified>
 consteval auto __get_iterator_concept() {
-  using _Iter = __uncvref_t<_IterMaybeQualified>;
+  using _Iter = __remove_cvref_t<_IterMaybeQualified>;
 
   if constexpr (contiguous_iterator<_Iter>)
     return contiguous_iterator_tag();

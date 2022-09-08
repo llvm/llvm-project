@@ -1,7 +1,7 @@
 // Force this file to use the kDirect method for sparse2sparse.
 // RUN: mlir-opt %s --sparse-compiler="s2s-strategy=2" | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 #Tensor1 = #sparse_tensor.encoding<{

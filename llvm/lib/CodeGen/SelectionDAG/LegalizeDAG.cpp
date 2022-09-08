@@ -2914,6 +2914,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         DAG.getConstant(16, dl,
                         TLI.getShiftAmountTy(MVT::i32, DAG.getDataLayout())));
     Op = DAG.getNode(ISD::BITCAST, dl, MVT::f32, Op);
+    // Add fp_extend in case the output is bigger than f32.
+    if (Node->getValueType(0) != MVT::f32)
+      Op = DAG.getNode(ISD::FP_EXTEND, dl, Node->getValueType(0), Op);
     Results.push_back(Op);
     break;
   }

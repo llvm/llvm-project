@@ -25,6 +25,7 @@ enum class Operation : int {
   // and output floating point numbers are of the same kind.
   BeginUnaryOperationsSingleOutput,
   Abs,
+  Asin,
   Atan,
   Atanh,
   Ceil,

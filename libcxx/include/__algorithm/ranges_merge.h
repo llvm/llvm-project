@@ -47,7 +47,7 @@ template <
     class _Comp,
     class _Proj1,
     class _Proj2>
-_LIBCPP_HIDE_FROM_ABI constexpr merge_result<__uncvref_t<_InIter1>, __uncvref_t<_InIter2>, __uncvref_t<_OutIter>>
+_LIBCPP_HIDE_FROM_ABI constexpr merge_result<__remove_cvref_t<_InIter1>, __remove_cvref_t<_InIter2>, __remove_cvref_t<_OutIter>>
 __merge_impl(
     _InIter1&& __first1,
     _Sent1&& __last1,

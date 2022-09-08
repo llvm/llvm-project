@@ -221,6 +221,8 @@ bool RISCVTargetInfo::initFeatureMap(
   if (getTriple().getArch() == llvm::Triple::riscv64) {
     Features["64bit"] = true;
     XLen = 64;
+  } else {
+    Features["32bit"] = true;
   }
 
   auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesVec);
@@ -251,6 +253,7 @@ bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
                     .Case("riscv", true)
                     .Case("riscv32", !Is64Bit)
                     .Case("riscv64", Is64Bit)
+                    .Case("32bit", !Is64Bit)
                     .Case("64bit", Is64Bit)
                     .Default(None);
   if (Result)

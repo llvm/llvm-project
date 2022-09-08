@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_constructible
     : public is_nothrow_constructible<_Tp,
-                  typename add_lvalue_reference<typename add_const<_Tp>::type>::type> {};
+                  __add_lvalue_reference_t<typename add_const<_Tp>::type> > {};
 
 #else // _LIBCPP_COMPILER_GCC
 

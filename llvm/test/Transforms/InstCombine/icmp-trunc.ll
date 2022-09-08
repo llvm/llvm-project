@@ -354,3 +354,150 @@ define i1 @trunc_ne_i64_i10(i64 %x) {
   %r = icmp eq i10 %t, 42
   ret i1 %r
 }
+
+define i1 @shl1_trunc_eq0(i32 %a) {
+; DL64-LABEL: @shl1_trunc_eq0(
+; DL64-NEXT:    [[R:%.*]] = icmp ugt i32 [[A:%.*]], 15
+; DL64-NEXT:    ret i1 [[R]]
+;
+; DL8-LABEL: @shl1_trunc_eq0(
+; DL8-NEXT:    [[SHL:%.*]] = shl i32 1, [[A:%.*]]
+; DL8-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i16
+; DL8-NEXT:    [[R:%.*]] = icmp eq i16 [[T]], 0
+; DL8-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 1, %a
+  %t = trunc i32 %shl to i16
+  %r = icmp eq i16 %t, 0
+  ret i1 %r
+}
+
+define <2 x i1> @shl1_trunc_ne0(<2 x i8> %a) {
+; CHECK-LABEL: @shl1_trunc_ne0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 1, i8 poison>, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i8> [[SHL]] to <2 x i5>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[T]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %shl = shl <2 x i8> <i8 1, i8 poison>, %a
+  %t = trunc <2 x i8> %shl to <2 x i5>
+  %r = icmp ne <2 x i5> %t, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define i1 @shl1_trunc_eq0_use1(i8 %a) {
+; CHECK-LABEL: @shl1_trunc_eq0_use1(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 1, [[A:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[SHL]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[A]], 5
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i8 1, %a
+  call void @use(i8 %shl)
+  %t = trunc i8 %shl to i6
+  %r = icmp eq i6 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl1_trunc_ne0_use2(i37 %a) {
+; CHECK-LABEL: @shl1_trunc_ne0_use2(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i37 1, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i37 [[SHL]] to i8
+; CHECK-NEXT:    call void @use(i8 [[T]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[T]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i37 1, %a
+  %t = trunc i37 %shl to i8
+  call void @use(i8 %t)
+  %r = icmp ne i8 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl2_trunc_eq0(i9 %a) {
+; CHECK-LABEL: @shl2_trunc_eq0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i9 2, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i6 [[T]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i9 2, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp eq i6 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl1_trunc_sgt0(i9 %a) {
+; CHECK-LABEL: @shl1_trunc_sgt0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i9 1, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i6 [[T]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i9 1, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp sgt i6 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl1_trunc_eq1(i64 %a) {
+; CHECK-LABEL: @shl1_trunc_eq1(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 1, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[SHL]] to i8
+; CHECK-NEXT:    call void @use(i8 [[T]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[T]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i64 1, %a
+  %t = trunc i64 %shl to i8
+  call void @use(i8 %t)
+  %r = icmp eq i8 %t, 1
+  ret i1 %r
+}
+
+define i1 @shl1_trunc_ne32(i8 %a) {
+; CHECK-LABEL: @shl1_trunc_ne32(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 1, [[A:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[SHL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[SHL]], 63
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 32
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i8 1, %a
+  call void @use(i8 %shl)
+  %t = trunc i8 %shl to i6
+  %r = icmp ne i6 %t, 32
+  ret i1 %r
+}
+
+define i1 @shl2_trunc_eq8_i32(i32 %a) {
+; DL64-LABEL: @shl2_trunc_eq8_i32(
+; DL64-NEXT:    [[SHL:%.*]] = shl i32 2, [[A:%.*]]
+; DL64-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], 65534
+; DL64-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 8
+; DL64-NEXT:    ret i1 [[R]]
+;
+; DL8-LABEL: @shl2_trunc_eq8_i32(
+; DL8-NEXT:    [[SHL:%.*]] = shl i32 2, [[A:%.*]]
+; DL8-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i16
+; DL8-NEXT:    [[R:%.*]] = icmp eq i16 [[T]], 8
+; DL8-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 2, %a
+  %t = trunc i32 %shl to i16
+  %r = icmp eq i16 %t, 8
+  ret i1 %r
+}
+
+define i1 @shl1_trunc_sgt4(i32 %a) {
+; CHECK-LABEL: @shl1_trunc_sgt4(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i16
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i16 [[T]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 1, %a
+  %t = trunc i32 %shl to i16
+  %r = icmp sgt i16 %t, 4
+  ret i1 %r
+}

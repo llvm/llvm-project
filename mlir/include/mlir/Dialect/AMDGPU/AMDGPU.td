@@ -23,7 +23,6 @@ def AMDGPU_Dialect : Dialect {
     that will eventually be executed on AMD hardware.
   }];
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
   let useDefaultAttributePrinterParser = 1;
 }
 
