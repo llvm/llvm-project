@@ -340,9 +340,9 @@ static const ArchDefinitionEntry g_macho_arch_entries[] = {
     {ArchSpec::eCore_uknownMach64,    llvm::MachO::CPU_ARCH_ABI64,      0,                                      0xFF000000u, 0x00000000u}};
 // clang-format on
 
-static const ArchDefinition g_macho_arch_def = {
-    eArchTypeMachO, llvm::array_lengthof(g_macho_arch_entries),
-    g_macho_arch_entries, "mach-o"};
+static const ArchDefinition g_macho_arch_def = {eArchTypeMachO,
+                                                std::size(g_macho_arch_entries),
+                                                g_macho_arch_entries, "mach-o"};
 
 //===----------------------------------------------------------------------===//
 // A table that gets searched linearly for matches. This table is used to
@@ -410,7 +410,7 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
 
 static const ArchDefinition g_elf_arch_def = {
     eArchTypeELF,
-    llvm::array_lengthof(g_elf_arch_entries),
+    std::size(g_elf_arch_entries),
     g_elf_arch_entries,
     "elf",
 };
@@ -436,7 +436,7 @@ static const ArchDefinitionEntry g_coff_arch_entries[] = {
 
 static const ArchDefinition g_coff_arch_def = {
     eArchTypeCOFF,
-    llvm::array_lengthof(g_coff_arch_entries),
+    std::size(g_coff_arch_entries),
     g_coff_arch_entries,
     "pe-coff",
 };
@@ -468,7 +468,7 @@ static const CoreDefinition *FindCoreDefinition(llvm::StringRef name) {
 }
 
 static inline const CoreDefinition *FindCoreDefinition(ArchSpec::Core core) {
-  if (core < llvm::array_lengthof(g_core_definitions))
+  if (core < std::size(g_core_definitions))
     return &g_core_definitions[core];
   return nullptr;
 }

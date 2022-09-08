@@ -59,7 +59,7 @@ bool EmulateInstructionPPC64::SetTargetTriple(const ArchSpec &arch) {
 }
 
 static bool LLDBTableGetRegisterInfo(uint32_t reg_num, RegisterInfo &reg_info) {
-  if (reg_num >= llvm::array_lengthof(g_register_infos_ppc64le))
+  if (reg_num >= std::size(g_register_infos_ppc64le))
     return false;
   reg_info = g_register_infos_ppc64le[reg_num];
   return true;
@@ -147,7 +147,7 @@ EmulateInstructionPPC64::GetOpcodeForInstruction(uint32_t opcode) {
        "addi RT, RA, SI"},
       {0xfc000003, 0xe8000000, &EmulateInstructionPPC64::EmulateLD,
        "ld RT, DS(RA)"}};
-  static const size_t k_num_ppc_opcodes = llvm::array_lengthof(g_opcodes);
+  static const size_t k_num_ppc_opcodes = std::size(g_opcodes);
 
   for (size_t i = 0; i < k_num_ppc_opcodes; ++i) {
     if ((g_opcodes[i].mask & opcode) == g_opcodes[i].value)
