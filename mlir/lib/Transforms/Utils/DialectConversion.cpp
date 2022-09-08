@@ -3273,6 +3273,76 @@ auto ConversionTarget::getOpInfo(OperationName op) const
 }
 
 //===----------------------------------------------------------------------===//
+// PDL Configuration
+//===----------------------------------------------------------------------===//
+
+void PDLConversionConfig::notifyRewriteBegin(PatternRewriter &rewriter) {
+  auto &rewriterImpl =
+      static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
+  rewriterImpl.currentTypeConverter = getTypeConverter();
+}
+
+void PDLConversionConfig::notifyRewriteEnd(PatternRewriter &rewriter) {
+  auto &rewriterImpl =
+      static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
+  rewriterImpl.currentTypeConverter = nullptr;
+}
+
+/// Remap the given value using the rewriter and the type converter in the
+/// provided config.
+static FailureOr<SmallVector<Value>>
+pdllConvertValues(ConversionPatternRewriter &rewriter, ValueRange values) {
+  SmallVector<Value> mappedValues;
+  if (failed(rewriter.getRemappedValues(values, mappedValues)))
+    return failure();
+  return std::move(mappedValues);
+}
+
+void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
+  patterns.getPDLPatterns().registerRewriteFunction(
+      "convertValue",
+      [](PatternRewriter &rewriter, Value value) -> FailureOr<Value> {
+        auto results = pdllConvertValues(
+            static_cast<ConversionPatternRewriter &>(rewriter), value);
+        if (failed(results))
+          return failure();
+        return results->front();
+      });
+  patterns.getPDLPatterns().registerRewriteFunction(
+      "convertValues", [](PatternRewriter &rewriter, ValueRange values) {
+        return pdllConvertValues(
+            static_cast<ConversionPatternRewriter &>(rewriter), values);
+      });
+  patterns.getPDLPatterns().registerRewriteFunction(
+      "convertType",
+      [](PatternRewriter &rewriter, Type type) -> FailureOr<Type> {
+        auto &rewriterImpl =
+            static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
+        if (TypeConverter *converter = rewriterImpl.currentTypeConverter) {
+          if (Type newType = converter->convertType(type))
+            return newType;
+          return failure();
+        }
+        return type;
+      });
+  patterns.getPDLPatterns().registerRewriteFunction(
+      "convertTypes",
+      [](PatternRewriter &rewriter,
+         TypeRange types) -> FailureOr<SmallVector<Type>> {
+        auto &rewriterImpl =
+            static_cast<ConversionPatternRewriter &>(rewriter).getImpl();
+        TypeConverter *converter = rewriterImpl.currentTypeConverter;
+        if (!converter)
+          return SmallVector<Type>(types);
+
+        SmallVector<Type> remappedTypes;
+        if (failed(converter->convertTypes(types, remappedTypes)))
+          return failure();
+        return std::move(remappedTypes);
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // Op Conversion Entry Points
 //===----------------------------------------------------------------------===//
 
