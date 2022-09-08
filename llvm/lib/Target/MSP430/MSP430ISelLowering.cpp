@@ -458,12 +458,12 @@ static void AnalyzeArguments(CCState &State,
   static const MCPhysReg CRegList[] = {
     MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15
   };
-  static const unsigned CNbRegs = array_lengthof(CRegList);
+  static const unsigned CNbRegs = std::size(CRegList);
   static const MCPhysReg BuiltinRegList[] = {
     MSP430::R8, MSP430::R9, MSP430::R10, MSP430::R11,
     MSP430::R12, MSP430::R13, MSP430::R14, MSP430::R15
   };
-  static const unsigned BuiltinNbRegs = array_lengthof(BuiltinRegList);
+  static const unsigned BuiltinNbRegs = std::size(BuiltinRegList);
 
   ArrayRef<MCPhysReg> RegList;
   unsigned NbRegs;

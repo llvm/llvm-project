@@ -2330,7 +2330,7 @@ void MachOObjectFile::getRelocationTypeName(
         "ARM64_RELOC_AUTHENTICATED_POINTER"
       };
 
-      if (RType >= array_lengthof(Table))
+      if (RType >= std::size(Table))
         res = "Unknown";
       else
         res = Table[RType];

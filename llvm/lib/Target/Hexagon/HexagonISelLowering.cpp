@@ -144,7 +144,7 @@ static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
     Hexagon::R0, Hexagon::R1, Hexagon::R2,
     Hexagon::R3, Hexagon::R4, Hexagon::R5
   };
-  const unsigned NumArgRegs = array_lengthof(ArgRegs);
+  const unsigned NumArgRegs = std::size(ArgRegs);
   unsigned RegNum = State.getFirstUnallocated(ArgRegs);
 
   // RegNum is an index into ArgRegs: skip a register if RegNum is odd.

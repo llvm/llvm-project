@@ -528,8 +528,7 @@ TEST(FormatVariadicTest, BigTest) {
 
   std::string S;
   llvm::raw_string_ostream Stream(S);
-  Stream << formatv(Intro, std::tuple_size<Tuple>::value,
-                    llvm::array_lengthof(Ts))
+  Stream << formatv(Intro, std::tuple_size<Tuple>::value, std::size(Ts))
          << "\n";
   Stream << formatv(Header, "Char", "HexInt", "Str", "Ref", "std::str",
                     "double", "float", "pointer", "comma", "exp", "bigint",

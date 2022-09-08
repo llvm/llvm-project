@@ -736,7 +736,7 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"mve", "nomve", "+mve", "-mve"},
                               {"mve.fp", "nomve.fp", "+mve.fp", "-mve.fp"}};
 
-  for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
+  for (unsigned i = 0; i < std::size(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]), ARM::getArchExtFeature(ArchExt[i][0]));
     EXPECT_EQ(StringRef(ArchExt[i][3]), ARM::getArchExtFeature(ArchExt[i][1]));
   }
@@ -767,7 +767,7 @@ TEST(TargetParserTest, ARMArchExtDependencies) {
 TEST(TargetParserTest, ARMparseHWDiv) {
   const char *hwdiv[] = {"thumb", "arm", "arm,thumb", "thumb,arm"};
 
-  for (unsigned i = 0; i < array_lengthof(hwdiv); i++)
+  for (unsigned i = 0; i < std::size(hwdiv); i++)
     EXPECT_NE(ARM::AEK_INVALID, ARM::parseHWDiv((StringRef)hwdiv[i]));
 }
 
@@ -785,7 +785,7 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
       "v8.7a",     "v8.8-a", "v8.8a", "v8-r",   "v8m.base", "v8m.main",
       "v8.1m.main"};
 
-  for (unsigned i = 0; i < array_lengthof(Arch); i++) {
+  for (unsigned i = 0; i < std::size(Arch); i++) {
     std::string arm_1 = "armeb" + (std::string)(Arch[i]);
     std::string arm_2 = "arm" + (std::string)(Arch[i]) + "eb";
     std::string arm_3 = "arm" + (std::string)(Arch[i]);
@@ -824,7 +824,7 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
 }
 
 TEST(TargetParserTest, ARMparseArchProfile) {
-  for (unsigned i = 0; i < array_lengthof(ARMArch); i++) {
+  for (unsigned i = 0; i < std::size(ARMArch); i++) {
     switch (ARM::parseArch(ARMArch[i])) {
     case ARM::ArchKind::ARMV6M:
     case ARM::ArchKind::ARMV7M:
@@ -864,7 +864,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
 }
 
 TEST(TargetParserTest, ARMparseArchVersion) {
-  for (unsigned i = 0; i < array_lengthof(ARMArch); i++)
+  for (unsigned i = 0; i < std::size(ARMArch); i++)
     if (((std::string)ARMArch[i]).substr(0, 4) == "armv")
       EXPECT_EQ((ARMArch[i][4] - 48u), ARM::parseArchVersion(ARMArch[i]));
     else
@@ -1585,7 +1585,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"pmuv3", "nopmuv3", "+perfmon", "-perfmon"},
   };
 
-  for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
+  for (unsigned i = 0; i < std::size(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),
               AArch64::getArchExtFeature(ArchExt[i][0]));
     EXPECT_EQ(StringRef(ArchExt[i][3]),

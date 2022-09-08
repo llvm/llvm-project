@@ -5064,7 +5064,7 @@ template <typename ELFT> static GNUAbiTag getGNUAbiTag(ArrayRef<uint8_t> Desc) {
       "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable", "NaCl",
   };
   StringRef OSName = "Unknown";
-  if (Words[0] < array_lengthof(OSNames))
+  if (Words[0] < std::size(OSNames))
     OSName = OSNames[Words[0]];
   uint32_t Major = Words[1], Minor = Words[2], Patch = Words[3];
   std::string str;
