@@ -133,13 +133,18 @@ static OpPrintingFlags adjustPrintingFlags(OpPrintingFlags flags,
 }
 
 /// Stream in an Operation.
-Diagnostic &Diagnostic::operator<<(Operation &val) {
-  return appendOp(val, OpPrintingFlags());
+Diagnostic &Diagnostic::operator<<(Operation &op) {
+  return appendOp(op, OpPrintingFlags());
 }
-Diagnostic &Diagnostic::appendOp(Operation &val, const OpPrintingFlags &flags) {
+
+Diagnostic &Diagnostic::appendOp(Operation &op, const OpPrintingFlags &flags) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  val.print(os, adjustPrintingFlags(flags, severity));
+  op.print(os, adjustPrintingFlags(flags, severity));
+  // Print on a new line for better readability if the op will be printed on
+  // multiple lines.
+  if (str.find('\n') != std::string::npos)
+    *this << '\n';
   return *this << os.str();
 }
 

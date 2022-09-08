@@ -687,7 +687,7 @@ static bool isReservedName(StringRef path) {
     return true;
 
   // Then compare against the list of ancient reserved names.
-  for (size_t i = 0; i < array_lengthof(sReservedNames); ++i) {
+  for (size_t i = 0; i < std::size(sReservedNames); ++i) {
     if (path.equals_insensitive(sReservedNames[i]))
       return true;
   }
@@ -962,16 +962,6 @@ void mapped_file_region::unmapImpl() {
 }
 
 void mapped_file_region::dontNeedImpl() {}
-
-std::error_code mapped_file_region::sync() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  assert(Mode == readwrite && "sync only valid for readwrite regions!");
-  if (!::FlushViewOfFile(Mapping, Size))
-    return mapWindowsError(GetLastError());
-  if (!::FlushFileBuffers(FileHandle))
-    return mapWindowsError(GetLastError());
-  return std::error_code();
-}
 
 int mapped_file_region::alignment() {
   SYSTEM_INFO SysInfo;

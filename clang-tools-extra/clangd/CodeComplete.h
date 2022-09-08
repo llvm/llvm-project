@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <future>
+#include <utility>
 
 namespace clang {
 class NamedDecl;
@@ -262,7 +263,7 @@ struct SpeculativeFuzzyFind {
   llvm::Optional<FuzzyFindRequest> NewReq;
   /// The result is consumed by `codeComplete()` if speculation succeeded.
   /// NOTE: the destructor will wait for the async call to finish.
-  std::future<SymbolSlab> Result;
+  std::future<std::pair<bool /*Incomplete*/, SymbolSlab>> Result;
 };
 
 /// Gets code completions at a specified \p Pos in \p FileName.

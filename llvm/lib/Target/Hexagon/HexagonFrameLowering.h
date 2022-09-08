@@ -97,7 +97,7 @@ public:
       { Hexagon::R25, -36 }, { Hexagon::R24, -40 }, { Hexagon::D12, -40 },
       { Hexagon::R27, -44 }, { Hexagon::R26, -48 }, { Hexagon::D13, -48 }
     };
-    NumEntries = array_lengthof(Offsets);
+    NumEntries = std::size(Offsets);
     return Offsets;
   }
 

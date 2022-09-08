@@ -113,6 +113,7 @@ public:
 private:
   /// Returns an original argument from the stack.
   template <typename T> const T &stackRef(unsigned Offset) {
+    assert(Args);
     return *reinterpret_cast<const T *>(Args - ArgSize + Offset);
   }
 

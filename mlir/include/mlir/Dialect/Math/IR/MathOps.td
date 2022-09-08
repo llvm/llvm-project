@@ -799,6 +799,7 @@ def Math_RoundOp : Math_FloatUnaryOp<"round"> {
     %a = math.round %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

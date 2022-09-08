@@ -20,9 +20,15 @@ using namespace mlir::dataflow;
 //===----------------------------------------------------------------------===//
 
 void ConstantValue::print(raw_ostream &os) const {
-  if (constant)
-    return constant.print(os);
-  os << "<NO VALUE>";
+  if (isUninitialized()) {
+    os << "<UNINITIALIZED>";
+    return;
+  }
+  if (getConstantValue() == nullptr) {
+    os << "<UNKNOWN>";
+    return;
+  }
+  return getConstantValue().print(os);
 }
 
 //===----------------------------------------------------------------------===//
@@ -45,8 +51,11 @@ void SparseConstantPropagation::visitOperation(
 
   SmallVector<Attribute, 8> constantOperands;
   constantOperands.reserve(op->getNumOperands());
-  for (auto *operandLattice : operands)
+  for (auto *operandLattice : operands) {
+    if (operandLattice->getValue().isUninitialized())
+      return;
     constantOperands.push_back(operandLattice->getValue().getConstantValue());
+  }
 
   // Save the original operands and attributes just in case the operation
   // folds in-place. The constant passed in may not correspond to the real

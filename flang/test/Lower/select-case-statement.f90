@@ -285,6 +285,59 @@
     print*, n
   end subroutine
 
+  ! CHECK-LABEL: func @_QPsempty
+  ! empty select case blocks
+  subroutine sempty(n)
+    ! CHECK:   %[[selectI1:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
+    ! CHECK:   fir.select_case %[[selectI1]] : i32 [#fir.point, %c1{{.*}}, ^bb1, #fir.point, %c2{{.*}}, ^bb2, unit, ^bb3]
+    ! CHECK: ^bb1:  // pred: ^bb0
+    ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+    ! CHECK:   br ^bb4
+    ! CHECK: ^bb2:  // pred: ^bb0
+    ! CHECK:   br ^bb4
+    ! CHECK: ^bb3:  // pred: ^bb0
+    ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+    ! CHECK:   br ^bb4
+    select case (n)
+      case (1)
+        print*, n, 'i:case 1'
+      case (2)
+      ! print*, n, 'i:case 2'
+      case default
+        print*, n, 'i:case default'
+    end select
+    ! CHECK: ^bb4:  // 3 preds: ^bb1, ^bb2, ^bb3
+    ! CHECK:   %[[cmpC1:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
+    ! CHECK:   %[[selectC1:[0-9]+]] = arith.cmpi eq, %[[cmpC1]], %c0{{.*}} : i32
+    ! CHECK:   cond_br %[[selectC1]], ^bb6, ^bb5
+    ! CHECK: ^bb5:  // pred: ^bb4
+    ! CHECK:   %[[cmpC2:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
+    ! CHECK:   %[[selectC2:[0-9]+]] = arith.cmpi eq, %[[cmpC2]], %c0{{.*}} : i32
+    ! CHECK:   cond_br %[[selectC2]], ^bb8, ^bb7
+    ! CHECK: ^bb6:  // pred: ^bb4
+    ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+    ! print*, n, 'c:case 2'
+    ! CHECK:   br ^bb10
+    ! CHECK: ^bb7:  // pred: ^bb5
+    ! CHECK:   br ^bb9
+    ! CHECK: ^bb8:  // pred: ^bb5
+    ! CHECK:   br ^bb10
+    ! CHECK: ^bb9:  // pred: ^bb7
+    ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+    ! CHECK:   br ^bb10
+    ! CHECK: ^bb10:  // 3 preds: ^bb6, ^bb8, ^bb9
+    select case (char(ichar('0')+n))
+      case ('1')
+        print*, n, 'c:case 1'
+      case ('2')
+      ! print*, n, 'c:case 2'
+      case default
+        print*, n, 'c:case default'
+    end select
+    ! CHECK:   return
+  end subroutine
+
+
   ! CHECK-LABEL: func @_QPswhere
   subroutine swhere(num)
     implicit none
@@ -392,6 +445,12 @@
     call scharacter2('22 ')   ! expected output:  9 -2
     call scharacter2('.  ')   ! expected output:  9 -2
     call scharacter2('   ')   ! expected output:  9 -2
+
+    print*
+    call sempty(0)            ! expected output: 0 i:case default 0; c:case default
+    call sempty(1)            ! expected output: 1 i:case 1; 1 c:case 1
+    call sempty(2)            ! no output
+    call sempty(3)            ! expected output: 3 i:case default; 3 c:case default
 
     print*
     call swhere(1)            ! expected output: 42.

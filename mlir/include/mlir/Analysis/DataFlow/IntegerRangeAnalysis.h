@@ -30,10 +30,18 @@ public:
   static IntegerValueRange getMaxRange(Value value);
 
   /// Create an integer value range lattice value.
-  IntegerValueRange(ConstantIntRanges value) : value(std::move(value)) {}
+  IntegerValueRange(Optional<ConstantIntRanges> value = None)
+      : value(std::move(value)) {}
+
+  /// Whether the range is uninitialized. This happens when the state hasn't
+  /// been set during the analysis.
+  bool isUninitialized() const { return !value.has_value(); }
 
   /// Get the known integer value range.
-  const ConstantIntRanges &getValue() const { return value; }
+  const ConstantIntRanges &getValue() const {
+    assert(!isUninitialized());
+    return *value;
+  }
 
   /// Compare two ranges.
   bool operator==(const IntegerValueRange &rhs) const {
@@ -43,7 +51,11 @@ public:
   /// Take the union of two ranges.
   static IntegerValueRange join(const IntegerValueRange &lhs,
                                 const IntegerValueRange &rhs) {
-    return lhs.value.rangeUnion(rhs.value);
+    if (lhs.isUninitialized())
+      return rhs;
+    if (rhs.isUninitialized())
+      return lhs;
+    return IntegerValueRange{lhs.getValue().rangeUnion(rhs.getValue())};
   }
 
   /// Print the integer value range.
@@ -51,7 +63,7 @@ public:
 
 private:
   /// The known integer value range.
-  ConstantIntRanges value;
+  Optional<ConstantIntRanges> value;
 };
 
 /// This lattice element represents the integer value range of an SSA value.
