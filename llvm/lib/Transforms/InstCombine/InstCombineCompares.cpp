@@ -1551,6 +1551,18 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   Type *SrcTy = X->getType();
   unsigned DstBits = Trunc->getType()->getScalarSizeInBits(),
            SrcBits = SrcTy->getScalarSizeInBits();
+
+  // (trunc (1 << Y) to iN) == 0 --> Y u>= N
+  // (trunc (1 << Y) to iN) != 0 --> Y u<  N
+  // TODO: Handle any shifted constant by subtracting trailing zeros.
+  // TODO: Handle non-equality predicates.
+  // TODO: Handle compare to power-of-2 (non-zero) constant.
+  Value *Y;
+  if (Cmp.isEquality() && C.isZero() && match(X, m_Shl(m_One(), m_Value(Y)))) {
+    auto NewPred = Pred == Cmp.ICMP_EQ ? Cmp.ICMP_UGE : Cmp.ICMP_ULT;
+    return new ICmpInst(NewPred, Y, ConstantInt::get(SrcTy, DstBits));
+  }
+
   if (Cmp.isEquality() && Trunc->hasOneUse()) {
     // Canonicalize to a mask and wider compare if the wide type is suitable:
     // (trunc X to i8) == C --> (X & 0xff) == (zext C)
