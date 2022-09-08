@@ -2887,12 +2887,15 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
 static constexpr unsigned ModifierOpNames[] = {
     AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
     AMDGPU::OpName::src2_modifiers, AMDGPU::OpName::clamp,
-    AMDGPU::OpName::omod};
+    AMDGPU::OpName::omod,           AMDGPU::OpName::op_sel};
 
 void SIInstrInfo::removeModOperands(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
-  for (unsigned Name : reverse(ModifierOpNames))
-    MI.removeOperand(AMDGPU::getNamedOperandIdx(Opc, Name));
+  for (unsigned Name : reverse(ModifierOpNames)) {
+    int Idx = AMDGPU::getNamedOperandIdx(Opc, Name);
+    if (Idx >= 0)
+      MI.removeOperand(Idx);
+  }
 }
 
 bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
