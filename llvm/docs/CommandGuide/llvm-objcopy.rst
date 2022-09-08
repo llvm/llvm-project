@@ -299,7 +299,7 @@ them.
 .. option:: --compress-debug-sections [<format>]
 
  Compress DWARF debug sections in the output, using the specified format.
- Supported formats are ``zlib`` and ``zstd``. Use ``zlib`` if ``<format>`` is omitted.
+ Supported formats are ``zlib``. Use ``zlib`` if ``<format>`` is omitted.
 
 .. option:: --decompress-debug-sections
 

@@ -721,17 +721,16 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   if (const auto *A = InputArgs.getLastArg(OBJCOPY_compress_debug_sections)) {
     Config.CompressionType = StringSwitch<DebugCompressionType>(A->getValue())
                                  .Case("zlib", DebugCompressionType::Z)
-                                 .Case("zstd", DebugCompressionType::Zstd)
                                  .Default(DebugCompressionType::None);
-    if (Config.CompressionType == DebugCompressionType::None) {
+    if (Config.CompressionType == DebugCompressionType::None)
       return createStringError(
           errc::invalid_argument,
           "invalid or unsupported --compress-debug-sections format: %s",
           A->getValue());
-    }
-    if (const char *Reason = compression::getReasonIfUnsupported(
-            compression::formatFor(Config.CompressionType)))
-      return createStringError(errc::invalid_argument, Reason);
+    if (!compression::zlib::isAvailable())
+      return createStringError(
+          errc::invalid_argument,
+          "LLVM was not compiled with LLVM_ENABLE_ZLIB: can not compress");
   }
 
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
