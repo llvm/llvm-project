@@ -155,6 +155,15 @@ public:
                                       CompilerType &type,
                                       VariableMetadataSP &metadata_sp);
 
+  swift::FuncDecl *GetFunctionToInjectVariableInto(
+      const SwiftASTManipulator::VariableInfo &variable, bool is_self) const;
+  swift::VarDecl *GetVarDeclForVariableInFunction(
+      const SwiftASTManipulator::VariableInfo &variable, bool is_self,
+      swift::FuncDecl *containing_function);
+  llvm::Optional<swift::Type>
+  GetSwiftTypeForVariable(
+      const SwiftASTManipulator::VariableInfo &variable, bool is_self) const;
+
   bool AddExternalVariables(llvm::MutableArrayRef<VariableInfo> variables);
 
   bool RewriteResult();
