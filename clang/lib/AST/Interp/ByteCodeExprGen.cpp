@@ -117,6 +117,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NullToPointer:
     return this->Visit(SubExpr);
 
+  case CK_IntegralToBoolean:
   case CK_IntegralCast: {
     Optional<PrimType> FromT = classify(SubExpr->getType());
     Optional<PrimType> ToT = classify(CE->getType());
@@ -131,19 +132,6 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_ToVoid:
     return discard(SubExpr);
-
-  case CK_IntegralToBoolean:
-    // Compare integral from Subexpr with 0
-    if (Optional<PrimType> T = classify(SubExpr->getType())) {
-      if (!this->Visit(SubExpr))
-        return false;
-
-      if (!this->emitConst(SubExpr, 0))
-        return false;
-
-      return this->emitNE(*T, SubExpr);
-    }
-    return false;
 
   default:
     assert(false && "Cast not implemented");
