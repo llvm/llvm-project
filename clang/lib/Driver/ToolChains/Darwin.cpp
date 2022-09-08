@@ -1809,7 +1809,7 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
       "WATCHOS_DEPLOYMENT_TARGET",
       "DRIVERKIT_DEPLOYMENT_TARGET",
   };
-  static_assert(llvm::array_lengthof(EnvVars) == Darwin::LastDarwinPlatform + 1,
+  static_assert(std::size(EnvVars) == Darwin::LastDarwinPlatform + 1,
                 "Missing platform");
   for (const auto &I : llvm::enumerate(llvm::makeArrayRef(EnvVars))) {
     if (char *Env = ::getenv(I.value()))
@@ -1830,11 +1830,11 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
           Targets[Darwin::TvOS] = "";
   } else {
     // Don't allow conflicts in any other platform.
-    unsigned FirstTarget = llvm::array_lengthof(Targets);
-    for (unsigned I = 0; I != llvm::array_lengthof(Targets); ++I) {
+    unsigned FirstTarget = std::size(Targets);
+    for (unsigned I = 0; I != std::size(Targets); ++I) {
       if (Targets[I].empty())
         continue;
-      if (FirstTarget == llvm::array_lengthof(Targets))
+      if (FirstTarget == std::size(Targets))
         FirstTarget = I;
       else
         TheDriver.Diag(diag::err_drv_conflicting_deployment_targets)
