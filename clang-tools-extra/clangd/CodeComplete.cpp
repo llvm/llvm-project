@@ -70,6 +70,7 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
+#include <utility>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
 #define DEBUG_TYPE "CodeComplete"
@@ -1363,13 +1364,14 @@ bool includeSymbolFromIndex(CodeCompletionContext::Kind Kind,
   return true;
 }
 
-std::future<SymbolSlab> startAsyncFuzzyFind(const SymbolIndex &Index,
-                                            const FuzzyFindRequest &Req) {
-  return runAsync<SymbolSlab>([&Index, Req]() {
+std::future<std::pair<bool, SymbolSlab>>
+startAsyncFuzzyFind(const SymbolIndex &Index, const FuzzyFindRequest &Req) {
+  return runAsync<std::pair<bool, SymbolSlab>>([&Index, Req]() {
     trace::Span Tracer("Async fuzzyFind");
     SymbolSlab::Builder Syms;
-    Index.fuzzyFind(Req, [&Syms](const Symbol &Sym) { Syms.insert(Sym); });
-    return std::move(Syms).build();
+    bool Incomplete =
+        Index.fuzzyFind(Req, [&Syms](const Symbol &Sym) { Syms.insert(Sym); });
+    return std::make_pair(Incomplete, std::move(Syms).build());
   });
 }
 
@@ -1721,7 +1723,9 @@ private:
       SPAN_ATTACH(Tracer, "Speculative results", true);
 
       trace::Span WaitSpec("Wait speculative results");
-      return SpecFuzzyFind->Result.get();
+      auto SpecRes = SpecFuzzyFind->Result.get();
+      Incomplete |= SpecRes.first;
+      return std::move(SpecRes.second);
     }
 
     SPAN_ATTACH(Tracer, "Speculative results", false);
