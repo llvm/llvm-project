@@ -240,6 +240,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
         llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
             .Case("none", llvm::DebugCompressionType::None)
             .Case("zlib", llvm::DebugCompressionType::Zlib)
+            .Case("zstd", llvm::DebugCompressionType::Zstd)
             .Default(llvm::DebugCompressionType::None);
   }
 
