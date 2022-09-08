@@ -83,6 +83,9 @@ class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
 }
 
+// A parameterized register class alternative to i32imm/i64imm from Target.td.
+def grlenimm : Operand<GRLenVT>;
+
 def uimm2 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<2>;
 }
@@ -1081,6 +1084,32 @@ def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
 defm : LdPat<atomic_load_64, LD_D>;
 defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
 defm : StPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
+/// Atomic Ops
+
+class PseudoMaskedAM
+    : Pseudo<(outs GPR:$res, GPR:$scratch),
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, grlenimm:$ordering), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoMaskedAtomicSwap32 : PseudoMaskedAM;
+
+class AtomicPat<Intrinsic intrin, Pseudo AMInst>
+    : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
+          (AMInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
+
+let Predicates = [IsLA64] in {
+def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i64,
+                PseudoMaskedAtomicSwap32>;
+def : Pat<(atomic_swap_32 GPR:$addr, GPR:$incr),
+          (AMSWAP_DB_W GPR:$incr, GPR:$addr)>;
+def : Pat<(atomic_swap_64 GPR:$addr, GPR:$incr),
+          (AMSWAP_DB_D GPR:$incr, GPR:$addr)>;
 } // Predicates = [IsLA64]
 
 /// Other pseudo-instructions
