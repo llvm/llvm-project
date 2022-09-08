@@ -70,7 +70,6 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
                 'SDKROOT': sdkroot.strip(),
                 'ARCH': arch,
                 'ARCH_CFLAGS': '-target {} {}'.format(triple, version_min),
-                'USE_SYSTEM_STDLIB': 1,
             })
         exe_path = os.path.realpath(self.getBuildArtifact(exe_name))
         cmd = [
