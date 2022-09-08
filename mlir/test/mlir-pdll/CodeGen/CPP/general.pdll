@@ -5,18 +5,19 @@
 // check that we handle overlap.
 
 // CHECK: struct GeneratedPDLLPattern0 : ::mlir::PDLPatternModule {
+// CHECK:  template <typename... ConfigsT>
 // CHECK:  : ::mlir::PDLPatternModule(::mlir::parseSourceString<::mlir::ModuleOp>(
 // CHECK:  R"mlir(
 // CHECK:    pdl.pattern
 // CHECK:      operation "test.op"
-// CHECK:  )mlir", context))
+// CHECK:  )mlir", context), std::forward<ConfigsT>(configs)...)
 
 // CHECK: struct NamedPattern : ::mlir::PDLPatternModule {
 // CHECK:  : ::mlir::PDLPatternModule(::mlir::parseSourceString<::mlir::ModuleOp>(
 // CHECK:  R"mlir(
 // CHECK:    pdl.pattern
 // CHECK:      operation "test.op2"
-// CHECK:  )mlir", context))
+// CHECK:  )mlir", context), std::forward<ConfigsT>(configs)...)
 
 // CHECK: struct GeneratedPDLLPattern1 : ::mlir::PDLPatternModule {
 
@@ -25,13 +26,13 @@
 // CHECK:  R"mlir(
 // CHECK:    pdl.pattern
 // CHECK:      operation "test.op3"
-// CHECK:  )mlir", context))
+// CHECK:  )mlir", context), std::forward<ConfigsT>(configs)...)
 
-// CHECK:      static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns(::mlir::RewritePatternSet &patterns) {
-// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern0>(patterns.getContext());
-// CHECK-NEXT:   patterns.add<NamedPattern>(patterns.getContext());
-// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern1>(patterns.getContext());
-// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern2>(patterns.getContext());
+// CHECK:      static void LLVM_ATTRIBUTE_UNUSED populateGeneratedPDLLPatterns(::mlir::RewritePatternSet &patterns, ConfigsT &&...configs) {
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern0>(patterns.getContext(), configs...);
+// CHECK-NEXT:   patterns.add<NamedPattern>(patterns.getContext(), configs...);
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern1>(patterns.getContext(), configs...);
+// CHECK-NEXT:   patterns.add<GeneratedPDLLPattern2>(patterns.getContext(), configs...);
 // CHECK-NEXT: }
 
 Pattern => erase op<test.op>;
