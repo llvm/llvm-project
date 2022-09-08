@@ -318,7 +318,7 @@ static Optional<SmallVector<Attribute>> getOperandValuesImpl(
   for (Value operand : op->getOperands()) {
     const Lattice<ConstantValue> *cv = getLattice(operand);
     // If any of the operands' values are uninitialized, bail out.
-    if (cv->isUninitialized())
+    if (cv->getValue().isUninitialized())
       return {};
     operands.push_back(cv->getValue().getConstantValue());
   }
