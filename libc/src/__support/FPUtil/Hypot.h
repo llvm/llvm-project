@@ -189,7 +189,10 @@ static inline T hypot(T x, T y) {
       sum >>= 2;
       ++out_exp;
       if (out_exp >= FPBits_t::MAX_EXPONENT) {
-        return T(FPBits_t::inf());
+        if (int round_mode = get_round();
+            round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
+          return T(FPBits_t::inf());
+        return T(FPBits_t(FPBits_t::MAX_NORMAL));
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to
@@ -227,7 +230,8 @@ static inline T hypot(T x, T y) {
   y_new >>= 1;
 
   // Round to the nearest, tie to even.
-  switch (get_round()) {
+  int round_mode = get_round();
+  switch (round_mode) {
   case FE_TONEAREST:
     // Round to nearest, ties to even
     if (round_bit && (lsb || sticky_bits || (r != 0)))
@@ -243,7 +247,9 @@ static inline T hypot(T x, T y) {
     y_new -= ONE >> 1;
     ++out_exp;
     if (out_exp >= FPBits_t::MAX_EXPONENT) {
-      return T(FPBits_t::inf());
+      if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
+        return T(FPBits_t::inf());
+      return T(FPBits_t(FPBits_t::MAX_NORMAL));
     }
   }
 

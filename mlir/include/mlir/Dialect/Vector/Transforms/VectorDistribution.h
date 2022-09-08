@@ -76,8 +76,9 @@ using DistributedReductionFn =
 
 /// Collect patterns to distribute vector reduction ops using given lamdba to
 /// distribute reduction op.
-void populateDistributeReduction(RewritePatternSet &pattern,
-                                 DistributedReductionFn distributedReductionFn);
+void populateDistributeReduction(
+    RewritePatternSet &pattern,
+    const DistributedReductionFn &distributedReductionFn);
 
 } // namespace vector
 } // namespace mlir

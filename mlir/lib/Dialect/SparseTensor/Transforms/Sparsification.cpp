@@ -525,7 +525,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
             MemRefType::get(dynShape, getPointerOverheadType(builder, enc));
         auto indTp =
             MemRefType::get(dynShape, getIndexOverheadType(builder, enc));
-        Value dim = constantIndex(builder, loc, d);
+        auto dim = builder.getIndexAttr(d);
         // Generate sparse primitives to obtains pointer and indices.
         codegen.pointers[tensor][idx] =
             builder.create<ToPointersOp>(loc, ptrTp, t->get(), dim);

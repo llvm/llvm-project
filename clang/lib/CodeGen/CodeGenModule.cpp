@@ -1099,6 +1099,8 @@ llvm::ConstantInt *CodeGenModule::getSize(CharUnits size) {
 
 void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
                                         const NamedDecl *D) const {
+  if (GV->hasDLLExportStorageClass() || GV->hasDLLImportStorageClass())
+    return;
   // Internal definitions always have default visibility.
   if (GV->hasLocalLinkage()) {
     GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
@@ -1109,14 +1111,6 @@ void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
   // Set visibility for definitions, and for declarations if requested globally
   // or set explicitly.
   LinkageInfo LV = D->getLinkageAndVisibility();
-  if (GV->hasDLLExportStorageClass() || GV->hasDLLImportStorageClass()) {
-    // Reject explicit non-default visibility on dllexport/dllimport.
-    if (LV.isVisibilityExplicit() && LV.getVisibility() != DefaultVisibility)
-      getDiags().Report(D->getLocation(),
-                        diag::err_non_default_visibility_dllstorage)
-          << (GV->hasDLLExportStorageClass() ? "dllexport" : "dllimport");
-    return;
-  }
   if (LV.isVisibilityExplicit() || getLangOpts().SetVisibilityForExternDecls ||
       !GV->isDeclarationForLinker())
     GV->setVisibility(GetLLVMVisibility(LV.getVisibility()));

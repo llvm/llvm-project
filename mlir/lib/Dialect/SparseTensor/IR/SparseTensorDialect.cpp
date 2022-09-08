@@ -226,14 +226,11 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
 // TensorDialect Operations.
 //===----------------------------------------------------------------------===//
 
-static LogicalResult isInBounds(Value dim, Value tensor) {
-  IntegerAttr constantAttr;
-  if (matchPattern(dim, m_Constant(&constantAttr))) {
-    unsigned d = constantAttr.getInt();
-    if (d >= tensor.getType().cast<RankedTensorType>().getRank())
-      return failure();
-  }
-  return success(); // in bounds, or symbolic
+static LogicalResult isInBounds(uint64_t dim, Value tensor) {
+  uint64_t rank = tensor.getType().cast<RankedTensorType>().getRank();
+  if (dim >= rank)
+    return failure();
+  return success(); // in bounds
 }
 
 static LogicalResult isMatchingWidth(Value result, unsigned width) {
@@ -270,7 +267,7 @@ OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
 
 LogicalResult ToPointersOp::verify() {
   auto e = getSparseTensorEncoding(getTensor().getType());
-  if (failed(isInBounds(getDim(), getTensor())))
+  if (failed(isInBounds(getDimension().getZExtValue(), getTensor())))
     return emitError("requested pointers dimension out of bounds");
   if (failed(isMatchingWidth(getResult(), e.getPointerBitWidth())))
     return emitError("unexpected type for pointers");
@@ -279,7 +276,7 @@ LogicalResult ToPointersOp::verify() {
 
 LogicalResult ToIndicesOp::verify() {
   auto e = getSparseTensorEncoding(getTensor().getType());
-  if (failed(isInBounds(getDim(), getTensor())))
+  if (failed(isInBounds(getDimension().getZExtValue(), getTensor())))
     return emitError("requested indices dimension out of bounds");
   if (failed(isMatchingWidth(getResult(), e.getIndexBitWidth())))
     return emitError("unexpected type for indices");
