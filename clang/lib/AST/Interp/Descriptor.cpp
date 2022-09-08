@@ -259,9 +259,7 @@ SourceLocation Descriptor::getLocation() const {
 }
 
 InitMap::InitMap(unsigned N) : UninitFields(N) {
-  for (unsigned I = 0; I < N / PER_FIELD; ++I) {
-    data()[I] = 0;
-  }
+  std::fill_n(data(), (N + PER_FIELD - 1) / PER_FIELD, 0);
 }
 
 InitMap::T *InitMap::data() {
