@@ -84,8 +84,51 @@ bool LoongArchExpandAtomicPseudo::expandMI(
   case LoongArch::PseudoMaskedAtomicSwap32:
     return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xchg, true, 32,
                              NextMBBI);
+  case LoongArch::PseudoAtomicSwap32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xchg, false, 32,
+                             NextMBBI);
   }
   return false;
+}
+
+static void doAtomicBinOpExpansion(const LoongArchInstrInfo *TII,
+                                   MachineInstr &MI, DebugLoc DL,
+                                   MachineBasicBlock *ThisMBB,
+                                   MachineBasicBlock *LoopMBB,
+                                   MachineBasicBlock *DoneMBB,
+                                   AtomicRMWInst::BinOp BinOp, int Width) {
+  Register DestReg = MI.getOperand(0).getReg();
+  Register ScratchReg = MI.getOperand(1).getReg();
+  Register AddrReg = MI.getOperand(2).getReg();
+  Register IncrReg = MI.getOperand(3).getReg();
+
+  // .loop:
+  //   dbar 0
+  //   ll.w dest, (addr)
+  //   binop scratch, dest, val
+  //   sc.w scratch, scratch, (addr)
+  //   beq scratch, zero, loop
+  BuildMI(LoopMBB, DL, TII->get(LoongArch::DBAR)).addImm(0);
+  BuildMI(LoopMBB, DL, TII->get(LoongArch::LL_W), DestReg)
+      .addReg(AddrReg)
+      .addImm(0);
+  switch (BinOp) {
+  default:
+    llvm_unreachable("Unexpected AtomicRMW BinOp");
+  case AtomicRMWInst::Xchg:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::OR), ScratchReg)
+        .addReg(IncrReg)
+        .addReg(LoongArch::R0);
+    break;
+  }
+  BuildMI(LoopMBB, DL, TII->get(LoongArch::SC_W), ScratchReg)
+      .addReg(ScratchReg)
+      .addReg(AddrReg)
+      .addImm(0);
+  BuildMI(LoopMBB, DL, TII->get(LoongArch::BEQ))
+      .addReg(ScratchReg)
+      .addReg(LoongArch::R0)
+      .addMBB(LoopMBB);
 }
 
 static void insertMaskedMerge(const LoongArchInstrInfo *TII, DebugLoc DL,
@@ -181,7 +224,8 @@ bool LoongArchExpandAtomicPseudo::expandAtomicBinOp(
   if (IsMasked)
     doMaskedAtomicBinOpExpansion(TII, MI, DL, &MBB, LoopMBB, DoneMBB, BinOp,
                                  Width);
-  // TODO: support IsMasked = false.
+  else
+    doAtomicBinOpExpansion(TII, MI, DL, &MBB, LoopMBB, DoneMBB, BinOp, Width);
 
   NextMBBI = MBB.end();
   MI.eraseFromParent();
