@@ -153,9 +153,6 @@ public:
     return RegClassPriorityTrumpsGlobalness;
   }
   bool getReverseLocalAssignment() const { return ReverseLocalAssignment; }
-  // FIXME: this is unnecessary once priority advisers are created by an
-  // analysis pass, which can fetch the SlotIndexes analysis itself.
-  SlotIndexes *getIndexes() const { return Indexes; }
   // end (interface to priority advisers)
 
 private:
