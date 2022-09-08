@@ -23,6 +23,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <iterator>
+#include <memory>
 #include <numeric>
 #include <random>
 #include <vector>
@@ -107,28 +108,28 @@ static cl::opt<SplitFunctionsStrategy> SplitStrategy(
 } // namespace opts
 
 namespace {
-struct SplitProfile2 {
-  bool canSplit(const BinaryFunction &BF) {
-    if (!BF.hasValidProfile())
-      return false;
+bool hasFullProfile(const BinaryFunction &BF) {
+  return llvm::all_of(BF.blocks(), [](const BinaryBasicBlock &BB) {
+    return BB.getExecutionCount() != BinaryBasicBlock::COUNT_NO_PROFILE;
+  });
+}
 
-    bool AllCold = true;
-    for (const BinaryBasicBlock &BB : BF) {
-      const uint64_t ExecCount = BB.getExecutionCount();
-      if (ExecCount == BinaryBasicBlock::COUNT_NO_PROFILE)
-        return false;
-      if (ExecCount != 0)
-        AllCold = false;
-    }
+bool allBlocksCold(const BinaryFunction &BF) {
+  return llvm::all_of(BF.blocks(), [](const BinaryBasicBlock &BB) {
+    return BB.getExecutionCount() == 0;
+  });
+}
 
-    return !AllCold;
+struct SplitProfile2 final : public SplitStrategy {
+  bool canSplit(const BinaryFunction &BF) override {
+    return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
   }
 
-  bool canOutline(const BinaryBasicBlock &BB) {
+  bool canOutline(const BinaryBasicBlock &BB) override {
     return BB.getExecutionCount() == 0;
   }
 
-  template <typename It> void partition(const It Start, const It End) const {
+  void fragment(const BlockIt Start, const BlockIt End) override {
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
       assert(BB->canOutline() &&
              "Moving a block that is not outlineable to cold fragment");
@@ -137,16 +138,15 @@ struct SplitProfile2 {
   }
 };
 
-struct SplitRandom2 {
-  std::minstd_rand0 *Gen;
+struct SplitRandom2 final : public SplitStrategy {
+  std::minstd_rand0 Gen;
 
-  explicit SplitRandom2(std::minstd_rand0 &Gen) : Gen(&Gen) {}
+  SplitRandom2() : Gen(opts::RandomSeed.getValue()) {}
 
-  bool canSplit(const BinaryFunction &BF) { return true; }
-  bool canOutline(const BinaryBasicBlock &BB) { return true; }
+  bool canSplit(const BinaryFunction &BF) override { return true; }
 
-  template <typename It> void partition(It Start, It End) const {
-    using DiffT = typename std::iterator_traits<It>::difference_type;
+  void fragment(const BlockIt Start, const BlockIt End) override {
+    using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
     const DiffT NumOutlineableBlocks = End - Start;
 
     // We want to split at least one block unless there are no blocks that can
@@ -154,7 +154,7 @@ struct SplitRandom2 {
     const auto MinimumSplit = std::min<DiffT>(NumOutlineableBlocks, 1);
     std::uniform_int_distribution<DiffT> Dist(MinimumSplit,
                                               NumOutlineableBlocks);
-    const DiffT NumColdBlocks = Dist(*Gen);
+    const DiffT NumColdBlocks = Dist(Gen);
     for (BinaryBasicBlock *BB : llvm::make_range(End - NumColdBlocks, End))
       BB->setFragmentNum(FragmentNum::cold());
 
@@ -164,16 +164,15 @@ struct SplitRandom2 {
   }
 };
 
-struct SplitRandomN {
-  std::minstd_rand0 *Gen;
+struct SplitRandomN final : public SplitStrategy {
+  std::minstd_rand0 Gen;
 
-  explicit SplitRandomN(std::minstd_rand0 &Gen) : Gen(&Gen) {}
+  SplitRandomN() : Gen(opts::RandomSeed.getValue()) {}
 
-  bool canSplit(const BinaryFunction &BF) { return true; }
-  bool canOutline(const BinaryBasicBlock &BB) { return true; }
+  bool canSplit(const BinaryFunction &BF) override { return true; }
 
-  template <typename It> void partition(It Start, It End) const {
-    using DiffT = typename std::iterator_traits<It>::difference_type;
+  void fragment(const BlockIt Start, const BlockIt End) override {
+    using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
     const DiffT NumOutlineableBlocks = End - Start;
 
     // We want to split at least one fragment if possible
@@ -181,12 +180,12 @@ struct SplitRandomN {
     std::uniform_int_distribution<DiffT> Dist(MinimumSplits,
                                               NumOutlineableBlocks);
     // Choose how many splits to perform
-    const DiffT NumSplits = Dist(*Gen);
+    const DiffT NumSplits = Dist(Gen);
 
     // Draw split points from a lottery
     SmallVector<unsigned, 0> Lottery(NumOutlineableBlocks);
     std::iota(Lottery.begin(), Lottery.end(), 0u);
-    std::shuffle(Lottery.begin(), Lottery.end(), *Gen);
+    std::shuffle(Lottery.begin(), Lottery.end(), Gen);
     Lottery.resize(NumSplits);
     llvm::sort(Lottery);
 
@@ -209,11 +208,10 @@ struct SplitRandomN {
   }
 };
 
-struct SplitAll {
-  bool canSplit(const BinaryFunction &BF) { return true; }
-  bool canOutline(const BinaryBasicBlock &BB) { return true; }
+struct SplitAll final : public SplitStrategy {
+  bool canSplit(const BinaryFunction &BF) override { return true; }
 
-  template <typename It> void partition(It Start, It End) const {
+  void fragment(const BlockIt Start, const BlockIt End) override {
     unsigned Fragment = 1;
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
       assert(BB->canOutline() &&
@@ -239,32 +237,26 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
   if (!opts::SplitFunctions)
     return;
 
-  std::minstd_rand0 RandGen(opts::RandomSeed.getValue());
-
-  ParallelUtilities::WorkFuncTy WorkFun;
+  std::unique_ptr<SplitStrategy> Strategy;
   bool ForceSequential = false;
 
   switch (opts::SplitStrategy) {
   case SplitFunctionsStrategy::Profile2:
-    WorkFun = [&](BinaryFunction &BF) { splitFunction<SplitProfile2>(BF); };
+    Strategy = std::make_unique<SplitProfile2>();
     break;
   case SplitFunctionsStrategy::Random2:
-    WorkFun = [&](BinaryFunction &BF) {
-      splitFunction(BF, SplitRandom2(RandGen));
-    };
+    Strategy = std::make_unique<SplitRandom2>();
     // If we split functions randomly, we need to ensure that across runs with
     // the same input, we generate random numbers for each function in the same
     // order.
     ForceSequential = true;
     break;
   case SplitFunctionsStrategy::RandomN:
-    WorkFun = [&](BinaryFunction &BF) {
-      splitFunction(BF, SplitRandomN(RandGen));
-    };
+    Strategy = std::make_unique<SplitRandomN>();
     ForceSequential = true;
     break;
   case SplitFunctionsStrategy::All:
-    WorkFun = [&](BinaryFunction &BF) { splitFunction<SplitAll>(BF); };
+    Strategy = std::make_unique<SplitAll>();
     break;
   }
 
@@ -273,7 +265,8 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
   };
 
   ParallelUtilities::runOnEachFunction(
-      BC, ParallelUtilities::SchedulingPolicy::SP_BB_LINEAR, WorkFun, SkipFunc,
+      BC, ParallelUtilities::SchedulingPolicy::SP_BB_LINEAR,
+      [&](BinaryFunction &BF) { splitFunction(BF, *Strategy); }, SkipFunc,
       "SplitFunctions", ForceSequential);
 
   if (SplitBytesHot + SplitBytesCold > 0)
@@ -283,8 +276,7 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
                      100.0 * SplitBytesHot / (SplitBytesHot + SplitBytesCold));
 }
 
-template <typename Strategy>
-void SplitFunctions::splitFunction(BinaryFunction &BF, Strategy S) {
+void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
   if (BF.empty())
     return;
 
@@ -375,7 +367,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, Strategy S) {
         return !BB->canOutline();
       });
 
-  S.partition(FirstOutlineable.base(), NewLayout.end());
+  S.fragment(FirstOutlineable.base(), NewLayout.end());
   BF.getLayout().update(NewLayout);
 
   // For shared objects, invoke instructions and corresponding landing pads
