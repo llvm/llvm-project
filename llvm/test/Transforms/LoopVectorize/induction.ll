@@ -6206,11 +6206,9 @@ define void @pr52460_first_order_recurrence_truncated_iv(i32* noalias %src, i32*
 ; UNROLL-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
 ; UNROLL-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[VEC_IND]], <2 x i32> [[STEP_ADD]], <2 x i32> <i32 1, i32 2>
 ; UNROLL-NEXT:    [[TMP2:%.*]] = load i32, i32* [[SRC:%.*]], align 4
-; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
-; UNROLL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
 ; UNROLL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT3]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
+; UNROLL-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT4]], [[TMP0]]
 ; UNROLL-NEXT:    [[TMP4:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT4]], [[TMP1]]
 ; UNROLL-NEXT:    [[SEXT:%.*]] = shl i64 [[INDEX]], 32
 ; UNROLL-NEXT:    [[TMP5:%.*]] = ashr exact i64 [[SEXT]], 32
@@ -6251,27 +6249,24 @@ define void @pr52460_first_order_recurrence_truncated_iv(i32* noalias %src, i32*
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[VECTOR_RECUR]], <2 x i32> [[VEC_IND]], <2 x i32> <i32 1, i32 2>
 ; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[VEC_IND]], <2 x i32> [[STEP_ADD]], <2 x i32> <i32 1, i32 2>
 ; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = load i32, i32* [[SRC:%.*]], align 4
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = load i32, i32* [[SRC]], align 4
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP6]], i32 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT3]], <2 x i32> poison, <2 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT]], [[TMP3]]
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT4]], [[TMP4]]
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = getelementptr i32, i32* [[DST:%.*]], i32 [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = getelementptr i32, i32* [[DST]], i32 [[TMP2]]
-; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = add <2 x i32> [[VEC_IND]], [[TMP7]]
-; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = add <2 x i32> [[STEP_ADD]], [[TMP8]]
-; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = getelementptr i32, i32* [[TMP9]], i32 0
-; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP13]] to <2 x i32>*
-; UNROLL-NO-IC-NEXT:    store <2 x i32> [[TMP11]], <2 x i32>* [[TMP14]], align 4
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = getelementptr i32, i32* [[TMP9]], i32 2
-; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = bitcast i32* [[TMP15]] to <2 x i32>*
-; UNROLL-NO-IC-NEXT:    store <2 x i32> [[TMP12]], <2 x i32>* [[TMP16]], align 4
+; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT4]], [[TMP3]]
+; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = mul nsw <2 x i32> [[BROADCAST_SPLAT4]], [[TMP4]]
+; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[DST:%.*]], i32 [[TMP1]]
+; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = getelementptr i32, i32* [[DST]], i32 [[TMP2]]
+; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[VEC_IND]], [[TMP6]]
+; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = add <2 x i32> [[STEP_ADD]], [[TMP7]]
+; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP8]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP12]] to <2 x i32>*
+; UNROLL-NO-IC-NEXT:    store <2 x i32> [[TMP10]], <2 x i32>* [[TMP13]], align 4
+; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = getelementptr i32, i32* [[TMP8]], i32 2
+; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = bitcast i32* [[TMP14]] to <2 x i32>*
+; UNROLL-NO-IC-NEXT:    store <2 x i32> [[TMP11]], <2 x i32>* [[TMP15]], align 4
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], <i32 2, i32 2>
-; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP52:![0-9]+]]
+; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; UNROLL-NO-IC-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP52:![0-9]+]]
 ; UNROLL-NO-IC:       middle.block:
 ; UNROLL-NO-IC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 100, 100
 ; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i32> [[STEP_ADD]], i32 1
@@ -6312,11 +6307,9 @@ define void @pr52460_first_order_recurrence_truncated_iv(i32* noalias %src, i32*
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[VEC_IND]], <4 x i32> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = load i32, i32* [[SRC:%.*]], align 4
-; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 0
-; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = mul nsw <4 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = mul nsw <4 x i32> [[BROADCAST_SPLAT4]], [[TMP0]]
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[BROADCAST_SPLAT4]], [[TMP1]]
 ; INTERLEAVE-NEXT:    [[SEXT:%.*]] = shl i64 [[INDEX]], 32
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = ashr exact i64 [[SEXT]], 32
