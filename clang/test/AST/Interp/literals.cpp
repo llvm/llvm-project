@@ -11,6 +11,7 @@ constexpr int number = 10;
 static_assert(number == 10, "");
 static_assert(number != 10, ""); // expected-error{{failed}} \
                                  // ref-error{{failed}} \
+                                 // expected-note{{evaluates to}} \
                                  // ref-note{{evaluates to}}
 
 constexpr bool getTrue() { return true; }
