@@ -268,7 +268,7 @@ void testByValueObjectInFormat(Foo *obj) {
 
 // <rdar://problem/13557053>
 void testTypeOf(NSInteger dW, NSInteger dH) {
-  NSLog(@"dW %d  dH %d",({ __typeof__(dW) __a = (dW); __a < 0 ? -__a : __a; }),({ __typeof__(dH) __a = (dH); __a < 0 ? -__a : __a; })); // expected-warning 2 {{format specifies type 'int' but the argument has type 'long'}}
+  NSLog(@"dW %d  dH %d",({ __typeof__(dW) __a = (dW); __a < 0 ? -__a : __a; }),({ __typeof__(dH) __a = (dH); __a < 0 ? -__a : __a; })); // expected-warning 2 {{values of type 'NSInteger' should not be used as format arguments; add an explicit cast to 'long' instead}}
 }
 
 void testUnicode(void) {
