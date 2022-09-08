@@ -9592,12 +9592,24 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   }
 
   if (IsUniform) {
+    // If the recipe is uniform across all parts (instead of just per VF), only
+    // generate a single instance.
+    Instruction *UI = getUnderlyingInstr();
+    if (isa<LoadInst>(UI) &&
+        all_of(operands(), [](VPValue *Op) { return !Op->getDef(); })) {
+      State.ILV->scalarizeInstruction(UI, this, VPIteration(0, 0), IsPredicated,
+                                      State);
+      for (unsigned Part = 1; Part < State.UF; ++Part)
+        State.set(this, State.get(this, VPIteration(0, 0)),
+                  VPIteration(Part, 0));
+      return;
+    }
+
     // Uniform within VL means we need to generate lane 0 only for each
     // unrolled copy.
     for (unsigned Part = 0; Part < State.UF; ++Part)
-      State.ILV->scalarizeInstruction(getUnderlyingInstr(), this,
-                                      VPIteration(Part, 0), IsPredicated,
-                                      State);
+      State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, 0),
+                                      IsPredicated, State);
     return;
   }
 
