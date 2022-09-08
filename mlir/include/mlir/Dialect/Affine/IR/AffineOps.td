@@ -24,8 +24,6 @@ def Affine_Dialect : Dialect {
   let cppNamespace = "mlir";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithmeticDialect"];
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 // Base class for Affine dialect ops.

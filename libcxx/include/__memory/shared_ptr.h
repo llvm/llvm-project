@@ -690,7 +690,7 @@ public:
         {
             typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
             typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer,
-                                        reference_wrapper<typename remove_reference<_Dp>::type>,
+                                        reference_wrapper<__libcpp_remove_reference_t<_Dp> >,
                                         _AllocT> _CntrlBlk;
             __cntrl_ = new _CntrlBlk(__r.get(), _VSTD::ref(__r.get_deleter()), _AllocT());
             __enable_weak_this(__r.get(), __r.get());
@@ -805,7 +805,7 @@ public:
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    typename add_lvalue_reference<element_type>::type operator*() const _NOEXCEPT
+    __add_lvalue_reference_t<element_type> operator*() const _NOEXCEPT
     {
         return *__ptr_;
     }
@@ -858,7 +858,7 @@ public:
 
 #if _LIBCPP_STD_VER > 14
     _LIBCPP_HIDE_FROM_ABI
-    typename add_lvalue_reference<element_type>::type operator[](ptrdiff_t __i) const
+    __add_lvalue_reference_t<element_type> operator[](ptrdiff_t __i) const
     {
             static_assert(is_array<_Tp>::value,
                           "std::shared_ptr<T>::operator[] is only valid when T is an array type.");
@@ -907,7 +907,7 @@ private:
     _LIBCPP_HIDE_FROM_ABI
     void __enable_weak_this(const enable_shared_from_this<_Yp>* __e, _OrigPtr* __ptr) _NOEXCEPT
     {
-        typedef typename remove_cv<_Yp>::type _RawYp;
+        typedef __remove_cv_t<_Yp> _RawYp;
         if (__e && __e->__weak_this_.expired())
         {
             __e->__weak_this_ = shared_ptr<_RawYp>(*this,

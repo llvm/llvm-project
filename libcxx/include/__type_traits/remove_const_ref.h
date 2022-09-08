@@ -20,9 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct __unconstref {
-    typedef _LIBCPP_NODEBUG typename remove_const<typename remove_reference<_Tp>::type>::type type;
-};
+using __remove_const_ref_t = __remove_const_t<__libcpp_remove_reference_t<_Tp> >;
 
 _LIBCPP_END_NAMESPACE_STD
 

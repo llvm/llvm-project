@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
@@ -204,7 +205,7 @@ protected:
   MachineRegisterInfo &MRI;
   MachineFrameInfo &MFI;
   MachineConstantPool &MCP;
-  DebugLoc DbgLoc;
+  MIMetadata MIMD;
   const TargetMachine &TM;
   const DataLayout &DL;
   const TargetInstrInfo &TII;
@@ -247,7 +248,7 @@ public:
   void finishBasicBlock();
 
   /// Return current debug location information.
-  DebugLoc getCurDebugLoc() const { return DbgLoc; }
+  DebugLoc getCurDebugLoc() const { return MIMD.getDL(); }
 
   /// Do "fast" instruction selection for function arguments and append
   /// the machine instructions to the current block. Returns true when

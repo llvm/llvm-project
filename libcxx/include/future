@@ -637,7 +637,7 @@ public:
     void set_value_at_thread_exit(_Arg&& __arg);
 
     _Rp move();
-    typename add_lvalue_reference<_Rp>::type copy();
+    __add_lvalue_reference_t<_Rp> copy();
 };
 
 template <class _Rp>
@@ -688,7 +688,7 @@ __assoc_state<_Rp>::move()
 }
 
 template <class _Rp>
-typename add_lvalue_reference<_Rp>::type
+__add_lvalue_reference_t<_Rp>
 __assoc_state<_Rp>::copy()
 {
     unique_lock<mutex> __lk(this->__mut_);
@@ -1750,7 +1750,7 @@ template <class _Fp>
 __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Fp&& __f)
     : __f_(nullptr)
 {
-    typedef typename remove_reference<typename decay<_Fp>::type>::type _FR;
+    typedef __libcpp_remove_reference_t<typename decay<_Fp>::type> _FR;
     typedef __packaged_task_func<_FR, allocator<_FR>, _Rp(_ArgTypes...)> _FF;
     if (sizeof(_FF) <= sizeof(__buf_))
     {
@@ -1774,7 +1774,7 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(
                                   allocator_arg_t, const _Alloc& __a0, _Fp&& __f)
     : __f_(nullptr)
 {
-    typedef typename remove_reference<typename decay<_Fp>::type>::type _FR;
+    typedef __libcpp_remove_reference_t<typename decay<_Fp>::type> _FR;
     typedef __packaged_task_func<_FR, _Alloc, _Rp(_ArgTypes...)> _FF;
     if (sizeof(_FF) <= sizeof(__buf_))
     {
@@ -1887,11 +1887,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     packaged_task() _NOEXCEPT : __p_(nullptr) {}
     template <class _Fp,
-              class = __enable_if_t<!is_same<__uncvref_t<_Fp>, packaged_task>::value> >
+              class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
         _LIBCPP_INLINE_VISIBILITY
         explicit packaged_task(_Fp&& __f) : __f_(_VSTD::forward<_Fp>(__f)) {}
     template <class _Fp, class _Allocator,
-              class = __enable_if_t<!is_same<__uncvref_t<_Fp>, packaged_task>::value> >
+              class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
         _LIBCPP_INLINE_VISIBILITY
         packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
              : __f_(allocator_arg, __a, _VSTD::forward<_Fp>(__f)),
@@ -2002,11 +2002,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     packaged_task() _NOEXCEPT : __p_(nullptr) {}
     template <class _Fp,
-              class = __enable_if_t<!is_same<__uncvref_t<_Fp>, packaged_task>::value> >
+              class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
         _LIBCPP_INLINE_VISIBILITY
         explicit packaged_task(_Fp&& __f) : __f_(_VSTD::forward<_Fp>(__f)) {}
     template <class _Fp, class _Allocator,
-              class = __enable_if_t<!is_same<__uncvref_t<_Fp>, packaged_task>::value> >
+              class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
         _LIBCPP_INLINE_VISIBILITY
         packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
              : __f_(allocator_arg, __a, _VSTD::forward<_Fp>(__f)),

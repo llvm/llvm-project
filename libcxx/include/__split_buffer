@@ -51,7 +51,7 @@ private:
 public:
     typedef _Tp                                             value_type;
     typedef _Allocator                                      allocator_type;
-    typedef typename remove_reference<allocator_type>::type __alloc_rr;
+    typedef __libcpp_remove_reference_t<allocator_type>     __alloc_rr;
     typedef allocator_traits<__alloc_rr>                    __alloc_traits;
     typedef value_type&                                     reference;
     typedef const value_type&                               const_reference;
@@ -67,8 +67,8 @@ public:
     pointer                                         __end_;
     __compressed_pair<pointer, allocator_type> __end_cap_;
 
-    typedef typename add_lvalue_reference<allocator_type>::type __alloc_ref;
-    typedef typename add_lvalue_reference<allocator_type>::type __alloc_const_ref;
+    typedef __add_lvalue_reference_t<allocator_type> __alloc_ref;
+    typedef __add_lvalue_reference_t<allocator_type> __alloc_const_ref;
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __alloc_rr&           __alloc() _NOEXCEPT         {return __end_cap_.second();}
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const __alloc_rr&     __alloc() const _NOEXCEPT   {return __end_cap_.second();}

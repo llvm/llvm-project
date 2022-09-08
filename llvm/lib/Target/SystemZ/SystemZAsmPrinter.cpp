@@ -817,10 +817,6 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
-  emitStackMaps(SM);
-}
-
 void SystemZAsmPrinter::emitFunctionBodyEnd() {
   if (TM.getTargetTriple().isOSzOS()) {
     // Emit symbol for the end of function if the z/OS target streamer

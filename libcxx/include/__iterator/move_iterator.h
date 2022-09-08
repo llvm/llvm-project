@@ -82,7 +82,7 @@ public:
     typedef typename iterator_traits<iterator_type>::reference __reference;
     typedef typename conditional<
             is_reference<__reference>::value,
-            typename remove_reference<__reference>::type&&,
+            __libcpp_remove_reference_t<__reference>&&,
             __reference
         >::type reference;
 #endif // _LIBCPP_STD_VER > 17

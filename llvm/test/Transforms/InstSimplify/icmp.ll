@@ -241,9 +241,7 @@ define <2 x i1> @sub_odd(<2 x i8> %x) {
 
 define <2 x i1> @sub_odd_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_odd_poison(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> <i8 poison, i8 1>, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[SUB]], [[X]]
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %sub = sub <2 x i8> <i8 poison, i8 1>, %x
   %cmp = icmp ne <2 x i8> %sub, %x

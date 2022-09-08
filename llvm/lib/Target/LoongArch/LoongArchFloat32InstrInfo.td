@@ -256,4 +256,4 @@ def : Pat<(bitconvert (i32 GPR:$src)), (MOVGR2FR_W GPR:$src)>;
 def : Pat<(i32 (bitconvert FPR32:$src)), (MOVFR2GR_S FPR32:$src)>;
 // int -> f32
 def : Pat<(f32 (sint_to_fp (i32 GPR:$src))), (FFINT_S_W (MOVGR2FR_W GPR:$src))>;
-} // Predicates = [HasBasicF, IsLA64]
+} // Predicates = [HasBasicF, IsLA32]

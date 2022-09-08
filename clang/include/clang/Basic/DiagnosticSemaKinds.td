@@ -11273,7 +11273,7 @@ def err_coroutine_unusable_new : Error<
   "'operator new' provided by %0 is not usable with the function signature of %1"
 >;
 def err_coroutine_unfound_nothrow_new : Error <
-  "unable to find '::operator new(size_­t, nothrow_­t)' for %0"
+  "unable to find '::operator new(size_t, nothrow_t)' for %0"
 >;
 } // end of coroutines issue category
 

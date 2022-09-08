@@ -2994,8 +2994,8 @@ class BaseLogicalRegPseudo<RegisterClass regtype, SDPatternOperator OpNode>
 
 // Split from LogicalImm as not all instructions have both.
 multiclass LogicalReg<bits<2> opc, bit N, string mnemonic,
-                      SDPatternOperator OpNode> {
-  let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+                      SDPatternOperator OpNode, int AddedComplexityVal = 0> {
+  let isReMaterializable = 1, isAsCheapAsAMove = 1, AddedComplexity = AddedComplexityVal in {
   def Wrr : BaseLogicalRegPseudo<GPR32, OpNode>;
   def Xrr : BaseLogicalRegPseudo<GPR64, OpNode>;
   }

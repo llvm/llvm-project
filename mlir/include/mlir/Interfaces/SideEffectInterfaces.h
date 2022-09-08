@@ -256,6 +256,12 @@ struct Write : public Effect::Base<Write> {};
 template <typename EffectTy>
 bool hasSingleEffect(Operation *op, Value value = nullptr);
 
+/// Returns true if `op` has an effect of type `EffectTy` on `value`. If no
+/// `value` is provided, simply check if effects of the given type(s) are
+/// present.
+template <typename... EffectTys>
+bool hasEffect(Operation *op, Value value = nullptr);
+
 /// Return true if the given operation is unused, and has no side effects on
 /// memory that prevent erasing.
 bool isOpTriviallyDead(Operation *op);

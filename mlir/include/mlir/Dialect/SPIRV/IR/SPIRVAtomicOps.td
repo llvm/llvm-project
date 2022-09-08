@@ -262,7 +262,7 @@ def SPV_AtomicExchangeOp : SPV_Op<"AtomicExchange", []> {
 
 // -----
 
-def SPV_AtomicFAddEXTOp : SPV_Op<"AtomicFAddEXT", []> {
+def SPV_EXTAtomicFAddOp : SPV_ExtVendorOp<"AtomicFAdd", []> {
   let summary = "TBD";
 
   let description = [{
@@ -279,7 +279,7 @@ def SPV_AtomicFAddEXTOp : SPV_Op<"AtomicFAddEXT", []> {
 
     3) store the New Value back through Pointer.
 
-    The instruction’s result is the Original Value.
+    The instruction's result is the Original Value.
 
     Result Type must be a floating-point type scalar.
 
@@ -290,14 +290,14 @@ def SPV_AtomicFAddEXTOp : SPV_Op<"AtomicFAddEXT", []> {
 
     ```
     atomic-fadd-op ::=
-        `spv.AtomicFAddEXT` scope memory-semantics
+        `spv.EXT.AtomicFAdd` scope memory-semantics
                             ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicFAddEXT "Device" "None" %pointer, %value :
+    %0 = spv.EXT.AtomicFAdd "Device" "None" %pointer, %value :
                            !spv.ptr<f32, StorageBuffer>
     ```mlir
   }];
