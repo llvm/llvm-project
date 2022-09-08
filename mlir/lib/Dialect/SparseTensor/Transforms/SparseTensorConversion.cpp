@@ -1137,13 +1137,15 @@ public:
   }
 };
 
-/// Sparse conversion rule for inserting in lexicographic index order.
-class SparseTensorLexInsertConverter : public OpConversionPattern<LexInsertOp> {
+/// Sparse conversion rule for the insertion operator.
+class SparseTensorInsertConverter : public OpConversionPattern<InsertOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
-  matchAndRewrite(LexInsertOp op, OpAdaptor adaptor,
+  matchAndRewrite(InsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // Note that the current regime only allows for strict lexicographic
+    // index order.
     Type elemTp = op.getTensor().getType().cast<ShapedType>().getElementType();
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
     replaceOpWithFuncCall(rewriter, op, name, {}, adaptor.getOperands(),
@@ -1432,7 +1434,7 @@ void mlir::populateSparseTensorConversionPatterns(
                SparseTensorConcatConverter, SparseTensorAllocConverter,
                SparseTensorDeallocConverter, SparseTensorToPointersConverter,
                SparseTensorToIndicesConverter, SparseTensorToValuesConverter,
-               SparseTensorLoadConverter, SparseTensorLexInsertConverter,
+               SparseTensorLoadConverter, SparseTensorInsertConverter,
                SparseTensorExpandConverter, SparseTensorCompressConverter,
                SparseTensorOutConverter>(typeConverter, patterns.getContext());
 

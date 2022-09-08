@@ -166,7 +166,7 @@ func.func @sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
 // CHECK:               scf.yield %[[VAL_37]] : f64
 // CHECK:             }
 // CHECK:             memref.store %[[VAL_30:.*]], %[[VAL_19]][] : memref<f64>
-// CHECK:             sparse_tensor.lex_insert %[[VAL_10]], %[[VAL_18]], %[[VAL_19]] : tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>, memref<?xindex>, memref<f64>
+// CHECK:             sparse_tensor.insert %[[VAL_10]], %[[VAL_18]], %[[VAL_19]] : tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>, memref<?xindex>, memref<f64>
 // CHECK:           }
 // CHECK:         }
 // CHECK:         %[[VAL_39:.*]] = sparse_tensor.load %[[VAL_10]] hasInserts : tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>

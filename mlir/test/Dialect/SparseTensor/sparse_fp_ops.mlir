@@ -375,7 +375,7 @@ func.func @divbyc(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_20:.*]] = math.sin %[[VAL_19]] : f64
 // CHECK:           %[[VAL_21:.*]] = math.tanh %[[VAL_20]] : f64
 // CHECK:           memref.store %[[VAL_21]], %[[BUF]][] : memref<f64>
-// CHECK:           sparse_tensor.lex_insert %[[VAL_4]], %[[VAL_8]], %[[BUF]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>, memref<?xindex>, memref<f64>
+// CHECK:           sparse_tensor.insert %[[VAL_4]], %[[VAL_8]], %[[BUF]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>, memref<?xindex>, memref<f64>
 // CHECK:         }
 // CHECK:         %[[VAL_22:.*]] = sparse_tensor.load %[[VAL_4]] hasInserts : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK:         return %[[VAL_22]] : tensor<32xf64, #sparse_tensor.encoding<{{{.*}}}>>
@@ -419,7 +419,7 @@ func.func @zero_preserving_math(%arga: tensor<32xf64, #SV>) -> tensor<32xf64, #S
 // CHECK:           %[[VAL_14:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_12]]] : memref<?xcomplex<f64>>
 // CHECK:           %[[VAL_15:.*]] = complex.div %[[VAL_14]], %[[VAL_3]] : complex<f64>
 // CHECK:           memref.store %[[VAL_15]], %[[VAL_9]][] : memref<complex<f64>>
-// CHECK:           sparse_tensor.lex_insert %[[VAL_4]], %[[VAL_8]], %[[VAL_9]] : tensor<32xcomplex<f64>, #sparse_tensor.encoding<{{.*}}>>, memref<?xindex>, memref<complex<f64>>
+// CHECK:           sparse_tensor.insert %[[VAL_4]], %[[VAL_8]], %[[VAL_9]] : tensor<32xcomplex<f64>, #sparse_tensor.encoding<{{.*}}>>, memref<?xindex>, memref<complex<f64>>
 // CHECK:         }
 // CHECK:         %[[VAL_16:.*]] = sparse_tensor.load %[[VAL_4]] hasInserts : tensor<32xcomplex<f64>, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:         return %[[VAL_16]] : tensor<32xcomplex<f64>, #sparse_tensor.encoding<{{.*}}>>

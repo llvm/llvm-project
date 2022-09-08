@@ -42,7 +42,7 @@
 // CHECK:               memref.store %[[VAL_21]], %[[VAL_11]]{{\[}}%[[VAL_2]]] : memref<?xindex>
 // CHECK:               %[[VAL_22:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_20]]] : memref<?xf64>
 // CHECK:               memref.store %[[VAL_22]], %[[VAL_12]][] : memref<f64>
-// CHECK:               sparse_tensor.lex_insert %[[VAL_4]], %[[VAL_11]], %[[VAL_12]] : tensor<4x3xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>, memref<?xindex>, memref<f64>
+// CHECK:               sparse_tensor.insert %[[VAL_4]], %[[VAL_11]], %[[VAL_12]] : tensor<4x3xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>, memref<?xindex>, memref<f64>
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[VAL_23:.*]] = sparse_tensor.load %[[VAL_4]] hasInserts : tensor<4x3xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
