@@ -26,6 +26,10 @@ void OptionValueFormat::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
+llvm::json::Value OptionValueFormat::ToJSON(const ExecutionContext *exe_ctx) {
+  return FormatManager::GetFormatAsCString(m_current_value);
+}
+
 Status OptionValueFormat::SetValueFromString(llvm::StringRef value,
                                              VarSetOperationType op) {
   Status error;
