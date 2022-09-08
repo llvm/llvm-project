@@ -1767,11 +1767,12 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySimd) {
   OpenMPIRBuilder OMPBuilder(*M);
-
+  MapVector<Value *, Value *> AlignedVars;
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
 
   // Simd-ize the loop.
-  OMPBuilder.applySimd(CLI, /* IfCond */ nullptr, OrderKind::OMP_ORDER_unknown,
+  OMPBuilder.applySimd(CLI, AlignedVars, /* IfCond */ nullptr,
+                       OrderKind::OMP_ORDER_unknown,
                        /* Simdlen */ nullptr,
                        /* Safelen */ nullptr);
 
@@ -1798,13 +1799,76 @@ TEST_F(OpenMPIRBuilderTest, ApplySimd) {
   }));
 }
 
-TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
+TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
   OpenMPIRBuilder OMPBuilder(*M);
+  IRBuilder<> Builder(BB);
+  const int AlignmentValue = 32;
+  AllocaInst *Alloc1 =
+      Builder.CreateAlloca(Builder.getInt8PtrTy(), Builder.getInt64(1));
+  LoadInst *Load1 = Builder.CreateLoad(Alloc1->getAllocatedType(), Alloc1);
+  MapVector<Value *, Value *> AlignedVars;
+  AlignedVars.insert({Load1, Builder.getInt64(AlignmentValue)});
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
 
   // Simd-ize the loop.
-  OMPBuilder.applySimd(CLI, /* IfCond */ nullptr, OrderKind::OMP_ORDER_unknown,
+  OMPBuilder.applySimd(CLI, AlignedVars, /* IfCond */ nullptr,
+                       OrderKind::OMP_ORDER_unknown,
+                       /* Simdlen */ nullptr,
+                       /* Safelen */ nullptr);
+
+  OMPBuilder.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  PassBuilder PB;
+  FunctionAnalysisManager FAM;
+  PB.registerFunctionAnalyses(FAM);
+  LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
+
+  const std::vector<Loop *> &TopLvl = LI.getTopLevelLoops();
+  EXPECT_EQ(TopLvl.size(), 1u);
+
+  Loop *L = TopLvl.front();
+  EXPECT_TRUE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
+  EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
+
+  // Check for llvm.access.group metadata attached to the printf
+  // function in the loop body.
+  BasicBlock *LoopBody = CLI->getBody();
+  EXPECT_TRUE(any_of(*LoopBody, [](Instruction &I) {
+    return I.getMetadata("llvm.access.group") != nullptr;
+  }));
+
+  // Check if number of assumption instructions is equal to number of aligned
+  // variables
+  BasicBlock *LoopPreheader = CLI->getPreheader();
+  size_t NumAssummptionCallsInPreheader = count_if(
+      *LoopPreheader, [](Instruction &I) { return isa<AssumeInst>(I); });
+  EXPECT_EQ(NumAssummptionCallsInPreheader, AlignedVars.size());
+
+  // Check if variables are correctly aligned
+  for (Instruction &Instr : *LoopPreheader) {
+    if (!isa<AssumeInst>(Instr))
+      continue;
+    AssumeInst *AssumeInstruction = cast<AssumeInst>(&Instr);
+    if (AssumeInstruction->getNumTotalBundleOperands()) {
+      auto Bundle = AssumeInstruction->getOperandBundleAt(0);
+      if (Bundle.getTagName() == "align") {
+        EXPECT_TRUE(isa<ConstantInt>(Bundle.Inputs[1]));
+        auto ConstIntVal = dyn_cast<ConstantInt>(Bundle.Inputs[1]);
+        EXPECT_EQ(ConstIntVal->getSExtValue(), AlignmentValue);
+      }
+    }
+  }
+}
+TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  MapVector<Value *, Value *> AlignedVars;
+  CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
+
+  // Simd-ize the loop.
+  OMPBuilder.applySimd(CLI, AlignedVars,
+                       /* IfCond */ nullptr, OrderKind::OMP_ORDER_unknown,
                        ConstantInt::get(Type::getInt32Ty(Ctx), 3),
                        /* Safelen */ nullptr);
 
@@ -1834,12 +1898,13 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlen) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySafelenOrderConcurrent) {
   OpenMPIRBuilder OMPBuilder(*M);
+  MapVector<Value *, Value *> AlignedVars;
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
 
   // Simd-ize the loop.
   OMPBuilder.applySimd(
-      CLI, /* IfCond */ nullptr, OrderKind::OMP_ORDER_concurrent,
+      CLI, AlignedVars, /* IfCond */ nullptr, OrderKind::OMP_ORDER_concurrent,
       /* Simdlen */ nullptr, ConstantInt::get(Type::getInt32Ty(Ctx), 3));
 
   OMPBuilder.finalize();
@@ -1870,13 +1935,13 @@ TEST_F(OpenMPIRBuilderTest, ApplySafelenOrderConcurrent) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySafelen) {
   OpenMPIRBuilder OMPBuilder(*M);
+  MapVector<Value *, Value *> AlignedVars;
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
 
-  // Simd-ize the loop.
-  OMPBuilder.applySimd(CLI, /* IfCond */ nullptr, OrderKind::OMP_ORDER_unknown,
-                       /* Simdlen */ nullptr,
-                       ConstantInt::get(Type::getInt32Ty(Ctx), 3));
+  OMPBuilder.applySimd(
+      CLI, AlignedVars, /* IfCond */ nullptr, OrderKind::OMP_ORDER_unknown,
+      /* Simdlen */ nullptr, ConstantInt::get(Type::getInt32Ty(Ctx), 3));
 
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -1904,11 +1969,12 @@ TEST_F(OpenMPIRBuilderTest, ApplySafelen) {
 
 TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
   OpenMPIRBuilder OMPBuilder(*M);
+  MapVector<Value *, Value *> AlignedVars;
 
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
 
-  // Simd-ize the loop.
-  OMPBuilder.applySimd(CLI, /* IfCond */ nullptr, OrderKind::OMP_ORDER_unknown,
+  OMPBuilder.applySimd(CLI, AlignedVars, /* IfCond */ nullptr,
+                       OrderKind::OMP_ORDER_unknown,
                        ConstantInt::get(Type::getInt32Ty(Ctx), 2),
                        ConstantInt::get(Type::getInt32Ty(Ctx), 3));
 
@@ -1939,6 +2005,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
 TEST_F(OpenMPIRBuilderTest, ApplySimdLoopIf) {
   OpenMPIRBuilder OMPBuilder(*M);
   IRBuilder<> Builder(BB);
+  MapVector<Value *, Value *> AlignedVars;
   AllocaInst *Alloc1 = Builder.CreateAlloca(Builder.getInt32Ty());
   AllocaInst *Alloc2 = Builder.CreateAlloca(Builder.getInt32Ty());
 
@@ -1953,7 +2020,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdLoopIf) {
   CanonicalLoopInfo *CLI = buildSingleLoopFunction(DL, OMPBuilder, 32);
 
   // Simd-ize the loop with if condition
-  OMPBuilder.applySimd(CLI, IfCmp, OrderKind::OMP_ORDER_unknown,
+  OMPBuilder.applySimd(CLI, AlignedVars, IfCmp, OrderKind::OMP_ORDER_unknown,
                        ConstantInt::get(Type::getInt32Ty(Ctx), 3),
                        /* Safelen */ nullptr);
 

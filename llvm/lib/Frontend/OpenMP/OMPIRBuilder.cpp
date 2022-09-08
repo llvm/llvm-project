@@ -3005,9 +3005,10 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
   Builder.CreateBr(NewBlocks.front());
 }
 
-void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop, Value *IfCond,
-                                OrderKind Order, ConstantInt *Simdlen,
-                                ConstantInt *Safelen) {
+void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
+                                MapVector<Value *, Value *> AlignedVars,
+                                Value *IfCond, OrderKind Order,
+                                ConstantInt *Simdlen, ConstantInt *Safelen) {
   LLVMContext &Ctx = Builder.getContext();
 
   Function *F = CanonicalLoop->getFunction();
@@ -3025,6 +3026,17 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop, Value *IfCond,
   LoopInfo &&LI = LIA.run(*F, FAM);
 
   Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
+  if (AlignedVars.size()) {
+    InsertPointTy IP = Builder.saveIP();
+    Builder.SetInsertPoint(CanonicalLoop->getPreheader()->getTerminator());
+    for (auto &AlignedItem : AlignedVars) {
+      Value *AlignedPtr = AlignedItem.first;
+      Value *Alignment = AlignedItem.second;
+      Builder.CreateAlignmentAssumption(F->getParent()->getDataLayout(),
+                                        AlignedPtr, Alignment);
+    }
+    Builder.restoreIP(IP);
+  }
 
   if (IfCond) {
     ValueToValueMapTy VMap;
