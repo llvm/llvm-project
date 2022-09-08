@@ -542,6 +542,7 @@ private:
 
     _MutexTuple __t_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(scoped_lock);
 
 #endif // _LIBCPP_STD_VER > 14
 #endif // !_LIBCPP_HAS_NO_THREADS

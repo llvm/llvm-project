@@ -53,6 +53,11 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+#if TEST_STD_VER > 14
+template <class It>
+cpp17_output_iterator(It) -> cpp17_output_iterator<It>;
+#endif
+
 #if TEST_STD_VER > 17
    static_assert(std::output_iterator<cpp17_output_iterator<int*>, int>);
 #endif
@@ -94,6 +99,11 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+#if TEST_STD_VER > 14
+template <class It>
+cpp17_input_iterator(It) -> cpp17_input_iterator<It>;
+#endif
+
 #if TEST_STD_VER > 17
    static_assert(std::input_iterator<cpp17_input_iterator<int*>>);
 #endif
@@ -133,6 +143,10 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+#if TEST_STD_VER > 14
+template <class It>
+forward_iterator(It) -> forward_iterator<It>;
+#endif
 
 template <class It>
 class bidirectional_iterator
@@ -171,6 +185,10 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+#if TEST_STD_VER > 14
+template <class It>
+bidirectional_iterator(It) -> bidirectional_iterator<It>;
+#endif
 
 template <class It>
 class random_access_iterator
@@ -221,6 +239,10 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+#if TEST_STD_VER > 14
+template <class It>
+random_access_iterator(It) -> random_access_iterator<It>;
+#endif
 
 #if TEST_STD_VER > 17
 
@@ -310,6 +332,8 @@ public:
   template <class T>
   void operator,(T const&) = delete;
 };
+template <class It>
+cpp20_random_access_iterator(It) -> cpp20_random_access_iterator<It>;
 
 static_assert(std::random_access_iterator<cpp20_random_access_iterator<int*>>);
 
@@ -368,6 +392,8 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+template <class It>
+contiguous_iterator(It) -> contiguous_iterator<It>;
 
 template <class It>
 class three_way_contiguous_iterator
@@ -418,6 +444,8 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+template <class It>
+three_way_contiguous_iterator(It) -> three_way_contiguous_iterator<It>;
 #endif // TEST_STD_VER > 17
 
 template <class Iter> // ADL base() for everything else (including pointers)
@@ -627,6 +655,9 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+template <class It>
+cpp20_input_iterator(It) -> cpp20_input_iterator<It>;
+
 static_assert(std::input_iterator<cpp20_input_iterator<int*>>);
 
 template<std::input_or_output_iterator>
@@ -660,6 +691,8 @@ public:
   template <class T>
   void operator,(T const&) = delete;
 };
+template <class It>
+cpp20_output_iterator(It) -> cpp20_output_iterator<It>;
 
 static_assert(std::output_iterator<cpp20_output_iterator<int*>, int>);
 
@@ -815,6 +848,8 @@ private:
     difference_type stride_count_ = 0;
     difference_type stride_displacement_ = 0;
 };
+template <class It>
+stride_counting_iterator(It) -> stride_counting_iterator<It>;
 
 #endif // TEST_STD_VER > 17
 
@@ -829,6 +864,8 @@ public:
 private:
     decltype(base(std::declval<It>())) base_;
 };
+template <class It>
+sentinel_wrapper(It) -> sentinel_wrapper<It>;
 
 template <class It>
 class sized_sentinel {
@@ -842,6 +879,8 @@ public:
 private:
     decltype(base(std::declval<It>())) base_;
 };
+template <class It>
+sized_sentinel(It) -> sized_sentinel<It>;
 
 namespace adl {
 
@@ -1211,6 +1250,8 @@ struct ProxyIterator : ProxyIteratorBase<Base> {
     return x.base_ - y.base_;
   }
 };
+template <class Base>
+ProxyIterator(Base) -> ProxyIterator<Base>;
 
 static_assert(std::indirectly_readable<ProxyIterator<int*>>);
 static_assert(std::indirectly_writable<ProxyIterator<int*>, Proxy<int>>);
@@ -1229,6 +1270,8 @@ struct ProxySentinel {
     return p.base_ == sent.base_;
   }
 };
+template <class BaseSent>
+ProxySentinel(BaseSent) -> ProxySentinel<BaseSent>;
 
 template <std::ranges::input_range Base>
   requires std::ranges::view<Base>

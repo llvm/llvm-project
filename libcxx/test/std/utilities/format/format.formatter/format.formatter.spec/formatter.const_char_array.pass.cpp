@@ -60,7 +60,7 @@ struct Tester {
     // Note not too found of this hack
     Str* data = reinterpret_cast<Str*>(buffer.c_str());
 
-    std::basic_format_context format_ctx =
+    FormatCtxT format_ctx =
         test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(*data));
     formatter.format(*data, format_ctx);
     assert(result == expected);
@@ -81,6 +81,9 @@ struct Tester {
     test(expected, fmt);
   }
 };
+
+template <size_t N>
+Tester(const char (&)[N]) -> Tester<N>;
 
 template <Tester t, class CharT>
 void test_helper_wrapper(std::basic_string<CharT> expected,

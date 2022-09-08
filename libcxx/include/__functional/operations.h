@@ -36,6 +36,7 @@ struct _LIBCPP_TEMPLATE_VIS plus
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
         {return __x + __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(plus);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -64,6 +65,7 @@ struct _LIBCPP_TEMPLATE_VIS minus
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
         {return __x - __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(minus);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -92,6 +94,7 @@ struct _LIBCPP_TEMPLATE_VIS multiplies
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
         {return __x * __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(multiplies);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -120,6 +123,7 @@ struct _LIBCPP_TEMPLATE_VIS divides
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
         {return __x / __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(divides);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -148,6 +152,7 @@ struct _LIBCPP_TEMPLATE_VIS modulus
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
         {return __x % __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(modulus);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -176,6 +181,7 @@ struct _LIBCPP_TEMPLATE_VIS negate
     _Tp operator()(const _Tp& __x) const
         {return -__x;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(negate);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -206,6 +212,7 @@ struct _LIBCPP_TEMPLATE_VIS bit_and
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
         {return __x & __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_and);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -230,6 +237,7 @@ struct _LIBCPP_TEMPLATE_VIS bit_not
     _Tp operator()(const _Tp& __x) const
         {return ~__x;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_not);
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS bit_not<void>
@@ -257,6 +265,7 @@ struct _LIBCPP_TEMPLATE_VIS bit_or
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
         {return __x | __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_or);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -285,6 +294,7 @@ struct _LIBCPP_TEMPLATE_VIS bit_xor
     _Tp operator()(const _Tp& __x, const _Tp& __y) const
         {return __x ^ __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_xor);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -315,6 +325,7 @@ struct _LIBCPP_TEMPLATE_VIS equal_to
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x == __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(equal_to);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -343,6 +354,7 @@ struct _LIBCPP_TEMPLATE_VIS not_equal_to
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x != __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(not_equal_to);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -371,6 +383,7 @@ struct _LIBCPP_TEMPLATE_VIS less
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x < __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(less);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -399,6 +412,7 @@ struct _LIBCPP_TEMPLATE_VIS less_equal
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x <= __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(less_equal);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -427,6 +441,7 @@ struct _LIBCPP_TEMPLATE_VIS greater_equal
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x >= __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater_equal);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -455,6 +470,7 @@ struct _LIBCPP_TEMPLATE_VIS greater
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x > __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -485,6 +501,7 @@ struct _LIBCPP_TEMPLATE_VIS logical_and
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x && __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_and);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -513,6 +530,7 @@ struct _LIBCPP_TEMPLATE_VIS logical_not
     bool operator()(const _Tp& __x) const
         {return !__x;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_not);
 
 #if _LIBCPP_STD_VER > 11
 template <>
@@ -541,6 +559,7 @@ struct _LIBCPP_TEMPLATE_VIS logical_or
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x || __y;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_or);
 
 #if _LIBCPP_STD_VER > 11
 template <>
