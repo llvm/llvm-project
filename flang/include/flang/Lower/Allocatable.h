@@ -48,6 +48,9 @@ void genAllocateStmt(AbstractConverter &converter,
 void genDeallocateStmt(AbstractConverter &converter,
                        const parser::DeallocateStmt &stmt, mlir::Location loc);
 
+void genDeallocateBox(AbstractConverter &converter,
+                      const fir::MutableBoxValue &box, mlir::Location loc);
+
 /// Create a MutableBoxValue for an allocatable or pointer entity.
 /// If the variables is a local variable that is not a dummy, it will be
 /// initialized to unallocated/diassociated status.
