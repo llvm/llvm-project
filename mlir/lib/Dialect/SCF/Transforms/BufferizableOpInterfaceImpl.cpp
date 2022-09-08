@@ -778,7 +778,7 @@ struct WhileOpInterface
       Value value = conditionOp.getArgs()[idx];
       if (!value.getType().isa<TensorType>() ||
           (equivalentYieldsAfter.contains(idx) &&
-              equivalentYieldsBefore.contains(idx))) {
+           equivalentYieldsBefore.contains(idx))) {
         beforeYieldValues.push_back(value);
         continue;
       }
