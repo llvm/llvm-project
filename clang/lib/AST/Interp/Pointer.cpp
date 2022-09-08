@@ -156,7 +156,7 @@ void Pointer::initialize() const {
   Descriptor *Desc = getFieldDesc();
 
   if (Desc->isArray()) {
-    if (!Pointee->IsStatic) {
+    if (Desc->isPrimitiveArray() && !Pointee->IsStatic) {
       // Primitive array initializer.
       InitMap *&Map = getInitMap();
       if (Map == (InitMap *)-1)
