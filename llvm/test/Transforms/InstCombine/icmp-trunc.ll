@@ -436,14 +436,12 @@ define i1 @shl1_trunc_sgt0(i9 %a) {
   ret i1 %r
 }
 
-; TODO: A == 0
-
 define i1 @shl1_trunc_eq1(i64 %a) {
 ; CHECK-LABEL: @shl1_trunc_eq1(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 1, [[A:%.*]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[SHL]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[T]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[T]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i64 1, %a
@@ -453,14 +451,11 @@ define i1 @shl1_trunc_eq1(i64 %a) {
   ret i1 %r
 }
 
-; TODO: A != 5
-
 define i1 @shl1_trunc_ne32(i8 %a) {
 ; CHECK-LABEL: @shl1_trunc_ne32(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 1, [[A:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[SHL]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[SHL]], 63
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 32
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[A]], 5
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i8 1, %a
