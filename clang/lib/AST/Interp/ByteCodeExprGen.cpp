@@ -232,9 +232,52 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
+    const ArraySubscriptExpr *E) {
+  const Expr *Base = E->getBase();
+  const Expr *Index = E->getIdx();
+
+  // Take pointer of LHS, add offset from RHS, narrow result.
+  // What's left on the stack after this is a pointer.
+  if (Optional<PrimType> IndexT = classify(Index->getType())) {
+    if (!this->Visit(Base))
+      return false;
+
+    if (!this->Visit(Index))
+      return false;
+
+    if (!this->emitAddOffset(*IndexT, E))
+      return false;
+
+    if (!this->emitNarrowPtr(E))
+      return false;
+
+    return true;
+  }
+
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
+  for (const Expr *Init : E->inits()) {
+    if (!this->visit(Init))
+      return false;
+  }
+  return true;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitSubstNonTypeTemplateParmExpr(
     const SubstNonTypeTemplateParmExpr *E) {
   return this->visit(E->getReplacement());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
+  // TODO: Check if the ConstantExpr already has a value set and if so,
+  //   use that instead of evaluating it again.
+  return this->visit(E->getSubExpr());
 }
 
 template <class Emitter>
@@ -492,11 +535,62 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
   return Local.Offset;
 }
 
+// NB: When calling this function, we have a pointer to the
+//   array-to-initialize on the stack.
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::visitInitializer(
-    const Expr *Init, InitFnRef InitFn) {
-  OptionScope<Emitter> Scope(this, InitFn);
-  return this->Visit(Init);
+bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
+  assert(Initializer->getType()->isArrayType());
+
+  // TODO: Fillers?
+  if (const auto *InitList = dyn_cast<InitListExpr>(Initializer)) {
+    unsigned ElementIndex = 0;
+    for (const Expr *Init : InitList->inits()) {
+      QualType InitType = Init->getType();
+
+      if (InitType->isArrayType()) {
+        // Advance the pointer currently on the stack to the given
+        // dimension and narrow().
+        if (!this->emitDupPtr(Init))
+          return false;
+        if (!this->emitConstUint32(ElementIndex, Init))
+          return false;
+        if (!this->emitAddOffsetUint32(Init))
+          return false;
+        if (!this->emitNarrowPtr(Init))
+          return false;
+        if (!visitArrayInitializer(Init))
+          return false;
+        if (!this->emitPopPtr(Init))
+          return false;
+      } else if (Optional<PrimType> T = classify(InitType)) {
+        // Visit the primitive element like normal.
+        if (!this->visit(Init))
+          return false;
+        if (!this->emitInitElem(*T, ElementIndex, Init))
+          return false;
+      } else {
+        assert(false && "Unhandled type in array initializer initlist");
+      }
+
+      ++ElementIndex;
+    }
+
+  } else {
+    assert(false && "Unknown expression for array initialization");
+  }
+
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *Initializer) {
+  QualType InitializerType = Initializer->getType();
+
+  if (InitializerType->isArrayType())
+    return visitArrayInitializer(Initializer);
+
+  // Otherwise, visit the expression like normal.
+  return this->Visit(Initializer);
 }
 
 template <class Emitter>

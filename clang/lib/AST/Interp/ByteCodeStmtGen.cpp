@@ -171,8 +171,7 @@ bool ByteCodeStmtGen<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       return this->emitRet(*ReturnType, RS);
     } else {
       // RVO - construct the value in the return location.
-      auto ReturnLocation = [this, RE] { return this->emitGetParamPtr(0, RE); };
-      if (!this->visitInitializer(RE, ReturnLocation))
+      if (!this->visitInitializer(RE))
         return false;
       this->emitCleanup();
       return this->emitRetVoid(RS);
@@ -232,21 +231,20 @@ bool ByteCodeStmtGen<Emitter>::visitIfStmt(const IfStmt *IS) {
 
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
-  auto DT = VD->getType();
-
   if (!VD->hasLocalStorage()) {
     // No code generation required.
     return true;
   }
 
   // Integers, pointers, primitives.
-  if (Optional<PrimType> T = this->classify(DT)) {
+  if (Optional<PrimType> T = this->classify(VD->getType())) {
     const Expr *Init = VD->getInit();
 
     if (!Init)
       return false;
 
-    auto Off = this->allocateLocalPrimitive(VD, *T, DT.isConstQualified());
+    unsigned Offset =
+        this->allocateLocalPrimitive(VD, *T, VD->getType().isConstQualified());
     // Compile the initializer in its own scope.
     {
       ExprScope<Emitter> Scope(this);
@@ -254,15 +252,14 @@ bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
         return false;
     }
     // Set the value.
-    return this->emitSetLocal(*T, Off, VD);
-  } else {
-    // Composite types - allocate storage and initialize it.
-    if (auto Off = this->allocateLocal(VD)) {
-      return this->visitLocalInitializer(VD->getInit(), *Off);
-    } else {
-      return this->bail(VD);
-    }
+    return this->emitSetLocal(*T, Offset, VD);
   }
+
+  // Composite types - allocate storage and initialize it.
+  if (Optional<unsigned> Offset = this->allocateLocal(VD))
+    return this->visitLocalInitializer(VD->getInit(), *Offset);
+
+  return this->bail(VD);
 }
 
 namespace clang {
