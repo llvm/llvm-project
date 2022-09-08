@@ -6,6 +6,7 @@
 // RUN:    | FileCheck %s -check-prefix=SCALIR
 // RUN: %clang_cc1 -triple s390x-linux-gnu %s -o - -target-feature -vector -emit-obj -S \
 // RUN:    | FileCheck %s -check-prefix=SCALASM
+// REQUIRES: systemz-registered-target
 
 typedef __attribute__((vector_size(16))) signed int vec_sint;
 
