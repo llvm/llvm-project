@@ -387,16 +387,6 @@ endif
 #----------------------------------------------------------------------
 # C++ standard library options
 #----------------------------------------------------------------------
-ifneq ($(and $(USE_LIBSTDCPP), $(USE_LIBCPP)),)
-	$(error Libcxx and Libstdc++ cannot be used together)
-endif
-
-ifeq (1, $(USE_SYSTEM_STDLIB))
-	ifneq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP)),)
-		$(error Cannot use system's standard library and a custom standard library together)
-	endif
-endif
-
 ifeq (1,$(USE_LIBSTDCPP))
 	# Clang requires an extra flag: -stdlib=libstdc++
 	ifneq (,$(findstring clang,$(CC)))
@@ -422,15 +412,6 @@ ifeq (1,$(USE_LIBCPP))
 				LDFLAGS += -Wl,-rpath,$(LLVM_LIBS_DIR)
 				endif
 		endif
-	endif
-endif
-
-# If no explicit request was made, but we have paths to a custom libcxx, use
-# them.
-ifeq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP), $(USE_SYSTEM_STDLIB)),)
-	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
-		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
-		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
 	endif
 endif
 
