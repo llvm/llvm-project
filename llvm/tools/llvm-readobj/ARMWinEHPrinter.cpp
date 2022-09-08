@@ -906,8 +906,8 @@ void Decoder::decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
   bool Terminated = false;
   for (unsigned OI = Offset, OE = Opcodes.size(); !Terminated && OI < OE; ) {
     for (unsigned DI = 0;; ++DI) {
-      if ((isAArch64 && (DI >= array_lengthof(Ring64))) ||
-          (!isAArch64 && (DI >= array_lengthof(Ring)))) {
+      if ((isAArch64 && (DI >= std::size(Ring64))) ||
+          (!isAArch64 && (DI >= std::size(Ring)))) {
         SW.startLine() << format("0x%02x                ; Bad opcode!\n",
                                  Opcodes.data()[OI]);
         ++OI;

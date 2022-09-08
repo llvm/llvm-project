@@ -786,6 +786,20 @@ define <4 x float> @relaxed_max_v4f32(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %v
 }
 
+; CHECK-LABEL: relaxed_dot_bf16x8_add_f32:
+; CHECK-NEXT: .functype relaxed_dot_bf16x8_add_f32 (v128, v128, v128) -> (v128){{$}}
+; CHECK-NEXT: f32x4.relaxed_dot_bf16x8_add_f32 $push[[R:[0-9]+]]=, $0, $1, $2{{$}}
+; CHECK-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.wasm.relaxed.dot.bf16x8.add.f32(<8 x i16>, <8 x i16>,
+                                                          <4 x float>)
+define <4 x float> @relaxed_dot_bf16x8_add_f32(<8 x i16> %a, <8 x i16> %b,
+                                               <4 x float> %c) {
+  %v = call <4 x float> @llvm.wasm.relaxed.dot.bf16x8.add.f32(
+    <8 x i16> %a, <8 x i16> %b, <4 x float> %c
+  )
+  ret <4 x float> %v
+}
+
 ; ==============================================================================
 ; 2 x f64
 ; ==============================================================================

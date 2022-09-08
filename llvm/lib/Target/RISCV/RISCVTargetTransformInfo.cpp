@@ -713,6 +713,15 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       return LT.first * 1;
     }
 
+    if (ValTy->getScalarSizeInBits() == 1) {
+      //  vmv.v.x v9, a0
+      //  vmsne.vi v9, v9, 0
+      //  vmandn.mm v8, v8, v9
+      //  vmand.mm v9, v0, v9
+      //  vmor.mm v0, v9, v8
+      return LT.first * 5;
+    }
+
     // vmv.v.x v10, a0
     // vmsne.vi v0, v10, 0
     // vmerge.vvm v8, v9, v8, v0

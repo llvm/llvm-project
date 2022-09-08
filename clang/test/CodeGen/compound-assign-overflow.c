@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-// CHECK: @[[INT:.*]] = private unnamed_addr constant { i16, i16, [6 x i8] } { i16 0, i16 11, [6 x i8] c"'int'\00" }
+// CHECK: @[[INT:.*]] = private unnamed_addr constant { i16, i16, [22 x i8] } { i16 0, i16 11, [22 x i8] c"'int32_t' (aka 'int')\00" }
 // CHECK: @[[LINE_100:.*]] = private unnamed_addr global {{.*}}, i32 100, i32 5 {{.*}} @[[INT]]
-// CHECK: @[[UINT:.*]] = private unnamed_addr constant { i16, i16, [15 x i8] } { i16 0, i16 10, [15 x i8] c"'unsigned int'\00" }
+// CHECK: @[[UINT:.*]] = private unnamed_addr constant { i16, i16, [32 x i8] } { i16 0, i16 10, [32 x i8] c"'uint32_t' (aka 'unsigned int')\00" }
 // CHECK: @[[LINE_200:.*]] = private unnamed_addr global {{.*}}, i32 200, i32 5 {{.*}} @[[UINT]]
 // CHECK: @[[LINE_300:.*]] = private unnamed_addr global {{.*}}, i32 300, i32 5 {{.*}} @[[INT]]
 

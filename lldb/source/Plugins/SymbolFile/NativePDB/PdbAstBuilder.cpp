@@ -456,45 +456,6 @@ static bool isLocalVariableType(SymbolKind K) {
   return false;
 }
 
-static std::string
-RenderScopeList(llvm::ArrayRef<llvm::ms_demangle::Node *> nodes) {
-  lldbassert(!nodes.empty());
-
-  std::string result = nodes.front()->toString();
-  nodes = nodes.drop_front();
-  while (!nodes.empty()) {
-    result += "::";
-    result += nodes.front()->toString(llvm::ms_demangle::OF_NoTagSpecifier);
-    nodes = nodes.drop_front();
-  }
-  return result;
-}
-
-static llvm::Optional<PublicSym32> FindPublicSym(const SegmentOffset &addr,
-                                                 SymbolStream &syms,
-                                                 PublicsStream &publics) {
-  llvm::FixedStreamArray<ulittle32_t> addr_map = publics.getAddressMap();
-  auto iter = llvm::lower_bound(
-      addr_map, addr, [&](const ulittle32_t &x, const SegmentOffset &y) {
-        CVSymbol s1 = syms.readRecord(x);
-        lldbassert(s1.kind() == S_PUB32);
-        PublicSym32 p1;
-        llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(s1, p1));
-        if (p1.Segment < y.segment)
-          return true;
-        return p1.Offset < y.offset;
-      });
-  if (iter == addr_map.end())
-    return llvm::None;
-  CVSymbol sym = syms.readRecord(*iter);
-  lldbassert(sym.kind() == S_PUB32);
-  PublicSym32 p;
-  llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym, p));
-  if (p.Segment == addr.segment && p.Offset == addr.offset)
-    return p;
-  return llvm::None;
-}
-
 clang::Decl *PdbAstBuilder::GetOrCreateSymbolForId(PdbCompilandSymId id) {
   CVSymbol cvs = m_index.ReadSymbolRecord(id);
 
@@ -605,52 +566,6 @@ PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
   return {context, std::string(uname)};
 }
 
-clang::DeclContext *
-PdbAstBuilder::GetParentDeclContextForSymbol(const CVSymbol &sym) {
-  if (!SymbolHasAddress(sym))
-    return CreateDeclInfoForUndecoratedName(getSymbolName(sym)).first;
-  SegmentOffset addr = GetSegmentAndOffset(sym);
-  llvm::Optional<PublicSym32> pub =
-      FindPublicSym(addr, m_index.symrecords(), m_index.publics());
-  if (!pub)
-    return CreateDeclInfoForUndecoratedName(getSymbolName(sym)).first;
-
-  llvm::ms_demangle::Demangler demangler;
-  StringView name{pub->Name.begin(), pub->Name.size()};
-  llvm::ms_demangle::SymbolNode *node = demangler.parse(name);
-  if (!node)
-    return FromCompilerDeclContext(GetTranslationUnitDecl());
-  llvm::ArrayRef<llvm::ms_demangle::Node *> name_components{
-      node->Name->Components->Nodes, node->Name->Components->Count - 1};
-
-  if (!name_components.empty()) {
-    // Render the current list of scope nodes as a fully qualified name, and
-    // look it up in the debug info as a type name.  If we find something,
-    // this is a type (which may itself be prefixed by a namespace).  If we
-    // don't, this is a list of namespaces.
-    std::string qname = RenderScopeList(name_components);
-    std::vector<TypeIndex> matches = m_index.tpi().findRecordsByName(qname);
-    while (!matches.empty()) {
-      clang::QualType qt = GetOrCreateType(matches.back());
-      if (qt.isNull())
-        continue;
-      clang::TagDecl *tag = qt->getAsTagDecl();
-      if (tag)
-        return clang::TagDecl::castToDeclContext(tag);
-      matches.pop_back();
-    }
-  }
-
-  // It's not a type.  It must be a series of namespaces.
-  auto context = FromCompilerDeclContext(GetTranslationUnitDecl());
-  while (!name_components.empty()) {
-    std::string ns = name_components.front()->toString();
-    context = GetOrCreateNamespaceDecl(ns.c_str(), *context);
-    name_components = name_components.drop_front();
-  }
-  return context;
-}
-
 clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
   // We must do this *without* calling GetOrCreate on the current uid, as
   // that would be an infinite recursion.
@@ -662,7 +577,7 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
       return GetOrCreateDeclContextForUid(*scope);
 
     CVSymbol sym = m_index.ReadSymbolRecord(uid.asCompilandSym());
-    return GetParentDeclContextForSymbol(sym);
+    return CreateDeclInfoForUndecoratedName(getSymbolName(sym)).first;
   }
   case PdbSymUidKind::Type: {
     // It could be a namespace, class, or global.  We don't support nested
@@ -688,7 +603,7 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
     switch (global.kind()) {
     case SymbolKind::S_GDATA32:
     case SymbolKind::S_LDATA32:
-      return GetParentDeclContextForSymbol(global);
+      return CreateDeclInfoForUndecoratedName(getSymbolName(global)).first;;
     case SymbolKind::S_PROCREF:
     case SymbolKind::S_LPROCREF: {
       ProcRefSym ref{global.kind()};

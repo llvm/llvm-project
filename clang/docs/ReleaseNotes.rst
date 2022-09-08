@@ -284,6 +284,10 @@ DWARF Support in Clang
 Arm and AArch64 Support in Clang
 --------------------------------
 
+- `-march` values for targeting armv2, armv2A, armv3 and armv3M have been removed.
+  Their presence gave the impression that Clang can correctly generate code for
+  them, which it cannot.
+
 Floating Point Support in Clang
 -------------------------------
 

@@ -1539,18 +1539,16 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   // For conversion purposes, we ignore any qualifiers.
   // For example, "const float" and "float" are equivalent.
-  QualType LHSType =
-    Context.getCanonicalType(LHS.get()->getType()).getUnqualifiedType();
-  QualType RHSType =
-    Context.getCanonicalType(RHS.get()->getType()).getUnqualifiedType();
+  QualType LHSType = LHS.get()->getType().getUnqualifiedType();
+  QualType RHSType = RHS.get()->getType().getUnqualifiedType();
 
   // For conversion purposes, we ignore any atomic qualifier on the LHS.
   if (const AtomicType *AtomicLHS = LHSType->getAs<AtomicType>())
     LHSType = AtomicLHS->getValueType();
 
   // If both types are identical, no conversion is needed.
-  if (LHSType == RHSType)
-    return LHSType;
+  if (Context.hasSameType(LHSType, RHSType))
+    return Context.getCommonSugaredType(LHSType, RHSType);
 
   // If either side is a non-arithmetic type (e.g. a pointer), we are done.
   // The caller can deal with this (e.g. pointer + int).
@@ -1568,8 +1566,8 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     LHS = ImpCastExprToType(LHS.get(), LHSType, CK_IntegralCast);
 
   // If both types are identical, no conversion is needed.
-  if (LHSType == RHSType)
-    return LHSType;
+  if (Context.hasSameType(LHSType, RHSType))
+    return Context.getCommonSugaredType(LHSType, RHSType);
 
   // At this point, we have two different arithmetic types.
 
@@ -8158,23 +8156,6 @@ static bool checkCondition(Sema &S, Expr *Cond, SourceLocation QuestionLoc) {
   return true;
 }
 
-/// Handle when one or both operands are void type.
-static QualType checkConditionalVoidType(Sema &S, ExprResult &LHS,
-                                         ExprResult &RHS) {
-    Expr *LHSExpr = LHS.get();
-    Expr *RHSExpr = RHS.get();
-
-    if (!LHSExpr->getType()->isVoidType())
-      S.Diag(RHSExpr->getBeginLoc(), diag::ext_typecheck_cond_one_void)
-          << RHSExpr->getSourceRange();
-    if (!RHSExpr->getType()->isVoidType())
-      S.Diag(LHSExpr->getBeginLoc(), diag::ext_typecheck_cond_one_void)
-          << LHSExpr->getSourceRange();
-    LHS = S.ImpCastExprToType(LHS.get(), S.Context.VoidTy, CK_ToVoid);
-    RHS = S.ImpCastExprToType(RHS.get(), S.Context.VoidTy, CK_ToVoid);
-    return S.Context.VoidTy;
-}
-
 /// Return false if the NullExpr can be promoted to PointerTy,
 /// true otherwise.
 static bool checkConditionalNullPointer(Sema &S, ExprResult &NullExpr,
@@ -8198,7 +8179,7 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
 
   if (S.Context.hasSameType(LHSTy, RHSTy)) {
     // Two identical pointers types are always compatible.
-    return LHSTy;
+    return S.Context.getCommonSugaredType(LHSTy, RHSTy);
   }
 
   QualType lhptee, rhptee;
@@ -8700,7 +8681,7 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
 
   // And if they're both bfloat (which isn't arithmetic), that's fine too.
   if (LHSTy->isBFloat16Type() && RHSTy->isBFloat16Type()) {
-    return LHSTy;
+    return Context.getCommonSugaredType(LHSTy, RHSTy);
   }
 
   // If both operands are the same structure or union type, the result is that
@@ -8710,14 +8691,29 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
       if (LHSRT->getDecl() == RHSRT->getDecl())
         // "If both the operands have structure or union type, the result has
         // that type."  This implies that CV qualifiers are dropped.
-        return LHSTy.getUnqualifiedType();
+        return Context.getCommonSugaredType(LHSTy.getUnqualifiedType(),
+                                            RHSTy.getUnqualifiedType());
     // FIXME: Type of conditional expression must be complete in C mode.
   }
 
   // C99 6.5.15p5: "If both operands have void type, the result has void type."
   // The following || allows only one side to be void (a GCC-ism).
   if (LHSTy->isVoidType() || RHSTy->isVoidType()) {
-    return checkConditionalVoidType(*this, LHS, RHS);
+    QualType ResTy;
+    if (LHSTy->isVoidType() && RHSTy->isVoidType()) {
+      ResTy = Context.getCommonSugaredType(LHSTy, RHSTy);
+    } else if (RHSTy->isVoidType()) {
+      ResTy = RHSTy;
+      Diag(RHS.get()->getBeginLoc(), diag::ext_typecheck_cond_one_void)
+          << RHS.get()->getSourceRange();
+    } else {
+      ResTy = LHSTy;
+      Diag(LHS.get()->getBeginLoc(), diag::ext_typecheck_cond_one_void)
+          << LHS.get()->getSourceRange();
+    }
+    LHS = ImpCastExprToType(LHS.get(), ResTy, CK_ToVoid);
+    RHS = ImpCastExprToType(RHS.get(), ResTy, CK_ToVoid);
+    return ResTy;
   }
 
   // C99 6.5.15p6 - "if one operand is a null pointer constant, the result has
@@ -8756,7 +8752,7 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   // Allow ?: operations in which both operands have the same
   // built-in sizeless type.
   if (LHSTy->isSizelessBuiltinType() && Context.hasSameType(LHSTy, RHSTy))
-    return LHSTy;
+    return Context.getCommonSugaredType(LHSTy, RHSTy);
 
   // Emit a better diagnostic if one of the expressions is a null pointer
   // constant and the other is not a pointer type. In this case, the user most
@@ -10427,7 +10423,7 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
 
   // If the vector types are identical, return.
   if (Context.hasSameType(LHSType, RHSType))
-    return LHSType;
+    return Context.getCommonSugaredType(LHSType, RHSType);
 
   // If we have compatible AltiVec and GCC vector types, use the AltiVec type.
   if (LHSVecType && RHSVecType &&
@@ -13145,7 +13141,7 @@ QualType Sema::CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
   assert((LHSMatType || RHSMatType) && "At least one operand must be a matrix");
 
   if (Context.hasSameType(LHSType, RHSType))
-    return LHSType;
+    return Context.getCommonSugaredType(LHSType, RHSType);
 
   // Type conversion may change LHS/RHS. Keep copies to the original results, in
   // case we have to return InvalidOperands.
@@ -13189,13 +13185,19 @@ QualType Sema::CheckMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
     if (LHSMatType->getNumColumns() != RHSMatType->getNumRows())
       return InvalidOperands(Loc, LHS, RHS);
 
-    if (!Context.hasSameType(LHSMatType->getElementType(),
-                             RHSMatType->getElementType()))
+    if (Context.hasSameType(LHSMatType, RHSMatType))
+      return Context.getCommonSugaredType(
+          LHS.get()->getType().getUnqualifiedType(),
+          RHS.get()->getType().getUnqualifiedType());
+
+    QualType LHSELTy = LHSMatType->getElementType(),
+             RHSELTy = RHSMatType->getElementType();
+    if (!Context.hasSameType(LHSELTy, RHSELTy))
       return InvalidOperands(Loc, LHS, RHS);
 
-    return Context.getConstantMatrixType(LHSMatType->getElementType(),
-                                         LHSMatType->getNumRows(),
-                                         RHSMatType->getNumColumns());
+    return Context.getConstantMatrixType(
+        Context.getCommonSugaredType(LHSELTy, RHSELTy),
+        LHSMatType->getNumRows(), RHSMatType->getNumColumns());
   }
   return CheckMatrixElementwiseOperands(LHS, RHS, Loc, IsCompAssign);
 }

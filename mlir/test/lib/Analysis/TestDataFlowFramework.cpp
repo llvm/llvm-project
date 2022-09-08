@@ -21,7 +21,7 @@ public:
   using AnalysisState::AnalysisState;
 
   /// Returns true if the state is uninitialized.
-  bool isUninitialized() const override { return !state; }
+  bool isUninitialized() const { return !state; }
 
   /// Print the integer value or "none" if uninitialized.
   void print(raw_ostream &os) const override {

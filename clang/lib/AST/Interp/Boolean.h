@@ -50,6 +50,7 @@ class Boolean {
   explicit operator int64_t() const { return V; }
   explicit operator uint64_t() const { return V; }
   explicit operator int() const { return V; }
+  explicit operator bool() const { return V; }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(1, static_cast<uint64_t>(V), false), true);
@@ -85,9 +86,10 @@ class Boolean {
   static Boolean min(unsigned NumBits) { return Boolean(false); }
   static Boolean max(unsigned NumBits) { return Boolean(true); }
 
-  template <typename T>
-  static std::enable_if_t<std::is_integral<T>::value, Boolean> from(T Value) {
-    return Boolean(Value != 0);
+  template <typename T> static Boolean from(T Value) {
+    if constexpr (std::is_integral<T>::value)
+      return Boolean(Value != 0);
+    return Boolean(static_cast<decltype(Boolean::V)>(Value) != 0);
   }
 
   template <unsigned SrcBits, bool SrcSign>

@@ -51,13 +51,13 @@ public:
       // All vector types are default aligned on an 8-byte boundary, even if the
       // vector facility is not available. That is different from Linux.
       MaxVectorAlign = 64;
-      // Compared to Linux/ELF, the data layout differs only in some details:
-      // - name mangling is GOFF
-      // - 128 bit vector types are 64 bit aligned
+      // Compared to Linux/ELF, the data layout differs only in that name
+      // mangling is GOFF.
       resetDataLayout(
           "E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64");
     } else
-      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64");
+      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
+                      "-v128:64-a:8:16-n32:64");
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     HasStrictFP = true;
   }
@@ -171,12 +171,14 @@ public:
     }
     HasVector &= !SoftFloat;
 
-    // If we use the vector ABI, vector types are 64-bit aligned.
-    if (HasVector && !getTriple().isOSzOS()) {
+    // If we use the vector ABI, vector types are 64-bit aligned. The
+    // DataLayout string is always set to this alignment as it is not a
+    // requirement that it follows the alignment emitted by the front end. It
+    // is assumed generally that the Datalayout should reflect only the
+    // target triple and not any specific feature.
+    if (HasVector && !getTriple().isOSzOS())
       MaxVectorAlign = 64;
-      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
-                      "-v128:64-a:8:16-n32:64");
-    }
+
     return true;
   }
 

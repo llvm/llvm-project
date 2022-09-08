@@ -523,6 +523,17 @@ static void genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
   errorManager.assignStat(builder, loc, stat);
 }
 
+void Fortran::lower::genDeallocateBox(
+    Fortran::lower::AbstractConverter &converter,
+    const fir::MutableBoxValue &box, mlir::Location loc) {
+  const Fortran::lower::SomeExpr *statExpr = nullptr;
+  const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
+  ErrorManager errorManager;
+  errorManager.init(converter, loc, statExpr, errMsgExpr);
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  genDeallocate(builder, loc, box, errorManager);
+}
+
 void Fortran::lower::genDeallocateStmt(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::DeallocateStmt &stmt, mlir::Location loc) {

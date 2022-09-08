@@ -856,14 +856,6 @@ class ProcNoItin<string Name, list<SubtargetFeature> Features>
 // ARM architectures
 //
 
-def ARMv2     : Architecture<"armv2",     "ARMv2",    []>;
-
-def ARMv2a    : Architecture<"armv2a",    "ARMv2a",   []>;
-
-def ARMv3     : Architecture<"armv3",     "ARMv3",    []>;
-
-def ARMv3m    : Architecture<"armv3m",    "ARMv3m",   []>;
-
 def ARMv4     : Architecture<"armv4",     "ARMv4",    []>;
 
 def ARMv4t    : Architecture<"armv4t",    "ARMv4t",   [HasV4TOps]>;

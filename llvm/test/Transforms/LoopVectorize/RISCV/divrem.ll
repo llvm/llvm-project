@@ -486,7 +486,7 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT2]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
-; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE9:%.*]] ]
+; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
@@ -497,53 +497,19 @@ define void @predicated_udiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i64> [[BROADCAST_SPLAT3]], zeroinitializer
-; FIXED-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP6]], i32 0
-; FIXED-NEXT:    br i1 [[TMP8]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
-; FIXED:       pred.udiv.if:
-; FIXED-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
-; FIXED-NEXT:    [[TMP10:%.*]] = udiv i64 [[TMP9]], [[V]]
-; FIXED-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> poison, i64 [[TMP10]], i32 0
-; FIXED-NEXT:    br label [[PRED_UDIV_CONTINUE]]
-; FIXED:       pred.udiv.continue:
-; FIXED-NEXT:    [[TMP12:%.*]] = phi <2 x i64> [ poison, [[VECTOR_BODY]] ], [ [[TMP11]], [[PRED_UDIV_IF]] ]
-; FIXED-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP6]], i32 1
-; FIXED-NEXT:    br i1 [[TMP13]], label [[PRED_UDIV_IF4:%.*]], label [[PRED_UDIV_CONTINUE5:%.*]]
-; FIXED:       pred.udiv.if4:
-; FIXED-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
-; FIXED-NEXT:    [[TMP15:%.*]] = udiv i64 [[TMP14]], [[V]]
-; FIXED-NEXT:    [[TMP16:%.*]] = insertelement <2 x i64> [[TMP12]], i64 [[TMP15]], i32 1
-; FIXED-NEXT:    br label [[PRED_UDIV_CONTINUE5]]
-; FIXED:       pred.udiv.continue5:
-; FIXED-NEXT:    [[TMP17:%.*]] = phi <2 x i64> [ [[TMP12]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP16]], [[PRED_UDIV_IF4]] ]
-; FIXED-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP7]], i32 0
-; FIXED-NEXT:    br i1 [[TMP18]], label [[PRED_UDIV_IF6:%.*]], label [[PRED_UDIV_CONTINUE7:%.*]]
-; FIXED:       pred.udiv.if6:
-; FIXED-NEXT:    [[TMP19:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i32 0
-; FIXED-NEXT:    [[TMP20:%.*]] = udiv i64 [[TMP19]], [[V]]
-; FIXED-NEXT:    [[TMP21:%.*]] = insertelement <2 x i64> poison, i64 [[TMP20]], i32 0
-; FIXED-NEXT:    br label [[PRED_UDIV_CONTINUE7]]
-; FIXED:       pred.udiv.continue7:
-; FIXED-NEXT:    [[TMP22:%.*]] = phi <2 x i64> [ poison, [[PRED_UDIV_CONTINUE5]] ], [ [[TMP21]], [[PRED_UDIV_IF6]] ]
-; FIXED-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
-; FIXED-NEXT:    br i1 [[TMP23]], label [[PRED_UDIV_IF8:%.*]], label [[PRED_UDIV_CONTINUE9]]
-; FIXED:       pred.udiv.if8:
-; FIXED-NEXT:    [[TMP24:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i32 1
-; FIXED-NEXT:    [[TMP25:%.*]] = udiv i64 [[TMP24]], [[V]]
-; FIXED-NEXT:    [[TMP26:%.*]] = insertelement <2 x i64> [[TMP22]], i64 [[TMP25]], i32 1
-; FIXED-NEXT:    br label [[PRED_UDIV_CONTINUE9]]
-; FIXED:       pred.udiv.continue9:
-; FIXED-NEXT:    [[TMP27:%.*]] = phi <2 x i64> [ [[TMP22]], [[PRED_UDIV_CONTINUE7]] ], [ [[TMP26]], [[PRED_UDIV_IF8]] ]
-; FIXED-NEXT:    [[TMP28:%.*]] = xor <2 x i1> [[TMP6]], <i1 true, i1 true>
-; FIXED-NEXT:    [[TMP29:%.*]] = xor <2 x i1> [[TMP7]], <i1 true, i1 true>
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[TMP17]], <2 x i64> [[WIDE_LOAD]]
-; FIXED-NEXT:    [[PREDPHI10:%.*]] = select <2 x i1> [[TMP7]], <2 x i64> [[TMP27]], <2 x i64> [[WIDE_LOAD1]]
-; FIXED-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    store <2 x i64> [[PREDPHI]], ptr [[TMP30]], align 8
-; FIXED-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 2
-; FIXED-NEXT:    store <2 x i64> [[PREDPHI10]], ptr [[TMP31]], align 8
+; FIXED-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[BROADCAST_SPLAT]], <2 x i64> <i64 1, i64 1>
+; FIXED-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP7]], <2 x i64> [[BROADCAST_SPLAT3]], <2 x i64> <i64 1, i64 1>
+; FIXED-NEXT:    [[TMP10:%.*]] = udiv <2 x i64> [[WIDE_LOAD]], [[TMP8]]
+; FIXED-NEXT:    [[TMP11:%.*]] = udiv <2 x i64> [[WIDE_LOAD1]], [[TMP9]]
+; FIXED-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[TMP6]], <i1 true, i1 true>
+; FIXED-NEXT:    [[TMP13:%.*]] = xor <2 x i1> [[TMP7]], <i1 true, i1 true>
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[TMP10]], <2 x i64> [[WIDE_LOAD]]
+; FIXED-NEXT:    [[PREDPHI4:%.*]] = select <2 x i1> [[TMP7]], <2 x i64> [[TMP11]], <2 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    store <2 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
+; FIXED-NEXT:    store <2 x i64> [[PREDPHI4]], ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; FIXED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -654,7 +620,7 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT2]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
-; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SDIV_CONTINUE9:%.*]] ]
+; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
 ; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
@@ -665,53 +631,19 @@ define void @predicated_sdiv(ptr noalias nocapture %a, i64 %v, i64 %n) {
 ; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i64> [[BROADCAST_SPLAT3]], zeroinitializer
-; FIXED-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP6]], i32 0
-; FIXED-NEXT:    br i1 [[TMP8]], label [[PRED_SDIV_IF:%.*]], label [[PRED_SDIV_CONTINUE:%.*]]
-; FIXED:       pred.sdiv.if:
-; FIXED-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
-; FIXED-NEXT:    [[TMP10:%.*]] = sdiv i64 [[TMP9]], [[V]]
-; FIXED-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> poison, i64 [[TMP10]], i32 0
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE]]
-; FIXED:       pred.sdiv.continue:
-; FIXED-NEXT:    [[TMP12:%.*]] = phi <2 x i64> [ poison, [[VECTOR_BODY]] ], [ [[TMP11]], [[PRED_SDIV_IF]] ]
-; FIXED-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP6]], i32 1
-; FIXED-NEXT:    br i1 [[TMP13]], label [[PRED_SDIV_IF4:%.*]], label [[PRED_SDIV_CONTINUE5:%.*]]
-; FIXED:       pred.sdiv.if4:
-; FIXED-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
-; FIXED-NEXT:    [[TMP15:%.*]] = sdiv i64 [[TMP14]], [[V]]
-; FIXED-NEXT:    [[TMP16:%.*]] = insertelement <2 x i64> [[TMP12]], i64 [[TMP15]], i32 1
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE5]]
-; FIXED:       pred.sdiv.continue5:
-; FIXED-NEXT:    [[TMP17:%.*]] = phi <2 x i64> [ [[TMP12]], [[PRED_SDIV_CONTINUE]] ], [ [[TMP16]], [[PRED_SDIV_IF4]] ]
-; FIXED-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP7]], i32 0
-; FIXED-NEXT:    br i1 [[TMP18]], label [[PRED_SDIV_IF6:%.*]], label [[PRED_SDIV_CONTINUE7:%.*]]
-; FIXED:       pred.sdiv.if6:
-; FIXED-NEXT:    [[TMP19:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i32 0
-; FIXED-NEXT:    [[TMP20:%.*]] = sdiv i64 [[TMP19]], [[V]]
-; FIXED-NEXT:    [[TMP21:%.*]] = insertelement <2 x i64> poison, i64 [[TMP20]], i32 0
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE7]]
-; FIXED:       pred.sdiv.continue7:
-; FIXED-NEXT:    [[TMP22:%.*]] = phi <2 x i64> [ poison, [[PRED_SDIV_CONTINUE5]] ], [ [[TMP21]], [[PRED_SDIV_IF6]] ]
-; FIXED-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
-; FIXED-NEXT:    br i1 [[TMP23]], label [[PRED_SDIV_IF8:%.*]], label [[PRED_SDIV_CONTINUE9]]
-; FIXED:       pred.sdiv.if8:
-; FIXED-NEXT:    [[TMP24:%.*]] = extractelement <2 x i64> [[WIDE_LOAD1]], i32 1
-; FIXED-NEXT:    [[TMP25:%.*]] = sdiv i64 [[TMP24]], [[V]]
-; FIXED-NEXT:    [[TMP26:%.*]] = insertelement <2 x i64> [[TMP22]], i64 [[TMP25]], i32 1
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE9]]
-; FIXED:       pred.sdiv.continue9:
-; FIXED-NEXT:    [[TMP27:%.*]] = phi <2 x i64> [ [[TMP22]], [[PRED_SDIV_CONTINUE7]] ], [ [[TMP26]], [[PRED_SDIV_IF8]] ]
-; FIXED-NEXT:    [[TMP28:%.*]] = xor <2 x i1> [[TMP6]], <i1 true, i1 true>
-; FIXED-NEXT:    [[TMP29:%.*]] = xor <2 x i1> [[TMP7]], <i1 true, i1 true>
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[TMP17]], <2 x i64> [[WIDE_LOAD]]
-; FIXED-NEXT:    [[PREDPHI10:%.*]] = select <2 x i1> [[TMP7]], <2 x i64> [[TMP27]], <2 x i64> [[WIDE_LOAD1]]
-; FIXED-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; FIXED-NEXT:    store <2 x i64> [[PREDPHI]], ptr [[TMP30]], align 8
-; FIXED-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 2
-; FIXED-NEXT:    store <2 x i64> [[PREDPHI10]], ptr [[TMP31]], align 8
+; FIXED-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[BROADCAST_SPLAT]], <2 x i64> <i64 1, i64 1>
+; FIXED-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP7]], <2 x i64> [[BROADCAST_SPLAT3]], <2 x i64> <i64 1, i64 1>
+; FIXED-NEXT:    [[TMP10:%.*]] = sdiv <2 x i64> [[WIDE_LOAD]], [[TMP8]]
+; FIXED-NEXT:    [[TMP11:%.*]] = sdiv <2 x i64> [[WIDE_LOAD1]], [[TMP9]]
+; FIXED-NEXT:    [[TMP12:%.*]] = xor <2 x i1> [[TMP6]], <i1 true, i1 true>
+; FIXED-NEXT:    [[TMP13:%.*]] = xor <2 x i1> [[TMP7]], <i1 true, i1 true>
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> [[TMP10]], <2 x i64> [[WIDE_LOAD]]
+; FIXED-NEXT:    [[PREDPHI4:%.*]] = select <2 x i1> [[TMP7]], <2 x i64> [[TMP11]], <2 x i64> [[WIDE_LOAD1]]
+; FIXED-NEXT:    store <2 x i64> [[PREDPHI]], ptr [[TMP4]], align 8
+; FIXED-NEXT:    store <2 x i64> [[PREDPHI4]], ptr [[TMP5]], align 8
 ; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; FIXED-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; FIXED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -1090,163 +1022,30 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED:       vector.ph:
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
-; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SDIV_CONTINUE30:%.*]] ]
+; FIXED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; FIXED-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
-; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
-; FIXED-NEXT:    [[TMP3:%.*]] = icmp ne <16 x i8> [[WIDE_LOAD]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
-; FIXED-NEXT:    [[TMP4:%.*]] = extractelement <16 x i1> [[TMP3]], i32 0
-; FIXED-NEXT:    br i1 [[TMP4]], label [[PRED_SDIV_IF:%.*]], label [[PRED_SDIV_CONTINUE:%.*]]
-; FIXED:       pred.sdiv.if:
-; FIXED-NEXT:    [[TMP5:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 0
-; FIXED-NEXT:    [[TMP6:%.*]] = sdiv i8 [[TMP5]], -1
-; FIXED-NEXT:    [[TMP7:%.*]] = insertelement <16 x i8> poison, i8 [[TMP6]], i32 0
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE]]
-; FIXED:       pred.sdiv.continue:
-; FIXED-NEXT:    [[TMP8:%.*]] = phi <16 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_SDIV_IF]] ]
-; FIXED-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[TMP3]], i32 1
-; FIXED-NEXT:    br i1 [[TMP9]], label [[PRED_SDIV_IF1:%.*]], label [[PRED_SDIV_CONTINUE2:%.*]]
-; FIXED:       pred.sdiv.if1:
-; FIXED-NEXT:    [[TMP10:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 1
-; FIXED-NEXT:    [[TMP11:%.*]] = sdiv i8 [[TMP10]], -1
-; FIXED-NEXT:    [[TMP12:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[TMP11]], i32 1
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE2]]
-; FIXED:       pred.sdiv.continue2:
-; FIXED-NEXT:    [[TMP13:%.*]] = phi <16 x i8> [ [[TMP8]], [[PRED_SDIV_CONTINUE]] ], [ [[TMP12]], [[PRED_SDIV_IF1]] ]
-; FIXED-NEXT:    [[TMP14:%.*]] = extractelement <16 x i1> [[TMP3]], i32 2
-; FIXED-NEXT:    br i1 [[TMP14]], label [[PRED_SDIV_IF3:%.*]], label [[PRED_SDIV_CONTINUE4:%.*]]
-; FIXED:       pred.sdiv.if3:
-; FIXED-NEXT:    [[TMP15:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 2
-; FIXED-NEXT:    [[TMP16:%.*]] = sdiv i8 [[TMP15]], -1
-; FIXED-NEXT:    [[TMP17:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[TMP16]], i32 2
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE4]]
-; FIXED:       pred.sdiv.continue4:
-; FIXED-NEXT:    [[TMP18:%.*]] = phi <16 x i8> [ [[TMP13]], [[PRED_SDIV_CONTINUE2]] ], [ [[TMP17]], [[PRED_SDIV_IF3]] ]
-; FIXED-NEXT:    [[TMP19:%.*]] = extractelement <16 x i1> [[TMP3]], i32 3
-; FIXED-NEXT:    br i1 [[TMP19]], label [[PRED_SDIV_IF5:%.*]], label [[PRED_SDIV_CONTINUE6:%.*]]
-; FIXED:       pred.sdiv.if5:
-; FIXED-NEXT:    [[TMP20:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 3
-; FIXED-NEXT:    [[TMP21:%.*]] = sdiv i8 [[TMP20]], -1
-; FIXED-NEXT:    [[TMP22:%.*]] = insertelement <16 x i8> [[TMP18]], i8 [[TMP21]], i32 3
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE6]]
-; FIXED:       pred.sdiv.continue6:
-; FIXED-NEXT:    [[TMP23:%.*]] = phi <16 x i8> [ [[TMP18]], [[PRED_SDIV_CONTINUE4]] ], [ [[TMP22]], [[PRED_SDIV_IF5]] ]
-; FIXED-NEXT:    [[TMP24:%.*]] = extractelement <16 x i1> [[TMP3]], i32 4
-; FIXED-NEXT:    br i1 [[TMP24]], label [[PRED_SDIV_IF7:%.*]], label [[PRED_SDIV_CONTINUE8:%.*]]
-; FIXED:       pred.sdiv.if7:
-; FIXED-NEXT:    [[TMP25:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 4
-; FIXED-NEXT:    [[TMP26:%.*]] = sdiv i8 [[TMP25]], -1
-; FIXED-NEXT:    [[TMP27:%.*]] = insertelement <16 x i8> [[TMP23]], i8 [[TMP26]], i32 4
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE8]]
-; FIXED:       pred.sdiv.continue8:
-; FIXED-NEXT:    [[TMP28:%.*]] = phi <16 x i8> [ [[TMP23]], [[PRED_SDIV_CONTINUE6]] ], [ [[TMP27]], [[PRED_SDIV_IF7]] ]
-; FIXED-NEXT:    [[TMP29:%.*]] = extractelement <16 x i1> [[TMP3]], i32 5
-; FIXED-NEXT:    br i1 [[TMP29]], label [[PRED_SDIV_IF9:%.*]], label [[PRED_SDIV_CONTINUE10:%.*]]
-; FIXED:       pred.sdiv.if9:
-; FIXED-NEXT:    [[TMP30:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 5
-; FIXED-NEXT:    [[TMP31:%.*]] = sdiv i8 [[TMP30]], -1
-; FIXED-NEXT:    [[TMP32:%.*]] = insertelement <16 x i8> [[TMP28]], i8 [[TMP31]], i32 5
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE10]]
-; FIXED:       pred.sdiv.continue10:
-; FIXED-NEXT:    [[TMP33:%.*]] = phi <16 x i8> [ [[TMP28]], [[PRED_SDIV_CONTINUE8]] ], [ [[TMP32]], [[PRED_SDIV_IF9]] ]
-; FIXED-NEXT:    [[TMP34:%.*]] = extractelement <16 x i1> [[TMP3]], i32 6
-; FIXED-NEXT:    br i1 [[TMP34]], label [[PRED_SDIV_IF11:%.*]], label [[PRED_SDIV_CONTINUE12:%.*]]
-; FIXED:       pred.sdiv.if11:
-; FIXED-NEXT:    [[TMP35:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 6
-; FIXED-NEXT:    [[TMP36:%.*]] = sdiv i8 [[TMP35]], -1
-; FIXED-NEXT:    [[TMP37:%.*]] = insertelement <16 x i8> [[TMP33]], i8 [[TMP36]], i32 6
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE12]]
-; FIXED:       pred.sdiv.continue12:
-; FIXED-NEXT:    [[TMP38:%.*]] = phi <16 x i8> [ [[TMP33]], [[PRED_SDIV_CONTINUE10]] ], [ [[TMP37]], [[PRED_SDIV_IF11]] ]
-; FIXED-NEXT:    [[TMP39:%.*]] = extractelement <16 x i1> [[TMP3]], i32 7
-; FIXED-NEXT:    br i1 [[TMP39]], label [[PRED_SDIV_IF13:%.*]], label [[PRED_SDIV_CONTINUE14:%.*]]
-; FIXED:       pred.sdiv.if13:
-; FIXED-NEXT:    [[TMP40:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 7
-; FIXED-NEXT:    [[TMP41:%.*]] = sdiv i8 [[TMP40]], -1
-; FIXED-NEXT:    [[TMP42:%.*]] = insertelement <16 x i8> [[TMP38]], i8 [[TMP41]], i32 7
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE14]]
-; FIXED:       pred.sdiv.continue14:
-; FIXED-NEXT:    [[TMP43:%.*]] = phi <16 x i8> [ [[TMP38]], [[PRED_SDIV_CONTINUE12]] ], [ [[TMP42]], [[PRED_SDIV_IF13]] ]
-; FIXED-NEXT:    [[TMP44:%.*]] = extractelement <16 x i1> [[TMP3]], i32 8
-; FIXED-NEXT:    br i1 [[TMP44]], label [[PRED_SDIV_IF15:%.*]], label [[PRED_SDIV_CONTINUE16:%.*]]
-; FIXED:       pred.sdiv.if15:
-; FIXED-NEXT:    [[TMP45:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 8
-; FIXED-NEXT:    [[TMP46:%.*]] = sdiv i8 [[TMP45]], -1
-; FIXED-NEXT:    [[TMP47:%.*]] = insertelement <16 x i8> [[TMP43]], i8 [[TMP46]], i32 8
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE16]]
-; FIXED:       pred.sdiv.continue16:
-; FIXED-NEXT:    [[TMP48:%.*]] = phi <16 x i8> [ [[TMP43]], [[PRED_SDIV_CONTINUE14]] ], [ [[TMP47]], [[PRED_SDIV_IF15]] ]
-; FIXED-NEXT:    [[TMP49:%.*]] = extractelement <16 x i1> [[TMP3]], i32 9
-; FIXED-NEXT:    br i1 [[TMP49]], label [[PRED_SDIV_IF17:%.*]], label [[PRED_SDIV_CONTINUE18:%.*]]
-; FIXED:       pred.sdiv.if17:
-; FIXED-NEXT:    [[TMP50:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 9
-; FIXED-NEXT:    [[TMP51:%.*]] = sdiv i8 [[TMP50]], -1
-; FIXED-NEXT:    [[TMP52:%.*]] = insertelement <16 x i8> [[TMP48]], i8 [[TMP51]], i32 9
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE18]]
-; FIXED:       pred.sdiv.continue18:
-; FIXED-NEXT:    [[TMP53:%.*]] = phi <16 x i8> [ [[TMP48]], [[PRED_SDIV_CONTINUE16]] ], [ [[TMP52]], [[PRED_SDIV_IF17]] ]
-; FIXED-NEXT:    [[TMP54:%.*]] = extractelement <16 x i1> [[TMP3]], i32 10
-; FIXED-NEXT:    br i1 [[TMP54]], label [[PRED_SDIV_IF19:%.*]], label [[PRED_SDIV_CONTINUE20:%.*]]
-; FIXED:       pred.sdiv.if19:
-; FIXED-NEXT:    [[TMP55:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 10
-; FIXED-NEXT:    [[TMP56:%.*]] = sdiv i8 [[TMP55]], -1
-; FIXED-NEXT:    [[TMP57:%.*]] = insertelement <16 x i8> [[TMP53]], i8 [[TMP56]], i32 10
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE20]]
-; FIXED:       pred.sdiv.continue20:
-; FIXED-NEXT:    [[TMP58:%.*]] = phi <16 x i8> [ [[TMP53]], [[PRED_SDIV_CONTINUE18]] ], [ [[TMP57]], [[PRED_SDIV_IF19]] ]
-; FIXED-NEXT:    [[TMP59:%.*]] = extractelement <16 x i1> [[TMP3]], i32 11
-; FIXED-NEXT:    br i1 [[TMP59]], label [[PRED_SDIV_IF21:%.*]], label [[PRED_SDIV_CONTINUE22:%.*]]
-; FIXED:       pred.sdiv.if21:
-; FIXED-NEXT:    [[TMP60:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 11
-; FIXED-NEXT:    [[TMP61:%.*]] = sdiv i8 [[TMP60]], -1
-; FIXED-NEXT:    [[TMP62:%.*]] = insertelement <16 x i8> [[TMP58]], i8 [[TMP61]], i32 11
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE22]]
-; FIXED:       pred.sdiv.continue22:
-; FIXED-NEXT:    [[TMP63:%.*]] = phi <16 x i8> [ [[TMP58]], [[PRED_SDIV_CONTINUE20]] ], [ [[TMP62]], [[PRED_SDIV_IF21]] ]
-; FIXED-NEXT:    [[TMP64:%.*]] = extractelement <16 x i1> [[TMP3]], i32 12
-; FIXED-NEXT:    br i1 [[TMP64]], label [[PRED_SDIV_IF23:%.*]], label [[PRED_SDIV_CONTINUE24:%.*]]
-; FIXED:       pred.sdiv.if23:
-; FIXED-NEXT:    [[TMP65:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 12
-; FIXED-NEXT:    [[TMP66:%.*]] = sdiv i8 [[TMP65]], -1
-; FIXED-NEXT:    [[TMP67:%.*]] = insertelement <16 x i8> [[TMP63]], i8 [[TMP66]], i32 12
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE24]]
-; FIXED:       pred.sdiv.continue24:
-; FIXED-NEXT:    [[TMP68:%.*]] = phi <16 x i8> [ [[TMP63]], [[PRED_SDIV_CONTINUE22]] ], [ [[TMP67]], [[PRED_SDIV_IF23]] ]
-; FIXED-NEXT:    [[TMP69:%.*]] = extractelement <16 x i1> [[TMP3]], i32 13
-; FIXED-NEXT:    br i1 [[TMP69]], label [[PRED_SDIV_IF25:%.*]], label [[PRED_SDIV_CONTINUE26:%.*]]
-; FIXED:       pred.sdiv.if25:
-; FIXED-NEXT:    [[TMP70:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 13
-; FIXED-NEXT:    [[TMP71:%.*]] = sdiv i8 [[TMP70]], -1
-; FIXED-NEXT:    [[TMP72:%.*]] = insertelement <16 x i8> [[TMP68]], i8 [[TMP71]], i32 13
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE26]]
-; FIXED:       pred.sdiv.continue26:
-; FIXED-NEXT:    [[TMP73:%.*]] = phi <16 x i8> [ [[TMP68]], [[PRED_SDIV_CONTINUE24]] ], [ [[TMP72]], [[PRED_SDIV_IF25]] ]
-; FIXED-NEXT:    [[TMP74:%.*]] = extractelement <16 x i1> [[TMP3]], i32 14
-; FIXED-NEXT:    br i1 [[TMP74]], label [[PRED_SDIV_IF27:%.*]], label [[PRED_SDIV_CONTINUE28:%.*]]
-; FIXED:       pred.sdiv.if27:
-; FIXED-NEXT:    [[TMP75:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 14
-; FIXED-NEXT:    [[TMP76:%.*]] = sdiv i8 [[TMP75]], -1
-; FIXED-NEXT:    [[TMP77:%.*]] = insertelement <16 x i8> [[TMP73]], i8 [[TMP76]], i32 14
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE28]]
-; FIXED:       pred.sdiv.continue28:
-; FIXED-NEXT:    [[TMP78:%.*]] = phi <16 x i8> [ [[TMP73]], [[PRED_SDIV_CONTINUE26]] ], [ [[TMP77]], [[PRED_SDIV_IF27]] ]
-; FIXED-NEXT:    [[TMP79:%.*]] = extractelement <16 x i1> [[TMP3]], i32 15
-; FIXED-NEXT:    br i1 [[TMP79]], label [[PRED_SDIV_IF29:%.*]], label [[PRED_SDIV_CONTINUE30]]
-; FIXED:       pred.sdiv.if29:
-; FIXED-NEXT:    [[TMP80:%.*]] = extractelement <16 x i8> [[WIDE_LOAD]], i32 15
-; FIXED-NEXT:    [[TMP81:%.*]] = sdiv i8 [[TMP80]], -1
-; FIXED-NEXT:    [[TMP82:%.*]] = insertelement <16 x i8> [[TMP78]], i8 [[TMP81]], i32 15
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE30]]
-; FIXED:       pred.sdiv.continue30:
-; FIXED-NEXT:    [[TMP83:%.*]] = phi <16 x i8> [ [[TMP78]], [[PRED_SDIV_CONTINUE28]] ], [ [[TMP82]], [[PRED_SDIV_IF29]] ]
-; FIXED-NEXT:    [[TMP84:%.*]] = xor <16 x i1> [[TMP3]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-; FIXED-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP3]], <16 x i8> [[TMP83]], <16 x i8> [[WIDE_LOAD]]
-; FIXED-NEXT:    [[TMP85:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
-; FIXED-NEXT:    store <16 x i8> [[PREDPHI]], ptr [[TMP85]], align 1
-; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; FIXED-NEXT:    [[TMP86:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[TMP86]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; FIXED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 16
+; FIXED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP0]]
+; FIXED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
+; FIXED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 0
+; FIXED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
+; FIXED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 16
+; FIXED-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
+; FIXED-NEXT:    [[TMP6:%.*]] = icmp ne <16 x i8> [[WIDE_LOAD]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+; FIXED-NEXT:    [[TMP7:%.*]] = icmp ne <16 x i8> [[WIDE_LOAD1]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+; FIXED-NEXT:    [[TMP8:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; FIXED-NEXT:    [[TMP9:%.*]] = select <16 x i1> [[TMP7]], <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; FIXED-NEXT:    [[TMP10:%.*]] = sdiv <16 x i8> [[WIDE_LOAD]], [[TMP8]]
+; FIXED-NEXT:    [[TMP11:%.*]] = sdiv <16 x i8> [[WIDE_LOAD1]], [[TMP9]]
+; FIXED-NEXT:    [[TMP12:%.*]] = xor <16 x i1> [[TMP6]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; FIXED-NEXT:    [[TMP13:%.*]] = xor <16 x i1> [[TMP7]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; FIXED-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> [[TMP10]], <16 x i8> [[WIDE_LOAD]]
+; FIXED-NEXT:    [[PREDPHI2:%.*]] = select <16 x i1> [[TMP7]], <16 x i8> [[TMP11]], <16 x i8> [[WIDE_LOAD1]]
+; FIXED-NEXT:    store <16 x i8> [[PREDPHI]], ptr [[TMP4]], align 1
+; FIXED-NEXT:    store <16 x i8> [[PREDPHI2]], ptr [[TMP5]], align 1
+; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; FIXED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; FIXED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -1256,94 +1055,23 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; FIXED-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; FIXED:       vec.epilog.vector.body:
-; FIXED-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT51:%.*]], [[PRED_SDIV_CONTINUE49:%.*]] ]
-; FIXED-NEXT:    [[TMP87:%.*]] = add i64 [[OFFSET_IDX]], 0
-; FIXED-NEXT:    [[TMP88:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP87]]
-; FIXED-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i8, ptr [[TMP88]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD33:%.*]] = load <8 x i8>, ptr [[TMP89]], align 1
-; FIXED-NEXT:    [[TMP90:%.*]] = icmp ne <8 x i8> [[WIDE_LOAD33]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
-; FIXED-NEXT:    [[TMP91:%.*]] = extractelement <8 x i1> [[TMP90]], i32 0
-; FIXED-NEXT:    br i1 [[TMP91]], label [[PRED_SDIV_IF34:%.*]], label [[PRED_SDIV_CONTINUE35:%.*]]
-; FIXED:       pred.sdiv.if34:
-; FIXED-NEXT:    [[TMP92:%.*]] = extractelement <8 x i8> [[WIDE_LOAD33]], i32 0
-; FIXED-NEXT:    [[TMP93:%.*]] = sdiv i8 [[TMP92]], -1
-; FIXED-NEXT:    [[TMP94:%.*]] = insertelement <8 x i8> poison, i8 [[TMP93]], i32 0
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE35]]
-; FIXED:       pred.sdiv.continue35:
-; FIXED-NEXT:    [[TMP95:%.*]] = phi <8 x i8> [ poison, [[VEC_EPILOG_VECTOR_BODY]] ], [ [[TMP94]], [[PRED_SDIV_IF34]] ]
-; FIXED-NEXT:    [[TMP96:%.*]] = extractelement <8 x i1> [[TMP90]], i32 1
-; FIXED-NEXT:    br i1 [[TMP96]], label [[PRED_SDIV_IF36:%.*]], label [[PRED_SDIV_CONTINUE37:%.*]]
-; FIXED:       pred.sdiv.if36:
-; FIXED-NEXT:    [[TMP97:%.*]] = extractelement <8 x i8> [[WIDE_LOAD33]], i32 1
-; FIXED-NEXT:    [[TMP98:%.*]] = sdiv i8 [[TMP97]], -1
-; FIXED-NEXT:    [[TMP99:%.*]] = insertelement <8 x i8> [[TMP95]], i8 [[TMP98]], i32 1
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE37]]
-; FIXED:       pred.sdiv.continue37:
-; FIXED-NEXT:    [[TMP100:%.*]] = phi <8 x i8> [ [[TMP95]], [[PRED_SDIV_CONTINUE35]] ], [ [[TMP99]], [[PRED_SDIV_IF36]] ]
-; FIXED-NEXT:    [[TMP101:%.*]] = extractelement <8 x i1> [[TMP90]], i32 2
-; FIXED-NEXT:    br i1 [[TMP101]], label [[PRED_SDIV_IF38:%.*]], label [[PRED_SDIV_CONTINUE39:%.*]]
-; FIXED:       pred.sdiv.if38:
-; FIXED-NEXT:    [[TMP102:%.*]] = extractelement <8 x i8> [[WIDE_LOAD33]], i32 2
-; FIXED-NEXT:    [[TMP103:%.*]] = sdiv i8 [[TMP102]], -1
-; FIXED-NEXT:    [[TMP104:%.*]] = insertelement <8 x i8> [[TMP100]], i8 [[TMP103]], i32 2
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE39]]
-; FIXED:       pred.sdiv.continue39:
-; FIXED-NEXT:    [[TMP105:%.*]] = phi <8 x i8> [ [[TMP100]], [[PRED_SDIV_CONTINUE37]] ], [ [[TMP104]], [[PRED_SDIV_IF38]] ]
-; FIXED-NEXT:    [[TMP106:%.*]] = extractelement <8 x i1> [[TMP90]], i32 3
-; FIXED-NEXT:    br i1 [[TMP106]], label [[PRED_SDIV_IF40:%.*]], label [[PRED_SDIV_CONTINUE41:%.*]]
-; FIXED:       pred.sdiv.if40:
-; FIXED-NEXT:    [[TMP107:%.*]] = extractelement <8 x i8> [[WIDE_LOAD33]], i32 3
-; FIXED-NEXT:    [[TMP108:%.*]] = sdiv i8 [[TMP107]], -1
-; FIXED-NEXT:    [[TMP109:%.*]] = insertelement <8 x i8> [[TMP105]], i8 [[TMP108]], i32 3
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE41]]
-; FIXED:       pred.sdiv.continue41:
-; FIXED-NEXT:    [[TMP110:%.*]] = phi <8 x i8> [ [[TMP105]], [[PRED_SDIV_CONTINUE39]] ], [ [[TMP109]], [[PRED_SDIV_IF40]] ]
-; FIXED-NEXT:    [[TMP111:%.*]] = extractelement <8 x i1> [[TMP90]], i32 4
-; FIXED-NEXT:    br i1 [[TMP111]], label [[PRED_SDIV_IF42:%.*]], label [[PRED_SDIV_CONTINUE43:%.*]]
-; FIXED:       pred.sdiv.if42:
-; FIXED-NEXT:    [[TMP112:%.*]] = extractelement <8 x i8> [[WIDE_LOAD33]], i32 4
-; FIXED-NEXT:    [[TMP113:%.*]] = sdiv i8 [[TMP112]], -1
-; FIXED-NEXT:    [[TMP114:%.*]] = insertelement <8 x i8> [[TMP110]], i8 [[TMP113]], i32 4
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE43]]
-; FIXED:       pred.sdiv.continue43:
-; FIXED-NEXT:    [[TMP115:%.*]] = phi <8 x i8> [ [[TMP110]], [[PRED_SDIV_CONTINUE41]] ], [ [[TMP114]], [[PRED_SDIV_IF42]] ]
-; FIXED-NEXT:    [[TMP116:%.*]] = extractelement <8 x i1> [[TMP90]], i32 5
-; FIXED-NEXT:    br i1 [[TMP116]], label [[PRED_SDIV_IF44:%.*]], label [[PRED_SDIV_CONTINUE45:%.*]]
-; FIXED:       pred.sdiv.if44:
-; FIXED-NEXT:    [[TMP117:%.*]] = extractelement <8 x i8> [[WIDE_LOAD33]], i32 5
-; FIXED-NEXT:    [[TMP118:%.*]] = sdiv i8 [[TMP117]], -1
-; FIXED-NEXT:    [[TMP119:%.*]] = insertelement <8 x i8> [[TMP115]], i8 [[TMP118]], i32 5
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE45]]
-; FIXED:       pred.sdiv.continue45:
-; FIXED-NEXT:    [[TMP120:%.*]] = phi <8 x i8> [ [[TMP115]], [[PRED_SDIV_CONTINUE43]] ], [ [[TMP119]], [[PRED_SDIV_IF44]] ]
-; FIXED-NEXT:    [[TMP121:%.*]] = extractelement <8 x i1> [[TMP90]], i32 6
-; FIXED-NEXT:    br i1 [[TMP121]], label [[PRED_SDIV_IF46:%.*]], label [[PRED_SDIV_CONTINUE47:%.*]]
-; FIXED:       pred.sdiv.if46:
-; FIXED-NEXT:    [[TMP122:%.*]] = extractelement <8 x i8> [[WIDE_LOAD33]], i32 6
-; FIXED-NEXT:    [[TMP123:%.*]] = sdiv i8 [[TMP122]], -1
-; FIXED-NEXT:    [[TMP124:%.*]] = insertelement <8 x i8> [[TMP120]], i8 [[TMP123]], i32 6
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE47]]
-; FIXED:       pred.sdiv.continue47:
-; FIXED-NEXT:    [[TMP125:%.*]] = phi <8 x i8> [ [[TMP120]], [[PRED_SDIV_CONTINUE45]] ], [ [[TMP124]], [[PRED_SDIV_IF46]] ]
-; FIXED-NEXT:    [[TMP126:%.*]] = extractelement <8 x i1> [[TMP90]], i32 7
-; FIXED-NEXT:    br i1 [[TMP126]], label [[PRED_SDIV_IF48:%.*]], label [[PRED_SDIV_CONTINUE49]]
-; FIXED:       pred.sdiv.if48:
-; FIXED-NEXT:    [[TMP127:%.*]] = extractelement <8 x i8> [[WIDE_LOAD33]], i32 7
-; FIXED-NEXT:    [[TMP128:%.*]] = sdiv i8 [[TMP127]], -1
-; FIXED-NEXT:    [[TMP129:%.*]] = insertelement <8 x i8> [[TMP125]], i8 [[TMP128]], i32 7
-; FIXED-NEXT:    br label [[PRED_SDIV_CONTINUE49]]
-; FIXED:       pred.sdiv.continue49:
-; FIXED-NEXT:    [[TMP130:%.*]] = phi <8 x i8> [ [[TMP125]], [[PRED_SDIV_CONTINUE47]] ], [ [[TMP129]], [[PRED_SDIV_IF48]] ]
-; FIXED-NEXT:    [[TMP131:%.*]] = xor <8 x i1> [[TMP90]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-; FIXED-NEXT:    [[PREDPHI50:%.*]] = select <8 x i1> [[TMP90]], <8 x i8> [[TMP130]], <8 x i8> [[WIDE_LOAD33]]
-; FIXED-NEXT:    [[TMP132:%.*]] = getelementptr inbounds i8, ptr [[TMP88]], i32 0
-; FIXED-NEXT:    store <8 x i8> [[PREDPHI50]], ptr [[TMP132]], align 1
-; FIXED-NEXT:    [[INDEX_NEXT51]] = add nuw i64 [[OFFSET_IDX]], 8
-; FIXED-NEXT:    [[TMP133:%.*]] = icmp eq i64 [[INDEX_NEXT51]], 1024
-; FIXED-NEXT:    br i1 [[TMP133]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; FIXED-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; FIXED-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 0
+; FIXED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP15]]
+; FIXED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
+; FIXED-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i8>, ptr [[TMP17]], align 1
+; FIXED-NEXT:    [[TMP18:%.*]] = icmp ne <8 x i8> [[WIDE_LOAD5]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
+; FIXED-NEXT:    [[TMP19:%.*]] = select <8 x i1> [[TMP18]], <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; FIXED-NEXT:    [[TMP20:%.*]] = sdiv <8 x i8> [[WIDE_LOAD5]], [[TMP19]]
+; FIXED-NEXT:    [[TMP21:%.*]] = xor <8 x i1> [[TMP18]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; FIXED-NEXT:    [[PREDPHI6:%.*]] = select <8 x i1> [[TMP18]], <8 x i8> [[TMP20]], <8 x i8> [[WIDE_LOAD5]]
+; FIXED-NEXT:    store <8 x i8> [[PREDPHI6]], ptr [[TMP17]], align 1
+; FIXED-NEXT:    [[INDEX_NEXT7]] = add nuw i64 [[OFFSET_IDX]], 8
+; FIXED-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT7]], 1024
+; FIXED-NEXT:    br i1 [[TMP22]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; FIXED:       vec.epilog.middle.block:
-; FIXED-NEXT:    [[CMP_N31:%.*]] = icmp eq i64 1024, 1024
-; FIXED-NEXT:    br i1 [[CMP_N31]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
+; FIXED-NEXT:    [[CMP_N3:%.*]] = icmp eq i64 1024, 1024
+; FIXED-NEXT:    br i1 [[CMP_N3]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; FIXED:       vec.epilog.scalar.ph:
 ; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
