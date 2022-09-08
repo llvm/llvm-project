@@ -375,6 +375,60 @@ entry:
   ret void
 }
 
+define void @non_sve_callee_high_range(float %f0, float %f1, float %f2, float %f3, float %f4, float %f5, float %f6, float %f7, <vscale x 4 x float> %v0, <vscale x 4 x float> %v1)  {
+; CHECK-LABEL: non_sve_callee_high_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset b8, -16
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    mov z8.d, #42 // =0x2a
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  tail call void asm sideeffect "mov z8.d, #42", "~{z8}"()
+  ret void
+}
+
+define <vscale x 4 x float> @sve_caller_non_sve_callee_high_range(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1)  {
+; CHECK-LABEL: sve_caller_non_sve_callee_high_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    mov z8.d, z0.d
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmov s2, #2.00000000
+; CHECK-NEXT:    fmov s3, #3.00000000
+; CHECK-NEXT:    fmov s4, #4.00000000
+; CHECK-NEXT:    fmov s5, #5.00000000
+; CHECK-NEXT:    fmov s6, #6.00000000
+; CHECK-NEXT:    fmov s7, #7.00000000
+; CHECK-NEXT:    mov x1, sp
+; CHECK-NEXT:    addvl x0, sp, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1w { z24.s }, p0, [sp]
+; CHECK-NEXT:    st1w { z8.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    bl non_sve_callee_high_range
+; CHECK-NEXT:    mov z0.d, z8.d
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void @non_sve_callee_high_range(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, <vscale x 4 x float> %v0, <vscale x 4 x float> %v1)
+  ret <vscale x 4 x float> %v0
+}
+
 declare float @callee1(float, <vscale x 8 x double>, <vscale x 8 x double>, <vscale x 2 x double>)
 declare float @callee2(i32, i32, i32, i32, i32, i32, i32, i32, float, <vscale x 8 x double>, <vscale x 8 x double>)
 declare float @callee3(float, float, <vscale x 8 x double>, <vscale x 6 x double>, <vscale x 2 x double>)

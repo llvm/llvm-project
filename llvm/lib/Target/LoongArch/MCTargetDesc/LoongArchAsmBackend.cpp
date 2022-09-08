@@ -59,7 +59,7 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // TODO: Add more fixup kinds.
   };
 
-  static_assert((array_lengthof(Infos)) == LoongArch::NumTargetFixupKinds,
+  static_assert((std::size(Infos)) == LoongArch::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
 
   // Fixup kinds from .reloc directive are like R_LARCH_NONE. They

@@ -55,6 +55,11 @@ void populateResolveRankedShapeTypeResultDimsPatterns(
 /// terms of shapes of its input operands.
 void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
 
+/// Appends patterns for simplifying extract_strided_metadata(other_op) into
+/// easier to analyze constructs.
+void populateSimplifyExtractStridedMetadataOpPatterns(
+    RewritePatternSet &patterns);
+
 /// Transformation to do multi-buffering/array expansion to remove dependencies
 /// on the temporary allocation between consecutive loop iterations.
 /// It return success if the allocation was multi-buffered and returns failure()
@@ -117,6 +122,11 @@ std::unique_ptr<Pass> createResolveRankedShapeTypeResultDimsPass();
 /// `InferShapedTypeOpInterface` or the `ReifyRankedShapeTypeShapeOpInterface`,
 /// in terms of shapes of its input operands.
 std::unique_ptr<Pass> createResolveShapedTypeResultDimsPass();
+
+/// Creates an operation pass to simplify
+/// `extract_strided_metadata(other_op(memref))` into
+/// `extract_strided_metadata(memref)`.
+std::unique_ptr<Pass> createSimplifyExtractStridedMetadataPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

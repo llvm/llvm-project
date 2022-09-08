@@ -75,8 +75,10 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
   // serialized MF to be compared later.
   SmallString<0> BeforeStr, AfterStr;
   StringRef PassID;
-  if (const PassInfo *PI = Pass::lookupPassInfo(getPassID()))
-    PassID = PI->getPassArgument();
+  if (PrintChanged != ChangePrinter::None) {
+    if (const PassInfo *PI = Pass::lookupPassInfo(getPassID()))
+      PassID = PI->getPassArgument();
+  }
   const bool IsInterestingPass = isPassInPrintList(PassID);
   const bool ShouldPrintChanged = PrintChanged != ChangePrinter::None &&
                                   IsInterestingPass &&

@@ -113,9 +113,6 @@ private:
   clang::VarDecl *CreateVariableDecl(PdbSymUid uid,
                                      llvm::codeview::CVSymbol sym,
                                      clang::DeclContext &scope);
-  clang::DeclContext *
-  GetParentDeclContextForSymbol(const llvm::codeview::CVSymbol &sym);
-
   clang::NamespaceDecl *GetOrCreateNamespaceDecl(const char *name,
                                                  clang::DeclContext &context);
   clang::FunctionDecl *CreateFunctionDeclFromId(PdbTypeSymId func_tid,

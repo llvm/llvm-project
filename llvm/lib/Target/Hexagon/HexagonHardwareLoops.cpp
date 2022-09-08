@@ -998,8 +998,8 @@ bool HexagonHardwareLoops::isInvalidLoopOperation(const MachineInstr *MI,
 
   static const unsigned Regs01[] = { LC0, SA0, LC1, SA1 };
   static const unsigned Regs1[]  = { LC1, SA1 };
-  auto CheckRegs = IsInnerHWLoop ? makeArrayRef(Regs01, array_lengthof(Regs01))
-                                 : makeArrayRef(Regs1, array_lengthof(Regs1));
+  auto CheckRegs = IsInnerHWLoop ? makeArrayRef(Regs01, std::size(Regs01))
+                                 : makeArrayRef(Regs1, std::size(Regs1));
   for (unsigned R : CheckRegs)
     if (MI->modifiesRegister(R, TRI))
       return true;

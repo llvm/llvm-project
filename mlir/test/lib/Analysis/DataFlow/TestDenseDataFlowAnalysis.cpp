@@ -21,16 +21,29 @@ namespace {
 class UnderlyingValue {
 public:
   /// Create an underlying value state with a known underlying value.
-  UnderlyingValue(Value underlyingValue) : underlyingValue(underlyingValue) {}
+  explicit UnderlyingValue(Optional<Value> underlyingValue = None)
+      : underlyingValue(underlyingValue) {}
+
+  /// Whether the state is uninitialized.
+  bool isUninitialized() const { return !underlyingValue.has_value(); }
 
   /// Returns the underlying value.
-  Value getUnderlyingValue() const { return underlyingValue; }
+  Value getUnderlyingValue() const {
+    assert(!isUninitialized());
+    return *underlyingValue;
+  }
 
   /// Join two underlying values. If there are conflicting underlying values,
   /// go to the pessimistic value.
   static UnderlyingValue join(const UnderlyingValue &lhs,
                               const UnderlyingValue &rhs) {
-    return lhs.underlyingValue == rhs.underlyingValue ? lhs : Value();
+    if (lhs.isUninitialized())
+      return rhs;
+    if (rhs.isUninitialized())
+      return lhs;
+    return lhs.underlyingValue == rhs.underlyingValue
+               ? lhs
+               : UnderlyingValue(Value{});
   }
 
   /// Compare underlying values.
@@ -41,7 +54,7 @@ public:
   void print(raw_ostream &os) const { os << underlyingValue; }
 
 private:
-  Value underlyingValue;
+  Optional<Value> underlyingValue;
 };
 
 /// This lattice represents, for a given memory resource, the potential last
@@ -51,9 +64,6 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LastModification)
 
   using AbstractDenseLattice::AbstractDenseLattice;
-
-  /// The lattice is always initialized.
-  bool isUninitialized() const override { return false; }
 
   /// Clear all modifications.
   ChangeResult reset() {
@@ -169,7 +179,7 @@ static Value getMostUnderlyingValue(
   const UnderlyingValueLattice *underlying;
   do {
     underlying = getUnderlyingValueFn(value);
-    if (!underlying || underlying->isUninitialized())
+    if (!underlying || underlying->getValue().isUninitialized())
       return {};
     Value underlyingValue = underlying->getValue().getUnderlyingValue();
     if (underlyingValue == value)

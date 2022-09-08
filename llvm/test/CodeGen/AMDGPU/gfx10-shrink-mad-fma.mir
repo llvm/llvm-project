@@ -192,7 +192,7 @@ body: |
     ; GFX10-NEXT: SI_RETURN implicit [[V_FMAMK_F16_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
-    %2:vgpr_32 = V_FMA_F16_e64 0, 18688, 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %2:vgpr_32 = V_FMA_F16_gfx9_e64 0, 18688, 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
     SI_RETURN implicit %2
 ...
 
@@ -207,7 +207,7 @@ body: |
     ; GFX10-NEXT: SI_RETURN implicit [[V_FMAMK_F16_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
-    %2:vgpr_32 = V_FMA_F16_e64 0, %0, 0, 18688, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %2:vgpr_32 = V_FMA_F16_gfx9_e64 0, %0, 0, 18688, 0, %1, 0, 0, implicit $mode, implicit $exec
     SI_RETURN implicit %2
 ...
 
@@ -222,7 +222,7 @@ body: |
     ; GFX10-NEXT: SI_RETURN implicit [[V_FMAAK_F16_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
-    %2:vgpr_32 = V_FMA_F16_e64 0, %0, 0, %1, 0, 18688, 0, 0, implicit $mode, implicit $exec
+    %2:vgpr_32 = V_FMA_F16_gfx9_e64 0, %0, 0, %1, 0, 18688, 0, 0, implicit $mode, implicit $exec
     SI_RETURN implicit %2
 ...
 
@@ -237,6 +237,6 @@ body: |
     ; GFX10-NEXT: SI_RETURN implicit [[V_FMAAK_F16_]]
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32 = IMPLICIT_DEF
-    %2:vgpr_32 = V_FMA_F16_e64 0, %0, 0, %1, 0, 18688, 0, 0, implicit $mode, implicit $exec
+    %2:vgpr_32 = V_FMA_F16_gfx9_e64 0, %0, 0, %1, 0, 18688, 0, 0, implicit $mode, implicit $exec
     SI_RETURN implicit %2
 ...

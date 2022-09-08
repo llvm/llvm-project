@@ -291,9 +291,6 @@ public:
   /// Returns the program point this static is located at.
   ProgramPoint getPoint() const { return point; }
 
-  /// Returns true if the analysis state is uninitialized.
-  virtual bool isUninitialized() const = 0;
-
   /// Print the contents of the analysis state.
   virtual void print(raw_ostream &os) const = 0;
 
