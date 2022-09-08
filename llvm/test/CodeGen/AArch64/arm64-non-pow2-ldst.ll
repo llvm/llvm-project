@@ -124,3 +124,68 @@ define void @sti280(ptr %p, i280 %a) nounwind {
     store i280 %a, i280* %p
     ret void
 }
+
+define void @i56_or(ptr %a) {
+; CHECK-LABEL: i56_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    ldrh w10, [x8, #4]!
+; CHECK-NEXT:    ldrb w11, [x8, #2]
+; CHECK-NEXT:    orr w9, w9, #0x180
+; CHECK-NEXT:    bfi w10, w11, #16, #16
+; CHECK-NEXT:    str w9, [x0]
+; CHECK-NEXT:    strb w11, [x8, #2]
+; CHECK-NEXT:    strh w10, [x8]
+; CHECK-NEXT:    ret
+  %aa = load i56, ptr %a, align 1
+  %b = or i56 %aa, 384
+  store i56 %b, ptr %a, align 1
+  ret void
+}
+
+define void @i56_and_or(ptr %a) {
+; CHECK-LABEL: i56_and_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    ldrh w10, [x8, #4]!
+; CHECK-NEXT:    ldrb w11, [x8, #2]
+; CHECK-NEXT:    orr w9, w9, #0x180
+; CHECK-NEXT:    and w9, w9, #0xffffff80
+; CHECK-NEXT:    bfi w10, w11, #16, #16
+; CHECK-NEXT:    strb w11, [x8, #2]
+; CHECK-NEXT:    str w9, [x0]
+; CHECK-NEXT:    strh w10, [x8]
+; CHECK-NEXT:    ret
+  %b = load i56, ptr %a, align 1
+  %c = and i56 %b, -128
+  %d = or i56 %c, 384
+  store i56 %d, ptr %a, align 1
+  ret void
+}
+
+define void @i56_insert_bit(ptr %a, i1 zeroext %bit) {
+; CHECK-LABEL: i56_insert_bit:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr w11, [x0]
+; CHECK-NEXT:    ldrh w9, [x8, #4]!
+; CHECK-NEXT:    ldrb w10, [x8, #2]
+; CHECK-NEXT:    bfi w9, w10, #16, #8
+; CHECK-NEXT:    strb w10, [x8, #2]
+; CHECK-NEXT:    bfi x11, x9, #32, #24
+; CHECK-NEXT:    strh w9, [x8]
+; CHECK-NEXT:    and x11, x11, #0xffffffffffffdfff
+; CHECK-NEXT:    orr w11, w11, w1, lsl #13
+; CHECK-NEXT:    str w11, [x0]
+; CHECK-NEXT:    ret
+  %extbit = zext i1 %bit to i56
+  %b = load i56, ptr %a, align 1
+  %extbit.shl = shl nuw nsw i56 %extbit, 13
+  %c = and i56 %b, -8193
+  %d = or i56 %c, %extbit.shl
+  store i56 %d, ptr %a, align 1
+  ret void
+}
+
