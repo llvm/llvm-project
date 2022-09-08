@@ -1167,14 +1167,13 @@ public:
     // All initialization should be done on entry of the loop nest.
     rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
     // Determine the size for access expansion (always the innermost stored
-    // dimension size, but we need to translate it back to the original
-    // dimension since the dim size utility applies dimension ordering).
+    // dimension size, translated back to original dimension). Note that we
+    // recursively rewrite the new DimOp on the **original** tensor.
     auto enc = getSparseTensorEncoding(srcType);
-    Value src = adaptor.getOperands()[0];
     unsigned innerDim = srcType.getRank() - 1;
     if (AffineMap p = enc.getDimOrdering())
       innerDim = p.getDimPosition(innerDim);
-    Value sz = genDimSizeCall(rewriter, loc, enc, src, innerDim);
+    Value sz = rewriter.create<tensor::DimOp>(loc, op.getTensor(), innerDim);
     // Allocate temporary buffers for values, filled-switch, and indices.
     // We do not use stack buffers for this, since the expanded size may
     // be rather large (as it envelops a single expanded dense dimension).
