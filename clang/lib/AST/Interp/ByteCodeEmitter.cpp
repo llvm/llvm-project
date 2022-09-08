@@ -62,8 +62,10 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
     // Return a dummy function if compilation failed.
     if (BailLocation)
       return llvm::make_error<ByteCodeGenError>(*BailLocation);
-    else
+    else {
+      Func->setIsFullyCompiled(true);
       return Func;
+    }
   } else {
     // Create scopes from descriptors.
     llvm::SmallVector<Scope, 2> Scopes;
@@ -74,6 +76,7 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
     // Set the function's code.
     Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
                   std::move(Scopes));
+    Func->setIsFullyCompiled(true);
     return Func;
   }
 }

@@ -112,6 +112,9 @@ public:
   /// Checks if the function is a constructor.
   bool isConstructor() const { return isa<CXXConstructorDecl>(F); }
 
+  /// Checks if the function is fully done compiling.
+  bool isFullyCompiled() const { return IsFullyCompiled; }
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
@@ -127,6 +130,8 @@ private:
     Scopes = std::move(NewScopes);
     IsValid = true;
   }
+
+  void setIsFullyCompiled(bool FC) { IsFullyCompiled = FC; }
 
 private:
   friend class Program;
@@ -154,6 +159,9 @@ private:
   llvm::DenseMap<unsigned, ParamDescriptor> Params;
   /// Flag to indicate if the function is valid.
   bool IsValid = false;
+  /// Flag to indicate if the function is done being
+  /// compiled to bytecode.
+  bool IsFullyCompiled = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
