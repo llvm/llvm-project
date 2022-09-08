@@ -1817,12 +1817,12 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
     runOnInstruction(
         BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SWAP_B32), NewAmtLo)
             .addDef(AmtReg - 1)
-            .addReg(AmtReg - 1)
-            .addReg(NewAmtLo));
+            .addReg(AmtReg - 1, RegState::Undef)
+            .addReg(NewAmtLo, RegState::Undef));
   runOnInstruction(BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SWAP_B32), NewAmt)
                        .addDef(AmtReg)
-                       .addReg(AmtReg)
-                       .addReg(NewAmt));
+                       .addReg(AmtReg, RegState::Undef)
+                       .addReg(NewAmt, RegState::Undef));
 
   // Instructions emitted after the current instruction will be processed by the
   // parent loop of the hazard recognizer in a natural way.
@@ -1843,11 +1843,14 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   // hazards related to these register has already been handled.
   Amt->setReg(NewAmt);
   Amt->setIsKill(false);
+  // We do not update liveness, so verifier may see it as undef.
+  Amt->setIsUndef(true);
   if (OverlappedDst)
     MI->getOperand(0).setReg(NewReg);
   if (OverlappedSrc) {
     Src1->setReg(NewReg);
     Src1->setIsKill(false);
+    Src1->setIsUndef(true);
   }
 
   return true;
