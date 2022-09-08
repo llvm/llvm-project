@@ -81,26 +81,16 @@ public:
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.
-  ValueT &getValue() {
-    assert(!isUninitialized() && "expected known lattice element");
-    return *value;
-  }
+  ValueT &getValue() { return value; }
   const ValueT &getValue() const {
     return const_cast<Lattice<ValueT> *>(this)->getValue();
   }
-
-  /// Returns true if the value of this lattice hasn't yet been initialized.
-  bool isUninitialized() const override { return !value.has_value(); }
 
   /// Join the information contained in the 'rhs' lattice into this
   /// lattice. Returns if the state of the current lattice changed.
   ChangeResult join(const AbstractSparseLattice &rhs) override {
     const Lattice<ValueT> &rhsLattice =
         static_cast<const Lattice<ValueT> &>(rhs);
-
-    // If rhs is uninitialized, there is nothing to do.
-    if (rhsLattice.isUninitialized())
-      return ChangeResult::NoChange;
 
     // Join the rhs value into this lattice.
     return join(rhsLattice.getValue());
@@ -109,15 +99,9 @@ public:
   /// Join the information contained in the 'rhs' value into this
   /// lattice. Returns if the state of the current lattice changed.
   ChangeResult join(const ValueT &rhs) {
-    // If the current lattice is uninitialized, copy the rhs value.
-    if (isUninitialized()) {
-      value = rhs;
-      return ChangeResult::Change;
-    }
-
     // Otherwise, join rhs with the current optimistic value.
-    ValueT newValue = ValueT::join(*value, rhs);
-    assert(ValueT::join(newValue, *value) == newValue &&
+    ValueT newValue = ValueT::join(value, rhs);
+    assert(ValueT::join(newValue, value) == newValue &&
            "expected `join` to be monotonic");
     assert(ValueT::join(newValue, rhs) == newValue &&
            "expected `join` to be monotonic");
@@ -131,17 +115,11 @@ public:
   }
 
   /// Print the lattice element.
-  void print(raw_ostream &os) const override {
-    if (value)
-      value->print(os);
-    else
-      os << "<NULL>";
-  }
+  void print(raw_ostream &os) const override { value.print(os); }
 
 private:
-  /// The currently computed value that is optimistically assumed to be true,
-  /// or None if the lattice element is uninitialized.
-  Optional<ValueT> value;
+  /// The currently computed value that is optimistically assumed to be true.
+  ValueT value;
 };
 
 //===----------------------------------------------------------------------===//
