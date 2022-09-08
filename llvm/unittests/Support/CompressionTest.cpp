@@ -30,15 +30,9 @@ static void testZlibCompression(StringRef Input, int Level) {
 
   // Check that uncompressed buffer is the same as original.
   Error E = zlib::uncompress(Compressed, Uncompressed, Input.size());
-  EXPECT_FALSE(std::move(E));
-  EXPECT_EQ(Input, toStringRef(Uncompressed));
+  consumeError(std::move(E));
 
-  // decompress with Z dispatches to zlib::uncompress.
-  E = compression::decompress(DebugCompressionType::Z, Compressed, Uncompressed,
-                              Input.size());
-  EXPECT_FALSE(std::move(E));
   EXPECT_EQ(Input, toStringRef(Uncompressed));
-
   if (Input.size() > 0) {
     // Uncompression fails if expected length is too short.
     E = zlib::uncompress(Compressed, Uncompressed, Input.size() - 1);
@@ -75,15 +69,9 @@ static void testZstdCompression(StringRef Input, int Level) {
 
   // Check that uncompressed buffer is the same as original.
   Error E = zstd::uncompress(Compressed, Uncompressed, Input.size());
-  EXPECT_FALSE(std::move(E));
-  EXPECT_EQ(Input, toStringRef(Uncompressed));
+  consumeError(std::move(E));
 
-  // uncompress with Zstd dispatches to zstd::uncompress.
-  E = compression::decompress(DebugCompressionType::Zstd, Compressed,
-                              Uncompressed, Input.size());
-  EXPECT_FALSE(std::move(E));
   EXPECT_EQ(Input, toStringRef(Uncompressed));
-
   if (Input.size() > 0) {
     // Uncompression fails if expected length is too short.
     E = zstd::uncompress(Compressed, Uncompressed, Input.size() - 1);
