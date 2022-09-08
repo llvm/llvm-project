@@ -23,6 +23,8 @@ class MaskedAtomicRMW<LLVMType itype>
 // We define 32-bit and 64-bit variants of the above, where T stands for i32
 // or i64 respectively:
 multiclass MaskedAtomicRMWIntrinsics {
+  // i32 @llvm.<name>.i32.<p>(any*, i32, i32, i32 imm);
+  def _i32 : MaskedAtomicRMW<llvm_i32_ty>;
   // i64 @llvm.<name>.i32.<p>(any*, i64, i64, i64 imm);
   def _i64 : MaskedAtomicRMW<llvm_i64_ty>;
 }
