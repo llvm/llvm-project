@@ -5805,7 +5805,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     assert(!Res && "Call operand has unhandled type");
     (void)Res;
   }
-  SmallVector<SDValue, 16> ArgValues;
+
   unsigned ExtraArgLocs = 0;
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
@@ -6157,17 +6157,10 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
 /// appropriate copies out of appropriate physical registers.
 SDValue AArch64TargetLowering::LowerCallResult(
     SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    const SmallVectorImpl<CCValAssign> &RVLocs, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
     SDValue ThisVal) const {
-  CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
-  // Assign locations to each value returned by this call.
-  SmallVector<CCValAssign, 16> RVLocs;
   DenseMap<unsigned, SDValue> CopiedRegs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
-                 *DAG.getContext());
-  CCInfo.AnalyzeCallResult(Ins, RetCC);
-
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
     CCValAssign VA = RVLocs[i];
@@ -6508,17 +6501,39 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     GuardWithBTI = FuncInfo->branchTargetEnforcement();
   }
 
+  // Analyze operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
+
+  if (IsVarArg) {
+    unsigned NumArgs = Outs.size();
+
+    for (unsigned i = 0; i != NumArgs; ++i) {
+      if (!Outs[i].IsFixed && Outs[i].VT.isScalableVector())
+        report_fatal_error("Passing SVE types to variadic functions is "
+                           "currently not supported");
+    }
+  }
+
+  analyzeCallOperands(*this, Subtarget, CLI, CCInfo);
+
+  CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
+  // Assign locations to each value returned by this call.
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState RetCCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
+                    *DAG.getContext());
+  RetCCInfo.AnalyzeCallResult(Ins, RetCC);
+
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
   if (CallConv == CallingConv::C || CallConv == CallingConv::Fast) {
-    bool CalleeOutSVE = any_of(Outs, [](ISD::OutputArg &Out){
-      return Out.VT.isScalableVector();
-    });
-    bool CalleeInSVE = any_of(Ins, [](ISD::InputArg &In){
-      return In.VT.isScalableVector();
-    });
-
-    if (CalleeInSVE || CalleeOutSVE)
+    auto HasSVERegLoc = [](CCValAssign &Loc) {
+      if (!Loc.isRegLoc())
+        return false;
+      return AArch64::ZPRRegClass.contains(Loc.getLocReg()) ||
+             AArch64::PPRRegClass.contains(Loc.getLocReg());
+    };
+    if (any_of(RVLocs, HasSVERegLoc) || any_of(ArgLocs, HasSVERegLoc))
       CallConv = CallingConv::AArch64_SVE_VectorCall;
   }
 
@@ -6539,22 +6554,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
-
-  // Analyze operands of the call, assigning locations to each operand.
-  SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
-
-  if (IsVarArg) {
-    unsigned NumArgs = Outs.size();
-
-    for (unsigned i = 0; i != NumArgs; ++i) {
-      if (!Outs[i].IsFixed && Outs[i].VT.isScalableVector())
-        report_fatal_error("Passing SVE types to variadic functions is "
-                           "currently not supported");
-    }
-  }
-
-  analyzeCallOperands(*this, Subtarget, CLI, CCInfo);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getNextStackOffset();
@@ -6961,7 +6960,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InFlag, CallConv, IsVarArg, Ins, DL, DAG,
+  return LowerCallResult(Chain, InFlag, CallConv, IsVarArg, RVLocs, DL, DAG,
                          InVals, IsThisReturn,
                          IsThisReturn ? OutVals[0] : SDValue());
 }
