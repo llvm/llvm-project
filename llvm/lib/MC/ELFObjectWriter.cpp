@@ -867,7 +867,7 @@ void ELFWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
   switch (CompressionType) {
   case DebugCompressionType::None:
     llvm_unreachable("has been handled");
-  case DebugCompressionType::Z:
+  case DebugCompressionType::Zlib:
     ChType = ELF::ELFCOMPRESS_ZLIB;
     break;
   case DebugCompressionType::Zstd:

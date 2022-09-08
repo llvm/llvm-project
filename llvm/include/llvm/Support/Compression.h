@@ -26,7 +26,7 @@ class Error;
 // compression::Format members for non-debugging purposes.
 enum class DebugCompressionType {
   None, ///< No compression
-  Z,    ///< zlib
+  Zlib, ///< zlib
   Zstd, ///< Zstandard
 };
 
@@ -84,7 +84,7 @@ inline Format formatFor(DebugCompressionType Type) {
   switch (Type) {
   case DebugCompressionType::None:
     llvm_unreachable("not a compression type");
-  case DebugCompressionType::Z:
+  case DebugCompressionType::Zlib:
     return Format::Zlib;
   case DebugCompressionType::Zstd:
     return Format::Zstd;

@@ -34,8 +34,8 @@ static void testZlibCompression(StringRef Input, int Level) {
   EXPECT_EQ(Input, toStringRef(Uncompressed));
 
   // decompress with Z dispatches to zlib::uncompress.
-  E = compression::decompress(DebugCompressionType::Z, Compressed, Uncompressed,
-                              Input.size());
+  E = compression::decompress(DebugCompressionType::Zlib, Compressed,
+                              Uncompressed, Input.size());
   EXPECT_FALSE(std::move(E));
   EXPECT_EQ(Input, toStringRef(Uncompressed));
 
