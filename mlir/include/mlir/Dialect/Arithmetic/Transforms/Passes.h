@@ -15,24 +15,15 @@ namespace mlir {
 namespace arith {
 
 #define GEN_PASS_DECL_ARITHMETICBUFFERIZE
-#define GEN_PASS_DECL_ARITHMETICEMULATEWIDEINT
 #define GEN_PASS_DECL_ARITHMETICEXPANDOPS
 #define GEN_PASS_DECL_ARITHMETICUNSIGNEDWHENEQUIVALENT
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h.inc"
-
-class WideIntEmulationConverter;
 
 /// Create a pass to bufferize Arithmetic ops.
 std::unique_ptr<Pass> createArithmeticBufferizePass();
 
 /// Create a pass to bufferize arith.constant ops.
 std::unique_ptr<Pass> createConstantBufferizePass(uint64_t alignment = 0);
-
-/// Adds patterns to emulate wide Arithmetic and Function ops over integer
-/// types into supported ones. This is done by splitting original power-of-two
-/// i2N integer types into two iN halves.
-void populateWideIntEmulationPatterns(WideIntEmulationConverter &typeConverter,
-                                      RewritePatternSet &patterns);
 
 /// Add patterns to expand Arithmetic ops for LLVM lowering.
 void populateArithmeticExpandOpsPatterns(RewritePatternSet &patterns);
