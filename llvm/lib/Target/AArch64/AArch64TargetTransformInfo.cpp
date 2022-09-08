@@ -2929,116 +2929,117 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse || Kind == TTI::SK_Splice) {
     static const CostTblEntry ShuffleTbl[] = {
-      // Broadcast shuffle kinds can be performed with 'dup'.
-      { TTI::SK_Broadcast, MVT::v8i8,  1 },
-      { TTI::SK_Broadcast, MVT::v16i8, 1 },
-      { TTI::SK_Broadcast, MVT::v4i16, 1 },
-      { TTI::SK_Broadcast, MVT::v8i16, 1 },
-      { TTI::SK_Broadcast, MVT::v2i32, 1 },
-      { TTI::SK_Broadcast, MVT::v4i32, 1 },
-      { TTI::SK_Broadcast, MVT::v2i64, 1 },
-      { TTI::SK_Broadcast, MVT::v2f32, 1 },
-      { TTI::SK_Broadcast, MVT::v4f32, 1 },
-      { TTI::SK_Broadcast, MVT::v2f64, 1 },
-      // Transpose shuffle kinds can be performed with 'trn1/trn2' and
-      // 'zip1/zip2' instructions.
-      { TTI::SK_Transpose, MVT::v8i8,  1 },
-      { TTI::SK_Transpose, MVT::v16i8, 1 },
-      { TTI::SK_Transpose, MVT::v4i16, 1 },
-      { TTI::SK_Transpose, MVT::v8i16, 1 },
-      { TTI::SK_Transpose, MVT::v2i32, 1 },
-      { TTI::SK_Transpose, MVT::v4i32, 1 },
-      { TTI::SK_Transpose, MVT::v2i64, 1 },
-      { TTI::SK_Transpose, MVT::v2f32, 1 },
-      { TTI::SK_Transpose, MVT::v4f32, 1 },
-      { TTI::SK_Transpose, MVT::v2f64, 1 },
-      // Select shuffle kinds.
-      // TODO: handle vXi8/vXi16.
-      { TTI::SK_Select, MVT::v2i32, 1 }, // mov.
-      { TTI::SK_Select, MVT::v4i32, 2 }, // rev+trn (or similar).
-      { TTI::SK_Select, MVT::v2i64, 1 }, // mov.
-      { TTI::SK_Select, MVT::v2f32, 1 }, // mov.
-      { TTI::SK_Select, MVT::v4f32, 2 }, // rev+trn (or similar).
-      { TTI::SK_Select, MVT::v2f64, 1 }, // mov.
-      // PermuteSingleSrc shuffle kinds.
-      { TTI::SK_PermuteSingleSrc, MVT::v2i32, 1 }, // mov.
-      { TTI::SK_PermuteSingleSrc, MVT::v4i32, 3 }, // perfectshuffle worst case.
-      { TTI::SK_PermuteSingleSrc, MVT::v2i64, 1 }, // mov.
-      { TTI::SK_PermuteSingleSrc, MVT::v2f32, 1 }, // mov.
-      { TTI::SK_PermuteSingleSrc, MVT::v4f32, 3 }, // perfectshuffle worst case.
-      { TTI::SK_PermuteSingleSrc, MVT::v2f64, 1 }, // mov.
-      { TTI::SK_PermuteSingleSrc, MVT::v4i16, 3 }, // perfectshuffle worst case.
-      { TTI::SK_PermuteSingleSrc, MVT::v4f16, 3 }, // perfectshuffle worst case.
-      { TTI::SK_PermuteSingleSrc, MVT::v4bf16, 3 }, // perfectshuffle worst case.
-      { TTI::SK_PermuteSingleSrc, MVT::v8i16, 8 }, // constpool + load + tbl
-      { TTI::SK_PermuteSingleSrc, MVT::v8f16, 8 }, // constpool + load + tbl
-      { TTI::SK_PermuteSingleSrc, MVT::v8bf16, 8 }, // constpool + load + tbl
-      { TTI::SK_PermuteSingleSrc, MVT::v8i8, 8 }, // constpool + load + tbl
-      { TTI::SK_PermuteSingleSrc, MVT::v16i8, 8 }, // constpool + load + tbl
-      // Reverse can be lowered with `rev`.
-      { TTI::SK_Reverse, MVT::v2i32, 1 }, // mov.
-      { TTI::SK_Reverse, MVT::v4i32, 2 }, // REV64; EXT
-      { TTI::SK_Reverse, MVT::v2i64, 1 }, // mov.
-      { TTI::SK_Reverse, MVT::v2f32, 1 }, // mov.
-      { TTI::SK_Reverse, MVT::v4f32, 2 }, // REV64; EXT
-      { TTI::SK_Reverse, MVT::v2f64, 1 }, // mov.
-      { TTI::SK_Reverse, MVT::v8f16, 2 }, // REV64; EXT
-      { TTI::SK_Reverse, MVT::v8i16, 2 }, // REV64; EXT
-      { TTI::SK_Reverse, MVT::v16i8, 2 }, // REV64; EXT
-      { TTI::SK_Reverse, MVT::v4f16, 1 }, // REV64
-      { TTI::SK_Reverse, MVT::v4i16, 1 }, // REV64
-      { TTI::SK_Reverse, MVT::v8i8, 1 }, // REV64
-      // Splice can all be lowered as `ext`.
-      { TTI::SK_Splice, MVT::v2i32, 1 },
-      { TTI::SK_Splice, MVT::v4i32, 1 },
-      { TTI::SK_Splice, MVT::v2i64, 1 },
-      { TTI::SK_Splice, MVT::v2f32, 1 },
-      { TTI::SK_Splice, MVT::v4f32, 1 },
-      { TTI::SK_Splice, MVT::v2f64, 1 },
-      { TTI::SK_Splice, MVT::v8f16, 1 },
-      { TTI::SK_Splice, MVT::v8bf16, 1 },
-      { TTI::SK_Splice, MVT::v8i16, 1 },
-      { TTI::SK_Splice, MVT::v16i8, 1 },
-      { TTI::SK_Splice, MVT::v4bf16, 1 },
-      { TTI::SK_Splice, MVT::v4f16, 1 },
-      { TTI::SK_Splice, MVT::v4i16, 1 },
-      { TTI::SK_Splice, MVT::v8i8, 1 },
-      // Broadcast shuffle kinds for scalable vectors
-      { TTI::SK_Broadcast, MVT::nxv16i8,  1 },
-      { TTI::SK_Broadcast, MVT::nxv8i16,  1 },
-      { TTI::SK_Broadcast, MVT::nxv4i32,  1 },
-      { TTI::SK_Broadcast, MVT::nxv2i64,  1 },
-      { TTI::SK_Broadcast, MVT::nxv2f16,  1 },
-      { TTI::SK_Broadcast, MVT::nxv4f16,  1 },
-      { TTI::SK_Broadcast, MVT::nxv8f16,  1 },
-      { TTI::SK_Broadcast, MVT::nxv2bf16, 1 },
-      { TTI::SK_Broadcast, MVT::nxv4bf16, 1 },
-      { TTI::SK_Broadcast, MVT::nxv8bf16, 1 },
-      { TTI::SK_Broadcast, MVT::nxv2f32,  1 },
-      { TTI::SK_Broadcast, MVT::nxv4f32,  1 },
-      { TTI::SK_Broadcast, MVT::nxv2f64,  1 },
-      { TTI::SK_Broadcast, MVT::nxv16i1,  1 },
-      { TTI::SK_Broadcast, MVT::nxv8i1,   1 },
-      { TTI::SK_Broadcast, MVT::nxv4i1,   1 },
-      { TTI::SK_Broadcast, MVT::nxv2i1,   1 },
-      // Handle the cases for vector.reverse with scalable vectors
-      { TTI::SK_Reverse, MVT::nxv16i8,  1 },
-      { TTI::SK_Reverse, MVT::nxv8i16,  1 },
-      { TTI::SK_Reverse, MVT::nxv4i32,  1 },
-      { TTI::SK_Reverse, MVT::nxv2i64,  1 },
-      { TTI::SK_Reverse, MVT::nxv2f16,  1 },
-      { TTI::SK_Reverse, MVT::nxv4f16,  1 },
-      { TTI::SK_Reverse, MVT::nxv8f16,  1 },
-      { TTI::SK_Reverse, MVT::nxv2bf16, 1 },
-      { TTI::SK_Reverse, MVT::nxv4bf16, 1 },
-      { TTI::SK_Reverse, MVT::nxv8bf16, 1 },
-      { TTI::SK_Reverse, MVT::nxv2f32,  1 },
-      { TTI::SK_Reverse, MVT::nxv4f32,  1 },
-      { TTI::SK_Reverse, MVT::nxv2f64,  1 },
-      { TTI::SK_Reverse, MVT::nxv16i1,  1 },
-      { TTI::SK_Reverse, MVT::nxv8i1,   1 },
-      { TTI::SK_Reverse, MVT::nxv4i1,   1 },
-      { TTI::SK_Reverse, MVT::nxv2i1,   1 },
+        // Broadcast shuffle kinds can be performed with 'dup'.
+        {TTI::SK_Broadcast, MVT::v8i8, 1},
+        {TTI::SK_Broadcast, MVT::v16i8, 1},
+        {TTI::SK_Broadcast, MVT::v4i16, 1},
+        {TTI::SK_Broadcast, MVT::v8i16, 1},
+        {TTI::SK_Broadcast, MVT::v2i32, 1},
+        {TTI::SK_Broadcast, MVT::v4i32, 1},
+        {TTI::SK_Broadcast, MVT::v2i64, 1},
+        {TTI::SK_Broadcast, MVT::v2f32, 1},
+        {TTI::SK_Broadcast, MVT::v4f32, 1},
+        {TTI::SK_Broadcast, MVT::v2f64, 1},
+        // Transpose shuffle kinds can be performed with 'trn1/trn2' and
+        // 'zip1/zip2' instructions.
+        {TTI::SK_Transpose, MVT::v8i8, 1},
+        {TTI::SK_Transpose, MVT::v16i8, 1},
+        {TTI::SK_Transpose, MVT::v4i16, 1},
+        {TTI::SK_Transpose, MVT::v8i16, 1},
+        {TTI::SK_Transpose, MVT::v2i32, 1},
+        {TTI::SK_Transpose, MVT::v4i32, 1},
+        {TTI::SK_Transpose, MVT::v2i64, 1},
+        {TTI::SK_Transpose, MVT::v2f32, 1},
+        {TTI::SK_Transpose, MVT::v4f32, 1},
+        {TTI::SK_Transpose, MVT::v2f64, 1},
+        // Select shuffle kinds.
+        // TODO: handle vXi8/vXi16.
+        {TTI::SK_Select, MVT::v2i32, 1}, // mov.
+        {TTI::SK_Select, MVT::v4i32, 2}, // rev+trn (or similar).
+        {TTI::SK_Select, MVT::v2i64, 1}, // mov.
+        {TTI::SK_Select, MVT::v2f32, 1}, // mov.
+        {TTI::SK_Select, MVT::v4f32, 2}, // rev+trn (or similar).
+        {TTI::SK_Select, MVT::v2f64, 1}, // mov.
+        // PermuteSingleSrc shuffle kinds.
+        {TTI::SK_PermuteSingleSrc, MVT::v2i32, 1}, // mov.
+        {TTI::SK_PermuteSingleSrc, MVT::v4i32, 3}, // perfectshuffle worst case.
+        {TTI::SK_PermuteSingleSrc, MVT::v2i64, 1}, // mov.
+        {TTI::SK_PermuteSingleSrc, MVT::v2f32, 1}, // mov.
+        {TTI::SK_PermuteSingleSrc, MVT::v4f32, 3}, // perfectshuffle worst case.
+        {TTI::SK_PermuteSingleSrc, MVT::v2f64, 1}, // mov.
+        {TTI::SK_PermuteSingleSrc, MVT::v4i16, 3}, // perfectshuffle worst case.
+        {TTI::SK_PermuteSingleSrc, MVT::v4f16, 3}, // perfectshuffle worst case.
+        {TTI::SK_PermuteSingleSrc, MVT::v4bf16,
+         3},                                       // perfectshuffle worst case.
+        {TTI::SK_PermuteSingleSrc, MVT::v8i16, 8}, // constpool + load + tbl
+        {TTI::SK_PermuteSingleSrc, MVT::v8f16, 8}, // constpool + load + tbl
+        {TTI::SK_PermuteSingleSrc, MVT::v8bf16, 8}, // constpool + load + tbl
+        {TTI::SK_PermuteSingleSrc, MVT::v8i8, 8},   // constpool + load + tbl
+        {TTI::SK_PermuteSingleSrc, MVT::v16i8, 8},  // constpool + load + tbl
+        // Reverse can be lowered with `rev`.
+        {TTI::SK_Reverse, MVT::v2i32, 1}, // REV64
+        {TTI::SK_Reverse, MVT::v4i32, 2}, // REV64; EXT
+        {TTI::SK_Reverse, MVT::v2i64, 1}, // EXT
+        {TTI::SK_Reverse, MVT::v2f32, 1}, // REV64
+        {TTI::SK_Reverse, MVT::v4f32, 2}, // REV64; EXT
+        {TTI::SK_Reverse, MVT::v2f64, 1}, // EXT
+        {TTI::SK_Reverse, MVT::v8f16, 2}, // REV64; EXT
+        {TTI::SK_Reverse, MVT::v8i16, 2}, // REV64; EXT
+        {TTI::SK_Reverse, MVT::v16i8, 2}, // REV64; EXT
+        {TTI::SK_Reverse, MVT::v4f16, 1}, // REV64
+        {TTI::SK_Reverse, MVT::v4i16, 1}, // REV64
+        {TTI::SK_Reverse, MVT::v8i8, 1},  // REV64
+        // Splice can all be lowered as `ext`.
+        {TTI::SK_Splice, MVT::v2i32, 1},
+        {TTI::SK_Splice, MVT::v4i32, 1},
+        {TTI::SK_Splice, MVT::v2i64, 1},
+        {TTI::SK_Splice, MVT::v2f32, 1},
+        {TTI::SK_Splice, MVT::v4f32, 1},
+        {TTI::SK_Splice, MVT::v2f64, 1},
+        {TTI::SK_Splice, MVT::v8f16, 1},
+        {TTI::SK_Splice, MVT::v8bf16, 1},
+        {TTI::SK_Splice, MVT::v8i16, 1},
+        {TTI::SK_Splice, MVT::v16i8, 1},
+        {TTI::SK_Splice, MVT::v4bf16, 1},
+        {TTI::SK_Splice, MVT::v4f16, 1},
+        {TTI::SK_Splice, MVT::v4i16, 1},
+        {TTI::SK_Splice, MVT::v8i8, 1},
+        // Broadcast shuffle kinds for scalable vectors
+        {TTI::SK_Broadcast, MVT::nxv16i8, 1},
+        {TTI::SK_Broadcast, MVT::nxv8i16, 1},
+        {TTI::SK_Broadcast, MVT::nxv4i32, 1},
+        {TTI::SK_Broadcast, MVT::nxv2i64, 1},
+        {TTI::SK_Broadcast, MVT::nxv2f16, 1},
+        {TTI::SK_Broadcast, MVT::nxv4f16, 1},
+        {TTI::SK_Broadcast, MVT::nxv8f16, 1},
+        {TTI::SK_Broadcast, MVT::nxv2bf16, 1},
+        {TTI::SK_Broadcast, MVT::nxv4bf16, 1},
+        {TTI::SK_Broadcast, MVT::nxv8bf16, 1},
+        {TTI::SK_Broadcast, MVT::nxv2f32, 1},
+        {TTI::SK_Broadcast, MVT::nxv4f32, 1},
+        {TTI::SK_Broadcast, MVT::nxv2f64, 1},
+        {TTI::SK_Broadcast, MVT::nxv16i1, 1},
+        {TTI::SK_Broadcast, MVT::nxv8i1, 1},
+        {TTI::SK_Broadcast, MVT::nxv4i1, 1},
+        {TTI::SK_Broadcast, MVT::nxv2i1, 1},
+        // Handle the cases for vector.reverse with scalable vectors
+        {TTI::SK_Reverse, MVT::nxv16i8, 1},
+        {TTI::SK_Reverse, MVT::nxv8i16, 1},
+        {TTI::SK_Reverse, MVT::nxv4i32, 1},
+        {TTI::SK_Reverse, MVT::nxv2i64, 1},
+        {TTI::SK_Reverse, MVT::nxv2f16, 1},
+        {TTI::SK_Reverse, MVT::nxv4f16, 1},
+        {TTI::SK_Reverse, MVT::nxv8f16, 1},
+        {TTI::SK_Reverse, MVT::nxv2bf16, 1},
+        {TTI::SK_Reverse, MVT::nxv4bf16, 1},
+        {TTI::SK_Reverse, MVT::nxv8bf16, 1},
+        {TTI::SK_Reverse, MVT::nxv2f32, 1},
+        {TTI::SK_Reverse, MVT::nxv4f32, 1},
+        {TTI::SK_Reverse, MVT::nxv2f64, 1},
+        {TTI::SK_Reverse, MVT::nxv16i1, 1},
+        {TTI::SK_Reverse, MVT::nxv8i1, 1},
+        {TTI::SK_Reverse, MVT::nxv4i1, 1},
+        {TTI::SK_Reverse, MVT::nxv2i1, 1},
     };
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
