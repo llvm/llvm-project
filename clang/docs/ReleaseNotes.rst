@@ -200,10 +200,6 @@ C++ Language Changes in Clang
 
 - Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=15`` option
   to get the old partial ordering behavior regarding packs.
-- Clang's default C++/ObjC++ standard is now ``gnu++17`` instead of ``gnu++14``.
-  This means Clang will by default accept code using features from C++17 and
-  conforming GNU extensions. Projects incompatible with C++17 can add
-  ``-std=gnu++14`` to their build settings to restore the previous behaviour.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
