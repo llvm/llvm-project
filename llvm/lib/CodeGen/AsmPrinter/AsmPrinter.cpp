@@ -354,7 +354,8 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
 
 AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
-      OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)) {
+      OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
+      SM(*this) {
   VerboseAsm = OutStreamer->isVerboseAsm();
 }
 
@@ -1453,9 +1454,87 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     *StackUsageStream << "static\n";
 }
 
-static bool needFuncLabelsForEHOrDebugInfo(const MachineFunction &MF) {
+void AsmPrinter::emitPCSectionsLabel(const MachineFunction &MF,
+                                     const MDNode &MD) {
+  MCSymbol *S = MF.getContext().createTempSymbol("pcsection");
+  OutStreamer->emitLabel(S);
+  PCSectionsSymbols[&MD].emplace_back(S);
+}
+
+void AsmPrinter::emitPCSections(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  if (PCSectionsSymbols.empty() && !F.hasMetadata(LLVMContext::MD_pcsections))
+    return;
+
+  const CodeModel::Model CM = MF.getTarget().getCodeModel();
+  const unsigned RelativeRelocSize =
+      (CM == CodeModel::Medium || CM == CodeModel::Large) ? getPointerSize()
+                                                          : 4;
+
+  // Switch to PCSection, short-circuiting the common case where the current
+  // section is still valid (assume most MD_pcsections contain just 1 section).
+  auto SwitchSection = [&, Prev = StringRef()](const StringRef &Sec) mutable {
+    if (Sec == Prev)
+      return;
+    MCSection *S = getObjFileLowering().getPCSection(Sec, MF.getSection());
+    assert(S && "PC section is not initialized");
+    OutStreamer->switchSection(S);
+    Prev = Sec;
+  };
+  // Emit symbols into sections and data as specified in the pcsections MDNode.
+  auto EmitForMD = [&](const MDNode &MD, ArrayRef<const MCSymbol *> Syms,
+                       bool Deltas) {
+    // Expect the first operand to be a section name. After that, a tuple of
+    // constants may appear, which will simply be emitted into the current
+    // section (the user of MD_pcsections decides the format of encoded data).
+    assert(isa<MDString>(MD.getOperand(0)) && "first operand not a string");
+    for (const MDOperand &MDO : MD.operands()) {
+      if (auto *S = dyn_cast<MDString>(MDO)) {
+        SwitchSection(S->getString());
+        const MCSymbol *Prev = Syms.front();
+        for (const MCSymbol *Sym : Syms) {
+          if (Sym == Prev || !Deltas) {
+            // Use the entry itself as the base of the relative offset.
+            MCSymbol *Base = MF.getContext().createTempSymbol("pcsection_base");
+            OutStreamer->emitLabel(Base);
+            // Emit relative relocation `addr - base`, which avoids a dynamic
+            // relocation in the final binary. User will get the address with
+            // `base + addr`.
+            emitLabelDifference(Sym, Base, RelativeRelocSize);
+          } else {
+            emitLabelDifference(Sym, Prev, 4);
+          }
+          Prev = Sym;
+        }
+      } else {
+        assert(isa<MDNode>(MDO) && "expecting either string or tuple");
+        const auto *AuxMDs = cast<MDNode>(MDO);
+        for (const MDOperand &AuxMDO : AuxMDs->operands()) {
+          assert(isa<ConstantAsMetadata>(AuxMDO) && "expecting a constant");
+          const auto *C = cast<ConstantAsMetadata>(AuxMDO);
+          emitGlobalConstant(F.getParent()->getDataLayout(), C->getValue());
+        }
+      }
+    }
+  };
+
+  OutStreamer->pushSection();
+  // Emit PCs for function start and function size.
+  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_pcsections))
+    EmitForMD(*MD, {getFunctionBegin(), getFunctionEnd()}, true);
+  // Emit PCs for instructions collected.
+  for (const auto &MS : PCSectionsSymbols)
+    EmitForMD(*MS.first, MS.second, false);
+  OutStreamer->popSection();
+  PCSectionsSymbols.clear();
+}
+
+/// Returns true if function begin and end labels should be emitted.
+static bool needFuncLabels(const MachineFunction &MF) {
   MachineModuleInfo &MMI = MF.getMMI();
-  if (!MF.getLandingPads().empty() || MF.hasEHFunclets() || MMI.hasDebugInfo())
+  if (!MF.getLandingPads().empty() || MF.hasEHFunclets() ||
+      MMI.hasDebugInfo() ||
+      MF.getFunction().hasMetadata(LLVMContext::MD_pcsections))
     return true;
 
   // We might emit an EH table that uses function begin and end labels even if
@@ -1512,6 +1591,9 @@ void AsmPrinter::emitFunctionBody() {
       // If there is a pre-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPreInstrSymbol())
         OutStreamer->emitLabel(S);
+
+      if (MDNode *MD = MI.getPCSections())
+        emitPCSectionsLabel(*MF, *MD);
 
       for (const HandlerInfo &HI : Handlers) {
         NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
@@ -1702,7 +1784,7 @@ void AsmPrinter::emitFunctionBody() {
   // are automatically sized.
   bool EmitFunctionSize = MAI->hasDotTypeDotSizeDirective() && !TT.isWasm();
 
-  if (needFuncLabelsForEHOrDebugInfo(*MF) || EmitFunctionSize) {
+  if (needFuncLabels(*MF) || EmitFunctionSize) {
     // Create a symbol for the end of function.
     CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
@@ -1744,6 +1826,9 @@ void AsmPrinter::emitFunctionBody() {
   // BB labels are requested for this function. Skip empty functions.
   if (MF->hasBBLabels() && HasAnyRealCode)
     emitBBAddrMapSection(*MF);
+
+  // Emit sections containing instruction and function PCs.
+  emitPCSections(*MF);
 
   // Emit section containing stack size metadata.
   emitStackSizeSection(*MF);
@@ -2078,6 +2163,12 @@ bool AsmPrinter::doFinalization(Module &M) {
   if (auto *TS = OutStreamer->getTargetStreamer())
     TS->emitConstantPools();
 
+  // Emit Stack maps before any debug info. Mach-O requires that no data or
+  // text sections come after debug info has been emitted. This matters for
+  // stack maps as they are arbitrary data, and may even have a custom format
+  // through user plugins.
+  emitStackMaps();
+
   // Finalize debug and EH information.
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
@@ -2258,7 +2349,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   if (F.hasFnAttribute("patchable-function-entry") ||
       F.hasFnAttribute("function-instrument") ||
       F.hasFnAttribute("xray-instruction-threshold") ||
-      needFuncLabelsForEHOrDebugInfo(MF) || NeedsLocalForSize ||
+      needFuncLabels(MF) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection || MF.hasBBLabels()) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
@@ -3745,7 +3836,7 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
   report_fatal_error("no GCMetadataPrinter registered for GC: " + Twine(Name));
 }
 
-void AsmPrinter::emitStackMaps(StackMaps &SM) {
+void AsmPrinter::emitStackMaps() {
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");
   bool NeedsDefault = false;

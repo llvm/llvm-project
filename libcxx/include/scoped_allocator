@@ -401,10 +401,10 @@ struct __outermost
 template <class _Alloc>
 struct __outermost<_Alloc, true>
 {
-    typedef typename remove_reference
+    typedef __libcpp_remove_reference_t
                      <
                         decltype(declval<_Alloc>().outer_allocator())
-                     >::type                                    _OuterAlloc;
+                     >                                    _OuterAlloc;
     typedef typename __outermost<_OuterAlloc>::type             type;
     _LIBCPP_INLINE_VISIBILITY
     type& operator()(_Alloc& __a) const _NOEXCEPT

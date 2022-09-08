@@ -233,14 +233,14 @@ ConvertToModule::matchAndRewrite(Operation *op,
 
 ConvertToSubgroupBallot::ConvertToSubgroupBallot(MLIRContext *context)
     : RewritePattern("test.convert_to_subgroup_ballot_op", 1, context,
-                     {"spv.SubgroupBallotKHR"}) {}
+                     {"spv.KHR.SubgroupBallot"}) {}
 
 LogicalResult
 ConvertToSubgroupBallot::matchAndRewrite(Operation *op,
                                          PatternRewriter &rewriter) const {
   Value predicate = op->getOperand(0);
 
-  rewriter.replaceOpWithNewOp<spirv::SubgroupBallotKHROp>(
+  rewriter.replaceOpWithNewOp<spirv::KHRSubgroupBallotOp>(
       op, op->getResult(0).getType(), predicate);
   return success();
 }

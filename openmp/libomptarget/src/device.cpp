@@ -216,6 +216,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
 
   void *TargetPointer = nullptr;
   bool IsHostPtr = false;
+  bool IsPresent = true;
   bool IsNew = false;
 
   LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
@@ -275,6 +276,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
          "memory\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size);
+      IsPresent = false;
       IsHostPtr = true;
       TargetPointer = HstPtrBegin;
     }
@@ -303,6 +305,9 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
          Entry->dynRefCountToStr().c_str(), Entry->holdRefCountToStr().c_str(),
          (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
     TargetPointer = (void *)Ptr;
+  } else {
+    // This entry is not present and we did not create a new entry for it.
+    IsPresent = false;
   }
 
   // If the target pointer is valid, and we need to transfer data, issue the
@@ -351,7 +356,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     }
   }
 
-  return {{IsNew, IsHostPtr}, Entry, TargetPointer};
+  return {{IsNew, IsHostPtr, IsPresent}, Entry, TargetPointer};
 }
 
 // Used by targetDataBegin, targetDataEnd, targetDataUpdate and target.
@@ -365,6 +370,7 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
 
   void *TargetPointer = NULL;
   bool IsNew = false;
+  bool IsPresent = true;
   IsHostPtr = false;
   IsLast = false;
   LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
@@ -416,11 +422,18 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
     DP("Get HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
        "memory\n",
        DPxPTR((uintptr_t)HstPtrBegin), Size);
+    IsPresent = false;
     IsHostPtr = true;
+    TargetPointer = HstPtrBegin;
+  } else {
+    // OpenMP Specification v5.2: if a matching list item is not found, the
+    // pointer retains its original value as per firstprivate semantics.
+    IsPresent = false;
+    IsHostPtr = false;
     TargetPointer = HstPtrBegin;
   }
 
-  return {{IsNew, IsHostPtr}, LR.Entry, TargetPointer};
+  return {{IsNew, IsHostPtr, IsPresent}, LR.Entry, TargetPointer};
 }
 
 // Return the target pointer begin (where the data will be moved).

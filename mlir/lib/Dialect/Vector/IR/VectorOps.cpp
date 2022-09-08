@@ -30,8 +30,8 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include <numeric>
 
@@ -227,91 +227,15 @@ struct BitmaskEnumStorage : public AttributeStorage {
 } // namespace vector
 } // namespace mlir
 
-CombiningKindAttr CombiningKindAttr::get(CombiningKind kind,
-                                         MLIRContext *context) {
-  return Base::get(context, static_cast<uint64_t>(kind));
-}
-
-CombiningKind CombiningKindAttr::getKind() const {
-  return static_cast<CombiningKind>(getImpl()->value);
-}
-
-static constexpr const CombiningKind combiningKindsList[] = {
-    // clang-format off
-    CombiningKind::ADD,
-    CombiningKind::MUL,
-    CombiningKind::MINUI,
-    CombiningKind::MINSI,
-    CombiningKind::MINF,
-    CombiningKind::MAXUI,
-    CombiningKind::MAXSI,
-    CombiningKind::MAXF,
-    CombiningKind::AND,
-    CombiningKind::OR,
-    CombiningKind::XOR,
-    // clang-format on
-};
-
-void CombiningKindAttr::print(AsmPrinter &printer) const {
-  printer << "<";
-  auto kinds = llvm::make_filter_range(combiningKindsList, [&](auto kind) {
-    return bitEnumContains(this->getKind(), kind);
-  });
-  llvm::interleaveComma(kinds, printer,
-                        [&](auto kind) { printer << stringifyEnum(kind); });
-  printer << ">";
-}
-
-Attribute CombiningKindAttr::parse(AsmParser &parser, Type type) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  StringRef elemName;
-  if (failed(parser.parseKeyword(&elemName)))
-    return {};
-
-  auto kind = symbolizeCombiningKind(elemName);
-  if (!kind) {
-    parser.emitError(parser.getNameLoc(), "Unknown combining kind: ")
-        << elemName;
-    return {};
-  }
-
-  if (failed(parser.parseGreater()))
-    return {};
-
-  return CombiningKindAttr::get(*kind, parser.getContext());
-}
-
-Attribute VectorDialect::parseAttribute(DialectAsmParser &parser,
-                                        Type type) const {
-  StringRef attrKind;
-  if (parser.parseKeyword(&attrKind))
-    return {};
-
-  if (attrKind == "kind")
-    return CombiningKindAttr::parse(parser, {});
-
-  parser.emitError(parser.getNameLoc(), "Unknown attribute type: ") << attrKind;
-  return {};
-}
-
-void VectorDialect::printAttribute(Attribute attr,
-                                   DialectAsmPrinter &os) const {
-  if (auto ck = attr.dyn_cast<CombiningKindAttr>()) {
-    os << "kind";
-    ck.print(os);
-    return;
-  }
-  llvm_unreachable("Unknown attribute type");
-}
-
 //===----------------------------------------------------------------------===//
 // VectorDialect
 //===----------------------------------------------------------------------===//
 
 void VectorDialect::initialize() {
-  addAttributes<CombiningKindAttr>();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Vector/IR/VectorOpsAttrDefs.cpp.inc"
+      >();
 
   addOperations<
 #define GET_OP_LIST
@@ -558,7 +482,7 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(::mlir::getIndexingMapsAttrName(), indexingMaps);
   result.addAttribute(::mlir::getIteratorTypesAttrName(), iteratorTypes);
   result.addAttribute(ContractionOp::getKindAttrStrName(),
-                      CombiningKindAttr::get(kind, builder.getContext()));
+                      CombiningKindAttr::get(builder.getContext(), kind));
 }
 
 ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -587,9 +511,10 @@ ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
   result.attributes.assign(dictAttr.getValue().begin(),
                            dictAttr.getValue().end());
   if (!result.attributes.get(ContractionOp::getKindAttrStrName())) {
-    result.addAttribute(ContractionOp::getKindAttrStrName(),
-                        CombiningKindAttr::get(ContractionOp::getDefaultKind(),
-                                               result.getContext()));
+    result.addAttribute(
+        ContractionOp::getKindAttrStrName(),
+        CombiningKindAttr::get(result.getContext(),
+                               ContractionOp::getDefaultKind()));
   }
   if (masksInfo.empty())
     return success();
@@ -2385,8 +2310,8 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!result.attributes.get(OuterProductOp::getKindAttrStrName())) {
     result.attributes.append(
         OuterProductOp::getKindAttrStrName(),
-        CombiningKindAttr::get(OuterProductOp::getDefaultKind(),
-                               result.getContext()));
+        CombiningKindAttr::get(result.getContext(),
+                               OuterProductOp::getDefaultKind()));
   }
 
   return failure(
@@ -5178,6 +5103,9 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Vector/IR/VectorOpsAttrDefs.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"

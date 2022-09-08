@@ -125,13 +125,7 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
       Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
                             /*UpdateRefCount=*/false,
                             /*UseHoldRefCount=*/false, IsHostPtr);
-  int Rc = (TPR.TargetPointer != NULL);
-  // Under unified memory the host pointer can be returned by the
-  // getTgtPtrBegin() function which means that there is no device
-  // corresponding point for ptr. This function should return false
-  // in that situation.
-  if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    Rc = !IsHostPtr;
+  int Rc = TPR.isPresent();
   DP("Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
 }

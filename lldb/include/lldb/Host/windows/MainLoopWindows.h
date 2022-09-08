@@ -22,7 +22,8 @@ namespace lldb_private {
 // descriptors are not supported.
 class MainLoopWindows : public MainLoopBase {
 public:
-  ~MainLoopWindows() override { assert(m_read_fds.empty()); }
+  MainLoopWindows();
+  ~MainLoopWindows() override;
 
   ReadHandleUP RegisterReadObject(const lldb::IOObjectSP &object_sp,
                                   const Callback &callback,
@@ -33,6 +34,8 @@ public:
 protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
 
+  void TriggerPendingCallbacks() override;
+
 private:
   void ProcessReadObject(IOObject::WaitableHandle handle);
   llvm::Expected<size_t> Poll();
@@ -42,6 +45,7 @@ private:
     Callback callback;
   };
   llvm::DenseMap<IOObject::WaitableHandle, FdInfo> m_read_fds;
+  void *m_trigger_event;
 };
 
 } // namespace lldb_private

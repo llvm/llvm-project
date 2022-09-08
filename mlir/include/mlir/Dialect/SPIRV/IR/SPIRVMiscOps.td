@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPV_AssumeTrueKHROp : SPV_Op<"AssumeTrueKHR", []> {
+def SPV_KHRAssumeTrueOp : SPV_KhrVendorOp<"AssumeTrue", []> {
   let summary = "TBD";
 
   let description = [{
@@ -27,13 +27,13 @@ def SPV_AssumeTrueKHROp : SPV_Op<"AssumeTrueKHR", []> {
     <!-- End of AutoGen section -->
 
     ```
-    assumetruekhr-op ::= `spv.AssumeTrueKHR` ssa-use
+    assumetruekhr-op ::= `spv.KHR.AssumeTrue` ssa-use
     ```mlir
 
     #### Example:
 
     ```
-    spv.AssumeTrueKHR %arg
+    spv.KHR.AssumeTrue %arg
     ```
   }];
 

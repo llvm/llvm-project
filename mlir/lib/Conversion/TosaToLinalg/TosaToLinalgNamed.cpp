@@ -93,7 +93,7 @@ getConvOutputDim(Location loc, Value initDim, Attribute padBeforeAttr,
   Value subtract = builder.create<arith::SubIOp>(paddedAfter, addOne);
   Value stride = reifyConstantDim(strideAttr, builder);
   Value divide = builder.create<arith::DivUIOp>(subtract, stride);
-  return builder.create<arith::SubIOp>(divide, one);
+  return builder.create<arith::AddIOp>(divide, one);
 }
 
 // Creates a vector of the dynamic output dims for Conv2D and Depthwise_Conv2D

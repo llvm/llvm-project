@@ -46,6 +46,6 @@ struct std::coroutine_traits<int, promise_on_alloc_failure_tag> {
   };
 };
 
-extern "C" int f(promise_on_alloc_failure_tag) { // expected-error 1+{{unable to find '::operator new(size_­t, nothrow_­t)' for 'f'}}
+extern "C" int f(promise_on_alloc_failure_tag) { // expected-error 1+{{unable to find '::operator new(size_t, nothrow_t)' for 'f'}}
     co_return;
 }

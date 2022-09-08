@@ -1252,8 +1252,7 @@ private:
       // to unknown guarantees that any memory accesses that access locations
       // after the pointer are considered as clobbers, which is important to
       // catch loop carried dependences.
-      if (Location.Ptr &&
-          !IsGuaranteedLoopInvariant(const_cast<Value *>(Location.Ptr)))
+      if (!IsGuaranteedLoopInvariant(const_cast<Value *>(Location.Ptr)))
         CurrentPair.second =
             Location.getWithNewSize(LocationSize::beforeOrAfterPointer());
       PHITransAddr Translator(

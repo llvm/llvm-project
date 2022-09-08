@@ -848,18 +848,19 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
 
     Type *Ty = IntegerType::get(VTy->getContext(), 32);
     // Fast path for splatted constants.
-    if (Constant *Splat = C->getSplatValue()) {
-      Constant *Elt = ConstantExpr::get(Opcode, Splat);
-      return ConstantVector::getSplat(VTy->getElementCount(), Elt);
-    }
+    if (Constant *Splat = C->getSplatValue())
+      if (Constant *Elt = ConstantFoldUnaryInstruction(Opcode, Splat))
+        return ConstantVector::getSplat(VTy->getElementCount(), Elt);
 
     // Fold each element and create a vector constant from those constants.
     SmallVector<Constant *, 16> Result;
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
       Constant *ExtractIdx = ConstantInt::get(Ty, i);
       Constant *Elt = ConstantExpr::getExtractElement(C, ExtractIdx);
-
-      Result.push_back(ConstantExpr::get(Opcode, Elt));
+      Constant *Res = ConstantFoldUnaryInstruction(Opcode, Elt);
+      if (!Res)
+        return nullptr;
+      Result.push_back(Res);
     }
 
     return ConstantVector::get(Result);

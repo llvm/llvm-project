@@ -458,9 +458,6 @@ struct InstrDesc {
   // A bitmask of used processor resource units.
   uint64_t UsedProcResUnits;
 
-  // A bitmask of implicit uses of processor resource units.
-  uint64_t ImplicitlyUsedProcResUnits;
-
   // A bitmask of used processor resource groups.
   uint64_t UsedProcResGroups;
 
@@ -480,6 +477,9 @@ struct InstrDesc {
   // instructions that are neither variadic nor have any variant can be
   // recycled.
   unsigned IsRecyclable : 1;
+
+  // True if some of the consumed group resources are partially overlapping.
+  unsigned HasPartiallyOverlappingGroups : 1;
 
   // A zero latency instruction doesn't consume any scheduler resources.
   bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }

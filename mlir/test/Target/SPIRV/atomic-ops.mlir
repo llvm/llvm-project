@@ -36,8 +36,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
   // CHECK-LABEL: @test_float_atomics
   spv.func @test_float_atomics(%ptr: !spv.ptr<f32, Workgroup>, %value: f32) -> f32 "None" {
-    // CHECK: spv.AtomicFAddEXT "Workgroup" "Acquire" %{{.*}}, %{{.*}} : !spv.ptr<f32, Workgroup>
-    %0 = spv.AtomicFAddEXT "Workgroup" "Acquire" %ptr, %value : !spv.ptr<f32, Workgroup>
+    // CHECK: spv.EXT.AtomicFAdd "Workgroup" "Acquire" %{{.*}}, %{{.*}} : !spv.ptr<f32, Workgroup>
+    %0 = spv.EXT.AtomicFAdd "Workgroup" "Acquire" %ptr, %value : !spv.ptr<f32, Workgroup>
     spv.ReturnValue %0: f32
   }
 }

@@ -254,6 +254,7 @@ enum NodeType : unsigned {
   FCOPYSIGN_VL, // Has a merge operand
   FP_TO_SINT_VL,
   FP_TO_UINT_VL,
+  VFCVT_X_F_VL,
   SINT_TO_FP_VL,
   UINT_TO_FP_VL,
   FP_ROUND_VL,

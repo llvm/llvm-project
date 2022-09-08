@@ -251,7 +251,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 typename add_lvalue_reference<_Tp>::type operator*() const {
+  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator*() const {
     return *__ptr_.first();
   }
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer operator->() const _NOEXCEPT {
@@ -448,7 +448,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 typename add_lvalue_reference<_Tp>::type
+  _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp>
   operator[](size_t __i) const {
     return __ptr_.first()[__i];
   }
@@ -673,7 +673,7 @@ make_unique(_Args&&... __args) {
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_array_unknown_bound
 make_unique(size_t __n) {
-  typedef typename remove_extent<_Tp>::type _Up;
+  typedef __remove_extent_t<_Tp> _Up;
   return unique_ptr<_Tp>(new _Up[__n]());
 }
 

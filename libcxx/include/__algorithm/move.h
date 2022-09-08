@@ -41,7 +41,7 @@ pair<_InIter, _OutIter> __move_impl(_InIter __first, _Sent __last, _OutIter __re
 template <class _AlgPolicy,
           class _InType,
           class _OutType,
-          class = __enable_if_t<is_same<typename remove_const<_InType>::type, _OutType>::value
+          class = __enable_if_t<is_same<__remove_const_t<_InType>, _OutType>::value
                              && is_trivially_move_assignable<_OutType>::value> >
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_InType*, _OutType*> __move_impl(_InType* __first, _InType* __last, _OutType* __result) {
@@ -70,7 +70,7 @@ struct __is_trivially_move_assignable_unwrapped
 template <class _AlgPolicy,
           class _InIter,
           class _OutIter,
-          __enable_if_t<is_same<typename remove_const<typename iterator_traits<_InIter>::value_type>::type,
+          __enable_if_t<is_same<__remove_const_t<typename iterator_traits<_InIter>::value_type>,
                                 typename iterator_traits<_OutIter>::value_type>::value
                      && __is_cpp17_contiguous_iterator<_InIter>::value
                      && __is_cpp17_contiguous_iterator<_OutIter>::value

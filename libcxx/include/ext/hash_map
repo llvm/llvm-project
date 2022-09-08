@@ -378,7 +378,7 @@ public:
     typedef std::pair<key_type, mapped_type>                     value_type;
     typedef typename _HashIterator::difference_type              difference_type;
     typedef value_type&                                          reference;
-    typedef typename std::__rebind_pointer<typename _HashIterator::pointer, value_type>::type
+    typedef std::__rebind_pointer_t<typename _HashIterator::pointer, value_type>
         pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_map_iterator() {}
@@ -423,7 +423,7 @@ public:
     typedef std::pair<key_type, mapped_type>                     value_type;
     typedef typename _HashIterator::difference_type              difference_type;
     typedef const value_type&                                    reference;
-    typedef typename std::__rebind_pointer<typename _HashIterator::pointer, const value_type>::type
+    typedef std::__rebind_pointer_t<typename _HashIterator::pointer, const value_type>
         pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_map_const_iterator() {}

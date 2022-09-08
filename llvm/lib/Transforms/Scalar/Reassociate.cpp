@@ -833,9 +833,14 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
 /// additional opportunities have been exposed.
 static Value *NegateValue(Value *V, Instruction *BI,
                           ReassociatePass::OrderedSet &ToRedo) {
-  if (auto *C = dyn_cast<Constant>(V))
-    return C->getType()->isFPOrFPVectorTy() ? ConstantExpr::getFNeg(C) :
-                                              ConstantExpr::getNeg(C);
+  if (auto *C = dyn_cast<Constant>(V)) {
+    const DataLayout &DL = BI->getModule()->getDataLayout();
+    Constant *Res = C->getType()->isFPOrFPVectorTy()
+                        ? ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)
+                        : ConstantExpr::getNeg(C);
+    if (Res)
+      return Res;
+  }
 
   // We are trying to expose opportunity for reassociation.  One of the things
   // that we want to do to achieve this is to push a negation as deep into an
@@ -880,10 +885,11 @@ static Value *NegateValue(Value *V, Instruction *BI,
     // this use.  We do this by moving it to the entry block (if it is a
     // non-instruction value) or right after the definition.  These negates will
     // be zapped by reassociate later, so we don't need much finesse here.
-    Instruction *TheNeg = cast<Instruction>(U);
+    Instruction *TheNeg = dyn_cast<Instruction>(U);
 
     // Verify that the negate is in this function, V might be a constant expr.
-    if (TheNeg->getParent()->getParent() != BI->getParent()->getParent())
+    if (!TheNeg ||
+        TheNeg->getParent()->getParent() != BI->getParent()->getParent())
       continue;
 
     Instruction *InsertPt;

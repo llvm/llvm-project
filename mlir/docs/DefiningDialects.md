@@ -327,8 +327,8 @@ This field may any of the following values:
 * `kEmitAccessorPrefix_Both`
   - Emit with **and** without prefix.
 
-All new dialects are strongly encouraged to use the `kEmitAccessorPrefix_Prefixed` value, as
-the `Raw` form is deprecated and in the process of being removed.
+All new dialects are strongly encouraged to use the default `kEmitAccessorPrefix_Prefixed`
+value, as the `Raw` form is deprecated and in the process of being removed.
 
 Note: Remove this section when all dialects have been switched to the new accessor form.
 

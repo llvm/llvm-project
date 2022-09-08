@@ -145,9 +145,9 @@ public:
       "Instantiation of propagate_const with an array type is ill-formed.");
   static_assert(!is_reference<_Tp>::value,
       "Instantiation of propagate_const with a reference type is ill-formed.");
-  static_assert(!(is_pointer<_Tp>::value && is_function<typename remove_pointer<_Tp>::type>::value),
+  static_assert(!(is_pointer<_Tp>::value && is_function<__remove_pointer_t<_Tp> >::value),
       "Instantiation of propagate_const with a function-pointer type is ill-formed.");
-  static_assert(!(is_pointer<_Tp>::value && is_same<typename remove_cv<typename remove_pointer<_Tp>::type>::type, void>::value),
+  static_assert(!(is_pointer<_Tp>::value && is_same<__remove_cv_t<__remove_pointer_t<_Tp> >, void>::value),
       "Instantiation of propagate_const with a pointer to (possibly cv-qualified) void is ill-formed.");
 
 private:

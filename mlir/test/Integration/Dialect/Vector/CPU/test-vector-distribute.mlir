@@ -1,11 +1,11 @@
 // RUN: mlir-opt %s -pass-pipeline="func.func(test-vector-to-forloop,convert-vector-to-scf,lower-affine,convert-scf-to-cf),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void  \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-scf,lower-affine,convert-scf-to-cf),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" | mlir-cpu-runner -e main \
 // RUN: -entry-point-result=void \
-// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext | \
+// RUN: -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // RUN: mlir-opt %s -pass-pipeline="func.func(test-vector-to-forloop)" | FileCheck %s -check-prefix=TRANSFORM

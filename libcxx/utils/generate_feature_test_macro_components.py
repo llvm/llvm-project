@@ -313,15 +313,17 @@ feature_test_macros = [ add_version_header(x) for x in [
     "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem)"
   }, {
     "name": "__cpp_lib_format",
-    # P2508, P2286, and P2419 were accepted in the same plenary and modify this
-    # feature-test macro. We expect to see an LWG issue soon. For now keep the
-    # value as is.
-    # TODO FMT Set P2508's feature-test macro.
-    #"values": { "c++20": 202106, "c++23": 202207" },
-    "values": { "c++20": 202106 },
+    "values": {
+        # "c++20": 201907 Not implemented P1361R2 Integration of chrono with text formatting
+        # "c++20": 202106 Fully implemented
+        # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
+        "c++20": 202106,
+        # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
+        },
     "headers": ["format"],
     "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
     "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)",
+    "unimplemented": True,
   }, {
     "name": "__cpp_lib_forward_like",
     "values": { "c++2b": 202207 },

@@ -18,7 +18,10 @@
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
 
-// XFAIL: sanitizer-new-delete && !hwasan, ubsan
+// XFAIL: sanitizer-new-delete && !hwasan
+
+// It fails with clang-14 or clang-16, but passes with clang-15.
+// UNSUPPORTED: ubsan
 
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc

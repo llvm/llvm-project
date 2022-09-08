@@ -40,7 +40,7 @@ pair<_InIter, _OutIter> __copy_impl(_InIter __first, _Sent __last, _OutIter __re
 
 template <class _InValueT,
           class _OutValueT,
-          class = __enable_if_t<is_same<typename remove_const<_InValueT>::type, _OutValueT>::value
+          class = __enable_if_t<is_same<__remove_const_t<_InValueT>, _OutValueT>::value
                              && is_trivially_copy_assignable<_OutValueT>::value> >
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_InValueT*, _OutValueT*> __copy_impl(_InValueT* __first, _InValueT* __last, _OutValueT* __result) {
@@ -58,7 +58,7 @@ pair<_InValueT*, _OutValueT*> __copy_impl(_InValueT* __first, _InValueT* __last,
 }
 
 template <class _InIter, class _OutIter,
-          __enable_if_t<is_same<typename remove_const<__iter_value_type<_InIter> >::type, __iter_value_type<_OutIter> >::value
+          __enable_if_t<is_same<__remove_const_t<__iter_value_type<_InIter> >, __iter_value_type<_OutIter> >::value
                       && __is_cpp17_contiguous_iterator<typename _InIter::iterator_type>::value
                       && __is_cpp17_contiguous_iterator<typename _OutIter::iterator_type>::value
                       && is_trivially_copy_assignable<__iter_value_type<_OutIter> >::value

@@ -551,6 +551,12 @@ getExtentFromTriplet(mlir::Value lb, mlir::Value ub, mlir::Value stride);
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value value);
 
+/// The type(C_PTR/C_FUNPTR) is defined as the derived type with only one
+/// component of integer 64, and the component is the C address. Get the C
+/// address.
+mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value cPtr, mlir::Type ty);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

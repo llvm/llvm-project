@@ -3128,14 +3128,9 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
 
   // (sub C, X) == X, C is odd  --> false
   // (sub C, X) != X, C is odd  --> true
-  if (match(LBO, m_Sub(m_APInt(C), m_Specific(RHS)))) {
-    if ((*C & 1) == 1) {
-      if (Pred == CmpInst::ICMP_EQ)
-        return getFalse(ITy);
-      if (Pred == CmpInst::ICMP_NE)
-        return getTrue(ITy);
-    }
-  }
+  if (match(LBO, m_Sub(m_APIntAllowUndef(C), m_Specific(RHS))) &&
+      (*C & 1) == 1 && ICmpInst::isEquality(Pred))
+    return (Pred == ICmpInst::ICMP_EQ) ? getFalse(ITy) : getTrue(ITy);
 
   return nullptr;
 }

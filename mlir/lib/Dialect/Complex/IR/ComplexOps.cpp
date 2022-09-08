@@ -139,6 +139,21 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// SubOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 && "binary op takes 2 operands");
+
+  // complex.sub(complex.add(a, b), b) -> a
+  if (auto add = getLhs().getDefiningOp<AddOp>())
+    if (getRhs() == add.getRhs())
+      return add.getLhs();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // NegOp
 //===----------------------------------------------------------------------===//
 
