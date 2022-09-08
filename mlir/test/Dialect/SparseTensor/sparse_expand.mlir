@@ -98,12 +98,12 @@ func.func @kernel(%arga: tensor<?x?xf64, #DCSC>) -> tensor<?xf64, #SV> {
 // CHECK-CONVERT-LABEL: func @matmul1(
 // CHECK-CONVERT-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-CONVERT-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-CONVERT-DAG: %[[C4:.*]] = arith.constant 4 : index
 // CHECK-CONVERT-DAG: %[[C8:.*]] = arith.constant 8 : index
 // CHECK-CONVERT: %[[N:.*]] = call @newSparseTensor
-// CHECK-CONVERT: %[[S:.*]] = call @sparseDimSize(%[[N]], %[[C1]])
-// CHECK-CONVERT: %[[A:.*]] = memref.alloc(%[[S]]) : memref<?xf64>
-// CHECK-CONVERT: %[[B:.*]] = memref.alloc(%[[S]]) : memref<?xi1>
-// CHECK-CONVERT: %[[C:.*]] = memref.alloc(%[[S]]) : memref<?xindex>
+// CHECK-CONVERT: %[[A:.*]] = memref.alloc(%[[C4]]) : memref<?xf64>
+// CHECK-CONVERT: %[[B:.*]] = memref.alloc(%[[C4]]) : memref<?xi1>
+// CHECK-CONVERT: %[[C:.*]] = memref.alloc(%[[C4]]) : memref<?xindex>
 // CHECK-CONVERT: linalg.fill ins(%{{.*}} : f64) outs(%[[A]] : memref<?xf64>)
 // CHECK-CONVERT: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<?xi1>)
 // CHECK-CONVERT: scf.for %{{.*}} = %[[C0]] to %[[C8]] step %[[C1]] {
@@ -147,11 +147,11 @@ func.func @matmul1(%A: tensor<8x2xf64, #CSR>,
 // CHECK-CONVERT-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-CONVERT-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK-CONVERT-DAG: %[[C4:.*]] = arith.constant 4 : index
+// CHECK-CONVERT-DAG: %[[C8:.*]] = arith.constant 8 : index
 // CHECK-CONVERT: %[[N:.*]] = call @newSparseTensor
-// CHECK-CONVERT: %[[S:.*]] = call @sparseDimSize(%[[N]], %[[C1]])
-// CHECK-CONVERT: %[[A:.*]] = memref.alloc(%[[S]]) : memref<?xf64>
-// CHECK-CONVERT: %[[B:.*]] = memref.alloc(%[[S]]) : memref<?xi1>
-// CHECK-CONVERT: %[[C:.*]] = memref.alloc(%[[S]]) : memref<?xindex>
+// CHECK-CONVERT: %[[A:.*]] = memref.alloc(%[[C8]]) : memref<?xf64>
+// CHECK-CONVERT: %[[B:.*]] = memref.alloc(%[[C8]]) : memref<?xi1>
+// CHECK-CONVERT: %[[C:.*]] = memref.alloc(%[[C8]]) : memref<?xindex>
 // CHECK-CONVERT: linalg.fill ins(%{{.*}} : f64) outs(%[[A]] : memref<?xf64>)
 // CHECK-CONVERT: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<?xi1>)
 // CHECK-CONVERT: scf.for %{{.*}} = %[[C0]] to %[[C4]] step %[[C1]] {

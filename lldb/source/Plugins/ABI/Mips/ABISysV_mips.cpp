@@ -503,8 +503,7 @@ static const RegisterInfo g_register_infos[] = {
     },
 };
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos);
+static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABISysV_mips::GetRegisterInfoArray(uint32_t &count) {
@@ -560,7 +559,7 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
   llvm::ArrayRef<addr_t>::iterator ai = args.begin(), ae = args.end();
 
   // Write arguments to registers
-  for (size_t i = 0; i < llvm::array_lengthof(reg_names); ++i) {
+  for (size_t i = 0; i < std::size(reg_names); ++i) {
     if (ai == ae)
       break;
 
