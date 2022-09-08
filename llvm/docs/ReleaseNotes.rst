@@ -82,6 +82,10 @@ Changes to the AMDGPU Backend
 Changes to the ARM Backend
 --------------------------
 
+* Support for targeting armv2, armv2A, armv3 and armv3M has been removed.
+  LLVM did not, and was not ever likely to generate correct code for those
+  architecture versions so their presence was misleading.
+
 Changes to the AVR Backend
 --------------------------
 

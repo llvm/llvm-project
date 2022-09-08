@@ -20,21 +20,20 @@ using namespace llvm;
 
 namespace {
 const char *ARMArch[] = {
-    "armv2",       "armv2a",         "armv3",       "armv3m",    "armv4",
-    "armv4t",      "armv5",          "armv5t",      "armv5e",    "armv5te",
-    "armv5tej",    "armv6",          "armv6j",      "armv6k",    "armv6hl",
-    "armv6t2",     "armv6kz",        "armv6z",      "armv6zk",   "armv6-m",
-    "armv6m",      "armv6sm",        "armv6s-m",    "armv7-a",   "armv7",
-    "armv7a",      "armv7ve",        "armv7hl",     "armv7l",    "armv7-r",
-    "armv7r",      "armv7-m",        "armv7m",      "armv7k",    "armv7s",
-    "armv7e-m",    "armv7em",        "armv8-a",     "armv8",     "armv8a",
-    "armv8l",      "armv8.1-a",      "armv8.1a",    "armv8.2-a", "armv8.2a",
-    "armv8.3-a",   "armv8.3a",       "armv8.4-a",   "armv8.4a",  "armv8.5-a",
-    "armv8.5a",    "armv8.6-a",      "armv8.6a",    "armv8.7-a", "armv8.7a",
-    "armv8.8-a",   "armv8.8a",       "armv8-r",     "armv8r",    "armv8-m.base",
-    "armv8m.base", "armv8-m.main",   "armv8m.main", "iwmmxt",    "iwmmxt2",
-    "xscale",      "armv8.1-m.main", "armv9-a",     "armv9",     "armv9a",
-    "armv9.1-a",   "armv9.1a",       "armv9.2-a",   "armv9.2a",
+    "armv4",        "armv4t",      "armv5",          "armv5t",      "armv5e",
+    "armv5te",      "armv5tej",    "armv6",          "armv6j",      "armv6k",
+    "armv6hl",      "armv6t2",     "armv6kz",        "armv6z",      "armv6zk",
+    "armv6-m",      "armv6m",      "armv6sm",        "armv6s-m",    "armv7-a",
+    "armv7",        "armv7a",      "armv7ve",        "armv7hl",     "armv7l",
+    "armv7-r",      "armv7r",      "armv7-m",        "armv7m",      "armv7k",
+    "armv7s",       "armv7e-m",    "armv7em",        "armv8-a",     "armv8",
+    "armv8a",       "armv8l",      "armv8.1-a",      "armv8.1a",    "armv8.2-a",
+    "armv8.2a",     "armv8.3-a",   "armv8.3a",       "armv8.4-a",   "armv8.4a",
+    "armv8.5-a",    "armv8.5a",    "armv8.6-a",      "armv8.6a",    "armv8.7-a",
+    "armv8.7a",     "armv8.8-a",   "armv8.8a",       "armv8-r",     "armv8r",
+    "armv8-m.base", "armv8m.base", "armv8-m.main",   "armv8m.main", "iwmmxt",
+    "iwmmxt2",      "xscale",      "armv8.1-m.main", "armv9-a",     "armv9",
+    "armv9a",       "armv9.1-a",   "armv9.1a",       "armv9.2-a",   "armv9.2a",
 };
 
 template <ARM::ISAKind ISAKind>
@@ -439,14 +438,6 @@ bool testARMArch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
 
 TEST(TargetParserTest, testARMArch) {
   EXPECT_TRUE(
-      testARMArch("armv2", "generic", "v2", ARMBuildAttrs::CPUArch::Pre_v4));
-  EXPECT_TRUE(
-      testARMArch("armv2a", "generic", "v2a", ARMBuildAttrs::CPUArch::Pre_v4));
-  EXPECT_TRUE(
-      testARMArch("armv3", "generic", "v3", ARMBuildAttrs::CPUArch::Pre_v4));
-  EXPECT_TRUE(
-      testARMArch("armv3m", "generic", "v3m", ARMBuildAttrs::CPUArch::Pre_v4));
-  EXPECT_TRUE(
       testARMArch("armv4", "strongarm", "v4",
                           ARMBuildAttrs::CPUArch::v4));
   EXPECT_TRUE(
@@ -603,10 +594,6 @@ TEST(TargetParserTest, testARMExtension) {
   EXPECT_FALSE(testARMExtension("xscale", ARM::ArchKind::INVALID, "crc"));
   EXPECT_FALSE(testARMExtension("swift", ARM::ArchKind::INVALID, "crc"));
 
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV2, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV2A, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV3, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV3M, "thumb"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV4, "dsp"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV4T, "dsp"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV5T, "simd"));
