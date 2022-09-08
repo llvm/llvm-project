@@ -726,6 +726,7 @@ private:
     const   value_type* __data_;
     size_type           __size_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_string_view);
 
 #if _LIBCPP_STD_VER > 17
 template <class _CharT, class _Traits>

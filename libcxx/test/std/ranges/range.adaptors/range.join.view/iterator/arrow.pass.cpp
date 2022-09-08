@@ -103,8 +103,8 @@ constexpr bool test() {
 
   {
     // Copyable input iterator with arrow.
-    ValueView<Box> children[4] = {ValueView(buffer[0]), ValueView(buffer[1]), ValueView(buffer[2]),
-                                  ValueView(buffer[3])};
+    using BoxView = ValueView<Box>;
+    ValueView<Box> children[4] = {BoxView(buffer[0]), BoxView(buffer[1]), BoxView(buffer[2]), BoxView(buffer[3])};
     std::ranges::join_view jv(ValueView<ValueView<Box>>{children});
     assert(jv.begin()->x == 1111);
     static_assert(HasArrow<decltype(jv.begin())>);

@@ -47,7 +47,7 @@ void test(std::string expected, std::string_view fmt, color arg) {
   auto out = std::back_inserter(result);
   using FormatCtxT = std::basic_format_context<decltype(out), char>;
 
-  std::basic_format_context format_ctx =
+  FormatCtxT format_ctx =
       test_format_context_create<decltype(out), char>(out, std::make_format_args<FormatCtxT>(arg));
   formatter.format(arg, format_ctx);
   assert(result == expected);
