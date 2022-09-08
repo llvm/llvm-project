@@ -411,3 +411,21 @@ func.func @round_fold_vec() -> (vector<4xf32>) {
   %0 = math.round %v1 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// CHECK-LABEL: @floor_fold
+// CHECK: %[[cst:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK: return %[[cst]]
+func.func @floor_fold() -> f32 {
+  %c = arith.constant 0.3 : f32
+  %r = math.floor %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @floor_fold2
+// CHECK: %[[cst:.+]] = arith.constant 2.000000e+00 : f32
+// CHECK: return %[[cst]]
+func.func @floor_fold2() -> f32 {
+  %c = arith.constant 2.0 : f32
+  %r = math.floor %c : f32
+  return %r : f32
+}
