@@ -482,6 +482,8 @@ def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
     %a = math.floor %b : f64
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
