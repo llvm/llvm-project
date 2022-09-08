@@ -107,7 +107,7 @@ public:
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
   }
   APSInt toAPSInt(unsigned NumBits) const {
-    if (Signed)
+    if constexpr (Signed)
       return APSInt(toAPSInt().sextOrTrunc(NumBits), !Signed);
     else
       return APSInt(toAPSInt().zextOrTrunc(NumBits), !Signed);
@@ -171,7 +171,7 @@ public:
   }
 
   template <bool SrcSign> static Integral from(Integral<0, SrcSign> Value) {
-    if (SrcSign)
+    if constexpr (SrcSign)
       return Integral(Value.V.getSExtValue());
     else
       return Integral(Value.V.getZExtValue());
