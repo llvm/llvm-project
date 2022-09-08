@@ -8,6 +8,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+import json
 import os
 import side_effect
 
@@ -97,6 +98,8 @@ class BreakpointCommandTestCase(TestBase):
             "/x/main.cpp",
             "./x/y/a/d/c/main.cpp",
         ]
+        # Reset source map.
+        self.runCmd("settings clear target.source-map")
         for path in invalid_paths:
             bkpt = target.BreakpointCreateByLocation(path, 2)
             self.assertTrue(bkpt.GetNumLocations() == 0,
@@ -429,3 +432,68 @@ class BreakpointCommandTestCase(TestBase):
 
         bp_3 = target.FindBreakpointByID(bp_id_3)
         self.assertFalse(bp_3.IsValid(), "Didn't delete disabled breakpoint 3")
+
+
+    def get_source_map_json(self):
+        stream = lldb.SBStream()
+        self.dbg.GetSetting("target.source-map").GetAsJSON(stream)
+        return json.loads(stream.GetData())
+
+    def verify_source_map_entry_pair(self, entry, original, replacement):
+        self.assertEquals(entry[0], original,
+            "source map entry 'original' does not match")
+        self.assertEquals(entry[1], replacement,
+            "source map entry 'replacement' does not match")
+
+    @skipIf(oslist=["windows"])
+    @no_debug_info_test
+    def test_breakpoints_auto_source_map_relative(self):
+        """
+            Test that with target.auto-source-map-relative settings.
+
+            The "relative.yaml" contains a line table that is:
+
+            Line table for a/b/c/main.cpp in `a.out
+            0x0000000100003f94: a/b/c/main.cpp:1
+            0x0000000100003fb0: a/b/c/main.cpp:2:3
+            0x0000000100003fb8: a/b/c/main.cpp:2:3
+        """
+        src_dir = self.getSourceDir()
+        yaml_path = os.path.join(src_dir, "relative.yaml")
+        yaml_base, ext = os.path.splitext(yaml_path)
+        obj_path = self.getBuildArtifact("a.out")
+        self.yaml2obj(yaml_path, obj_path)
+
+        # Create a target with the object file we just created from YAML
+        target = self.dbg.CreateTarget(obj_path)
+        # We now have debug information with line table paths that start are
+        # "./a/b/c/main.cpp".
+
+        source_map_json = self.get_source_map_json()
+        self.assertEquals(len(source_map_json), 0, "source map should be empty initially")
+
+        # Verify auto deduced source map when file path in debug info
+        # is a suffix of request breakpoint file path
+        path = "/x/y/a/b/c/main.cpp"
+        bp = target.BreakpointCreateByLocation(path, 2)
+        self.assertTrue(bp.GetNumLocations() > 0,
+                'Couldn\'t resolve breakpoint using full path "%s" in executate "%s" with '
+                'debug info that has relative path with matching suffix' % (path, self.getBuildArtifact("a.out")))
+
+        source_map_json = self.get_source_map_json()
+        self.assertEquals(len(source_map_json), 1, "source map should not be empty")
+        self.verify_source_map_entry_pair(source_map_json[0], ".", "/x/y")
+
+        # Reset source map.
+        self.runCmd("settings clear target.source-map")
+
+        # Verify source map will not auto deduced when file path of request breakpoint
+        # equals the file path in debug info.
+        path = "a/b/c/main.cpp"
+        bp = target.BreakpointCreateByLocation(path, 2)
+        self.assertTrue(bp.GetNumLocations() > 0,
+                'Couldn\'t resolve breakpoint using full path "%s" in executate "%s" with '
+                'debug info that has relative path with matching suffix' % (path, self.getBuildArtifact("a.out")))
+
+        source_map_json = self.get_source_map_json()
+        self.assertEquals(len(source_map_json), 0, "source map should not be deduced")
