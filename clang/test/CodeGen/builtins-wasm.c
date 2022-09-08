@@ -794,3 +794,10 @@ i32x4 dot_i8x16_i7x16_add_s_i32x4(i8x16 a, i8x16 b, i32x4 c) {
   // WEBASSEMBLY-SAME: <16 x i8> %a, <16 x i8> %b, <4 x i32> %c)
   // WEBASSEMBLY-NEXT: ret
 }
+
+f32x4 relaxed_dot_bf16x8_add_f32_f32x4(u16x8 a, u16x8 b, f32x4 c) {
+  return __builtin_wasm_relaxed_dot_bf16x8_add_f32_f32x4(a, b, c);
+  // WEBASSEMBLY: call <4 x float> @llvm.wasm.relaxed.dot.bf16x8.add.f32
+  // WEBASSEMBLY-SAME: <8 x i16> %a, <8 x i16> %b, <4 x float> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
