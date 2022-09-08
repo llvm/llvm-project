@@ -21,7 +21,10 @@ package(
 
 licenses(["notice"])
 
-exports_files(["LICENSE.TXT"])
+exports_files([
+    "LICENSE.TXT",
+    "run_lit.sh",
+])
 
 filegroup(
     name = "c_headers",
