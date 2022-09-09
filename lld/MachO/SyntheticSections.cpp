@@ -933,8 +933,8 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
     if (entries.empty())
       continue;
 
-    assert(is_sorted(dataInCodeEntries, [](const data_in_code_entry &lhs,
-                                           const data_in_code_entry &rhs) {
+    assert(is_sorted(entries, [](const data_in_code_entry &lhs,
+                                 const data_in_code_entry &rhs) {
       return lhs.offset < rhs.offset;
     }));
     // For each code subsection find 'data in code' entries residing in it.
@@ -963,6 +963,12 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
       }
     }
   }
+
+  // ld64 emits the table in sorted order too.
+  llvm::sort(dataInCodeEntries,
+             [](const data_in_code_entry &lhs, const data_in_code_entry &rhs) {
+               return lhs.offset < rhs.offset;
+             });
   return dataInCodeEntries;
 }
 
