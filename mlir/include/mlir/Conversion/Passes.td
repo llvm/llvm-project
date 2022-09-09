@@ -149,8 +149,8 @@ def ConvertAsyncToLLVM : Pass<"convert-async-to-llvm", "ModuleOp"> {
   }];
   let constructor = "mlir::createConvertAsyncToLLVMPass()";
   let dependentDialects = [
-    "async::AsyncDialect",
     "arith::ArithmeticDialect",
+    "async::AsyncDialect",
     "LLVM::LLVMDialect",
   ];
 }
