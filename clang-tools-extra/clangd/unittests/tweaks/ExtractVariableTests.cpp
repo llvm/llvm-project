@@ -330,7 +330,7 @@ TEST_F(ExtractVariableTest, Test) {
              void bar() {
                int (*placeholder)(int) = foo('c'); (void)placeholder;
              })cpp"},
-      // Arithmetic on typedef types preserves typedef types
+      // Arithmetic on typedef types yields plain integer types
       {R"cpp(typedef long NSInteger;
              void varDecl() {
                 NSInteger a = 2 * 5;
@@ -339,7 +339,7 @@ TEST_F(ExtractVariableTest, Test) {
        R"cpp(typedef long NSInteger;
              void varDecl() {
                 NSInteger a = 2 * 5;
-                NSInteger placeholder = a * 7; NSInteger b = placeholder + 3;
+                long placeholder = a * 7; NSInteger b = placeholder + 3;
              })cpp"},
   };
   for (const auto &IO : InputOutputs) {
