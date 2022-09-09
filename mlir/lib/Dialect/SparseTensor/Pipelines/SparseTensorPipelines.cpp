@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -58,8 +59,12 @@ void mlir::sparse_tensor::buildSparseCompiler(
   if (options.testBufferizationAnalysisOnly)
     return;
   pm.addPass(createSparsificationPass(options.sparsificationOptions()));
-  pm.addPass(createSparseTensorConversionPass(
-      options.sparseTensorConversionOptions()));
+  if (options.enableRuntimeLibrary)
+    pm.addPass(createSparseTensorConversionPass(
+        options.sparseTensorConversionOptions()));
+  else
+    pm.addPass(createSparseTensorCodegenPass());
+  pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   pm.addPass(createDenseBufferizationPass(
       getBufferizationOptions(/*analysisOnly=*/false)));
   pm.addNestedPass<func::FuncOp>(

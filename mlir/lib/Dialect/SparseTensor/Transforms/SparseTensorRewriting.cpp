@@ -300,8 +300,10 @@ public:
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
 
-void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns) {
+void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
+                                         bool /*enableRT*/) {
   patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd,
                ReshapeRewriter<tensor::ExpandShapeOp>,
                ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
+  // TODO: If RT not enabled, rewrite concatenate ops, etc here.
 }
