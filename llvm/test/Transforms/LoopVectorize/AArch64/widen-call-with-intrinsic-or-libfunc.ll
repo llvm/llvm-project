@@ -19,7 +19,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr ir<%src>, vp<%3>
 ; CHECK-NEXT:     WIDEN ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%conv> = fpext ir<%l>
-; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using library function)
+; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using library function: __simd_sin_v2f64)
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<%3>
 ; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
 ; CHECK-NEXT:     EMIT vp<%10> = VF * UF +(nuw)  vp<%2>
