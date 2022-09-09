@@ -32,6 +32,7 @@ module {
     %d2_0 = tensor.dim %t2, %c0 : tensor<?x?xf64, #DCSR>
     %d1_1 = tensor.dim %t1, %c1 : tensor<4x5xf64, #DCSR>
     %d2_1 = tensor.dim %t2, %c1 : tensor<?x?xf64, #DCSR>
+
     // CHECK: 4
     vector.print %d1_0 : index
     // CHECK-NEXT: 2
@@ -40,6 +41,11 @@ module {
     vector.print %d1_1 : index
     // CHECK-NEXT: 3
     vector.print %d2_1 : index
+
+    // Release resources.
+    bufferization.dealloc_tensor %t1 : tensor<4x5xf64, #DCSR>
+    bufferization.dealloc_tensor %t2 : tensor<?x?xf64, #DCSR>
+
     return
   }
 }
