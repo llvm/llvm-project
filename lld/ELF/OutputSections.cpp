@@ -17,6 +17,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Config/llvm-config.h" // LLVM_ENABLE_ZLIB
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -320,18 +321,31 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
 
 // Compress section contents if this section contains debug info.
 template <class ELFT> void OutputSection::maybeCompress() {
-#if LLVM_ENABLE_ZLIB
   using Elf_Chdr = typename ELFT::Chdr;
 
   // Compress only DWARF debug sections.
-  if (!config->compressDebugSections || (flags & SHF_ALLOC) ||
-      !name.startswith(".debug_") || size == 0)
+  if (config->compressDebugSections == DebugCompressionType::None ||
+      (flags & SHF_ALLOC) || !name.startswith(".debug_") || size == 0)
     return;
 
   llvm::TimeTraceScope timeScope("Compress debug sections");
-
-  // Write uncompressed data to a temporary zero-initialized buffer.
+  compressed.uncompressedSize = size;
   auto buf = std::make_unique<uint8_t[]>(size);
+  if (config->compressDebugSections == DebugCompressionType::Zstd) {
+    {
+      parallel::TaskGroup tg;
+      writeTo<ELFT>(buf.get(), tg);
+    }
+    compressed.shards = std::make_unique<SmallVector<uint8_t, 0>[]>(1);
+    compression::zstd::compress(makeArrayRef(buf.get(), size),
+                                compressed.shards[0]);
+    size = sizeof(Elf_Chdr) + compressed.shards[0].size();
+    flags |= SHF_COMPRESSED;
+    return;
+  }
+
+#if LLVM_ENABLE_ZLIB
+  // Write uncompressed data to a temporary zero-initialized buffer.
   {
     parallel::TaskGroup tg;
     writeTo<ELFT>(buf.get(), tg);
@@ -361,7 +375,6 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   // Update section size and combine Alder-32 checksums.
   uint32_t checksum = 1;       // Initial Adler-32 value
-  compressed.uncompressedSize = size;
   size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
   for (size_t i = 0; i != numShards; ++i) {
     size += shardsOut[i].size();
@@ -400,10 +413,15 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   // just write it down.
   if (compressed.shards) {
     auto *chdr = reinterpret_cast<typename ELFT::Chdr *>(buf);
-    chdr->ch_type = ELFCOMPRESS_ZLIB;
     chdr->ch_size = compressed.uncompressedSize;
     chdr->ch_addralign = alignment;
     buf += sizeof(*chdr);
+    if (config->compressDebugSections == DebugCompressionType::Zstd) {
+      chdr->ch_type = ELFCOMPRESS_ZSTD;
+      memcpy(buf, compressed.shards[0].data(), compressed.shards[0].size());
+      return;
+    }
+    chdr->ch_type = ELFCOMPRESS_ZLIB;
 
     // Compute shard offsets.
     auto offsets = std::make_unique<size_t[]>(compressed.numShards);

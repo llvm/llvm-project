@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -164,7 +165,7 @@ struct Configuration {
   bool callGraphProfileSort;
   bool checkSections;
   bool checkDynamicRelocs;
-  bool compressDebugSections;
+  llvm::DebugCompressionType compressDebugSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
