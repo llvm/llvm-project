@@ -720,7 +720,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   if (const auto *A = InputArgs.getLastArg(OBJCOPY_compress_debug_sections)) {
     Config.CompressionType = StringSwitch<DebugCompressionType>(A->getValue())
-                                 .Case("zlib", DebugCompressionType::Z)
+                                 .Case("zlib", DebugCompressionType::Zlib)
                                  .Case("zstd", DebugCompressionType::Zstd)
                                  .Default(DebugCompressionType::None);
     if (Config.CompressionType == DebugCompressionType::None) {
