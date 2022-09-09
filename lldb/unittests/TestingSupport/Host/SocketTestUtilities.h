@@ -42,6 +42,13 @@ void CreateDomainConnectedSockets(llvm::StringRef path,
 
 bool HostSupportsIPv6();
 bool HostSupportsIPv4();
+
+/// Return an IP for localhost based on host support.
+///
+/// This will return either "127.0.0.1" if IPv4 is detected, or "[::1]" if IPv6
+/// is detected. If neither are detected, return an error.
+llvm::Expected<std::string> GetLocalhostIP();
+
 } // namespace lldb_private
 
 #endif

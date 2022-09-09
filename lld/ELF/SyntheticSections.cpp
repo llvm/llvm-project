@@ -2175,8 +2175,8 @@ static BssSection *getCommonSec(Symbol *sym) {
 }
 
 static uint32_t getSymSectionIndex(Symbol *sym) {
-  assert(!(sym->needsCopy && sym->isObject()));
-  if (!isa<Defined>(sym) || sym->needsCopy)
+  assert(!(sym->hasFlag(NEEDS_COPY) && sym->isObject()));
+  if (!isa<Defined>(sym) || sym->hasFlag(NEEDS_COPY))
     return SHN_UNDEF;
   if (const OutputSection *os = sym->getOutputSection())
     return os->sectionIndex >= SHN_LORESERVE ? (uint32_t)SHN_XINDEX
@@ -2236,7 +2236,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
 
     for (SymbolTableEntry &ent : symbols) {
       Symbol *sym = ent.sym;
-      if (sym->isInPlt() && sym->needsCopy)
+      if (sym->isInPlt() && sym->hasFlag(NEEDS_COPY))
         eSym->st_other |= STO_MIPS_PLT;
       if (isMicroMips()) {
         // We already set the less-significant bit for symbols
@@ -2247,7 +2247,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
         // like `objdump` will be able to deal with a correct
         // symbol position.
         if (sym->isDefined() &&
-            ((sym->stOther & STO_MIPS_MICROMIPS) || sym->needsCopy)) {
+            ((sym->stOther & STO_MIPS_MICROMIPS) || sym->hasFlag(NEEDS_COPY))) {
           if (!strTabSec.isDynamic())
             eSym->st_value &= ~1;
           eSym->st_other |= STO_MIPS_MICROMIPS;

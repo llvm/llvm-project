@@ -26,6 +26,9 @@ namespace mlir {
 //===----------------------------------------------------------------------===//
 
 struct SPIRVConversionOptions {
+  /// The number of bits to store a boolean value.
+  unsigned boolNumBits{8};
+
   /// Whether to emulate non-32-bit scalar types with 32-bit scalar types if
   /// no native support.
   ///
@@ -45,9 +48,10 @@ struct SPIRVConversionOptions {
   /// Use 64-bit integers to convert index types.
   bool use64bitIndex{false};
 
-  /// The number of bits to store a boolean value. It is eight bits by
-  /// default.
-  unsigned boolNumBits{8};
+  /// Whether to enable fast math mode during conversion. If true, various
+  /// patterns would assume no NaN/infinity numbers as inputs, and thus there
+  /// will be no special guards emitted to check and handle such cases.
+  bool enableFastMathMode{false};
 };
 
 /// Type conversion from builtin types to SPIR-V types for shader interface.
