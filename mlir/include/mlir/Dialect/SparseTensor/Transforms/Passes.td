@@ -169,6 +169,7 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
   let dependentDialects = [
     "arith::ArithmeticDialect",
     "bufferization::BufferizationDialect",
+    "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",

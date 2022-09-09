@@ -175,7 +175,9 @@ struct SparseTensorCodegenPass
         [&](bufferization::DeallocTensorOp op) {
           return converter.isLegal(op.getTensor().getType());
         });
-    // Legal dialects may occur in generated code.
+    // The following operations and dialects may be introduced by the
+    // codegen rules, and are therefore marked as legal.
+    target.addLegalOp<linalg::FillOp>();
     target.addLegalDialect<arith::ArithmeticDialect,
                            bufferization::BufferizationDialect,
                            memref::MemRefDialect, scf::SCFDialect>();
