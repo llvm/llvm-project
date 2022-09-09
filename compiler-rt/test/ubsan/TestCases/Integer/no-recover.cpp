@@ -20,7 +20,7 @@ int main() {
   // ABORT: no-recover.cpp:[[@LINE-2]]:5: runtime error: unsigned integer overflow: 2271560481 + 3989547399 cannot be represented in type 'unsigned int'
 
   (void)(uint64_t(10000000000000000000ull) + uint64_t(9000000000000000000ull));
-  // RECOVER: 10000000000000000000 + 9000000000000000000 cannot be represented in type '{{uint64_t|unsigned long( long)?}}'
+  // RECOVER: 10000000000000000000 + 9000000000000000000 cannot be represented in type 'unsigned {{long( long)?}}'
   // SILENT-RECOVER-NOT: runtime error
   // ABORT-NOT: runtime error
 }

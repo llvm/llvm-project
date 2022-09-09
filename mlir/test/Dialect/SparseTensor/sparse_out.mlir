@@ -123,7 +123,7 @@ func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR>) -> tensor<32x
 // CHECK:               %[[VAL_18:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_16]]] : memref<?xf32>
 // CHECK:               %[[VAL_19:.*]] = arith.mulf %[[VAL_18]], %[[VAL_1]] : f32
 // CHECK:               memref.store %[[VAL_19]], %[[BUF]][] : memref<f32>
-// CHECK:               sparse_tensor.lex_insert %[[VAL_7]], %[[VAL_11]], %[[BUF]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
+// CHECK:               sparse_tensor.insert %[[VAL_7]], %[[VAL_11]], %[[BUF]] : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[VAL_20:.*]] = sparse_tensor.load %[[VAL_7]] hasInserts : tensor<10x20xf32, #sparse_tensor.encoding<{{.*}}>>
@@ -259,7 +259,7 @@ func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20x
 // CHECK:                     scf.yield %[[VAL_94]], %[[VAL_97]], %[[VAL_98:.*]] : index, index, i32
 // CHECK:                   }
 // CHECK:                   memref.store %[[VAL_70]]#2, %[[BUF]][] : memref<i32>
-// CHECK:                   sparse_tensor.lex_insert %[[VAL_8]], %[[VAL_23]], %[[BUF]] : tensor<?x?xi32, #{{.*}}>, memref<?xindex>, memref<i32>
+// CHECK:                   sparse_tensor.insert %[[VAL_8]], %[[VAL_23]], %[[BUF]] : tensor<?x?xi32, #{{.*}}>, memref<?xindex>, memref<i32>
 // CHECK:                 } else {
 // CHECK:                 }
 // CHECK:                 %[[VAL_100:.*]] = arith.cmpi eq, %[[VAL_57]], %[[VAL_60]] : index

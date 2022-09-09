@@ -19,6 +19,7 @@ class LibcxxIteratorDataFormatterTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
         self.namespace = 'std'
 
+    @expectedFailureDarwin # FIXME: May need to force system libcxx here.
     @add_test_categories(["libc++"])
     def test_with_run_command(self):
         """Test that libc++ iterators format properly."""

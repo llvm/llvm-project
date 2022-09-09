@@ -49,9 +49,9 @@ def SparseTensor_Dialect : Dialect {
     lattices drive actual sparse code generation, which consists of a
     relatively straightforward one-to-one mapping from iteration lattices
     to combinations of for-loops, while-loops, and if-statements. Sparse
-    tensor outputs that materialize uninitialized are handled with
-    insertions in pure lexicographical index order if all parallel loops
-    are outermost or using a 1-dimensional access pattern expansion
+    tensor outputs that materialize uninitialized are handled with direct
+    insertions if all parallel loops are outermost or insertions that
+    indirectly go through a 1-dimensional access pattern expansion
     (a.k.a. workspace) where feasible [Gustavson72,Bik96,Kjolstad19].
 
     * [Bik96] Aart J.C. Bik. Compiler Support for Sparse Matrix Computations.

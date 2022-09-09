@@ -59,6 +59,14 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   bool isWideningInstruction(Type *Ty, unsigned Opcode,
                              ArrayRef<const Value *> Args);
 
+  // A helper function called by 'getVectorInstrCost'.
+  //
+  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost'; 'HasRealUse'
+  // indicates whether the vector instruction is available in the input IR or
+  // just imaginary in vectorizer passes.
+  InstructionCost getVectorInstrCostHelper(Type *Val, unsigned Index,
+                                           bool HasRealUse);
+
 public:
   explicit AArch64TTIImpl(const AArch64TargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
@@ -173,8 +181,9 @@ public:
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr);
 
-  using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index);
+  InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      unsigned Index);
 
   InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,

@@ -43,6 +43,7 @@ class LibcxxSpanDataFormatterTestCase(TestBase):
         self.expect_var_path(f'{var_name}[4]', type='int', value='12345')
 
     @add_test_categories(['libc++'])
+    @expectedFailureDarwin # FIXME: May need to force system libcxx here.
     @skipIf(compiler='clang', compiler_version=['<', '11.0'])
     def test_with_run_command(self):
         """Test that std::span variables are formatted correctly when printed."""

@@ -13188,7 +13188,7 @@ EmulateInstructionARM::GetARMOpcodeForInstruction(const uint32_t opcode,
        &EmulateInstructionARM::EmulateRFE, "rfe{<amode>} <Rn>{!}"}
 
   };
-  static const size_t k_num_arm_opcodes = llvm::array_lengthof(g_arm_opcodes);
+  static const size_t k_num_arm_opcodes = std::size(g_arm_opcodes);
 
   for (size_t i = 0; i < k_num_arm_opcodes; ++i) {
     if ((g_arm_opcodes[i].mask & opcode) == g_arm_opcodes[i].value &&
@@ -13739,7 +13739,7 @@ EmulateInstructionARM::GetThumbOpcodeForInstruction(const uint32_t opcode,
        &EmulateInstructionARM::EmulateUXTH, "uxth<c>.w <Rd>,<Rm>{,<rotation>}"},
   };
 
-  const size_t k_num_thumb_opcodes = llvm::array_lengthof(g_thumb_opcodes);
+  const size_t k_num_thumb_opcodes = std::size(g_thumb_opcodes);
   for (size_t i = 0; i < k_num_thumb_opcodes; ++i) {
     if ((g_thumb_opcodes[i].mask & opcode) == g_thumb_opcodes[i].value &&
         (g_thumb_opcodes[i].variants & arm_isa) != 0)

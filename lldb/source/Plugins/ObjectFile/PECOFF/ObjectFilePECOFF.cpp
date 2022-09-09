@@ -743,7 +743,7 @@ bool ObjectFilePECOFF::ParseSectionHeaders(
 }
 
 llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
-  llvm::StringRef hdr_name(sect.name, llvm::array_lengthof(sect.name));
+  llvm::StringRef hdr_name(sect.name, std::size(sect.name));
   hdr_name = hdr_name.split('\0').first;
   if (hdr_name.consume_front("/")) {
     lldb::offset_t stroff;

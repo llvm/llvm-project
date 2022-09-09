@@ -2093,7 +2093,7 @@ bool llvm::promoteLoopAccessesToScalars(
               Store->getAlign(), MDL, Preheader->getTerminator(), DT, TLI);
         }
       } else
-        return false; // Not a load or store.
+        continue; // Not a load or store.
 
       if (!AccessTy)
         AccessTy = getLoadStoreType(UI);
@@ -2254,12 +2254,13 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
     return {}; // Nothing to promote...
 
   // Discard any sets for which there is an aliasing non-promotable access.
+  BatchAAResults BatchAA(*AA);
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
     if (AttemptingPromotion.contains(I))
       return;
 
     llvm::erase_if(Sets, [&](const AliasSet *AS) {
-      return AS->aliasesUnknownInst(I, *AA);
+      return AS->aliasesUnknownInst(I, BatchAA);
     });
   });
 

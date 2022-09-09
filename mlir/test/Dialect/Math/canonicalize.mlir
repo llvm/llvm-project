@@ -411,3 +411,39 @@ func.func @round_fold_vec() -> (vector<4xf32>) {
   %0 = math.round %v1 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// CHECK-LABEL: @floor_fold
+// CHECK: %[[cst:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK: return %[[cst]]
+func.func @floor_fold() -> f32 {
+  %c = arith.constant 0.3 : f32
+  %r = math.floor %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @floor_fold2
+// CHECK: %[[cst:.+]] = arith.constant 2.000000e+00 : f32
+// CHECK: return %[[cst]]
+func.func @floor_fold2() -> f32 {
+  %c = arith.constant 2.0 : f32
+  %r = math.floor %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @trunc_fold
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 1.000000e+00 : f32
+// CHECK-NEXT:   return %[[cst]]
+func.func @trunc_fold() -> f32 {
+  %c = arith.constant 1.1 : f32
+  %r = math.trunc %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @trunc_fold_vec
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, -0.000000e+00, 1.000000e+00, -1.000000e+00]> : vector<4xf32>
+// CHECK-NEXT:   return %[[cst]]
+func.func @trunc_fold_vec() -> (vector<4xf32>) {
+  %v = arith.constant dense<[0.5, -0.5, 1.5, -1.5]> : vector<4xf32>
+  %0 = math.trunc %v : vector<4xf32>
+  return %0 : vector<4xf32>
+}

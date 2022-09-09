@@ -41,7 +41,7 @@ using namespace lldb_private;
 #include "Plugins/Process/Utility/RegisterInfos_arm.h"
 #undef DECLARE_REGISTER_INFOS_ARM_STRUCT
 
-static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos_arm);
+static size_t k_num_register_infos = std::size(g_register_infos_arm);
 
 // Array of lldb register numbers used to define the set of all General Purpose
 // Registers
@@ -68,9 +68,9 @@ uint32_t g_fpu_reg_indices[] = {
 };
 
 RegisterSet g_register_sets[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_reg_indices), g_gpr_reg_indices},
-    {"Floating Point Registers", "fpu", llvm::array_lengthof(g_fpu_reg_indices),
+    {"General Purpose Registers", "gpr", std::size(g_gpr_reg_indices),
+     g_gpr_reg_indices},
+    {"Floating Point Registers", "fpu", std::size(g_fpu_reg_indices),
      g_fpu_reg_indices},
 };
 
@@ -82,7 +82,7 @@ RegisterContextWindows_arm::RegisterContextWindows_arm(
 RegisterContextWindows_arm::~RegisterContextWindows_arm() {}
 
 size_t RegisterContextWindows_arm::GetRegisterCount() {
-  return llvm::array_lengthof(g_register_infos_arm);
+  return std::size(g_register_infos_arm);
 }
 
 const RegisterInfo *
@@ -93,7 +93,7 @@ RegisterContextWindows_arm::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextWindows_arm::GetRegisterSetCount() {
-  return llvm::array_lengthof(g_register_sets);
+  return std::size(g_register_sets);
 }
 
 const RegisterSet *RegisterContextWindows_arm::GetRegisterSet(size_t reg_set) {

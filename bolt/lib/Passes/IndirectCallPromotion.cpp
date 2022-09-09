@@ -1158,8 +1158,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
     for (auto &BFIt : BFs) {
       BinaryFunction &Function = BFIt.second;
 
-      if (!Function.isSimple() || Function.isIgnored() ||
-          !Function.hasProfile())
+      if (!shouldOptimize(Function))
         continue;
 
       const bool HasLayout = !Function.getLayout().block_empty();
@@ -1219,7 +1218,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
   for (BinaryFunction *FuncPtr : Functions) {
     BinaryFunction &Function = *FuncPtr;
 
-    if (!Function.isSimple() || Function.isIgnored() || !Function.hasProfile())
+    if (!shouldOptimize(Function))
       continue;
 
     const bool HasLayout = !Function.getLayout().block_empty();

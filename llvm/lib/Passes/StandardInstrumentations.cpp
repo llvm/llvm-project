@@ -188,10 +188,7 @@ std::string getIRName(Any IR) {
 
   if (any_isa<const Loop *>(IR)) {
     const Loop *L = any_cast<const Loop *>(IR);
-    std::string S;
-    raw_string_ostream OS(S);
-    L->print(OS, /*Verbose*/ false, /*PrintNested*/ false);
-    return OS.str();
+    return L->getName().str();
   }
 
   llvm_unreachable("Unknown wrapped IR type");

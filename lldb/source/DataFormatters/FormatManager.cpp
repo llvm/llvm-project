@@ -76,7 +76,7 @@ static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
                   kNumFormats,
               "All formats must have a corresponding info entry.");
 
-static uint32_t g_num_format_infos = llvm::array_lengthof(g_format_infos);
+static uint32_t g_num_format_infos = std::size(g_format_infos);
 
 static bool GetFormatFromFormatChar(char format_char, Format &format) {
   for (uint32_t i = 0; i < g_num_format_infos; ++i) {

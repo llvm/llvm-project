@@ -8631,9 +8631,9 @@ OperandMatchResultTy AMDGPUAsmParser::parseVOPD(OperandVector &Operands) {
     lex();
     lex();
     Operands.push_back(AMDGPUOperand::CreateToken(this, "::", S));
-    const MCExpr *Expr;
-    if (isToken(AsmToken::Identifier) && !Parser.parseExpression(Expr)) {
-      Operands.push_back(AMDGPUOperand::CreateExpr(this, Expr, S));
+    StringRef OpYName;
+    if (isToken(AsmToken::Identifier) && !Parser.parseIdentifier(OpYName)) {
+      Operands.push_back(AMDGPUOperand::CreateToken(this, OpYName, S));
       return MatchOperand_Success;
     }
     Error(S, "invalid VOPD :: usage");

@@ -544,7 +544,7 @@ static RegisterInfo g_reg_infos[] = {
     DEF_H(31),
 };
 
-constexpr size_t k_num_reg_infos = llvm::array_lengthof(g_reg_infos);
+constexpr size_t k_num_reg_infos = std::size(g_reg_infos);
 
 // ARM64 general purpose registers.
 const uint32_t g_gpr_regnums[] = {
@@ -751,15 +751,15 @@ const uint32_t g_fpu_regnums[] = {
 };
 
 // Skip the last LLDB_INVALID_REGNUM in each count below by subtracting 1
-constexpr size_t k_num_gpr_regs = llvm::array_lengthof(g_gpr_regnums) - 1;
-constexpr size_t k_num_fpu_regs = llvm::array_lengthof(g_fpu_regnums) - 1;
+constexpr size_t k_num_gpr_regs = std::size(g_gpr_regnums) - 1;
+constexpr size_t k_num_fpu_regs = std::size(g_fpu_regnums) - 1;
 
 static RegisterSet g_reg_sets[] = {
     {"General Purpose Registers", "gpr", k_num_gpr_regs, g_gpr_regnums},
     {"Floating Point Registers", "fpu", k_num_fpu_regs, g_fpu_regnums},
 };
 
-constexpr size_t k_num_reg_sets = llvm::array_lengthof(g_reg_sets);
+constexpr size_t k_num_reg_sets = std::size(g_reg_sets);
 
 RegisterContextMinidump_ARM64::RegisterContextMinidump_ARM64(
     lldb_private::Thread &thread, const DataExtractor &data)

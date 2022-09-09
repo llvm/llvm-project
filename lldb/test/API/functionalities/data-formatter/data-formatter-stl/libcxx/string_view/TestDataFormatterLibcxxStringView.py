@@ -21,6 +21,7 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
         self.line2 = line_number('main.cpp', '// Break here to look at bad string view.' )
 
     @add_test_categories(["libc++"])
+    @expectedFailureDarwin # FIXME: May need to force system libcxx here.
     @expectedFailureAll(bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android")
     # Inline namespace is randomly ignored as Clang due to broken lookup inside
     # the std namespace.
