@@ -69,7 +69,7 @@ define amdgpu_kernel void @v_select_v16i8(<16 x i8> addrspace(1)* %out, <16 x i8
 ; GFX89: s_cselect_b32
 ; GFX89-NOT: s_cselect_b32
 
-; SI: v_cndmask_b32
+; SI: s_cselect_b32
 ; SI-NOT: cndmask
 define amdgpu_kernel void @select_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a, <4 x i8> %b, i8 %c) #0 {
   %cmp = icmp eq i8 %c, 0
@@ -83,7 +83,7 @@ define amdgpu_kernel void @select_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a,
 ; GFX89: s_cselect_b32
 ; GFX89-NOT: s_cselect_b32
 
-; SI: v_cndmask_b32_e32
+; SI: s_cselect_b32
 ; SI-NOT: v_cndmask_b32e
 define amdgpu_kernel void @select_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
@@ -111,10 +111,10 @@ define amdgpu_kernel void @v_select_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16
 ; SI: cndmask
 ; SI-NOT: cndmask
 
-; GFX89: v_cndmask_b32_e32
-; GFX89: cndmask
-; VI: cndmask
-; GFX89-NOT: cndmask
+; VI: s_cselect_b32
+; VI: s_cselect_b32
+; GFX9: cndmask
+; GFX9: cndmask
 define amdgpu_kernel void @v_select_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> addrspace(1)* %a.ptr, <3 x i16> addrspace(1)* %b.ptr, i32 %c) #0 {
   %a = load <3 x i16>, <3 x i16> addrspace(1)* %a.ptr
   %b = load <3 x i16>, <3 x i16> addrspace(1)* %b.ptr
@@ -156,8 +156,8 @@ define amdgpu_kernel void @v_select_v8i16(<8 x i16> addrspace(1)* %out, <8 x i16
 ; vector select with SGPR inputs.
 
 ; GCN-LABEL: {{^}}s_select_v2i32:
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @s_select_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a, <2 x i32> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
@@ -167,10 +167,10 @@ define amdgpu_kernel void @s_select_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32
 }
 
 ; GCN-LABEL: {{^}}s_select_v4i32:
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 ; GCN: buffer_store_dwordx4
 define amdgpu_kernel void @s_select_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, <4 x i32> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
@@ -198,14 +198,14 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}select_v8i32:
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 define amdgpu_kernel void @select_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> %a, <8 x i32> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <8 x i32> %a, <8 x i32> %b
@@ -214,15 +214,9 @@ define amdgpu_kernel void @select_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> 
 }
 
 ; GCN-LABEL: {{^}}s_select_v2f32:
-; GCN-DAG: s_load_dwordx4 s[[[ALO:[0-9]+]]:[[BHI:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
-
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[BHI]]
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[ALO]]
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
-
-; GCN-DAG: v_cndmask_b32_e32
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; GCN-DAG: v_cndmask_b32_e32
+; GCN-DAG: s_cselect_b32
+; GCN-DAG: s_cselect_b32
 ; GCN: buffer_store_dwordx2
 define amdgpu_kernel void @s_select_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
@@ -234,9 +228,9 @@ define amdgpu_kernel void @s_select_v2f32(<2 x float> addrspace(1)* %out, <2 x f
 ; GCN-LABEL: {{^}}s_select_v3f32:
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
 
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 
 ; GCN: buffer_store_dwordx
 define amdgpu_kernel void @s_select_v3f32(<3 x float> addrspace(1)* %out, <3 x float> %a, <3 x float> %b, i32 %c) #0 {
@@ -250,10 +244,10 @@ define amdgpu_kernel void @s_select_v3f32(<3 x float> addrspace(1)* %out, <3 x f
 ; GCN: s_load_dwordx8
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
 
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 
 ; GCN: buffer_store_dwordx4
 define amdgpu_kernel void @s_select_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, <4 x float> %b, i32 %c) #0 {
@@ -284,11 +278,11 @@ bb:
 ; GCN-LABEL: {{^}}s_select_v5f32:
 ; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 0{{$}}
 
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 
 ; GCN: buffer_store_dwordx
 define amdgpu_kernel void @s_select_v5f32(<5 x float> addrspace(1)* %out, <5 x float> %a, <5 x float> %b, i32 %c) #0 {
@@ -315,10 +309,10 @@ define amdgpu_kernel void @select_v8f32(<8 x float> addrspace(1)* %out, <8 x flo
 }
 
 ; GCN-LABEL: {{^}}select_v2f64:
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 define amdgpu_kernel void @select_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %a, <2 x double> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <2 x double> %a, <2 x double> %b
@@ -327,14 +321,14 @@ define amdgpu_kernel void @select_v2f64(<2 x double> addrspace(1)* %out, <2 x do
 }
 
 ; GCN-LABEL: {{^}}select_v4f64:
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 define amdgpu_kernel void @select_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %a, <4 x double> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <4 x double> %a, <4 x double> %b
@@ -343,22 +337,22 @@ define amdgpu_kernel void @select_v4f64(<4 x double> addrspace(1)* %out, <4 x do
 }
 
 ; GCN-LABEL: {{^}}select_v8f64:
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
-; GCN: v_cndmask_b32_e32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
+; GCN: s_cselect_b32
 define amdgpu_kernel void @select_v8f64(<8 x double> addrspace(1)* %out, <8 x double> %a, <8 x double> %b, i32 %c) #0 {
   %cmp = icmp eq i32 %c, 0
   %select = select i1 %cmp, <8 x double> %a, <8 x double> %b
