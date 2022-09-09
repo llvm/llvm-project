@@ -805,7 +805,6 @@ define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; FIXEDLEN-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
 ; FIXEDLEN-NEXT:    store i64 [[V]], ptr [[B:%.*]], align 8
-; FIXEDLEN-NEXT:    store i64 [[V]], ptr [[B]], align 8
 ; FIXEDLEN-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXEDLEN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXEDLEN-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
@@ -1430,7 +1429,6 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; FIXEDLEN-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
 ; FIXEDLEN-NEXT:    store i64 [[V]], ptr [[B:%.*]], align 1
-; FIXEDLEN-NEXT:    store i64 [[V]], ptr [[B]], align 1
 ; FIXEDLEN-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[TMP0]]
 ; FIXEDLEN-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
 ; FIXEDLEN-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0

@@ -137,13 +137,13 @@ define void @matrix_mul_double_shuffle(i32 %N, i32* nocapture %C, i16* nocapture
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    dup v0.4h, w8
 ; CHECK-NEXT:    and x8, x0, #0xfffffff8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0 def $x0
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrh w9, [x2], #16
 ; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    dup v1.4h, w9
-; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    lsl x9, x9, #2
+; CHECK-NEXT:    ubfiz x9, x0, #2, #32
 ; CHECK-NEXT:    add w0, w0, #8
 ; CHECK-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    str q1, [x1, x9]
