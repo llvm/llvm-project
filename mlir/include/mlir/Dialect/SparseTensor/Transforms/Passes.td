@@ -97,7 +97,9 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
     Option<"enableSIMDIndex32", "enable-simd-index32", "bool", "false",
            "Enable i32 indexing into vectors (for efficiency)">,
     Option<"enableVLAVectorization", "enable-vla-vectorization", "bool",
-           "false", "Enable vector length agnostic vectorization">
+           "false", "Enable vector length agnostic vectorization">,
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "true", "Enable runtime library for manipulating sparse tensors">
   ];
 }
 

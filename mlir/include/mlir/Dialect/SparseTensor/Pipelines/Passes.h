@@ -75,6 +75,12 @@ struct SparseCompilerOptions
   PassOptions::Option<bool> enableVLAVectorization{
       *this, "enable-vla-vectorization",
       desc("Enable vector length agnostic vectorization"), init(false)};
+  PassOptions::Option<bool> enableRuntimeLibrary{
+      *this, "enable-runtime-library",
+      desc("Enable runtime library for manipulating sparse tensors"),
+      // TODO: Disable runtime library by default after feature complete.
+      init(true)};
+
   PassOptions::Option<bool> testBufferizationAnalysisOnly{
       *this, "test-bufferization-analysis-only",
       desc("Run only the inplacability analysis"), init(false)};
@@ -82,7 +88,8 @@ struct SparseCompilerOptions
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
     return SparsificationOptions(parallelization, vectorization, vectorLength,
-                                 enableSIMDIndex32, enableVLAVectorization);
+                                 enableSIMDIndex32, enableVLAVectorization,
+                                 enableRuntimeLibrary);
   }
 
   // These options must be kept in sync with `SparseTensorConversionBase`.
