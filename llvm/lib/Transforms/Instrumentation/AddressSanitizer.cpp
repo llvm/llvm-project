@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -1143,7 +1144,15 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
     Modified |= FunctionSanitizer.instrumentFunction(F, &TLI);
   }
   Modified |= ModuleSanitizer.instrumentModule(M);
-  return Modified ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  if (!Modified)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  // GlobalsAA is considered stateless and does not get invalidated unless
+  // explicitly invalidated; PreservedAnalyses::none() is not enough. Sanitizers
+  // make changes that require GlobalsAA to be invalidated.
+  PA.abandon<GlobalsAA>();
+  return PA;
 }
 
 static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
