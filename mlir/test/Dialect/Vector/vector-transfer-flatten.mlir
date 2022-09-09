@@ -12,9 +12,9 @@ func.func @transfer_read_flattenable_with_offset(
 // CHECK-LABEL: func @transfer_read_flattenable_with_offset
 // CHECK-SAME:      %[[ARG:[0-9a-zA-Z]+]]: memref<5x4x3x2xi8
 // CHECK:         %[[COLLAPSED:.+]] = memref.collapse_shape %[[ARG]] {{.}}[0, 1, 2, 3]
-// C-HECK:         %[[READ1D:.+]] = vector.transfer_read %[[COLLAPSED]]
-// C-HECK:         %[[VEC2D:.+]] = vector.shape_cast %[[READ1D]] : vector<120xi8> to vector<5x4x3x2xi8>
-// C-HECK:         return %[[VEC2D]]
+// CHECK:         %[[READ1D:.+]] = vector.transfer_read %[[COLLAPSED]]
+// CHECK:         %[[VEC2D:.+]] = vector.shape_cast %[[READ1D]] : vector<120xi8> to vector<5x4x3x2xi8>
+// CHECK:         return %[[VEC2D]]
 
 // -----
 
@@ -26,12 +26,12 @@ func.func @transfer_write_flattenable_with_offset(
     return
 }
 
-// C-HECK-LABEL: func @transfer_write_flattenable_with_offset
-// C-HECK-SAME:      %[[ARG:[0-9a-zA-Z]+]]: memref<5x4x3x2xi8
-// C-HECK-SAME:      %[[VEC:[0-9a-zA-Z]+]]: vector<5x4x3x2xi8>
-// C-HECK-DAG:     %[[COLLAPSED:.+]] = memref.collapse_shape %[[ARG]] {{.}}[0, 1, 2, 3]{{.}} : memref<5x4x3x2xi8, {{.+}}> into memref<120xi8, {{.+}}>
-// C-HECK-DAG:     %[[VEC1D:.+]] = vector.shape_cast %[[VEC]] : vector<5x4x3x2xi8> to vector<120xi8>
-// C-HECK:         vector.transfer_write %[[VEC1D]], %[[COLLAPSED]]
+// CHECK-LABEL: func @transfer_write_flattenable_with_offset
+// CHECK-SAME:      %[[ARG:[0-9a-zA-Z]+]]: memref<5x4x3x2xi8
+// CHECK-SAME:      %[[VEC:[0-9a-zA-Z]+]]: vector<5x4x3x2xi8>
+// CHECK-DAG:     %[[COLLAPSED:.+]] = memref.collapse_shape %[[ARG]] {{.}}[0, 1, 2, 3]{{.}} : memref<5x4x3x2xi8, {{.+}}> into memref<120xi8, {{.+}}>
+// CHECK-DAG:     %[[VEC1D:.+]] = vector.shape_cast %[[VEC]] : vector<5x4x3x2xi8> to vector<120xi8>
+// CHECK:         vector.transfer_write %[[VEC1D]], %[[COLLAPSED]]
 
 // -----
 
@@ -104,3 +104,31 @@ func.func @transfer_write_flattenable_with_dynamic_dims_and_indices(%vec : vecto
 // CHECK-SAME:    [%[[ARG2]], %[[ARG3]], %[[C0]]]
 // CHECK-SAME:    {in_bounds = [true]}
 // CHECK-SAME:    : vector<32xi8>, memref<?x?x32xi8, {{.+}}>
+
+// -----
+
+func.func @transfer_read_flattenable_negative(
+      %arg : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<2x2x2x2xi8> {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0 : i8
+    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst : 
+      memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>, vector<2x2x2x2xi8>
+    return %v : vector<2x2x2x2xi8>
+}
+
+// CHECK-LABEL: func @transfer_read_flattenable_negative
+//       CHECK:   vector.transfer_read {{.*}} vector<2x2x2x2xi8>
+
+// -----
+
+func.func @transfer_read_flattenable_negative2(
+      %arg : memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0 : i8
+    %v = vector.transfer_read %arg[%c0, %c0, %c0, %c0], %cst : 
+      memref<5x4x3x2xi8, strided<[24, 8, 2, 1], offset: ?>>, vector<5x4x3x2xi8>
+    return %v : vector<5x4x3x2xi8>
+}
+
+// CHECK-LABEL: func @transfer_read_flattenable_negative2
+//       CHECK:   vector.transfer_read {{.*}} vector<5x4x3x2xi8>
