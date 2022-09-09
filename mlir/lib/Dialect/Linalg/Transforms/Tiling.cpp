@@ -235,7 +235,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   auto hasStrideOne = [](Range r) { return !isConstantIntValue(r.stride, 1); };
   if (llvm::any_of(loopRanges, hasStrideOne))
     return op->emitOpError("only stride-1 supported atm");
-  auto destOperands = op.getDestinationOperands(b);
+  auto dest = op.getDestinationOperands(b);
 
   SmallVector<OpFoldResult> nonZeroNumThreads =
       llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
@@ -348,7 +348,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
                                         resultSizes)))
       return op->emitOpError("output offsets couldn't be calculated");
     SmallVector<OpFoldResult> strides(resultSizes.size(), b.getIndexAttr(1));
-    b.setInsertionPointToStart(foreachThreadOp.getTerminator().getBody());
+    b.setInsertionPointToEnd(foreachThreadOp.getTerminator().getBody());
     b.create<tensor::ParallelInsertSliceOp>(loc, std::get<1>(it),
                                             std::get<2>(it), resultOffsets,
                                             resultSizes, strides);
