@@ -39,7 +39,7 @@ struct MockDelegate : public GDBRemoteClientBase::ContinueDelegate {
 };
 
 struct TestClient : public GDBRemoteClientBase {
-  TestClient() : GDBRemoteClientBase("test.client", "test.client.listener") {
+  TestClient() : GDBRemoteClientBase("test.client") {
     m_send_acks = false;
   }
 };

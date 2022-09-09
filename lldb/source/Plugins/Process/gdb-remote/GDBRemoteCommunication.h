@@ -80,12 +80,8 @@ enum GDBErrno {
 
 class ProcessGDBRemote;
 
-class GDBRemoteCommunication : public Communication, public Broadcaster {
+class GDBRemoteCommunication : public Communication {
 public:
-  enum {
-    eBroadcastBitRunPacketSent = (1u << 0),
-  };
-
   enum class PacketType { Invalid = 0, Standard, Notify };
 
   enum class PacketResult {
@@ -120,7 +116,7 @@ public:
     bool m_timeout_modified;
   };
 
-  GDBRemoteCommunication(const char *comm_name, const char *listener_name);
+  GDBRemoteCommunication();
 
   ~GDBRemoteCommunication() override;
 
