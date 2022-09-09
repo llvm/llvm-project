@@ -125,15 +125,12 @@ struct SplitProfile2 final : public SplitStrategy {
     return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
   }
 
-  bool canOutline(const BinaryBasicBlock &BB) override {
-    return BB.getExecutionCount() == 0;
-  }
+  bool keepEmpty() override { return false; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
-      assert(BB->canOutline() &&
-             "Moving a block that is not outlineable to cold fragment");
-      BB->setFragmentNum(FragmentNum::cold());
+      if (BB->getExecutionCount() == 0)
+        BB->setFragmentNum(FragmentNum::cold());
     }
   }
 };
@@ -145,22 +142,23 @@ struct SplitRandom2 final : public SplitStrategy {
 
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
+  bool keepEmpty() override { return false; }
+
   void fragment(const BlockIt Start, const BlockIt End) override {
     using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
-    const DiffT NumOutlineableBlocks = End - Start;
+    const DiffT NumBlocks = End - Start;
+    assert(NumBlocks > 0 && "Cannot fragment empty function");
 
-    // We want to split at least one block unless there are no blocks that can
-    // be outlined
-    const auto MinimumSplit = std::min<DiffT>(NumOutlineableBlocks, 1);
-    std::uniform_int_distribution<DiffT> Dist(MinimumSplit,
-                                              NumOutlineableBlocks);
-    const DiffT NumColdBlocks = Dist(Gen);
-    for (BinaryBasicBlock *BB : llvm::make_range(End - NumColdBlocks, End))
+    // We want to split at least one block
+    const auto LastSplitPoint = std::max<DiffT>(NumBlocks - 1, 1);
+    std::uniform_int_distribution<DiffT> Dist(1, LastSplitPoint);
+    const DiffT SplitPoint = Dist(Gen);
+    for (BinaryBasicBlock *BB : llvm::make_range(Start + SplitPoint, End))
       BB->setFragmentNum(FragmentNum::cold());
 
     LLVM_DEBUG(dbgs() << formatv("BOLT-DEBUG: randomly chose last {0} (out of "
                                  "{1} possible) blocks to split\n",
-                                 NumColdBlocks, End - Start));
+                                 NumBlocks - SplitPoint, End - Start));
   }
 };
 
@@ -171,26 +169,33 @@ struct SplitRandomN final : public SplitStrategy {
 
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
+  bool keepEmpty() override { return false; }
+
   void fragment(const BlockIt Start, const BlockIt End) override {
     using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
-    const DiffT NumOutlineableBlocks = End - Start;
+    const DiffT NumBlocks = End - Start;
+    assert(NumBlocks > 0 && "Cannot fragment empty function");
 
-    // We want to split at least one fragment if possible
-    const auto MinimumSplits = std::min<DiffT>(NumOutlineableBlocks, 1);
-    std::uniform_int_distribution<DiffT> Dist(MinimumSplits,
-                                              NumOutlineableBlocks);
+    // With n blocks, there are n-1 places to split them.
+    const DiffT MaximumSplits = NumBlocks - 1;
+    // We want to generate at least two fragment if possible, but if there is
+    // only one block, no splits are possible.
+    const auto MinimumSplits = std::min<DiffT>(MaximumSplits, 1);
+    std::uniform_int_distribution<DiffT> Dist(MinimumSplits, MaximumSplits);
     // Choose how many splits to perform
     const DiffT NumSplits = Dist(Gen);
 
     // Draw split points from a lottery
-    SmallVector<unsigned, 0> Lottery(NumOutlineableBlocks);
-    std::iota(Lottery.begin(), Lottery.end(), 0u);
+    SmallVector<unsigned, 0> Lottery(MaximumSplits);
+    // Start lottery at 1, because there is no meaningful splitpoint before the
+    // first block.
+    std::iota(Lottery.begin(), Lottery.end(), 1u);
     std::shuffle(Lottery.begin(), Lottery.end(), Gen);
     Lottery.resize(NumSplits);
     llvm::sort(Lottery);
 
     // Add one past the end entry to lottery
-    Lottery.push_back(NumOutlineableBlocks);
+    Lottery.push_back(NumBlocks);
 
     unsigned LotteryIndex = 0;
     unsigned BBPos = 0;
@@ -211,13 +216,12 @@ struct SplitRandomN final : public SplitStrategy {
 struct SplitAll final : public SplitStrategy {
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
+  bool keepEmpty() override { return false; }
+
   void fragment(const BlockIt Start, const BlockIt End) override {
-    unsigned Fragment = 1;
-    for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
-      assert(BB->canOutline() &&
-             "Moving a block that is not outlineable to cold fragment");
+    unsigned Fragment = 0;
+    for (BinaryBasicBlock *const BB : llvm::make_range(Start, End))
       BB->setFragmentNum(FragmentNum(Fragment++));
-    }
   }
 };
 } // namespace
@@ -306,10 +310,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
   for (BinaryBasicBlock *const BB : NewLayout) {
     if (!BB->canOutline())
       continue;
-    if (!S.canOutline(*BB)) {
-      BB->setCanOutline(false);
-      continue;
-    }
+
     // Do not split extra entry points in aarch64. They can be referred by
     // using ADRs and when this happens, these blocks cannot be placed far
     // away due to the limited range in ADR instruction.
@@ -337,12 +338,22 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
     }
   }
 
+  BF.getLayout().updateLayoutIndices();
+  S.fragment(NewLayout.begin(), NewLayout.end());
+
+  // Make sure all non-outlineable blocks are in the main-fragment.
+  for (BinaryBasicBlock *const BB : NewLayout) {
+    if (!BB->canOutline())
+      BB->setFragmentNum(FragmentNum::main());
+  }
+
   if (opts::AggressiveSplitting) {
     // All blocks with 0 count that we can move go to the end of the function.
     // Even if they were natural to cluster formation and were seen in-between
     // hot basic blocks.
-    stable_sort(NewLayout, [&](BinaryBasicBlock *A, BinaryBasicBlock *B) {
-      return A->canOutline() < B->canOutline();
+    llvm::stable_sort(NewLayout, [&](const BinaryBasicBlock *const A,
+                                     const BinaryBasicBlock *const B) {
+      return A->getFragmentNum() < B->getFragmentNum();
     });
   } else if (BF.hasEHRanges() && !opts::SplitEH) {
     // Typically functions with exception handling have landing pads at the end.
@@ -354,20 +365,30 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
 
     std::stable_sort(FirstLP, NewLayout.end(),
                      [&](BinaryBasicBlock *A, BinaryBasicBlock *B) {
-                       return A->canOutline() < B->canOutline();
+                       return A->getFragmentNum() < B->getFragmentNum();
                      });
   }
 
-  // Identify the last block that must not be split into a fragment. Every block
-  // after this block can be split. Note that when the iterator points to the
-  // block that cannot be outlined, then reverse_iterator::base() points to the
-  // block after it.
-  const BinaryFunction::BasicBlockOrderType::reverse_iterator FirstOutlineable =
-      llvm::find_if(reverse(NewLayout), [](const BinaryBasicBlock *const BB) {
-        return !BB->canOutline();
-      });
+  // Make sure that fragments are increasing.
+  FragmentNum CurrentFragment = NewLayout.back()->getFragmentNum();
+  for (BinaryBasicBlock *const BB : reverse(NewLayout)) {
+    if (BB->getFragmentNum() > CurrentFragment)
+      BB->setFragmentNum(CurrentFragment);
+    CurrentFragment = BB->getFragmentNum();
+  }
 
-  S.fragment(FirstOutlineable.base(), NewLayout.end());
+  if (!S.keepEmpty()) {
+    FragmentNum CurrentFragment = FragmentNum::main();
+    FragmentNum NewFragment = FragmentNum::main();
+    for (BinaryBasicBlock *const BB : NewLayout) {
+      if (BB->getFragmentNum() > CurrentFragment) {
+        CurrentFragment = BB->getFragmentNum();
+        NewFragment = FragmentNum(NewFragment.get() + 1);
+      }
+      BB->setFragmentNum(NewFragment);
+    }
+  }
+
   BF.getLayout().update(NewLayout);
 
   // For shared objects, invoke instructions and corresponding landing pads

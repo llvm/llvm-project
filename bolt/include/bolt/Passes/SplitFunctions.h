@@ -40,7 +40,7 @@ public:
 
   virtual ~SplitStrategy() = default;
   virtual bool canSplit(const BinaryFunction &BF) = 0;
-  virtual bool canOutline(const BinaryBasicBlock &BB) { return true; }
+  virtual bool keepEmpty() = 0;
   virtual void fragment(const BlockIt Start, const BlockIt End) = 0;
 };
 
