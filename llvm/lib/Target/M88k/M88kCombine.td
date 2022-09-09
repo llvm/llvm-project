@@ -83,7 +83,7 @@ def subadd_from_icmpadd2 : GICombineRule<
 //  - Pred = unsigned <=
 //  - Pred = equal and either SrcB or SrcC being zero
 // into the instruction sequence
-//  Unused, Carry = G_USUBU SrcB', SrcC'
+//  Unused, Carry = G_USUBO SrcB', SrcC'
 //  Dst, UnusedCarry = G_UADDE SrcA, Zero, Carry
 // with SrcB' and SrcC' derived from SrcB and SrcC, inserting a zero constant
 // value if necessary.
@@ -94,11 +94,43 @@ def addsub_from_addicmp : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 // Combine
+//  Dst = G_SUB SrcA, (G_ZEXT (G_ICMP Pred, SrcB, SrcC)
+// with:
+//  - Pred = unsigned >
+//  - Pred = unsigned <
+//  - Pred = not equal and either SrcB or SrcC being zero
+// into the instruction sequence
+//  Unused, Carry = G_USUBO SrcB', SrcC'
+//  Dst, UnusedCarry = G_USUBE SrcA, Zero, Carry
+// with SrcB' and SrcC' derived from SrcB and SrcC, inserting a zero constant
+// value if necessary.
+def subsub_from_subicmp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SUB):$root,
+         [{ return matchSubSubFromSubICmp(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// Combine
+//  Dst = G_SUB SrcA, (G_ZEXT (G_ICMP Pred, SrcB, SrcC)
+// with:
+//  - Pred = signed >= and SrcC equals zero
+//  - Pred = signed <=  and SrcB equals zero
+// The returned MatchInfo transforms this sequence into
+//  Unused, Carry = G_UADDO SrcB', SrcC'
+//  Dst, UnusedCarry = G_USUBE SrcA, Zero, Carry
+// with SrcB' and SrcC' derived from SrcB and SrcC.
+def subadd_from_subicmp : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SUB):$root,
+         [{ return matchSubAddFromSubICmp(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// Combine
 //  Unused, CarryBit = G_USUBU SrcB, SrcC
 //  Carry = G_ZEXT CarryBit
 //  Dst = G_UADD SrcA, Carry
 // into the instruction sequence
-//  Unused, Carry = G_USUBU SrcB, SrcC
+//  Unused, Carry = G_USUBO SrcB, SrcC
 //  Dst, UnusedCarry = G_UADDE SrcA, Zero, Carry
 // inserting a zero constant value if necessary.
 def addsub_from_addsub : GICombineRule<
@@ -107,13 +139,14 @@ def addsub_from_addsub : GICombineRule<
          [{ return matchAddSubFromAddSub(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// All combiner rules turning a comparison into an operation with carry.
+def compare_to_carry : GICombineGroup<[addsub_from_addicmp, addsub_from_addsub,
+    subadd_from_subicmp, subsub_from_subicmp]>;
+
 // Post-legalization combines which are primarily optimizations.
 def M88kPostLegalizerCombinerHelper: GICombinerHelper<
   "M88kGenPostLegalizerCombinerHelper", [
-  //subadd_from_icmpadd1,
-  //subadd_from_icmpadd2,
-  addsub_from_addicmp,
-  addsub_from_addsub,
+  compare_to_carry,
   form_bitfield_extract, // Some rules require legalizer
   rotate_out_of_range // Required for left rotates, which produce a negative constant
   ]> {

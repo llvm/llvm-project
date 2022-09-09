@@ -84,11 +84,83 @@ declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
 ; Special case: return (a >= b) + c
 define i32 @f9(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: f9:
-; CHECK:       subu.co %r2, %r3, %r2
+; CHECK:       subu.co %r2, %r2, %r3
 ; CHECK-NEXT:  addu.ci %r2, %r4, %r5
 ; CHECK-NEXT:  jmp %r1
   %cmp = icmp uge i32 %a, %b
   %conv = zext i1 %cmp to i32
   %sum = add i32 %conv, %c
   ret i32 %sum
+}
+
+; Special case: return (a <= b) + c
+define i32 @f10(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: f10:
+; CHECK:       subu.co %r2, %r3, %r2
+; CHECK-NEXT:  addu.ci %r2, %r4, %r5
+; CHECK-NEXT:  jmp %r1
+  %cmp = icmp ule i32 %a, %b
+  %conv = zext i1 %cmp to i32
+  %sum = add i32 %conv, %c
+  ret i32 %sum
+}
+
+; Special case: return a - (b < c)
+define i32 @f11(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: f11:
+; CHECK:       subu.co %r3, %r3, %r4
+; CHECK-NEXT:  subu.ci %r2, %r2, %r5
+; CHECK-NEXT:  jmp %r1
+  %cmp = icmp ult i32 %b, %c
+  %conv = zext i1 %cmp to i32
+  %dif = sub i32 %a, %conv
+  ret i32 %dif
+}
+
+; Special case: return a - (b > c)
+define i32 @f12(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: f12:
+; CHECK:       subu.co %r3, %r4, %r3
+; CHECK-NEXT:  subu.ci %r2, %r2, %r5
+; CHECK-NEXT:  jmp %r1
+  %cmp = icmp ugt i32 %b, %c
+  %conv = zext i1 %cmp to i32
+  %dif = sub i32 %a, %conv
+  ret i32 %dif
+}
+
+; Special case: return a - (b != 0)
+define i32 @f13(i32 %a, i32 %b) {
+; CHECK-LABEL: f13:
+; CHECK:       subu.co %r3, %r4, %r3
+; CHECK-NEXT:  subu.ci %r2, %r2, %r4
+; CHECK-NEXT:  jmp %r1
+  %cmp = icmp ne i32 %b, 0
+  %conv = zext i1 %cmp to i32
+  %dif = sub i32 %a, %conv
+  ret i32 %dif
+}
+
+; Special case: return a - (b >= 0)
+define i32 @f14(i32 %a, i32 %b) {
+; CHECK-LABEL: f14:
+; CHECK:       addu.co %r3, %r3, %r3
+; CHECK-NEXT:  subu.ci %r2, %r2, %r4
+; CHECK-NEXT:  jmp %r1
+  %cmp = icmp sge i32 %b, 0
+  %conv = zext i1 %cmp to i32
+  %dif = sub i32 %a, %conv
+  ret i32 %dif
+}
+
+; Special case: return a - (0 <= b)
+define i32 @f15(i32 %a, i32 %b) {
+; CHECK-LABEL: f15:
+; CHECK:       addu.co %r3, %r3, %r3
+; CHECK-NEXT:  subu.ci %r2, %r2, %r4
+; CHECK-NEXT:  jmp %r1
+  %cmp = icmp sle i32 0, %b
+  %conv = zext i1 %cmp to i32
+  %dif = sub i32 %a, %conv
+  ret i32 %dif
 }

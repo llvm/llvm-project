@@ -180,7 +180,7 @@ bool matchAddCmpToSubAdd2(MachineInstr &MI, MachineOperand &Src1,
 //  - Pred = unsigned <=
 //  - Pred = equal and either SrcB or SrcC being zero
 // The returned MatchInfo transforms this sequence into
-//  Unused, Carry = G_USUBU SrcB', SrcC'
+//  Unused, Carry = G_USUBO SrcB', SrcC'
 //  Dst, UnusedCarry = G_UADDE SrcA, Zero, Carry
 // with SrcB' and SrcC' derived from SrcB and SrcC, inserting a zero constant
 // value if necessary.
@@ -202,23 +202,21 @@ bool matchAddSubFromAddICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   switch (Pred) {
   case CmpInst::ICMP_UGE:
-    std::swap(SrcRegB, SrcRegC);
     ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
     break;
   case CmpInst::ICMP_ULE:
+    std::swap(SrcRegB, SrcRegC);
     ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
     break;
-  case CmpInst::ICMP_EQ: {
-    int64_t Cst;
-    if (mi_match(SrcRegB, MRI, m_ICst(Cst)) && Cst == 0) {
+  case CmpInst::ICMP_EQ:
+    if (mi_match(SrcRegB, MRI, m_ZeroInt())) {
       ZeroReg = SrcRegB;
-    } else if (mi_match(SrcRegC, MRI, m_ICst(Cst)) && Cst == 0) {
+    } else if (mi_match(SrcRegC, MRI, m_ZeroInt())) {
       std::swap(SrcRegB, SrcRegC);
       ZeroReg = SrcRegB;
     } else
       return false;
     break;
-  }
   default:
     return false;
   }
@@ -232,6 +230,125 @@ bool matchAddSubFromAddICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
       B.buildConstant(ZeroReg, 0);
     B.buildInstr(TargetOpcode::G_USUBO, {UnusedReg, Carry}, {SrcRegB, SrcRegC});
     B.buildInstr(TargetOpcode::G_UADDE, {DstReg, UnusedCarry},
+                 {SrcRegA, ZeroReg, Carry});
+  };
+
+  return true;
+}
+
+// Match
+//  Dst = G_SUB SrcA, (G_ZEXT (G_ICMP Pred, SrcB, SrcC)
+// with:
+//  - Pred = unsigned >
+//  - Pred = unsigned <
+//  - Pred = not equal and either SrcB or SrcC being zero
+// The returned MatchInfo transforms this sequence into
+//  Unused, Carry = G_USUBO SrcB', SrcC'
+//  Dst, UnusedCarry = G_USUBE SrcA, Zero, Carry
+// with SrcB' and SrcC' derived from SrcB and SrcC, inserting a zero constant
+// value if necessary.
+bool matchSubSubFromSubICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SUB);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcRegA;
+  Register SrcRegB;
+  Register SrcRegC;
+  Register ZeroReg;
+  CmpInst::Predicate Pred;
+  if (!mi_match(
+          MI, MRI,
+          m_GSub(m_Reg(SrcRegA), m_GZExt(m_GICmp(m_Pred(Pred), m_Reg(SrcRegB),
+                                                 m_Reg(SrcRegC))))))
+    return false;
+
+  switch (Pred) {
+  case CmpInst::ICMP_UGT:
+    std::swap(SrcRegB, SrcRegC);
+    ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    break;
+  case CmpInst::ICMP_ULT:
+    ZeroReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    break;
+  case CmpInst::ICMP_NE:
+    if (mi_match(SrcRegB, MRI, m_ZeroInt())) {
+      ZeroReg = SrcRegB;
+    } else if (mi_match(SrcRegC, MRI, m_ZeroInt())) {
+      std::swap(SrcRegB, SrcRegC);
+      ZeroReg = SrcRegB;
+    } else
+      return false;
+    break;
+  default:
+    return false;
+  }
+
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
+  Register UnusedReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    if (Pred != CmpInst::ICMP_NE)
+      B.buildConstant(ZeroReg, 0);
+    B.buildInstr(TargetOpcode::G_USUBO, {UnusedReg, Carry}, {SrcRegB, SrcRegC});
+    B.buildInstr(TargetOpcode::G_USUBE, {DstReg, UnusedCarry},
+                 {SrcRegA, ZeroReg, Carry});
+  };
+
+  return true;
+}
+
+// Match
+//  Dst = G_SUB SrcA, (G_ZEXT (G_ICMP Pred, SrcB, SrcC)
+// with:
+//  - Pred = signed >= and SrcC equals zero
+//  - Pred = signed <=  and SrcB equals zero
+// The returned MatchInfo transforms this sequence into
+//  Unused, Carry = G_UADDO SrcB', SrcC'
+//  Dst, UnusedCarry = G_USUBE SrcA, Zero, Carry
+// with SrcB' and SrcC' derived from SrcB and SrcC.
+bool matchSubAddFromSubICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SUB);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcRegA;
+  Register SrcRegB;
+  Register SrcRegC;
+  Register ZeroReg;
+  CmpInst::Predicate Pred;
+  if (!mi_match(
+          MI, MRI,
+          m_GSub(m_Reg(SrcRegA), m_GZExt(m_GICmp(m_Pred(Pred), m_Reg(SrcRegB),
+                                                 m_Reg(SrcRegC))))))
+    return false;
+
+  switch (Pred) {
+  case CmpInst::ICMP_SGE:
+    if (mi_match(SrcRegC, MRI, m_ZeroInt())) {
+      ZeroReg = SrcRegC;
+    } else
+      return false;
+    break;
+  case CmpInst::ICMP_SLE:
+    if (mi_match(SrcRegB, MRI, m_ZeroInt())) {
+      std::swap(SrcRegB, SrcRegC);
+      ZeroReg = SrcRegC;
+    } else
+      return false;
+    break;
+  default:
+    return false;
+  }
+
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(1));
+  Register UnusedReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(1));
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    B.buildInstr(TargetOpcode::G_UADDO, {UnusedReg, Carry}, {SrcRegB, SrcRegB});
+    B.buildInstr(TargetOpcode::G_USUBE, {DstReg, UnusedCarry},
                  {SrcRegA, ZeroReg, Carry});
   };
 
