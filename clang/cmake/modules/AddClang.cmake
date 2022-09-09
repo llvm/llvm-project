@@ -70,7 +70,7 @@ macro(add_clang_library name)
         ${CLANG_SOURCE_DIR}/include/clang/${lib_path}/*.td
       )
       source_group("TableGen descriptions" FILES ${tds})
-      set_source_files_properties(${tds}} PROPERTIES HEADER_FILE_ONLY ON)
+      set_source_files_properties(${tds} PROPERTIES HEADER_FILE_ONLY ON)
 
       if(headers OR tds)
         set(srcs ${headers} ${tds})
