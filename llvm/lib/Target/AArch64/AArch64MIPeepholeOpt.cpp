@@ -32,6 +32,9 @@
 //    ORRWrs, we can remove the ORRWrs because the upper 32 bits of the source
 //    operand are set to zero.
 //
+// 5. %reg = INSERT_SUBREG %reg(tied-def 0), %subreg, subidx
+//     ==> %reg:subidx =  SUBREG_TO_REG 0, %subreg, subidx
+//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExpandImm.h"
@@ -97,6 +100,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   template <typename T>
   bool visitAND(unsigned Opc, MachineInstr &MI);
   bool visitORR(MachineInstr &MI);
+  bool visitINSERT(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -245,6 +249,50 @@ bool AArch64MIPeepholeOpt::visitORR(MachineInstr &MI) {
   MRI->replaceRegWith(DefReg, SrcReg);
   MRI->clearKillFlags(SrcReg);
   LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
+  MI.eraseFromParent();
+
+  return true;
+}
+
+bool AArch64MIPeepholeOpt::visitINSERT(MachineInstr &MI) {
+  // Check this INSERT_SUBREG comes from below zero-extend pattern.
+  //
+  // From %reg = INSERT_SUBREG %reg(tied-def 0), %subreg, subidx
+  // To   %reg:subidx =  SUBREG_TO_REG 0, %subreg, subidx
+  //
+  // We're assuming the first operand to INSERT_SUBREG is irrelevant because a
+  // COPY would destroy the upper part of the register anyway
+  if (!MI.isRegTiedToDefOperand(1))
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  const TargetRegisterClass *RC = MRI->getRegClass(DstReg);
+  MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(2).getReg());
+  if (!SrcMI)
+    return false;
+
+  // From https://developer.arm.com/documentation/dui0801/b/BABBGCAC
+  //
+  // When you use the 32-bit form of an instruction, the upper 32 bits of the
+  // source registers are ignored and the upper 32 bits of the destination
+  // register are set to zero.
+  //
+  // If AArch64's 32-bit form of instruction defines the source operand of
+  // zero-extend, we do not need the zero-extend. Let's check the MI's opcode is
+  // real AArch64 instruction and if it is not, do not process the opcode
+  // conservatively.
+  if ((SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END) ||
+      !AArch64::GPR64allRegClass.hasSubClassEq(RC))
+    return false;
+
+  // Build a SUBREG_TO_REG instruction
+  MachineInstr *SubregMI =
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+              TII->get(TargetOpcode::SUBREG_TO_REG), DstReg)
+          .addImm(0)
+          .add(MI.getOperand(2))
+          .add(MI.getOperand(3));
+  LLVM_DEBUG(dbgs() << MI << "  replace by:\n: " << *SubregMI << "\n");
   MI.eraseFromParent();
 
   return true;
@@ -492,6 +540,9 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       switch (MI.getOpcode()) {
       default:
+        break;
+      case AArch64::INSERT_SUBREG:
+        Changed = visitINSERT(MI);
         break;
       case AArch64::ANDWrr:
         Changed = visitAND<uint32_t>(AArch64::ANDWri, MI);
