@@ -73,7 +73,8 @@ public:
 
   llvm::ExceptionHandling
   GetExceptionModel(const llvm::opt::ArgList &Args) const override;
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   SanitizerMask getSupportedSanitizers() const override;
   unsigned GetDefaultDwarfVersion() const override;

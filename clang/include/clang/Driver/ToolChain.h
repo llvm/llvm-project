@@ -108,6 +108,12 @@ public:
     UNW_Libgcc
   };
 
+  enum class UnwindTableLevel {
+    None,
+    Synchronous,
+    Asynchronous,
+  };
+
   enum RTTIMode {
     RM_Enabled,
     RM_Disabled,
@@ -495,9 +501,9 @@ public:
   /// Returns true if gcov instrumentation (-fprofile-arcs or --coverage) is on.
   static bool needsGCovInstrumentation(const llvm::opt::ArgList &Args);
 
-  /// IsUnwindTablesDefault - Does this tool chain use -funwind-tables
-  /// by default.
-  virtual bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const;
+  /// How detailed should the unwind tables be by default.
+  virtual UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const;
 
   /// Test whether this toolchain supports outline atomics by default.
   virtual bool
