@@ -24,6 +24,10 @@ namespace mlir::arith {
 
 using namespace mlir;
 
+//===----------------------------------------------------------------------===//
+// Common Helper Functions
+//===----------------------------------------------------------------------===//
+
 // Returns N bottom and N top bits from `value`, where N = `newBitWidth`.
 // Treats `value` as a 2*N bits-wide integer.
 // The bottom bits are returned in the first pair element, while the top bits in
@@ -33,6 +37,96 @@ static std::pair<APInt, APInt> getHalves(const APInt &value,
   APInt low = value.extractBits(newBitWidth, 0);
   APInt high = value.extractBits(newBitWidth, newBitWidth);
   return {std::move(low), std::move(high)};
+}
+
+// Returns the type with the last (innermost) dimention reduced to x1.
+// Scalarizes 1D vector inputs to match how we extract/insert vector values,
+// e.g.:
+//   - vector<3x2xi16> --> vector<3x1xi16>
+//   - vector<2xi16>   --> i16
+static Type reduceInnermostDim(VectorType type) {
+  if (type.getShape().size() == 1)
+    return type.getElementType();
+
+  auto newShape = to_vector(type.getShape());
+  newShape.back() = 1;
+  return VectorType::get(newShape, type.getElementType());
+}
+
+// Extracts the `input` vector slice with elements at the last dimension offset
+// by `lastOffset`. Returns a value of vector type with the last dimension
+// reduced to x1 or fully scalarized, e.g.:
+//   - vector<3x2xi16> --> vector<3x1xi16>
+//   - vector<2xi16>   --> i16
+static Value extractLastDimSlice(ConversionPatternRewriter &rewriter,
+                                 Location loc, Value input,
+                                 int64_t lastOffset) {
+  llvm::ArrayRef<int64_t> shape = input.getType().cast<VectorType>().getShape();
+  assert(lastOffset < shape.back() && "Offset out of bounds");
+
+  // Scalarize the result in case of 1D vectors.
+  if (shape.size() == 1)
+    return rewriter.create<vector::ExtractOp>(loc, input, lastOffset);
+
+  SmallVector<int64_t> offsets(shape.size(), 0);
+  offsets.back() = lastOffset;
+  auto sizes = llvm::to_vector(shape);
+  sizes.back() = 1;
+  SmallVector<int64_t> strides(shape.size(), 1);
+
+  return rewriter.create<vector::ExtractStridedSliceOp>(loc, input, offsets,
+                                                        sizes, strides);
+}
+
+// Extracts two vector slices from the `input` whose type is `vector<...x2T>`,
+// with the first element at offset 0 and the second element at offset 1.
+static std::pair<Value, Value>
+extractLastDimHalves(ConversionPatternRewriter &rewriter, Location loc,
+                     Value input) {
+  return {extractLastDimSlice(rewriter, loc, input, 0),
+          extractLastDimSlice(rewriter, loc, input, 1)};
+}
+
+// Inserts the `source` vector slice into the `dest` vector at offset
+// `lastOffset` in the last dimension. `source` can be a scalar when `dest` is a
+// 1D vector.
+static Value insertLastDimSlice(ConversionPatternRewriter &rewriter,
+                                Location loc, Value source, Value dest,
+                                int64_t lastOffset) {
+  llvm::ArrayRef<int64_t> shape = dest.getType().cast<VectorType>().getShape();
+  assert(lastOffset < shape.back() && "Offset out of bounds");
+
+  // Handle scalar source.
+  if (source.getType().isa<IntegerType>())
+    return rewriter.create<vector::InsertOp>(loc, source, dest, lastOffset);
+
+  SmallVector<int64_t> offsets(shape.size(), 0);
+  offsets.back() = lastOffset;
+  SmallVector<int64_t> strides(shape.size(), 1);
+  return rewriter.create<vector::InsertStridedSliceOp>(loc, source, dest,
+                                                       offsets, strides);
+}
+
+// Constructs a new vector of type `resultType` by creating a series of
+// insertions of `resultComponents`, each at the next offset of the last vector
+// dimension.
+// When all `resultComponents` are scalars, the result type is `vector<NxT>`;
+// when `resultComponents` are `vector<...x1xT>`s, the result type is
+// `vector<...xNxT>`, where `N` is the number of `resultComponenets`.
+static Value constructResultVector(ConversionPatternRewriter &rewriter,
+                                   Location loc, VectorType resultType,
+                                   ValueRange resultComponents) {
+  llvm::ArrayRef<int64_t> resultShape = resultType.getShape();
+  assert(!resultShape.empty() && "Result expected to have dimentions");
+  assert(resultShape.back() == static_cast<int64_t>(resultComponents.size()) &&
+         "Wrong number of result components");
+
+  Value resultVec =
+      rewriter.create<arith::ConstantOp>(loc, rewriter.getZeroAttr(resultType));
+  for (auto [i, component] : llvm::enumerate(resultComponents))
+    resultVec = insertLastDimSlice(rewriter, loc, component, resultVec, i);
+
+  return resultVec;
 }
 
 namespace {
@@ -95,6 +189,45 @@ struct ConvertConstant final : OpConversionPattern<arith::ConstantOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertAddI
+//===----------------------------------------------------------------------===//
+
+struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::AddIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+    auto newTy = getTypeConverter()
+                     ->convertType(op.getType())
+                     .dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(loc, "expected scalar or vector type");
+
+    Type newElemTy = reduceInnermostDim(newTy);
+
+    auto [lhsElem0, lhsElem1] = extractLastDimHalves(rewriter, loc, lhs);
+    auto [rhsElem0, rhsElem1] = extractLastDimHalves(rewriter, loc, rhs);
+
+    auto lowSum = rewriter.create<arith::AddUICarryOp>(loc, lhsElem0, rhsElem0);
+    Value carryVal =
+        rewriter.create<arith::ExtUIOp>(loc, newElemTy, lowSum.getCarry());
+
+    Value high0 = rewriter.create<arith::AddIOp>(loc, carryVal, lhsElem1);
+    Value high = rewriter.create<arith::AddIOp>(loc, high0, rhsElem1);
+
+    Value resultVec =
+        constructResultVector(rewriter, loc, newTy, {lowSum.getSum(), high});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // Pass Definition
 //===----------------------------------------------------------------------===//
 
@@ -116,12 +249,12 @@ struct EmulateWideIntPass final
     target.addDynamicallyLegalOp<func::FuncOp>([&typeConverter](Operation *op) {
       return typeConverter.isLegal(cast<func::FuncOp>(op).getFunctionType());
     });
-    target.addDynamicallyLegalOp<
-        // `func.*` ops
-        func::CallOp, func::ReturnOp,
-        // `arith.*` ops
-        arith::ConstantOp>(
-        [&typeConverter](Operation *op) { return typeConverter.isLegal(op); });
+    auto opLegalCallback = [&typeConverter](Operation *op) {
+      return typeConverter.isLegal(op);
+    };
+    target.addDynamicallyLegalOp<func::CallOp, func::ReturnOp>(opLegalCallback);
+    target.addDynamicallyLegalDialect<arith::ArithmeticDialect,
+                                      vector::VectorDialect>(opLegalCallback);
 
     RewritePatternSet patterns(ctx);
     arith::populateWideIntEmulationPatterns(typeConverter, patterns);
@@ -201,5 +334,6 @@ void arith::populateWideIntEmulationPatterns(
   populateReturnOpTypeConversionPattern(patterns, typeConverter);
 
   // Populate `arith.*` conversion patterns.
-  patterns.add<ConvertConstant>(typeConverter, patterns.getContext());
+  patterns.add<ConvertConstant, ConvertAddI>(typeConverter,
+                                             patterns.getContext());
 }
