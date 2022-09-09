@@ -56,9 +56,9 @@ on support follow.
      ``Zba``          Supported
      ``Zbb``          Supported
      ``Zbc``          Supported
-     ``Zbkb``         Supported (`See note <#riscv-scalar-crypto-note1>`_)
+     ``Zbkb``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
      ``Zbkc``         Supported
-     ``Zbkx``         Supported (`See note <#riscv-scalar-crypto-note1>`_)
+     ``Zbkx``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
      ``Zbs``          Supported
      ``Zdinx``        Assembly Support
      ``Zfh``          Supported
@@ -71,22 +71,22 @@ on support follow.
      ``Zicboz``       Assembly Support
      ``Zihintpause``  Assembly Support
      ``Zkn``          Supported
-     ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`_)
-     ``Zkne``         Supported (`See note <#riscv-scalar-crypto-note2>`_)
-     ``Zknh``         Supported (`See note <#riscv-scalar-crypto-note2>`_)
-     ``Zksed``        Supported (`See note <#riscv-scalar-crypto-note2>`_)
-     ``Zksh``         Supported (`See note <#riscv-scalar-crypto-note2>`_)
+     ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zkne``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zknh``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zksed``        Supported (`See note <#riscv-scalar-crypto-note2>`__)
+     ``Zksh``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
      ``Zk``           Supported
      ``Zkr``          Supported
      ``Zks``          Supported
      ``Zkt``          Supported
      ``Zmmul``        Supported
-     ``Zve32x``       (`Partially <#riscv-vlen-32-note>`_) Supported
-     ``Zve32f``       (`Partially <#riscv-vlen-32-note>`_) Supported
+     ``Zve32x``       (`Partially <#riscv-vlen-32-note>`__) Supported
+     ``Zve32f``       (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve64x``       Supported
      ``Zve64f``       Supported
      ``Zve64d``       Supported
-     ``Zvl32b``       (`Partially <#riscv-vlen-32-note>`_) Supported
+     ``Zvl32b``       (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``       Supported
      ``Zvl128b``      Supported
      ``Zvl256b``      Supported
