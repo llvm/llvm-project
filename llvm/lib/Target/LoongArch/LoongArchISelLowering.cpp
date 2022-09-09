@@ -80,6 +80,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTLZ, MVT::i32, Custom);
     if (Subtarget.hasBasicF() && !Subtarget.hasBasicD())
       setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
+    if (Subtarget.hasBasicF())
+      setOperationAction(ISD::FRINT, MVT::f32, Legal);
+    if (Subtarget.hasBasicD())
+      setOperationAction(ISD::FRINT, MVT::f64, Legal);
   }
 
   // LA32 does not have REVB.2W and REVB.D due to the 64-bit operands, and
