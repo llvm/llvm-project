@@ -379,6 +379,17 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       error("unknown parameter: -m" + s);
   }
 
+  if (args.hasFlag(OPT_guard_cf, OPT_no_guard_cf, false)) {
+    if (args.hasFlag(OPT_guard_longjmp, OPT_no_guard_longjmp, true))
+      add("-guard:cf,longjmp");
+    else
+      add("-guard:cf,nolongjmp");
+  } else if (args.hasFlag(OPT_guard_longjmp, OPT_no_guard_longjmp, false)) {
+    auto *a = args.getLastArg(OPT_guard_longjmp);
+    warn("parameter " + a->getSpelling() +
+         " only takes effect when used with --guard-cf");
+  }
+
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
 
