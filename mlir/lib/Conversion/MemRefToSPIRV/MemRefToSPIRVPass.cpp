@@ -39,7 +39,7 @@ void ConvertMemRefToSPIRVPass::runOnOperation() {
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
-  SPIRVTypeConverter::Options options;
+  SPIRVConversionOptions options;
   options.boolNumBits = this->boolNumBits;
   SPIRVTypeConverter typeConverter(targetAttr, options);
 

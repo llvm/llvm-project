@@ -1126,7 +1126,8 @@ TEST(CommandLineTest, ReadConfigFile) {
 
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
-  bool Result = llvm::cl::readConfigFile(ConfigFile.path(), Saver, Argv);
+  bool Result = llvm::cl::readConfigFile(ConfigFile.path(), Saver, Argv,
+		                         *llvm::vfs::getRealFileSystem());
 
   EXPECT_TRUE(Result);
   EXPECT_EQ(Argv.size(), 13U);

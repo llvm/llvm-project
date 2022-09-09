@@ -181,9 +181,11 @@ namespace {
 struct UnrollTransferReadPattern
     : public OpRewritePattern<vector::TransferReadOp> {
   UnrollTransferReadPattern(MLIRContext *context,
-                            const vector::UnrollVectorOptions &options)
-      : OpRewritePattern<vector::TransferReadOp>(context, /*benefit=*/1),
+                            const vector::UnrollVectorOptions &options,
+                            PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransferReadOp>(context, benefit),
         options(options) {}
+
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
@@ -236,9 +238,11 @@ private:
 struct UnrollTransferWritePattern
     : public OpRewritePattern<vector::TransferWriteOp> {
   UnrollTransferWritePattern(MLIRContext *context,
-                             const vector::UnrollVectorOptions &options)
-      : OpRewritePattern<vector::TransferWriteOp>(context, /*benefit=*/1),
+                             const vector::UnrollVectorOptions &options,
+                             PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransferWriteOp>(context, benefit),
         options(options) {}
+
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
@@ -306,8 +310,9 @@ struct OffsetMapInfo {
 struct UnrollContractionPattern
     : public OpRewritePattern<vector::ContractionOp> {
   UnrollContractionPattern(MLIRContext *context,
-                           const vector::UnrollVectorOptions &options)
-      : OpRewritePattern<vector::ContractionOp>(context, /*benefit=*/1),
+                           const vector::UnrollVectorOptions &options,
+                           PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::ContractionOp>(context, benefit),
         options(options) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
@@ -408,8 +413,9 @@ private:
 struct UnrollMultiReductionPattern
     : public OpRewritePattern<vector::MultiDimReductionOp> {
   UnrollMultiReductionPattern(MLIRContext *context,
-                              const vector::UnrollVectorOptions &options)
-      : OpRewritePattern<vector::MultiDimReductionOp>(context, /*benefit=*/1),
+                              const vector::UnrollVectorOptions &options,
+                              PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::MultiDimReductionOp>(context, benefit),
         options(options) {}
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reductionOp,
@@ -481,9 +487,11 @@ private:
 
 struct UnrollElementwisePattern : public RewritePattern {
   UnrollElementwisePattern(MLIRContext *context,
-                           const vector::UnrollVectorOptions &options)
-      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context),
+                           const vector::UnrollVectorOptions &options,
+                           PatternBenefit benefit = 1)
+      : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
         options(options) {}
+
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
@@ -539,7 +547,8 @@ private:
 /// %db = vector.extract_map %a[%id] : vector<32xf32> to vector<1xf32>
 /// %dv = arith.addf %da, %db : vector<1xf32>
 struct PointwiseExtractPattern : public OpRewritePattern<vector::ExtractMapOp> {
-  using OpRewritePattern<vector::ExtractMapOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
+
   LogicalResult matchAndRewrite(vector::ExtractMapOp extract,
                                 PatternRewriter &rewriter) const override {
     Operation *definedOp = extract.getVector().getDefiningOp();
@@ -570,7 +579,8 @@ struct PointwiseExtractPattern : public OpRewritePattern<vector::ExtractMapOp> {
 /// Canonicalize an extract_map using the result of a contract operation.
 /// This propagate the extract_map to operands.
 struct ContractExtractPattern : public OpRewritePattern<vector::ExtractMapOp> {
-  using OpRewritePattern<vector::ExtractMapOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
+
   LogicalResult matchAndRewrite(vector::ExtractMapOp extract,
                                 PatternRewriter &rewriter) const override {
     Operation *definedOp = extract.getVector().getDefiningOp();
@@ -631,8 +641,8 @@ struct ContractExtractPattern : public OpRewritePattern<vector::ExtractMapOp> {
 /// ```
 struct TransferReadExtractPattern
     : public OpRewritePattern<vector::TransferReadOp> {
-  TransferReadExtractPattern(MLIRContext *context)
-      : OpRewritePattern<vector::TransferReadOp>(context) {}
+  using OpRewritePattern::OpRewritePattern;
+
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
@@ -682,8 +692,8 @@ struct TransferReadExtractPattern
 
 struct TransferWriteInsertPattern
     : public OpRewritePattern<vector::TransferWriteOp> {
-  TransferWriteInsertPattern(MLIRContext *context)
-      : OpRewritePattern<vector::TransferWriteOp>(context) {}
+  using OpRewritePattern::OpRewritePattern;
+
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
@@ -726,8 +736,9 @@ struct TransferWriteInsertPattern
 
 struct UnrollReductionPattern : public OpRewritePattern<vector::ReductionOp> {
   UnrollReductionPattern(MLIRContext *context,
-                         const vector::UnrollVectorOptions &options)
-      : OpRewritePattern<vector::ReductionOp>(context, /*benefit=*/1),
+                         const vector::UnrollVectorOptions &options,
+                         PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::ReductionOp>(context, benefit),
         options(options) {}
 
   LogicalResult matchAndRewrite(vector::ReductionOp reductionOp,
@@ -772,9 +783,11 @@ private:
 
 struct UnrollTranposePattern : public OpRewritePattern<vector::TransposeOp> {
   UnrollTranposePattern(MLIRContext *context,
-                        const vector::UnrollVectorOptions &options)
-      : OpRewritePattern<vector::TransposeOp>(context, /*benefit=*/1),
+                        const vector::UnrollVectorOptions &options,
+                        PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransposeOp>(context, benefit),
         options(options) {}
+
   LogicalResult matchAndRewrite(vector::TransposeOp tranposeOp,
                                 PatternRewriter &rewriter) const override {
     if (tranposeOp.getResultType().getRank() == 0)
@@ -821,16 +834,17 @@ private:
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
-    RewritePatternSet &patterns, const UnrollVectorOptions &options) {
+    RewritePatternSet &patterns, const UnrollVectorOptions &options,
+    PatternBenefit benefit) {
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
                UnrollContractionPattern, UnrollElementwisePattern,
                UnrollReductionPattern, UnrollMultiReductionPattern,
-               UnrollTranposePattern>(patterns.getContext(), options);
+               UnrollTranposePattern>(patterns.getContext(), options, benefit);
 }
 
 void mlir::vector::populatePropagateVectorDistributionPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<PointwiseExtractPattern, ContractExtractPattern,
                TransferReadExtractPattern, TransferWriteInsertPattern>(
-      patterns.getContext());
+      patterns.getContext(), benefit);
 }

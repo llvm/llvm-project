@@ -202,7 +202,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 
 } // namespace
 
-static const unsigned StaticDiagInfoSize = llvm::array_lengthof(StaticDiagInfo);
+static const unsigned StaticDiagInfoSize = std::size(StaticDiagInfo);
 
 /// GetDiagInfo - Return the StaticDiagInfoRec entry for the specified DiagID,
 /// or null if the ID is invalid.
@@ -317,7 +317,7 @@ static const StaticDiagCategoryRec CategoryNameTable[] = {
 
 /// getNumberOfCategories - Return the number of categories
 unsigned DiagnosticIDs::getNumberOfCategories() {
-  return llvm::array_lengthof(CategoryNameTable) - 1;
+  return std::size(CategoryNameTable) - 1;
 }
 
 /// getCategoryNameFromID - Given a category ID, return the name of the

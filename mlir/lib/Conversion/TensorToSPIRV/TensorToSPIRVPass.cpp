@@ -37,7 +37,7 @@ class ConvertTensorToSPIRVPass
     std::unique_ptr<ConversionTarget> target =
         SPIRVConversionTarget::get(targetAttr);
 
-    SPIRVTypeConverter::Options options;
+    SPIRVConversionOptions options;
     options.emulateNon32BitScalarTypes = this->emulateNon32BitScalarTypes;
     SPIRVTypeConverter typeConverter(targetAttr, options);
 

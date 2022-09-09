@@ -110,7 +110,19 @@ size_t InputSectionBase::getSize() const {
   return rawData.size() - bytesDropped;
 }
 
-void InputSectionBase::uncompress() const {
+template <class ELFT>
+static void decompressAux(const InputSectionBase &sec, uint8_t *out,
+                          size_t size) {
+  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(sec.rawData.data());
+  auto compressed = sec.rawData.slice(sizeof(typename ELFT::Chdr));
+  if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
+                    ? compression::zlib::uncompress(compressed, out, size)
+                    : compression::zstd::uncompress(compressed, out, size))
+    fatal(toString(&sec) +
+          ": decompress failed: " + llvm::toString(std::move(e)));
+}
+
+void InputSectionBase::decompress() const {
   size_t size = uncompressedSize;
   uint8_t *uncompressedBuf;
   {
@@ -119,9 +131,7 @@ void InputSectionBase::uncompress() const {
     uncompressedBuf = bAlloc().Allocate<uint8_t>(size);
   }
 
-  if (Error e = compression::zlib::uncompress(rawData, uncompressedBuf, size))
-    fatal(toString(this) +
-          ": uncompress failed: " + llvm::toString(std::move(e)));
+  invokeELFT(decompressAux, *this, uncompressedBuf, size);
   rawData = makeArrayRef(uncompressedBuf, size);
   uncompressedSize = -1;
 }
@@ -212,6 +222,10 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
     if (!compression::zlib::isAvailable())
       error(toString(this) + " is compressed with ELFCOMPRESS_ZLIB, but lld is "
                              "not built with zlib support");
+  } else if (hdr->ch_type == ELFCOMPRESS_ZSTD) {
+    if (!compression::zstd::isAvailable())
+      error(toString(this) + " is compressed with ELFCOMPRESS_ZSTD, but lld is "
+                             "not built with zstd support");
   } else {
     error(toString(this) + ": unsupported compression type (" +
           Twine(hdr->ch_type) + ")");
@@ -220,7 +234,6 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
 
   uncompressedSize = hdr->ch_size;
   alignment = std::max<uint32_t>(hdr->ch_addralign, 1);
-  rawData = rawData.slice(sizeof(*hdr));
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
@@ -1219,10 +1232,14 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
   if (uncompressedSize >= 0) {
+    auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(rawData.data());
+    auto compressed = rawData.slice(sizeof(typename ELFT::Chdr));
     size_t size = uncompressedSize;
-    if (Error e = compression::zlib::uncompress(rawData, buf, size))
+    if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
+                      ? compression::zlib::uncompress(compressed, buf, size)
+                      : compression::zstd::uncompress(compressed, buf, size))
       fatal(toString(this) +
-            ": uncompress failed: " + llvm::toString(std::move(e)));
+            ": decompress failed: " + llvm::toString(std::move(e)));
     uint8_t *bufEnd = buf + size;
     relocate<ELFT>(buf, bufEnd);
     return;

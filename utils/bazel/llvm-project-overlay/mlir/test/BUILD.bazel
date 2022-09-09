@@ -620,6 +620,7 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         "//mlir:ArithmeticDialect",
+        "//mlir:LinalgDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:TensorDialect",

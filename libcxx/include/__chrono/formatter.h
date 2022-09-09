@@ -55,7 +55,7 @@ namespace __formatter {
 template <class _CharT, class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
     const _Tp& __value, basic_stringstream<_CharT>& __sstr, basic_string_view<_CharT> __chrono_specs) {
-  tm __t              = std::__convert_to_tm(__value);
+  tm __t              = std::__convert_to_tm<tm>(__value);
   const auto& __facet = std::use_facet<time_put<_CharT>>(__sstr.getloc());
   for (auto __it = __chrono_specs.begin(); __it != __chrono_specs.end(); ++__it) {
     if (*__it == _CharT('%')) {

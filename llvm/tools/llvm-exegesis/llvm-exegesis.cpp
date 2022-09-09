@@ -298,9 +298,10 @@ void benchmarkMain() {
   if (exegesis::pfm::pfmInitialize())
     ExitWithError("cannot initialize libpfm");
 
-  InitializeNativeTarget();
-  InitializeNativeTargetAsmPrinter();
-  InitializeNativeTargetAsmParser();
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllAsmParsers();
   InitializeNativeExegesisTarget();
 
   const LLVMState State(CpuName);

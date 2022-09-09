@@ -8197,9 +8197,12 @@ VPRecipeBase *VPRecipeBuilder::tryToOptimizeInductionPHI(
                                        *PSE.getSE(), *OrigLoop, Range);
 
   // Check if this is pointer induction. If so, build the recipe for it.
-  if (auto *II = Legal->getPointerInductionDescriptor(Phi))
-    return new VPWidenPointerInductionRecipe(Phi, Operands[0], *II,
-                                             *PSE.getSE());
+  if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
+    VPValue *Step = vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep(),
+                                                           *PSE.getSE());
+    assert(isa<SCEVConstant>(II->getStep()));
+    return new VPWidenPointerInductionRecipe(Phi, Operands[0], Step, *II);
+  }
   return nullptr;
 }
 
@@ -9437,8 +9440,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
             PartStart, ConstantInt::get(PtrInd->getType(), Lane));
         Value *GlobalIdx = State.Builder.CreateAdd(PtrInd, Idx);
 
-        Value *Step = CreateStepValue(IndDesc.getStep(), SE,
-                                      State.CFG.PrevBB->getTerminator());
+        Value *Step = State.get(getOperand(1), VPIteration(0, Part));
         Value *SclrGep = emitTransformedIndex(
             State.Builder, GlobalIdx, IndDesc.getStartValue(), Step, IndDesc);
         SclrGep->setName("next.gep");
@@ -9462,12 +9464,9 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
 
   // A pointer induction, performed by using a gep
-  const DataLayout &DL = NewPointerPhi->getModule()->getDataLayout();
   Instruction *InductionLoc = &*State.Builder.GetInsertPoint();
 
-  const SCEV *ScalarStep = IndDesc.getStep();
-  SCEVExpander Exp(SE, DL, "induction");
-  Value *ScalarStepValue = Exp.expandCodeFor(ScalarStep, PhiType, InductionLoc);
+  Value *ScalarStepValue = State.get(getOperand(1), VPIteration(0, 0));
   Value *RuntimeVF = getRuntimeVF(State.Builder, PhiType, State.VF);
   Value *NumUnrolledElems =
       State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, State.UF));
@@ -9495,6 +9494,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
     StartOffset = State.Builder.CreateAdd(
         StartOffset, State.Builder.CreateStepVector(VecPhiType));
 
+    assert(ScalarStepValue == State.get(getOperand(1), VPIteration(0, Part)) &&
+           "scalar step must be the same across all parts");
     Value *GEP = State.Builder.CreateGEP(
         IndDesc.getElementType(), NewPointerPhi,
         State.Builder.CreateMul(
@@ -9620,9 +9621,10 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
+  Instruction *UI = getUnderlyingInstr();
   if (State.Instance) { // Generate a single instance.
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-    State.ILV->scalarizeInstruction(getUnderlyingInstr(), this, *State.Instance,
+    State.ILV->scalarizeInstruction(UI, this, *State.Instance,
                                     IsPredicated, State);
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
@@ -9630,7 +9632,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       if (State.Instance->Lane.isFirstLane()) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
         Value *Poison = PoisonValue::get(
-            VectorType::get(getUnderlyingValue()->getType(), State.VF));
+            VectorType::get(UI->getType(), State.VF));
         State.set(this, Poison, State.Instance->Part);
       }
       State.ILV->packScalarIntoVectorValue(this, *State.Instance, State);
@@ -9641,14 +9643,15 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   if (IsUniform) {
     // If the recipe is uniform across all parts (instead of just per VF), only
     // generate a single instance.
-    Instruction *UI = getUnderlyingInstr();
-    if (isa<LoadInst>(UI) &&
+    if ((isa<LoadInst>(UI) || isa<StoreInst>(UI)) &&
         all_of(operands(), [](VPValue *Op) { return !Op->getDef(); })) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(0, 0), IsPredicated,
                                       State);
-      for (unsigned Part = 1; Part < State.UF; ++Part)
-        State.set(this, State.get(this, VPIteration(0, 0)),
-                  VPIteration(Part, 0));
+      if (!UI->getType()->isVoidTy()) {
+        for (unsigned Part = 1; Part < State.UF; ++Part)
+          State.set(this, State.get(this, VPIteration(0, 0)),
+                    VPIteration(Part, 0));
+      }
       return;
     }
 
@@ -9665,9 +9668,8 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   const unsigned EndLane = State.VF.getKnownMinValue();
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-      State.ILV->scalarizeInstruction(getUnderlyingInstr(), this,
-                                      VPIteration(Part, Lane), IsPredicated,
-                                      State);
+      State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane),
+                                      IsPredicated, State);
 }
 
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {

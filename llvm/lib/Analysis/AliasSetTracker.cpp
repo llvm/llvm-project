@@ -228,7 +228,7 @@ AliasResult AliasSet::aliasesPointer(const Value *Ptr, LocationSize Size,
 }
 
 bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
-                                  AliasAnalysis &AA) const {
+                                  BatchAAResults &AA) const {
 
   if (AliasAny)
     return true;
@@ -299,9 +299,10 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
 }
 
 AliasSet *AliasSetTracker::findAliasSetForUnknownInst(Instruction *Inst) {
+  BatchAAResults BatchAA(AA);
   AliasSet *FoundSet = nullptr;
   for (AliasSet &AS : llvm::make_early_inc_range(*this)) {
-    if (AS.Forward || !AS.aliasesUnknownInst(Inst, AA))
+    if (AS.Forward || !AS.aliasesUnknownInst(Inst, BatchAA))
       continue;
     if (!FoundSet) {
       // If this is the first alias set ptr can go into, remember it.

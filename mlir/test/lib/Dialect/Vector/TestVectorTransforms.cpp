@@ -160,7 +160,7 @@ struct TestVectorContractionLowering
       VectorContractLowering lowering = VectorContractLowering::OuterProduct;
       VectorTransformsOptions options{lowering};
       patterns.add<ContractionOpToOuterProductOpLowering>(
-          options, &getContext(), [](vector::ContractionOp op) {
+          options, &getContext(), /*benefit=*/1, [](vector::ContractionOp op) {
             // Only lowers vector.contract where the lhs as a type vector<MxNx?>
             // where M is not 4.
             if (op.getRhsType().getShape()[0] == 4)

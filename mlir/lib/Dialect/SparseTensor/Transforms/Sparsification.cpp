@@ -762,7 +762,7 @@ static void genInsertionStore(CodeGen &codegen, OpBuilder &builder,
   // Direct insertion in lexicographic index order.
   if (!codegen.expValues) {
     builder.create<memref::StoreOp>(loc, rhs, codegen.lexVal);
-    builder.create<LexInsertOp>(loc, t->get(), codegen.lexIdx, codegen.lexVal);
+    builder.create<InsertOp>(loc, t->get(), codegen.lexIdx, codegen.lexVal);
     return;
   }
   // Generates insertion code along expanded access pattern.

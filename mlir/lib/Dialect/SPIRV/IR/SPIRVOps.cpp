@@ -260,7 +260,8 @@ static ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
                                                 kMemoryAccessAttrName))
     return failure();
 
-  if (spirv::bitEnumContains(memoryAccessAttr, spirv::MemoryAccess::Aligned)) {
+  if (spirv::bitEnumContainsAll(memoryAccessAttr,
+                                spirv::MemoryAccess::Aligned)) {
     // Parse integer attribute for alignment.
     Attribute alignmentAttr;
     Type i32Type = parser.getBuilder().getIntegerType(32);
@@ -290,7 +291,8 @@ static ParseResult parseSourceMemoryAccessAttributes(OpAsmParser &parser,
                                                 kSourceMemoryAccessAttrName))
     return failure();
 
-  if (spirv::bitEnumContains(memoryAccessAttr, spirv::MemoryAccess::Aligned)) {
+  if (spirv::bitEnumContainsAll(memoryAccessAttr,
+                                spirv::MemoryAccess::Aligned)) {
     // Parse integer attribute for alignment.
     Attribute alignmentAttr;
     Type i32Type = parser.getBuilder().getIntegerType(32);
@@ -316,7 +318,7 @@ static void printMemoryAccessAttribute(
 
     printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
-    if (spirv::bitEnumContains(*memAccess, spirv::MemoryAccess::Aligned)) {
+    if (spirv::bitEnumContainsAll(*memAccess, spirv::MemoryAccess::Aligned)) {
       // Print integer alignment attribute.
       if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
                                                : memoryOp.alignment())) {
@@ -349,7 +351,7 @@ static void printSourceMemoryAccessAttribute(
 
     printer << " [\"" << stringifyMemoryAccess(*memAccess) << "\"";
 
-    if (spirv::bitEnumContains(*memAccess, spirv::MemoryAccess::Aligned)) {
+    if (spirv::bitEnumContainsAll(*memAccess, spirv::MemoryAccess::Aligned)) {
       // Print integer alignment attribute.
       if (auto alignment = (alignmentAttrValue ? alignmentAttrValue
                                                : memoryOp.alignment())) {
@@ -407,7 +409,7 @@ static LogicalResult verifyImageOperands(Op imageOp,
       spirv::ImageOperands::MakeTexelVisible |
       spirv::ImageOperands::SignExtend | spirv::ImageOperands::ZeroExtend;
 
-  if (spirv::bitEnumContains(attr.getValue(), noSupportOperands))
+  if (spirv::bitEnumContainsAll(attr.getValue(), noSupportOperands))
     llvm_unreachable("unimplemented operands of Image Operands");
 
   return success();
@@ -491,8 +493,8 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
            << memAccessAttr;
   }
 
-  if (spirv::bitEnumContains(memAccess.getValue(),
-                             spirv::MemoryAccess::Aligned)) {
+  if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                spirv::MemoryAccess::Aligned)) {
     if (!op->getAttr(kAlignmentAttrName)) {
       return memoryOp.emitOpError("missing alignment value");
     }
@@ -535,8 +537,8 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
            << memAccess;
   }
 
-  if (spirv::bitEnumContains(memAccess.getValue(),
-                             spirv::MemoryAccess::Aligned)) {
+  if (spirv::bitEnumContainsAll(memAccess.getValue(),
+                                spirv::MemoryAccess::Aligned)) {
     if (!op->getAttr(kSourceAlignmentAttrName)) {
       return memoryOp.emitOpError("missing alignment value");
     }

@@ -286,3 +286,53 @@ func.func @sparse_alloc_3d() -> tensor<10x20x30xf64, #Dense3D> {
   %1 = sparse_tensor.load %0 : tensor<10x20x30xf64, #Dense3D>
   return %1 : tensor<10x20x30xf64, #Dense3D>
 }
+
+//   CHECK-LABEL: func.func @sparse_expansion1()
+//         CHECK: %[[A:.*]] = memref.alloc() : memref<8xf64>
+//         CHECK: %[[B:.*]] = memref.alloc() : memref<8xi1>
+//         CHECK: %[[C:.*]] = memref.alloc() : memref<8xindex>
+//         CHECK: %[[D:.*]] = memref.cast %[[C]] : memref<8xindex> to memref<?xindex>
+//     CHECK-DAG: linalg.fill ins(%{{.*}}  : f64) outs(%[[A]] : memref<8xf64>)
+//     CHECK-DAG: linalg.fill ins(%{{.*}}  : i1) outs(%[[B]] : memref<8xi1>)
+//         CHECK: return %[[D]] : memref<?xindex>
+func.func @sparse_expansion1() -> memref<?xindex> {
+  %0 = bufferization.alloc_tensor() : tensor<4x8xf64, #CSR>
+  %values, %filled, %added, %count = sparse_tensor.expand %0
+    : tensor<4x8xf64, #CSR> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return %added : memref<?xindex>
+}
+
+//   CHECK-LABEL: func.func @sparse_expansion2()
+//         CHECK: %[[A:.*]] = memref.alloc() : memref<4xf64>
+//         CHECK: %[[B:.*]] = memref.alloc() : memref<4xi1>
+//         CHECK: %[[C:.*]] = memref.alloc() : memref<4xindex>
+//         CHECK: %[[D:.*]] = memref.cast %[[C]] : memref<4xindex> to memref<?xindex>
+//     CHECK-DAG: linalg.fill ins(%{{.*}}  : f64) outs(%[[A]] : memref<4xf64>)
+//     CHECK-DAG: linalg.fill ins(%{{.*}}  : i1) outs(%[[B]] : memref<4xi1>)
+//         CHECK: return %[[D]] : memref<?xindex>
+func.func @sparse_expansion2() -> memref<?xindex> {
+  %0 = bufferization.alloc_tensor() : tensor<4x8xf64, #CSC>
+  %values, %filled, %added, %count = sparse_tensor.expand %0
+    : tensor<4x8xf64, #CSC> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return %added : memref<?xindex>
+}
+
+//   CHECK-LABEL: func.func @sparse_expansion3(
+//    CHECK-SAME: %[[D0:.*]]: index,
+//    CHECK-SAME: %{{.*}}: index) -> memref<?xindex> {
+//         CHECK: %[[C1:.*]] = arith.constant 1 : index
+//         CHECK: %[[S0:.*]] = memref.alloc() : memref<2xindex>
+//         CHECK: memref.store %[[D0]], %[[S0]]{{\[}}%[[C1]]] : memref<2xindex>
+//         CHECK: %[[D1:.*]] = memref.load %[[S0]]{{\[}}%[[C1]]] : memref<2xindex>
+//         CHECK: %[[V:.*]] = memref.alloc(%[[D1]]) : memref<?xf64>
+//         CHECK: %[[B:.*]] = memref.alloc(%[[D1]]) : memref<?xi1>
+//         CHECK: %[[D:.*]] = memref.alloc(%[[D1]]) : memref<?xindex>
+//         CHECK: linalg.fill ins(%{{.*}} : f64) outs(%[[V]] : memref<?xf64>)
+//         CHECK: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<?xi1>)
+//         CHECK: return %[[D]] : memref<?xindex>
+func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
+  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #CSC>
+  %values, %filled, %added, %count = sparse_tensor.expand %0
+    : tensor<?x?xf64, #CSC> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+  return %added : memref<?xindex>
+}

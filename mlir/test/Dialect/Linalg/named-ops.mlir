@@ -243,6 +243,38 @@ func.func @conv_1d_nwc_wcf(%input: memref<?x?x?xf32>, %filter: memref<?x?x?xf32>
 
 // -----
 
+// CHECK-LABEL: func @conv_1d_ncw_fcw
+func.func @conv_1d_ncw_fcw(%input: tensor<?x?x?xf32>, %filter: tensor<?x?x?xf32>, %init: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
+  // CHECK:      %{{.+}} = linalg.conv_1d_ncw_fcw
+  // CHECK-SAME:   dilations = dense<1> : tensor<1xi64>
+  // CHECK-SAME:   strides = dense<1> : tensor<1xi64>
+  // CHECK-SAME:   ins(%{{.+}}, %{{.+}} : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+  // CHECK-SAME:   outs(%{{.+}} : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  %0 = linalg.conv_1d_ncw_fcw {dilations = dense<1> : tensor<1xi64>,
+                                            strides = dense<1> : tensor<1xi64>}
+     ins (%input, %filter: tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+    outs (%init: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @conv_1d_ncw_fcw
+func.func @conv_1d_ncw_fcw(%input: memref<?x?x?xf32>, %filter: memref<?x?x?xf32>, %output: memref<?x?x?xf32>) {
+  // CHECK:      linalg.conv_1d_ncw_fcw
+  // CHECK-SAME:   dilations = dense<1> : tensor<1xi64>
+  // CHECK-SAME:   strides = dense<1> : tensor<1xi64>
+  // CHECK-SAME:   ins(%{{.+}}, %{{.+}} : memref<?x?x?xf32>, memref<?x?x?xf32>)
+  // CHECK-SAME:   outs(%{{.+}} : memref<?x?x?xf32>)
+  linalg.conv_1d_ncw_fcw {dilations = dense<1> : tensor<1xi64>,
+                                       strides = dense<1> : tensor<1xi64>}
+     ins (%input, %filter: memref<?x?x?xf32>, memref<?x?x?xf32>)
+    outs (%output: memref<?x?x?xf32>)
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @conv_2d_nhwc_hwcf
 func.func @conv_2d_nhwc_hwcf(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %init: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   // CHECK:      %{{.+}} = linalg.conv_2d_nhwc_hwcf

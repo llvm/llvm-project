@@ -52,7 +52,7 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionARM64, InstructionARM64)
 
 static bool LLDBTableGetRegisterInfo(uint32_t reg_num, RegisterInfo &reg_info) {
-  if (reg_num >= llvm::array_lengthof(g_register_infos_arm64_le))
+  if (reg_num >= std::size(g_register_infos_arm64_le))
     return false;
   reg_info = g_register_infos_arm64_le[reg_num];
   return true;
@@ -360,7 +360,7 @@ EmulateInstructionARM64::GetOpcodeForInstruction(const uint32_t opcode) {
        "TBNZ <R><t>, #<imm>, <label>"},
 
   };
-  static const size_t k_num_arm_opcodes = llvm::array_lengthof(g_opcodes);
+  static const size_t k_num_arm_opcodes = std::size(g_opcodes);
 
   for (size_t i = 0; i < k_num_arm_opcodes; ++i) {
     if ((g_opcodes[i].mask & opcode) == g_opcodes[i].value)

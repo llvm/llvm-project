@@ -162,7 +162,7 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
   llvm::FastMathFlags ret;
   auto fmf = op.getFastmathFlags();
   for (auto it : handlers)
-    if (bitEnumContains(fmf, it.first))
+    if (bitEnumContainsAll(fmf, it.first))
       (ret.*(it.second))(true);
   return ret;
 }

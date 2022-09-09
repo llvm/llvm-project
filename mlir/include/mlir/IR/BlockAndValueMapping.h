@@ -63,12 +63,8 @@ public:
 
   /// Lookup a mapped value within the map. This asserts the provided value
   /// exists within the map.
-  template <typename T>
-  T lookup(T from) const {
-    auto result = lookupOrNull(from);
-    assert(result && "expected 'from' to be contained within the map");
-    return result;
-  }
+  Block *lookup(Block *from) const { return lookupImpl(from); }
+  Value lookup(Value from) const { return lookupImpl(from); }
 
   /// Clears all mappings held by the mapper.
   void clear() { valueMap.clear(); }
@@ -80,6 +76,13 @@ public:
   const DenseMap<Block *, Block *> &getBlockMap() const { return blockMap; }
 
 private:
+  template<typename T>
+  T lookupImpl(T from) const {
+    T result = lookupOrNull(from);
+    assert(result && "expected 'from' to be contained within the map");
+    return result;
+  }
+
   /// Utility lookupOrValue that looks up an existing key or returns the
   /// provided value.
   Block *lookupOrValue(Block *from, Block *value) const {

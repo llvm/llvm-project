@@ -16,10 +16,9 @@
 
 #include <errno.h>
 
-namespace __llvm_libc {
+#include "inv_trigf_utils.h"
 
-// PI / 2
-constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
+namespace __llvm_libc {
 
 static constexpr size_t N_EXCEPTS = 2;
 
@@ -40,14 +39,6 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ASINF_EXCEPTS_HI = {{
     // x = 0x1.ee836cp-1, asinf(x) = 0x1.4f0654p0 (RZ)
     {0x3f7741b6, 0x3fa7832a, 1, 0, 0},
 }};
-
-// > Q = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20|],
-//                 [|1, D...|], [0, 0.5]);
-static constexpr double COEFFS[10] = {
-    0x1.5555555540fa1p-3, 0x1.333333512edc2p-4, 0x1.6db6cc1541b31p-5,
-    0x1.f1caff324770ep-6, 0x1.6e43899f5f4f4p-6, 0x1.1f847cf652577p-6,
-    0x1.9b60f47f87146p-7, 0x1.259e2634c494fp-6, -0x1.df946fa875ddp-8,
-    0x1.02311ecf99c28p-5};
 
 LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -104,14 +95,9 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
     // little more than 0.5.
     double xd = static_cast<double>(x);
     double xsq = xd * xd;
-    double x4 = xsq * xsq;
-    double r1 = fputil::polyeval(x4, COEFFS[0], COEFFS[2], COEFFS[4], COEFFS[6],
-                                 COEFFS[8]);
-    double r2 = fputil::polyeval(x4, COEFFS[1], COEFFS[3], COEFFS[5], COEFFS[7],
-                                 COEFFS[9]);
-    double r3 = fputil::multiply_add(xsq, r2, r1);
     double x3 = xd * xsq;
-    return fputil::multiply_add(x3, r3, xd);
+    double r = asin_eval(xsq);
+    return fputil::multiply_add(x3, r, xd);
   }
 
   // |x| > 1, return NaNs.
@@ -130,6 +116,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
     return r.value();
 
   // When |x| > 0.5, we perform range reduction as follow:
+  //
   // Assume further that 0.5 < x <= 1, and let:
   //   y = asin(x)
   // We will use the double angle formula:
@@ -143,27 +130,24 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   //   pi/4 - y/2 = asin( sqrt( (1 - x)/2 ) )
   // Equivalently:
   //   asin(x) = y = pi/2 - 2 * asin( sqrt( (1 - x)/2 ) )
-  // Let u = (1 - x)/2, then
-  //   asin(x) = pi/2 - 2 * asin(u)
-  // Moreover, since 0.5 < x <= 1,
+  // Let u = (1 - x)/2, then:
+  //   asin(x) = pi/2 - 2 * asin( sqrt(u) )
+  // Moreover, since 0.5 < x <= 1:
   //   0 <= u < 1/4, and 0 <= sqrt(u) < 0.5,
   // And hence we can reuse the same polynomial approximation of asin(x) when
   // |x| <= 0.5:
-  //   asin(x) = pi/2 - 2 * u * P(u^2),
+  //   asin(x) ~ pi/2 - 2 * sqrt(u) * P(u),
 
   xbits.set_sign(false);
+  double sign = SIGN[x_sign];
   double xd = static_cast<double>(xbits.get_val());
   double u = fputil::multiply_add(-0.5, xd, 0.5);
-  double cv = -2 * fputil::sqrt(u);
+  double c1 = sign * (-2 * fputil::sqrt(u));
+  double c2 = fputil::multiply_add(sign, M_MATH_PI_2, c1);
+  double c3 = c1 * u;
 
-  double usq = u * u;
-  double r1 = fputil::polyeval(usq, COEFFS[0], COEFFS[2], COEFFS[4], COEFFS[6],
-                               COEFFS[8]);
-  double r2 = fputil::polyeval(usq, COEFFS[1], COEFFS[3], COEFFS[5], COEFFS[7],
-                               COEFFS[9]);
-  double r3 = fputil::multiply_add(u, r2, r1);
-  double r = fputil::multiply_add(cv * u, r3, M_MATH_PI_2 + cv);
-  return SIGN[x_sign] * r;
+  double r = asin_eval(u);
+  return fputil::multiply_add(c3, r, c2);
 }
 
 } // namespace __llvm_libc

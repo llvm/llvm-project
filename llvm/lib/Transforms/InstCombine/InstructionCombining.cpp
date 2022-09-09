@@ -3937,9 +3937,8 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // replacement below is still necessary.
   Instruction *MoveBefore;
   if (isa<Argument>(Op)) {
-    MoveBefore = &FI.getFunction()->getEntryBlock().front();
-    while (isa<AllocaInst>(MoveBefore))
-      MoveBefore = MoveBefore->getNextNode();
+    MoveBefore =
+        &*FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
   } else {
     MoveBefore = cast<Instruction>(Op)->getInsertionPointAfterDef();
     if (!MoveBefore)

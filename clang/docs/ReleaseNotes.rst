@@ -93,6 +93,8 @@ Bug Fixes
   `Issue 57516 <https://github.com/llvm/llvm-project/issues/57516>`_
 - Fix ``__builtin_assume_aligned`` crash when the 1st arg is array type. This fixes
   `Issue 57169 <https://github.com/llvm/llvm-project/issues/57169>`_
+- Clang configuration files are now read through the virtual file system
+  rather than the physical one, if these are different.
 
 
 Improvements to Clang's diagnostics
@@ -178,6 +180,10 @@ Attribute Changes in Clang
 
 Windows Support
 ---------------
+- For the MinGW driver, added the options ``-mguard=none``, ``-mguard=cf`` and
+  ``-mguard=cf-nochecks`` (equivalent to ``/guard:cf-``, ``/guard:cf`` and
+  ``/guard:cf,nochecks`` in clang-cl) for enabling Control Flow Guard checks
+  and generation of address-taken function table.
 
 AIX Support
 -----------
