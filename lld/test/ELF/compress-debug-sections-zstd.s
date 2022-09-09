@@ -13,6 +13,13 @@
 # CHECK-NEXT: 0x00000030 6e74006c 6f6e6720 756e7369 676e6564 nt.long unsigned
 # CHECK-NEXT: 0x00000040 20696e74 00                          int.
 
+# RUN: ld.lld %t.o -o %t.so -shared --compress-debug-sections=zstd
+# RUN: llvm-readelf -S %t.so | FileCheck %s --check-prefix=OUTPUT-SEC
+# RUN: llvm-objcopy --decompress-debug-sections %t.so
+# RUN: llvm-readelf -S -x .debug_str %t.so | FileCheck %s
+
+# OUTPUT-SEC: .debug_str    PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] 01 MSC 0 0  1
+
 .section .debug_str,"MS",@progbits,1
 .LASF2:
  .string "short unsigned int"
