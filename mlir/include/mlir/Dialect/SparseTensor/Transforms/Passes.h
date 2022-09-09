@@ -63,18 +63,22 @@ enum class SparseVectorizationStrategy {
 struct SparsificationOptions {
   SparsificationOptions(SparseParallelizationStrategy p,
                         SparseVectorizationStrategy v, unsigned vl, bool e,
-                        bool vla)
+                        bool vla, bool rt)
       : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
-        enableSIMDIndex32(e), enableVLAVectorization(vla) {}
+        enableSIMDIndex32(e), enableVLAVectorization(vla),
+        enableRuntimeLibrary(rt) {}
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              SparseVectorizationStrategy::kNone, 1u, false,
-                              false) {}
+                              SparseVectorizationStrategy::kNone, 1u,
+                              /*enable SIMD Index32=*/false,
+                              /*enable VLA Vectorization=*/false,
+                              /*enable runtime library=*/true) {}
   SparseParallelizationStrategy parallelizationStrategy;
   SparseVectorizationStrategy vectorizationStrategy;
   unsigned vectorLength;
   bool enableSIMDIndex32;
   bool enableVLAVectorization;
+  bool enableRuntimeLibrary;
 };
 
 /// Sets up sparsification rewriting rules with the given options.
@@ -159,7 +163,7 @@ std::unique_ptr<Pass> createSparseTensorCodegenPass();
 // Other rewriting rules and passes.
 //===----------------------------------------------------------------------===//
 
-void populateSparseTensorRewriting(RewritePatternSet &patterns);
+void populateSparseTensorRewriting(RewritePatternSet &patterns, bool enableRT);
 
 std::unique_ptr<Pass> createDenseBufferizationPass(
     const bufferization::OneShotBufferizationOptions &options);
