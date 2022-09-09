@@ -134,12 +134,22 @@ write_lit_cfg("lit_unit_site_cfg") {
   extra_values = [ "LLVM_BUILD_MODE=." ]
 }
 
+action("lit-lldb-init-quiet") {
+  script = "//llvm/utils/gn/build/write_file.py"
+  outputs = [ "$root_out_dir/obj/lldb/test/Shell/lit-lldb-init-quiet" ]
+  args = [
+    rebase_path(outputs[0], root_build_dir),
+    "command source -C --silent-run true lit-lldb-init",
+  ]
+}
+
 # This target should contain all dependencies of check-lldb.
 # //:default depends on it, so that ninja's default target builds all
 # prerequisites for check-lldb but doesn't run check-lldb itself.
 group("test") {
   deps = [
     ":lit-lldb-init",
+    ":lit-lldb-init-quiet",
     ":lit_api_site_cfg",
     ":lit_shell_site_cfg",
     ":lit_site_cfg",
