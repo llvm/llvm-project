@@ -30,6 +30,7 @@ write_cmake_config("lit_site_cfg") {
 
     "LLD_DEFAULT_LD_LLD_IS_MINGW=0",
     "LLVM_BUILD_EXAMPLES=0",
+    "LLVM_ENABLE_ZSTD=0",
     "LLVM_BYE_LINK_INTO_TOOLS=0",
   ]
 
