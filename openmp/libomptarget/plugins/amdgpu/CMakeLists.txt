@@ -102,10 +102,11 @@ target_include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
 )
 
-target_link_libraries(
-  omptarget.rtl.amdgpu
-  PUBLIC
-  -Wl,--whole-archive hostrpc_services -Wl,--no-whole-archive
+  LINK_COMPONENTS
+  Support
+  Object
+
+  LINK_LIBS 
   PRIVATE
   elf_common
   MemoryManager
