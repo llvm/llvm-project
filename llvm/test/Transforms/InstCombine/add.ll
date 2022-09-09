@@ -2177,3 +2177,106 @@ define i8 @add_select_sub_both_arms_simplify_use2(i1 %b, i8 %a) {
   %add = add i8 %sel, %a
   ret i8 %add
 }
+
+define i5 @demand_low_bits_uses(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_low_bits_uses(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[A]] to i5
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %m = mul i8 %x, -32 ; 0xE0
+  %a = add i8 %m, %y
+  call void @use(i8 %a)
+  %r = trunc i8 %a to i5
+  ret i5 %r
+}
+
+define i6 @demand_low_bits_uses_extra_bit(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_low_bits_uses_extra_bit(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -32
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[A]] to i6
+; CHECK-NEXT:    ret i6 [[R]]
+;
+  %m = mul i8 %x, -32 ; 0xE0
+  %a = add i8 %m, %y
+  call void @use(i8 %a)
+  %r = trunc i8 %a to i6
+  ret i6 %r
+}
+
+define i8 @demand_low_bits_uses_commute(i8 %x, i8 %p, i8 %z) {
+; CHECK-LABEL: @demand_low_bits_uses_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y]], [[M]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[S]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %y = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %m = and i8 %x, -64 ; 0xC0
+  %a = add i8 %y, %m
+  call void @use(i8 %a)
+  %s = sub i8 %a, %z
+  %r = shl i8 %s, 2
+  ret i8 %r
+}
+
+define i8 @demand_low_bits_uses_commutei_extra_bit(i8 %x, i8 %p, i8 %z) {
+; CHECK-LABEL: @demand_low_bits_uses_commutei_extra_bit(
+; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y]], [[M]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[S]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %y = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %m = and i8 %x, -64 ; 0xC0
+  %a = add i8 %y, %m
+  call void @use(i8 %a)
+  %s = sub i8 %a, %z
+  %r = shl i8 %s, 1
+  ret i8 %r
+}
+
+define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64 noundef %w) {
+; CHECK-LABEL: @PR57576(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i64 [[X:%.*]] to i128
+; CHECK-NEXT:    [[ZY:%.*]] = zext i64 [[Y:%.*]] to i128
+; CHECK-NEXT:    [[ZW:%.*]] = zext i64 [[W:%.*]] to i128
+; CHECK-NEXT:    [[ZZ:%.*]] = zext i64 [[Z:%.*]] to i128
+; CHECK-NEXT:    [[SHY:%.*]] = shl nuw i128 [[ZY]], 64
+; CHECK-NEXT:    [[MW:%.*]] = mul i128 [[ZW]], -18446744073709551616
+; CHECK-NEXT:    [[XY:%.*]] = or i128 [[SHY]], [[ZX]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i128 [[XY]], [[ZZ]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[SUB]], [[MW]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[ADD]] to i64
+; CHECK-NEXT:    [[H:%.*]] = lshr i128 [[ADD]], 64
+; CHECK-NEXT:    [[T2:%.*]] = trunc i128 [[H]] to i64
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } poison, i64 [[T]], 0
+; CHECK-NEXT:    [[R2:%.*]] = insertvalue { i64, i64 } [[R1]], i64 [[T2]], 1
+; CHECK-NEXT:    ret { i64, i64 } [[R2]]
+;
+  %zx = zext i64 %x to i128
+  %zy = zext i64 %y to i128
+  %zw = zext i64 %w to i128
+  %zz = zext i64 %z to i128
+  %shy = shl nuw i128 %zy, 64
+  %mw = mul i128 %zw, -18446744073709551616
+  %xy = or i128 %shy, %zx
+  %sub = sub i128 %xy, %zz
+  %add = add i128 %sub, %mw
+  %t = trunc i128 %add to i64
+  %h = lshr i128 %add, 64
+  %t2 = trunc i128 %h to i64
+  %r1 = insertvalue { i64, i64 } poison, i64 %t, 0
+  %r2 = insertvalue { i64, i64 } %r1, i64 %t2, 1
+  ret { i64, i64 } %r2
+}
