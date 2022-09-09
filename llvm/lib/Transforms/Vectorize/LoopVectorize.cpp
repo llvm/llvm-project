@@ -9464,7 +9464,6 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
 
   // A pointer induction, performed by using a gep
-  const DataLayout &DL = NewPointerPhi->getModule()->getDataLayout();
   Instruction *InductionLoc = &*State.Builder.GetInsertPoint();
 
   Value *ScalarStepValue = State.get(getOperand(1), VPIteration(0, 0));
