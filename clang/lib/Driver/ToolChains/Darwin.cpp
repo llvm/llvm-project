@@ -2925,13 +2925,16 @@ Darwin::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   return DAL;
 }
 
-bool MachO::IsUnwindTablesDefault(const ArgList &Args) const {
+ToolChain::UnwindTableLevel MachO::getDefaultUnwindTableLevel(const ArgList &Args) const {
   // Unwind tables are not emitted if -fno-exceptions is supplied (except when
   // targeting x86_64).
-  return getArch() == llvm::Triple::x86_64 ||
-         (GetExceptionModel(Args) != llvm::ExceptionHandling::SjLj &&
-          Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
-                       true));
+  if (getArch() == llvm::Triple::x86_64 ||
+      (GetExceptionModel(Args) != llvm::ExceptionHandling::SjLj &&
+       Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
+                    true)))
+    return UnwindTableLevel::Asynchronous;
+
+  return UnwindTableLevel::None;
 }
 
 bool MachO::UseDwarfDebugFlags() const {
