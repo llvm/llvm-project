@@ -494,7 +494,7 @@ func.func @sparse_reconstruct_ins(%arg0: tensor<128xf32, #SparseVector>) -> tens
 func.func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
                     %arg1: memref<?xindex>,
                     %arg2: memref<f32>) {
-  sparse_tensor.lex_insert %arg0, %arg1, %arg2 : tensor<128xf32, #SparseVector>, memref<?xindex>, memref<f32>
+  sparse_tensor.insert %arg0, %arg1, %arg2 : tensor<128xf32, #SparseVector>, memref<?xindex>, memref<f32>
   return
 }
 
