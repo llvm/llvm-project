@@ -150,7 +150,7 @@
   },
   {
     "directory": "DIR"
-    "command": "clang_tool -target x86_64-apple-darwin -c DIR/tu_save_temps_module.c -save-temps=obj -o DIR/tu_save_temps_module.o -fmodules -fimplicit-modules -fimplicit-module-maps"
+    "command": "clang_tool -target x86_64-apple-darwin -c DIR/tu_save_temps_module.c -save-temps=obj -o DIR/tu_save_temps_module.o -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/cache"
     "file": "DIR/tu_save_temps_module.c"
   }
 ]
