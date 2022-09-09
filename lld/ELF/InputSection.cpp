@@ -110,7 +110,7 @@ size_t InputSectionBase::getSize() const {
   return rawData.size() - bytesDropped;
 }
 
-void InputSectionBase::uncompress() const {
+void InputSectionBase::decompress() const {
   size_t size = uncompressedSize;
   uint8_t *uncompressedBuf;
   {
@@ -121,7 +121,7 @@ void InputSectionBase::uncompress() const {
 
   if (Error e = compression::zlib::uncompress(rawData, uncompressedBuf, size))
     fatal(toString(this) +
-          ": uncompress failed: " + llvm::toString(std::move(e)));
+          ": decompress failed: " + llvm::toString(std::move(e)));
   rawData = makeArrayRef(uncompressedBuf, size);
   uncompressedSize = -1;
 }
@@ -1222,7 +1222,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
     size_t size = uncompressedSize;
     if (Error e = compression::zlib::uncompress(rawData, buf, size))
       fatal(toString(this) +
-            ": uncompress failed: " + llvm::toString(std::move(e)));
+            ": decompress failed: " + llvm::toString(std::move(e)));
     uint8_t *bufEnd = buf + size;
     relocate<ELFT>(buf, bufEnd);
     return;
