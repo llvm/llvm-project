@@ -1,4 +1,4 @@
-//===-- Definition of ino_t type ------------------------------------------===//
+//===-- Definition of dev_t type ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_INO_T_H__
-#define __LLVM_LIBC_TYPES_INO_T_H__
+#ifndef __LLVM_LIBC_TYPES_DEV_T_H__
+#define __LLVM_LIBC_TYPES_DEV_T_H__
 
-typedef __UINTPTR_TYPE__ ino_t;
+typedef __UINT64_TYPE__ dev_t;
 
-#endif // __LLVM_LIBC_TYPES_INO_T_H__
+#endif // __LLVM_LIBC_TYPES_DEV_T_H__

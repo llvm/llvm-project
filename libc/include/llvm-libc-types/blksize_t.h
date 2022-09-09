@@ -1,4 +1,4 @@
-//===-- Definition of ino_t type ------------------------------------------===//
+//===-- Definition of blksize_t type --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_INO_T_H__
-#define __LLVM_LIBC_TYPES_INO_T_H__
+#ifndef __LLVM_LIBC_TYPES_BLKSIZE_T_H__
+#define __LLVM_LIBC_TYPES_BLKSIZE_T_H__
 
-typedef __UINTPTR_TYPE__ ino_t;
+typedef __INTPTR_TYPE__ blksize_t;
 
-#endif // __LLVM_LIBC_TYPES_INO_T_H__
+#endif // __LLVM_LIBC_TYPES_BLKSIZE_T_H__

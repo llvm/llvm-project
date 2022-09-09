@@ -63,3 +63,51 @@ add_libc_unittest(
     libc.src.sys.stat.mkdirat
     libc.src.unistd.rmdir
 )
+
+add_libc_unittest(
+  stat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    stat_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.fcntl
+    libc.include.sys_stat
+    libc.src.sys.stat.stat
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+)
+
+add_libc_unittest(
+  lstat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    lstat_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.fcntl
+    libc.include.sys_stat
+    libc.src.sys.stat.lstat
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+)
+
+add_libc_unittest(
+  fstat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    fstat_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.fcntl
+    libc.include.sys_stat
+    libc.src.sys.stat.fstat
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+)

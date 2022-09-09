@@ -277,7 +277,8 @@ def SysResourceAPI : PublicAPI<"sys/resource.h"> {
 }
 
 def SysStatAPI : PublicAPI<"sys/stat.h"> {
-  let Types = ["mode_t"];
+  let Types = ["mode_t", "dev_t", "ino_t", "nlink_t", "uid_t", "gid_t", "off_t",
+               "struct timespec", "blksize_t", "blkcnt_t", "struct stat"];
 }
 
 def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {
