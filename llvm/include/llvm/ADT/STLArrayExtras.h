@@ -28,8 +28,8 @@ namespace llvm {
 
 /// Find the length of an array.
 template <class T, std::size_t N>
-constexpr inline LLVM_DEPRECATED("Use std::size instead.", "std::size") size_t
-    array_lengthof(T (&)[N]) {
+LLVM_DEPRECATED("Use std::size instead.", "std::size")
+constexpr inline size_t array_lengthof(T (&)[N]) {
   return N;
 }
 

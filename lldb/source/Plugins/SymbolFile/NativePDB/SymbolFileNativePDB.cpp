@@ -369,9 +369,8 @@ Block &SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
         m_index->MakeVirtualAddress(block.Segment, block.CodeOffset);
     lldb::addr_t func_base =
         func->GetAddressRange().GetBaseAddress().GetFileAddress();
-    Block::Range range = Block::Range(block_base - func_base, block.CodeSize);
     if (block_base >= func_base)
-      child_block->AddRange(range);
+      child_block->AddRange(Block::Range(block_base - func_base, block.CodeSize));
     else {
       GetObjectFile()->GetModule()->ReportError(
           "S_BLOCK32 at modi: %d offset: %d: adding range [0x%" PRIx64

@@ -2111,6 +2111,7 @@ cc_library(
         ":SparseTensorDialect",
         ":SparseTensorTransforms",
         ":TensorTransforms",
+        ":Transforms",
         ":VectorToLLVM",
         ":VectorTransforms",
     ],
