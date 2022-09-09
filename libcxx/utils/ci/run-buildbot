@@ -574,6 +574,20 @@ benchmarks)
     generate-cmake
     check-cxx-benchmarks
 ;;
+check-lldb-data-formatters)
+    clean
+    ${CMAKE}                                        \
+        -S "${MONOREPO_ROOT}/llvm"                  \
+        -B "${BUILD_DIR}"                           \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}"     \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo           \
+        -DLLVM_ENABLE_ASSERTIONS=ON                 \
+        -DLLDB_ENABLE_PYTHON=ON                     \
+        -DLLVM_ENABLE_PROJECTS='llvm;clang;lldb'    \
+        -DLLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'
+
+    ${NINJA} -C "${BUILD_DIR}" check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx
+;;
 documentation)
     clean
     generate-cmake -DLLVM_ENABLE_SPHINX=ON
