@@ -64,6 +64,7 @@ add_entrypoint_object(
     -O3
 )
 
+add_math_entrypoint_object(acosf)
 add_math_entrypoint_object(asinf)
 add_math_entrypoint_object(atanf)
 
