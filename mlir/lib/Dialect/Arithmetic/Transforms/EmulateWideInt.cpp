@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/WideIntEmulationConverter.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
@@ -23,7 +24,80 @@ namespace mlir::arith {
 
 using namespace mlir;
 
+// Returns N bottom and N top bits from `value`, where N = `newBitWidth`.
+// Treats `value` as a 2*N bits-wide integer.
+// The bottom bits are returned in the first pair element, while the top bits in
+// the second one.
+static std::pair<APInt, APInt> getHalves(const APInt &value,
+                                         unsigned newBitWidth) {
+  APInt low = value.extractBits(newBitWidth, 0);
+  APInt high = value.extractBits(newBitWidth, newBitWidth);
+  return {std::move(low), std::move(high)};
+}
+
 namespace {
+//===----------------------------------------------------------------------===//
+// ConvertConstant
+//===----------------------------------------------------------------------===//
+
+struct ConvertConstant final : OpConversionPattern<arith::ConstantOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ConstantOp op, OpAdaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type oldType = op.getType();
+    auto newType = getTypeConverter()->convertType(oldType).cast<VectorType>();
+    unsigned newBitWidth = newType.getElementTypeBitWidth();
+    Attribute oldValue = op.getValueAttr();
+
+    if (auto intAttr = oldValue.dyn_cast<IntegerAttr>()) {
+      auto [low, high] = getHalves(intAttr.getValue(), newBitWidth);
+      auto newAttr = DenseElementsAttr::get(newType, {low, high});
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, newAttr);
+      return success();
+    }
+
+    if (auto splatAttr = oldValue.dyn_cast<SplatElementsAttr>()) {
+      auto [low, high] =
+          getHalves(splatAttr.getSplatValue<APInt>(), newBitWidth);
+      int64_t numSplatElems = splatAttr.getNumElements();
+      SmallVector<APInt> values;
+      values.reserve(numSplatElems * 2);
+      for (int64_t i = 0; i < numSplatElems; ++i) {
+        values.push_back(low);
+        values.push_back(high);
+      }
+
+      auto attr = DenseElementsAttr::get(newType, values);
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, attr);
+      return success();
+    }
+
+    if (auto elemsAttr = oldValue.dyn_cast<DenseElementsAttr>()) {
+      int64_t numElems = elemsAttr.getNumElements();
+      SmallVector<APInt> values;
+      values.reserve(numElems * 2);
+      for (const APInt &origVal : elemsAttr.getValues<APInt>()) {
+        auto [low, high] = getHalves(origVal, newBitWidth);
+        values.push_back(std::move(low));
+        values.push_back(std::move(high));
+      }
+
+      auto attr = DenseElementsAttr::get(newType, values);
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, attr);
+      return success();
+    }
+
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "unhandled constant attribute");
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Pass Definition
+//===----------------------------------------------------------------------===//
+
 struct EmulateWideIntPass final
     : arith::impl::ArithmeticEmulateWideIntBase<EmulateWideIntPass> {
   using ArithmeticEmulateWideIntBase::ArithmeticEmulateWideIntBase;
@@ -42,7 +116,11 @@ struct EmulateWideIntPass final
     target.addDynamicallyLegalOp<func::FuncOp>([&typeConverter](Operation *op) {
       return typeConverter.isLegal(cast<func::FuncOp>(op).getFunctionType());
     });
-    target.addDynamicallyLegalOp<func::CallOp, func::ReturnOp>(
+    target.addDynamicallyLegalOp<
+        // `func.*` ops
+        func::CallOp, func::ReturnOp,
+        // `arith.*` ops
+        arith::ConstantOp>(
         [&typeConverter](Operation *op) { return typeConverter.isLegal(op); });
 
     RewritePatternSet patterns(ctx);
@@ -53,6 +131,10 @@ struct EmulateWideIntPass final
   }
 };
 } // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
+// Public Interface Definition
+//===----------------------------------------------------------------------===//
 
 arith::WideIntEmulationConverter::WideIntEmulationConverter(
     unsigned widestIntSupportedByTarget)
@@ -117,4 +199,7 @@ void arith::populateWideIntEmulationPatterns(
                                                                  typeConverter);
   populateCallOpTypeConversionPattern(patterns, typeConverter);
   populateReturnOpTypeConversionPattern(patterns, typeConverter);
+
+  // Populate `arith.*` conversion patterns.
+  patterns.add<ConvertConstant>(typeConverter, patterns.getContext());
 }

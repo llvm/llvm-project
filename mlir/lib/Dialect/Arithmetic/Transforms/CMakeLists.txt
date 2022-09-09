@@ -15,13 +15,14 @@ add_mlir_dialect_library(MLIRArithmeticTransforms
   MLIRAnalysis
   MLIRArithmeticDialect
   MLIRBufferizationDialect
-  MLIRFuncDialect
   MLIRBufferizationTransforms
-  MLIRVectorDialect
+  MLIRFuncDialect
+  MLIRFuncTransforms
   MLIRInferIntRangeInterface
   MLIRIR
   MLIRMemRefDialect
   MLIRPass
   MLIRTransforms
   MLIRTransformUtils
+  MLIRVectorDialect
   )

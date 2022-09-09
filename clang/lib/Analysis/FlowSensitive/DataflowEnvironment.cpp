@@ -81,9 +81,6 @@ static Value *mergeDistinctValues(QualType Type, Value *Val1,
                                   Environment::ValueModel &Model) {
   // Join distinct boolean values preserving information about the constraints
   // in the respective path conditions.
-  //
-  // FIXME: Does not work for backedges, since the two (or more) paths will not
-  // have mutually exclusive conditions.
   if (auto *Expr1 = dyn_cast<BoolValue>(Val1)) {
     auto *Expr2 = cast<BoolValue>(Val2);
     auto &MergedVal = MergedEnv.makeAtomicBoolValue();

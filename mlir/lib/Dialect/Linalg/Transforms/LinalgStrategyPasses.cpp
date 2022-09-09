@@ -41,7 +41,6 @@ namespace mlir {
 #define GEN_PASS_DEF_LINALGSTRATEGYDECOMPOSEPASS
 #define GEN_PASS_DEF_LINALGSTRATEGYPEELPASS
 #define GEN_PASS_DEF_LINALGSTRATEGYVECTORIZEPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYENABLEPASS
 #define GEN_PASS_DEF_LINALGSTRATEGYLOWERVECTORSPASS
 #define GEN_PASS_DEF_LINALGSTRATEGYREMOVEMARKERSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -272,57 +271,6 @@ struct LinalgStrategyVectorizePass
   LinalgTransformationFilter filter;
 };
 
-/// Configurable pass to enable the application of other pattern-based linalg
-/// passes.
-struct LinalgStrategyEnablePass
-    : public impl::LinalgStrategyEnablePassBase<LinalgStrategyEnablePass> {
-
-  LinalgStrategyEnablePass(LinalgEnablingOptions opt,
-                           LinalgTransformationFilter filt)
-      : options(opt), filter(std::move(filt)) {}
-
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
-      return;
-
-    MLIRContext *context = funcOp.getContext();
-    RewritePatternSet patterns =
-        linalg::getLinalgTilingCanonicalizationPatterns(context);
-    scf::populateSCFForLoopCanonicalizationPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns))))
-      return signalPassFailure();
-
-    if (options.licm) {
-      funcOp->walk([&](LoopLikeOpInterface loopLike) {
-        moveLoopInvariantCode(loopLike);
-      });
-    }
-
-    // Gathers all innermost loops through a post order pruned walk.
-    funcOp.walk([](Operation *op) {
-      if (auto forOp = dyn_cast<AffineForOp>(op))
-        (void)promoteIfSingleIteration(forOp);
-      else if (auto forOp = dyn_cast<scf::ForOp>(op))
-        (void)promoteIfSingleIteration(forOp);
-    });
-    if (options.hoistRedundantVectorTransfers)
-      hoistRedundantVectorTransfers(funcOp);
-
-    if (options.hoistRedundantVectorTransfersOnTensor)
-      hoistRedundantVectorTransfersOnTensor(funcOp);
-
-    // Run CSE to cleanup after canonicalization.
-    OpPassManager dynamicPM("func.func");
-    dynamicPM.addPass(createCSEPass());
-    if (failed(runPipeline(dynamicPM, funcOp)))
-      return signalPassFailure();
-  }
-
-  LinalgEnablingOptions options;
-  LinalgTransformationFilter filter;
-};
-
 /// Configurable pass to lower vector operations.
 struct LinalgStrategyLowerVectorsPass
     : public impl::LinalgStrategyLowerVectorsPassBase<
@@ -452,13 +400,6 @@ mlir::createLinalgStrategyVectorizePass(
     const LinalgTransformationFilter &filter, bool padVectorize) {
   return std::make_unique<LinalgStrategyVectorizePass>(opName, opt, filter,
                                                        padVectorize);
-}
-
-/// Create a LinalgStrategyEnablePass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyEnablePass(LinalgEnablingOptions opt,
-                                     const LinalgTransformationFilter &filter) {
-  return std::make_unique<LinalgStrategyEnablePass>(opt, filter);
 }
 
 /// Create a LinalgStrategyLowerVectorsPass.

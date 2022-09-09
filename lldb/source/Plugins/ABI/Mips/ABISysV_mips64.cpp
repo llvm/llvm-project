@@ -503,8 +503,7 @@ static const RegisterInfo g_register_infos_mips64[] = {
     },
 };
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos_mips64);
+static const uint32_t k_num_register_infos = std::size(g_register_infos_mips64);
 
 const lldb_private::RegisterInfo *
 ABISysV_mips64::GetRegisterInfoArray(uint32_t &count) {

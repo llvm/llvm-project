@@ -959,7 +959,7 @@ struct ConvertArithmeticToSPIRVPass
     auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
     auto target = SPIRVConversionTarget::get(targetAttr);
 
-    SPIRVTypeConverter::Options options;
+    SPIRVConversionOptions options;
     options.emulateNon32BitScalarTypes = this->emulateNon32BitScalarTypes;
     SPIRVTypeConverter typeConverter(targetAttr, options);
 

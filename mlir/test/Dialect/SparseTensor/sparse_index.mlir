@@ -100,7 +100,7 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK:               %[[VAL_25:.*]] = arith.muli %[[VAL_23]], %[[VAL_24]] : i64
 // CHECK:               %[[VAL_26:.*]] = arith.muli %[[VAL_22]], %[[VAL_25]] : i64
 // CHECK:               memref.store %[[VAL_26]], %[[BUF]][] : memref<i64>
-// CHECK:               sparse_tensor.lex_insert %[[VAL_6]], %[[VAL_12]], %[[BUF]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK:               sparse_tensor.insert %[[VAL_6]], %[[VAL_12]], %[[BUF]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[VAL_27:.*]] = sparse_tensor.load %[[VAL_6]] hasInserts : tensor<?x?xi64, #sparse_tensor.encoding

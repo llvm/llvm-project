@@ -8,22 +8,22 @@
 ; CHECK: Running analysis: LoopAnalysis
 ; CHECK: Running analysis: InnerAnalysisManagerProxy<
 ; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 2 containing: %inner1.header
+; CHECK: Running analysis: LoopAccessAnalysis on inner1.header
 ; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 2 containing: %inner2.header
+; CHECK: Running analysis: LoopAccessAnalysis on inner2.header
 ; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %outer.header
+; CHECK: Running analysis: LoopAccessAnalysis on outer.header
 ; CHECK: Running pass: LoopUnrollPass
 ; CHECK: Clearing all analysis results for: inner2.header
 ; CHECK: Clearing all analysis results for: outer.header
 ; CHECK: Invalidating analysis: LoopAccessAnalysis on {{.*}}inner1.header
 ; CHECK-NOT: Invalidating analysis: LoopAccessAnalysis on {{.*}}inner1.header.1
 ; CHECK: Running pass: LoopAccessInfoPrinterPass
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %inner1.header
+; CHECK: Running analysis: LoopAccessAnalysis on inner1.header
 ; CHECK: Loop access info in function 'test':
 ; CHECK:   inner1.header:
 ; CHECK: Running pass: LoopAccessInfoPrinterPass
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %inner1.header.1
+; CHECK: Running analysis: LoopAccessAnalysis on inner1.header.1
 ; CHECK: Loop access info in function 'test':
 ; CHECK:   inner1.header.1:
 

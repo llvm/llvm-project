@@ -1058,6 +1058,15 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
+#if KMP_MIC
+// fence-style instructions do not exist, but lock; xaddl $0,(%rsp) can be used.
+// We shouldn't need it, though, since the ABI rules require that
+// * If the compiler generates NGO stores it also generates the fence
+// * If users hand-code NGO stores they should insert the fence
+// therefore no incomplete unordered stores should be visible.
+#define KMP_MFENCE() /* Nothing */
+#define KMP_SFENCE() /* Nothing */
+#else
 #if KMP_COMPILER_ICC || KMP_COMPILER_ICX
 #define KMP_MFENCE_() _mm_mfence()
 #define KMP_SFENCE_() _mm_sfence()
@@ -1076,6 +1085,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
     KMP_MFENCE_();                                                             \
   }
 #define KMP_SFENCE() KMP_SFENCE_()
+#endif
 #else
 #define KMP_MFENCE() KMP_MB()
 #define KMP_SFENCE() KMP_MB()

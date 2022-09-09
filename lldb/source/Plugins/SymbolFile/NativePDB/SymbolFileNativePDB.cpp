@@ -363,6 +363,24 @@ Block &SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     lldbassert(block.Parent != 0);
     PdbCompilandSymId parent_id(block_id.modi, block.Parent);
     Block &parent_block = GetOrCreateBlock(parent_id);
+    Function *func = parent_block.CalculateSymbolContextFunction();
+    lldbassert(func);
+    lldb::addr_t block_base =
+        m_index->MakeVirtualAddress(block.Segment, block.CodeOffset);
+    lldb::addr_t func_base =
+        func->GetAddressRange().GetBaseAddress().GetFileAddress();
+    Block::Range range = Block::Range(block_base - func_base, block.CodeSize);
+    if (block_base >= func_base)
+      child_block->AddRange(range);
+    else {
+      GetObjectFile()->GetModule()->ReportError(
+          "S_BLOCK32 at modi: %d offset: %d: adding range [0x%" PRIx64
+          "-0x%" PRIx64 ") which has a base that is less than the function's "
+          "low PC 0x%" PRIx64 ". Please file a bug and attach the file at the "
+          "start of this error message",
+          block_id.modi, block_id.offset, block_base,
+          block_base + block.CodeSize, func_base);
+    }
     parent_block.AddChild(child_block);
     m_ast->GetOrCreateBlockDecl(block_id);
     m_blocks.insert({opaque_block_uid, child_block});

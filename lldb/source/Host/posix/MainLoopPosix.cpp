@@ -81,7 +81,7 @@ Status MainLoopPosix::RunImpl::Poll() {
     EV_SET(&in_events[i++], fd.first, EVFILT_READ, EV_ADD, 0, 0, 0);
 
   num_events = kevent(loop.m_kqueue, in_events.data(), in_events.size(),
-                      out_events, llvm::array_lengthof(out_events), nullptr);
+                      out_events, std::size(out_events), nullptr);
 
   if (num_events < 0) {
     if (errno == EINTR) {
