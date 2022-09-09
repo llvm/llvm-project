@@ -2193,7 +2193,7 @@ Parse OpenMP pragmas and generate parallel code.
 
 .. option:: -fopenmp-target-fast, -fno-openmp-target-fast
 
-Enables fast optimization options for OpenMP target offloading: -fopenmp-target-ignore-env-vars, -fopenmp-assume-no-thread-state, -fopenmp-assume-no-nested-parallelism.
+Enables fast optimization options for OpenMP target offloading: -fopenmp-target-ignore-env-vars, -fopenmp-assume-no-thread-state, -fopenmp-assume-no-nested-parallelism. Enables -O3 if no -O* level is specified.
 
 .. option:: -fopenmp-extensions, -fno-openmp-extensions
 

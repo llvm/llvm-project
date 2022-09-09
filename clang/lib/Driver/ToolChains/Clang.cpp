@@ -6188,9 +6188,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-optimistic-collapse");
 
-      if (isTargetFastUsed(Args))
+      if (isTargetFastUsed(Args)) {
+        if (!Args.hasArg(options::OPT_O_Group))
+          CmdArgs.push_back("-O3");
+
         CmdArgs.push_back("-fopenmp-target-fast");
-      else
+      } else
         CmdArgs.push_back("-fno-openmp-target-fast");
 
       if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,

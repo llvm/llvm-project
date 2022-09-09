@@ -19,10 +19,11 @@
 // RUN:   | FileCheck -check-prefixes=OFast,NoTFast,NoEnV,NoTState,NoNestParallel %s
 
 // RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -fopenmp-target-fast -fno-openmp-target-ignore-env-vars %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=TFast,NoEnV,TState,NestParallel %s
+// RUN:   | FileCheck -check-prefixes=TFast,NoEnV,TState,NestParallel,O3 %s
 
 // O4: -O4
 // OFast: -Ofast
+// O3: -O3
 
 // TFast: -fopenmp-target-fast
 // TFast-NOT: -fno-openmp-target-fast
