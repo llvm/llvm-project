@@ -28,6 +28,9 @@ ELF Improvements
 
 * ``ELFCOMPRESS_ZSTD`` compressed input sections are now supported.
   (`D129406 <https://reviews.llvm.org/D129406>`_)
+* ``--compress-debug-sections=zstd`` is now available to compress debug
+  sections with zstd (``ELFCOMPRESS_ZSTD``).
+  (`D133548 <https://reviews.llvm.org/D133548>`_)
 
 Breaking changes
 ----------------
