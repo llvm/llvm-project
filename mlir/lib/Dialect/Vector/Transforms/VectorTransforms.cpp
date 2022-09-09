@@ -216,7 +216,7 @@ namespace {
 //   %1 = user %0 : vector<5x4x2xf32>
 //
 struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
-  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
@@ -250,7 +250,7 @@ struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
 /// Progressive lowering of BroadcastOp.
 class BroadcastOpLowering : public OpRewritePattern<vector::BroadcastOp> {
 public:
-  using OpRewritePattern<vector::BroadcastOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::BroadcastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -381,11 +381,11 @@ void pruneNonTransposedDims(ArrayRef<int64_t> transpose,
 ///   %x = vector.insert .., .. [.., ..]
 class TransposeOpLowering : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   TransposeOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
-                      MLIRContext *context)
-      : OpRewritePattern<vector::TransposeOp>(context),
+                      MLIRContext *context, PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransposeOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions) {}
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
@@ -470,12 +470,12 @@ private:
 class TransposeOp2DToShuffleLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   TransposeOp2DToShuffleLowering(
       vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context)
-      : OpRewritePattern<vector::TransposeOp>(context),
+      MLIRContext *context, PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransposeOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions) {}
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
@@ -534,7 +534,7 @@ private:
 ///
 class OuterProductOpLowering : public OpRewritePattern<vector::OuterProductOp> {
 public:
-  using OpRewritePattern<vector::OuterProductOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::OuterProductOp op,
                                 PatternRewriter &rewriter) const override {
@@ -593,9 +593,9 @@ struct ContractOpToElementwise
   }
   ContractOpToElementwise(
       vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context,
+      MLIRContext *context, PatternBenefit benefit = 1,
       const FilterConstraintType &constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context),
+      : OpRewritePattern<vector::ContractionOp>(context, benefit),
         vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
@@ -715,7 +715,7 @@ private:
 /// will be folded at LLVM IR level.
 class ConstantMaskOpLowering : public OpRewritePattern<vector::ConstantMaskOp> {
 public:
-  using OpRewritePattern<vector::ConstantMaskOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ConstantMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -789,7 +789,7 @@ public:
 /// until a one-dimensional vector is reached.
 class CreateMaskOpLowering : public OpRewritePattern<vector::CreateMaskOp> {
 public:
-  using OpRewritePattern<vector::CreateMaskOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -835,7 +835,7 @@ public:
 class ShapeCastOp2DDownCastRewritePattern
     : public OpRewritePattern<vector::ShapeCastOp> {
 public:
-  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -868,7 +868,7 @@ public:
 class ShapeCastOp2DUpCastRewritePattern
     : public OpRewritePattern<vector::ShapeCastOp> {
 public:
-  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -900,7 +900,7 @@ public:
 // into the right place if we get here.
 class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
 public:
-  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ShapeCastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -974,7 +974,7 @@ private:
 ///  ```
 struct MultiReduceToContract
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reduceOp,
                                 PatternRewriter &rewriter) const override {
@@ -1030,7 +1030,7 @@ struct MultiReduceToContract
 ///  ```
 struct CombineContractTranspose
     : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
@@ -1087,7 +1087,7 @@ struct CombineContractTranspose
 ///  ```
 struct CombineContractBroadcast
     : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
@@ -2036,8 +2036,9 @@ Optional<mlir::vector::DistributeOps> mlir::vector::distributPointwiseVectorOp(
 struct TransferReadToVectorLoadLowering
     : public OpRewritePattern<vector::TransferReadOp> {
   TransferReadToVectorLoadLowering(MLIRContext *context,
-                                   llvm::Optional<unsigned> maxRank)
-      : OpRewritePattern<vector::TransferReadOp>(context),
+                                   llvm::Optional<unsigned> maxRank,
+                                   PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransferReadOp>(context, benefit),
         maxTransferRank(maxRank) {}
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
@@ -2124,7 +2125,7 @@ struct TransferReadToVectorLoadLowering
 // trivial case (for architectures for which this matters).
 struct VectorLoadToMemrefLoadLowering
     : public OpRewritePattern<vector::LoadOp> {
-  using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::LoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
@@ -2142,7 +2143,7 @@ struct VectorLoadToMemrefLoadLowering
 /// Replace a 0-d vector.store with a vector.extractelement + memref.store.
 struct VectorStoreToMemrefStoreLowering
     : public OpRewritePattern<vector::StoreOp> {
-  using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::StoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
@@ -2177,8 +2178,9 @@ struct VectorStoreToMemrefStoreLowering
 struct TransferWriteToVectorStoreLowering
     : public OpRewritePattern<vector::TransferWriteOp> {
   TransferWriteToVectorStoreLowering(MLIRContext *context,
-                                     llvm::Optional<unsigned> maxRank)
-      : OpRewritePattern<vector::TransferWriteOp>(context),
+                                     llvm::Optional<unsigned> maxRank,
+                                     PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::TransferWriteOp>(context, benefit),
         maxTransferRank(maxRank) {}
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
@@ -2415,6 +2417,7 @@ struct BubbleDownBitCastForStridedSliceExtract
 struct BubbleUpBitCastForStridedSliceInsert
     : public OpRewritePattern<vector::BitCastOp> {
   using OpRewritePattern::OpRewritePattern;
+
   LogicalResult matchAndRewrite(vector::BitCastOp bitcastOp,
                                 PatternRewriter &rewriter) const override {
     VectorType castSrcType = bitcastOp.getSourceVectorType();
@@ -2530,8 +2533,9 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
 template <typename ConcreteOp>
 struct MaterializeTransferMask : public OpRewritePattern<ConcreteOp> {
 public:
-  explicit MaterializeTransferMask(MLIRContext *context, bool enableIndexOpt)
-      : mlir::OpRewritePattern<ConcreteOp>(context),
+  explicit MaterializeTransferMask(MLIRContext *context, bool enableIndexOpt,
+                                   PatternBenefit benefit = 1)
+      : mlir::OpRewritePattern<ConcreteOp>(context, benefit),
         force32BitVectorIndices(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(ConcreteOp xferOp,
@@ -2583,8 +2587,9 @@ class VectorCreateMaskOpConversion
     : public OpRewritePattern<vector::CreateMaskOp> {
 public:
   explicit VectorCreateMaskOpConversion(MLIRContext *context,
-                                        bool enableIndexOpt)
-      : mlir::OpRewritePattern<vector::CreateMaskOp>(context),
+                                        bool enableIndexOpt,
+                                        PatternBenefit benefit = 1)
+      : mlir::OpRewritePattern<vector::CreateMaskOp>(context, benefit),
         force32BitVectorIndices(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
@@ -2608,7 +2613,7 @@ private:
 
 // Drop inner most contiguous unit dimensions from transfer_read operand.
 class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -2815,7 +2820,7 @@ static Value genOperator(Location loc, Value x, Value y,
 ///   vector<2x3xi32>, vector<2xi32>
 /// ```
 struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
-  using OpRewritePattern<vector::ScanOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ScanOp scanOp,
                                 PatternRewriter &rewriter) const override {
@@ -2896,81 +2901,87 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
 } // namespace
 
 void mlir::vector::populateVectorMaskMaterializationPatterns(
-    RewritePatternSet &patterns, bool force32BitVectorIndices) {
+    RewritePatternSet &patterns, bool force32BitVectorIndices,
+    PatternBenefit benefit) {
   patterns.add<VectorCreateMaskOpConversion,
                MaterializeTransferMask<vector::TransferReadOp>,
                MaterializeTransferMask<vector::TransferWriteOp>>(
-      patterns.getContext(), force32BitVectorIndices);
+      patterns.getContext(), force32BitVectorIndices, benefit);
 }
 
-void mlir::vector::populateShapeCastFoldingPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<ShapeCastOpFolder>(patterns.getContext());
+void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
+                                                    PatternBenefit benefit) {
+  patterns.add<ShapeCastOpFolder>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<BubbleDownVectorBitCastForExtract,
                BubbleDownBitCastForStridedSliceExtract,
-               BubbleUpBitCastForStridedSliceInsert>(patterns.getContext());
+               BubbleUpBitCastForStridedSliceInsert>(patterns.getContext(),
+                                                     benefit);
 }
 
 void mlir::vector::populateVectorBroadcastLoweringPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<BroadcastOpLowering>(patterns.getContext());
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<BroadcastOpLowering>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorMaskOpLoweringPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<CreateMaskOpLowering, ConstantMaskOpLowering>(
-      patterns.getContext());
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorShapeCastLoweringPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<ShapeCastOp2DDownCastRewritePattern,
                ShapeCastOp2DUpCastRewritePattern, ShapeCastOpRewritePattern>(
-      patterns.getContext());
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorContractLoweringPatterns(
-    RewritePatternSet &patterns, VectorTransformsOptions options) {
-  patterns.add<OuterProductOpLowering>(patterns.getContext());
+    RewritePatternSet &patterns, VectorTransformsOptions options,
+    PatternBenefit benefit) {
+  patterns.add<OuterProductOpLowering>(patterns.getContext(), benefit);
   patterns.add<ContractionOpLowering, ContractionOpToMatmulOpLowering,
-               ContractionOpToOuterProductOpLowering>(options,
-                                                      patterns.getContext());
+               ContractionOpToOuterProductOpLowering>(
+      options, patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
-    RewritePatternSet &patterns, VectorTransformsOptions options) {
+    RewritePatternSet &patterns, VectorTransformsOptions options,
+    PatternBenefit benefit) {
   patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
-      options, patterns.getContext());
+      options, patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorReductionToContractPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<MultiReduceToContract, CombineContractBroadcast,
                CombineContractTranspose, ReorderCastOpsOnBroadcast,
-               ReorderElementwiseOpsOnTranspose>(patterns.getContext());
+               ReorderElementwiseOpsOnTranspose>(patterns.getContext(),
+                                                 benefit);
 }
 
 void mlir::vector::
     populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
-        RewritePatternSet &patterns) {
-  patterns.add<DropInnerMostUnitDims>(patterns.getContext());
+        RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<DropInnerMostUnitDims>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorTransferLoweringPatterns(
-    RewritePatternSet &patterns, llvm::Optional<unsigned> maxTransferRank) {
+    RewritePatternSet &patterns, llvm::Optional<unsigned> maxTransferRank,
+    PatternBenefit benefit) {
   patterns.add<TransferReadToVectorLoadLowering,
                TransferWriteToVectorStoreLowering>(patterns.getContext(),
-                                                   maxTransferRank);
+                                                   maxTransferRank, benefit);
   patterns
       .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
-          patterns.getContext());
+          patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorScanLoweringPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<ScanToArithOps>(patterns.getContext());
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<ScanToArithOps>(patterns.getContext(), benefit);
 }

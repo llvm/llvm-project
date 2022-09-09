@@ -37,7 +37,8 @@ struct WarpExecuteOnLane0LoweringOptions {
 
 void populateWarpExecuteOnLane0OpToScfForPattern(
     RewritePatternSet &patterns,
-    const WarpExecuteOnLane0LoweringOptions &options);
+    const WarpExecuteOnLane0LoweringOptions &options,
+    PatternBenefit benefit = 1);
 
 using DistributionMapFn = std::function<AffineMap(vector::TransferWriteOp)>;
 
@@ -59,7 +60,8 @@ using DistributionMapFn = std::function<AffineMap(vector::TransferWriteOp)>;
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
 void populateDistributeTransferWriteOpPatterns(
-    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn);
+    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
+    PatternBenefit benefit = 1);
 
 /// Move scalar operations with no dependency on the warp op outside of the
 /// region.
@@ -67,7 +69,7 @@ void moveScalarUniformCode(WarpExecuteOnLane0Op op);
 
 /// Collect patterns to propagate warp distribution.
 void populatePropagateWarpVectorDistributionPatterns(
-    RewritePatternSet &pattern);
+    RewritePatternSet &pattern, PatternBenefit benefit = 1);
 
 /// Lambda signature to compute a reduction of a distributed value for the given
 /// reduction kind and size.
@@ -78,7 +80,8 @@ using DistributedReductionFn =
 /// distribute reduction op.
 void populateDistributeReduction(
     RewritePatternSet &pattern,
-    const DistributedReductionFn &distributedReductionFn);
+    const DistributedReductionFn &distributedReductionFn,
+    PatternBenefit benefit = 1);
 
 } // namespace vector
 } // namespace mlir
