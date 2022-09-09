@@ -124,8 +124,8 @@ MLIRContext *SPIRVTypeConverter::getContext() const {
 
 // TODO: This is a utility function that should probably be exposed by the
 // SPIR-V dialect. Keeping it local till the use case arises.
-static Optional<int64_t>
-getTypeNumBytes(const SPIRVTypeConverter::Options &options, Type type) {
+static Optional<int64_t> getTypeNumBytes(const SPIRVConversionOptions &options,
+                                         Type type) {
   if (type.isa<spirv::ScalarType>()) {
     auto bitWidth = type.getIntOrFloatBitWidth();
     // According to the SPIR-V spec:
@@ -199,7 +199,7 @@ getTypeNumBytes(const SPIRVTypeConverter::Options &options, Type type) {
 
 /// Converts a scalar `type` to a suitable type under the given `targetEnv`.
 static Type convertScalarType(const spirv::TargetEnv &targetEnv,
-                              const SPIRVTypeConverter::Options &options,
+                              const SPIRVConversionOptions &options,
                               spirv::ScalarType type,
                               Optional<spirv::StorageClass> storageClass = {}) {
   // Get extension and capability requirements for the given type.
@@ -232,7 +232,7 @@ static Type convertScalarType(const spirv::TargetEnv &targetEnv,
 
 /// Converts a vector `type` to a suitable type under the given `targetEnv`.
 static Type convertVectorType(const spirv::TargetEnv &targetEnv,
-                              const SPIRVTypeConverter::Options &options,
+                              const SPIRVConversionOptions &options,
                               VectorType type,
                               Optional<spirv::StorageClass> storageClass = {}) {
   if (type.getRank() <= 1 && type.getNumElements() == 1)
@@ -271,7 +271,7 @@ static Type convertVectorType(const spirv::TargetEnv &targetEnv,
 /// constant values and use OpCompositeExtract and OpCompositeInsert to
 /// manipulate, like what we do for vectors.
 static Type convertTensorType(const spirv::TargetEnv &targetEnv,
-                              const SPIRVTypeConverter::Options &options,
+                              const SPIRVConversionOptions &options,
                               TensorType type) {
   // TODO: Handle dynamic shapes.
   if (!type.hasStaticShape()) {
@@ -310,7 +310,7 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
 }
 
 static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
-                                  const SPIRVTypeConverter::Options &options,
+                                  const SPIRVConversionOptions &options,
                                   MemRefType type,
                                   spirv::StorageClass storageClass) {
   unsigned numBoolBits = options.boolNumBits;
@@ -349,7 +349,7 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
 }
 
 static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
-                              const SPIRVTypeConverter::Options &options,
+                              const SPIRVConversionOptions &options,
                               MemRefType type) {
   auto attr = type.getMemorySpace().dyn_cast_or_null<spirv::StorageClassAttr>();
   if (!attr) {
@@ -414,7 +414,7 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
 }
 
 SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
-                                       Options options)
+                                       const SPIRVConversionOptions &options)
     : targetEnv(targetAttr), options(options) {
   // Add conversions. The order matters here: later ones will be tried earlier.
 
