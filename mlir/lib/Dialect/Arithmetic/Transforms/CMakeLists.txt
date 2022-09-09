@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRArithmeticTransforms
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
+  EmulateWideInt.cpp
   ExpandOps.cpp
   UnsignedWhenEquivalent.cpp
 
@@ -15,9 +16,13 @@ add_mlir_dialect_library(MLIRArithmeticTransforms
   MLIRArithmeticDialect
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
+  MLIRFuncDialect
+  MLIRFuncTransforms
   MLIRInferIntRangeInterface
   MLIRIR
   MLIRMemRefDialect
   MLIRPass
   MLIRTransforms
+  MLIRTransformUtils
+  MLIRVectorDialect
   )

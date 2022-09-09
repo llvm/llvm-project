@@ -97,6 +97,11 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> DebugInfoCorrelate;
+
+// Experiment to move sanitizers earlier.
+static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
+    "sanitizer-early-opt-ep", cl::Optional,
+    cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
 }
 
 namespace {
@@ -632,8 +637,9 @@ static OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
 static void addSanitizers(const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
-  PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
-                                         OptimizationLevel Level) {
+
+  auto SanitizersCallback = [&](ModulePassManager &MPM,
+                                OptimizationLevel Level) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
       MPM.addPass(SanitizerCoveragePass(
@@ -708,7 +714,11 @@ static void addSanitizers(const Triple &TargetTriple,
     if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles));
     }
-  });
+  };
+  if (ClSanitizeOnOptimizerEarlyEP)
+    PB.registerOptimizerEarlyEPCallback(SanitizersCallback);
+  else
+    PB.registerOptimizerLastEPCallback(SanitizersCallback);
 }
 
 void EmitAssemblyHelper::RunOptimizationPipeline(

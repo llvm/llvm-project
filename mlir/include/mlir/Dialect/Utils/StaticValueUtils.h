@@ -29,6 +29,13 @@ struct Range {
   OpFoldResult stride;
 };
 
+/// Given an array of Range values, return a tuple of (offset vector, sizes
+/// vector, and strides vector) formed by separating out the individual elements
+/// of each range.
+std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
+           SmallVector<OpFoldResult>>
+getOffsetsSizesAndStrides(ArrayRef<Range> ranges);
+
 /// Helper function to dispatch an OpFoldResult into `staticVec` if:
 ///   a) it is an IntegerAttr
 /// In other cases, the OpFoldResult is dispached to the `dynamicVec`.
