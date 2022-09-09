@@ -652,7 +652,7 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
                                        "libSystem.B.dylib"};
 
   FileSpecList bp_modules;
-  for (size_t i = 0; i < llvm::array_lengthof(g_bp_modules); i++) {
+  for (size_t i = 0; i < std::size(g_bp_modules); i++) {
     const char *bp_module = g_bp_modules[i];
     bp_modules.EmplaceBack(bp_module);
   }
@@ -661,9 +661,9 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
   bool hardware = false;
   LazyBool skip_prologue = eLazyBoolNo;
   bp_sp = target.CreateBreakpoint(&bp_modules, nullptr, g_bp_names,
-                                  llvm::array_lengthof(g_bp_names),
-                                  eFunctionNameTypeFull, eLanguageTypeUnknown,
-                                  0, skip_prologue, internal, hardware);
+                                  std::size(g_bp_names), eFunctionNameTypeFull,
+                                  eLanguageTypeUnknown, 0, skip_prologue,
+                                  internal, hardware);
   bp_sp->SetBreakpointKind("thread-creation");
 
   return bp_sp;
