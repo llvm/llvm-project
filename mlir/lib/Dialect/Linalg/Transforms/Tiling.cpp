@@ -235,10 +235,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   auto hasStrideOne = [](Range r) { return !isConstantIntValue(r.stride, 1); };
   if (llvm::any_of(loopRanges, hasStrideOne))
     return op->emitOpError("only stride-1 supported atm");
-  // TODO: support `getTiledImplementation` with >1 produced tiled ops.
-  auto dest = op.getDestinationOperands(b);
-  if (dest.size() != 1)
-    return op->emitOpError("only single dest operand supported atm");
+  auto destOperands = op.getDestinationOperands(b);
 
   SmallVector<OpFoldResult> nonZeroNumThreads =
       llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
