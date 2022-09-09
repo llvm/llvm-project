@@ -257,3 +257,15 @@ func.func @ipowi(%i: i32, %v: vector<4xi32>, %t: tensor<4x4x?xi32>) {
   %2 = math.ipowi %t, %t : tensor<4x4x?xi32>
   return
 }
+
+// CHECK-LABEL: func @trunc(
+// CHECK-SAME:             %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
+func.func @trunc(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = math.trunc %[[F]] : f32
+  %0 = math.trunc %f : f32
+  // CHECK: %{{.*}} = math.trunc %[[V]] : vector<4xf32>
+  %1 = math.trunc %v : vector<4xf32>
+  // CHECK: %{{.*}} = math.trunc %[[T]] : tensor<4x4x?xf32>
+  %2 = math.trunc %t : tensor<4x4x?xf32>
+  return
+}
