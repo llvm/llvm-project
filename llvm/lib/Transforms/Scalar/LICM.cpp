@@ -2093,7 +2093,7 @@ bool llvm::promoteLoopAccessesToScalars(
               Store->getAlign(), MDL, Preheader->getTerminator(), DT, TLI);
         }
       } else
-        return false; // Not a load or store.
+        continue; // Not a load or store.
 
       if (!AccessTy)
         AccessTy = getLoadStoreType(UI);
