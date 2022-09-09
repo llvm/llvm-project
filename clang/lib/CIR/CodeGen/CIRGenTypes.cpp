@@ -5,7 +5,6 @@
 #include "CallingConv.h"
 #include "TargetInfo.h"
 
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 
@@ -15,6 +14,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 using namespace clang;
 using namespace cir;

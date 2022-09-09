@@ -19,10 +19,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "llvm/ADT/PointerIntPair.h"
 
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/Value.h"
 
 namespace cir {

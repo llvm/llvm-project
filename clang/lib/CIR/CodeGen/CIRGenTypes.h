@@ -20,10 +20,10 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include <utility>
@@ -146,7 +146,7 @@ public:
   mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
 
   std::unique_ptr<CIRGenRecordLayout>
-  computeRecordLayout(const clang::RecordDecl *D, mlir::cir::StructType& Ty);
+  computeRecordLayout(const clang::RecordDecl *D, mlir::cir::StructType &Ty);
 
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);

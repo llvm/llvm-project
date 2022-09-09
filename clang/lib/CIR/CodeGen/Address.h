@@ -15,10 +15,10 @@
 #define LLVM_CLANG_LIB_CIR_ADDRESS_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "llvm/IR/Constants.h"
 
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/Value.h"
 
 namespace cir {

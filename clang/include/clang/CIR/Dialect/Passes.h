@@ -26,7 +26,7 @@ std::unique_ptr<Pass> createMergeCleanupsPass();
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
-#include "mlir/Dialect/CIR/Passes.h.inc"
+#include "clang/CIR/Dialect/Passes.h.inc"
 
 } // namespace mlir
 

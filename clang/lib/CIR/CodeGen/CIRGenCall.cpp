@@ -18,8 +18,8 @@
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -402,7 +402,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
   //     callLoc, mlir::SymbolRefAttr::get(CalleePtr),
   //     CalleePtr.getType().getResults(), CIRCallArgs);
   auto theCall = CGM.getBuilder().create<mlir::cir::CallOp>(callLoc, CalleePtr,
-                                                             CIRCallArgs);
+                                                            CIRCallArgs);
 
   if (callOrInvoke)
     callOrInvoke = &theCall;

@@ -37,6 +37,7 @@ add_clang_library(clangCIR
   DEPENDS
   MLIRCIR
   MLIRCIROpsIncGen
+  ${dialect_libs}
 
   LINK_LIBS
   clangAST
