@@ -22,6 +22,7 @@ class Operation;
 
 namespace fir {
 class FirOpBuilder;
+class ConvertOp;
 } // namespace fir
 
 namespace Fortran {
@@ -50,11 +51,11 @@ void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genOpenMPReduction(AbstractConverter &,
                         const Fortran::parser::OmpClauseList &clauseList);
 
+mlir::Operation *findReductionChain(mlir::Value, mlir::Value * = nullptr);
+fir::ConvertOp getConvertFromReductionOp(mlir::Operation *, mlir::Value);
 void updateReduction(mlir::Operation *, fir::FirOpBuilder &, mlir::Value,
-                     mlir::Value);
-
-mlir::Operation *getReductionInChain(mlir::Value, mlir::Value);
-
+                     mlir::Value, fir::ConvertOp * = nullptr);
+void removeStoreOp(mlir::Operation *, mlir::Value);
 } // namespace lower
 } // namespace Fortran
 
