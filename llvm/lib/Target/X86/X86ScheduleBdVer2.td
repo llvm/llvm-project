@@ -1186,6 +1186,12 @@ def PdWriteVPPERM : SchedWriteRes<[PdFPU01, PdFPMAL]> {
 }
 def : InstRW<[PdWriteVPPERM], (instrs VPPERMrrr, VPPERMrrr_REV)>;
 
+def PdWriteVPPERMLd : SchedWriteRes<[PdFPU01, PdFPMAL, PdLoad]> {
+  let Latency = 7;
+  let ResourceCycles = [1, 3, 3];
+}
+def : InstRW<[PdWriteVPPERMLd], (instrs VPPERMrrm, VPPERMrmr)>;
+
 defm : PdWriteResXMMPair<WriteBlend,         [PdFPU01, PdFPMAL], 2>;
 defm : X86WriteResPairUnsupported<WriteBlendY>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;

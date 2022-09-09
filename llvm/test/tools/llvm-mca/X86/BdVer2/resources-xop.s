@@ -322,8 +322,8 @@ vpshlw %xmm0, (%rax), %xmm3
 # CHECK-NEXT:  1      4     1.00                        vpmadcswd	%xmm0, %xmm1, %xmm2, %xmm3
 # CHECK-NEXT:  1      9     1.50    *                   vpmadcswd	%xmm0, (%rax), %xmm1, %xmm3
 # CHECK-NEXT:  1      2     1.50                        vpperm	%xmm0, %xmm1, %xmm2, %xmm3
-# CHECK-NEXT:  1      8     1.50    *                   vpperm	(%rax), %xmm0, %xmm1, %xmm3
-# CHECK-NEXT:  1      8     1.50    *                   vpperm	%xmm0, (%rax), %xmm1, %xmm3
+# CHECK-NEXT:  1      7     1.50    *                   vpperm	(%rax), %xmm0, %xmm1, %xmm3
+# CHECK-NEXT:  1      7     1.50    *                   vpperm	%xmm0, (%rax), %xmm1, %xmm3
 # CHECK-NEXT:  1      3     1.00                        vprotb	%xmm0, %xmm1, %xmm3
 # CHECK-NEXT:  1      8     1.50    *                   vprotb	(%rax), %xmm0, %xmm3
 # CHECK-NEXT:  1      8     1.50    *                   vprotb	%xmm0, (%rax), %xmm3
