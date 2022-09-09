@@ -22,6 +22,9 @@ TEST(BlockAndValueMapping, TypedValue) {
   OpBuilder builder(&context);
   Location loc = builder.getUnknownLoc();
 
+  Block block;
+  builder.setInsertionPointToEnd(&block);
+
   Value i64Val = builder.create<test::TestOpConstant>(
       loc, builder.getI64Type(), builder.getI64IntegerAttr(0));
   Value f64Val = builder.create<test::TestOpConstant>(
