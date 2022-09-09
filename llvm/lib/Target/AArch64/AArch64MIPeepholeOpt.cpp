@@ -293,6 +293,7 @@ bool AArch64MIPeepholeOpt::visitINSERT(MachineInstr &MI) {
           .add(MI.getOperand(2))
           .add(MI.getOperand(3));
   LLVM_DEBUG(dbgs() << MI << "  replace by:\n: " << *SubregMI << "\n");
+  (void)SubregMI;
   MI.eraseFromParent();
 
   return true;
