@@ -9642,13 +9642,15 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     // If the recipe is uniform across all parts (instead of just per VF), only
     // generate a single instance.
     Instruction *UI = getUnderlyingInstr();
-    if (isa<LoadInst>(UI) &&
+    if ((isa<LoadInst>(UI) || isa<StoreInst>(UI)) &&
         all_of(operands(), [](VPValue *Op) { return !Op->getDef(); })) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(0, 0), IsPredicated,
                                       State);
-      for (unsigned Part = 1; Part < State.UF; ++Part)
-        State.set(this, State.get(this, VPIteration(0, 0)),
-                  VPIteration(Part, 0));
+      if (!UI->getType()->isVoidTy()) {
+        for (unsigned Part = 1; Part < State.UF; ++Part)
+          State.set(this, State.get(this, VPIteration(0, 0)),
+                    VPIteration(Part, 0));
+      }
       return;
     }
 
