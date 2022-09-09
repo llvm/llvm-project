@@ -480,6 +480,16 @@ func.func @tripleSubAdd1(%arg0: index) -> index {
   return %add2 : index
 }
 
+// CHECK-LABEL: @subSub0
+//       CHECK:   %[[c0:.+]] = arith.constant 0 : index
+//       CHECK:   %[[add:.+]] = arith.subi %[[c0]], %arg1 : index
+//       CHECK:   return %[[add]]
+func.func @subSub0(%arg0: index, %arg1: index) -> index {
+  %sub1 = arith.subi %arg0, %arg1 : index
+  %sub2 = arith.subi %sub1, %arg0 : index
+  return %sub2 : index
+}
+
 // CHECK-LABEL: @tripleSubSub0
 //       CHECK:   %[[cres:.+]] = arith.constant 25 : index
 //       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] : index
@@ -526,6 +536,22 @@ func.func @tripleSubSub3(%arg0: index) -> index {
   %add1 = arith.subi %arg0, %c17 : index
   %add2 = arith.subi %add1, %c42 : index
   return %add2 : index
+}
+
+// CHECK-LABEL: @subAdd1
+//  CHECK-NEXT:   return %arg0
+func.func @subAdd1(%arg0: index, %arg1 : index) -> index {
+  %add = arith.addi %arg0, %arg1 : index
+  %sub = arith.subi %add, %arg1 : index
+  return %sub : index
+}
+
+// CHECK-LABEL: @subAdd2
+//  CHECK-NEXT:   return %arg1
+func.func @subAdd2(%arg0: index, %arg1 : index) -> index {
+  %add = arith.addi %arg0, %arg1 : index
+  %sub = arith.subi %add, %arg0 : index
+  return %sub : index
 }
 
 // CHECK-LABEL: @doubleAddSub1
