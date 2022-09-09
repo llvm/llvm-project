@@ -911,8 +911,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 /// by Dirs.
 ///
 static bool searchForFile(SmallVectorImpl<char> &FilePath,
-                          ArrayRef<StringRef> Dirs, StringRef FileName,
-                          llvm::vfs::FileSystem &FS) {
+                          ArrayRef<StringRef> Dirs, StringRef FileName) {
   SmallString<128> WPath;
   for (const StringRef &Dir : Dirs) {
     if (Dir.empty())
@@ -920,8 +919,7 @@ static bool searchForFile(SmallVectorImpl<char> &FilePath,
     WPath.clear();
     llvm::sys::path::append(WPath, Dir, FileName);
     llvm::sys::path::native(WPath);
-    auto Status = FS.status(WPath);
-    if (Status && Status->getType() == llvm::sys::fs::file_type::regular_file) {
+    if (llvm::sys::fs::is_regular_file(WPath)) {
       FilePath = std::move(WPath);
       return true;
     }
@@ -932,7 +930,7 @@ static bool searchForFile(SmallVectorImpl<char> &FilePath,
 bool Driver::readConfigFile(StringRef FileName) {
   // Try reading the given file.
   SmallVector<const char *, 32> NewCfgArgs;
-  if (!llvm::cl::readConfigFile(FileName, Saver, NewCfgArgs, getVFS())) {
+  if (!llvm::cl::readConfigFile(FileName, Saver, NewCfgArgs)) {
     Diag(diag::err_drv_cannot_read_config_file) << FileName;
     return true;
   }
@@ -972,7 +970,7 @@ bool Driver::loadConfigFile() {
       SmallString<128> CfgDir;
       CfgDir.append(
           CLOptions->getLastArgValue(options::OPT_config_system_dir_EQ));
-      if (CfgDir.empty() || getVFS().makeAbsolute(CfgDir))
+      if (CfgDir.empty() || llvm::sys::fs::make_absolute(CfgDir))
         SystemConfigDir.clear();
       else
         SystemConfigDir = static_cast<std::string>(CfgDir);
@@ -981,7 +979,7 @@ bool Driver::loadConfigFile() {
       SmallString<128> CfgDir;
       CfgDir.append(
           CLOptions->getLastArgValue(options::OPT_config_user_dir_EQ));
-      if (CfgDir.empty() || getVFS().makeAbsolute(CfgDir))
+      if (CfgDir.empty() || llvm::sys::fs::make_absolute(CfgDir))
         UserConfigDir.clear();
       else
         UserConfigDir = static_cast<std::string>(CfgDir);
@@ -1006,16 +1004,13 @@ bool Driver::loadConfigFile() {
       // If argument contains directory separator, treat it as a path to
       // configuration file.
       if (llvm::sys::path::has_parent_path(CfgFileName)) {
-        SmallString<128> CfgFilePath(CfgFileName);
-        if (llvm::sys::path::is_relative(CfgFilePath)) {
-          if (getVFS().makeAbsolute(CfgFilePath))
-            return true;
-          auto Status = getVFS().status(CfgFilePath);
-          if (!Status ||
-              Status->getType() != llvm::sys::fs::file_type::regular_file) {
-            Diag(diag::err_drv_config_file_not_exist) << CfgFilePath;
-            return true;
-          }
+        SmallString<128> CfgFilePath;
+        if (llvm::sys::path::is_relative(CfgFileName))
+          llvm::sys::fs::current_path(CfgFilePath);
+        llvm::sys::path::append(CfgFilePath, CfgFileName);
+        if (!llvm::sys::fs::is_regular_file(CfgFilePath)) {
+          Diag(diag::err_drv_config_file_not_exist) << CfgFilePath;
+          return true;
         }
         return readConfigFile(CfgFilePath);
       }
@@ -1074,19 +1069,17 @@ bool Driver::loadConfigFile() {
   // Try to find config file. First try file with corrected architecture.
   llvm::SmallString<128> CfgFilePath;
   if (!FixedConfigFile.empty()) {
-    if (searchForFile(CfgFilePath, CfgFileSearchDirs, FixedConfigFile,
-                      getVFS()))
+    if (searchForFile(CfgFilePath, CfgFileSearchDirs, FixedConfigFile))
       return readConfigFile(CfgFilePath);
     // If 'x86_64-clang.cfg' was not found, try 'x86_64.cfg'.
     FixedConfigFile.resize(FixedArchPrefixLen);
     FixedConfigFile.append(".cfg");
-    if (searchForFile(CfgFilePath, CfgFileSearchDirs, FixedConfigFile,
-                      getVFS()))
+    if (searchForFile(CfgFilePath, CfgFileSearchDirs, FixedConfigFile))
       return readConfigFile(CfgFilePath);
   }
 
   // Then try original file name.
-  if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()))
+  if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName))
     return readConfigFile(CfgFilePath);
 
   // Finally try removing driver mode part: 'x86_64-clang.cfg' -> 'x86_64.cfg'.
@@ -1094,7 +1087,7 @@ bool Driver::loadConfigFile() {
       !ClangNameParts.TargetPrefix.empty()) {
     CfgFileName.assign(ClangNameParts.TargetPrefix);
     CfgFileName.append(".cfg");
-    if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()))
+    if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName))
       return readConfigFile(CfgFilePath);
   }
 
