@@ -1,4 +1,4 @@
-//===-- Definition of ino_t type ------------------------------------------===//
+//===-- Definition of struct timespec -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_INO_T_H__
-#define __LLVM_LIBC_TYPES_INO_T_H__
+#ifndef __LLVM_LIBC_TYPES_TIMESPEC_H__
+#define __LLVM_LIBC_TYPES_TIMESPEC_H__
 
-typedef __UINTPTR_TYPE__ ino_t;
+#include <llvm-libc-types/time_t.h>
 
-#endif // __LLVM_LIBC_TYPES_INO_T_H__
+struct timespec {
+  time_t tv_sec;
+  long tv_nsec;
+};
+
+#endif // __LLVM_LIBC_TYPES_TIMESPEC_H__

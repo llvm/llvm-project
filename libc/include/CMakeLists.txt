@@ -222,6 +222,7 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-macros.sys_stat_macros
     .llvm-libc-types.mode_t
+    .llvm-libc-types.struct_stat
 )
 
 add_gen_header(
