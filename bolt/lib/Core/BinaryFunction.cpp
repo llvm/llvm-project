@@ -619,13 +619,16 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
   // Dump new exception ranges for the function.
   if (!CallSites.empty()) {
     OS << "EH table:\n";
-    for (const CallSite &CSI : CallSites) {
-      OS << "  [" << *CSI.Start << ", " << *CSI.End << ") landing pad : ";
-      if (CSI.LP)
-        OS << *CSI.LP;
-      else
-        OS << "0";
-      OS << ", action : " << CSI.Action << '\n';
+    for (const FunctionFragment &FF : getLayout().fragments()) {
+      for (const auto &FCSI : getCallSites(FF.getFragmentNum())) {
+        const CallSite &CSI = FCSI.second;
+        OS << "  [" << *CSI.Start << ", " << *CSI.End << ") landing pad : ";
+        if (CSI.LP)
+          OS << *CSI.LP;
+        else
+          OS << "0";
+        OS << ", action : " << CSI.Action << '\n';
+      }
     }
     OS << '\n';
   }

@@ -216,7 +216,11 @@ struct SplitRandomN final : public SplitStrategy {
 struct SplitAll final : public SplitStrategy {
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
-  bool keepEmpty() override { return false; }
+  bool keepEmpty() override {
+    // Keeping empty fragments allows us to test, that empty fragments do not
+    // generate symbols.
+    return true;
+  }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     unsigned Fragment = 0;
