@@ -428,6 +428,18 @@ OpFoldResult math::RoundEvenOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// FloorOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::FloorOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOp<FloatAttr>(operands, [](const APFloat &a) {
+    APFloat result(a);
+    result.roundToIntegral(llvm::RoundingMode::TowardNegative);
+    return result;
+  });
+}
+
+//===----------------------------------------------------------------------===//
 // RoundOp folder
 //===----------------------------------------------------------------------===//
 
