@@ -31,7 +31,8 @@ public:
   /// prefers it.
   virtual unsigned getPriority(const LiveInterval &LI) const = 0;
 
-  RegAllocPriorityAdvisor(const MachineFunction &MF, const RAGreedy &RA);
+  RegAllocPriorityAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+                          SlotIndexes *const Indexes);
 
 protected:
   const RAGreedy &RA;
@@ -47,12 +48,47 @@ protected:
 
 class DefaultPriorityAdvisor : public RegAllocPriorityAdvisor {
 public:
-  DefaultPriorityAdvisor(const MachineFunction &MF, const RAGreedy &RA)
-      : RegAllocPriorityAdvisor(MF, RA) {}
+  DefaultPriorityAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+                         SlotIndexes *const Indexes)
+      : RegAllocPriorityAdvisor(MF, RA, Indexes) {}
 
 private:
   unsigned getPriority(const LiveInterval &LI) const override;
 };
+
+class RegAllocPriorityAdvisorAnalysis : public ImmutablePass {
+public:
+  enum class AdvisorMode : int { Default, Release, Development };
+
+  RegAllocPriorityAdvisorAnalysis(AdvisorMode Mode)
+      : ImmutablePass(ID), Mode(Mode){};
+  static char ID;
+
+  /// Get an advisor for the given context (i.e. machine function, etc)
+  virtual std::unique_ptr<RegAllocPriorityAdvisor>
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
+  AdvisorMode getAdvisorMode() const { return Mode; }
+
+protected:
+  // This analysis preserves everything, and subclasses may have additional
+  // requirements.
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
+private:
+  StringRef getPassName() const override;
+  const AdvisorMode Mode;
+};
+
+/// Specialization for the API used by the analysis infrastructure to create
+/// an instance of the priority advisor.
+template <> Pass *callDefaultCtor<RegAllocPriorityAdvisorAnalysis>();
+
+RegAllocPriorityAdvisorAnalysis *createReleaseModePriorityAdvisor();
+
+RegAllocPriorityAdvisorAnalysis *createDevelopmentModePriorityAdvisor();
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_REGALLOCPRIORITYADVISOR_H

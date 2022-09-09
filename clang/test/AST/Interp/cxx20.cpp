@@ -2,15 +2,13 @@
 // RUN: %clang_cc1 -std=c++20 -verify=ref %s
 
 
-// expected-no-diagnostics
-// ref-no-diagnostics
 constexpr int getMinus5() {
   int a = 10;
   a = -5;
   int *p = &a;
   return *p;
 }
-//static_assert(getMinus5() == -5, "") TODO
+static_assert(getMinus5() == -5, "");
 
 constexpr int assign() {
   int m = 10;
@@ -20,7 +18,7 @@ constexpr int assign() {
 
   return m;
 }
-//static_assert(assign() == 20, "");  TODO
+static_assert(assign() == 20, "");
 
 
 constexpr int pointerAssign() {
@@ -31,7 +29,7 @@ constexpr int pointerAssign() {
 
   return m;
 }
-//static_assert(pointerAssign() == 12, "");  TODO
+static_assert(pointerAssign() == 12, "");
 
 constexpr int pointerDeref() {
   int m = 12;
@@ -39,7 +37,7 @@ constexpr int pointerDeref() {
 
   return *p;
 }
-//static_assert(pointerDeref() == 12, ""); TODO
+static_assert(pointerDeref() == 12, "");
 
 constexpr int pointerAssign2() {
   int m = 10;
@@ -52,4 +50,13 @@ constexpr int pointerAssign2() {
 
   return v;
 }
-//static_assert(pointerAssign2() == 12, ""); TODO
+static_assert(pointerAssign2() == 12, "");
+
+
+constexpr int unInitLocal() {
+  int a;
+  return a; // ref-note{{read of uninitialized object}}
+}
+static_assert(unInitLocal() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                       // ref-error {{not an integral constant expression}} \
+                                       // ref-note {{in call to 'unInitLocal()'}}

@@ -201,7 +201,7 @@ static bool canBeHoisted(Operation *op,
 /// Return a value yielded by `warpOp` which statifies the filter lamdba
 /// condition and is not dead.
 static OpOperand *getWarpResult(WarpExecuteOnLane0Op warpOp,
-                                std::function<bool(Operation *)> fn) {
+                                const std::function<bool(Operation *)> &fn) {
   auto yield = cast<vector::YieldOp>(
       warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
   for (OpOperand &yieldOperand : yield->getOpOperands()) {
@@ -712,6 +712,9 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
     if (!operand)
       return failure();
     auto read = operand->get().getDefiningOp<vector::TransferReadOp>();
+    // Don't duplicate transfer_read ops when distributing.
+    if (!read.getResult().hasOneUse())
+      return failure();
     unsigned operandIndex = operand->getOperandNumber();
     Value distributedVal = warpOp.getResult(operandIndex);
 
@@ -986,7 +989,7 @@ struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
                   DistributedReductionFn distributedReductionFn,
                   PatternBenefit benefit = 1)
       : OpRewritePattern<WarpExecuteOnLane0Op>(context, benefit),
-        distributedReductionFn(distributedReductionFn) {}
+        distributedReductionFn(std::move(distributedReductionFn)) {}
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -1053,26 +1056,30 @@ private:
 
 void mlir::vector::populateWarpExecuteOnLane0OpToScfForPattern(
     RewritePatternSet &patterns,
-    const WarpExecuteOnLane0LoweringOptions &options) {
-  patterns.add<WarpOpToScfForPattern>(patterns.getContext(), options);
+    const WarpExecuteOnLane0LoweringOptions &options, PatternBenefit benefit) {
+  patterns.add<WarpOpToScfForPattern>(patterns.getContext(), options, benefit);
 }
 
 void mlir::vector::populateDistributeTransferWriteOpPatterns(
-    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn) {
-  patterns.add<WarpOpTransferWrite>(patterns.getContext(), distributionMapFn);
+    RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
+    PatternBenefit benefit) {
+  patterns.add<WarpOpTransferWrite>(patterns.getContext(), distributionMapFn,
+                                    benefit);
 }
 
 void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<WarpOpElementwise, WarpOpTransferRead, WarpOpDeadResult,
                WarpOpBroadcast, WarpOpExtract, WarpOpForwardOperand,
-               WarpOpScfForOp, WarpOpConstant>(patterns.getContext());
+               WarpOpScfForOp, WarpOpConstant>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateDistributeReduction(
     RewritePatternSet &patterns,
-    DistributedReductionFn distributedReductionFn) {
-  patterns.add<WarpOpReduction>(patterns.getContext(), distributedReductionFn);
+    const DistributedReductionFn &distributedReductionFn,
+    PatternBenefit benefit) {
+  patterns.add<WarpOpReduction>(patterns.getContext(), distributedReductionFn,
+                                benefit);
 }
 
 void mlir::vector::moveScalarUniformCode(WarpExecuteOnLane0Op warpOp) {

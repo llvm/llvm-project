@@ -38,6 +38,17 @@
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
 
+#include "AddressSpace.hpp"
+#include "CompactUnwinder.hpp"
+#include "config.h"
+#include "DwarfInstructions.hpp"
+#include "EHHeaderParser.hpp"
+#include "libunwind.h"
+#include "libunwind_ext.h"
+#include "Registers.hpp"
+#include "RWMutex.hpp"
+#include "Unwind-EHABI.h"
+
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 // Provide a definition for the DISPATCHER_CONTEXT struct for old (Win7 and
 // earlier) SDKs.
@@ -74,18 +85,6 @@ extern "C" _Unwind_Reason_Code __libunwind_seh_personality(
     struct _Unwind_Context *);
 
 #endif
-
-#include "config.h"
-
-#include "AddressSpace.hpp"
-#include "CompactUnwinder.hpp"
-#include "config.h"
-#include "DwarfInstructions.hpp"
-#include "EHHeaderParser.hpp"
-#include "libunwind.h"
-#include "Registers.hpp"
-#include "RWMutex.hpp"
-#include "Unwind-EHABI.h"
 
 namespace libunwind {
 

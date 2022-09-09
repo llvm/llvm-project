@@ -76,10 +76,10 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK-DAG:       %[[VAL_4:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_5:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_6:.*]] = bufferization.alloc_tensor(%[[VAL_4]], %[[VAL_5]]) : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]], %[[VAL_2]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]], %[[VAL_2]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 0 : index} : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 0 : index} : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.pointers %[[VAL_0]] {dimension = 1 : index} : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_10:.*]] = sparse_tensor.indices %[[VAL_0]] {dimension = 1 : index} : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:           %[[VAL_12:.*]] = memref.alloca(%[[VAL_3]]) : memref<?xindex>
 // CHECK:           %[[BUF:.*]] = memref.alloca() : memref<i64>
@@ -100,7 +100,7 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK:               %[[VAL_25:.*]] = arith.muli %[[VAL_23]], %[[VAL_24]] : i64
 // CHECK:               %[[VAL_26:.*]] = arith.muli %[[VAL_22]], %[[VAL_25]] : i64
 // CHECK:               memref.store %[[VAL_26]], %[[BUF]][] : memref<i64>
-// CHECK:               sparse_tensor.lex_insert %[[VAL_6]], %[[VAL_12]], %[[BUF]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK:               sparse_tensor.insert %[[VAL_6]], %[[VAL_12]], %[[BUF]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[VAL_27:.*]] = sparse_tensor.load %[[VAL_6]] hasInserts : tensor<?x?xi64, #sparse_tensor.encoding

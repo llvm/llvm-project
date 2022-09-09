@@ -37,7 +37,15 @@ COFF Improvements
 MinGW Improvements
 ------------------
 
-* ...
+* The lld-specific options ``--guard-cf``, ``--no-guard-cf``,
+  ``--guard-longjmp`` and ``--no-guard-longjmp`` has been added to allow
+  enabling Control Flow Guard and long jump hardening. These options are
+  disabled by default, but enabling ``--guard-cf`` will also enable
+  ``--guard-longjmp`` unless ``--no-guard-longjmp`` is also specified.
+  ``--guard-longjmp`` depends on ``--guard-cf`` and cannot be used by itself.
+  Note that these features require the ``_load_config_used`` symbol to contain
+  the load config directory and be filled with the required symbols.
+  (`D132808 <https://reviews.llvm.org/D132808>`_)
 
 MachO Improvements
 ------------------

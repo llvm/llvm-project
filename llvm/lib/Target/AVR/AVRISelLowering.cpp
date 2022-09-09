@@ -1108,9 +1108,9 @@ static const MCPhysReg RegList16Tiny[] = {AVR::R26R25, AVR::R25R24,
                                           AVR::R24R23, AVR::R23R22,
                                           AVR::R22R21, AVR::R21R20};
 
-static_assert(array_lengthof(RegList8AVR) == array_lengthof(RegList16AVR),
+static_assert(std::size(RegList8AVR) == std::size(RegList16AVR),
               "8-bit and 16-bit register arrays must be of equal length");
-static_assert(array_lengthof(RegList8Tiny) == array_lengthof(RegList16Tiny),
+static_assert(std::size(RegList8Tiny) == std::size(RegList16Tiny),
               "8-bit and 16-bit register arrays must be of equal length");
 
 /// Analyze incoming and outgoing function arguments. We need custom C++ code
@@ -1127,11 +1127,11 @@ static void analyzeArguments(TargetLowering::CallLoweringInfo *CLI,
   ArrayRef<MCPhysReg> RegList8;
   ArrayRef<MCPhysReg> RegList16;
   if (Tiny) {
-    RegList8 = makeArrayRef(RegList8Tiny, array_lengthof(RegList8Tiny));
-    RegList16 = makeArrayRef(RegList16Tiny, array_lengthof(RegList16Tiny));
+    RegList8 = makeArrayRef(RegList8Tiny, std::size(RegList8Tiny));
+    RegList16 = makeArrayRef(RegList16Tiny, std::size(RegList16Tiny));
   } else {
-    RegList8 = makeArrayRef(RegList8AVR, array_lengthof(RegList8AVR));
-    RegList16 = makeArrayRef(RegList16AVR, array_lengthof(RegList16AVR));
+    RegList8 = makeArrayRef(RegList8AVR, std::size(RegList8AVR));
+    RegList16 = makeArrayRef(RegList16AVR, std::size(RegList16AVR));
   }
 
   unsigned NumArgs = Args.size();
@@ -1223,11 +1223,11 @@ static void analyzeReturnValues(const SmallVectorImpl<ArgT> &Args,
   ArrayRef<MCPhysReg> RegList8;
   ArrayRef<MCPhysReg> RegList16;
   if (Tiny) {
-    RegList8 = makeArrayRef(RegList8Tiny, array_lengthof(RegList8Tiny));
-    RegList16 = makeArrayRef(RegList16Tiny, array_lengthof(RegList16Tiny));
+    RegList8 = makeArrayRef(RegList8Tiny, std::size(RegList8Tiny));
+    RegList16 = makeArrayRef(RegList16Tiny, std::size(RegList16Tiny));
   } else {
-    RegList8 = makeArrayRef(RegList8AVR, array_lengthof(RegList8AVR));
-    RegList16 = makeArrayRef(RegList16AVR, array_lengthof(RegList16AVR));
+    RegList8 = makeArrayRef(RegList8AVR, std::size(RegList8AVR));
+    RegList16 = makeArrayRef(RegList16AVR, std::size(RegList16AVR));
   }
 
   // GCC-ABI says that the size is rounded up to the next even number,

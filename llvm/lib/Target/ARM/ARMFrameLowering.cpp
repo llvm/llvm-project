@@ -2792,7 +2792,7 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
 const TargetFrameLowering::SpillSlot *
 ARMFrameLowering::getCalleeSavedSpillSlots(unsigned &NumEntries) const {
   static const SpillSlot FixedSpillOffsets[] = {{ARM::FPCXTNS, -4}};
-  NumEntries = array_lengthof(FixedSpillOffsets);
+  NumEntries = std::size(FixedSpillOffsets);
   return FixedSpillOffsets;
 }
 

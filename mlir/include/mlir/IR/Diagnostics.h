@@ -197,10 +197,10 @@ public:
   Diagnostic &operator<<(OperationName val);
 
   /// Stream in an Operation.
-  Diagnostic &operator<<(Operation &val);
-  Diagnostic &operator<<(Operation *val) { return *this << *val; }
+  Diagnostic &operator<<(Operation &op);
+  Diagnostic &operator<<(Operation *op) { return *this << *op; }
   /// Append an operation with the given printing flags.
-  Diagnostic &appendOp(Operation &val, const OpPrintingFlags &flags);
+  Diagnostic &appendOp(Operation &op, const OpPrintingFlags &flags);
 
   /// Stream in a Value.
   Diagnostic &operator<<(Value val);

@@ -104,7 +104,7 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 
 SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
-    ValueRange newIterOperands, NewYieldValueFn newYieldValueFn) {
+    ValueRange newIterOperands, const NewYieldValueFn &newYieldValueFn) {
   if (loopNest.empty())
     return {};
   SmallVector<scf::ForOp> newLoopNest(loopNest.size());

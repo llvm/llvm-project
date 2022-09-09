@@ -603,6 +603,38 @@ defaultInitializeAtRuntime(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+// Fortran 2018 - 9.7.3.2 point 6
+// When a procedure is invoked, any allocated allocatable object that is an
+// actual argument corresponding to an INTENT(OUT) allocatable dummy argument
+// is deallocated; any allocated allocatable object that is a subobject of an
+// actual argument corresponding to an INTENT(OUT) dummy argument is
+// deallocated.
+static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
+                                const Fortran::lower::pft::Variable &var,
+                                Fortran::lower::SymMap &symMap) {
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+  if (Fortran::semantics::IsDummy(sym) &&
+      Fortran::semantics::IsIntentOut(sym) &&
+      Fortran::semantics::IsAllocatable(sym)) {
+    if (auto symbox = symMap.lookupSymbol(sym)) {
+      fir::ExtendedValue extVal = symbox.toExtendedValue();
+      if (auto mutBox = extVal.getBoxOf<fir::MutableBoxValue>()) {
+        mlir::Location loc = converter.getCurrentLocation();
+        if (Fortran::semantics::IsOptional(sym)) {
+          fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+          auto isPresent = builder.create<fir::IsPresentOp>(
+              loc, builder.getI1Type(), fir::getBase(extVal));
+          builder.genIfThen(loc, isPresent)
+              .genThen([&]() { genDeallocateBox(converter, *mutBox, loc); })
+              .end();
+        } else {
+          genDeallocateBox(converter, *mutBox, loc);
+        }
+      }
+    }
+  }
+}
+
 /// Instantiate a local variable. Precondition: Each variable will be visited
 /// such that if its properties depend on other variables, the variables upon
 /// which its properties depend will already have been visited.
@@ -612,6 +644,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   assert(!var.isAlias());
   Fortran::lower::StatementContext stmtCtx;
   mapSymbolAttributes(converter, var, symMap, stmtCtx);
+  deallocateIntentOut(converter, var, symMap);
   if (mustBeDefaultInitializedAtRuntime(var))
     defaultInitializeAtRuntime(converter, var, symMap);
 }

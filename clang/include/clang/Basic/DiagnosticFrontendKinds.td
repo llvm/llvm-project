@@ -282,8 +282,6 @@ def err_duplicate_mangled_name : Error<
   "definition with same mangled name '%0' as another definition">;
 def err_cyclic_alias : Error<
   "%select{alias|ifunc}0 definition is part of a cycle">;
-def err_non_default_visibility_dllstorage : Error<
-  "non-default visibility cannot be applied to '%0' declaration">;
 def err_ifunc_resolver_return : Error<
   "ifunc resolver function must return a pointer">;
 
