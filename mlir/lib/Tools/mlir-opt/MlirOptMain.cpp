@@ -59,19 +59,14 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
   bool wasThreadingEnabled = context->isMultithreadingEnabled();
   context->disableMultithreading();
 
-  // Prepare the pass manager and apply any command line options.
-  PassManager pm(context, OpPassManager::Nesting::Implicit);
-  pm.enableVerifier(verifyPasses);
-  applyPassManagerCLOptions(pm);
-  pm.enableTiming(timing);
-
   // Prepare the parser config, and attach any useful/necessary resource
   // handlers. Unhandled external resources are treated as passthrough, i.e.
   // they are not processed and will be emitted directly to the output
   // untouched.
+  PassReproducerOptions reproOptions;
   FallbackAsmResourceMap fallbackResourceMap;
   ParserConfig config(context, &fallbackResourceMap);
-  attachPassReproducerAsmResource(config, pm, wasThreadingEnabled);
+  reproOptions.attachResourceParser(config);
 
   // Parse the input file and reset the context threading state.
   TimingScope parserTiming = timing.nest("Parser");
@@ -81,8 +76,13 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
     return failure();
   parserTiming.stop();
 
-  // Callback to build the pipeline.
-  if (failed(passManagerSetupFn(pm)))
+  // Prepare the pass manager, applying command-line and reproducer options.
+  PassManager pm(context, OpPassManager::Nesting::Implicit,
+                 module->getOperationName());
+  pm.enableVerifier(verifyPasses);
+  applyPassManagerCLOptions(pm);
+  pm.enableTiming(timing);
+  if (failed(reproOptions.apply(pm)) || failed(passManagerSetupFn(pm)))
     return failure();
 
   // Run the pipeline.
