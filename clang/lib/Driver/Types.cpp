@@ -42,7 +42,7 @@ static constexpr TypeInfo TypeInfos[] = {
 #include "clang/Driver/Types.def"
 #undef TYPE
 };
-static const unsigned numTypes = llvm::array_lengthof(TypeInfos);
+static const unsigned numTypes = std::size(TypeInfos);
 
 static const TypeInfo &getInfo(unsigned id) {
   assert(id > 0 && id - 1 < numTypes && "Invalid Type ID.");

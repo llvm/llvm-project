@@ -1749,7 +1749,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     &CGM.getContext().Idents.get("count")
   };
   Selector FastEnumSel =
-    CGM.getContext().Selectors.getSelector(llvm::array_lengthof(II), &II[0]);
+      CGM.getContext().Selectors.getSelector(std::size(II), &II[0]);
 
   QualType ItemsTy =
     getContext().getConstantArrayType(getContext().getObjCIdType(),
