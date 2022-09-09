@@ -117,6 +117,7 @@ static Value constructResultVector(ConversionPatternRewriter &rewriter,
                                    Location loc, VectorType resultType,
                                    ValueRange resultComponents) {
   llvm::ArrayRef<int64_t> resultShape = resultType.getShape();
+  (void)resultShape;
   assert(!resultShape.empty() && "Result expected to have dimentions");
   assert(resultShape.back() == static_cast<int64_t>(resultComponents.size()) &&
          "Wrong number of result components");
