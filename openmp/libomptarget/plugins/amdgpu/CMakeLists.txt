@@ -75,6 +75,10 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   ${LIBOMPTARGET_INCLUDE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
 
+  LINK_COMPONENTS
+  Support
+  Object
+
   LINK_LIBS 
   PRIVATE
   elf_common
