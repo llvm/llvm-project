@@ -44,9 +44,9 @@ on support follow.
 
   .. table:: Ratified Extensions by Status
 
-     =============    ========================
+     ===============  ========================
      Extension        Status
-     =============    ========================
+     ===============  ========================
      ``A``            Supported
      ``C``            Supported
      ``D``            Supported
@@ -98,7 +98,7 @@ on support follow.
      ``Zvl16384b``    Supported
      ``Zvl32768b``    Supported
      ``Zvl65536b``    Supported
-     =============    ========================
+     ===============  ========================
 
 Assembly Support
   LLVM supports the associated instructions in assembly.  All assembly related tools (e.g. assembler, disassembler, llvm-objdump, etc..) are supported.  Compiler and linker will accept extension names, and linked binaries will contain appropriate ELF flags and attributes to reflect use of named extension.
