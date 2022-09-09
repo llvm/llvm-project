@@ -22,7 +22,7 @@ class CIRDialect;
 } // namespace cir
 
 #define GEN_PASS_CLASSES
-#include "mlir/Dialect/CIR/Passes.h.inc"
+#include "clang/CIR/Dialect/Passes.h.inc"
 
 } // namespace mlir
 

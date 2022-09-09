@@ -13,7 +13,7 @@
 #ifndef MLIR_CIR_DIALECT_CIR_TYPES
 #define MLIR_CIR_DIALECT_CIR_TYPES
 
-include "mlir/Dialect/CIR/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 
 //===----------------------------------------------------------------------===//

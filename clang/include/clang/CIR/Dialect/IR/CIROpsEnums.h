@@ -15,7 +15,8 @@
 #define MLIR_DIALECT_CIR_CIROPSENUMS_H_
 
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Dialect/CIR/IR/CIROpsEnums.h.inc"
+
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h.inc"
 
 namespace mlir {
 namespace cir {

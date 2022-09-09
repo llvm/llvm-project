@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/CIR/IR/CIRDialect.h"
-#include "mlir/Dialect/CIR/IR/CIRAttrs.h"
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -27,10 +27,10 @@
 using namespace mlir;
 using namespace mlir::cir;
 
-#include "mlir/Dialect/CIR/IR/CIROpsEnums.cpp.inc"
-#include "mlir/Dialect/CIR/IR/CIROpsStructs.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROpsStructs.cpp.inc"
 
-#include "mlir/Dialect/CIR/IR/CIROpsDialect.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect
@@ -57,7 +57,7 @@ void cir::CIRDialect::initialize() {
   registerAttributes();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/CIR/IR/CIROps.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROps.cpp.inc"
       >();
   addInterfaces<CIROpAsmDialectInterface>();
 }
@@ -79,12 +79,10 @@ static int parseOptionalKeywordAlternative(OpAsmParser &parser,
 }
 
 namespace {
-template <typename Ty>
-struct EnumTraits {};
+template <typename Ty> struct EnumTraits {};
 
 #define REGISTER_ENUM_TYPE(Ty)                                                 \
-  template <>                                                                  \
-  struct EnumTraits<Ty> {                                                      \
+  template <> struct EnumTraits<Ty> {                                          \
     static StringRef stringify(Ty value) { return stringify##Ty(value); }      \
     static unsigned getMaxEnumVal() { return getMaxEnumValFor##Ty(); }         \
   }
@@ -1427,4 +1425,4 @@ void CstArrayAttr::print(::mlir::AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/CIR/IR/CIROps.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROps.cpp.inc"

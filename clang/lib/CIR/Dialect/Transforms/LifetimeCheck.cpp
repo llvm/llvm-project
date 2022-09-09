@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/CIR/Passes.h"
-
 #include "PassDetail.h"
-#include "mlir/Dialect/CIR/IR/CIRDialect.h"
+
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #include "llvm/ADT/SetOperations.h"

@@ -17,8 +17,8 @@
 #include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
-#include "mlir/Dialect/CIR/IR/CIRDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Value.h"
 

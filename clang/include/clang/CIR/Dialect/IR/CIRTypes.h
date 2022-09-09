@@ -1,4 +1,4 @@
-//===- CIRAttrs.h - MLIR CIR Attrs ------------------------------*- C++ -*-===//
+//===- CIRTypes.h - MLIR CIR Types ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,23 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the attributes in the CIR dialect.
+// This file declares the types in the CIR dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_CIR_IR_CIRATTRS_H_
-#define MLIR_DIALECT_CIR_IR_CIRATTRS_H_
+#ifndef MLIR_DIALECT_CIR_IR_CIRTYPES_H_
+#define MLIR_DIALECT_CIR_IR_CIRTYPES_H_
 
-#include "mlir/Dialect/CIR/IR/CIROpsEnums.h"
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Types.h"
 
 //===----------------------------------------------------------------------===//
-// CIR Dialect Attrs
+// CIR Dialect Types
 //===----------------------------------------------------------------------===//
 
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/CIR/IR/CIROpsAttributes.h.inc"
+#define GET_TYPEDEF_CLASSES
+#include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"
 
-#endif // MLIR_DIALECT_CIR_IR_CIRATTRS_H_
+#endif // MLIR_DIALECT_CIR_IR_CIRTYPES_H_

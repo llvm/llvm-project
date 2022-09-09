@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/CIR/IR/CIRDialect.h"
-#include "mlir/Dialect/CIR/Passes.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/Passes.h"
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"

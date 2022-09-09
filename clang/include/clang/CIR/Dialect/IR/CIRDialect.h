@@ -1,4 +1,4 @@
-//===- CIRDialect.h - MLIR Dialect for CIR ----------------------*- C++ -*-===//
+//===- CIRDialect.h - CIR dialect -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the Target dialect for CIR in MLIR.
+// This file declares the CIR dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_CIR_CIRDIALECT_H_
-#define MLIR_DIALECT_CIR_CIRDIALECT_H_
+#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -25,11 +25,11 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-#include "mlir/Dialect/CIR/IR/CIRAttrs.h"
-#include "mlir/Dialect/CIR/IR/CIROpsDialect.h.inc"
-#include "mlir/Dialect/CIR/IR/CIROpsEnums.h"
-#include "mlir/Dialect/CIR/IR/CIROpsStructs.h.inc"
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsDialect.h.inc"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Dialect/IR/CIROpsStructs.h.inc"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace mlir {
 namespace OpTrait {
@@ -62,6 +62,7 @@ void buildTerminatedBody(OpBuilder &builder, Location loc);
 } // namespace mlir
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/CIR/IR/CIROps.h.inc"
+#include "clang/CIR/Dialect/IR/CIROps.h.inc"
 
-#endif // MLIR_DIALECT_CIR_CIRDIALECT_H_
+#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+
