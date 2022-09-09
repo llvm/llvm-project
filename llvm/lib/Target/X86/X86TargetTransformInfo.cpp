@@ -3616,8 +3616,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::UMULO,      MVT::i64,     {  2 } }, // mulq + seto
   };
   static const CostKindTblEntry X86CostTbl[] = { // 32 or 64-bit targets
-    { ISD::ABS,        MVT::i32,     {  2 } }, // SUB+CMOV
-    { ISD::ABS,        MVT::i16,     {  2 } }, // SUB+CMOV
+    { ISD::ABS,        MVT::i32,     {  2 } }, // SUB+XOR+SRA or SUB+CMOV
+    { ISD::ABS,        MVT::i16,     {  2 } }, // SUB+XOR+SRA or SUB+CMOV
+    { ISD::ABS,        MVT::i8,      {  2 } }, // SUB+XOR+SRA
     { ISD::BITREVERSE, MVT::i32,     { 14 } },
     { ISD::BITREVERSE, MVT::i16,     { 14 } },
     { ISD::BITREVERSE, MVT::i8,      { 11 } },
