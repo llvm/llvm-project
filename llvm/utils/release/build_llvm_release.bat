@@ -251,3 +251,63 @@ cd ..
 
 exit /b 0
 ::==============================================================================
+
+::=============================================================================
+:: Parse command line arguments.
+:: The format for the arguments is:
+::   Boolean: --option
+::   Value:   --option<separator>value
+::     with <separator> being: space, colon, semicolon or equal sign
+::
+:: Command line usage example:
+::   my-batch-file.bat --build --type=release --version 123
+:: It will create 3 variables:
+::   'build' with the value 'true'
+::   'type' with the value 'release'
+::   'version' with the value '123'
+::
+:: Usage:
+::   set "build="
+::   set "type="
+::   set "version="
+::
+::   REM Parse arguments.
+::   call :parse_args %*
+::
+::   if defined build (
+::     ...
+::   )
+::   if %type%=='release' (
+::     ...
+::   )
+::   if %version%=='123' (
+::     ...
+::   )
+::=============================================================================
+:parse_args
+  set "arg_name="
+  :parse_args_start
+  if "%1" == "" (
+    :: Set a seen boolean argument.
+    if "%arg_name%" neq "" (
+      set "%arg_name%=true"
+    )
+    goto :parse_args_done
+  )
+  set aux=%1
+  if "%aux:~0,2%" == "--" (
+    :: Set a seen boolean argument.
+    if "%arg_name%" neq "" (
+      set "%arg_name%=true"
+    )
+    set "arg_name=%aux:~2,250%"
+  ) else (
+    set "%arg_name%=%1"
+    set "arg_name="
+  )
+  shift
+  goto :parse_args_start
+
+:parse_args_done
+exit /b 0
+::==============================================================================
