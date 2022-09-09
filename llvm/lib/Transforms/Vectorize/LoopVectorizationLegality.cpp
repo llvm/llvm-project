@@ -933,16 +933,33 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   // vectorize loop is made, runtime checks are added so as to make sure that
   // invariant address won't alias with any other objects.
   if (!LAI->getStoresToInvariantAddresses().empty()) {
-    // For each invariant address, check its last stored value is unconditional.
+    // For each invariant address, check if last stored value is unconditional
+    // and the address is not calculated inside the loop.
     for (StoreInst *SI : LAI->getStoresToInvariantAddresses()) {
-      if (isInvariantStoreOfReduction(SI) &&
-          blockNeedsPredication(SI->getParent())) {
+      if (!isInvariantStoreOfReduction(SI))
+        continue;
+
+      if (blockNeedsPredication(SI->getParent())) {
         reportVectorizationFailure(
             "We don't allow storing to uniform addresses",
             "write of conditional recurring variant value to a loop "
             "invariant address could not be vectorized",
             "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
         return false;
+      }
+
+      // Invariant address should be defined outside of loop. LICM pass usually
+      // makes sure it happens, but in rare cases it does not, we do not want
+      // to overcomplicate vectorization to support this case.
+      if (Instruction *Ptr = dyn_cast<Instruction>(SI->getPointerOperand())) {
+        if (TheLoop->contains(Ptr)) {
+          reportVectorizationFailure(
+              "Invariant address is calculated inside the loop",
+              "write to a loop invariant address could not "
+              "be vectorized",
+              "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
+          return false;
+        }
       }
     }
 
