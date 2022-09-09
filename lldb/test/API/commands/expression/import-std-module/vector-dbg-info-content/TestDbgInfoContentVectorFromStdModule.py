@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 class TestDbgInfoContentVector(TestBase):
 
     @add_test_categories(["libc++"])
+    @expectedFailureDarwin # FIXME: May need to force system libcxx here.
     @skipIf(compiler=no_match("clang"))
     def test(self):
         self.build()

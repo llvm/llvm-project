@@ -16,8 +16,12 @@
 namespace lldb_private {
 namespace process_gdb_remote {
 
-class GDBRemoteClientBase : public GDBRemoteCommunication {
+class GDBRemoteClientBase : public GDBRemoteCommunication, public Broadcaster {
 public:
+  enum {
+    eBroadcastBitRunPacketSent = (1u << 0),
+  };
+
   struct ContinueDelegate {
     virtual ~ContinueDelegate();
     virtual void HandleAsyncStdout(llvm::StringRef out) = 0;
@@ -31,7 +35,7 @@ public:
     virtual void HandleAsyncStructuredDataPacket(llvm::StringRef data) = 0;
   };
 
-  GDBRemoteClientBase(const char *comm_name, const char *listener_name);
+  GDBRemoteClientBase(const char *comm_name);
 
   bool SendAsyncSignal(int signo, std::chrono::seconds interrupt_timeout);
 

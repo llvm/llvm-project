@@ -104,9 +104,7 @@ void parseGuard(StringRef fullArg) {
       config->guardCF &= ~GuardCFLevel::LongJmp;
     else if (arg.equals_insensitive("noehcont"))
       config->guardCF &= ~GuardCFLevel::EHCont;
-    else if (arg.equals_insensitive("cf"))
-      config->guardCF = GuardCFLevel::CF;
-    else if (arg.equals_insensitive("longjmp"))
+    else if (arg.equals_insensitive("cf") || arg.equals_insensitive("longjmp"))
       config->guardCF |= GuardCFLevel::CF | GuardCFLevel::LongJmp;
     else if (arg.equals_insensitive("ehcont"))
       config->guardCF |= GuardCFLevel::CF | GuardCFLevel::EHCont;

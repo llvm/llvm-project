@@ -63,6 +63,7 @@ def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0]> {
 def LLVM_SinOp : LLVM_UnaryIntrinsicOp<"sin">;
 def LLVM_RoundEvenOp : LLVM_UnaryIntrinsicOp<"roundeven">;
 def LLVM_RoundOp : LLVM_UnaryIntrinsicOp<"round">;
+def LLVM_FTruncOp : LLVM_UnaryIntrinsicOp<"trunc">;
 def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrinsicOp<"pow">;
 def LLVM_PowIOp : LLVM_BinaryIntrinsicOp<"powi">;

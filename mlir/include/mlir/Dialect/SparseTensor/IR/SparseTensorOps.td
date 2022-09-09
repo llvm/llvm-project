@@ -197,18 +197,25 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", []>,
 // as our sparse abstractions evolve.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
+def SparseTensor_InsertOp : SparseTensor_Op<"insert", []>,
     Arguments<(ins AnySparseTensor:$tensor,
                StridedMemRefRankOf<[Index], [1]>:$indices,
                AnyType:$value)> {
-  string summary = "Inserts a value into given sparse tensor in lexicographical index order";
+  string summary = "Inserts a value into given sparse tensor";
   string description = [{
     Inserts the given value at given indices into the underlying sparse
     storage format of the given tensor with the given indices. This
     operation can only be applied when a tensor materializes unintialized
-    with a `bufferization.alloc_tensor` operation, the insertions occur in
-    strict lexicographical index order, and the final tensor is constructed
-    with a `load` operation that has the `hasInserts` attribute set.
+    with a `bufferization.alloc_tensor` operation and the final tensor
+    is constructed with a `load` operation that has the `hasInserts`
+    attribute set.
+
+    Properties in the sparse tensor type fully describe what kind
+    of insertion order is allowed. When all dimensions have "unique"
+    and "ordered" properties, for example, insertions should occur in
+    strict lexicographical index order. Other properties define
+    different insertion regimens. Inserting in a way contrary to
+    these properties results in undefined behavior.
 
     Note that this operation is "impure" in the sense that its behavior
     is solely defined by side-effects and not SSA values. The semantics
@@ -217,7 +224,7 @@ def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
     Example:
 
     ```mlir
-    sparse_tensor.lex_insert %tensor, %indices, %val
+    sparse_tensor.insert %tensor, %indices, %val
       : tensor<1024x1024xf64, #CSR>, memref<?xindex>, memref<f64>
     ```
   }];

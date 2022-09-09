@@ -257,7 +257,7 @@ static bool isZero(Value v) {
 /// inserting a memref.subview dropping those unit dims.
 class TransferReadDropUnitDimsPattern
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp transferReadOp,
                                 PatternRewriter &rewriter) const override {
@@ -300,7 +300,7 @@ class TransferReadDropUnitDimsPattern
 /// unit dims, by inserting a memref.subview dropping those unit dims.
 class TransferWriteDropUnitDimsPattern
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp transferWriteOp,
                                 PatternRewriter &rewriter) const override {
@@ -339,34 +339,26 @@ class TransferWriteDropUnitDimsPattern
   }
 };
 
-/// Returns the position of the first inner dimension that has contiguous layout
-/// with at least `requiredContiguousSize` contiguous elements.
-/// When such a dimension is found, the return value satisfies:
-///   0 <= return_value <= memrefType.getRank() - 1.
-/// When no such dimension is found, the return value is memrefType.getRank().
-static int64_t getContiguousInnerDim(MemRefType memrefType,
-                                     int64_t requiredContiguousSize) {
+/// Return true if the memref type has its inner dimension matching the given
+/// shape. Otherwise return false.
+static int64_t hasMatchingInnerContigousShape(MemRefType memrefType,
+                                              ArrayRef<int64_t> targetShape) {
   auto shape = memrefType.getShape();
   SmallVector<int64_t> strides;
   int64_t offset;
-  int64_t innerDim = shape.size();
-  if (succeeded(getStridesAndOffset(memrefType, strides, offset))) {
-    int64_t innerSize = 1;
-    while (true) {
-      if (innerDim == 0)
-        break;
-      const int64_t nextDim = innerDim - 1;
-      if (shape[nextDim] == ShapedType::kDynamicSize)
-        break;
-      if (strides[nextDim] != innerSize)
-        break;
-      innerSize *= shape[nextDim];
-      innerDim = nextDim;
-      if (innerSize >= requiredContiguousSize)
-        break;
-    }
+  if (!succeeded(getStridesAndOffset(memrefType, strides, offset)))
+    return false;
+  if (strides.back() != 1)
+    return false;
+  strides.pop_back();
+  int64_t flatDim = 1;
+  for (auto [targetDim, memrefDim, memrefStride] :
+       llvm::reverse(llvm::zip(targetShape, shape, strides))) {
+    flatDim *= memrefDim;
+    if (flatDim != memrefStride || targetDim != memrefDim)
+      return false;
   }
-  return innerDim;
+  return true;
 }
 
 /// Creates a memref.collapse_shape collapsing all inner dimensions of the
@@ -412,7 +404,7 @@ checkAndCollapseInnerZeroIndices(ValueRange indices, int64_t firstDimToCollapse,
 /// already reduced i.e. without unit dims.
 class FlattenContiguousRowMajorTransferReadPattern
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp transferReadOp,
                                 PatternRewriter &rewriter) const override {
@@ -427,10 +419,12 @@ class FlattenContiguousRowMajorTransferReadPattern
     if (vectorType.getRank() <= 1)
       // Already 0D/1D, nothing to do.
       return failure();
-    int64_t firstContiguousInnerDim =
-        getContiguousInnerDim(sourceType, vectorType.getNumElements());
-    if (firstContiguousInnerDim >= sourceType.getRank() - 1)
+    if (!hasMatchingInnerContigousShape(
+            sourceType,
+            vectorType.getShape().take_back(vectorType.getRank() - 1)))
       return failure();
+    int64_t firstContiguousInnerDim =
+        sourceType.getRank() - vectorType.getRank();
     // TODO: generalize this pattern, relax the requirements here.
     if (transferReadOp.hasOutOfBoundsDim())
       return failure();
@@ -470,7 +464,7 @@ class FlattenContiguousRowMajorTransferReadPattern
 /// already reduced i.e. without unit dims.
 class FlattenContiguousRowMajorTransferWritePattern
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp transferWriteOp,
                                 PatternRewriter &rewriter) const override {
@@ -485,10 +479,12 @@ class FlattenContiguousRowMajorTransferWritePattern
     if (vectorType.getRank() <= 1)
       // Already 0D/1D, nothing to do.
       return failure();
-    int64_t firstContiguousInnerDim =
-        getContiguousInnerDim(sourceType, vectorType.getNumElements());
-    if (firstContiguousInnerDim >= sourceType.getRank() - 1)
+    if (!hasMatchingInnerContigousShape(
+            sourceType,
+            vectorType.getShape().take_back(vectorType.getRank() - 1)))
       return failure();
+    int64_t firstContiguousInnerDim =
+        sourceType.getRank() - vectorType.getRank();
     // TODO: generalize this pattern, relax the requirements here.
     if (transferWriteOp.hasOutOfBoundsDim())
       return failure();
@@ -543,17 +539,17 @@ void mlir::vector::transferOpflowOpt(Operation *rootOp) {
 }
 
 void mlir::vector::populateVectorTransferDropUnitDimsPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns
       .add<TransferReadDropUnitDimsPattern, TransferWriteDropUnitDimsPattern>(
-          patterns.getContext());
+          patterns.getContext(), benefit);
   populateShapeCastFoldingPatterns(patterns);
 }
 
 void mlir::vector::populateFlattenVectorTransferPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<FlattenContiguousRowMajorTransferReadPattern,
                FlattenContiguousRowMajorTransferWritePattern>(
-      patterns.getContext());
-  populateShapeCastFoldingPatterns(patterns);
+      patterns.getContext(), benefit);
+  populateShapeCastFoldingPatterns(patterns, benefit);
 }

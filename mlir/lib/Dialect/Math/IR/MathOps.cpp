@@ -428,6 +428,18 @@ OpFoldResult math::RoundEvenOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// FloorOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::FloorOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOp<FloatAttr>(operands, [](const APFloat &a) {
+    APFloat result(a);
+    result.roundToIntegral(llvm::RoundingMode::TowardNegative);
+    return result;
+  });
+}
+
+//===----------------------------------------------------------------------===//
 // RoundOp folder
 //===----------------------------------------------------------------------===//
 
@@ -439,6 +451,24 @@ OpFoldResult math::RoundOp::fold(ArrayRef<Attribute> operands) {
           return APFloat(round(a.convertToDouble()));
         case 32:
           return APFloat(roundf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// TruncOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::TruncOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(trunc(a.convertToDouble()));
+        case 32:
+          return APFloat(truncf(a.convertToFloat()));
         default:
           return {};
         }

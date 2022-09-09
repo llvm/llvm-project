@@ -401,8 +401,9 @@ struct CastAwayContractionLeadingOneDim
 
 class CastAwayElementwiseLeadingOneDim : public RewritePattern {
 public:
-  CastAwayElementwiseLeadingOneDim(MLIRContext *context)
-      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
+  CastAwayElementwiseLeadingOneDim(MLIRContext *context,
+                                   PatternBenefit benefit = 1)
+      : RewritePattern(MatchAnyOpTypeTag(), benefit, context) {}
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
@@ -436,12 +437,12 @@ public:
 } // namespace
 
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns
       .add<CastAwayExtractStridedSliceLeadingOneDim,
            CastAwayInsertStridedSliceLeadingOneDim, CastAwayInsertLeadingOneDim,
            CastAwayTransferReadLeadingOneDim,
            CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
-           CastAwayContractionLeadingOneDim>(patterns.getContext());
-  populateShapeCastFoldingPatterns(patterns);
+           CastAwayContractionLeadingOneDim>(patterns.getContext(), benefit);
+  populateShapeCastFoldingPatterns(patterns, benefit);
 }

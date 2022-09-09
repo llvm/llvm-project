@@ -330,16 +330,13 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
   if (failed(resolveSourceIndicesSubView(loadOp.getLoc(), rewriter, subViewOp,
                                          indices, sourceIndices)))
     return failure();
+
   llvm::TypeSwitch<Operation *, void>(loadOp)
       .Case<AffineLoadOp, memref::LoadOp>([&](auto op) {
         rewriter.replaceOpWithNewOp<decltype(op)>(loadOp, subViewOp.source(),
                                                   sourceIndices);
       })
       .Case([&](vector::TransferReadOp transferReadOp) {
-        if (transferReadOp.getTransferRank() == 0) {
-          // TODO: Propagate the error.
-          return;
-        }
         rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
             transferReadOp, transferReadOp.getVectorType(), subViewOp.source(),
             sourceIndices,
@@ -439,15 +436,13 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
   if (failed(resolveSourceIndicesSubView(storeOp.getLoc(), rewriter, subViewOp,
                                          indices, sourceIndices)))
     return failure();
+
   llvm::TypeSwitch<Operation *, void>(storeOp)
       .Case<AffineStoreOp, memref::StoreOp>([&](auto op) {
         rewriter.replaceOpWithNewOp<decltype(op)>(
             storeOp, storeOp.getValue(), subViewOp.source(), sourceIndices);
       })
       .Case([&](vector::TransferWriteOp op) {
-        // TODO: support 0-d corner case.
-        if (op.getTransferRank() == 0)
-          return;
         rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
             op, op.getValue(), subViewOp.source(), sourceIndices,
             getPermutationMapAttr(rewriter.getContext(), subViewOp,

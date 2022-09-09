@@ -3753,6 +3753,12 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       return DAG.getNode(ISD::ADD, DL, VT, N1, N0);
   }
 
+  // (sub (subcarry X, 0, Carry), Y) -> (subcarry X, Y, Carry)
+  if (N0.getOpcode() == ISD::SUBCARRY && isNullConstant(N0.getOperand(1)) &&
+      N0.getResNo() == 0 && N0.hasOneUse())
+    return DAG.getNode(ISD::SUBCARRY, DL, N0->getVTList(),
+                       N0.getOperand(0), N1, N0.getOperand(2));
+
   if (TLI.isOperationLegalOrCustom(ISD::ADDCARRY, VT)) {
     // (sub Carry, X)  ->  (addcarry (sub 0, X), 0, Carry)
     if (SDValue Carry = getAsCarry(TLI, N0)) {

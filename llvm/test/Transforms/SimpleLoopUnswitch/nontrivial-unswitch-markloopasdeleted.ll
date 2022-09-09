@@ -4,7 +4,7 @@
 ; Running loop-distribute will result in LoopAccessAnalysis being required and
 ; cached in the LoopAnalysisManagerFunctionProxy.
 ;
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 2 containing: %loop_a_inner<header><latch><exiting>
+; CHECK: Running analysis: LoopAccessAnalysis on loop_a_inner
 
 
 ; Then simple-loop-unswitch is removing/replacing some loops (resulting in
@@ -17,7 +17,7 @@
 ; SimpleLoopUnswitch not marking the Loop as removed, so we missed clearing
 ; the analysis caches.
 ;
-; CHECK: Running pass: SimpleLoopUnswitchPass on Loop at depth 1 containing: %loop_begin<header>,%loop_b,%loop_b_inner,%loop_b_inner_exit,%loop_a,%loop_a_inner,%loop_a_inner_exit,%latch<latch><exiting>
+; CHECK: Running pass: SimpleLoopUnswitchPass on loop_begin
 ; CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-NEXT: Clearing all analysis results for: loop_a_inner
 
@@ -27,7 +27,7 @@
 ; loop_a_inner.us). This kind of verifies that it was correct to remove the
 ; loop_a_inner related analysis above.
 ;
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 2 containing: %loop_a_inner.us<header><latch><exiting>
+; CHECK: Running analysis: LoopAccessAnalysis on loop_a_inner.us
 
 
 define i32 @test6(i1* %ptr, i1 %cond1, i32* %a.ptr, i32* %b.ptr) {

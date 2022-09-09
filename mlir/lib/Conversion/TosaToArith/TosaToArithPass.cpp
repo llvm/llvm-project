@@ -31,6 +31,8 @@ using namespace tosa;
 namespace {
 struct TosaToArith : public impl::TosaToArithBase<TosaToArith> {
 public:
+  TosaToArith(TosaToArithOptions &options) : TosaToArithBase(options) {}
+
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
@@ -52,6 +54,8 @@ public:
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToArith() {
-  return std::make_unique<TosaToArith>();
+std::unique_ptr<Pass> mlir::tosa::createTosaToArith(bool includeApplyRescale,
+                                                    bool use32BitApplyRescale) {
+  TosaToArithOptions options = {includeApplyRescale, use32BitApplyRescale};
+  return std::make_unique<TosaToArith>(options);
 }

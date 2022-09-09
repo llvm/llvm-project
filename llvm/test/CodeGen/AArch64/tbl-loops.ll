@@ -151,7 +151,7 @@ define void @loop2(i8* noalias nocapture noundef writeonly %dst, float* nocaptur
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.ls .LBB1_4
 ; CHECK-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-NEXT:    lsl x9, x8, #1
+; CHECK-NEXT:    ubfiz x9, x8, #1, #32
 ; CHECK-NEXT:    add x9, x9, #2
 ; CHECK-NEXT:    add x10, x1, x9, lsl #2
 ; CHECK-NEXT:    cmp x10, x0
@@ -535,7 +535,7 @@ define void @loop4(i8* noalias nocapture noundef writeonly %dst, float* nocaptur
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.ls .LBB3_4
 ; CHECK-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-NEXT:    lsl x9, x8, #2
+; CHECK-NEXT:    ubfiz x9, x8, #2, #32
 ; CHECK-NEXT:    add x9, x9, #4
 ; CHECK-NEXT:    add x10, x1, x9, lsl #2
 ; CHECK-NEXT:    cmp x10, x0

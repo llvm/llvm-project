@@ -650,3 +650,44 @@ func.func @lane_dependent_warp_propagate_read(
   vector.transfer_write %r, %dest[%c0, %laneid] : vector<1x1xf32>, memref<1x1024xf32>
   return
 }
+
+// -----
+
+// CHECK-PROP:   func @dont_duplicate_read
+func.func @dont_duplicate_read(
+  %laneid: index, %src: memref<1024xf32>) -> vector<1xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+//       CHECK-PROP:   vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
+//  CHECK-PROP-NEXT:     vector.transfer_read
+//  CHECK-PROP-NEXT:     "blocking_use"
+//  CHECK-PROP-NEXT:     vector.yield
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
+    %2 = vector.transfer_read %src[%c0], %cst : memref<1024xf32>, vector<32xf32>
+    "blocking_use"(%2) : (vector<32xf32>) -> ()
+    vector.yield %2 : vector<32xf32>
+  }
+  return %r : vector<1xf32>
+}
+
+// -----
+
+// CHECK-PROP:   func @dedup
+func.func @dedup(%laneid: index, %v0: vector<4xf32>, %v1: vector<4xf32>) 
+    -> (vector<1xf32>, vector<1xf32>) {
+
+  // CHECK-PROP: %[[SINGLE_RES:.*]] = vector.warp_execute_on_lane_0{{.*}} -> (vector<1xf32>) {
+  %r:2 = vector.warp_execute_on_lane_0(%laneid)[32]
+      args(%v0, %v1 : vector<4xf32>, vector<4xf32>) -> (vector<1xf32>, vector<1xf32>) {
+    ^bb0(%arg0: vector<128xf32>, %arg1: vector<128xf32>):
+
+    // CHECK-PROP: %[[SINGLE_VAL:.*]] = "some_def"(%{{.*}}) : (vector<128xf32>) -> vector<32xf32>
+    %2 = "some_def"(%arg0) : (vector<128xf32>) -> vector<32xf32>
+
+    // CHECK-PROP: vector.yield %[[SINGLE_VAL]] : vector<32xf32>
+    vector.yield %2, %2 : vector<32xf32>, vector<32xf32>
+  }
+
+  // CHECK-PROP: return %[[SINGLE_RES]], %[[SINGLE_RES]] : vector<1xf32>, vector<1xf32>
+  return %r#0, %r#1 : vector<1xf32>, vector<1xf32>
+}

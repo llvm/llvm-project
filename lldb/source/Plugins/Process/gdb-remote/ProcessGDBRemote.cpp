@@ -1168,7 +1168,7 @@ Status ProcessGDBRemote::DoResume() {
   ListenerSP listener_sp(
       Listener::MakeListener("gdb-remote.resume-packet-sent"));
   if (listener_sp->StartListeningForEvents(
-          &m_gdb_comm, GDBRemoteCommunication::eBroadcastBitRunPacketSent)) {
+          &m_gdb_comm, GDBRemoteClientBase::eBroadcastBitRunPacketSent)) {
     listener_sp->StartListeningForEvents(
         &m_async_broadcaster,
         ProcessGDBRemote::eBroadcastBitAsyncThreadDidExit);

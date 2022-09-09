@@ -6,8 +6,7 @@ define { i64, i64 } @sub(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 nou
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    subq %rdx, %rax
-; CHECK-NEXT:    sbbq $0, %rsi
-; CHECK-NEXT:    subq %rcx, %rsi
+; CHECK-NEXT:    sbbq %rcx, %rsi
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    retq
   %5 = zext i64 %1 to i128

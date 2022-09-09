@@ -178,9 +178,8 @@ cl::opt<bolt::ReorderBasicBlocks::LayoutType> ReorderBlocks(
     cl::ZeroOrMore, cl::cat(BoltOptCategory),
     cl::callback([](const bolt::ReorderBasicBlocks::LayoutType &option) {
       if (option == bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS) {
-        WithColor::warning()
-            << "'-reorder-blocks=cache+' is deprecated, "
-            << "please use '-reorder-blocks=ext-tsp' instead\n";
+        errs() << "BOLT-WARNING: '-reorder-blocks=cache+' is deprecated, please"
+               << " use '-reorder-blocks=ext-tsp' instead\n";
         ReorderBlocks = bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP;
       }
     }));
