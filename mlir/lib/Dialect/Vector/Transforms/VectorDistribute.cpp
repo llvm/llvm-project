@@ -753,27 +753,50 @@ struct WarpOpDeadResult : public OpRewritePattern<WarpExecuteOnLane0Op> {
   using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Type> resultTypes;
-    SmallVector<Value> yieldValues;
+    SmallVector<Type> newResultTypes;
+    newResultTypes.reserve(warpOp->getNumResults());
+    SmallVector<Value> newYieldValues;
+    newYieldValues.reserve(warpOp->getNumResults());
+    DenseMap<Value, int64_t> dedupYieldOperandPositionMap;
+    DenseMap<OpResult, int64_t> dedupResultPositionMap;
     auto yield = cast<vector::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+
+    // Some values may be yielded multiple times and correspond to multiple
+    // results. Deduplicating occurs by taking each result with its matching
+    // yielded value, and:
+    //   1. recording the unique first position at which the value is yielded.
+    //   2. recording for the result, the first position at which the dedup'ed
+    //      value is yielded.
+    //   3. skipping from the new result types / new yielded values any result
+    //      that has no use or whose yielded value has already been seen.
     for (OpResult result : warpOp.getResults()) {
-      if (result.use_empty())
+      Value yieldOperand = yield.getOperand(result.getResultNumber());
+      auto it = dedupYieldOperandPositionMap.insert(
+          std::make_pair(yieldOperand, newResultTypes.size()));
+      dedupResultPositionMap.insert(std::make_pair(result, it.first->second));
+      if (result.use_empty() || !it.second)
         continue;
-      resultTypes.push_back(result.getType());
-      yieldValues.push_back(yield.getOperand(result.getResultNumber()));
+      newResultTypes.push_back(result.getType());
+      newYieldValues.push_back(yieldOperand);
     }
-    if (yield.getNumOperands() == yieldValues.size())
+    // No modification, exit early.
+    if (yield.getNumOperands() == newYieldValues.size())
       return failure();
+    // Move the body of the old warpOp to a new warpOp.
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
-        rewriter, warpOp, yieldValues, resultTypes);
-    unsigned resultIndex = 0;
+        rewriter, warpOp, newYieldValues, newResultTypes);
+    // Replace results of the old warpOp by the new, deduplicated results.
+    SmallVector<Value> newValues;
+    newValues.reserve(warpOp->getNumResults());
     for (OpResult result : warpOp.getResults()) {
       if (result.use_empty())
-        continue;
-      result.replaceAllUsesWith(newWarpOp.getResult(resultIndex++));
+        newValues.push_back(Value());
+      else
+        newValues.push_back(
+            newWarpOp.getResult(dedupResultPositionMap.lookup(result)));
     }
-    rewriter.eraseOp(warpOp);
+    rewriter.replaceOp(warpOp, newValues);
     return success();
   }
 };
