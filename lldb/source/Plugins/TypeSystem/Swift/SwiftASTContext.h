@@ -17,6 +17,7 @@
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
+#include "swift/Parse/ParseVersion.h"
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Utility/Either.h"
