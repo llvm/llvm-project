@@ -259,6 +259,11 @@ def : Pat<(bitconvert GPR:$src), (MOVGR2FR_D GPR:$src)>;
 def : Pat<(bitconvert FPR64:$src), (MOVFR2GR_D FPR64:$src)>;
 } // Predicates = [HasBasicD, IsLA64]
 
+// FP Rounding
+let Predicates = [HasBasicD, IsLA64] in {
+def : PatFpr<frint, FRINT_D, FPR64>;
+} // Predicates = [HasBasicD, IsLA64]
+
 let Predicates = [HasBasicD, IsLA32] in {
 def : Pat<(f64 fpimm0), (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0)>;
 def : Pat<(f64 fpimm0neg), (FNEG_D (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0))>;
