@@ -202,7 +202,6 @@ template <class charT> class messages_byname;
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale>
 #include <__memory/unique_ptr.h>
-#include <cstdarg> // TODO: Remove this include
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -4354,6 +4353,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstdarg>
 #  include <iterator>
 #endif
 

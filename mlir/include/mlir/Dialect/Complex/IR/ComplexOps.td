@@ -531,6 +531,8 @@ def SubOp : ComplexArithmeticOp<"sub"> {
     %a = complex.sub %b, %c : complex<f32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

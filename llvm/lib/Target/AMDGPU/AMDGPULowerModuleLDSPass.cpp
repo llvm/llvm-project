@@ -244,6 +244,10 @@ public:
       }
     }
 
+    for (auto &GV : make_early_inc_range(M.globals()))
+      if (AMDGPU::isLDSVariableToLower(GV) && GV.use_empty())
+        GV.eraseFromParent();
+    
     return Changed;
   }
 
