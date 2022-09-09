@@ -26,6 +26,9 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* ``ELFCOMPRESS_ZSTD`` compressed input sections are now supported.
+  (`D129406 <https://reviews.llvm.org/D129406>`_)
+
 Breaking changes
 ----------------
 
