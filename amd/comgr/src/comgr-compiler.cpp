@@ -244,12 +244,12 @@ bool AssemblerInvocation::createFromArgs(AssemblerInvocation &Opts,
                                      OPT_compress_debug_sections_EQ)) {
     if (A->getOption().getID() == OPT_compress_debug_sections) {
       // TODO: be more clever about the compression type auto-detection
-      Opts.CompressDebugSections = llvm::DebugCompressionType::Z;
+      Opts.CompressDebugSections = llvm::DebugCompressionType::Zlib;
     } else {
       Opts.CompressDebugSections =
           llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
               .Case("none", llvm::DebugCompressionType::None)
-              .Case("zlib", llvm::DebugCompressionType::Z)
+              .Case("zlib", llvm::DebugCompressionType::Zlib)
               .Default(llvm::DebugCompressionType::None);
     }
   }
