@@ -89,6 +89,9 @@ private:
   void generateRewriter(pdl::OperationOp operationOp,
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
+  void generateRewriter(pdl::RangeOp rangeOp,
+                        DenseMap<Value, Value> &rewriteValues,
+                        function_ref<Value(Value)> mapRewriteValue);
   void generateRewriter(pdl::ReplaceOp replaceOp,
                         DenseMap<Value, Value> &rewriteValues,
                         function_ref<Value(Value)> mapRewriteValue);
@@ -668,8 +671,8 @@ SymbolRefAttr PatternLowering::generateRewriter(
     for (Operation &rewriteOp : *rewriter.getBody()) {
       llvm::TypeSwitch<Operation *>(&rewriteOp)
           .Case<pdl::ApplyNativeRewriteOp, pdl::AttributeOp, pdl::EraseOp,
-                pdl::OperationOp, pdl::ReplaceOp, pdl::ResultOp, pdl::ResultsOp,
-                pdl::TypeOp, pdl::TypesOp>([&](auto op) {
+                pdl::OperationOp, pdl::RangeOp, pdl::ReplaceOp, pdl::ResultOp,
+                pdl::ResultsOp, pdl::TypeOp, pdl::TypesOp>([&](auto op) {
             this->generateRewriter(op, rewriteValues, mapRewriteValue);
           });
     }
@@ -773,6 +776,16 @@ void PatternLowering::generateRewriter(
           loc, valueTy, createdOp, it.index());
     type = builder.create<pdl_interp::GetValueTypeOp>(loc, resultVal);
   }
+}
+
+void PatternLowering::generateRewriter(
+    pdl::RangeOp rangeOp, DenseMap<Value, Value> &rewriteValues,
+    function_ref<Value(Value)> mapRewriteValue) {
+  SmallVector<Value, 4> replOperands;
+  for (Value operand : rangeOp.getArguments())
+    replOperands.push_back(mapRewriteValue(operand));
+  rewriteValues[rangeOp] = builder.create<pdl_interp::CreateRangeOp>(
+      rangeOp.getLoc(), rangeOp.getType(), replOperands);
 }
 
 void PatternLowering::generateRewriter(
