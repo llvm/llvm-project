@@ -3228,6 +3228,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     insertShadowCheck(Shadow, Origin, &I);
   }
 
+  void handleMaskedExpandLoad(IntrinsicInst &I) {
+    // PassThru can be undef, so default visitInstruction is too strict.
+    // TODO: Provide real implementation.
+    setShadow(&I, getCleanShadow(&I));
+    setOrigin(&I, getCleanOrigin());
+  }
+
+  void handleMaskedGather(IntrinsicInst &I) {
+    // PassThru can be undef, so default visitInstruction is too strict.
+    // TODO: Provide real implementation.
+    setShadow(&I, getCleanShadow(&I));
+    setOrigin(&I, getCleanOrigin());
+  }
+
   void handleMaskedStore(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *V = I.getArgOperand(0);
@@ -3428,6 +3442,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::bswap:
       handleBswap(I);
+      break;
+    case Intrinsic::masked_expandload:
+      handleMaskedExpandLoad(I);
+      break;
+    case Intrinsic::masked_gather:
+      handleMaskedGather(I);
       break;
     case Intrinsic::masked_store:
       handleMaskedStore(I);
