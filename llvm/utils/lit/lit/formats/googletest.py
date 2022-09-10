@@ -112,8 +112,8 @@ class GoogleTest(TestFormat):
         shard_env = {
             'GTEST_OUTPUT': 'json:' + test.gtest_json_file,
             'GTEST_SHUFFLE': '1' if use_shuffle else '0',
-            'GTEST_TOTAL_SHARDS': total_shards,
-            'GTEST_SHARD_INDEX': shard_idx
+            'GTEST_TOTAL_SHARDS': os.environ.get("GTEST_TOTAL_SHARDS", total_shards),
+            'GTEST_SHARD_INDEX': os.environ.get("GTEST_SHARD_INDEX", shard_idx)
         }
         test.config.environment.update(shard_env)
 

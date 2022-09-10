@@ -15079,12 +15079,14 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
       TargetLowering::NegatibleCost::Expensive;
   SDValue NegN0 =
       TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize, CostN0);
-  SDValue NegN1 =
-      TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize, CostN1);
-  if (NegN0 && NegN1 &&
-      (CostN0 == TargetLowering::NegatibleCost::Cheaper ||
-       CostN1 == TargetLowering::NegatibleCost::Cheaper))
-    return DAG.getNode(ISD::FMUL, DL, VT, NegN0, NegN1);
+  if (NegN0) {
+    HandleSDNode NegN0Handle(NegN0);
+    SDValue NegN1 =
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize, CostN1);
+    if (NegN1 && (CostN0 == TargetLowering::NegatibleCost::Cheaper ||
+                  CostN1 == TargetLowering::NegatibleCost::Cheaper))
+      return DAG.getNode(ISD::FMUL, DL, VT, NegN0, NegN1);
+  }
 
   // fold (fmul X, (select (fcmp X > 0.0), -1.0, 1.0)) -> (fneg (fabs X))
   // fold (fmul X, (select (fcmp X > 0.0), 1.0, -1.0)) -> (fabs X)
@@ -15170,12 +15172,14 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
       TargetLowering::NegatibleCost::Expensive;
   SDValue NegN0 =
       TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize, CostN0);
-  SDValue NegN1 =
-      TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize, CostN1);
-  if (NegN0 && NegN1 &&
-      (CostN0 == TargetLowering::NegatibleCost::Cheaper ||
-       CostN1 == TargetLowering::NegatibleCost::Cheaper))
-    return DAG.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
+  if (NegN0) {
+    HandleSDNode NegN0Handle(NegN0);
+    SDValue NegN1 =
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize, CostN1);
+    if (NegN1 && (CostN0 == TargetLowering::NegatibleCost::Cheaper ||
+                  CostN1 == TargetLowering::NegatibleCost::Cheaper))
+      return DAG.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
+  }
 
   // FIXME: use fast math flags instead of Options.UnsafeFPMath
   if (Options.UnsafeFPMath) {
@@ -15473,12 +15477,14 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
       TargetLowering::NegatibleCost::Expensive;
   SDValue NegN0 =
       TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize, CostN0);
-  SDValue NegN1 =
-      TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize, CostN1);
-  if (NegN0 && NegN1 &&
-      (CostN0 == TargetLowering::NegatibleCost::Cheaper ||
-       CostN1 == TargetLowering::NegatibleCost::Cheaper))
-    return DAG.getNode(ISD::FDIV, SDLoc(N), VT, NegN0, NegN1);
+  if (NegN0) {
+    HandleSDNode NegN0Handle(NegN0);
+    SDValue NegN1 =
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize, CostN1);
+    if (NegN1 && (CostN0 == TargetLowering::NegatibleCost::Cheaper ||
+                  CostN1 == TargetLowering::NegatibleCost::Cheaper))
+      return DAG.getNode(ISD::FDIV, SDLoc(N), VT, NegN0, NegN1);
+  }
 
   return SDValue();
 }

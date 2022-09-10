@@ -101,6 +101,10 @@ public:
       const lldb_private::SourceLocationSpec &src_location_spec,
       lldb::SymbolContextItem resolve_scope,
       lldb_private::SymbolContextList &sc_list) override;
+
+  lldb_private::Status
+  GetFrameVariableError(lldb_private::StackFrame &frame) override;
+
   void
   FindGlobalVariables(lldb_private::ConstString name,
                       const lldb_private::CompilerDeclContext &parent_decl_ctx,
@@ -168,6 +172,7 @@ protected:
     lldb_private::FileSpec so_file;
     lldb_private::ConstString oso_path;
     llvm::sys::TimePoint<> oso_mod_time;
+    lldb_private::Status oso_load_error;
     OSOInfoSP oso_sp;
     lldb::CompUnitSP compile_unit_sp;
     uint32_t first_symbol_index = UINT32_MAX;

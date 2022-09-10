@@ -227,17 +227,7 @@ Error COFFLinkGraphBuilder::graphifySymbols() {
                << " (index: " << SectionIndex << ") \n";
       });
     else if (Sym->isUndefined()) {
-      if (SymbolName.startswith(getDLLImportStubPrefix())) {
-        if (Sym->getValue() != 0)
-          return make_error<JITLinkError>(
-              "DLL import symbol has non-zero offset");
-
-        auto ExternalSym = createExternalSymbol(
-            SymIndex, SymbolName.drop_front(getDLLImportStubPrefix().size()),
-            *Sym, Sec);
-        GSym = &createDLLImportEntry(SymbolName, *ExternalSym);
-      } else
-        GSym = createExternalSymbol(SymIndex, SymbolName, *Sym, Sec);
+      GSym = createExternalSymbol(SymIndex, SymbolName, *Sym, Sec);
     } else if (Sym->isWeakExternal()) {
       auto *WeakExternal = Sym->getAux<object::coff_aux_weak_external>();
       COFFSymbolIndex TagIndex = WeakExternal->TagIndex;
