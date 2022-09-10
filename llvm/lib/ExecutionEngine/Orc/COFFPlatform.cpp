@@ -413,33 +413,35 @@ COFFPlatform::COFFPlatform(ExecutionSession &ES,
     Err = std::move(E2);
     return;
   }
-}
 
-Error COFFPlatform::bootstrap(JITDylib &PlatformJD) {
-  for (auto &Lib : DylibsToPreload)
-    if (auto Err = LoadDynLibrary(PlatformJD, Lib))
-      return Err;
+  for (auto& Lib : DylibsToPreload)
+      if (auto E2 = LoadDynLibrary(PlatformJD, Lib)) {
+          Err = std::move(E2);
+          return;
+      }
 
   if (StaticVCRuntime)
-    if (auto Err = VCRuntimeBootstrap->initializeStaticVCRuntime(PlatformJD))
-      return Err;
+      if (auto E2 = VCRuntimeBootstrap->initializeStaticVCRuntime(PlatformJD)) {
+          Err = std::move(E2);
+          return;
+      }
 
   // Associate wrapper function tags with JIT-side function implementations.
-  if (auto Err = associateRuntimeSupportFunctions(PlatformJD)) {
-    return Err;
+  if (auto E2 = associateRuntimeSupportFunctions(PlatformJD)) {
+      Err = std::move(E2);
+      return;
   }
 
   // Lookup addresses of runtime functions callable by the platform,
   // call the platform bootstrap function to initialize the platform-state
   // object in the executor.
-  if (auto Err = bootstrapCOFFRuntime(PlatformJD)) {
-    return Err;
+  if (auto E2 = bootstrapCOFFRuntime(PlatformJD)) {
+      Err = std::move(E2);
+      return;
   }
 
   Bootstrapping.store(false);
   JDBootstrapStates.clear();
-
-  return Error::success();
 }
 
 Expected<COFFPlatform::JITDylibDepMap>

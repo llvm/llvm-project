@@ -1239,16 +1239,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     };
 
     if (auto P = COFFPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str(),
-                                      std::move(LoadDynLibrary))) {
-      // Set platform early to register jitdylib of dynamic libraries.
-      auto &CP = **P;
+                                      std::move(LoadDynLibrary))) 
       ES.setPlatform(std::move(*P));
-
-      if (auto E2 = CP.bootstrap(*MainJD)) {
-        Err = std::move(E2);
-        return;
-      }
-    } else {
+     else {
       Err = P.takeError();
       return;
     }
