@@ -1,7 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
+
+void Dtor() { printf("destructor\n"); }
 
 int Ctor() {
   printf("constructor\n");
+  atexit(Dtor);
   return 0;
 }
 
