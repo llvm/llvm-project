@@ -77,7 +77,7 @@ static const int Signals[] = {SIGHUP,
 #endif
 };
 
-static const unsigned NumSigs = llvm::array_lengthof(Signals);
+static const unsigned NumSigs = std::size(Signals);
 
 static struct sigaction SigActions[NumSigs];
 static std::mutex SigActionsMutex;
