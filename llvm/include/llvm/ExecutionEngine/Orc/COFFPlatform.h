@@ -46,8 +46,6 @@ public:
          const char *VCRuntimePath = nullptr,
          Optional<SymbolAliasMap> RuntimeAliases = None);
 
-  Error bootstrap(JITDylib &PlatformJD);
-
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
 
