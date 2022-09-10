@@ -24,6 +24,7 @@ endif()
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS
   ${CMAKE_INSTALL_PREFIX} /opt/rocm)
+
 if(hsa-runtime64_DIR)
   message("FOUND hsa-runtime64 at ${hsa-runtime64_DIR}")
 endif()
@@ -47,7 +48,6 @@ endif()
 set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
 
-
 if (${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   libomptarget_say("Building AMDGPU plugin linked against libhsa")
   set(LIBOMPTARGET_EXTRA_SOURCE)
@@ -59,24 +59,6 @@ else()
   set(LIBOMPTARGET_DEP_LIBRARIES)
 endif()
 
-add_library(omptarget.rtl.amdgpu SHARED
-      impl/impl.cpp
-      impl/interop_hsa.cpp
-      impl/data.cpp
-      impl/get_elf_mach_gfx_name.cpp
-      impl/system.cpp
-      impl/msgpack.cpp
-      src/rtl.cpp
-      src/ompt_callback.cpp
-      ${LIBOMPTARGET_EXTRA_SOURCE}
-      )
-add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu)
-
-# Install plugin under the lib destination folder.
-# When we build for debug, OPENMP_LIBDIR_SUFFIX get set to -debug
-install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${RUN_PACKAGE}lib${OPENMP_LIBDIR_SUFFIX}")
-set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH_USE_LINK_PATH ON)
-
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   # On FreeBSD, the 'environ' symbol is undefined at link time, but resolved by
   # the dynamic linker at runtime. Therefore, allow the symbol to be undefined
@@ -85,6 +67,46 @@ if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
 else()
   set(LDFLAGS_UNDEFINED "-Wl,-z,defs")
 endif()
+
+add_llvm_library(omptarget.rtl.amdgpu SHARED
+  impl/impl.cpp
+  impl/interop_hsa.cpp
+  impl/data.cpp
+  impl/get_elf_mach_gfx_name.cpp
+  impl/system.cpp
+  impl/msgpack.cpp
+  src/rtl.cpp
+  src/ompt_callback.cpp
+  ${LIBOMPTARGET_EXTRA_SOURCE}
+
+  ADDITIONAL_HEADER_DIRS
+  ${LIBOMPTARGET_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/impl
+
+  LINK_COMPONENTS
+  Support
+  Object
+
+  LINK_LIBS
+  PRIVATE
+  elf_common
+  MemoryManager
+  ${LIBOMPTARGET_DEP_LIBRARIES}
+  ${OPENMP_PTHREAD_LIB}
+  -Wl,--whole-archive hostrpc_services -Wl,--no-whole-archive
+  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
+  ${LDFLAGS_UNDEFINED}
+
+  NO_INSTALL_RPATH
+)
+add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu)
+
+target_include_directories(
+  omptarget.rtl.amdgpu
+  PRIVATE
+  ${LIBOMPTARGET_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/impl
+)
 
 # Don't override an externally defined RPATH
 if(NOT DEFINED CMAKE_INSTALL_RPATH)
@@ -95,26 +117,10 @@ else()
     BUILD_RPATH ${CMAKE_INSTALL_RPATH})
 endif()
 
-target_include_directories(
-  omptarget.rtl.amdgpu
-  PRIVATE
-  ${LIBOMPTARGET_INCLUDE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/impl
-)
 
-  LINK_COMPONENTS
-  Support
-  Object
-
-  LINK_LIBS 
-  PRIVATE
-  elf_common
-  MemoryManager
-  ${LIBOMPTARGET_DEP_LIBRARIES}
-  ${OPENMP_PTHREAD_LIB}
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
-  ${LDFLAGS_UNDEFINED}
-  )
+# Install plugin under the lib destination folder.
+install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
+set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH_USE_LINK_PATH ON)
 
 # Report to the parent scope that we are building a plugin for hsa.
 # This controls whether tests are run for the nvptx offloading target

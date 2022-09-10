@@ -379,5 +379,5 @@ add_library(omptarget.devicertl STATIC)
 set_target_properties(omptarget.devicertl PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
 
-install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
+install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR})
 

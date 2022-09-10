@@ -48,6 +48,10 @@
 #include "print_tracing.h"
 #include "trace.h"
 
+#include "MemoryManager.h"
+
+#include "utils.h"
+
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
@@ -234,7 +238,9 @@ public:
   }
 
   void *allocate(uint64_t ArgNum) {
+#if DBG_KERGN_ARGS
     assert((ArgNum * sizeof(void *)) == KernargSegmentSize);
+#endif
     Lock L(&Mutex);
     void *Res = nullptr;
     if (!FreeKernargSegments.empty()) {
@@ -2141,8 +2147,9 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
   const uint32_t SgprSpillCount = KernelInfoEntry.sgpr_spill_count;
   const uint32_t VgprSpillCount = KernelInfoEntry.vgpr_spill_count;
 
+#if DBG_KERGN_ARGS
   assert(ArgNum == (int)KernelInfoEntry.explicit_argument_count);
-
+#endif
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
@@ -2222,7 +2229,9 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
     }
     {
       if (ArgPool) {
+#if DBG_KERGN_ARGS
         assert(ArgPool->KernargSegmentSize == (ArgNum * sizeof(void *)));
+#endif
         KernArg = ArgPool->allocate(ArgNum);
       }
       if (!KernArg) {

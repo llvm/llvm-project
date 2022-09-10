@@ -77,6 +77,8 @@ else()
     PRIVATE
     elf_common
     MemoryManager
+#${CMAKE_DL_LIBS}
+#{LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
     ${OPENMP_PTHREAD_LIB}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
     "-Wl,-z,defs"
@@ -87,7 +89,7 @@ endif()
 add_dependencies(omptarget.rtl.cuda omptarget.devicertl.nvptx)
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
 set_target_properties(omptarget.rtl.cuda PROPERTIES 
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 
