@@ -19,6 +19,7 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Host/PosixApi.h"
 
@@ -1137,6 +1138,21 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   reverse_request.try_emplace(
       "arguments", llvm::json::Value(std::move(run_in_terminal_args)));
   return reverse_request;
+}
+
+llvm::json::Object CreateTerminatedEventObject() {
+  llvm::json::Object event(CreateEventObject("terminated"));
+  lldb::SBStructuredData statistics = g_vsc.target.GetStatistics();
+  bool is_dictionary =
+      statistics.GetType() == lldb::eStructuredDataTypeDictionary;
+  if (!is_dictionary) {
+    return event;
+  }
+
+  lldb::SBStream stats_stream;
+  statistics.GetAsJSON(stats_stream);
+  event.try_emplace("statistics", llvm::json::fixUTF8(stats_stream.GetData()));
+  return event;
 }
 
 std::string JSONToString(const llvm::json::Value &json) {
