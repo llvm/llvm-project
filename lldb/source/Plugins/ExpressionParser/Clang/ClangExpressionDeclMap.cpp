@@ -867,7 +867,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
   // emit DW_AT_object_pointer
   // for C++ so it hasn't actually been tested.
 
-  VariableList *vars = frame->GetVariableList(false);
+  VariableList *vars = frame->GetVariableList(false, nullptr);
 
   lldb::VariableSP this_var = vars->FindVariable(ConstString("this"));
 
@@ -952,7 +952,7 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
   // In that case, just look up the "self" variable in the current scope
   // and use its type.
 
-  VariableList *vars = frame->GetVariableList(false);
+  VariableList *vars = frame->GetVariableList(false, nullptr);
 
   lldb::VariableSP self_var = vars->FindVariable(ConstString("self"));
 
