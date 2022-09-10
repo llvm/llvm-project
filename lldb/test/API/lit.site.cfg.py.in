@@ -31,7 +31,7 @@ config.lldb_executable = lit_config.substitute('@LLDB_TEST_EXECUTABLE@')
 config.test_arch = '@LLDB_TEST_ARCH@'
 config.test_compiler = lit_config.substitute('@LLDB_TEST_COMPILER@')
 config.dsymutil = lit_config.substitute('@LLDB_TEST_DSYMUTIL@')
-config.has_libcxx = '@LLDB_HAS_LIBCXX@'
+config.has_libcxx = @LLDB_HAS_LIBCXX@
 # The API tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-api")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-api")
