@@ -39,9 +39,8 @@ static const int NUM_THREADS = std::thread::hardware_concurrency();
 // Range: [0, Inf];
 static const uint32_t POS_START = 0x0000'0000U;
 static const uint32_t POS_STOP = 0x7f80'0000U;
-/
 
-    TEST_F(LlvmLibcAsinfExhaustiveTest, PostiveRangeRoundNearestTieToEven) {
+TEST_F(LlvmLibcAsinfExhaustiveTest, PostiveRangeRoundNearestTieToEven) {
   test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::Nearest);
 }
 

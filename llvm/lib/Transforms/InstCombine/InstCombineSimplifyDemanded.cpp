@@ -525,7 +525,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Depth + 1))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
-    // If we are known to be adding/subtracting zeros to every bit below
+    // If we are known to be adding zeros to every bit below
     // the highest demanded bit, we just return the other side.
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
@@ -549,7 +549,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
-    // If we are known to be adding/subtracting zeros to every bit below
+    // If we are known to be subtracting zeros from every bit below
     // the highest demanded bit, we just return the other side.
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
@@ -1005,11 +1005,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   // this instruction has a simpler value in that context.
   switch (I->getOpcode()) {
   case Instruction::And: {
-    // If either the LHS or the RHS are Zero, the result is zero.
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
-    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1,
-                     CxtI);
-
+    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown & RHSKnown;
 
     // If the client is only demanding bits that we know, return the known
@@ -1018,8 +1015,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
       return Constant::getIntegerValue(ITy, Known.One);
 
     // If all of the demanded bits are known 1 on one side, return the other.
-    // These bits cannot contribute to the result of the 'and' in this
-    // context.
+    // These bits cannot contribute to the result of the 'and' in this context.
     if (DemandedMask.isSubsetOf(LHSKnown.Zero | RHSKnown.One))
       return I->getOperand(0);
     if (DemandedMask.isSubsetOf(RHSKnown.Zero | LHSKnown.One))
@@ -1028,14 +1024,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     break;
   }
   case Instruction::Or: {
-    // We can simplify (X|Y) -> X or Y in the user's context if we know that
-    // only bits from X or Y are demanded.
-
-    // If either the LHS or the RHS are One, the result is One.
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
-    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1,
-                     CxtI);
-
+    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown | RHSKnown;
 
     // If the client is only demanding bits that we know, return the known
@@ -1043,9 +1033,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     if (DemandedMask.isSubsetOf(Known.Zero | Known.One))
       return Constant::getIntegerValue(ITy, Known.One);
 
-    // If all of the demanded bits are known zero on one side, return the
-    // other.  These bits cannot contribute to the result of the 'or' in this
-    // context.
+    // We can simplify (X|Y) -> X or Y in the user's context if we know that
+    // only bits from X or Y are demanded.
+    // If all of the demanded bits are known zero on one side, return the other.
+    // These bits cannot contribute to the result of the 'or' in this context.
     if (DemandedMask.isSubsetOf(LHSKnown.One | RHSKnown.Zero))
       return I->getOperand(0);
     if (DemandedMask.isSubsetOf(RHSKnown.One | LHSKnown.Zero))
@@ -1054,13 +1045,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     break;
   }
   case Instruction::Xor: {
-    // We can simplify (X^Y) -> X or Y in the user's context if we know that
-    // only bits from X or Y are demanded.
-
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
-    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1,
-                     CxtI);
-
+    computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown ^ RHSKnown;
 
     // If the client is only demanding bits that we know, return the known
@@ -1068,8 +1054,9 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     if (DemandedMask.isSubsetOf(Known.Zero | Known.One))
       return Constant::getIntegerValue(ITy, Known.One);
 
-    // If all of the demanded bits are known zero on one side, return the
-    // other.
+    // We can simplify (X^Y) -> X or Y in the user's context if we know that
+    // only bits from X or Y are demanded.
+    // If all of the demanded bits are known zero on one side, return the other.
     if (DemandedMask.isSubsetOf(RHSKnown.Zero))
       return I->getOperand(0);
     if (DemandedMask.isSubsetOf(LHSKnown.Zero))

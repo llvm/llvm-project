@@ -1183,21 +1183,16 @@ public:
 class VPWidenPointerInductionRecipe : public VPHeaderPHIRecipe {
   const InductionDescriptor &IndDesc;
 
-  /// SCEV used to expand step.
-  /// FIXME: move expansion of step to the pre-header, once it is modeled
-  /// explicitly.
-  ScalarEvolution &SE;
-
 public:
   /// Create a new VPWidenPointerInductionRecipe for \p Phi with start value \p
   /// Start.
-  VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start,
-                                const InductionDescriptor &IndDesc,
-                                ScalarEvolution &SE)
+  VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start, VPValue *Step,
+                                const InductionDescriptor &IndDesc)
       : VPHeaderPHIRecipe(VPVWidenPointerInductionSC, VPWidenPointerInductionSC,
                           Phi),
-        IndDesc(IndDesc), SE(SE) {
+        IndDesc(IndDesc) {
     addOperand(Start);
+    addOperand(Step);
   }
 
   ~VPWidenPointerInductionRecipe() override = default;

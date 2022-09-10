@@ -47,7 +47,8 @@
 #    elif __cplusplus <= 202002L
 #      define _LIBCPP_STD_VER 20
 #    else
-#      define _LIBCPP_STD_VER 22 // current year, or date of c++2b ratification
+// Expected release year of the next C++ standard
+#      define _LIBCPP_STD_VER 23
 #    endif
 #  endif // _LIBCPP_STD_VER
 

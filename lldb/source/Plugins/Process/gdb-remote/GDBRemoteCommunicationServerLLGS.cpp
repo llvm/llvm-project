@@ -70,11 +70,9 @@ enum GDBRemoteServerError {
 // GDBRemoteCommunicationServerLLGS constructor
 GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
     MainLoop &mainloop, const NativeProcessProtocol::Factory &process_factory)
-    : GDBRemoteCommunicationServerCommon("gdb-remote.server",
-                                         "gdb-remote.server.rx_packet"),
-      m_mainloop(mainloop), m_process_factory(process_factory),
-      m_current_process(nullptr), m_continue_process(nullptr),
-      m_stdio_communication() {
+    : GDBRemoteCommunicationServerCommon(), m_mainloop(mainloop),
+      m_process_factory(process_factory), m_current_process(nullptr),
+      m_continue_process(nullptr), m_stdio_communication() {
   RegisterPacketHandlers();
 }
 
@@ -3517,19 +3515,17 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
               arg.c_str());
   }
 
-  if (!argv.empty()) {
-    m_process_launch_info.GetExecutableFile().SetFile(
-        m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
-    m_process_launch_error = LaunchProcess();
-    if (m_process_launch_error.Success()) {
-      assert(m_current_process);
-      return SendStopReasonForState(*m_current_process,
-                                    m_current_process->GetState(),
-                                    /*force_synchronous=*/true);
-    }
-    LLDB_LOG(log, "failed to launch exe: {0}", m_process_launch_error);
-  }
-  return SendErrorResponse(8);
+  if (argv.empty())
+    return SendErrorResponse(Status("No arguments"));
+  m_process_launch_info.GetExecutableFile().SetFile(
+      m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
+  m_process_launch_error = LaunchProcess();
+  if (m_process_launch_error.Fail())
+    return SendErrorResponse(m_process_launch_error);
+  assert(m_current_process);
+  return SendStopReasonForState(*m_current_process,
+                                m_current_process->GetState(),
+                                /*force_synchronous=*/true);
 }
 
 GDBRemoteCommunication::PacketResult

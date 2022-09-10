@@ -62,12 +62,6 @@ private:
     return Error::success();
   }
 
-  Symbol &createDLLImportEntry(StringRef StubName, Symbol &Target) override {
-    auto &Sym = DLLImportTable.getEntryForTarget(getGraph(), Target);
-    Sym.setName(StubName);
-    return Sym;
-  }
-
   Error addSingleRelocation(const object::RelocationRef &Rel,
                             const object::SectionRef &FixupSect,
                             Block &BlockToFix) {
@@ -185,8 +179,6 @@ private:
 
     return Error::success();
   }
-
-  x86_64::GOTTableManager DLLImportTable;
 
 public:
   COFFLinkGraphBuilder_x86_64(const object::COFFObjectFile &Obj, const Triple T)

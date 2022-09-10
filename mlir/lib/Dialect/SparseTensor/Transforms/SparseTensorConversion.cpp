@@ -564,7 +564,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
       encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
   SmallVector<Value, 4> sizes;
   SmallVector<Value, 8> params;
-  sizesFromSrc(rewriter, sizes, loc, op.getSrc());
+  sizesFromPtr(rewriter, sizes, loc, encSrc, srcTp, adaptor.getSrc());
   newParams(rewriter, params, loc, srcTp, noPerm, Action::kToIterator, sizes,
             adaptor.getSrc());
   Value iter = genNewCall(rewriter, loc, params);
@@ -1168,13 +1168,13 @@ public:
     // All initialization should be done on entry of the loop nest.
     rewriter.setInsertionPointAfter(op.getTensor().getDefiningOp());
     // Determine the size for access expansion (always the innermost stored
-    // dimension size, translated back to original dimension). Note that we
-    // recursively rewrite the new DimOp on the **original** tensor.
+    // dimension size, translated back to original dimension).
     auto enc = getSparseTensorEncoding(srcType);
     unsigned innerDim = srcType.getRank() - 1;
     if (AffineMap p = enc.getDimOrdering())
       innerDim = p.getDimPosition(innerDim);
-    Value sz = rewriter.create<tensor::DimOp>(loc, op.getTensor(), innerDim);
+    auto sz = sizeFromPtrAtDim(rewriter, loc, enc, srcType, adaptor.getTensor(),
+                               innerDim);
     // Allocate temporary buffers for values, filled-switch, and indices.
     // We do not use stack buffers for this, since the expanded size may
     // be rather large (as it envelops a single expanded dense dimension).

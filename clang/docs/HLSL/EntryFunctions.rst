@@ -37,10 +37,16 @@ linkage following normal function code generation.
 
 The actual exported entry function which can be called by the GPU driver is a
 ``void(void)`` function that isn't name mangled. In code generation we generate
-the unmangled entry function, instantiations of the parameters with their
-semantic values populated, and a call to the user-defined function. After the
-call instruction the return value (if any) is saved using a target-appropriate
-intrinsic for storing outputs (for DirectX, the ``llvm.dx.store.output``).
+the unmangled entry function to serve as the actual shader entry. The shader
+entry function is annotated with the ``hlsl.shader`` function attribute
+identifying the entry's pipeline stage.
+
+The body of the unmangled entry function contains first a call to execute global
+constructors, then instantiations of the user-defined entry parameters with
+their semantic values populated, and a call to the user-defined function.
+After the call instruction the return value (if any) is saved using a
+target-appropriate intrinsic for storing outputs (for DirectX, the
+``llvm.dx.store.output``). Global destructors are not supported in HLSL.
 
 .. note::
 

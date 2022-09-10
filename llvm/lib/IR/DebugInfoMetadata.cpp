@@ -1937,7 +1937,7 @@ DILifetime *DILifetime::getImpl(LLVMContext &Context, Metadata *Obj,
                                 Metadata *Loc, ArrayRef<Metadata *> Args,
                                 StorageType Storage) {
   Metadata *Ops[] = {Obj, Loc};
-  return storeImpl(new (array_lengthof(Ops) + Args.size(), Storage)
+  return storeImpl(new (std::size(Ops) + Args.size(), Storage)
                        DILifetime(Context, Storage, Ops, Args),
                    Storage);
 }

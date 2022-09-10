@@ -138,7 +138,8 @@ getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {
 // inline constexpr <enum-type> operator&(<enum-type> a, <enum-type> b);
 // inline constexpr <enum-type> operator^(<enum-type> a, <enum-type> b);
 // inline constexpr <enum-type> operator~(<enum-type> bits);
-// inline constexpr bool bitEnumContains(<enum-type> bits, <enum-type> bit);
+// inline constexpr bool bitEnumContainsAll(<enum-type> bits, <enum-type> bit);
+// inline constexpr bool bitEnumContainsAny(<enum-type> bits, <enum-type> bit);
 // inline constexpr <enum-type> bitEnumClear(<enum-type> bits, <enum-type> bit);
 // inline constexpr <enum-type> bitEnumSet(<enum-type> bits, <enum-type> bit,
 // bool value=true);
@@ -161,8 +162,11 @@ inline constexpr {0} operator~({0} bits) {{
   // Ensure only bits that can be present in the enum are set
   return static_cast<{0}>(~static_cast<{1}>(bits) & static_cast<{1}>({2}u));
 }
-inline constexpr bool bitEnumContains({0} bits, {0} bit) {{
+inline constexpr bool bitEnumContainsAll({0} bits, {0} bit) {{
   return (bits & bit) == bit;
+}
+inline constexpr bool bitEnumContainsAny({0} bits, {0} bit) {{
+  return (static_cast<{1}>(bits) & static_cast<{1}>(bit)) != 0;
 }
 inline constexpr {0} bitEnumClear({0} bits, {0} bit) {{
   return bits & ~bit;

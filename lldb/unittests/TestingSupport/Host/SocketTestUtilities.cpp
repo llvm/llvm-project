@@ -126,3 +126,13 @@ bool lldb_private::HostSupportsIPv4() {
 bool lldb_private::HostSupportsIPv6() {
   return CheckIPSupport("IPv6", "[::1]:0");
 }
+
+llvm::Expected<std::string> lldb_private::GetLocalhostIP() {
+  if (HostSupportsIPv4())
+    return "127.0.0.1";
+  if (HostSupportsIPv6())
+    return "[::1]";
+  return llvm::make_error<llvm::StringError>(
+      "Neither IPv4 nor IPv6 appear to be supported",
+      llvm::inconvertibleErrorCode());
+}

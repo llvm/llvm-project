@@ -7349,6 +7349,11 @@ def : Pat<(shl (i64 (sext GPR32:$Rn)), (i64 imm0_63:$imm)),
                    (i64 (i64shift_a        imm0_63:$imm)),
                    (i64 (i64shift_sext_i32 imm0_63:$imm)))>;
 
+def : Pat<(shl (i64 (zext GPR32:$Rn)), (i64 imm0_63:$imm)),
+          (UBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a        imm0_63:$imm)),
+                   (i64 (i64shift_sext_i32 imm0_63:$imm)))>;
+
 // sra patterns have an AddedComplexity of 10, so make sure we have a higher
 // AddedComplexity for the following patterns since we want to match sext + sra
 // patterns before we attempt to match a single sra node.

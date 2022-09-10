@@ -21,7 +21,8 @@
 
 namespace __llvm_libc {
 
-// PI / 2
+// PI and PI / 2
+constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
 constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
 
 // atan table size
@@ -36,7 +37,7 @@ extern const double ATAN_K[5];
 // atan(u) + atan(v) = atan((u+v)/(1-uv))
 
 // x should be positive, normal finite value
-inline static double atan_eval(double x) {
+static inline double atan_eval(double x) {
   using FPB = fputil::FPBits<double>;
   // Added some small value to umin and umax mantissa to avoid possible rounding
   // errors.
@@ -87,6 +88,24 @@ inline static double atan_eval(double x) {
   else
     result = fputil::multiply_add(pe, v, ATAN_T[val - 1]);
   return sign ? -result : result;
+}
+
+// > Q = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20|],
+//                 [|1, D...|], [0, 0.5]);
+constexpr double ASIN_COEFFS[10] = {0x1.5555555540fa1p-3, 0x1.333333512edc2p-4,
+                                    0x1.6db6cc1541b31p-5, 0x1.f1caff324770ep-6,
+                                    0x1.6e43899f5f4f4p-6, 0x1.1f847cf652577p-6,
+                                    0x1.9b60f47f87146p-7, 0x1.259e2634c494fp-6,
+                                    -0x1.df946fa875ddp-8, 0x1.02311ecf99c28p-5};
+
+// Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x
+static inline double asin_eval(double xsq) {
+  double x4 = xsq * xsq;
+  double r1 = fputil::polyeval(x4, ASIN_COEFFS[0], ASIN_COEFFS[2],
+                               ASIN_COEFFS[4], ASIN_COEFFS[6], ASIN_COEFFS[8]);
+  double r2 = fputil::polyeval(x4, ASIN_COEFFS[1], ASIN_COEFFS[3],
+                               ASIN_COEFFS[5], ASIN_COEFFS[7], ASIN_COEFFS[9]);
+  return fputil::multiply_add(xsq, r2, r1);
 }
 
 } // namespace __llvm_libc

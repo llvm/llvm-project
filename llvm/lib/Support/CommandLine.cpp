@@ -1264,10 +1264,17 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     // always have an absolute path deduced from the containing file.
     SmallString<128> CurrDir;
     if (llvm::sys::path::is_relative(FName)) {
-      if (!CurrentDir)
-        llvm::sys::fs::current_path(CurrDir);
-      else
+      if (!CurrentDir) {
+        if (auto CWD = FS.getCurrentWorkingDirectory()) {
+          CurrDir = *CWD;
+        } else {
+          // TODO: The error should be propagated up the stack.
+          llvm::consumeError(llvm::errorCodeToError(CWD.getError()));
+          return false;
+        }
+      } else {
         CurrDir = *CurrentDir;
+      }
       llvm::sys::path::append(CurrDir, FName);
       FName = CurrDir.c_str();
     }
@@ -1357,24 +1364,26 @@ bool cl::expandResponseFiles(int Argc, const char *const *Argv,
 }
 
 bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
-                        SmallVectorImpl<const char *> &Argv) {
+                        SmallVectorImpl<const char *> &Argv,
+                        llvm::vfs::FileSystem &FS) {
   SmallString<128> AbsPath;
   if (sys::path::is_relative(CfgFile)) {
-    llvm::sys::fs::current_path(AbsPath);
-    llvm::sys::path::append(AbsPath, CfgFile);
+    AbsPath.assign(CfgFile);
+    if (std::error_code EC = FS.makeAbsolute(AbsPath))
+      return false;
     CfgFile = AbsPath.str();
   }
-  if (llvm::Error Err = ExpandResponseFile(
-          CfgFile, Saver, cl::tokenizeConfigFile, Argv,
-          /*MarkEOLs=*/false, /*RelativeNames=*/true, /*ExpandBasePath=*/true,
-          *llvm::vfs::getRealFileSystem())) {
+  if (llvm::Error Err =
+          ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
+                             /*ExpandBasePath=*/true, FS)) {
     // TODO: The error should be propagated up the stack.
     llvm::consumeError(std::move(Err));
     return false;
   }
   return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
                              /*MarkEOLs=*/false, /*RelativeNames=*/true,
-                             /*ExpandBasePath=*/true, llvm::None);
+                             /*ExpandBasePath=*/true, llvm::None, FS);
 }
 
 static void initCommonOptions();

@@ -104,34 +104,50 @@ size_t ThreadedCommunication::Read(void *dst, size_t dst_len,
       return 0;
     }
 
+    // No data yet, we have to start listening.
     ListenerSP listener_sp(
         Listener::MakeListener("ThreadedCommunication::Read"));
     listener_sp->StartListeningForEvents(
         this, eBroadcastBitReadThreadGotBytes | eBroadcastBitReadThreadDidExit);
+
+    // Re-check for data, as it might have arrived while we were setting up our
+    // listener.
+    cached_bytes = GetCachedBytes(dst, dst_len);
+    if (cached_bytes > 0) {
+      status = eConnectionStatusSuccess;
+      return cached_bytes;
+    }
+
     EventSP event_sp;
-    while (listener_sp->GetEvent(event_sp, timeout)) {
-      const uint32_t event_type = event_sp->GetType();
-      if (event_type & eBroadcastBitReadThreadGotBytes) {
-        return GetCachedBytes(dst, dst_len);
-      }
-
-      if (event_type & eBroadcastBitReadThreadDidExit) {
-        // If the thread exited of its own accord, it either means it
-        // hit an end-of-file condition or an error.
-        status = m_pass_status;
+    // Explicitly check for the thread exit, for the same reason.
+    if (m_read_thread_did_exit) {
+      // We've missed the event, lets just conjure one up.
+      event_sp = std::make_shared<Event>(eBroadcastBitReadThreadDidExit);
+    } else {
+      if (!listener_sp->GetEvent(event_sp, timeout)) {
         if (error_ptr)
-          *error_ptr = std::move(m_pass_error);
-
-        if (GetCloseOnEOF())
-          Disconnect(nullptr);
+          error_ptr->SetErrorString("Timed out.");
+        status = eConnectionStatusTimedOut;
         return 0;
       }
     }
+    const uint32_t event_type = event_sp->GetType();
+    if (event_type & eBroadcastBitReadThreadGotBytes) {
+      return GetCachedBytes(dst, dst_len);
+    }
 
-    if (error_ptr)
-      error_ptr->SetErrorString("Timed out.");
-    status = eConnectionStatusTimedOut;
-    return 0;
+    if (event_type & eBroadcastBitReadThreadDidExit) {
+      // If the thread exited of its own accord, it either means it
+      // hit an end-of-file condition or an error.
+      status = m_pass_status;
+      if (error_ptr)
+        *error_ptr = std::move(m_pass_error);
+
+      if (GetCloseOnEOF())
+        Disconnect(nullptr);
+      return 0;
+    }
+    llvm_unreachable("Got unexpected event type!");
   }
 
   // We aren't using a read thread, just read the data synchronously in this
@@ -299,22 +315,25 @@ lldb::thread_result_t ThreadedCommunication::ReadThread() {
   m_pass_error = std::move(error);
   LLDB_LOG(log, "Communication({0}) thread exiting...", this);
 
-  // Handle threads wishing to synchronize with us.
+  // Start shutting down. We need to do this in a very specific order to ensure
+  // we don't race with threads wanting to read/synchronize with us.
+
+  // First, we signal our intent to exit. This ensures no new thread start
+  // waiting on events from us.
+  m_read_thread_did_exit = true;
+
+  // Unblock any existing thread waiting for the synchronization signal.
+  BroadcastEvent(eBroadcastBitNoMorePendingInput);
+
   {
-    // Prevent new ones from showing up.
-    m_read_thread_did_exit = true;
-
-    // Unblock any existing thread waiting for the synchronization signal.
-    BroadcastEvent(eBroadcastBitNoMorePendingInput);
-
-    // Wait for the thread to finish...
+    // Wait for the synchronization thread to finish...
     std::lock_guard<std::mutex> guard(m_synchronize_mutex);
     // ... and disconnect.
     if (disconnect)
       Disconnect();
   }
 
-  // Let clients know that this thread is exiting
+  // Finally, unblock any readers waiting for us to exit.
   BroadcastEvent(eBroadcastBitReadThreadDidExit);
   return {};
 }

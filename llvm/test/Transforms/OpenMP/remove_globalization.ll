@@ -155,7 +155,7 @@ entry:
 ; CHECK: declare i8* @__kmpc_alloc_shared(i64)
 declare i8* @__kmpc_alloc_shared(i64)
 
-; CHECK: declare void @__kmpc_free_shared(i8* nocapture, i64)
+; CHECK: declare void @__kmpc_free_shared(i8* allocptr nocapture, i64)
 declare void @__kmpc_free_shared(i8*, i64)
 
 declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"

@@ -13,6 +13,7 @@ set(ORC_COMMON_SOURCES
 set(ALL_ORC_SOURCES
   ${ORC_COMMON_SOURCES}
   coff_platform.cpp
+  coff_platform.per_jd.cpp
   elfnix_platform.cpp
   macho_ehframe_registration.cpp
   macho_platform.cpp
@@ -128,7 +129,12 @@ else() # not Apple
     set(ORC_SOURCES
       ${ORC_COMMON_SOURCES}
       coff_platform.cpp
+      coff_platform.per_jd.cpp
       )
+
+    if (MSVC)
+      set(ORC_CFLAGS "${ORC_CFLAGS} /MD")
+    endif()
   else()
     set(ORC_BUILD_TYPE STATIC)
 

@@ -947,15 +947,21 @@ template <class ELFT> static void readCallGraphsFromObjectFiles() {
   }
 }
 
-static bool getCompressDebugSections(opt::InputArgList &args) {
+static DebugCompressionType getCompressDebugSections(opt::InputArgList &args) {
   StringRef s = args.getLastArgValue(OPT_compress_debug_sections, "none");
-  if (s == "none")
-    return false;
-  if (s != "zlib")
+  if (s == "zlib") {
+    if (!compression::zlib::isAvailable())
+      error("--compress-debug-sections: zlib is not available");
+    return DebugCompressionType::Zlib;
+  }
+  if (s == "zstd") {
+    if (!compression::zstd::isAvailable())
+      error("--compress-debug-sections: zstd is not available");
+    return DebugCompressionType::Zstd;
+  }
+  if (s != "none")
     error("unknown --compress-debug-sections value: " + s);
-  if (!compression::zlib::isAvailable())
-    error("--compress-debug-sections: zlib is not available");
-  return true;
+  return DebugCompressionType::None;
 }
 
 static StringRef getAliasSpelling(opt::Arg *arg) {

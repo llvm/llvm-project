@@ -60,7 +60,7 @@ defm check_sections: B<"check-sections",
 
 defm compress_debug_sections:
   Eq<"compress-debug-sections", "Compress DWARF debug sections">,
-  MetaVarName<"[none,zlib]">;
+  MetaVarName<"[none,zlib,zstd]">;
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
