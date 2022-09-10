@@ -791,7 +791,7 @@ bool ReduceCrashingInstructions::TestInsts(
             !Inst.isEHPad() && !Inst.getType()->isTokenTy() &&
             !Inst.isSwiftError()) {
           if (!Inst.getType()->isVoidTy())
-            Inst.replaceAllUsesWith(UndefValue::get(Inst.getType()));
+            Inst.replaceAllUsesWith(PoisonValue::get(Inst.getType()));
           Inst.eraseFromParent();
         }
       }
