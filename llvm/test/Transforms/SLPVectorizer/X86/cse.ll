@@ -347,3 +347,49 @@ if.end13:                                         ; preds = %if.then12, %sw.epil
   %b.0 = phi double [ %3, %if.then12 ], [ %add10, %sw.epilog7 ], [ undef, %entry], [ undef, %entry ]
   unreachable
 }
+
+define void @cse_for_hoisted_instructions_in_preheader(i32* %dst, i32 %a, i1 %c) {
+; CHECK-LABEL: @cse_for_hoisted_instructions_in_preheader(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[A]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[A]], i32 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> <i32 22, i32 22>, [[TMP1]]
+; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP4]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[GEP_0]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP3]], <i32 3, i32 3>
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 10
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[GEP_2]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP7]], <2 x i32>* [[TMP8]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %or.a = or i32 22, %a
+  %or.0 = or i32 %or.a, 3
+  %gep.0 = getelementptr inbounds i32, i32* %dst, i64 0
+  store i32 %or.0, i32* %gep.0
+  %or.a.2 = or i32 22, %a
+  %or.1 = or i32 %or.a.2, 3
+  %gep.1 = getelementptr inbounds i32, i32* %dst, i64 1
+  store i32 %or.1, i32* %gep.1
+  %or.2 = or i32 %a, 3
+  %gep.2 = getelementptr inbounds i32, i32* %dst, i64 10
+  store i32 %or.2, i32* %gep.2
+  %or.3 = or i32 %a, 3
+  %gep.3 = getelementptr inbounds i32, i32* %dst, i64 11
+  store i32 %or.3, i32* %gep.3
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
