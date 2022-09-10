@@ -243,7 +243,7 @@ Error COFFPlatform::setupJITDylib(JITDylib &JD) {
   SymbolAliasMap CXXAliases;
   addAliases(ES, CXXAliases, requiredCXXAliases());
   if (auto Err = JD.define(symbolAliases(std::move(CXXAliases))))
-    return std::move(Err);
+    return Err;
 
   auto PerJDObj = getPerJDObjectFile();
   if (!PerJDObj)
@@ -364,7 +364,7 @@ COFFPlatform::COFFPlatform(ExecutionSession &ES,
   auto OrcRuntimeArchiveGenerator =
       StaticLibraryDefinitionGenerator::Load(ObjLinkingLayer, OrcRuntimePath);
   if (!OrcRuntimeArchiveGenerator) {
-    Err = std::move(OrcRuntimeArchiveGenerator.takeError());
+    Err = OrcRuntimeArchiveGenerator.takeError();
     return;
   }
 
