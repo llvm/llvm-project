@@ -2129,15 +2129,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitInsertElementInst(InsertElementInst &I) {
     insertShadowCheck(I.getOperand(2), &I);
     IRBuilder<> IRB(&I);
-    setShadow(&I, IRB.CreateInsertElement(getShadow(&I, 0), getShadow(&I, 1),
-                                          I.getOperand(2), "_msprop"));
+    auto *Shadow0 = getShadow(&I, 0);
+    auto *Shadow1 = getShadow(&I, 1);
+    setShadow(&I, IRB.CreateInsertElement(Shadow0, Shadow1, I.getOperand(2),
+                                          "_msprop"));
     setOriginForNaryOp(I);
   }
 
   void visitShuffleVectorInst(ShuffleVectorInst &I) {
     IRBuilder<> IRB(&I);
-    setShadow(&I, IRB.CreateShuffleVector(getShadow(&I, 0), getShadow(&I, 1),
-                                          I.getShuffleMask(), "_msprop"));
+    auto *Shadow0 = getShadow(&I, 0);
+    auto *Shadow1 = getShadow(&I, 1);
+    setShadow(&I, IRB.CreateShuffleVector(Shadow0, Shadow1, I.getShuffleMask(),
+                                          "_msprop"));
     setOriginForNaryOp(I);
   }
 
@@ -2495,9 +2499,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Si = !(C & ~Sc) && Sc
     Value *Zero = Constant::getNullValue(Sc->getType());
     Value *MinusOne = Constant::getAllOnesValue(Sc->getType());
-    Value *Si = IRB.CreateAnd(
-        IRB.CreateICmpNE(Sc, Zero),
-        IRB.CreateICmpEQ(IRB.CreateAnd(IRB.CreateXor(Sc, MinusOne), C), Zero));
+    Value *LHS = IRB.CreateICmpNE(Sc, Zero);
+    Value *RHS =
+        IRB.CreateICmpEQ(IRB.CreateAnd(IRB.CreateXor(Sc, MinusOne), C), Zero);
+    Value *Si = IRB.CreateAnd(LHS, RHS);
     Si->setName("_msprop_icmp");
     setShadow(&I, Si);
     setOriginForNaryOp(I);
@@ -3100,7 +3105,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         ResTy->getScalarSizeInBits() - SignificantBitsPerResultElement;
 
     IRBuilder<> IRB(&I);
-    Value *S = IRB.CreateOr(getShadow(&I, 0), getShadow(&I, 1));
+    auto *Shadow0 = getShadow(&I, 0);
+    auto *Shadow1 = getShadow(&I, 1);
+    Value *S = IRB.CreateOr(Shadow0, Shadow1);
     S = IRB.CreateBitCast(S, ResTy);
     S = IRB.CreateSExt(IRB.CreateICmpNE(S, Constant::getNullValue(ResTy)),
                        ResTy);
@@ -3116,7 +3123,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
     Type *ResTy = isX86_MMX ? getMMXVectorTy(EltSizeInBits * 2) : I.getType();
     IRBuilder<> IRB(&I);
-    Value *S = IRB.CreateOr(getShadow(&I, 0), getShadow(&I, 1));
+    auto *Shadow0 = getShadow(&I, 0);
+    auto *Shadow1 = getShadow(&I, 1);
+    Value *S = IRB.CreateOr(Shadow0, Shadow1);
     S = IRB.CreateBitCast(S, ResTy);
     S = IRB.CreateSExt(IRB.CreateICmpNE(S, Constant::getNullValue(ResTy)),
                        ResTy);
@@ -3131,7 +3140,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleVectorComparePackedIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Type *ResTy = getShadowTy(&I);
-    Value *S0 = IRB.CreateOr(getShadow(&I, 0), getShadow(&I, 1));
+    auto *Shadow0 = getShadow(&I, 0);
+    auto *Shadow1 = getShadow(&I, 1);
+    Value *S0 = IRB.CreateOr(Shadow0, Shadow1);
     Value *S = IRB.CreateSExt(
         IRB.CreateICmpNE(S0, Constant::getNullValue(ResTy)), ResTy);
     setShadow(&I, S);
@@ -3143,7 +3154,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // element of a vector, and comi* which return the result as i32.
   void handleVectorCompareScalarIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
-    Value *S0 = IRB.CreateOr(getShadow(&I, 0), getShadow(&I, 1));
+    auto *Shadow0 = getShadow(&I, 0);
+    auto *Shadow1 = getShadow(&I, 1);
+    Value *S0 = IRB.CreateOr(Shadow0, Shadow1);
     Value *S = LowerElementShadowExtend(IRB, S0, getShadowTy(&I));
     setShadow(&I, S);
     setOriginForNaryOp(I);
