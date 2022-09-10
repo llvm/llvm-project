@@ -1124,7 +1124,9 @@ void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
   ++PPBranchLevel;
   assert(PPBranchLevel >= 0 && PPBranchLevel <= (int)PPLevelBranchIndex.size());
   if (PPBranchLevel == (int)PPLevelBranchIndex.size()) {
-    PPLevelBranchIndex.push_back(0);
+    // If the first branch is unreachable, set the BranchIndex to 1.  This way
+    // the next branch will be parsed if there is one.
+    PPLevelBranchIndex.push_back(Unreachable ? 1 : 0);
     PPLevelBranchCount.push_back(0);
   }
   PPChainBranchIndex.push(0);

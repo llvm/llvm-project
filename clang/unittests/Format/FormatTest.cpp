@@ -5993,6 +5993,16 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
                          ");\n"
                          "#else\n"
                          "#endif");
+
+  // Verify that indentation is correct when there is an `#if 0` with an
+  // `#else`.
+  verifyFormat("#if 0\n"
+               "{\n"
+               "#else\n"
+               "{\n"
+               "#endif\n"
+               "  x;\n"
+               "}");
 }
 
 TEST_F(FormatTest, GraciouslyHandleIncorrectPreprocessorConditions) {
@@ -25367,27 +25377,12 @@ TEST_F(FormatTest, InsertBraces) {
 
   verifyFormat("do {\n"
                "#if 0\n"
-               " if (a) {\n"
-               "#else\n"
-               "  if (b) {\n"
-               "#endif\n"
-               "}\n"
-               "}\n"
-               "while (0)\n"
-               "  ;",
-               Style);
-  // TODO: Replace the test above with the one below after #57539 is fixed.
-#if 0
-  verifyFormat("do {\n"
-               "#if 0\n"
-               "  if (a) {\n"
                "#else\n"
                "  if (b) {\n"
                "#endif\n"
                "  }\n"
                "} while (0);",
                Style);
-#endif
 
   Style.ColumnLimit = 15;
 
