@@ -138,13 +138,14 @@ class Builder:
         return None
 
     def getBuildCommand(self, debug_info, architecture=None, compiler=None,
-            dictionary=None, testdir=None, testname=None):
+            dictionary=None, testdir=None, testname=None, make_targets=None):
         debug_info_args = self._getDebugInfoArgs(debug_info)
         if debug_info_args is None:
             return None
-
+        if make_targets is None:
+            make_targets = ["all"]
         command_parts = [
-            self.getMake(testdir, testname), debug_info_args, ["all"],
+            self.getMake(testdir, testname), debug_info_args, make_targets,
             self.getArchCFlags(architecture), self.getArchSpec(architecture),
             self.getCCSpec(compiler), self.getExtraMakeArgs(),
             self.getSDKRootSpec(), self.getModuleCacheSpec(),

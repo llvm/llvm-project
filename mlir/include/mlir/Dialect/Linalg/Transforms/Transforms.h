@@ -754,20 +754,19 @@ private:
 
 /// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
 /// convolution ops.
+template <typename Conv2DOp, typename Conv1DOp>
 struct DownscaleSizeOneWindowed2DConvolution final
-    : public OpRewritePattern<Conv2DNhwcHwcfOp> {
+    : public OpRewritePattern<Conv2DOp> {
   DownscaleSizeOneWindowed2DConvolution(
       MLIRContext *context,
       LinalgTransformationFilter f = LinalgTransformationFilter(),
       PatternBenefit benefit = 1)
-      : OpRewritePattern<Conv2DNhwcHwcfOp>(context, benefit),
-        filter(std::move(f)) {}
+      : OpRewritePattern<Conv2DOp>(context, benefit), filter(std::move(f)) {}
 
-  FailureOr<Conv1DNwcWcfOp>
-  returningMatchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
-                           PatternRewriter &rewriter) const;
+  FailureOr<Conv1DOp> returningMatchAndRewrite(Conv2DOp convOp,
+                                               PatternRewriter &rewriter) const;
 
-  LogicalResult matchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
+  LogicalResult matchAndRewrite(Conv2DOp convOp,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
