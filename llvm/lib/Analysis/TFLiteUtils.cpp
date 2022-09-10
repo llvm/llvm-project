@@ -134,6 +134,7 @@ TFModelEvaluatorImpl::TFModelEvaluatorImpl(
   for (size_t I = 0; I < Interpreter->outputs().size(); ++I)
     OutputsMap[Interpreter->GetOutputName(I)] = I;
 
+  size_t NumberFeaturesPassed = 0;
   for (size_t I = 0; I < InputSpecs.size(); ++I) {
     auto &InputSpec = InputSpecs[I];
     auto MapI = InputsMap.find(InputSpec.name() + ":" +
@@ -147,6 +148,14 @@ TFModelEvaluatorImpl::TFModelEvaluatorImpl(
       return;
     std::memset(Input[I]->data.data, 0,
                 InputSpecs[I].getTotalTensorBufferSize());
+    ++NumberFeaturesPassed;
+  }
+
+  if (NumberFeaturesPassed < Interpreter->inputs().size()) {
+    // we haven't passed all the required features to the model, throw an error.
+    errs() << "Required feature(s) have not been passed to the ML model";
+    invalidate();
+    return;
   }
 
   for (size_t I = 0; I < OutputSpecsSize; ++I) {
