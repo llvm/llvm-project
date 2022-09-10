@@ -63,7 +63,7 @@ public:
   size_t getFrameOffset() const { return FrameOffset; }
 
   /// Returns the value of a local variable.
-  template <typename T> const T &getLocal(unsigned Offset) {
+  template <typename T> const T &getLocal(unsigned Offset) const {
     return localRef<T>(Offset);
   }
 
@@ -118,7 +118,7 @@ private:
   }
 
   /// Returns an offset to a local.
-  template <typename T> T &localRef(unsigned Offset) {
+  template <typename T> T &localRef(unsigned Offset) const {
     return *reinterpret_cast<T *>(Locals.get() + Offset);
   }
 
