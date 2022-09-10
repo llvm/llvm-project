@@ -180,8 +180,10 @@ COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
+  auto &HostFuncJD = ES.createBareJITDylib("$<PlatformRuntimeHostFuncJD>");
+
   // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(absoluteSymbols(
+  if (auto Err = HostFuncJD.define(absoluteSymbols(
           {{ES.intern("__orc_rt_jit_dispatch"),
             {EPC.getJITDispatchInfo().JITDispatchFunction.getValue(),
              JITSymbolFlags::Exported}},
@@ -195,6 +197,7 @@ COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
       StaticLibraryDefinitionGenerator::Load(ObjLinkingLayer, OrcRuntimePath);
   if (!OrcRuntimeArchiveGenerator)
     return OrcRuntimeArchiveGenerator.takeError();
+  PlatformJD.addToLinkOrder(HostFuncJD);
 
   // Create the instance.
   Error Err = Error::success();
@@ -225,6 +228,7 @@ Error COFFPlatform::setupJITDylib(JITDylib &JD) {
       return Err;
   }
 
+  JD.addGenerator(DLLImportDefinitionGenerator::Create(ES, ObjLinkingLayer));
   return Error::success();
 }
 
