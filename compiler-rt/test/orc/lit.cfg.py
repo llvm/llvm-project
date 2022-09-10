@@ -37,6 +37,9 @@ config.substitutions.append(
 config.substitutions.append(
     ('%clangxx ',
      build_invocation(config.cxx_mode_flags + [config.target_cflags])))
+config.substitutions.append(
+    ('%clang_cl ',
+     build_invocation(['--driver-mode=cl'] + [config.target_cflags])))
 if config.host_os == 'Windows':
   config.substitutions.append(
       ('%llvm_jitlink', (llvm_jitlink + ' -orc-runtime=' +

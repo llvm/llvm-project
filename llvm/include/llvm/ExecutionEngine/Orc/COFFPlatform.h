@@ -42,10 +42,9 @@ public:
   static Expected<std::unique_ptr<COFFPlatform>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          JITDylib &PlatformJD, const char *OrcRuntimePath,
-         LoadDynamicLibrary LoadDynLibrary, const char *VCRuntimePath = nullptr,
+         LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime = false,
+         const char *VCRuntimePath = nullptr,
          Optional<SymbolAliasMap> RuntimeAliases = None);
-
-  Error bootstrap(JITDylib &PlatformJD);
 
   ExecutionSession &getExecutionSession() const { return ES; }
   ObjectLinkingLayer &getObjectLinkingLayer() const { return ObjLinkingLayer; }
@@ -141,11 +140,10 @@ private:
 
   static bool supportedTarget(const Triple &TT);
 
-  COFFPlatform(
-      ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-      JITDylib &PlatformJD,
-      std::unique_ptr<StaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
-      LoadDynamicLibrary LoadDynLibrary, const char *VCRuntimePath, Error &Err);
+  COFFPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+               JITDylib &PlatformJD, const char *OrcRuntimePath,
+               LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
+               const char *VCRuntimePath, Error &Err);
 
   // Associate COFFPlatform JIT-side runtime support functions with handlers.
   Error associateRuntimeSupportFunctions(JITDylib &PlatformJD);
@@ -164,6 +162,8 @@ private:
   // Build dependency graph of a JITDylib
   Expected<JITDylibDepMap> buildJDDepMap(JITDylib &JD);
 
+  Expected<MemoryBufferRef> getPerJDObjectFile();
+
   // Implements rt_pushInitializers by making repeat async lookups for
   // initializer symbols (each lookup may spawn more initializer symbols if
   // it pulls in new materializers, e.g. from objects in a static library).
@@ -181,6 +181,9 @@ private:
 
   LoadDynamicLibrary LoadDynLibrary;
   std::unique_ptr<COFFVCRuntimeBootstrapper> VCRuntimeBootstrap;
+  std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer;
+  std::unique_ptr<object::Archive> OrcRuntimeArchive;
+  bool StaticVCRuntime;
 
   SymbolStringPtr COFFHeaderStartSymbol;
 
