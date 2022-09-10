@@ -1197,10 +1197,12 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     ExitOnErr(loadProcessSymbols(*this));
   else {
     // This symbol is used in testcases.
-    ExitOnErr(MainJD->define(absoluteSymbols(
+    auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
+    ExitOnErr(TestResultJD.define(absoluteSymbols(
         {{ES.intern("llvm_jitlink_setTestResultOverride"),
           {pointerToJITTargetAddress(llvm_jitlink_setTestResultOverride),
            JITSymbolFlags::Exported}}})));
+    MainJD->addToLinkOrder(TestResultJD);
   }
 
   ExitOnErr(loadDylibs(*this));
