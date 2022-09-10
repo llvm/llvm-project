@@ -593,8 +593,19 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
         UUID uuid;
         const bool value_is_slide = false;
         for (addr_t addr : bin_addrs) {
-          const bool force_symbol_search = true;
           const bool notify = true;
+          // First see if this is a special platform
+          // binary that may determine the DynamicLoader and
+          // Platform to be used in this Process/Target in the
+          // process of loading it.
+          if (GetTarget()
+                  .GetDebugger()
+                  .GetPlatformList()
+                  .LoadPlatformBinaryAndSetup(this, addr, notify))
+            continue;
+
+          const bool force_symbol_search = true;
+          // Second manually load this binary into the Target.
           DynamicLoader::LoadBinaryWithUUIDAndAddress(
               this, uuid, addr, value_is_slide, force_symbol_search, notify);
         }

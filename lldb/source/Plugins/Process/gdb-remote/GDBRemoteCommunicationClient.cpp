@@ -2206,12 +2206,13 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
             ++num_keys_decoded;
           }
         } else if (name.equals("binary-addresses")) {
-          addr_t addr;
-          while (!value.empty()) {
-            llvm::StringRef addr_str;
-            std::tie(addr_str, value) = value.split(',');
-            if (!addr_str.getAsInteger(16, addr))
-              m_binary_addresses.push_back(addr);
+          m_binary_addresses.clear();
+          ++num_keys_decoded;
+          for (llvm::StringRef x : llvm::split(value, ',')) {
+            addr_t vmaddr;
+            x.consume_front("0x");
+            if (llvm::to_integer(x, vmaddr, 16))
+              m_binary_addresses.push_back(vmaddr);
           }
         }
       }
