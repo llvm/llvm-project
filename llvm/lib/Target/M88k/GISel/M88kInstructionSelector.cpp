@@ -1190,6 +1190,8 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return true;
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_INTTOPTR:
+  case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_FREEZE:
     return selectCopy(I, TII, MRI, TRI, RBI);
   case TargetOpcode::G_INTRINSIC:

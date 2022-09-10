@@ -285,6 +285,10 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                           getValueMapping(PMI_GR32),
                                           getValueMapping(PMI_GR32)});
     break;
+  case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_INTTOPTR:
+    OperandsMapping = getValueMapping(PMI_GR32);
+    break;
   case TargetOpcode::G_SELECT:
     // TODO FP not handled.
     OperandsMapping = getOperandsMapping({getValueMapping(PMI_GR32),

@@ -46,7 +46,8 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_PHI).legalFor({S32, P0});
   getActionDefinitionsBuilder(G_SELECT)
-      .customForCartesianProduct({S32, S64, P0}, {S1});
+      .customForCartesianProduct({S32, S64, P0}, {S1})
+      .clampScalar(0, S32, S64);
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
       .legalFor({S32, P0})
       .clampScalar(0, S32, S32);
@@ -174,6 +175,7 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   const LLT S1 = LLT::scalar(1);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
+  const LLT P0 = LLT::pointer(0, 32);
 
   switch (MI.getOpcode()) {
   case G_FCONSTANT: {
@@ -269,7 +271,7 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     // The instruction
     // %4:_(s32) = G_SELECT %1:_(s32), %2:_(s32), %3:_(s32)
     // is lowered to:
-    // %5:_(s32) = G_SEXT_INREG %1:_(s32), 0
+    // %5:_(s32) = G_SEXT %1:_(s32)
     // %6:_(s32) = G_AND %5:_(s32), %2:_(s32)
     // %7:_(s32) = G_XOR %5:_(s32), -1
     // %8:_(s32) = G_AND %5:_(s32), %3:_(s32)
@@ -277,36 +279,54 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     //
     // If one of the values to select is zero, then the G_AND belonging to that
     // value is not generated.
+    // The pointer type require special care.
     Register Dst = MI.getOperand(0).getReg();
     Register Tst = MI.getOperand(1).getReg();
     Register TVal = MI.getOperand(2).getReg();
     Register FVal = MI.getOperand(3).getReg();
     LLT DstTy = MRI.getType(Dst);
     LLT TstTy = MRI.getType(Tst);
-    //LLT TValTy = MRI.getType(TVal);
-    //LLT FValy = MRI.getType(FVal);
-    if (TstTy != S1)
-      return false;
-    if (DstTy != S32 && DstTy != S64)
-      return false;
-    int64_t Cst;
-    bool MissT = mi_match(TVal, MRI, m_ICst(Cst)) && Cst == 0;
-    bool MissF = mi_match(FVal, MRI, m_ICst(Cst)) && Cst == 0;
+
+    // The type used for the calculation. If the instruction operates on
+    // pointers then it is a scalar type of the same size as the pointer.
+    LLT Ty = DstTy.isPointer() ? LLT::scalar(DstTy.getSizeInBits()) : DstTy;
+
+    bool MissT = mi_match(TVal, MRI, m_ZeroInt());
+    bool MissF = mi_match(FVal, MRI, m_ZeroInt());
     if (MissT && MissF) {
       MIRBuilder.buildConstant(Dst, 0);
     } else {
-      auto Mask = MIRBuilder.buildSExtInReg(S32, Tst, 0);
-      if (MissF) {
-        MIRBuilder.buildAnd(Dst, TVal, Mask);
-      } else if (MissT) {
-        auto NegMask = MIRBuilder.buildNot(S32, Mask);
-        MIRBuilder.buildAnd(Dst, FVal, NegMask);
-      } else {
-        auto MaskT = MIRBuilder.buildAnd(S32, TVal, Mask);
-        auto NegMask = MIRBuilder.buildNot(S32, Mask);
-        auto MaskF = MIRBuilder.buildAnd(S32, FVal, NegMask);
-        MIRBuilder.buildOr(Dst, MaskT, MaskF);
+      Register Res = Dst;
+
+      // Convert pointers to integers if necessary.
+      if (DstTy.isPointer()) {
+        Res = MRI.createGenericVirtualRegister(Ty);
+        if (!MissT) {
+          Register Tmp = MRI.createGenericVirtualRegister(Ty);
+          MIRBuilder.buildPtrToInt(Tmp, TVal);
+          TVal = Tmp;
+        }
+        if (!MissF) {
+          Register Tmp = MRI.createGenericVirtualRegister(Ty);
+          MIRBuilder.buildPtrToInt(Tmp, FVal);
+          FVal = Tmp;
+        }
       }
+
+      auto Mask = MIRBuilder.buildSExt(Ty, Tst);
+      if (MissF) {
+        MIRBuilder.buildAnd(Res, TVal, Mask);
+      } else if (MissT) {
+        auto NegMask = MIRBuilder.buildNot(Ty, Mask);
+        MIRBuilder.buildAnd(Res, FVal, NegMask);
+      } else {
+        auto MaskT = MIRBuilder.buildAnd(Ty, TVal, Mask);
+        auto NegMask = MIRBuilder.buildNot(Ty, Mask);
+        auto MaskF = MIRBuilder.buildAnd(Ty, FVal, NegMask);
+        MIRBuilder.buildOr(Res, MaskT, MaskF);
+      }
+      if (DstTy.isPointer())
+        MIRBuilder.buildIntToPtr(Dst, Res);
     }
     MI.eraseFromParent();
     break;
