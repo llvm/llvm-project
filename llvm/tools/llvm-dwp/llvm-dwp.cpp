@@ -71,7 +71,10 @@ getDWOFilenames(StringRef ExecFilename) {
     if (!DWOCompDir.empty()) {
       SmallString<16> DWOPath(std::move(DWOName));
       sys::fs::make_absolute(DWOCompDir, DWOPath);
-      DWOPaths.emplace_back(DWOPath.data(), DWOPath.size());
+      if (!sys::fs::exists(DWOPath) && sys::fs::exists(DWOName))
+        DWOPaths.push_back(std::move(DWOName));
+      else
+        DWOPaths.emplace_back(DWOPath.data(), DWOPath.size());
     } else {
       DWOPaths.push_back(std::move(DWOName));
     }
