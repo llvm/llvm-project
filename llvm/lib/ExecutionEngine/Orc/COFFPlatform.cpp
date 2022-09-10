@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 
 #include "llvm/Object/COFF.h"
 
@@ -161,7 +162,7 @@ namespace orc {
 Expected<std::unique_ptr<COFFPlatform>>
 COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                      JITDylib &PlatformJD, const char *OrcRuntimePath,
-                     LoadDynamicLibrary LoadDynLibrary,
+                     LoadDynamicLibrary LoadDynLibrary, bool StaticVCRuntime,
                      const char *VCRuntimePath,
                      Optional<SymbolAliasMap> RuntimeAliases) {
   auto &EPC = ES.getExecutorProcessControl();
@@ -180,8 +181,10 @@ COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
+  auto &HostFuncJD = ES.createBareJITDylib("$<PlatformRuntimeHostFuncJD>");
+
   // Add JIT-dispatch function support symbols.
-  if (auto Err = PlatformJD.define(absoluteSymbols(
+  if (auto Err = HostFuncJD.define(absoluteSymbols(
           {{ES.intern("__orc_rt_jit_dispatch"),
             {EPC.getJITDispatchInfo().JITDispatchFunction.getValue(),
              JITSymbolFlags::Exported}},
@@ -190,20 +193,42 @@ COFFPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
              JITSymbolFlags::Exported}}})))
     return std::move(Err);
 
-  // Create a generator for the ORC runtime archive.
-  auto OrcRuntimeArchiveGenerator =
-      StaticLibraryDefinitionGenerator::Load(ObjLinkingLayer, OrcRuntimePath);
-  if (!OrcRuntimeArchiveGenerator)
-    return OrcRuntimeArchiveGenerator.takeError();
+  PlatformJD.addToLinkOrder(HostFuncJD);
 
   // Create the instance.
   Error Err = Error::success();
   auto P = std::unique_ptr<COFFPlatform>(new COFFPlatform(
-      ES, ObjLinkingLayer, PlatformJD, std::move(*OrcRuntimeArchiveGenerator),
-      std::move(LoadDynLibrary), VCRuntimePath, Err));
+      ES, ObjLinkingLayer, PlatformJD, OrcRuntimePath,
+      std::move(LoadDynLibrary), StaticVCRuntime, VCRuntimePath, Err));
   if (Err)
     return std::move(Err);
   return std::move(P);
+}
+
+Expected<MemoryBufferRef> COFFPlatform::getPerJDObjectFile() {
+  auto PerJDObj = OrcRuntimeArchive->findSym("__orc_rt_coff_per_jd_marker");
+  if (!PerJDObj)
+    return PerJDObj.takeError();
+
+  if (!*PerJDObj)
+    return make_error<StringError>("Could not find per jd object file",
+                                   inconvertibleErrorCode());
+
+  auto Buffer = (*PerJDObj)->getAsBinary();
+  if (!Buffer)
+    return Buffer.takeError();
+
+  return (*Buffer)->getMemoryBufferRef();
+}
+
+static void addAliases(ExecutionSession &ES, SymbolAliasMap &Aliases,
+                       ArrayRef<std::pair<const char *, const char *>> AL) {
+  for (auto &KV : AL) {
+    auto AliasName = ES.intern(KV.first);
+    assert(!Aliases.count(AliasName) && "Duplicate symbol name in alias map");
+    Aliases[std::move(AliasName)] = {ES.intern(KV.second),
+                                     JITSymbolFlags::Exported};
+  }
 }
 
 Error COFFPlatform::setupJITDylib(JITDylib &JD) {
@@ -214,17 +239,39 @@ Error COFFPlatform::setupJITDylib(JITDylib &JD) {
   if (auto Err = ES.lookup({&JD}, COFFHeaderStartSymbol).takeError())
     return Err;
 
+  // Define the CXX aliases.
+  SymbolAliasMap CXXAliases;
+  addAliases(ES, CXXAliases, requiredCXXAliases());
+  if (auto Err = JD.define(symbolAliases(std::move(CXXAliases))))
+    return Err;
+
+  auto PerJDObj = getPerJDObjectFile();
+  if (!PerJDObj)
+    return PerJDObj.takeError();
+
+  auto I = getObjectFileInterface(ES, *PerJDObj);
+  if (!I)
+    return I.takeError();
+
+  if (auto Err = ObjLinkingLayer.add(
+          JD, MemoryBuffer::getMemBuffer(*PerJDObj, false), std::move(*I)))
+    return Err;
+
   if (!Bootstrapping) {
-    auto ImportedLibs = VCRuntimeBootstrap->loadStaticVCRuntime(JD);
+    auto ImportedLibs = StaticVCRuntime
+                            ? VCRuntimeBootstrap->loadStaticVCRuntime(JD)
+                            : VCRuntimeBootstrap->loadDynamicVCRuntime(JD);
     if (!ImportedLibs)
       return ImportedLibs.takeError();
     for (auto &Lib : *ImportedLibs)
       if (auto Err = LoadDynLibrary(JD, Lib))
         return Err;
-    if (auto Err = VCRuntimeBootstrap->initializeStaticVCRuntime(JD))
-      return Err;
+    if (StaticVCRuntime)
+      if (auto Err = VCRuntimeBootstrap->initializeStaticVCRuntime(JD))
+        return Err;
   }
 
+  JD.addGenerator(DLLImportDefinitionGenerator::Create(ES, ObjLinkingLayer));
   return Error::success();
 }
 
@@ -261,19 +308,8 @@ Error COFFPlatform::notifyRemoving(ResourceTracker &RT) {
   llvm_unreachable("Not supported yet");
 }
 
-static void addAliases(ExecutionSession &ES, SymbolAliasMap &Aliases,
-                       ArrayRef<std::pair<const char *, const char *>> AL) {
-  for (auto &KV : AL) {
-    auto AliasName = ES.intern(KV.first);
-    assert(!Aliases.count(AliasName) && "Duplicate symbol name in alias map");
-    Aliases[std::move(AliasName)] = {ES.intern(KV.second),
-                                     JITSymbolFlags::Exported};
-  }
-}
-
 SymbolAliasMap COFFPlatform::standardPlatformAliases(ExecutionSession &ES) {
   SymbolAliasMap Aliases;
-  addAliases(ES, Aliases, requiredCXXAliases());
   addAliases(ES, Aliases, standardRuntimeUtilityAliases());
   return Aliases;
 }
@@ -282,7 +318,8 @@ ArrayRef<std::pair<const char *, const char *>>
 COFFPlatform::requiredCXXAliases() {
   static const std::pair<const char *, const char *> RequiredCXXAliases[] = {
       {"_CxxThrowException", "__orc_rt_coff_cxx_throw_exception"},
-  };
+      {"_onexit", "__orc_rt_coff_onexit_per_jd"},
+      {"atexit", "__orc_rt_coff_atexit_per_jd"}};
 
   return ArrayRef<std::pair<const char *, const char *>>(RequiredCXXAliases);
 }
@@ -311,15 +348,36 @@ bool COFFPlatform::supportedTarget(const Triple &TT) {
   }
 }
 
-COFFPlatform::COFFPlatform(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    JITDylib &PlatformJD,
-    std::unique_ptr<StaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
-    LoadDynamicLibrary LoadDynLibrary, const char *VCRuntimePath, Error &Err)
+COFFPlatform::COFFPlatform(ExecutionSession &ES,
+                           ObjectLinkingLayer &ObjLinkingLayer,
+                           JITDylib &PlatformJD, const char *OrcRuntimePath,
+                           LoadDynamicLibrary LoadDynLibrary,
+                           bool StaticVCRuntime, const char *VCRuntimePath,
+                           Error &Err)
     : ES(ES), ObjLinkingLayer(ObjLinkingLayer),
       LoadDynLibrary(std::move(LoadDynLibrary)),
+      StaticVCRuntime(StaticVCRuntime),
       COFFHeaderStartSymbol(ES.intern("__ImageBase")) {
   ErrorAsOutParameter _(&Err);
+
+  // Create a generator for the ORC runtime archive.
+  auto OrcRuntimeArchiveGenerator =
+      StaticLibraryDefinitionGenerator::Load(ObjLinkingLayer, OrcRuntimePath);
+  if (!OrcRuntimeArchiveGenerator) {
+    Err = OrcRuntimeArchiveGenerator.takeError();
+    return;
+  }
+
+  auto ArchiveBuffer = MemoryBuffer::getFile(OrcRuntimePath);
+  if (!ArchiveBuffer) {
+    Err = createFileError(OrcRuntimePath, ArchiveBuffer.getError());
+    return;
+  }
+  OrcRuntimeArchiveBuffer = std::move(*ArchiveBuffer);
+  OrcRuntimeArchive =
+      std::make_unique<object::Archive>(*OrcRuntimeArchiveBuffer, Err);
+  if (Err)
+    return;
 
   Bootstrapping.store(true);
   ObjLinkingLayer.addPlugin(std::make_unique<COFFPlatformPlugin>(*this));
@@ -333,10 +391,12 @@ COFFPlatform::COFFPlatform(
   }
   VCRuntimeBootstrap = std::move(*VCRT);
 
-  for (auto &Lib : OrcRuntimeGenerator->getImportedDynamicLibraries())
+  for (auto &Lib : (*OrcRuntimeArchiveGenerator)->getImportedDynamicLibraries())
     DylibsToPreload.insert(Lib);
 
-  auto ImportedLibs = VCRuntimeBootstrap->loadStaticVCRuntime(PlatformJD);
+  auto ImportedLibs =
+      StaticVCRuntime ? VCRuntimeBootstrap->loadStaticVCRuntime(PlatformJD)
+                      : VCRuntimeBootstrap->loadDynamicVCRuntime(PlatformJD);
   if (!ImportedLibs) {
     Err = ImportedLibs.takeError();
     return;
@@ -345,6 +405,8 @@ COFFPlatform::COFFPlatform(
   for (auto &Lib : *ImportedLibs)
     DylibsToPreload.insert(Lib);
 
+  PlatformJD.addGenerator(std::move(*OrcRuntimeArchiveGenerator));
+
   // PlatformJD hasn't been set up by the platform yet (since we're creating
   // the platform now), so set it up.
   if (auto E2 = setupJITDylib(PlatformJD)) {
@@ -352,33 +414,34 @@ COFFPlatform::COFFPlatform(
     return;
   }
 
-  PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
-}
+  for (auto& Lib : DylibsToPreload)
+      if (auto E2 = LoadDynLibrary(PlatformJD, Lib)) {
+          Err = std::move(E2);
+          return;
+      }
 
-Error COFFPlatform::bootstrap(JITDylib &PlatformJD) {
-  for (auto &Lib : DylibsToPreload)
-    if (auto Err = LoadDynLibrary(PlatformJD, Lib))
-      return Err;
-
-  if (auto Err = VCRuntimeBootstrap->initializeStaticVCRuntime(PlatformJD))
-    return Err;
+  if (StaticVCRuntime)
+      if (auto E2 = VCRuntimeBootstrap->initializeStaticVCRuntime(PlatformJD)) {
+          Err = std::move(E2);
+          return;
+      }
 
   // Associate wrapper function tags with JIT-side function implementations.
-  if (auto Err = associateRuntimeSupportFunctions(PlatformJD)) {
-    return Err;
+  if (auto E2 = associateRuntimeSupportFunctions(PlatformJD)) {
+      Err = std::move(E2);
+      return;
   }
 
   // Lookup addresses of runtime functions callable by the platform,
   // call the platform bootstrap function to initialize the platform-state
   // object in the executor.
-  if (auto Err = bootstrapCOFFRuntime(PlatformJD)) {
-    return Err;
+  if (auto E2 = bootstrapCOFFRuntime(PlatformJD)) {
+      Err = std::move(E2);
+      return;
   }
 
   Bootstrapping.store(false);
   JDBootstrapStates.clear();
-
-  return Error::success();
 }
 
 Expected<COFFPlatform::JITDylibDepMap>
@@ -632,13 +695,6 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
           }))
     return Err;
 
-  // Run static initializers collected in bootstrap stage.
-  for (auto KV : JDBootstrapStates) {
-    auto &JDBState = KV.second;
-    if (auto Err = runBootstrapInitializers(JDBState))
-      return Err;
-  }
-
   // Call bootstrap functions
   if (auto Err = ES.callSPSWrapper<void()>(orc_rt_coff_platform_bootstrap))
     return Err;
@@ -658,6 +714,13 @@ Error COFFPlatform::bootstrapCOFFRuntime(JITDylib &PlatformJD) {
               orc_rt_coff_register_object_sections, JDBState.HeaderAddr,
               ObjSectionMap, false))
         return Err;
+  }
+
+  // Run static initializers collected in bootstrap stage.
+  for (auto KV : JDBootstrapStates) {
+    auto &JDBState = KV.second;
+    if (auto Err = runBootstrapInitializers(JDBState))
+      return Err;
   }
 
   return Error::success();

@@ -733,7 +733,7 @@ void WinEHPrepare::demotePHIsOnFunclets(Function &F,
 
   for (auto *PN : PHINodes) {
     // There may be lingering uses on other EH PHIs being removed
-    PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+    PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
     PN->eraseFromParent();
   }
 }

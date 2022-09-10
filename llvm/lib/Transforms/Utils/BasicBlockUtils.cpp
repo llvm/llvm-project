@@ -149,7 +149,7 @@ bool llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
     if (PN->getIncomingValue(0) != PN)
       PN->replaceAllUsesWith(PN->getIncomingValue(0));
     else
-      PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+      PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
 
     if (MemDep)
       MemDep->removeInstruction(PN);  // Memdep updates AA itself.

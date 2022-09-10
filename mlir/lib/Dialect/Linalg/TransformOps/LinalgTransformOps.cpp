@@ -76,10 +76,18 @@ DiagnosedSilenceableFailure
 transform::DecomposeOp::applyToOne(linalg::LinalgOp target,
                                    SmallVectorImpl<Operation *> &results,
                                    transform::TransformState &state) {
-  FailureOr<LinalgOp> windowed =
-      tryApply<DownscaleSizeOneWindowed2DConvolution>(target);
-  if (succeeded(windowed)) {
-    results.push_back(*windowed);
+  FailureOr<LinalgOp> windowedNhwc =
+      tryApply<DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNhwcHwcfOp,
+                                                     Conv1DNwcWcfOp>>(target);
+  if (succeeded(windowedNhwc)) {
+    results.push_back(*windowedNhwc);
+    return DiagnosedSilenceableFailure(success());
+  }
+  FailureOr<LinalgOp> windowedNchw =
+      tryApply<DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNchwFchwOp,
+                                                     Conv1DNcwFcwOp>>(target);
+  if (succeeded(windowedNchw)) {
+    results.push_back(*windowedNchw);
     return DiagnosedSilenceableFailure(success());
   }
   FailureOr<LinalgOp> depthwise =

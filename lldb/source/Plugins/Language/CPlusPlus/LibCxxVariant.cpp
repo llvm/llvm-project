@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibCxxVariant.h"
+#include "LibCxx.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 
 #include "llvm/ADT/Optional.h"
@@ -121,8 +122,8 @@ bool LibcxxVariantSummaryProvider(ValueObject &valobj, Stream &stream,
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP impl_sp(
-      valobj_sp->GetChildMemberWithName(ConstString("__impl"), true));
+  ValueObjectSP impl_sp = GetChildMemberWithName(
+      *valobj_sp, {ConstString("__impl_"), ConstString("__impl")});
 
   if (!impl_sp)
     return false;
@@ -189,8 +190,8 @@ private:
 
 bool VariantFrontEnd::Update() {
   m_size = 0;
-  ValueObjectSP impl_sp(
-      m_backend.GetChildMemberWithName(ConstString("__impl"), true));
+  ValueObjectSP impl_sp = formatters::GetChildMemberWithName(
+      m_backend, {ConstString("__impl_"), ConstString("__impl")});
   if (!impl_sp)
     return false;
 
@@ -209,38 +210,40 @@ bool VariantFrontEnd::Update() {
 
 ValueObjectSP VariantFrontEnd::GetChildAtIndex(size_t idx) {
   if (idx >= m_size)
-    return ValueObjectSP();
+    return {};
 
-  ValueObjectSP impl_sp(
-      m_backend.GetChildMemberWithName(ConstString("__impl"), true));
+  ValueObjectSP impl_sp = formatters::GetChildMemberWithName(
+      m_backend, {ConstString("__impl_"), ConstString("__impl")});
+  if (!impl_sp)
+    return {};
 
   auto optional_index_value = LibcxxVariantIndexValue(impl_sp);
 
   if (!optional_index_value)
-    return ValueObjectSP();
+    return {};
 
   uint64_t index_value = *optional_index_value;
 
   ValueObjectSP nth_head = LibcxxVariantGetNthHead(impl_sp, index_value);
 
   if (!nth_head)
-    return ValueObjectSP();
+    return {};
 
   CompilerType head_type = nth_head->GetCompilerType();
 
   if (!head_type)
-    return ValueObjectSP();
+    return {};
 
   CompilerType template_type = head_type.GetTypeTemplateArgument(1);
 
   if (!template_type)
-    return ValueObjectSP();
+    return {};
 
   ValueObjectSP head_value(
       nth_head->GetChildMemberWithName(ConstString("__value"), true));
 
   if (!head_value)
-    return ValueObjectSP();
+    return {};
 
   return head_value->Clone(ConstString("Value"));
 }

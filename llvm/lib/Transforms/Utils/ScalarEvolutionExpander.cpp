@@ -2666,7 +2666,7 @@ void SCEVExpanderCleaner::cleanup() {
 #endif
     assert(!I->getType()->isVoidTy() &&
            "inserted instruction should have non-void types");
-    I->replaceAllUsesWith(UndefValue::get(I->getType()));
+    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
     I->eraseFromParent();
   }
 }

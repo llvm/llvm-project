@@ -4,3 +4,4 @@ __kmpc_*
 
 memcmp
 printf
+__assert_fail

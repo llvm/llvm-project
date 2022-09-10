@@ -122,7 +122,11 @@ def ConvertArithmeticToSPIRV : Pass<"convert-arith-to-spirv"> {
     Option<"emulateNon32BitScalarTypes", "emulate-non-32-bit-scalar-types",
            "bool", /*default=*/"true",
            "Emulate non-32-bit scalar types with 32-bit ones if "
-           "missing native support">
+           "missing native support">,
+    Option<"enableFastMath", "enable-fast-math",
+           "bool", /*default=*/"false",
+           "Enable fast math mode (assuming no NaN and infinity for floating "
+           "point values) when performing conversion">
   ];
 }
 

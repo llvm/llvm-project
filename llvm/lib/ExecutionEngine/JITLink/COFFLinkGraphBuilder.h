@@ -46,7 +46,6 @@ protected:
   const object::COFFObjectFile &getObject() const { return Obj; }
 
   virtual Error addRelocations() = 0;
-  virtual Symbol &createDLLImportEntry(StringRef StubName, Symbol &Target) = 0;
 
   Error graphifySections();
   Error graphifySymbols();
