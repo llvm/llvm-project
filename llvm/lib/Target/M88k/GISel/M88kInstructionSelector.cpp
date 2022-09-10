@@ -57,6 +57,12 @@ private:
 
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
+  bool constrainSelectedInstRegOperands(MachineInstr &I,
+                                        const MachineRegisterInfo &MRI,
+                                        const TargetInstrInfo &TII,
+                                        const TargetRegisterInfo &TRI,
+                                        const RegisterBankInfo &RBI) const;
+
   void renderLO16(MachineInstrBuilder &MIB, const MachineInstr &I,
                   int OpIdx = -1) const;
   void renderHI16(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -149,6 +155,21 @@ M88kInstructionSelector::M88kInstructionSelector(
 {
 }
 
+// Check is the register Reg is zero. If yes then return the hardware zero
+// register, otherwise return Reg.
+static Register getRegOrZero(Register Reg, const MachineRegisterInfo &MRI) {
+  Optional<ValueAndVReg> Res =
+      getIConstantVRegValWithLookThrough(Reg, MRI, true);
+  if (Res && Res->Value.isZero())
+    return M88k::R0;
+  return Reg;
+}
+
+static Register getRegOrZero(MachineOperand &OP,
+                             const MachineRegisterInfo &MRI) {
+  return getRegOrZero(OP.getReg(), MRI);
+}
+
 // Like llvm::getSrcRegIgnoringCopies() but returns the register from argument
 // list instead of None.
 static Register getRegIgnoringCopies(Register Reg,
@@ -206,6 +227,24 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
+bool M88kInstructionSelector::constrainSelectedInstRegOperands(
+    MachineInstr &I, const MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
+    const TargetRegisterInfo &TRI, const RegisterBankInfo &RBI) const {
+  for (MachineOperand &OP : I.explicit_operands()) {
+    if (!OP.isReg())
+      continue;
+    Register Reg = OP.getReg();
+    if (Register::isPhysicalRegister(Reg))
+      continue;
+    Optional<ValueAndVReg> Res =
+        getIConstantVRegValWithLookThrough(Reg, MRI, true);
+    // TODO This needs an update when the XR register class is supported.
+    if (Res && Res->Value.isZero())
+      OP.setReg(M88k::R0);
+  }
+  return ::constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+}
+
 void M88kInstructionSelector::renderLO16(MachineInstrBuilder &MIB,
                                          const MachineInstr &I,
                                          int OpIdx) const {
@@ -236,8 +275,7 @@ bool M88kInstructionSelector::selectFrameIndex(MachineInstr &I,
                          .add(I.getOperand(1))
                          .addImm(0);
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-  return false;
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectGlobalValue(
@@ -251,7 +289,7 @@ bool M88kInstructionSelector::selectGlobalValue(
                          .addReg(Temp, RegState::Define)
                          .addReg(M88k::R0)
                          .addGlobalAddress(GV, 0, M88kII::MO_ABS_HI);
-  if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+  if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
     return false;
 
   MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ORri))
@@ -260,7 +298,7 @@ bool M88kInstructionSelector::selectGlobalValue(
            .addGlobalAddress(GV, 0, M88kII::MO_ABS_LO);
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectFPtoSI(MachineInstr &I,
@@ -284,7 +322,7 @@ bool M88kInstructionSelector::selectFPtoSI(MachineInstr &I,
                I.getOperand(0).getReg())
            .addReg(I.getOperand(1).getReg());
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectUbfx(MachineInstr &I,
@@ -325,7 +363,7 @@ bool M88kInstructionSelector::selectUbfx(MachineInstr &I,
                          .addImm(Offset);
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 enum class ICC : unsigned {
@@ -425,7 +463,7 @@ bool M88kInstructionSelector::selectICmp(MachineInstr &I,
              .addReg(LHS)
              .add(I.getOperand(3));
   }
-  if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+  if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
     return false;
 
   MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::EXTUrwo))
@@ -435,7 +473,7 @@ bool M88kInstructionSelector::selectICmp(MachineInstr &I,
            .addImm(int64_t(CCCode));
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectBrCond(MachineInstr &I,
@@ -468,7 +506,7 @@ bool M88kInstructionSelector::selectBrCond(MachineInstr &I,
                .addReg(Temp, RegState::Define)
                .addReg(LHS)
                .addImm(UImm16);
-      if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+      if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
         return false;
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
                .addImm(static_cast<int64_t>(CCCode))
@@ -482,7 +520,7 @@ bool M88kInstructionSelector::selectBrCond(MachineInstr &I,
              .addReg(Temp, RegState::Define)
              .addReg(LHS)
              .addReg(RHS);
-    if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+    if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
       return false;
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
              .addImm(static_cast<int64_t>(CCCode))
@@ -512,7 +550,7 @@ bool M88kInstructionSelector::selectBrCond(MachineInstr &I,
   }
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectJumpTable(MachineInstr &I,
@@ -529,7 +567,7 @@ bool M88kInstructionSelector::selectJumpTable(MachineInstr &I,
            .addReg(Temp, RegState::Define)
            .addReg(M88k::R0)
            .addJumpTableIndex(JTIndex, M88kII::MO_ABS_HI);
-  if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+  if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
     return false;
 
   MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::ORri))
@@ -537,7 +575,7 @@ bool M88kInstructionSelector::selectJumpTable(MachineInstr &I,
            .addReg(Temp, RegState::Kill)
            .addJumpTableIndex(JTIndex, M88kII::MO_ABS_LO);
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectBrJT(MachineInstr &I,
@@ -566,12 +604,12 @@ bool M88kInstructionSelector::selectBrJT(MachineInstr &I,
              .addReg(JTPtrReg)
              .addReg(JTIndexReg);
   }
-  if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+  if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
     return false;
 
   MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::JMP)).addReg(DstReg);
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectBrIndirect(MachineInstr &I,
@@ -582,7 +620,7 @@ bool M88kInstructionSelector::selectBrIndirect(MachineInstr &I,
   MachineInstr *MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::JMP))
                          .addReg(I.getOperand(0).getReg());
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectPtrAdd(MachineInstr &I,
@@ -607,7 +645,7 @@ bool M88kInstructionSelector::selectPtrAdd(MachineInstr &I,
              .addReg(AddendReg);
   }
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectAddSubWithCarry(
@@ -654,7 +692,7 @@ bool M88kInstructionSelector::selectAddSubWithCarry(
   }
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MIB, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectMul(MachineInstr &I, MachineBasicBlock &MBB,
@@ -686,7 +724,7 @@ bool M88kInstructionSelector::selectMul(MachineInstr &I, MachineBasicBlock &MBB,
     return false;
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectUDiv(MachineInstr &I,
@@ -714,7 +752,7 @@ bool M88kInstructionSelector::selectUDiv(MachineInstr &I,
     return false;
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
@@ -741,7 +779,7 @@ bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
              .addReg(Temp, RegState::Define)
              .addReg(LHS)
              .addImm(SImm16);
-    if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+    if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
       return false;
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
              .addReg(Temp, RegState::Kill)
@@ -755,7 +793,7 @@ bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
              .addReg(Temp, RegState::Define)
              .addReg(LHS)
              .addReg(RHS);
-    if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+    if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
       return false;
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
              .addReg(Temp, RegState::Kill)
@@ -765,7 +803,7 @@ bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
     return false;
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 enum class LoadStore : unsigned {
@@ -858,7 +896,7 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
              .addReg(Temp, RegState::Define)
              .addReg(M88k::R0)
              .addGlobalAddress(GV, 0, M88kII::MO_ABS_HI);
-    if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+    if (!constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI))
       return false;
 
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
@@ -917,7 +955,7 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
   }
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectMergeUnmerge(
@@ -947,7 +985,6 @@ bool M88kInstructionSelector::selectMergeUnmerge(
              .addReg(SrcReg, 0, M88k::sub_lo);
     RBI.constrainGenericRegister(I.getOperand(0).getReg(), M88k::GPRRCRegClass,
                                  MRI);
-    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
                  I.getOperand(1).getReg())
@@ -956,7 +993,7 @@ bool M88kInstructionSelector::selectMergeUnmerge(
                                  MRI);
   }
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return true;
 }
 
 bool M88kInstructionSelector::selectIntrinsic(MachineInstr &I,
@@ -990,7 +1027,7 @@ bool M88kInstructionSelector::selectIntrinsic(MachineInstr &I,
                .addReg(MFReturnAddr);
 
       I.eraseFromParent();
-      return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
     }
 
     MFI.setFrameAddressIsTaken(true);
@@ -1001,7 +1038,7 @@ bool M88kInstructionSelector::selectIntrinsic(MachineInstr &I,
                .addUse(FrameAddr)
                .addImm(0);
 
-      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
       FrameAddr = NextFrame;
     }
 
@@ -1017,7 +1054,7 @@ bool M88kInstructionSelector::selectIntrinsic(MachineInstr &I,
     }
 
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
   }
   }
   return false;
@@ -1052,7 +1089,7 @@ bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
                    .addReg(M88k::R0)
                    .addImm(-Cst);
         I.eraseFromParent();
-        return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+        return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
       }
     }
     return false;
@@ -1115,7 +1152,7 @@ bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
                .addImm(MaskOffset);
     }
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    return constrainSelectedInstRegOperands(*MI, MRI, TII, TRI, RBI);
   }
   default:
     return false;
