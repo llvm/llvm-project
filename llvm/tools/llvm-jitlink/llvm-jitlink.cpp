@@ -1197,10 +1197,12 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     ExitOnErr(loadProcessSymbols(*this));
   else {
     // This symbol is used in testcases.
-    ExitOnErr(MainJD->define(absoluteSymbols(
+    auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
+    ExitOnErr(TestResultJD.define(absoluteSymbols(
         {{ES.intern("llvm_jitlink_setTestResultOverride"),
           {pointerToJITTargetAddress(llvm_jitlink_setTestResultOverride),
            JITSymbolFlags::Exported}}})));
+    MainJD->addToLinkOrder(TestResultJD);
   }
 
   ExitOnErr(loadDylibs(*this));
@@ -1237,16 +1239,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     };
 
     if (auto P = COFFPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str(),
-                                      std::move(LoadDynLibrary))) {
-      // Set platform early to register jitdylib of dynamic libraries.
-      auto &CP = **P;
+                                      std::move(LoadDynLibrary))) 
       ES.setPlatform(std::move(*P));
-
-      if (auto E2 = CP.bootstrap(*MainJD)) {
-        Err = std::move(E2);
-        return;
-      }
-    } else {
+     else {
       Err = P.takeError();
       return;
     }

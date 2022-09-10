@@ -139,7 +139,6 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   assert(DeviceId >= 0 && DeviceId < NUMBER_OF_DEVICES && "bad dev id");
 
   size_t ImageSize = (size_t)Image->ImageEnd - (size_t)Image->ImageStart;
-  size_t NumEntries = (size_t)(Image->EntriesEnd - Image->EntriesBegin);
 
   // load dynamic library and get the entry points. We use the dl library
   // to do the loading of the library, but we could do it directly to avoid the

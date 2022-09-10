@@ -1411,7 +1411,8 @@ class Base(unittest2.TestCase):
             debug_info=None,
             architecture=None,
             compiler=None,
-            dictionary=None):
+            dictionary=None,
+            make_targets=None):
         """Platform specific way to build binaries."""
         if not architecture and configuration.arch:
             architecture = configuration.arch
@@ -1426,7 +1427,7 @@ class Base(unittest2.TestCase):
 
         module = builder_module()
         command = builder_module().getBuildCommand(debug_info, architecture,
-                compiler, dictionary, testdir, testname)
+                compiler, dictionary, testdir, testname, make_targets)
         if command is None:
             raise Exception("Don't know how to build binary")
 
