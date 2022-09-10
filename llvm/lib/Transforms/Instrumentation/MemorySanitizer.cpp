@@ -3313,9 +3313,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           Acc = IRB.CreateOr(Acc, More);
         }
 
-        Value *Origin = IRB.CreateSelect(
-            IRB.CreateICmpNE(Acc, Constant::getNullValue(Acc->getType())),
-            getOrigin(PassThru), IRB.CreateLoad(MS.OriginTy, OriginPtr));
+        Value *NotNull =
+            IRB.CreateICmpNE(Acc, Constant::getNullValue(Acc->getType()));
+        Value *PtrOrigin = IRB.CreateLoad(MS.OriginTy, OriginPtr);
+        Value *Origin =
+            IRB.CreateSelect(NotNull, getOrigin(PassThru), PtrOrigin);
 
         setOrigin(&I, Origin);
       } else {
