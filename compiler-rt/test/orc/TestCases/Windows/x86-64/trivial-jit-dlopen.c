@@ -1,10 +1,9 @@
-// XFAIL: *
 // Test that __orc_rt_coff_jit_dlopen and __orc_rt_coff_jit_dlclose work as
 // expected for a straightforward dlopen; dlclose sequence: first the
 // constructors should be run.
 //
-// RUN: %clang -c -o %t.inits.o %p/Inputs/standalone-dylib.c
-// RUN: %clang -c -o %t.test.o %s
+// RUN: %clang_cl -MD -c -o %t.inits.o %p/Inputs/standalone-dylib.c
+// RUN: %clang_cl -MD -c -o %t.test.o %s
 // RUN: %llvm_jitlink \
 // RUN:   -alias dlopen=__orc_rt_coff_jit_dlopen \
 // RUN:   -alias dlclose=__orc_rt_coff_jit_dlclose \
@@ -12,11 +11,12 @@
 
 // CHECK: entering main
 // CHECK-NEXT: constructor
+// CHECK-NEXT: destructor
 // CHECK-NEXT: leaving main
 
 #include <stdio.h>
-__declspec(dllimport) void *dlopen(const char *path, int mode);
-__declspec(dllimport) int dlclose(void *handle);
+void *dlopen(const char *path, int mode);
+int dlclose(void *handle);
 
 int main(int argc, char *argv[]) {
   printf("entering main\n");

@@ -81,6 +81,7 @@ private:
     size_t LinkedAgainstRefCount = 0;
     size_t DlRefCount = 0;
     std::vector<JITDylibState *> Deps;
+    std::vector<void (*)(void)> AtExits;
     XtorSection CInitSection;    // XIA~XIZ
     XtorSection CXXInitSection;  // XCA~XCZ
     XtorSection CPreTermSection; // XPA~XPZ
@@ -94,6 +95,7 @@ private:
 public:
   static void initialize();
   static COFFPlatformRuntimeState &get();
+  static bool isInitialized() { return CPS; }
   static void destroy();
 
   COFFPlatformRuntimeState() = default;
@@ -112,6 +114,8 @@ public:
 
   Error registerJITDylib(std::string Name, void *Header);
   Error deregisterJITDylib(void *Header);
+
+  Error registerAtExit(ExecutorAddr HeaderAddr, void (*AtExit)(void));
 
   Error registerObjectSections(
       ExecutorAddr HeaderAddr,
@@ -410,7 +414,10 @@ Error COFFPlatformRuntimeState::dlcloseDeinitialize(JITDylibState &JDS) {
              JDS.Name.c_str());
   });
 
-  // FIXME: call atexits.
+  // Run atexits
+  for (auto AtExit : JDS.AtExits)
+    AtExit();
+  JDS.AtExits.clear();
 
   // Run static terminators.
   JDS.CPreTermSection.RunAllNewAndFlush();
@@ -454,8 +461,7 @@ Error COFFPlatformRuntimeState::registerObjectSections(
   auto I = JDStates.find(HeaderAddr.toPtr<void *>());
   if (I == JDStates.end()) {
     std::ostringstream ErrStream;
-    ErrStream << "Attempted to register unrecognized header "
-              << HeaderAddr.getValue();
+    ErrStream << "Unrecognized header " << HeaderAddr.getValue();
     return make_error<StringError>(ErrStream.str());
   }
   auto &JDState = I->second;
@@ -499,7 +505,7 @@ Error COFFPlatformRuntimeState::deregisterObjectSections(
   auto I = JDStates.find(HeaderAddr.toPtr<void *>());
   if (I == JDStates.end()) {
     std::ostringstream ErrStream;
-    ErrStream << "Attempted to register unrecognized header "
+    ErrStream << "Attempted to deregister unrecognized header "
               << HeaderAddr.getValue();
     return make_error<StringError>(ErrStream.str());
   }
@@ -546,6 +552,19 @@ Error COFFPlatformRuntimeState::deregisterBlockRange(ExecutorAddr HeaderAddr,
   assert(BlockRanges.count(Range.Start.toPtr<void *>()) &&
          "Block range address not registered");
   BlockRanges.erase(Range.Start.toPtr<void *>());
+  return Error::success();
+}
+
+Error COFFPlatformRuntimeState::registerAtExit(ExecutorAddr HeaderAddr,
+                                               void (*AtExit)(void)) {
+  std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
+  auto I = JDStates.find(HeaderAddr.toPtr<void *>());
+  if (I == JDStates.end()) {
+    std::ostringstream ErrStream;
+    ErrStream << "Unrecognized header " << HeaderAddr.getValue();
+    return make_error<StringError>(ErrStream.str());
+  }
+  I->second.AtExits.push_back(AtExit);
   return Error::success();
 }
 
@@ -689,6 +708,32 @@ ORC_RT_INTERFACE void __stdcall __orc_rt_coff_cxx_throw_exception(
   };
   RaiseException(EH_EXCEPTION_NUMBER, EXCEPTION_NONCONTINUABLE,
                  _countof(parameters), parameters);
+}
+
+//------------------------------------------------------------------------------
+//                             COFF atexits
+//------------------------------------------------------------------------------
+
+typedef int (*OnExitFunction)(void);
+typedef void (*AtExitFunction)(void);
+
+ORC_RT_INTERFACE OnExitFunction __orc_rt_coff_onexit(void *Header,
+                                                     OnExitFunction Func) {
+  if (auto Err = COFFPlatformRuntimeState::get().registerAtExit(
+          ExecutorAddr::fromPtr(Header), (void (*)(void))Func)) {
+    consumeError(std::move(Err));
+    return nullptr;
+  }
+  return Func;
+}
+
+ORC_RT_INTERFACE int __orc_rt_coff_atexit(void *Header, AtExitFunction Func) {
+  if (auto Err = COFFPlatformRuntimeState::get().registerAtExit(
+          ExecutorAddr::fromPtr(Header), (void (*)(void))Func)) {
+    consumeError(std::move(Err));
+    return -1;
+  }
+  return 0;
 }
 
 //------------------------------------------------------------------------------
