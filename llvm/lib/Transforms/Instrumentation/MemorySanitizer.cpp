@@ -3273,7 +3273,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  bool handleMaskedLoad(IntrinsicInst &I) {
+  void handleMaskedLoad(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Addr = I.getArgOperand(0);
     const Align Alignment(
@@ -3322,7 +3322,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         setOrigin(&I, getCleanOrigin());
       }
     }
-    return true;
   }
 
   // Instrument BMI / BMI2 intrinsics.
