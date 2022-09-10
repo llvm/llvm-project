@@ -37,4 +37,4 @@
 //
 // CACHE-HIT: remark: compile job cache hit
 // CACHE-MISS-NOT: remark: compile job cache hit
-// CACHE-ERROR: fatal error: compile job cache error:
+// CACHE-ERROR: fatal error: caching backend error:
