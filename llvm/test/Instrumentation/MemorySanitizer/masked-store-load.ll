@@ -97,16 +97,16 @@ define <4 x double> @Load(<4 x double>* %p, <4 x double> %v, <4 x i1> %mask) san
 ;
 ; ADDR-LABEL: @Load(
 ; ADDR-NEXT:  entry:
-; ADDR-NEXT:    [[TMP0:%.*]] = load <4 x i64>, <4 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <4 x i64>*), align 8
-; ADDR-NEXT:    [[TMP1:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8
-; ADDR-NEXT:    [[TMP2:%.*]] = load <4 x i1>, <4 x i1>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 40) to <4 x i1>*), align 8
+; ADDR-NEXT:    [[TMP0:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8
+; ADDR-NEXT:    [[TMP1:%.*]] = load <4 x i1>, <4 x i1>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 40) to <4 x i1>*), align 8
+; ADDR-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <4 x i64>*), align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[TMP3:%.*]] = ptrtoint <4 x double>* [[P:%.*]] to i64
 ; ADDR-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
 ; ADDR-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to <4 x i64>*
-; ADDR-NEXT:    [[_MSMASKEDLD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* [[TMP5]], i32 1, <4 x i1> [[MASK:%.*]], <4 x i64> [[TMP0]])
-; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; ADDR-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
+; ADDR-NEXT:    [[_MSMASKEDLD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* [[TMP5]], i32 1, <4 x i1> [[MASK:%.*]], <4 x i64> [[TMP2]])
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP0]], 0
+; ADDR-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
 ; ADDR-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP6]], 0
 ; ADDR-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
