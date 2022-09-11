@@ -32,8 +32,8 @@ or end of a markup element should rarely if ever appear incidentally in logging
 text. It's specifically intended not to require sanitizing plain text, such as
 the HTML/XML requirement to replace ``<`` with ``&lt;`` and the like.
 
-:manpage:`llvm-symbolizer(1)` includes a symbolizing filter via its ``--filter``
-option.
+:doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` includes a symbolizing
+filter via its ``--filter`` option.
 
 Scope and assumptions
 =====================
@@ -431,4 +431,4 @@ over the raw logging stream, accumulating context and massaging text as it goes.
 .. rubric:: Footnotes
 
 .. [#not_yet_implemented] This markup element is not yet implemented in
-  :manpage:`llvm-symbolizer(1)`.
+  :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>`.
