@@ -12,6 +12,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
 namespace lldb_private {
@@ -78,11 +79,31 @@ public:
   bool GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num,
                        RegisterInfo &reg_info) override;
 
-  lldb::addr_t ReadPC(bool *success);
+  lldb::addr_t ReadPC(bool &success);
   bool WritePC(lldb::addr_t pc);
 
   const InstrPattern *Decode(uint32_t inst);
   bool DecodeAndExecute(uint32_t inst, bool ignore_cond);
+
+  template <typename T>
+  static std::enable_if_t<std::is_integral_v<T>, T>
+  ReadMem(EmulateInstructionRISCV &emulator, uint64_t addr, bool *success) {
+
+    EmulateInstructionRISCV::Context ctx;
+    ctx.type = EmulateInstruction::eContextRegisterLoad;
+    ctx.SetNoArgs();
+    return T(emulator.ReadMemoryUnsigned(ctx, addr, sizeof(T), T(), success));
+  }
+
+  template <typename T>
+  static bool WriteMem(EmulateInstructionRISCV &emulator, uint64_t addr,
+                       RegisterValue value) {
+    EmulateInstructionRISCV::Context ctx;
+    ctx.type = EmulateInstruction::eContextRegisterStore;
+    ctx.SetNoArgs();
+    return emulator.WriteMemoryUnsigned(ctx, addr, value.GetAsUInt64(),
+                                        sizeof(T));
+  }
 };
 
 } // namespace lldb_private
