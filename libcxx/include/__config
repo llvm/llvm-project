@@ -1218,7 +1218,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // determining the latter depends on internal GNU libc details. If the
 // __cpp_char8_t feature test macro is not defined, then a char8_t typedef
 // will be declared as well.
-#  if defined(_LIBCPP_GLIBC_PREREQ)
+#  if defined(_LIBCPP_GLIBC_PREREQ) && defined(__GLIBC_USE)
 #    if _LIBCPP_GLIBC_PREREQ(2, 36) && (defined(__cpp_char8_t) || __GLIBC_USE(ISOC2X))
 #      undef _LIBCPP_HAS_NO_C8RTOMB_MBRTOC8
 #    endif
