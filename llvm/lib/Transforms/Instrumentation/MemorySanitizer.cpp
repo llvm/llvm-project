@@ -3327,18 +3327,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Value *MaskedPassThruShadow = IRB.CreateAnd(
             getShadow(PassThru), IRB.CreateSExt(IRB.CreateNeg(Mask), ShadowTy));
 
-        Value *Acc = IRB.CreateExtractElement(
-            MaskedPassThruShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
-        for (int i = 1, N = cast<FixedVectorType>(PassThru->getType())
-                                ->getNumElements();
-             i < N; ++i) {
-          Value *More = IRB.CreateExtractElement(
-              MaskedPassThruShadow, ConstantInt::get(IRB.getInt32Ty(), i));
-          Acc = IRB.CreateOr(Acc, More);
-        }
+        Value *ConvertedShadow =
+            convertShadowToScalar(MaskedPassThruShadow, IRB);
+        Value *NotNull = convertToBool(ConvertedShadow, IRB, "_mscmp");
 
-        Value *NotNull =
-            IRB.CreateICmpNE(Acc, Constant::getNullValue(Acc->getType()));
         Value *PtrOrigin = IRB.CreateLoad(MS.OriginTy, OriginPtr);
         Value *Origin =
             IRB.CreateSelect(NotNull, getOrigin(PassThru), PtrOrigin);
