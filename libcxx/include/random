@@ -1721,22 +1721,21 @@ class piecewise_linear_distribution
 // standard-mandated includes
 #include <initializer_list>
 
-#include <cmath>       // for backward compatibility; TODO remove it
-#include <cstddef>     // for backward compatibility; TODO remove it
-#include <cstdint>     // for backward compatibility; TODO remove it
-#include <iosfwd>      // for backward compatibility; TODO remove it
-#include <limits>      // for backward compatibility; TODO remove it
-#include <numeric>     // for backward compatibility; TODO remove it
-#include <string>      // for backward compatibility; TODO remove it
-#include <type_traits> // for backward compatibility; TODO remove it
-#include <vector>      // for backward compatibility; TODO remove it
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
+#  include <cmath>
+#  include <cstddef>
+#  include <cstdint>
+#  include <iosfwd>
+#  include <limits>
+#  include <numeric>
+#  include <string>
+#  include <type_traits>
+#  include <vector>
 #endif
 
 #endif // _LIBCPP_RANDOM
