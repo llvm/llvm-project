@@ -1396,6 +1396,18 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return &I;
   }
 
+  // (add A (or A, -A)) --> (and (add A, -1) A)
+  // (add A (or -A, A)) --> (and (add A, -1) A)
+  // (add (or A, -A) A) --> (and (add A, -1) A)
+  // (add (or -A, A) A) --> (and (add A, -1) A)
+  if (match(&I, m_c_BinOp(m_Value(A), m_OneUse(m_c_Or(m_Neg(m_Deferred(A)),
+                                                      m_Deferred(A)))))) {
+    Value *Add =
+        Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()), "",
+                          I.hasNoSignedWrap(), I.hasNoSignedWrap());
+    return BinaryOperator::CreateAnd(Add, A);
+  }
+
   // Canonicalize ((A & -A) - 1) --> ((A - 1) & ~A)
   // Forms all commutable operations, and simplifies ctpop -> cttz folds.
   if (match(&I,
