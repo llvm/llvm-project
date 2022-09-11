@@ -1144,6 +1144,34 @@ void InLineChangePrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     TextChangeReporter<IRDataT<EmptyData>>::registerRequiredCallbacks(PIC);
 }
 
+TimeProfilingPassesHandler::TimeProfilingPassesHandler() {}
+
+void TimeProfilingPassesHandler::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  if (!getTimeTraceProfilerInstance())
+    return;
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this](StringRef P, Any IR) { this->runBeforePass(P, IR); });
+  PIC.registerAfterPassCallback(
+      [this](StringRef P, Any IR, const PreservedAnalyses &) {
+        this->runAfterPass();
+      },
+      true);
+  PIC.registerAfterPassInvalidatedCallback(
+      [this](StringRef P, const PreservedAnalyses &) { this->runAfterPass(); },
+      true);
+  PIC.registerBeforeAnalysisCallback(
+      [this](StringRef P, Any IR) { this->runBeforePass(P, IR); });
+  PIC.registerAfterAnalysisCallback(
+      [this](StringRef P, Any IR) { this->runAfterPass(); }, true);
+}
+
+void TimeProfilingPassesHandler::runBeforePass(StringRef PassID, Any IR) {
+  timeTraceProfilerBegin(PassID, getIRName(IR));
+}
+
+void TimeProfilingPassesHandler::runAfterPass() { timeTraceProfilerEnd(); }
+
 namespace {
 
 class DisplayNode;
@@ -2061,6 +2089,13 @@ void StandardInstrumentations::registerCallbacks(
   PrintChangedDiff.registerCallbacks(PIC);
   WebsiteChangeReporter.registerCallbacks(PIC);
   PrintCrashIR.registerCallbacks(PIC);
+  // TimeProfiling records the pass running time cost.
+  // Its 'BeforePassCallback' can be appended at the tail of all the
+  // BeforeCallbacks by calling `registerCallbacks` in the end.
+  // Its 'AfterPassCallback' is put at the front of all the
+  // AfterCallbacks by its `registerCallbacks`. This is necessary
+  // to ensure that other callbacks are not included in the timings.
+  TimeProfilingPasses.registerCallbacks(PIC);
 }
 
 template class ChangeReporter<std::string>;

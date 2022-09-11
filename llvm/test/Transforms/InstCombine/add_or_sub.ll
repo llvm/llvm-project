@@ -5,55 +5,47 @@ declare void @use19(i19)
 declare void @use12(i12)
 declare void @use2(i2)
 
-define i32 @add_or_sub_comb_i32_commuted1(i32 %x) {
-; CHECK-LABEL: @add_or_sub_comb_i32_commuted1(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SUB]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[OR]], [[X]]
+define i32 @add_or_sub_comb_i32_commuted1_nuw(i32 %x) {
+; CHECK-LABEL: @add_or_sub_comb_i32_commuted1_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %sub = sub i32 0, %x
   %or = or i32 %sub, %x
-  %add = add i32 %or, %x
+  %add = add nuw i32 %or, %x
   ret i32 %add
 }
 
-define i8 @add_or_sub_comb_i8_commuted2(i8 %p) {
-; CHECK-LABEL: @add_or_sub_comb_i8_commuted2(
+define i8 @add_or_sub_comb_i8_commuted2_nsw(i8 %p) {
+; CHECK-LABEL: @add_or_sub_comb_i8_commuted2_nsw(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], [[SUB]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[OR]]
-; CHECK-NEXT:    ret i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[X]]
 ;
   %x = mul i8 %p, %p ; thwart complexity-based canonicalization
   %sub = sub i8 0, %x
   %or = or i8 %sub, %x
-  %add = add i8 %x, %or
+  %add = add nsw i8 %x, %or
   ret i8 %add
 }
 
-define i128 @add_or_sub_comb_i128_commuted3(i128 %p) {
-; CHECK-LABEL: @add_or_sub_comb_i128_commuted3(
+define i128 @add_or_sub_comb_i128_commuted3_nuw_nsw(i128 %p) {
+; CHECK-LABEL: @add_or_sub_comb_i128_commuted3_nuw_nsw(
 ; CHECK-NEXT:    [[X:%.*]] = mul i128 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i128 0, [[X]]
-; CHECK-NEXT:    [[OR:%.*]] = or i128 [[X]], [[SUB]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[OR]], [[X]]
-; CHECK-NEXT:    ret i128 [[ADD]]
+; CHECK-NEXT:    ret i128 [[X]]
 ;
   %x = mul i128 %p, %p ; thwart complexity-based canonicalization
   %sub = sub i128 0, %x
   %or = or i128 %x, %sub
-  %add = add i128 %or, %x
+  %add = add nuw nsw i128 %or, %x
   ret i128 %add
 }
 
 define i64 @add_or_sub_comb_i64_commuted4(i64 %p) {
 ; CHECK-LABEL: @add_or_sub_comb_i64_commuted4(
 ; CHECK-NEXT:    [[X:%.*]] = mul i64 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[X]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[X]], [[SUB]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[X]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[X]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = and i64 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %x = mul i64 %p, %p ; thwart complexity-based canonicalization
@@ -66,9 +58,8 @@ define i64 @add_or_sub_comb_i64_commuted4(i64 %p) {
 define <3 x i32> @add_or_sub_comb_i32vec(<3 x i32> %p) {
 ; CHECK-LABEL: @add_or_sub_comb_i32vec(
 ; CHECK-NEXT:    [[X:%.*]] = mul <3 x i32> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub <3 x i32> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[OR:%.*]] = or <3 x i32> [[X]], [[SUB]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <3 x i32> [[OR]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i32> [[X]], <i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[ADD:%.*]] = and <3 x i32> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <3 x i32> [[ADD]]
 ;
   %x = mul <3 x i32> %p, %p ; thwart complexity-based canonicalization
@@ -81,11 +72,12 @@ define <3 x i32> @add_or_sub_comb_i32vec(<3 x i32> %p) {
 define <4 x i16> @add_or_sub_comb_i32vec_poison(<4 x i16> %p) {
 ; CHECK-LABEL: @add_or_sub_comb_i32vec_poison(
 ; CHECK-NEXT:    [[X:%.*]] = mul <4 x i16> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i16> [[X]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[X]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    [[ADD:%.*]] = and <4 x i16> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <4 x i16> [[ADD]]
 ;
   %x = mul <4 x i16> %p, %p ; thwart complexity-based canonicalization
-  %sub = sub <4 x i16> <i16 -1, i16 poison, i16 poison, i16 -1>, %x
+  %sub = sub <4 x i16> <i16 0, i16 poison, i16 poison, i16 0>, %x
   %or = or <4 x i16> %sub, %x
   %add = add <4 x i16> %or, %x
   ret <4 x i16> %add
@@ -96,8 +88,8 @@ define i12 @add_or_sub_comb_i12_multiuse_only_sub(i12 %p) {
 ; CHECK-NEXT:    [[X:%.*]] = mul i12 [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i12 0, [[X]]
 ; CHECK-NEXT:    call void @use12(i12 [[SUB]])
-; CHECK-NEXT:    [[OR:%.*]] = or i12 [[X]], [[SUB]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i12 [[OR]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i12 [[X]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = and i12 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i12 [[ADD]]
 ;
   %x = mul i12 %p, %p ; thwart complexity-based canonicalization
@@ -108,8 +100,74 @@ define i12 @add_or_sub_comb_i12_multiuse_only_sub(i12 %p) {
   ret i12 %add
 }
 
-define i2 @add_or_sub_comb_i2_multiuse_only_or(i2 %p) {
-; CHECK-LABEL: @add_or_sub_comb_i2_multiuse_only_or(
+define i8 @add_or_sub_comb_i8_negative_y_sub(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_or_sub_comb_i8_negative_y_sub(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %sub = sub i8 0, %y ; mismatch: y instead of x
+  %or = or i8 %sub, %x
+  %add = add i8 %or, %x
+  ret i8 %add
+}
+
+define i8 @add_or_sub_comb_i8_negative_y_or(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_or_sub_comb_i8_negative_y_or(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %sub = sub i8 0, %x
+  %or = or i8 %sub, %y ; mismatch: y instead of x
+  %add = add i8 %or, %x
+  ret i8 %add
+}
+
+define i8 @add_or_sub_comb_i8_negative_y_add(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_or_sub_comb_i8_negative_y_add(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %sub = sub i8 0, %x
+  %or = or i8 %sub, %x
+  %add = add i8 %or, %y ; mismatch: y instead of x
+  ret i8 %add
+}
+
+define i8 @add_or_sub_comb_i8_negative_xor_instead_or(i8 %x) {
+; CHECK-LABEL: @add_or_sub_comb_i8_negative_xor_instead_or(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %sub = sub i8 0, %x
+  %xor = xor i8 %sub, %x ; mismatch: xor instead of or
+  %add = add i8 %xor, %x
+  ret i8 %add
+}
+
+
+define i16 @add_or_sub_comb_i16_negative_sub_no_negate(i16 %x) {
+; CHECK-LABEL: @add_or_sub_comb_i16_negative_sub_no_negate(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i16 1, [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[SUB]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[OR]], [[X]]
+; CHECK-NEXT:    ret i16 [[ADD]]
+;
+  %sub = sub i16 1, %x ; mismatch: sub isn't a negate
+  %or = or i16 %sub, %x
+  %add = add i16 %or, %x
+  ret i16 %add
+}
+
+define i2 @add_or_sub_comb_i2_negative_multiuse_only_or(i2 %p) {
+; CHECK-LABEL: @add_or_sub_comb_i2_negative_multiuse_only_or(
 ; CHECK-NEXT:    [[X:%.*]] = mul i2 [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i2 0, [[X]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i2 [[X]], [[SUB]]
@@ -125,8 +183,8 @@ define i2 @add_or_sub_comb_i2_multiuse_only_or(i2 %p) {
   ret i2 %add
 }
 
-define i19 @add_or_sub_comb_i19_multiuse_both(i19 %p) {
-; CHECK-LABEL: @add_or_sub_comb_i19_multiuse_both(
+define i19 @add_or_sub_comb_i19_negative_multiuse_both(i19 %p) {
+; CHECK-LABEL: @add_or_sub_comb_i19_negative_multiuse_both(
 ; CHECK-NEXT:    [[X:%.*]] = mul i19 [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i19 0, [[X]]
 ; CHECK-NEXT:    call void @use19(i19 [[SUB]])
@@ -142,85 +200,4 @@ define i19 @add_or_sub_comb_i19_multiuse_both(i19 %p) {
   call void @use19(i19 %or) ; extra use of or
   %add = add i19 %or, %x
   ret i19 %add
-}
-
-define i10 @add_or_sub_comb_i10_nsw_nuw(i10 %p) {
-; CHECK-LABEL: @add_or_sub_comb_i10_nsw_nuw(
-; CHECK-NEXT:    [[X:%.*]] = mul i10 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i10 0, [[X]]
-; CHECK-NEXT:    [[OR:%.*]] = or i10 [[X]], [[SUB]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i10 [[OR]], [[X]]
-; CHECK-NEXT:    ret i10 [[ADD]]
-;
-  %x = mul i10 %p, %p ; thwart complexity-based canonicalization
-  %sub = sub i10 0, %x
-  %or = or i10 %sub, %x
-  %add = add nsw nuw i10 %or, %x
-  ret i10 %add
-}
-
-define i8 @add_or_sub_comb_i8_negative1(i8 %x, i8 %y) {
-; CHECK-LABEL: @add_or_sub_comb_i8_negative1(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[X:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[X]]
-; CHECK-NEXT:    ret i8 [[ADD]]
-;
-  %sub = sub i8 0, %y ; mismatch: y instead of x
-  %or = or i8 %sub, %x
-  %add = add i8 %or, %x
-  ret i8 %add
-}
-
-define i8 @add_or_sub_comb_i8_negative2(i8 %x, i8 %y) {
-; CHECK-LABEL: @add_or_sub_comb_i8_negative2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[Y:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[X]]
-; CHECK-NEXT:    ret i8 [[ADD]]
-;
-  %sub = sub i8 0, %x
-  %or = or i8 %sub, %y ; mismatch: y instead of x
-  %add = add i8 %or, %x
-  ret i8 %add
-}
-
-define i8 @add_or_sub_comb_i8_negative3(i8 %x, i8 %y) {
-; CHECK-LABEL: @add_or_sub_comb_i8_negative3(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SUB]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[OR]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[ADD]]
-;
-  %sub = sub i8 0, %x
-  %or = or i8 %sub, %x
-  %add = add i8 %or, %y ; mismatch: y instead of x
-  ret i8 %add
-}
-
-define i8 @add_or_sub_comb_i8_negative4(i8 %x) {
-; CHECK-LABEL: @add_or_sub_comb_i8_negative4(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[SUB]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[XOR]], [[X]]
-; CHECK-NEXT:    ret i8 [[ADD]]
-;
-  %sub = sub i8 0, %x
-  %xor = xor i8 %sub, %x ; mismatch: xor instead of or
-  %add = add i8 %xor, %x
-  ret i8 %add
-}
-
-
-define i16 @add_or_sub_comb_i16_negative5(i16 %x) {
-; CHECK-LABEL: @add_or_sub_comb_i16_negative5(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i16 1, [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i16 [[SUB]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[OR]], [[X]]
-; CHECK-NEXT:    ret i16 [[ADD]]
-;
-  %sub = sub i16 1, %x ; mismatch: sub isn't a negate
-  %or = or i16 %sub, %x
-  %add = add i16 %or, %x
-  ret i16 %add
 }

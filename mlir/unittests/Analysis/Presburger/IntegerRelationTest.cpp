@@ -130,7 +130,7 @@ TEST(IntegerRelationTest, symbolicLexmin) {
           .findSymbolicIntegerLexMin();
 
   PWMAFunction expectedLexmin =
-      parsePWMAF(/*numInputs=*/2,
+      parsePWMAF(/*numInputs=*/1,
                  /*numOutputs=*/1,
                  {
                      {"(a)[b] : (a - b >= 0)", {{1, 0, 0}}},     // a
