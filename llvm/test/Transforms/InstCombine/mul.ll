@@ -1481,3 +1481,82 @@ define i32 @mulnot_extrause(i32 %a0) {
   %mul = mul i32 %not, -4
   ret i32 %mul
 }
+
+define i32 @zext_negpow2(i8 %x) {
+; CHECK-LABEL: @zext_negpow2(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[ZX]], -16777216
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  %r = mul i32 %zx, -16777216 ; -1 << 24
+  ret i32 %r
+}
+
+define <2 x i14> @zext_negpow2_vec(<2 x i5> %x) {
+; CHECK-LABEL: @zext_negpow2_vec(
+; CHECK-NEXT:    [[ZX:%.*]] = zext <2 x i5> [[X:%.*]] to <2 x i14>
+; CHECK-NEXT:    [[R:%.*]] = mul <2 x i14> [[ZX]], <i14 -2048, i14 -2048>
+; CHECK-NEXT:    ret <2 x i14> [[R]]
+;
+  %zx = zext <2 x i5> %x to <2 x i14>
+  %r = mul <2 x i14> %zx, <i14 -2048, i14 -2048> ; -1 << 11
+  ret <2 x i14> %r
+}
+
+define i32 @zext_negpow2_too_small(i8 %x) {
+; CHECK-LABEL: @zext_negpow2_too_small(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = mul nsw i32 [[ZX]], -8388608
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  %r = mul i32 %zx, -8388608 ; -1 << 23
+  ret i32 %r
+}
+
+define i16 @sext_negpow2(i9 %x) {
+; CHECK-LABEL: @sext_negpow2(
+; CHECK-NEXT:    [[SX:%.*]] = sext i9 [[X:%.*]] to i16
+; CHECK-NEXT:    [[R:%.*]] = mul i16 [[SX]], -1024
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %sx = sext i9 %x to i16
+  %r = mul i16 %sx, -1024 ; -1 << 10
+  ret i16 %r
+}
+
+define <2 x i16> @sext_negpow2_vec(<2 x i8> %x) {
+; CHECK-LABEL: @sext_negpow2_vec(
+; CHECK-NEXT:    [[SX:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[SX]], <i16 -256, i16 poison>
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %sx = sext <2 x i8> %x to <2 x i16>
+  %r = mul <2 x i16> %sx, <i16 -256, i16 poison> ; -1 << 8
+  ret <2 x i16> %r
+}
+
+define <2 x i16> @sext_negpow2_too_small_vec(<2 x i8> %x) {
+; CHECK-LABEL: @sext_negpow2_too_small_vec(
+; CHECK-NEXT:    [[SX:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = mul <2 x i16> [[SX]], <i16 -128, i16 poison>
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %sx = sext <2 x i8> %x to <2 x i16>
+  %r = mul <2 x i16> %sx, <i16 -128, i16 poison> ; -1 << 7
+  ret <2 x i16> %r
+}
+
+define i32 @zext_negpow2_use(i8 %x) {
+; CHECK-LABEL: @zext_negpow2_use(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[ZX]])
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[ZX]], -16777216
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i8 %x to i32
+  call void @use32(i32 %zx)
+  %r = mul i32 %zx, -16777216 ; -1 << 24
+  ret i32 %r
+}
