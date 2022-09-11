@@ -9647,7 +9647,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
         all_of(operands(), [](VPValue *Op) { return !Op->getDef(); })) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(0, 0), IsPredicated,
                                       State);
-      if (!UI->getType()->isVoidTy()) {
+      if (user_begin() != user_end()) {
         for (unsigned Part = 1; Part < State.UF; ++Part)
           State.set(this, State.get(this, VPIteration(0, 0)),
                     VPIteration(Part, 0));

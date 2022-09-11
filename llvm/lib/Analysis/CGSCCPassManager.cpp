@@ -84,11 +84,7 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     if (!PI.runBeforePass(*Pass, *C))
       continue;
 
-    PreservedAnalyses PassPA;
-    {
-      TimeTraceScope TimeScope(Pass->name());
-      PassPA = Pass->run(*C, AM, G, UR);
-    }
+    PreservedAnalyses PassPA = Pass->run(*C, AM, G, UR);
 
     if (UR.InvalidatedSCCs.count(C))
       PI.runAfterPassInvalidated<LazyCallGraph::SCC>(*Pass, PassPA);
@@ -277,11 +273,7 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
           if (!PI.runBeforePass<LazyCallGraph::SCC>(*Pass, *C))
             continue;
 
-          PreservedAnalyses PassPA;
-          {
-            TimeTraceScope TimeScope(Pass->name());
-            PassPA = Pass->run(*C, CGAM, CG, UR);
-          }
+          PreservedAnalyses PassPA = Pass->run(*C, CGAM, CG, UR);
 
           if (UR.InvalidatedSCCs.count(C))
             PI.runAfterPassInvalidated<LazyCallGraph::SCC>(*Pass, PassPA);
@@ -548,12 +540,7 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
     if (!PI.runBeforePass<Function>(*Pass, F))
       continue;
 
-    PreservedAnalyses PassPA;
-    {
-      TimeTraceScope TimeScope(Pass->name());
-      PassPA = Pass->run(F, FAM);
-    }
-
+    PreservedAnalyses PassPA = Pass->run(F, FAM);
     PI.runAfterPass<Function>(*Pass, F, PassPA);
 
     // We know that the function pass couldn't have invalidated any other

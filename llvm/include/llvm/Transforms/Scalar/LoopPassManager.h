@@ -392,11 +392,7 @@ Optional<PreservedAnalyses> LoopPassManager::runSinglePass(
   if (!PI.runBeforePass<Loop>(*Pass, L))
     return None;
 
-  PreservedAnalyses PA;
-  {
-    TimeTraceScope TimeScope(Pass->name(), IR.getName());
-    PA = Pass->run(IR, AM, AR, U);
-  }
+  PreservedAnalyses PA = Pass->run(IR, AM, AR, U);
 
   // do not pass deleted Loop into the instrumentation
   if (U.skipCurrentLoop())
