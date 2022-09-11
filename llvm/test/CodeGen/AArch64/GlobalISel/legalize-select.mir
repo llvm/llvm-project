@@ -337,3 +337,49 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            lower_select_vec_ptr
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$q0' }
+body:             |
+  bb.1:
+    liveins: $q0, $x0
+
+    ; CHECK-LABEL: name: lower_select_vec_ptr
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[C]](p0), [[C]](p0)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](p0), [[C]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C1]]
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(<2 x s64>) = G_PTRTOINT [[COPY1]](<2 x p0>)
+    ; CHECK-NEXT: [[PTRTOINT1:%[0-9]+]]:_(<2 x s64>) = G_PTRTOINT [[BUILD_VECTOR]](<2 x p0>)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[AND]], 1
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXT_INREG]](s32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[DEF]], [[SEXT]](s64), [[C2]](s64)
+    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[IVEC]](<2 x s64>), [[DEF]], shufflemask(0, 0)
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C3]](s64), [[C3]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[SHUF]], [[BUILD_VECTOR1]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<2 x s64>) = G_AND [[PTRTOINT]], [[SHUF]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(<2 x s64>) = G_AND [[PTRTOINT1]], [[XOR]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND1]], [[AND2]]
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(<2 x p0>) = G_INTTOPTR [[OR]](<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[INTTOPTR]](<2 x p0>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:_(p0) = COPY $x0
+    %1:_(<2 x p0>) = COPY $q0
+    %2:_(p0) = G_CONSTANT i64 0
+    %5:_(<2 x p0>) = G_BUILD_VECTOR %2(p0), %2(p0)
+    %3:_(s1) = G_ICMP intpred(eq), %0(p0), %2
+    %4:_(<2 x p0>) = G_SELECT %3(s1), %1, %5
+    $q0 = COPY %4(<2 x p0>)
+    RET_ReallyLR implicit $q0
+
+...
