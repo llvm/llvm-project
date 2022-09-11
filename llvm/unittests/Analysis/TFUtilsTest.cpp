@@ -121,3 +121,12 @@ TEST(TFUtilsTest, UnsupportedFeature) {
   for (auto I = 0; I < 2 * 5; ++I)
     EXPECT_FLOAT_EQ(F[I], 3.14 + I);
 }
+
+TEST(TFUtilsTest, MissingFeature) {
+  std::vector<TensorSpec> InputSpecs{};
+  std::vector<TensorSpec> OutputSpecs{
+      TensorSpec::createSpec<float>("StatefulPartitionedCall", {1})};
+
+  TFModelEvaluator Evaluator(getModelPath(), InputSpecs, OutputSpecs);
+  EXPECT_FALSE(Evaluator.isValid());
+}
