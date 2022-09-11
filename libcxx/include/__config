@@ -1208,6 +1208,22 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_PACKED
 #  endif
 
+// c8rtomb() and mbrtoc8() were added in C++20 and C23. Support for these
+// functions is gradually being added to existing C libraries. The conditions
+// below check for known C library versions and conditions under which these
+// functions are declared by the C library.
+#  define _LIBCPP_HAS_NO_C8RTOMB_MBRTOC8
+// GNU libc 2.36 and newer declare c8rtomb() and mbrtoc8() in C++ modes if
+// __cpp_char8_t is defined or if C2X extensions are enabled. Unfortunately,
+// determining the latter depends on internal GNU libc details. If the
+// __cpp_char8_t feature test macro is not defined, then a char8_t typedef
+// will be declared as well.
+#  if defined(_LIBCPP_GLIBC_PREREQ)
+#    if _LIBCPP_GLIBC_PREREQ(2, 36) && (defined(__cpp_char8_t) || __GLIBC_USE(ISOC2X))
+#      undef _LIBCPP_HAS_NO_C8RTOMB_MBRTOC8
+#    endif
+#  endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG
