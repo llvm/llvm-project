@@ -16,6 +16,8 @@
 #include "mlir/Support/MathExtras.h"
 #include <numeric>
 
+#include <numeric>
+
 using namespace mlir;
 using namespace presburger;
 
@@ -280,10 +282,8 @@ void presburger::mergeLocalVars(
   DivisionRepr divsA = relA.getLocalReprs();
   DivisionRepr divsB = relB.getLocalReprs();
 
-  for (unsigned i = initLocals, e = divsB.getNumDivs(); i < e; ++i) {
-    divsA.setDividend(i, divsB.getDividend(i));
-    divsA.getDenom(i) = divsB.getDenom(i);
-  }
+  for (unsigned i = initLocals, e = divsB.getNumDivs(); i < e; ++i)
+    divsA.setDiv(i, divsB.getDividend(i), divsB.getDenom(i));
 
   // Remove duplicate divisions from divsA. The removing duplicate divisions
   // call, calls `merge` to effectively merge divisions in relA and relB.
@@ -357,6 +357,55 @@ SmallVector<int64_t, 8> presburger::getComplementIneq(ArrayRef<int64_t> ineq) {
   return coeffs;
 }
 
+SmallVector<Optional<int64_t>, 4>
+DivisionRepr::divValuesAt(ArrayRef<int64_t> point) const {
+  assert(point.size() == getNumNonDivs() && "Incorrect point size");
+
+  SmallVector<Optional<int64_t>, 4> divValues(getNumDivs(), None);
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (unsigned i = 0, e = getNumDivs(); i < e; ++i) {
+      // If division value is found, continue;
+      if (divValues[i])
+        continue;
+
+      ArrayRef<int64_t> dividend = getDividend(i);
+      int64_t divVal = 0;
+
+      // Check if we have all the division values required for this division.
+      unsigned j, f;
+      for (j = 0, f = getNumDivs(); j < f; ++j) {
+        if (dividend[getDivOffset() + j] == 0)
+          continue;
+        // Division value required, but not found yet.
+        if (!divValues[j])
+          break;
+        divVal += dividend[getDivOffset() + j] * divValues[j].value();
+      }
+
+      // We have some division values that are still not found, but are required
+      // to find the value of this division.
+      if (j < f)
+        continue;
+
+      // Fill remaining values.
+      divVal = std::inner_product(point.begin(), point.end(), dividend.begin(),
+                                  divVal);
+      // Add constant.
+      divVal += dividend.back();
+      // Take floor division with denominator.
+      divVal = floorDiv(divVal, denoms[i]);
+
+      // Set div value and continue.
+      divValues[i] = divVal;
+      changed = true;
+    }
+  }
+
+  return divValues;
+}
+
 void DivisionRepr::removeDuplicateDivs(
     llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
 
@@ -400,6 +449,23 @@ void DivisionRepr::removeDuplicateDivs(
       --j;
     }
   }
+}
+
+void DivisionRepr::insertDiv(unsigned pos, ArrayRef<int64_t> dividend,
+                             unsigned divisor) {
+  assert(pos <= getNumDivs() && "Invalid insertion position");
+  assert(dividend.size() == getNumVars() + 1 && "Incorrect dividend size");
+
+  dividends.appendExtraRow(dividend);
+  denoms.insert(denoms.begin() + pos, divisor);
+  dividends.insertColumn(getDivOffset() + pos);
+}
+
+void DivisionRepr::insertDiv(unsigned pos, unsigned num) {
+  assert(pos <= getNumDivs() && "Invalid insertion position");
+  dividends.insertColumns(getDivOffset() + pos, num);
+  dividends.insertRows(pos, num);
+  denoms.insert(denoms.begin() + pos, num, 0);
 }
 
 void DivisionRepr::print(raw_ostream &os) const {

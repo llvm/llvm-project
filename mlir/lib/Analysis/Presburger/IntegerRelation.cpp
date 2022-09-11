@@ -238,6 +238,7 @@ SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
                getVarKindEnd(VarKind::Domain));
   // Compute the symbolic lexmin of the dims and locals, with the symbols being
   // the actual symbols of this set.
+  // The resultant space of lexmin is the space of the relation itself.
   SymbolicLexMin result =
       SymbolicLexSimplex(*this,
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
@@ -248,8 +249,8 @@ SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
 
   // We want to return only the lexmin over the dims, so strip the locals from
   // the computed lexmin.
-  result.lexmin.truncateOutput(result.lexmin.getNumOutputs() -
-                               getNumLocalVars());
+  result.lexmin.removeOutputs(result.lexmin.getNumOutputs() - getNumLocalVars(),
+                              result.lexmin.getNumOutputs());
   return result;
 }
 

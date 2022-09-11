@@ -118,7 +118,7 @@ public:
   DivisionRepr(unsigned numVars, unsigned numDivs)
       : dividends(numDivs, numVars + 1), denoms(numDivs, 0) {}
 
-  DivisionRepr(unsigned numVars) : dividends(numVars + 1, 0) {}
+  DivisionRepr(unsigned numVars) : dividends(0, numVars + 1) {}
 
   unsigned getNumVars() const { return dividends.getNumColumns() - 1; }
   unsigned getNumDivs() const { return dividends.getNumRows(); }
@@ -142,15 +142,24 @@ public:
     return dividends.getRow(i);
   }
 
+  // For a given point containing values for each variable other than the
+  // division variables, try to find the values for each division variable from
+  // their division representation.
+  SmallVector<Optional<int64_t>, 4> divValuesAt(ArrayRef<int64_t> point) const;
+
   // Get the `i^th` denominator.
   unsigned &getDenom(unsigned i) { return denoms[i]; }
   unsigned getDenom(unsigned i) const { return denoms[i]; }
 
   ArrayRef<unsigned> getDenoms() const { return denoms; }
 
-  void setDividend(unsigned i, ArrayRef<int64_t> dividend) {
+  void setDiv(unsigned i, ArrayRef<int64_t> dividend, unsigned divisor) {
     dividends.setRow(i, dividend);
+    denoms[i] = divisor;
   }
+
+  void insertDiv(unsigned pos, ArrayRef<int64_t> dividend, unsigned divisor);
+  void insertDiv(unsigned pos, unsigned num = 1);
 
   /// Removes duplicate divisions. On every possible duplicate division found,
   /// `merge(i, j)`, where `i`, `j` are current index of the duplicate
