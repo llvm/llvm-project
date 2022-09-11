@@ -1227,14 +1227,14 @@ TEST_F(TUSchedulerTests, IncluderCache) {
   auto GetFlags = [&](PathRef Header) {
     S.update(Header, getInputs(Header, ";"), WantDiagnostics::Yes);
     EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-    tooling::CompileCommand Cmd;
+    auto Cmd = std::make_shared<tooling::CompileCommand>();
     S.runWithPreamble("GetFlags", Header, TUScheduler::StaleOrAbsent,
-                      [&](llvm::Expected<InputsAndPreamble> Inputs) {
+                      [Cmd](llvm::Expected<InputsAndPreamble> Inputs) {
                         ASSERT_FALSE(!Inputs) << Inputs.takeError();
-                        Cmd = std::move(Inputs->Command);
+                        *Cmd = std::move(Inputs->Command);
                       });
     EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
-    return Cmd.CommandLine;
+    return Cmd->CommandLine;
   };
 
   for (const auto &Path : {NoCmd, Unreliable, OK, NotIncluded})
