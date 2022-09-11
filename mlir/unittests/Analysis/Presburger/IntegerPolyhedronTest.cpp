@@ -1171,7 +1171,7 @@ void expectSymbolicIntegerLexMin(
   ASSERT_NE(poly.getNumSymbolVars(), 0u);
 
   PWMAFunction expectedLexmin =
-      parsePWMAF(/*numInputs=*/poly.getNumSymbolVars(),
+      parsePWMAF(/*numInputs=*/0,
                  /*numOutputs=*/poly.getNumDimVars(), expectedLexminRepr,
                  /*numSymbols=*/poly.getNumSymbolVars());
 

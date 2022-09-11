@@ -529,9 +529,9 @@ private:
 
 /// Represents the result of a symbolic lexicographic minimization computation.
 struct SymbolicLexMin {
-  SymbolicLexMin(const PresburgerSpace &domainSpace, unsigned numOutputs)
-      : lexmin(domainSpace, numOutputs),
-        unboundedDomain(PresburgerSet::getEmpty(domainSpace)) {}
+  SymbolicLexMin(const PresburgerSpace &space)
+      : lexmin(space),
+        unboundedDomain(PresburgerSet::getEmpty(space.getDomainSpace())) {}
 
   /// This maps assignments of symbols to the corresponding lexmin.
   /// Takes no value when no integer sample exists for the assignment or if the
