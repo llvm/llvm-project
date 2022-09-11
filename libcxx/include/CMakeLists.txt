@@ -294,6 +294,7 @@ set(files
   __format/format_args.h
   __format/format_context.h
   __format/format_error.h
+  __format/format_functions.h
   __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
