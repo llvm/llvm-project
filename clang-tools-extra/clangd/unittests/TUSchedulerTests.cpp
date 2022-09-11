@@ -1227,12 +1227,15 @@ TEST_F(TUSchedulerTests, IncluderCache) {
   auto GetFlags = [&](PathRef Header) {
     S.update(Header, getInputs(Header, ";"), WantDiagnostics::Yes);
     EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+    Notification CmdDone;
     tooling::CompileCommand Cmd;
     S.runWithPreamble("GetFlags", Header, TUScheduler::StaleOrAbsent,
                       [&](llvm::Expected<InputsAndPreamble> Inputs) {
                         ASSERT_FALSE(!Inputs) << Inputs.takeError();
                         Cmd = std::move(Inputs->Command);
+                        CmdDone.notify();
                       });
+    CmdDone.wait();
     EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
     return Cmd.CommandLine;
   };
