@@ -8,7 +8,7 @@ Section,Description,Dependencies,Assignee,Status,First released version
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::file_time<Duration>``",,Not assigned,,,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::local_time<Duration>``",,Not assigned,,,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::local-time-format-t<Duration>``",A ``<chrono>`` implementation,Not assigned,,,
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::day``",,Mark de Wever,|In Progress|,
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::day``",,Mark de Wever,|Complete|, Clang 16
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::month``",,Mark de Wever,|In Progress|,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::year``",,Mark de Wever,|In Progress|,
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::weekday``",,Mark de Wever,|In Progress|,
