@@ -63,6 +63,9 @@ if(LLVM_BUILD_LLVM_DYLIB)
 
   target_link_libraries(LLVM PRIVATE ${LIB_NAMES})
 
+  get_property(SYSTEM_LIBS TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS)
+  target_link_libraries(LLVM PUBLIC ${SYSTEM_LIBS})
+
   if (APPLE)
     set_property(TARGET LLVM APPEND_STRING PROPERTY
                 LINK_FLAGS
