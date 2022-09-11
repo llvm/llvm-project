@@ -514,11 +514,7 @@ public:
       if (!PI.runBeforePass<IRUnitT>(*Pass, IR))
         continue;
 
-      PreservedAnalyses PassPA;
-      {
-        TimeTraceScope TimeScope(Pass->name(), IR.getName());
-        PassPA = Pass->run(IR, AM, ExtraArgs...);
-      }
+      PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
 
       // Call onto PassInstrumentation's AfterPass callbacks immediately after
       // running the pass.
