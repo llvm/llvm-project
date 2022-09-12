@@ -21,6 +21,9 @@ clang_target_link_libraries(LexTests
   clangAPINotes
   clangParse
   clangSema
+  )
 
+target_link_libraries(LexTests
+  PRIVATE
   LLVMTestingSupport
   )
