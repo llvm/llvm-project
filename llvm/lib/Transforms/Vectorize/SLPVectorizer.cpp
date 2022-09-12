@@ -9032,6 +9032,7 @@ void BoUpSLP::optimizeGatherSequence() {
 
     // We can hoist this instruction. Move it to the pre-header.
     I->moveBefore(PreHeader->getTerminator());
+    CSEBlocks.insert(PreHeader);
   }
 
   // Make a list of all reachable blocks in our CSE queue.
