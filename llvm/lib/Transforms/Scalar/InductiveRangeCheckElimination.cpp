@@ -1583,8 +1583,11 @@ InductiveRangeCheck::computeSafeIterationSpace(
     bool IsLatchSigned) const {
   // We can deal when types of latch check and range checks don't match in case
   // if latch check is more narrow.
-  auto *IVType = cast<IntegerType>(IndVar->getType());
-  auto *RCType = cast<IntegerType>(getBegin()->getType());
+  auto *IVType = dyn_cast<IntegerType>(IndVar->getType());
+  auto *RCType = dyn_cast<IntegerType>(getBegin()->getType());
+  // Do not work with pointer types.
+  if (!IVType || !RCType)
+    return None;
   if (IVType->getBitWidth() > RCType->getBitWidth())
     return None;
   // IndVar is of the form "A + B * I" (where "I" is the canonical induction
