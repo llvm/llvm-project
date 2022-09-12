@@ -1191,7 +1191,7 @@ void Module::ReportWarningToolchainMismatch(
     llvm::VersionTuple sym_file_version =
         sym_file->GetProducerVersion(comp_unit);
     llvm::VersionTuple swift_version =
-        swift::version::Version::getCurrentCompilerVersion();
+        swift::version::getCurrentCompilerVersion();
     if (sym_file_version != swift_version) {
       std::string str = llvm::formatv(
           "{0} was compiled with a different Swift compiler "
