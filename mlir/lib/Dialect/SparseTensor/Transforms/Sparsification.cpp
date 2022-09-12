@@ -141,40 +141,60 @@ static unsigned perm(const SparseTensorEncodingAttr &enc, unsigned d) {
   return d;
 }
 
-/// Helper method to translate dim level type to internal representation.
-static Dim toDim(const SparseTensorEncodingAttr &enc, unsigned d) {
+/// Helper method to obtain the dimension level format from the encoding.
+//
+//  TODO: note that we store, but currently completely *ignore* the properties
+//
+static DimLevelFormat toDimLevelFormat(const SparseTensorEncodingAttr &enc,
+                                       unsigned d) {
   if (enc) {
-    SparseTensorEncodingAttr::DimLevelType tp = enc.getDimLevelType()[d];
-    if (tp == SparseTensorEncodingAttr::DimLevelType::Compressed)
-      return Dim::kSparse;
+    switch (enc.getDimLevelType()[d]) {
+    case SparseTensorEncodingAttr::DimLevelType::Dense:
+      return DimLevelFormat(DimLvlType::kDense);
+    case SparseTensorEncodingAttr::DimLevelType::Compressed:
+      return DimLevelFormat(DimLvlType::kCompressed);
+    case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
+      return DimLevelFormat(DimLvlType::kCompressed, true, false);
+    case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
+      return DimLevelFormat(DimLvlType::kCompressed, false, true);
+    case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+      return DimLevelFormat(DimLvlType::kCompressed, false, false);
+    case SparseTensorEncodingAttr::DimLevelType::Singleton:
+      return DimLevelFormat(DimLvlType::kSingleton);
+    case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
+      return DimLevelFormat(DimLvlType::kSingleton, true, false);
+    case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
+      return DimLevelFormat(DimLvlType::kSingleton, false, true);
+    case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+      return DimLevelFormat(DimLvlType::kSingleton, false, false);
+    }
   }
-  return Dim::kDense;
+  return DimLevelFormat(DimLvlType::kDense);
 }
 
 /// Helper method to inspect affine expressions. Rejects cases where the
-/// same index is used more than once. Also rejects affine expressions
-/// that are not a direct index for annotated tensors.
-// TODO: accept more affine cases for sparse tensors
-static bool findAffine(Merger &merger, unsigned tensor, AffineExpr a, Dim dim,
-                       bool isDense) {
+/// same index is used more than once. Also rejects compound affine
+/// expressions in sparse dimensions.
+static bool findAffine(Merger &merger, unsigned tensor, AffineExpr a,
+                       DimLevelFormat dim) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
     unsigned idx = a.cast<AffineDimExpr>().getPosition();
-    if (!merger.isDim(tensor, idx, Dim::kUndef))
+    if (!merger.isDimLevelType(tensor, idx, DimLvlType::kUndef))
       return false; // used more than once
-    merger.setDim(tensor, idx, dim);
+    merger.setDimLevelFormat(tensor, idx, dim);
     return true;
   }
   case AffineExprKind::Add:
   case AffineExprKind::Mul: {
-    if (!isDense)
-      return false;
+    if (dim.levelType != DimLvlType::kDense)
+      return false; // compound only in dense dim
     auto binOp = a.cast<AffineBinaryOpExpr>();
-    return findAffine(merger, tensor, binOp.getLHS(), dim, isDense) &&
-           findAffine(merger, tensor, binOp.getRHS(), dim, isDense);
+    return findAffine(merger, tensor, binOp.getLHS(), dim) &&
+           findAffine(merger, tensor, binOp.getRHS(), dim);
   }
   case AffineExprKind::Constant:
-    return isDense;
+    return dim.levelType == DimLvlType::kDense; // const only in dense dim
   default:
     return false;
   }
@@ -196,7 +216,7 @@ static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       unsigned tensor = t->getOperandNumber();
       AffineExpr a = map.getResult(perm(enc, d));
-      if (!findAffine(merger, tensor, a, toDim(enc, d), !enc))
+      if (!findAffine(merger, tensor, a, toDimLevelFormat(enc, d)))
         return false; // inadmissable affine expression
     }
   }
@@ -286,13 +306,13 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     if (mask & SortMask::kIncludeUndef) {
       unsigned tensor = t->getOperandNumber();
       for (unsigned i = 0; i < n; i++)
-        if (merger.isDim(tensor, i, Dim::kSparse))
+        if (merger.isDimLevelType(tensor, i, DimLvlType::kCompressed) ||
+            merger.isDimLevelType(tensor, i, DimLvlType::kSingleton))
           for (unsigned j = 0; j < n; j++)
-            if (merger.isDim(tensor, j, Dim::kUndef))
+            if (merger.isDimLevelType(tensor, j, DimLvlType::kUndef))
               adjM[i][j] = true;
     }
   }
-
   // Topologically sort the iteration graph to determine loop order.
   // Report failure for a cyclic iteration graph.
   topSort.clear();
@@ -334,7 +354,8 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   auto iteratorTypes = op.iterator_types().getValue();
   unsigned numLoops = iteratorTypes.size();
   for (unsigned i = 0; i < numLoops; i++)
-    if (merger.isDim(tensor, i, Dim::kSparse)) {
+    if (merger.isDimLevelType(tensor, i, DimLvlType::kCompressed) ||
+        merger.isDimLevelType(tensor, i, DimLvlType::kSingleton)) {
       allDense = false;
       break;
     }
@@ -519,7 +540,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
         continue; // compound
       unsigned idx = a.cast<AffineDimExpr>().getPosition();
       // Handle sparse storage schemes.
-      if (merger.isDim(tensor, idx, Dim::kSparse)) {
+      if (merger.isDimLevelType(tensor, idx, DimLvlType::kCompressed)) {
         auto dynShape = {ShapedType::kDynamicSize};
         auto ptrTp =
             MemRefType::get(dynShape, getPointerOverheadType(builder, enc));
@@ -531,6 +552,8 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
             builder.create<ToPointersOp>(loc, ptrTp, t->get(), dim);
         codegen.indices[tensor][idx] =
             builder.create<ToIndicesOp>(loc, indTp, t->get(), dim);
+      } else if (merger.isDimLevelType(tensor, idx, DimLvlType::kSingleton)) {
+        llvm_unreachable("TODO: not implemented yet");
       }
       // Find upper bound in current dimension.
       unsigned p = perm(enc, d);
@@ -543,7 +566,6 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     // Perform the required bufferization. Dense inputs materialize
     // from the input tensors. Dense outputs need special handling.
     // Sparse inputs use sparse primitives to obtain the values.
-    // We also accept in-place all-dense annotated "sparse" outputs.
     Type elementType = getElementTypeOrSelf(t->get().getType());
     if (!enc) {
       // Non-annotated dense tensors.
@@ -985,11 +1007,13 @@ static Value genExp(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
     return genInvariantValue(merger, codegen, rewriter, exp);
   if (merger.exp(exp).kind == Kind::kIndex)
     return genIndexValue(codegen, rewriter, merger.exp(exp).index, ldx);
+
   if (merger.exp(exp).kind == Kind::kReduce) {
     // Make custom reduction identity accessible for expanded access pattern.
     assert(codegen.redCustom == -1u);
     codegen.redCustom = exp;
   }
+
   Value v0 =
       genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0, ldx);
   Value v1 =
@@ -1000,8 +1024,12 @@ static Value genExp(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
              merger.exp(exp).kind == Kind::kBinaryBranch ||
              merger.exp(exp).kind == Kind::kReduce))
     ee = relinkBranch(codegen, rewriter, ee.getParentBlock(), ee, ldx);
-  if (merger.exp(exp).kind == Kind::kReduce)
+
+  if (merger.exp(exp).kind == Kind::kReduce) {
+    assert(codegen.redCustom != -1u);
     codegen.redCustom = -1u;
+  }
+
   return ee;
 }
 
@@ -1029,7 +1057,7 @@ static bool isInvariantAffine(const CodeGen &codegen, AffineExpr a,
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                           linalg::GenericOp op, unsigned exp, unsigned ldx,
-                          bool atStart, unsigned last = 0) {
+                          bool atStart, unsigned last = -1u) {
   if (exp == -1u)
     return;
   if (merger.exp(exp).kind == Kind::kTensor) {
@@ -1131,7 +1159,7 @@ static bool genInit(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     if (inits[b]) {
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
-      if (merger.isDim(b, Dim::kSparse)) {
+      if (merger.isDimLevelType(b, DimLvlType::kCompressed)) {
         // Initialize sparse index.
         unsigned pat = at;
         for (; pat != 0; pat--) {
@@ -1145,6 +1173,8 @@ static bool genInit(Merger &merger, CodeGen &codegen, OpBuilder &builder,
         codegen.pidxs[tensor][idx] = genLoad(codegen, builder, loc, ptr, p0);
         Value p1 = builder.create<arith::AddIOp>(loc, p0, one);
         codegen.highs[tensor][idx] = genLoad(codegen, builder, loc, ptr, p1);
+      } else if (merger.isDimLevelType(b, DimLvlType::kSingleton)) {
+        llvm_unreachable("TODO: not implemented yet");
       } else {
         // Dense index still in play.
         needsUniv = true;
@@ -1235,11 +1265,13 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   assert(idx == merger.index(fb));
   auto iteratorTypes = op.iterator_types().getValue();
   bool isReduction = linalg::isReductionIterator(iteratorTypes[idx]);
-  bool isSparse = merger.isDim(fb, Dim::kSparse);
+  bool isSparse = merger.isDimLevelType(fb, DimLvlType::kCompressed);
   bool isVector = isVectorFor(codegen, isInner, isReduction, isSparse) &&
                   denseUnitStrides(merger, op, idx);
   bool isParallel =
       isParallelFor(codegen, isOuter, isReduction, isSparse, isVector);
+
+  assert(!merger.isDimLevelType(fb, DimLvlType::kSingleton) && "TODO: implement");
 
   // Prepare vector length.
   if (isVector)
@@ -1308,7 +1340,7 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   // Construct the while-loop with a parameter for each index.
   Type indexType = builder.getIndexType();
   for (unsigned b = 0, be = indices.size(); b < be; b++) {
-    if (indices[b] && merger.isDim(b, Dim::kSparse)) {
+    if (indices[b] && merger.isDimLevelType(b, DimLvlType::kCompressed)) {
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
       types.push_back(indexType);
@@ -1341,7 +1373,8 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   Value cond;
   unsigned o = 0;
   for (unsigned b = 0, be = indices.size(); b < be; b++) {
-    if (indices[b] && merger.isDim(b, Dim::kSparse)) {
+    // TODO: singleton
+    if (indices[b] && merger.isDimLevelType(b, DimLvlType::kCompressed)) {
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
       Value op1 = before->getArgument(o);
@@ -1389,7 +1422,8 @@ static void genLocals(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   // Initialize sparse indices.
   Value min;
   for (unsigned b = 0, be = locals.size(); b < be; b++) {
-    if (locals[b] && merger.isDim(b, Dim::kSparse)) {
+    // TODO: singleton
+    if (locals[b] && merger.isDimLevelType(b, DimLvlType::kCompressed)) {
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
       Value ptr = codegen.indices[tensor][idx];
@@ -1419,7 +1453,7 @@ static void genLocals(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   // but may be needed for linearized codegen.
   for (unsigned b = 0, be = locals.size(); b < be; b++) {
     if ((locals[b] || merger.isOutTensor(b, idx)) &&
-        merger.isDim(b, Dim::kDense)) {
+        merger.isDimLevelType(b, DimLvlType::kDense)) {
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
       unsigned pat = at;
@@ -1477,7 +1511,8 @@ static void genWhileInduction(Merger &merger, CodeGen &codegen,
   SmallVector<Value, 4> operands;
   Value one = constantIndex(builder, loc, 1);
   for (unsigned b = 0, be = induction.size(); b < be; b++) {
-    if (induction[b] && merger.isDim(b, Dim::kSparse)) {
+    // TODO: singleton
+    if (induction[b] && merger.isDimLevelType(b, DimLvlType::kCompressed)) {
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
       Value op1 = codegen.idxs[tensor][idx];
@@ -1541,7 +1576,8 @@ static scf::IfOp genIf(Merger &merger, CodeGen &codegen, OpBuilder &builder,
       unsigned tensor = merger.tensor(b);
       assert(idx == merger.index(b));
       Value clause;
-      if (merger.isDim(b, Dim::kSparse)) {
+      // TODO: singleton
+      if (merger.isDimLevelType(b, DimLvlType::kCompressed)) {
         Value op1 = codegen.idxs[tensor][idx];
         Value op2 = codegen.loops[idx];
         clause = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
@@ -1605,7 +1641,8 @@ static bool startLoopSeq(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     unsigned lsize = merger.set(lts).size();
     for (unsigned i = 1; i < lsize; i++) {
       unsigned li = merger.set(lts)[i];
-      if (!merger.hasAnyDimOf(merger.lat(li).simple, Dim::kSparse))
+      if (!merger.hasAnyDimLevelTypeOf(merger.lat(li).simple, DimLvlType::kCompressed) &&
+          !merger.hasAnyDimLevelTypeOf(merger.lat(li).simple, DimLvlType::kSingleton))
         return true;
     }
   }
