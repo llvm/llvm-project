@@ -1089,7 +1089,7 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
     RemovePred(SU, Pred);
     AddPredQueued(NewSU, Pred);
   }
-  for (SDep D : NodeSuccs) {
+  for (SDep &D : NodeSuccs) {
     SUnit *SuccDep = D.getSUnit();
     D.setSUnit(SU);
     RemovePred(SuccDep, D);
@@ -1100,7 +1100,7 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
         !D.isCtrl() && NewSU->NumRegDefsLeft > 0)
       --NewSU->NumRegDefsLeft;
   }
-  for (SDep D : ChainSuccs) {
+  for (SDep &D : ChainSuccs) {
     SUnit *SuccDep = D.getSUnit();
     D.setSUnit(SU);
     RemovePred(SuccDep, D);
