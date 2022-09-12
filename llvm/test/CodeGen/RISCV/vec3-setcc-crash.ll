@@ -46,7 +46,7 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ;
 ; RV64-LABEL: vec3_setcc_crash:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lwu a0, 0(a0)
+; RV64-NEXT:    lw a0, 0(a0)
 ; RV64-NEXT:    slli a2, a0, 40
 ; RV64-NEXT:    slli a3, a0, 56
 ; RV64-NEXT:    slli a4, a0, 48
@@ -73,7 +73,7 @@ define void @vec3_setcc_crash(<3 x i8>* %in, <3 x i8>* %out) {
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    j .LBB0_8
 ; RV64-NEXT:  .LBB0_7:
-; RV64-NEXT:    srli a0, a0, 16
+; RV64-NEXT:    srliw a0, a0, 16
 ; RV64-NEXT:  .LBB0_8:
 ; RV64-NEXT:    sb a0, 2(a1)
 ; RV64-NEXT:    sh a2, 0(a1)
