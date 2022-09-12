@@ -1,4 +1,4 @@
-llvm-remarkutil -
+llvm-remarkutil - Remark utility
 ==============================================================
 
 .. program:: llvm-remarkutil
