@@ -1,10 +1,44 @@
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
+import json
 import os
 
 
 class TestTargetSourceMap(TestBase):
+
+    @no_debug_info_test
+    def test_source_map_via_setting_api(self):
+        """
+            Test that ensures SBDebugger::GetSetting("target.source-map") API
+            can correctly fetch source mapping entries.
+        """
+        # Set the target soure map to map "./" to the current test directory
+        src_dir = self.getSourceDir()
+
+        source_map_setting_path = "target.source-map"
+        initial_source_map = self.dbg.GetSetting(source_map_setting_path)
+        self.assertEquals(initial_source_map.GetSize(), 0,
+            "Initial source map should be empty")
+
+        src_dir = self.getSourceDir()
+        self.runCmd('settings set %s . "%s"' % (source_map_setting_path, src_dir))
+
+        source_map = self.dbg.GetSetting(source_map_setting_path)
+        self.assertEquals(source_map.GetSize(), 1,
+            "source map should be have one appended entry")
+
+        stream = lldb.SBStream()
+        source_map.GetAsJSON(stream)
+        serialized_source_map = json.loads(stream.GetData())
+
+        self.assertEquals(len(serialized_source_map[0]), 2,
+            "source map entry should have two parts")
+        self.assertEquals(serialized_source_map[0][0], ".",
+            "source map entry's first part does not match")
+        self.assertEquals(serialized_source_map[0][1], src_dir,
+            "source map entry's second part does not match")
+
 
     @no_debug_info_test
     def test_source_map(self):

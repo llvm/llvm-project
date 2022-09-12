@@ -25365,6 +25365,30 @@ TEST_F(FormatTest, InsertBraces) {
                "}",
                Style);
 
+  verifyFormat("do {\n"
+               "#if 0\n"
+               " if (a) {\n"
+               "#else\n"
+               "  if (b) {\n"
+               "#endif\n"
+               "}\n"
+               "}\n"
+               "while (0)\n"
+               "  ;",
+               Style);
+  // TODO: Replace the test above with the one below after #57539 is fixed.
+#if 0
+  verifyFormat("do {\n"
+               "#if 0\n"
+               "  if (a) {\n"
+               "#else\n"
+               "  if (b) {\n"
+               "#endif\n"
+               "  }\n"
+               "} while (0);",
+               Style);
+#endif
+
   Style.ColumnLimit = 15;
 
   verifyFormat("#define A     \\\n"

@@ -559,6 +559,18 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
 
+  static const CostKindTblEntry AVX512UniformCostTable[] = {
+    { ISD::SRA,  MVT::v2i64,  { 1 } },
+    { ISD::SRA,  MVT::v4i64,  { 1 } },
+    { ISD::SRA,  MVT::v8i64,  { 1 } },
+  };
+
+  if (ST->hasAVX512() && Op2Info.isUniform())
+    if (const auto *Entry =
+            CostTableLookup(AVX512UniformCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
+
   static const CostKindTblEntry AVX2UniformCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
     { ISD::SHL,  MVT::v16i16, { 1 } }, // psllw.
@@ -573,6 +585,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v8i32,  { 1 } }, // psrad
     { ISD::SHL,  MVT::v4i64,  { 1 } }, // psllq
     { ISD::SRL,  MVT::v4i64,  { 1 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64,  { 4 } }, // 2*psrad + shuffle.
   };
 
   if (ST->hasAVX2() && Op2Info.isUniform())
@@ -822,16 +835,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
   }
-
-  static const CostKindTblEntry AVX2UniformShiftCostTable[] = {
-    { ISD::SRA,  MVT::v4i64,  {   4 } }, // 2*psrad + shuffle.
-  };
-
-  if (ST->hasAVX2() && Op2Info.isUniform())
-    if (const auto *Entry =
-            CostTableLookup(AVX2UniformShiftCostTable, ISD, LT.second))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
 
   static const CostKindTblEntry SSE2UniformShiftCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
