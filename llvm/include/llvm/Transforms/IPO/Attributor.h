@@ -209,9 +209,51 @@ Optional<Value *>
 combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
                                      const Optional<Value *> &B, Type *Ty);
 
+/// Helper to represent an access offset and size, with logic to deal with
+/// uncertainty and check for overlapping accesses.
+struct OffsetAndSize : public std::pair<int64_t, int64_t> {
+  using BaseTy = std::pair<int64_t, int64_t>;
+  OffsetAndSize(int64_t Offset, int64_t Size) : BaseTy(Offset, Size) {}
+  OffsetAndSize(const BaseTy &P) : BaseTy(P) {}
+  int64_t getOffset() const { return first; }
+  int64_t getSize() const { return second; }
+  static OffsetAndSize getUnknown() { return OffsetAndSize(Unknown, Unknown); }
+
+  /// Return true if offset or size are unknown.
+  bool offsetOrSizeAreUnknown() const {
+    return getOffset() == OffsetAndSize::Unknown ||
+           getSize() == OffsetAndSize::Unknown;
+  }
+
+  /// Return true if offset and size are unknown, thus this is the default
+  /// unknown object.
+  bool offsetAndSizeAreUnknown() const {
+    return getOffset() == OffsetAndSize::Unknown &&
+           getSize() == OffsetAndSize::Unknown;
+  }
+
+  /// Return true if this offset and size pair might describe an address that
+  /// overlaps with \p OAS.
+  bool mayOverlap(const OffsetAndSize &OAS) const {
+    // Any unknown value and we are giving up -> overlap.
+    if (offsetOrSizeAreUnknown() || OAS.offsetOrSizeAreUnknown())
+      return true;
+
+    // Check if one offset point is in the other interval [offset,
+    // offset+size].
+    return OAS.getOffset() + OAS.getSize() > getOffset() &&
+           OAS.getOffset() < getOffset() + getSize();
+  }
+
+  /// Constant used to represent unknown offset or sizes.
+  static constexpr int64_t Unknown = 1 << 31;
+};
+
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
 Constant *getInitialValueForObj(Value &Obj, Type &Ty,
-                                const TargetLibraryInfo *TLI);
+                                const TargetLibraryInfo *TLI,
+                                const DataLayout &DL,
+                                OffsetAndSize *OASPtr = nullptr);
 
 /// Collect all potential underlying objects of \p Ptr at position \p CtxI in
 /// \p Objects. Assumed information is used and dependences onto \p QueryingAA
@@ -5036,47 +5078,13 @@ struct AAPointerInfo : public AbstractAttribute {
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
-  /// Helper to represent an access offset and size, with logic to deal with
-  /// uncertainty and check for overlapping accesses.
-  struct OffsetAndSize : public std::pair<int64_t, int64_t> {
-    using BaseTy = std::pair<int64_t, int64_t>;
-    OffsetAndSize(int64_t Offset, int64_t Size) : BaseTy(Offset, Size) {}
-    OffsetAndSize(const BaseTy &P) : BaseTy(P) {}
-    int64_t getOffset() const { return first; }
-    int64_t getSize() const { return second; }
-    static OffsetAndSize getUnknown() {
-      return OffsetAndSize(Unknown, Unknown);
-    }
-
-    /// Return true if offset or size are unknown.
-    bool offsetOrSizeAreUnknown() const {
-      return getOffset() == OffsetAndSize::Unknown ||
-             getSize() == OffsetAndSize::Unknown;
-    }
-
-    /// Return true if this offset and size pair might describe an address that
-    /// overlaps with \p OAS.
-    bool mayOverlap(const OffsetAndSize &OAS) const {
-      // Any unknown value and we are giving up -> overlap.
-      if (offsetOrSizeAreUnknown() || OAS.offsetOrSizeAreUnknown())
-        return true;
-
-      // Check if one offset point is in the other interval [offset,
-      // offset+size].
-      return OAS.getOffset() + OAS.getSize() > getOffset() &&
-             OAS.getOffset() < getOffset() + getSize();
-    }
-
-    /// Constant used to represent unknown offset or sizes.
-    static constexpr int64_t Unknown = 1 << 31;
-  };
-
   /// Call \p CB on all accesses that might interfere with \p OAS and return
   /// true if all such accesses were known and the callback returned true for
   /// all of them, false otherwise. An access interferes with an offset-size
   /// pair if it might read or write that memory region.
   virtual bool forallInterferingAccesses(
-      OffsetAndSize OAS, function_ref<bool(const Access &, bool)> CB) const = 0;
+      AA::OffsetAndSize OAS,
+      function_ref<bool(const Access &, bool)> CB) const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p I and
   /// return true if all such accesses were known and the callback returned true
@@ -5085,11 +5093,10 @@ struct AAPointerInfo : public AbstractAttribute {
   /// affect the load even if they on the surface look as if they would. The
   /// flag \p HasBeenWrittenTo will be set to true if we know that \p I does not
   /// read the intial value of the underlying memory.
-  virtual bool
-  forallInterferingAccesses(Attributor &A, const AbstractAttribute &QueryingAA,
-                            Instruction &I,
-                            function_ref<bool(const Access &, bool)> CB,
-                            bool &HasBeenWrittenTo) const = 0;
+  virtual bool forallInterferingAccesses(
+      Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
+      function_ref<bool(const Access &, bool)> CB, bool &HasBeenWrittenTo,
+      AA::OffsetAndSize *OASPtr = nullptr) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
   static bool classof(const AbstractAttribute *AA) {

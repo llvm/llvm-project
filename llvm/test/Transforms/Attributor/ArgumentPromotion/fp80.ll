@@ -28,13 +28,10 @@ define void @run() {
 ; NOT_CGSCC_NPM-NEXT:  entry:
 ; NOT_CGSCC_NPM-NEXT:    unreachable
 ;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@run
 ; IS__CGSCC____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_FOO:%.*]], %struct.Foo* @a, i32 0, i32 0), align 8
-; IS__CGSCC____-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* @a, i64 0, i32 1
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A_0_1]], align 8
 ; IS__CGSCC____-NEXT:    unreachable
 ;
 entry:
@@ -124,7 +121,7 @@ loop:
 ;.
 ; NOT_CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree nosync nounwind readonly willreturn }
+; IS__CGSCC____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone }
 ;.
