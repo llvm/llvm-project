@@ -4121,27 +4121,3 @@ StatsDuration::Duration SymbolFileDWARF::GetDebugInfoIndexTime() {
     return m_index->GetIndexTime();
   return {};
 }
-
-Status SymbolFileDWARF::GetFrameVariableError(StackFrame &frame) {
-  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  CompileUnit *cu = frame.GetSymbolContext(eSymbolContextCompUnit).comp_unit;
-  if (!cu)
-    return Status();
-
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(cu);
-  if (!dwarf_cu)
-    return Status();
-
-  // Don't return an error for assembly files as they typically don't have
-  // varaible information.
-  if (dwarf_cu->GetDWARFLanguageType() == DW_LANG_Mips_Assembler)
-    return Status();
-
-  // Check if this compile unit has any variable DIEs. If it doesn't then there
-  // is not variable information for the entire compile unit.
-  if (dwarf_cu->HasAny({DW_TAG_variable, DW_TAG_formal_parameter}))
-    return Status();
-
-  return Status("no variable information is available in debug info for this "
-                "compile unit");
-}

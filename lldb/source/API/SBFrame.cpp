@@ -602,8 +602,7 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
                 &variable_list);
           if (value_type == eValueTypeVariableGlobal) {
             const bool get_file_globals = true;
-            VariableList *frame_vars = frame->GetVariableList(get_file_globals,
-                                                              nullptr);
+            VariableList *frame_vars = frame->GetVariableList(get_file_globals);
             if (frame_vars)
               frame_vars->AppendVariablesIfUnique(variable_list);
           }
@@ -806,10 +805,7 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
         VariableList *variable_list = nullptr;
-        Status var_error;
-        variable_list = frame->GetVariableList(true, &var_error);
-        if (var_error.Fail())
-          value_list.SetError(var_error);
+        variable_list = frame->GetVariableList(true);
         if (variable_list) {
           const size_t num_variables = variable_list->GetSize();
           if (num_variables) {

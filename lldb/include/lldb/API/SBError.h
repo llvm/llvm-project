@@ -64,7 +64,6 @@ protected:
   friend class SBCommunication;
   friend class SBData;
   friend class SBDebugger;
-  friend class SBFile;
   friend class SBHostOS;
   friend class SBPlatform;
   friend class SBProcess;
@@ -74,8 +73,8 @@ protected:
   friend class SBThread;
   friend class SBTrace;
   friend class SBValue;
-  friend class SBValueList;
   friend class SBWatchpoint;
+  friend class SBFile;
 
   friend class lldb_private::ScriptInterpreter;
 

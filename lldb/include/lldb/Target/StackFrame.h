@@ -254,14 +254,9 @@ public:
   ///     that are visible to the entire compilation unit (e.g. file
   ///     static in C, globals that are homed in this CU).
   ///
-  /// \param [out] error_ptr
-  ///   If there is an error in the debug information that prevents variables
-  ///   from being fetched. \see SymbolFile::GetFrameVariableError() for full
-  ///   details.
-  ///
   /// \return
   ///     A pointer to a list of variables.
-  VariableList *GetVariableList(bool get_file_globals, Status *error_ptr);
+  VariableList *GetVariableList(bool get_file_globals);
 
   /// Retrieve the list of variables that are in scope at this StackFrame's
   /// pc.
