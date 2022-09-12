@@ -350,6 +350,7 @@ define void @test11() {
 
 ; TEST 12
 define i32 @irreducible_cfg(i32 %0) {
+;
 ; CHECK-LABEL: define {{[^@]+}}@irreducible_cfg
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call noalias i8* @malloc(i64 noundef 4)
