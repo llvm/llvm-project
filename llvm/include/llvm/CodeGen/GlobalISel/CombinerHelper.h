@@ -684,6 +684,11 @@ public:
   /// (G_*ADDO x, 0) -> x + no carry out
   bool matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Match:
+  /// (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
+  /// (G_*SUBE x, y, 0) -> (G_*SUBO x, y)
+  bool matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Transform (fadd x, fneg(y)) -> (fsub x, y)
   ///           (fadd fneg(x), y) -> (fsub y, x)
   ///           (fsub x, fneg(y)) -> (fadd x, y)
