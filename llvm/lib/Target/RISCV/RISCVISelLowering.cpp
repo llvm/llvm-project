@@ -179,6 +179,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, XLenVT,
                    MVT::i1, Promote);
+  // DAGCombiner can call isLoadExtLegal for types that aren't legal.
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
+                   MVT::i1, Promote);
 
   // TODO: add all necessary setOperationAction calls.
   setOperationAction(ISD::DYNAMIC_STACKALLOC, XLenVT, Expand);
@@ -209,6 +212,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
+
+    setOperationAction(ISD::LOAD, MVT::i32, Custom);
 
     setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                        MVT::i32, Custom);
@@ -7086,6 +7091,22 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, RCW, RCW.getValue(1)));
     Results.push_back(RCW.getValue(2));
     break;
+  }
+  case ISD::LOAD: {
+    if (!ISD::isNON_EXTLoad(N))
+      return;
+
+    // Use a SEXTLOAD instead of the default EXTLOAD. Similar to the
+    // sext_inreg we emit for ADD/SUB/MUL/SLLI.
+    LoadSDNode *Ld = cast<LoadSDNode>(N);
+
+    SDLoc dl(N);
+    SDValue Res = DAG.getExtLoad(ISD::SEXTLOAD, dl, MVT::i64, Ld->getChain(),
+                                 Ld->getBasePtr(), Ld->getMemoryVT(),
+                                 Ld->getMemOperand());
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Res));
+    Results.push_back(Res.getValue(1));
+    return;
   }
   case ISD::MUL: {
     unsigned Size = N->getSimpleValueType(0).getSizeInBits();
