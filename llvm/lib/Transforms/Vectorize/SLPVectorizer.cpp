@@ -3665,8 +3665,60 @@ Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
                                                          bool TopToBottom) {
   // No need to reorder if need to shuffle reuses, still need to shuffle the
   // node.
-  if (!TE.ReuseShuffleIndices.empty())
-    return None;
+  if (!TE.ReuseShuffleIndices.empty()) {
+    // Check if reuse shuffle indices can be improved by reordering.
+    // For this, check that reuse mask is "clustered", i.e. each scalar values
+    // is used once in each submask of size <number_of_scalars>.
+    // Example: 4 scalar values.
+    // ReuseShuffleIndices mask: 0, 1, 2, 3, 3, 2, 0, 1 - clustered.
+    //                           0, 1, 2, 3, 3, 3, 1, 0 - not clustered, because
+    //                           element 3 is used twice in the second submask.
+    unsigned Sz = TE.Scalars.size();
+    if (!ShuffleVectorInst::isOneUseSingleSourceMask(TE.ReuseShuffleIndices,
+                                                     Sz))
+      return None;
+    unsigned VF = TE.getVectorFactor();
+    // Try build correct order for extractelement instructions.
+    SmallVector<int> ReusedMask(TE.ReuseShuffleIndices.begin(),
+                                TE.ReuseShuffleIndices.end());
+    if (TE.getOpcode() == Instruction::ExtractElement && !TE.isAltShuffle() &&
+        all_of(TE.Scalars, [Sz](Value *V) {
+          Optional<unsigned> Idx = getExtractIndex(cast<Instruction>(V));
+          return Idx && *Idx < Sz;
+        })) {
+      SmallVector<int> ReorderMask(Sz, UndefMaskElem);
+      if (TE.ReorderIndices.empty())
+        std::iota(ReorderMask.begin(), ReorderMask.end(), 0);
+      else
+        inversePermutation(TE.ReorderIndices, ReorderMask);
+      for (unsigned I = 0; I < VF; ++I) {
+        int &Idx = ReusedMask[I];
+        if (Idx == UndefMaskElem)
+          continue;
+        Value *V = TE.Scalars[ReorderMask[Idx]];
+        Optional<unsigned> EI = getExtractIndex(cast<Instruction>(V));
+        Idx = std::distance(ReorderMask.begin(), find(ReorderMask, *EI));
+      }
+    }
+    // Build the order of the VF size, need to reorder reuses shuffles, they are
+    // always of VF size.
+    OrdersType ResOrder(VF);
+    std::iota(ResOrder.begin(), ResOrder.end(), 0);
+    auto *It = ResOrder.begin();
+    for (unsigned K = 0; K < VF; K += Sz) {
+      OrdersType CurrentOrder(TE.ReorderIndices);
+      SmallVector<int> SubMask(makeArrayRef(ReusedMask).slice(K, Sz));
+      if (SubMask.front() == UndefMaskElem)
+        std::iota(SubMask.begin(), SubMask.end(), 0);
+      reorderOrder(CurrentOrder, SubMask);
+      transform(CurrentOrder, It, [K](unsigned Pos) { return Pos + K; });
+      std::advance(It, Sz);
+    }
+    if (all_of(enumerate(ResOrder),
+               [](const auto &Data) { return Data.index() == Data.value(); }))
+      return {}; // Use identity order.
+    return ResOrder;
+  }
   if (TE.State == TreeEntry::Vectorize &&
       (isa<LoadInst, ExtractElementInst, ExtractValueInst>(TE.getMainOp()) ||
        (TopToBottom && isa<StoreInst, InsertElementInst>(TE.getMainOp()))) &&
@@ -3783,8 +3835,8 @@ void BoUpSLP::reorderTopToBottom() {
         UserTE = UserTE->UserTreeIndices.back().UserTE;
         ++Cnt;
       }
-      VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
-      if (TE->State != TreeEntry::Vectorize)
+      VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
+      if (TE->State != TreeEntry::Vectorize || !TE->ReuseShuffleIndices.empty())
         GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
     }
   });
@@ -3808,12 +3860,13 @@ void BoUpSLP::reorderTopToBottom() {
     for (const TreeEntry *OpTE : OrderedEntries) {
       // No need to reorder this nodes, still need to extend and to use shuffle,
       // just need to merge reordering shuffle and the reuse shuffle.
-      if (!OpTE->ReuseShuffleIndices.empty())
+      if (!OpTE->ReuseShuffleIndices.empty() && !GathersToOrders.count(OpTE))
         continue;
       // Count number of orders uses.
       const auto &Order = [OpTE, &GathersToOrders,
                            &AltShufflesToOrders]() -> const OrdersType & {
-        if (OpTE->State == TreeEntry::NeedToGather) {
+        if (OpTE->State == TreeEntry::NeedToGather ||
+            !OpTE->ReuseShuffleIndices.empty()) {
           auto It = GathersToOrders.find(OpTE);
           if (It != GathersToOrders.end())
             return It->second;
@@ -3829,8 +3882,16 @@ void BoUpSLP::reorderTopToBottom() {
       auto It = ExternalUserReorderMap.find(OpTE);
       if (It != ExternalUserReorderMap.end()) {
         const auto &ExternalUserReorderIndices = It->second;
-        for (const OrdersType &ExtOrder : ExternalUserReorderIndices)
-          ++OrdersUses.insert(std::make_pair(ExtOrder, 0)).first->second;
+        // If the OpTE vector factor != number of scalars - use natural order,
+        // it is an attempt to reorder node with reused scalars but with
+        // external uses.
+        if (OpTE->getVectorFactor() != OpTE->Scalars.size()) {
+          OrdersUses.insert(std::make_pair(OrdersType(), 0)).first->second +=
+              ExternalUserReorderIndices.size();
+        } else {
+          for (const OrdersType &ExtOrder : ExternalUserReorderIndices)
+            ++OrdersUses.insert(std::make_pair(ExtOrder, 0)).first->second;
+        }
         // No other useful reorder data in this entry.
         if (Order.empty())
           continue;
@@ -3990,7 +4051,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
     if (Optional<OrdersType> CurrentOrder =
             getReorderingData(*TE, /*TopToBottom=*/false)) {
       OrderedEntries.insert(TE.get());
-      if (TE->State != TreeEntry::Vectorize)
+      if (TE->State != TreeEntry::Vectorize || !TE->ReuseShuffleIndices.empty())
         GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
     }
   });
@@ -4062,10 +4123,11 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         TreeEntry *OpTE = Op.second;
         if (!VisitedOps.insert(OpTE).second)
           continue;
-        if (!OpTE->ReuseShuffleIndices.empty())
+        if (!OpTE->ReuseShuffleIndices.empty() && !GathersToOrders.count(OpTE))
           continue;
         const auto &Order = [OpTE, &GathersToOrders]() -> const OrdersType & {
-          if (OpTE->State == TreeEntry::NeedToGather)
+          if (OpTE->State == TreeEntry::NeedToGather ||
+              !OpTE->ReuseShuffleIndices.empty())
             return GathersToOrders.find(OpTE)->second;
           return OpTE->ReorderIndices;
         }();
@@ -6974,7 +7036,7 @@ template <typename T>
 static T *performExtractsShuffleAction(
     MutableArrayRef<std::pair<T *, SmallVector<int>>> ShuffleMask, Value *Base,
     function_ref<unsigned(T *)> GetVF,
-    function_ref<std::pair<T *, bool>(T *, ArrayRef<int>)> ResizeAction,
+    function_ref<std::pair<T *, bool>(T *, ArrayRef<int>, bool)> ResizeAction,
     function_ref<T *(ArrayRef<int>, ArrayRef<T *>)> Action) {
   assert(!ShuffleMask.empty() && "Empty list of shuffles for inserts.");
   SmallVector<int> Mask(ShuffleMask.begin()->second);
@@ -6983,7 +7045,8 @@ static T *performExtractsShuffleAction(
   bool IsBaseNotUndef = !isUndefVector(Base);
   if (IsBaseNotUndef) {
     // Base is not undef, need to combine it with the next subvectors.
-    std::pair<T *, bool> Res = ResizeAction(ShuffleMask.begin()->first, Mask);
+    std::pair<T *, bool> Res =
+        ResizeAction(ShuffleMask.begin()->first, Mask, /*ForSingleMask=*/false);
     for (unsigned Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
       if (Mask[Idx] == UndefMaskElem)
         Mask[Idx] = Idx;
@@ -6998,7 +7061,8 @@ static T *performExtractsShuffleAction(
   } else if (ShuffleMask.size() == 1) {
     // Base is undef and only 1 vector is shuffled - perform the action only for
     // single vector, if the mask is not the identity mask.
-    std::pair<T *, bool> Res = ResizeAction(ShuffleMask.begin()->first, Mask);
+    std::pair<T *, bool> Res = ResizeAction(ShuffleMask.begin()->first, Mask,
+                                            /*ForSingleMask=*/true);
     if (Res.second)
       // Identity mask is found.
       Prev = Res.first;
@@ -7022,9 +7086,10 @@ static T *performExtractsShuffleAction(
       Prev = Action(Mask, {ShuffleMask.begin()->first, VMIt->first});
     } else {
       // Vectors of different sizes - resize and reshuffle.
-      std::pair<T *, bool> Res1 =
-          ResizeAction(ShuffleMask.begin()->first, Mask);
-      std::pair<T *, bool> Res2 = ResizeAction(VMIt->first, VMIt->second);
+      std::pair<T *, bool> Res1 = ResizeAction(ShuffleMask.begin()->first, Mask,
+                                               /*ForSingleMask=*/false);
+      std::pair<T *, bool> Res2 =
+          ResizeAction(VMIt->first, VMIt->second, /*ForSingleMask=*/false);
       ArrayRef<int> SecMask = VMIt->second;
       for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
         if (Mask[I] != UndefMaskElem) {
@@ -7043,7 +7108,8 @@ static T *performExtractsShuffleAction(
   // Perform requested actions for the remaining masks/vectors.
   for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
     // Shuffle other input vectors, if any.
-    std::pair<T *, bool> Res = ResizeAction(VMIt->first, VMIt->second);
+    std::pair<T *, bool> Res =
+        ResizeAction(VMIt->first, VMIt->second, /*ForSingleMask=*/false);
     ArrayRef<int> SecMask = VMIt->second;
     for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
       if (SecMask[I] != UndefMaskElem) {
@@ -7189,7 +7255,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
   InstructionCost SpillCost = getSpillCost();
   Cost += SpillCost + ExtractCost;
-  auto &&ResizeToVF = [this, &Cost](const TreeEntry *TE, ArrayRef<int> Mask) {
+  auto &&ResizeToVF = [this, &Cost](const TreeEntry *TE, ArrayRef<int> Mask,
+                                    bool) {
     InstructionCost C = 0;
     unsigned VF = Mask.size();
     unsigned VecVF = TE->getVectorFactor();
@@ -8805,7 +8872,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
     return Op;
   };
 
-  auto &&ResizeToVF = [&CreateShuffle](Value *Vec, ArrayRef<int> Mask) {
+  auto &&ResizeToVF = [&CreateShuffle](Value *Vec, ArrayRef<int> Mask,
+                                       bool ForSingleMask) {
     unsigned VF = Mask.size();
     unsigned VecVF = cast<FixedVectorType>(Vec->getType())->getNumElements();
     if (VF != VecVF) {
@@ -8813,12 +8881,14 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
         Vec = CreateShuffle(Vec, nullptr, Mask);
         return std::make_pair(Vec, true);
       }
-      SmallVector<int> ResizeMask(VF, UndefMaskElem);
-      for (unsigned I = 0; I < VF; ++I) {
-        if (Mask[I] != UndefMaskElem)
-          ResizeMask[Mask[I]] = Mask[I];
+      if (!ForSingleMask) {
+        SmallVector<int> ResizeMask(VF, UndefMaskElem);
+        for (unsigned I = 0; I < VF; ++I) {
+          if (Mask[I] != UndefMaskElem)
+            ResizeMask[Mask[I]] = Mask[I];
+        }
+        Vec = CreateShuffle(Vec, nullptr, ResizeMask);
       }
-      Vec = CreateShuffle(Vec, nullptr, ResizeMask);
     }
 
     return std::make_pair(Vec, false);
