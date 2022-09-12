@@ -10,9 +10,8 @@
 #include "mlir/Transforms/DialectConversion.pdll"
 
 /// Change the result type of a producer.
-// FIXME: We shouldn't need to specify arguments for the result cast.
-Pattern => replace op<test.cast>(args: ValueRange) -> (results: TypeRange)
-  with op<test.cast>(args) -> (convertTypes(results));
+Pattern => replace op<test.cast> -> (results: TypeRange)
+  with op<test.cast> -> (convertTypes(results));
 
 /// Pass through test.return conversion.
 Pattern => replace op<test.return>(args: ValueRange)
