@@ -235,7 +235,7 @@ struct UnitExtentReplacementInfo {
 /// Utility function for replacing operands/results to a linalg generic
 /// operation with unit-extent dimensions. These can be replaced with
 /// an operand/result with the unit-extent dimension removed. This is only done
-/// if the indexing map used to access that didimensionmension has a
+/// if the indexing map used to access that dimension has a
 /// AffineConstantExpr of value 0. Given the `type` of an result/operand of a
 /// Linalg op, and its `indexMap` the utility function returns:
 /// - the new type with dimensions of size 1 removed.
@@ -515,7 +515,7 @@ struct RankReducedInsertSliceOp : public OpRewritePattern<InsertOpTy> {
     {
       OpBuilder::InsertionGuard g(rewriter);
       // The only difference between InsertSliceOp and ParallelInsertSliceOp is
-      // the the insertion point is just before the ParallelCombiningOp in the
+      // the insertion point is just before the ParallelCombiningOp in the
       // parallel case.
       if (std::is_same<InsertOpTy, tensor::ParallelInsertSliceOp>::value)
         rewriter.setInsertionPoint(insertSliceOp->getParentOp());
