@@ -40,13 +40,16 @@ void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
   for (const MachineOperand &MOP : MI.operands()) {
+    if (MOP.isReg()) {
+      if (MOP.isDef() && MOP.getReg().isPhysical())
+        removeReg(MOP.getReg());
+      continue;
+    }
+
     if (MOP.isRegMask()) {
       removeRegsNotPreserved(MOP.getRegMask());
       continue;
     }
-
-    if (MOP.isReg() && MOP.isDef() && MOP.getReg().isPhysical())
-      removeReg(MOP.getReg());
   }
 
   // Add uses to the set.
@@ -54,7 +57,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
     if (!MOP.isReg() || !MOP.readsReg())
       continue;
 
-    if (MOP.getReg() && MOP.getReg().isPhysical())
+    if (MOP.getReg().isPhysical())
       addReg(MOP.getReg());
   }
 }
