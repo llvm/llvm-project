@@ -323,11 +323,11 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
   llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR CPU execution driver\n");
 
   if (options.hostSupportsJit) {
-    auto J = llvm::orc::LLJITBuilder().create();
-    if (J)
+    auto j = llvm::orc::LLJITBuilder().create();
+    if (j)
       llvm::outs() << "true\n";
     else {
-      llvm::consumeError(J.takeError());
+      llvm::consumeError(j.takeError());
       llvm::outs() << "false\n";
     }
     return 0;

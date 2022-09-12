@@ -5813,7 +5813,7 @@ The current supported opcode vocabulary is limited:
 - ``DW_OP_LLVM_arg, N`` is used in debug intrinsics that refer to more than one
   value, such as one that calculates the sum of two registers. This is always
   used in combination with an ordered list of values, such that
-  ``DW_OP_LLVM_arg, N`` refers to the ``N``th element in that list. For
+  ``DW_OP_LLVM_arg, N`` refers to the ``N``\ :sup:`th` element in that list. For
   example, ``!DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus,
   DW_OP_stack_value)`` used with the list ``(%reg1, %reg2)`` would evaluate to
   ``%reg1 - reg2``. This list of values should be provided by the containing

@@ -47,11 +47,13 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override;
+
   ConstString GetName() const override { return m_name; }
 
   virtual Status DumpPropertyValue(const ExecutionContext *exe_ctx,
                                    Stream &strm, llvm::StringRef property_path,
-                                   uint32_t dump_mask);
+                                   uint32_t dump_mask, bool is_json = false);
 
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
                                    Stream &strm) const;
