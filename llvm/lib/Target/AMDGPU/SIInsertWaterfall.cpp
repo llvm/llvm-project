@@ -161,8 +161,7 @@ static Register compareIdx(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
   // CondReg
   // Optionally CondReg is passed in from a previous compareIdx call
   Register IndexReg = IndexOp.getReg();
-  auto IndexRC = RI->getSubRegClass(MRI->getRegClass(IndexOp.getReg()),
-                                    IndexOp.getSubReg());
+  auto IndexRC = RI->getRegClassForOperandReg(*MRI, IndexOp);
   unsigned AndOpc =
       IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
   const auto *BoolXExecRC = RI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
@@ -539,9 +538,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     for (auto BeginMI : Item.BeginList) {
       IdxInfo CurrIdx;
       CurrIdx.Index = TII->getNamedOperand(*(BeginMI), AMDGPU::OpName::idx);
-      CurrIdx.IndexRC =
-          RI->getSubRegClass(MRI->getRegClass(CurrIdx.Index->getReg()),
-                             CurrIdx.Index->getSubReg());
+      CurrIdx.IndexRC = RI->getRegClassForOperandReg(*MRI, *CurrIdx.Index);
       CurrIdx.IndexSRC = RI->getEquivalentSGPRClass(CurrIdx.IndexRC);
       IndexList.push_back(CurrIdx);
 

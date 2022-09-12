@@ -430,8 +430,8 @@ define amdgpu_kernel void @constant_load_v16i16(<16 x i16> addrspace(1)* %out, <
 ; EG-NEXT:    TEX 0 @8
 ; EG-NEXT:    ALU 3, @13, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T2.X, 0
-; EG-NEXT:    ALU 1, @17, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @10
+; EG-NEXT:    ALU 1, @17, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    Fetch clause starting at 8:
@@ -576,21 +576,18 @@ define amdgpu_kernel void @constant_load_v16i16_align2(<16 x i16> addrspace(4)* 
 ;
 ; EG-LABEL: constant_load_v16i16_align2:
 ; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 0, @12, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 0 @8
-; EG-NEXT:    ALU 1, @13, KC0[], KC1[]
+; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 1 @6
+; EG-NEXT:    ALU 1, @11, KC0[], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XYZW, T2.X, 0
-; EG-NEXT:    TEX 0 @10
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T2.X, 1
 ; EG-NEXT:    CF_END
-; EG-NEXT:    PAD
-; EG-NEXT:    Fetch clause starting at 8:
+; EG-NEXT:    Fetch clause starting at 6:
 ; EG-NEXT:     VTX_READ_128 T1.XYZW, T0.X, 16, #1
-; EG-NEXT:    Fetch clause starting at 10:
 ; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 0, #1
-; EG-NEXT:    ALU clause starting at 12:
+; EG-NEXT:    ALU clause starting at 10:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Y,
-; EG-NEXT:    ALU clause starting at 13:
+; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     MOV * T2.X, literal.x,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
 entry:
