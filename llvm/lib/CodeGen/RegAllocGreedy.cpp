@@ -330,12 +330,12 @@ unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
       // are singly defined, this produces optimal coloring in the absence of
       // global interference and other constraints.
       if (!ReverseLocalAssignment)
-        Prio = LI.beginIndex().getInstrDistance(Indexes->getLastIndex());
+        Prio = LI.beginIndex().getApproxInstrDistance(Indexes->getLastIndex());
       else {
         // Allocating bottom up may allow many short LRGs to be assigned first
         // to one of the cheap registers. This could be much faster for very
         // large blocks on targets with many physical registers.
-        Prio = Indexes->getZeroIndex().getInstrDistance(LI.endIndex());
+        Prio = Indexes->getZeroIndex().getApproxInstrDistance(LI.endIndex());
       }
     } else {
       // Allocate global and split ranges in long->short order. Long ranges that
