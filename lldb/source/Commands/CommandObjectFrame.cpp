@@ -483,14 +483,9 @@ protected:
     // might clear the StackFrameList for the thread.  So hold onto a shared
     // pointer to the frame so it stays alive.
 
-    Status error;
     VariableList *variable_list =
-        frame->GetVariableList(m_option_variable.show_globals, &error);
+        frame->GetVariableList(m_option_variable.show_globals);
 
-    if (error.Fail() && (!variable_list || variable_list->GetSize() == 0)) {
-      result.AppendError(error.AsCString());
-
-    }
     VariableSP var_sp;
     ValueObjectSP valobj_sp;
 

@@ -578,8 +578,7 @@ static void PrivateAutoComplete(
       if (frame) {
         const bool get_file_globals = true;
 
-        VariableList *variable_list = frame->GetVariableList(get_file_globals,
-                                                             nullptr);
+        VariableList *variable_list = frame->GetVariableList(get_file_globals);
 
         if (variable_list) {
           for (const VariableSP &var_sp : *variable_list)
@@ -675,7 +674,7 @@ static void PrivateAutoComplete(
           const bool get_file_globals = true;
 
           VariableList *variable_list =
-              frame->GetVariableList(get_file_globals, nullptr);
+              frame->GetVariableList(get_file_globals);
 
           if (!variable_list)
             break;
