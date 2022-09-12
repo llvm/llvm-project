@@ -287,11 +287,9 @@ define i32 @test5d(i64 %x) {
 define i32 @not_op_ctlz(i64 %x) {
 ; CHECK-LABEL: @not_op_ctlz(
 ; CHECK-NEXT:    [[N:%.*]] = xor i64 [[X:%.*]], -1
-; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[N]], i1 true), !range [[RNG2]]
+; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[N]], i1 false), !range [[RNG2]]
 ; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[CAST]]
 ;
   %n = xor i64 %x, -1
   %ct = tail call i64 @llvm.ctlz.i64(i64 %n, i1 true)
@@ -304,16 +302,71 @@ define i32 @not_op_ctlz(i64 %x) {
 define i32 @not_op_cttz(i64 %x) {
 ; CHECK-LABEL: @not_op_cttz(
 ; CHECK-NEXT:    [[N:%.*]] = xor i64 [[X:%.*]], -1
-; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[N]], i1 true), !range [[RNG2]]
+; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[N]], i1 false), !range [[RNG2]]
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    ret i32 [[CAST]]
+;
+  %n = xor i64 %x, -1
+  %ct = tail call i64 @llvm.cttz.i64(i64 %n, i1 true)
+  %cast = trunc i64 %ct to i32
+  %tobool = icmp eq i64 %x, -1
+  %r = select i1 %tobool, i32 64, i32 %cast
+  ret i32 %r
+}
+
+; negative test
+
+define i32 @not_op_ctlz_wrong_xor_op1(i64 %x) {
+; CHECK-LABEL: @not_op_ctlz_wrong_xor_op1(
+; CHECK-NEXT:    [[N:%.*]] = xor i64 [[X:%.*]], -2
+; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[N]], i1 true), !range [[RNG2]]
 ; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = xor i64 %x, -2
+  %ct = tail call i64 @llvm.ctlz.i64(i64 %n, i1 true)
+  %cast = trunc i64 %ct to i32
+  %tobool = icmp eq i64 %x, -1
+  %r = select i1 %tobool, i32 64, i32 %cast
+  ret i32 %r
+}
+
+; negative test
+
+define i32 @not_op_ctlz_wrong_xor_op0(i64 %x, i64 %y) {
+; CHECK-LABEL: @not_op_ctlz_wrong_xor_op0(
+; CHECK-NEXT:    [[N:%.*]] = xor i64 [[Y:%.*]], -1
+; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[N]], i1 true), !range [[RNG2]]
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = xor i64 %y, -1
+  %ct = tail call i64 @llvm.ctlz.i64(i64 %n, i1 true)
+  %cast = trunc i64 %ct to i32
+  %tobool = icmp eq i64 %x, -1
+  %r = select i1 %tobool, i32 64, i32 %cast
+  ret i32 %r
+}
+
+; negative test
+
+define i32 @not_op_cttz_wrong_cmp(i64 %x) {
+; CHECK-LABEL: @not_op_cttz_wrong_cmp(
+; CHECK-NEXT:    [[N:%.*]] = xor i64 [[X:%.*]], -1
+; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[N]], i1 true), !range [[RNG2]]
+; CHECK-NEXT:    [[CAST:%.*]] = trunc i64 [[CT]] to i32
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[X]], 0
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[TOBOOL]], i32 64, i32 [[CAST]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %n = xor i64 %x, -1
   %ct = tail call i64 @llvm.cttz.i64(i64 %n, i1 true)
   %cast = trunc i64 %ct to i32
-  %tobool = icmp eq i64 %x, -1
+  %tobool = icmp eq i64 %x, 0
   %r = select i1 %tobool, i32 64, i32 %cast
   ret i32 %r
 }
