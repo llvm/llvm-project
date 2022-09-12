@@ -14,6 +14,7 @@
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -1374,27 +1375,47 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
                             LoadI->getType());
       }
 
-      if (auto *StoreI = dyn_cast<StoreInst>(Usr)) {
-        if (StoreI->getValueOperand() == CurPtr) {
-          LLVM_DEBUG(dbgs() << "[AAPointerInfo] Escaping use in store "
-                            << *StoreI << "\n");
-          return false;
+      auto HandleStoreLike = [&](Instruction &I, Value *ValueOp, Type &ValueTy,
+                                 ArrayRef<Value *> OtherOps, AccessKind AK) {
+        for (auto *OtherOp : OtherOps) {
+          if (OtherOp == CurPtr) {
+            LLVM_DEBUG(
+                dbgs()
+                << "[AAPointerInfo] Escaping use in store like instruction "
+                << I << "\n");
+            return false;
+          }
         }
+
         // If the access is to a pointer that may or may not be the associated
         // value, e.g. due to a PHI, we cannot assume it will be written.
-        AccessKind AK = AccessKind::AK_W;
         if (getUnderlyingObject(CurPtr) == &AssociatedValue)
           AK = AccessKind(AK | AccessKind::AK_MUST);
         else
           AK = AccessKind(AK | AccessKind::AK_MAY);
         bool UsedAssumedInformation = false;
-        Optional<Value *> Content =
-            A.getAssumedSimplified(*StoreI->getValueOperand(), *this,
-                                   UsedAssumedInformation, AA::Interprocedural);
-        return handleAccess(A, *StoreI, *CurPtr, Content, AK,
-                            OffsetInfoMap[CurPtr].Offset, Changed,
-                            StoreI->getValueOperand()->getType());
-      }
+        Optional<Value *> Content = nullptr;
+        if (ValueOp)
+          Content = A.getAssumedSimplified(
+              *ValueOp, *this, UsedAssumedInformation, AA::Interprocedural);
+        return handleAccess(A, I, *CurPtr, Content, AK,
+                            OffsetInfoMap[CurPtr].Offset, Changed, &ValueTy);
+      };
+
+      if (auto *StoreI = dyn_cast<StoreInst>(Usr))
+        return HandleStoreLike(*StoreI, StoreI->getValueOperand(),
+                               *StoreI->getValueOperand()->getType(),
+                               {StoreI->getValueOperand()}, AccessKind::AK_W);
+      if (auto *RMWI = dyn_cast<AtomicRMWInst>(Usr))
+        return HandleStoreLike(*RMWI, nullptr,
+                               *RMWI->getValOperand()->getType(),
+                               {RMWI->getValOperand()}, AccessKind::AK_RW);
+      if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(Usr))
+        return HandleStoreLike(
+            *CXI, nullptr, *CXI->getNewValOperand()->getType(),
+            {CXI->getCompareOperand(), CXI->getNewValOperand()},
+            AccessKind::AK_RW);
+
       if (auto *CB = dyn_cast<CallBase>(Usr)) {
         if (CB->isLifetimeStartOrEnd())
           return true;
