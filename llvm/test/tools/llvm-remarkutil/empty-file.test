@@ -1,0 +1,7 @@
+RUN: not llvm-remarkutil yaml2bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAML2BITSTREAM
+RUN: llvm-remarkutil bitstream2yaml %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=BITSTREAM2YAML
+
+; YAML2BITSTREAM: error: document root is not of mapping type.
+
+; An empty bitstream file is valid.
+; BITSTREAM2YAML-NOT: error

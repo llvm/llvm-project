@@ -33,7 +33,6 @@ Basic Commands
    llvm-otool
    llvm-profdata
    llvm-readobj
-   llvm-remark-size-diff
    llvm-stress
    llvm-symbolizer
    opt
@@ -86,3 +85,12 @@ Developer Tools
    llvm-pdbutil
    llvm-profgen
    llvm-tli-checker
+
+Remarks Tools
+~~~~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+
+   llvm-remark-size-diff
+   llvm-remarkutil

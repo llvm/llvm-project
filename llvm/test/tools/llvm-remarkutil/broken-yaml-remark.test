@@ -1,0 +1,2 @@
+RUN: not llvm-remarkutil yaml2bitstream %p/Inputs/broken-remark -o - 2>&1 | FileCheck %s
+CHECK: error: Type, Pass, Name or Function missing
