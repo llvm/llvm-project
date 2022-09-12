@@ -350,7 +350,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   if (isMaterializing(lhs->get())) {
     unsigned nest = 0;
     for (unsigned i = 0; i < numLoops; i++) {
-      if (isReductionIterator(iteratorTypes[topSort[i]]))
+      if (linalg::isReductionIterator(iteratorTypes[topSort[i]]))
         break; // terminate at first reduction
       nest++;
     }
@@ -1234,7 +1234,7 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   unsigned tensor = merger.tensor(fb);
   assert(idx == merger.index(fb));
   auto iteratorTypes = op.iterator_types().getValue();
-  bool isReduction = isReductionIterator(iteratorTypes[idx]);
+  bool isReduction = linalg::isReductionIterator(iteratorTypes[idx]);
   bool isSparse = merger.isDim(fb, Dim::kSparse);
   bool isVector = isVectorFor(codegen, isInner, isReduction, isSparse) &&
                   denseUnitStrides(merger, op, idx);

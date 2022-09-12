@@ -185,6 +185,17 @@ bool isDisjointTransferSet(VectorTransferOpInterface transferA,
 /// corresponding arith operation.
 Value makeArithReduction(OpBuilder &b, Location loc, CombiningKind kind,
                          Value v1, Value v2);
+
+/// Returns true if `attr` has "parallel" iterator type semantics.
+inline bool isParallelIterator(Attribute attr) {
+  return attr.cast<IteratorTypeAttr>().getValue() == IteratorType::parallel;
+}
+
+/// Returns true if `attr` has "reduction" iterator type semantics.
+inline bool isReductionIterator(Attribute attr) {
+  return attr.cast<IteratorTypeAttr>().getValue() == IteratorType::reduction;
+}
+
 } // namespace vector
 } // namespace mlir
 
