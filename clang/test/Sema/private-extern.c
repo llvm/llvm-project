@@ -69,9 +69,9 @@ void f8(void) {
 struct s0 { int x; };
 
 void f9(void) {
-  extern int g15 = 0; // expected-error{{'extern' variable cannot have an initializer}}
+  extern int g15 = 0; // expected-error{{declaration of block scope identifier with linkage cannot have an initializer}}
   // FIXME: linkage specifier in warning.
-  __private_extern__ int g16 = 0; // expected-error{{'extern' variable cannot have an initializer}}
+  __private_extern__ int g16 = 0; // expected-error{{declaration of block scope identifier with linkage cannot have an initializer}}
 }
 
 extern int g17;

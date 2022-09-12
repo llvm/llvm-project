@@ -138,6 +138,9 @@ Improvements to Clang's diagnostics
   incorrectly saying no_sanitize only applies to functions and methods.
 - No longer mention ``reinterpet_cast`` in the invalid constant expression
   diagnostic note when in C mode.
+- Clang will now give a more suitale diagnostic for declaration of block
+  scope identifiers that have external/internal linkage that has an initializer.
+  Fixes `Issue 57478: <https://github.com/llvm/llvm-project/issues/57478>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

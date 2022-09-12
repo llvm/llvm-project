@@ -69,7 +69,7 @@ namespace BadSpecifiers {
     // storage-class-specifiers
     static auto &[a] = n; // expected-warning {{declared 'static' is a C++20 extension}}
     thread_local auto &[b] = n; // expected-warning {{declared 'thread_local' is a C++20 extension}}
-    extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}} expected-error {{cannot have an initializer}}
+    extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}} expected-error {{declaration of block scope identifier with linkage cannot have an initializer}}
     struct S {
       mutable auto &[d] = n; // expected-error {{not permitted in this context}}
 
