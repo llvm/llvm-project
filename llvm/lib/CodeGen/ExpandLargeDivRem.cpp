@@ -14,18 +14,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 
 using namespace llvm;
@@ -51,11 +53,11 @@ static bool isSigned(unsigned int Opcode) {
   return Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
 }
 
-static bool runImpl(Function &F, const TargetTransformInfo &TTI) {
+static bool runImpl(Function &F, const TargetLowering &TLI) {
   SmallVector<BinaryOperator *, 4> Replace;
   bool Modified = false;
 
-  unsigned MaxLegalDivRemBitWidth = TTI.maxLegalDivRemBitWidth();
+  unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
   if (ExpandDivRemBits != llvm::IntegerType::MAX_INT_BITS)
     MaxLegalDivRemBitWidth = ExpandDivRemBits;
 
@@ -103,17 +105,6 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI) {
   return Modified;
 }
 
-PreservedAnalyses ExpandLargeDivRemPass::run(Function &F,
-                                             FunctionAnalysisManager &AM) {
-  TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-  bool Changed = runImpl(F, TTI);
-
-  if (Changed)
-    return PreservedAnalyses::none();
-
-  return PreservedAnalyses::all();
-}
-
 class ExpandLargeDivRemLegacyPass : public FunctionPass {
 public:
   static char ID;
@@ -123,12 +114,13 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    return runImpl(F, TTI);
+    auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    auto *TLI = TM->getSubtargetImpl(F)->getTargetLowering();
+    return runImpl(F, *TLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }

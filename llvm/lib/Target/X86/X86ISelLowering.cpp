@@ -170,6 +170,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.canUseCMPXCHG8B())
     setMaxAtomicSizeInBitsSupported(32);
 
+  setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
+
   // Set up the register classes.
   addRegisterClass(MVT::i8, &X86::GR8RegClass);
   addRegisterClass(MVT::i16, &X86::GR16RegClass);
