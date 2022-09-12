@@ -16,43 +16,43 @@ define void @cost_abs_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> 
 ; SSE2-LABEL: 'cost_abs_i64'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'cost_abs_i64'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 false)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSE42-LABEL: 'cost_abs_i64'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX1-LABEL: 'cost_abs_i64'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX2-LABEL: 'cost_abs_i64'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512-LABEL: 'cost_abs_i64'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I64    = call i64 @llvm.abs.i64(i64 %a64, i1 0)
@@ -65,44 +65,44 @@ define void @cost_abs_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> 
 define void @cost_abs_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i32> %a512) {
 ; SSE2-LABEL: 'cost_abs_i32'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'cost_abs_i32'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSE42-LABEL: 'cost_abs_i32'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX1-LABEL: 'cost_abs_i32'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX2-LABEL: 'cost_abs_i32'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512-LABEL: 'cost_abs_i32'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I32   = call i32 @llvm.abs.i32(i32 %a32, i1 0)
@@ -115,58 +115,58 @@ define void @cost_abs_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i32>
 define void @cost_abs_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16> %a512) {
 ; SSE2-LABEL: 'cost_abs_i16'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'cost_abs_i16'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSE42-LABEL: 'cost_abs_i16'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX1-LABEL: 'cost_abs_i16'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX2-LABEL: 'cost_abs_i16'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512F-LABEL: 'cost_abs_i16'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 false)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512DQ-LABEL: 'cost_abs_i16'
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 false)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512BW-LABEL: 'cost_abs_i16'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 false)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 false)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I16    = call i16 @llvm.abs.i16(i16 %a16, i1 0)
@@ -178,59 +178,59 @@ define void @cost_abs_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16
 
 define void @cost_abs_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x i8> %a512) {
 ; SSE2-LABEL: 'cost_abs_i8'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'cost_abs_i8'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSE42-LABEL: 'cost_abs_i8'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX1-LABEL: 'cost_abs_i8'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX2-LABEL: 'cost_abs_i8'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512F-LABEL: 'cost_abs_i8'
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512DQ-LABEL: 'cost_abs_i8'
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512BW-LABEL: 'cost_abs_i8'
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 false)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I8    = call i8 @llvm.abs.i8(i8 %a8, i1 0)
@@ -248,43 +248,43 @@ define void @cost_abs_i64_poison(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ; SSE2-LABEL: 'cost_abs_i64_poison'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'cost_abs_i64_poison'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 true)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSE42-LABEL: 'cost_abs_i64_poison'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX1-LABEL: 'cost_abs_i64_poison'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX2-LABEL: 'cost_abs_i64_poison'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512-LABEL: 'cost_abs_i64_poison'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = call i64 @llvm.abs.i64(i64 %a64, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %a128, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %a256, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I64 = call <8 x i64> @llvm.abs.v8i64(<8 x i64> %a512, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I64    = call i64 @llvm.abs.i64(i64 %a64, i1 -1)
@@ -297,44 +297,44 @@ define void @cost_abs_i64_poison(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 define void @cost_abs_i32_poison(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i32> %a512) {
 ; SSE2-LABEL: 'cost_abs_i32_poison'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'cost_abs_i32_poison'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSE42-LABEL: 'cost_abs_i32_poison'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX1-LABEL: 'cost_abs_i32_poison'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX2-LABEL: 'cost_abs_i32_poison'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512-LABEL: 'cost_abs_i32_poison'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I32 = call i32 @llvm.abs.i32(i32 %a32, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a128, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <8 x i32> @llvm.abs.v8i32(<8 x i32> %a256, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %a512, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I32   = call i32 @llvm.abs.i32(i32 %a32, i1 -1)
@@ -347,58 +347,58 @@ define void @cost_abs_i32_poison(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 define void @cost_abs_i16_poison(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16> %a512) {
 ; SSE2-LABEL: 'cost_abs_i16_poison'
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'cost_abs_i16_poison'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSE42-LABEL: 'cost_abs_i16_poison'
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX1-LABEL: 'cost_abs_i16_poison'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX2-LABEL: 'cost_abs_i16_poison'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512F-LABEL: 'cost_abs_i16_poison'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 true)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512DQ-LABEL: 'cost_abs_i16_poison'
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 true)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512BW-LABEL: 'cost_abs_i16_poison'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I16 = call i16 @llvm.abs.i16(i16 %a16, i1 true)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %a128, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %a256, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %a512, i1 true)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I16    = call i16 @llvm.abs.i16(i16 %a16, i1 -1)
@@ -410,59 +410,59 @@ define void @cost_abs_i16_poison(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 
 define void @cost_abs_i8_poison(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x i8> %a512) {
 ; SSE2-LABEL: 'cost_abs_i8_poison'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSSE3-LABEL: 'cost_abs_i8_poison'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SSE42-LABEL: 'cost_abs_i8_poison'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX1-LABEL: 'cost_abs_i8_poison'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX2-LABEL: 'cost_abs_i8_poison'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512F-LABEL: 'cost_abs_i8_poison'
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512DQ-LABEL: 'cost_abs_i8_poison'
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; AVX512BW-LABEL: 'cost_abs_i8_poison'
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I8 = call i8 @llvm.abs.i8(i8 %a8, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %a128, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = call <32 x i8> @llvm.abs.v32i8(<32 x i8> %a256, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64I8 = call <64 x i8> @llvm.abs.v64i8(<64 x i8> %a512, i1 true)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %I8    = call i8 @llvm.abs.i8(i8 %a8, i1 -1)
