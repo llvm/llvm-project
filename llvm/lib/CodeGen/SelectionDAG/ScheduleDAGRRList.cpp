@@ -24,7 +24,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
@@ -321,7 +321,7 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
 
     // Special handling for CopyFromReg of untyped values.
     if (!Node->isMachineOpcode() && Node->getOpcode() == ISD::CopyFromReg) {
-      unsigned Reg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
+      Register Reg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
       const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(Reg);
       RegClass = RC->getID();
       Cost = 1;
@@ -1381,7 +1381,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
             InlineAsm::isClobberKind(Flags)) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
-            unsigned Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
+            Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
             if (Register::isPhysicalRegister(Reg))
               CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
           }
@@ -1431,7 +1431,7 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       for (unsigned i = 0; i < MCID.getNumDefs(); ++i)
         if (MCID.OpInfo[i].isOptionalDef()) {
           const SDValue &OptionalDef = Node->getOperand(i - Node->getNumValues());
-          unsigned Reg = cast<RegisterSDNode>(OptionalDef)->getReg();
+          Register Reg = cast<RegisterSDNode>(OptionalDef)->getReg();
           CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
         }
     }
@@ -2376,8 +2376,8 @@ static bool hasOnlyLiveInOpers(const SUnit *SU) {
     const SUnit *PredSU = Pred.getSUnit();
     if (PredSU->getNode() &&
         PredSU->getNode()->getOpcode() == ISD::CopyFromReg) {
-      unsigned Reg =
-        cast<RegisterSDNode>(PredSU->getNode()->getOperand(1))->getReg();
+      Register Reg =
+          cast<RegisterSDNode>(PredSU->getNode()->getOperand(1))->getReg();
       if (Register::isVirtualRegister(Reg)) {
         RetVal = true;
         continue;
@@ -2397,8 +2397,8 @@ static bool hasOnlyLiveOutUses(const SUnit *SU) {
     if (Succ.isCtrl()) continue;
     const SUnit *SuccSU = Succ.getSUnit();
     if (SuccSU->getNode() && SuccSU->getNode()->getOpcode() == ISD::CopyToReg) {
-      unsigned Reg =
-        cast<RegisterSDNode>(SuccSU->getNode()->getOperand(1))->getReg();
+      Register Reg =
+          cast<RegisterSDNode>(SuccSU->getNode()->getOperand(1))->getReg();
       if (Register::isVirtualRegister(Reg)) {
         RetVal = true;
         continue;
@@ -2908,13 +2908,13 @@ static bool canClobberPhysRegDefs(const SUnit *SuccSU, const SUnit *SU,
         continue;
       if (!N->hasAnyUseOfValue(i))
         continue;
-      unsigned Reg = ImpDefs[i - NumDefs];
+      MCPhysReg Reg = ImpDefs[i - NumDefs];
       if (SURegMask && MachineOperand::clobbersPhysReg(SURegMask, Reg))
         return true;
       if (!SUImpDefs)
         continue;
       for (;*SUImpDefs; ++SUImpDefs) {
-        unsigned SUReg = *SUImpDefs;
+        MCPhysReg SUReg = *SUImpDefs;
         if (TRI->regsOverlap(Reg, SUReg))
           return true;
       }
