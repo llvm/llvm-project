@@ -39,34 +39,41 @@ void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
 
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
-  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+  for (const MachineOperand &MOP : MI.operands()) {
     if (MOP.isRegMask()) {
       removeRegsNotPreserved(MOP.getRegMask());
       continue;
     }
 
-    if (MOP.isDef())
+    if (MOP.isReg() && MOP.isDef() && MOP.getReg().isPhysical())
       removeReg(MOP.getReg());
   }
 
   // Add uses to the set.
-  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+  for (const MachineOperand &MOP : MI.operands()) {
     if (!MOP.isReg() || !MOP.readsReg())
       continue;
-    addReg(MOP.getReg());
+
+    if (MOP.getReg() && MOP.getReg().isPhysical())
+      addReg(MOP.getReg());
   }
 }
 
 void LiveRegUnits::accumulate(const MachineInstr &MI) {
   // Add defs, uses and regmask clobbers to the set.
-  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+  for (const MachineOperand &MOP : MI.operands()) {
+    if (MOP.isReg()) {
+      if (!MOP.getReg().isPhysical())
+        continue;
+      if (MOP.isDef() || MOP.readsReg())
+        addReg(MOP.getReg());
+      continue;
+    }
+
     if (MOP.isRegMask()) {
       addRegsInMask(MOP.getRegMask());
       continue;
     }
-    if (!MOP.isDef() && !MOP.readsReg())
-      continue;
-    addReg(MOP.getReg());
   }
 }
 
