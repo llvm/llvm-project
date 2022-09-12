@@ -1517,13 +1517,32 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     //       sense to specialize attributes for call sites arguments instead of
     //       redirecting requests to the callee argument.
     Argument *Arg = getAssociatedArgument();
-    if (!Arg)
+    if (Arg) {
+      const IRPosition &ArgPos = IRPosition::argument(*Arg);
+      auto &ArgAA =
+          A.getAAFor<AAPointerInfo>(*this, ArgPos, DepClassTy::REQUIRED);
+      if (ArgAA.getState().isValidState())
+        return translateAndAddState(A, ArgAA, 0, *cast<CallBase>(getCtxI()),
+                                    /* FromCallee */ true);
+    }
+
+    const auto &NoCaptureAA =
+        A.getAAFor<AANoCapture>(*this, getIRPosition(), DepClassTy::OPTIONAL);
+
+    if (!NoCaptureAA.isAssumedNoCapture())
       return indicatePessimisticFixpoint();
-    const IRPosition &ArgPos = IRPosition::argument(*Arg);
-    auto &ArgAA =
-        A.getAAFor<AAPointerInfo>(*this, ArgPos, DepClassTy::REQUIRED);
-    return translateAndAddState(A, ArgAA, 0, *cast<CallBase>(getCtxI()),
-                                /* FromCallee */ true);
+
+    bool IsKnown = false;
+    if (AA::isAssumedReadNone(A, getIRPosition(), *this, IsKnown))
+      return ChangeStatus::UNCHANGED;
+    bool ReadOnly = AA::isAssumedReadOnly(A, getIRPosition(), *this, IsKnown);
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    handleAccess(A, *getCtxI(), getAssociatedValue(), nullptr,
+                 ReadOnly ? AccessKind::AK_MAY_READ
+                          : AccessKind::AK_MAY_READ_WRITE,
+                 0, Changed, nullptr, AA::OffsetAndSize::Unknown);
+    return Changed;
   }
 
   /// See AbstractAttribute::trackStatistics()

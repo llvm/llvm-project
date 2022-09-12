@@ -29,13 +29,15 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ;
 @GlobalS = internal constant %struct.S { i32 42, double 3.140000e+00, ptr null }, align 8
 
+declare void @harmless_use(ptr nocapture readonly) nofree norecurse nosync nounwind readnone willreturn nocallback
+
 ;.
 ; CHECK: @[[GLOBALS:[a-zA-Z0-9_$"\\.-]+]] = internal constant [[STRUCT_S:%.*]] { i32 42, double 3.140000e+00, ptr null }, align 8
 ;.
 define i32 @testOneFieldGlobalS() {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@testOneFieldGlobalS
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.then:
@@ -54,6 +56,7 @@ define i32 @testOneFieldGlobalS() {
 ;
 entry:
   %i = load i32, ptr @GlobalS, align 8
+  call void @harmless_use(ptr @GlobalS)
   %cmp = icmp ne i32 %i, 42
   br i1 %cmp, label %if.then, label %if.end
 
@@ -89,7 +92,7 @@ if.end7:                                          ; preds = %if.then5, %if.end4
 define i32 @testOneFieldGlobalS_type_mismatch() {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@testOneFieldGlobalS_type_mismatch
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = load double, ptr @GlobalS, align 8
 ; CHECK-NEXT:    [[IC:%.*]] = fptosi double [[I]] to i32
@@ -155,7 +158,7 @@ if.end7:                                          ; preds = %if.then5, %if.end4
 define i32 @testOneFieldGlobalS_byte_offset_wrong() {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@testOneFieldGlobalS_byte_offset_wrong
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = load i32, ptr getelementptr inbounds (i32, ptr @GlobalS, i32 1), align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[I]], 42
@@ -217,5 +220,6 @@ if.end7:                                          ; preds = %if.then5, %if.end4
   ret i32 %r.2
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
