@@ -1380,6 +1380,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setMaxAtomicSizeInBitsSupported(0);
   }
 
+  setMaxDivRemBitWidthSupported(64);
+
   setOperationAction(ISD::PREFETCH,         MVT::Other, Custom);
 
   // Requires SXTB/SXTH, available on v6 and up in both ARM and Thumb modes.

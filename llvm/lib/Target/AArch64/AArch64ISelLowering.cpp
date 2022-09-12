@@ -961,6 +961,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setHasExtractBitsInsn(true);
 
+  setMaxDivRemBitWidthSupported(128);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
   if (Subtarget->hasNEON()) {
