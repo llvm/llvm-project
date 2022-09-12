@@ -526,11 +526,11 @@ ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
 
   for (StringRef s : iteratorTypes.getAsValueRange<StringAttr>()) {
     auto maybeIteratorType = symbolizeIteratorType(s);
-    if (!maybeIteratorType.hasValue())
+    if (!maybeIteratorType.has_value())
       return parser.emitError(loc) << "unexpected iterator_type (" << s << ")";
 
     iteratorTypeAttrs.push_back(IteratorTypeAttr::get(
-        parser.getContext(), maybeIteratorType.getValue()));
+        parser.getContext(), maybeIteratorType.value()));
   }
   result.attributes.set("iterator_types",
                         parser.getBuilder().getArrayAttr(iteratorTypeAttrs));
