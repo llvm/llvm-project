@@ -18,6 +18,7 @@
 #include <vector>
 
 llvm::ThreadPoolStrategy llvm::parallel::strategy;
+thread_local unsigned llvm::parallel::threadIndex;
 
 namespace llvm {
 namespace parallel {
@@ -95,6 +96,7 @@ public:
 
 private:
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
+    threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
     while (true) {
       std::unique_lock<std::mutex> Lock(Mutex);
