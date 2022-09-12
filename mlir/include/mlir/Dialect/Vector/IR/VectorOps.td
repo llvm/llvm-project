@@ -63,6 +63,21 @@ def Vector_CombiningKindAttr : EnumAttr<Vector_Dialect, CombiningKind, "kind"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+def IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
+  I32EnumAttrCase<"parallel", 0>,
+  I32EnumAttrCase<"reduction", 1>
+  ]> {
+    let genSpecializedAttr = 0;
+    let cppNamespace = "::mlir::vector";
+}
+
+def IteratorTypeEnum : EnumAttr<Vector_Dialect, IteratorType, "iterator_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def IteratorTypeArrayAttr : TypedArrayAttrBase<IteratorTypeEnum,
+    "Iterator type should be an enum.">;
+
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
 def Vector_ContractionOp :
@@ -76,7 +91,7 @@ def Vector_ContractionOp :
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
                Variadic<VectorOf<[I1]>>:$masks,
                ArrayAttr:$indexing_maps,
-               ArrayAttr:$iterator_types,
+               IteratorTypeArrayAttr:$iterator_types,
                DefaultValuedAttr<Vector_CombiningKindAttr,
                                  "CombiningKind::ADD">:$kind)>,
     Results<(outs AnyType)> {
@@ -201,7 +216,7 @@ def Vector_ContractionOp :
       "ArrayAttr":$indexingMaps, "ArrayAttr":$iteratorTypes)>,
     OpBuilder<(ins "Value":$lhs, "Value":$rhs, "Value":$acc,
       "ArrayRef<ArrayRef<AffineExpr>>":$indexingExprs,
-      "ArrayRef<StringRef>":$iteratorTypes)>,
+      "ArrayRef<IteratorType>":$iteratorTypes)>,
     OpBuilder<(ins "Value":$lhs, "Value":$rhs, "Value":$acc,
       "ArrayAttr":$indexingMaps, "ArrayAttr":$iteratorTypes,
       "CombiningKind":$kind)>
@@ -248,6 +263,14 @@ def Vector_ContractionOp :
 
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;
+    }
+
+    // Returns iterator types in string format.
+    SmallVector<StringRef> getIteratorTypeNames() {
+      return llvm::to_vector(
+          llvm::map_range(getIteratorTypes(), [](Attribute a) {
+            return stringifyIteratorType(a.cast<IteratorTypeAttr>().getValue());
+          }));
     }
   }];
 

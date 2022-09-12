@@ -22,6 +22,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -986,13 +987,13 @@ struct MultiReduceToContract
     SmallVector<bool> reductionMask = reduceOp.getReductionMask();
     auto srcMap = rewriter.getMultiDimIdentityMap(reductionMask.size());
     SmallVector<AffineExpr> exprs;
-    SmallVector<StringRef> iteratorTypes;
+    SmallVector<vector::IteratorType> iteratorTypes;
     for (const auto &isReduceDim : llvm::enumerate(reductionMask)) {
       if (!isReduceDim.value()) {
-        iteratorTypes.push_back(getParallelIteratorTypeName());
+        iteratorTypes.push_back(vector::IteratorType::parallel);
         exprs.push_back(rewriter.getAffineDimExpr(isReduceDim.index()));
       } else {
-        iteratorTypes.push_back(getReductionIteratorTypeName());
+        iteratorTypes.push_back(vector::IteratorType::reduction);
       }
     }
     auto dstMap = AffineMap::get(/*dimCount=*/reductionMask.size(),
@@ -1000,7 +1001,10 @@ struct MultiReduceToContract
     rewriter.replaceOpWithNewOp<mlir::vector::ContractionOp>(
         reduceOp, mulOp->getOperand(0), mulOp->getOperand(1), reduceOp.getAcc(),
         rewriter.getAffineMapArrayAttr({srcMap, srcMap, dstMap}),
-        rewriter.getStrArrayAttr(iteratorTypes));
+        rewriter.getArrayAttr(llvm::to_vector(llvm::map_range(
+            iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
+              return IteratorTypeAttr::get(rewriter.getContext(), t);
+            }))));
     return success();
   }
 };
