@@ -641,6 +641,10 @@ public:
     return Contents.RegMask;
   }
 
+  /// Return the size of regmask array if we are able to figure it out from
+  /// this operand. Return zero otherwise.
+  unsigned getRegMaskSize() const;
+
   /// Returns number of elements needed for a regmask array.
   static unsigned getRegMaskSize(unsigned NumRegs) {
     return (NumRegs + 31) / 32;
