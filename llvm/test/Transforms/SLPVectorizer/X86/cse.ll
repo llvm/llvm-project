@@ -353,19 +353,17 @@ define void @cse_for_hoisted_instructions_in_preheader(i32* %dst, i32 %a, i1 %c)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[A]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[A]], i32 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> <i32 22, i32 22>, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> <i32 22, i32 22>, [[TMP1]]
 ; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP4]], <i32 3, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[GEP_0]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP3]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP2]], <i32 3, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[GEP_0]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], <2 x i32>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP1]], <i32 3, i32 3>
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 10
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[GEP_2]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP7]], <2 x i32>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[GEP_2]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
