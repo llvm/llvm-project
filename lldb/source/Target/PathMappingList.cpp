@@ -131,6 +131,16 @@ void PathMappingList::Dump(Stream *s, int pair_index) {
   }
 }
 
+llvm::json::Value PathMappingList::ToJSON() {
+  llvm::json::Array entries;
+  for (const auto &pair : m_pairs) {
+    llvm::json::Array entry{pair.first.GetStringRef().str(),
+                            pair.second.GetStringRef().str()};
+    entries.emplace_back(std::move(entry));
+  }
+  return entries;
+}
+
 void PathMappingList::Clear(bool notify) {
   if (!m_pairs.empty())
     ++m_mod_id;

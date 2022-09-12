@@ -184,13 +184,13 @@ struct AAICVTracker;
 /// Attributor runs.
 struct OMPInformationCache : public InformationCache {
   OMPInformationCache(Module &M, AnalysisGetter &AG,
-                      BumpPtrAllocator &Allocator, SetVector<Function *> &CGSCC,
+                      BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
                       KernelSet &Kernels)
-      : InformationCache(M, AG, Allocator, &CGSCC), OMPBuilder(M),
+      : InformationCache(M, AG, Allocator, CGSCC), OMPBuilder(M),
         Kernels(Kernels) {
 
     OMPBuilder.initialize();
-    initializeRuntimeFunctions();
+    initializeRuntimeFunctions(M);
     initializeInternalControlVars();
   }
 
@@ -414,7 +414,7 @@ struct OMPInformationCache : public InformationCache {
     // TODO: We directly convert uses into proper calls and unknown uses.
     for (Use &U : RFI.Declaration->uses()) {
       if (Instruction *UserI = dyn_cast<Instruction>(U.getUser())) {
-        if (ModuleSlice.count(UserI->getFunction())) {
+        if (ModuleSlice.empty() || ModuleSlice.count(UserI->getFunction())) {
           RFI.getOrCreateUseVector(UserI->getFunction()).push_back(&U);
           ++NumUses;
         }
@@ -447,8 +447,7 @@ struct OMPInformationCache : public InformationCache {
 
   /// Helper to initialize all runtime function information for those defined
   /// in OpenMPKinds.def.
-  void initializeRuntimeFunctions() {
-    Module &M = *((*ModuleSlice.begin())->getParent());
+  void initializeRuntimeFunctions(Module &M) {
 
     // Helper macros for handling __VA_ARGS__ in OMP_RTL
 #define OMP_TYPE(VarName, ...)                                                 \
@@ -857,7 +856,7 @@ struct OpenMPOpt {
     InternalControlVar ICVs[] = {ICV_nthreads, ICV_active_levels, ICV_cancel,
                                  ICV_proc_bind};
 
-    for (Function *F : OMPInfoCache.ModuleSlice) {
+    for (Function *F : SCC) {
       for (auto ICV : ICVs) {
         auto ICVInfo = OMPInfoCache.ICVs[ICV];
         auto Remark = [&](OptimizationRemarkAnalysis ORA) {
@@ -2150,7 +2149,7 @@ private:
 };
 
 Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
-  if (!OMPInfoCache.ModuleSlice.count(&F))
+  if (!OMPInfoCache.ModuleSlice.empty() && !OMPInfoCache.ModuleSlice.count(&F))
     return nullptr;
 
   // Use a scope to keep the lifetime of the CachedKernel short.
@@ -5057,8 +5056,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   BumpPtrAllocator Allocator;
   CallGraphUpdater CGUpdater;
 
-  SetVector<Function *> Functions(SCC.begin(), SCC.end());
-  OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions, Kernels);
+  OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ nullptr, Kernels);
 
   unsigned MaxFixpointIterations =
       (isOpenMPDevice(M)) ? SetFixpointIterations : 32;
@@ -5070,6 +5068,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
 
+  SetVector<Function *> Functions;
   Attributor A(Functions, InfoCache, AC);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
@@ -5132,7 +5131,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
 
   SetVector<Function *> Functions(SCC.begin(), SCC.end());
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
-                                /*CGSCC*/ Functions, Kernels);
+                                /*CGSCC*/ &Functions, Kernels);
 
   unsigned MaxFixpointIterations =
       (isOpenMPDevice(M)) ? SetFixpointIterations : 32;
@@ -5211,7 +5210,7 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
     BumpPtrAllocator Allocator;
     OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG,
                                   Allocator,
-                                  /*CGSCC*/ Functions, Kernels);
+                                  /*CGSCC*/ &Functions, Kernels);
 
     unsigned MaxFixpointIterations =
         (isOpenMPDevice(M)) ? SetFixpointIterations : 32;
