@@ -108,7 +108,7 @@ defm : FPFMADynFrmAlias_m<FMSUB_H,  "fmsub.h",  HINX>;
 defm : FPFMADynFrmAlias_m<FNMSUB_H, "fnmsub.h", HINX>;
 defm : FPFMADynFrmAlias_m<FNMADD_H, "fnmadd.h", HINX>;
 
-let SchedRW = [WriteFALU16, ReadFALU16, ReadFALU16] in {
+let SchedRW = [WriteFAdd16, ReadFAdd16, ReadFAdd16] in {
 defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", HINX, /*Commutable*/1>;
 defm FSUB_H : FPALU_rr_frm_m<0b0000110, "fsub.h", HINX>;
 }
