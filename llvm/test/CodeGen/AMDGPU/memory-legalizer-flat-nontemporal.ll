@@ -9,6 +9,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -mattr=+tgsplit -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX940-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX12-WGP %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+cumode -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX12-CU %s
 
 define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX7-LABEL: flat_nontemporal_load_0:
@@ -138,6 +140,30 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: flat_nontemporal_load_0:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    flat_load_b32 v2, v[0:1] slc dlc
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    flat_store_b32 v[0:1], v2
+; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: flat_nontemporal_load_0:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    flat_load_b32 v2, v[0:1] slc dlc
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
+; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-CU-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load i32, ptr %in, align 4, !nontemporal !0
@@ -291,6 +317,36 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: flat_nontemporal_load_1:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-WGP-NEXT:    v_add_co_u32 v0, s0, s0, v0
+; GFX12-WGP-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
+; GFX12-WGP-NEXT:    flat_load_b32 v2, v[0:1] slc dlc
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v0, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    flat_store_b32 v[0:1], v2
+; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: flat_nontemporal_load_1:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-CU-NEXT:    v_add_co_u32 v0, s0, s0, v0
+; GFX12-CU-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
+; GFX12-CU-NEXT:    flat_load_b32 v2, v[0:1] slc dlc
+; GFX12-CU-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_mov_b32 v0, s2
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
+; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-CU-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -428,6 +484,30 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2 glc slc dlc
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: flat_nontemporal_store_0:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    flat_load_b32 v2, v[0:1]
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    flat_store_b32 v[0:1], v2 glc slc dlc
+; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: flat_nontemporal_store_0:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    flat_load_b32 v2, v[0:1]
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 glc slc dlc
+; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-CU-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load i32, ptr %in, align 4
@@ -581,6 +661,36 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2 glc slc dlc
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: flat_nontemporal_store_1:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s1
+; GFX12-WGP-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-WGP-NEXT:    v_add_co_u32 v0, s0, s2, v0
+; GFX12-WGP-NEXT:    flat_load_b32 v2, v[1:2]
+; GFX12-WGP-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    flat_store_b32 v[0:1], v2 glc slc dlc
+; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: flat_nontemporal_store_1:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s1
+; GFX12-CU-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-CU-NEXT:    v_add_co_u32 v0, s0, s2, v0
+; GFX12-CU-NEXT:    flat_load_b32 v2, v[1:2]
+; GFX12-CU-NEXT:    v_add_co_ci_u32_e64 v1, null, s3, 0, s0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 glc slc dlc
+; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-CU-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

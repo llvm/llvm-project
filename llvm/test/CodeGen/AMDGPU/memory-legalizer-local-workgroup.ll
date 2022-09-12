@@ -10,6 +10,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -mattr=+tgsplit -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX940-TGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX12-WGP %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+cumode -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX12-CU %s
 
 define amdgpu_kernel void @local_workgroup_unordered_load(
 ; GFX6-LABEL: local_workgroup_unordered_load:
@@ -133,6 +135,26 @@ define amdgpu_kernel void @local_workgroup_unordered_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v1, v0
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_unordered_load:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_load_b32 v0, v0
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v1, v0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_unordered_load:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_load_b32 v0, v0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v1, v0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("workgroup") unordered, align 4
@@ -262,6 +284,26 @@ define amdgpu_kernel void @local_workgroup_monotonic_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v1, v0
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_load:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_load_b32 v0, v0
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v1, v0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_load:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_load_b32 v0, v0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v1, v0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("workgroup") monotonic, align 4
@@ -395,6 +437,27 @@ define amdgpu_kernel void @local_workgroup_acquire_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v1, v0
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_load:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_load_b32 v0, v0
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v1, v0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_load:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_load_b32 v0, v0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v1, v0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("workgroup") acquire, align 4
@@ -541,6 +604,30 @@ define amdgpu_kernel void @local_workgroup_seq_cst_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v1, v0
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_load:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_load_b32 v0, v0
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v1, v0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_load:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_load_b32 v0, v0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v1, v0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("workgroup") seq_cst, align 4
@@ -648,6 +735,22 @@ define amdgpu_kernel void @local_workgroup_unordered_store(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_unordered_store:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_unordered_store:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("workgroup") unordered, align 4
@@ -754,6 +857,22 @@ define amdgpu_kernel void @local_workgroup_monotonic_store(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_store:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_store:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("workgroup") monotonic, align 4
@@ -873,6 +992,25 @@ define amdgpu_kernel void @local_workgroup_release_store(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_release_store:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_release_store:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("workgroup") release, align 4
@@ -992,6 +1130,25 @@ define amdgpu_kernel void @local_workgroup_seq_cst_store(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_store:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_store:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("workgroup") seq_cst, align 4
@@ -1098,6 +1255,22 @@ define amdgpu_kernel void @local_workgroup_monotonic_atomicrmw(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup") monotonic
@@ -1217,6 +1390,25 @@ define amdgpu_kernel void @local_workgroup_acquire_atomicrmw(
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup") acquire
@@ -1336,6 +1528,25 @@ define amdgpu_kernel void @local_workgroup_release_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_release_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_release_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup") release
@@ -1468,6 +1679,28 @@ define amdgpu_kernel void @local_workgroup_acq_rel_atomicrmw(
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acq_rel_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acq_rel_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup") acq_rel
@@ -1600,6 +1833,28 @@ define amdgpu_kernel void @local_workgroup_seq_cst_atomicrmw(
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup") seq_cst
@@ -1732,6 +1987,27 @@ define amdgpu_kernel void @local_workgroup_acquire_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_ret_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_ret_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup") acquire
@@ -1878,6 +2154,30 @@ define amdgpu_kernel void @local_workgroup_acq_rel_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acq_rel_ret_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acq_rel_ret_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup") acq_rel
@@ -2024,6 +2324,30 @@ define amdgpu_kernel void @local_workgroup_seq_cst_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_ret_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_ret_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup") seq_cst
@@ -2143,6 +2467,24 @@ define amdgpu_kernel void @local_workgroup_monotonic_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -2275,6 +2617,27 @@ define amdgpu_kernel void @local_workgroup_acquire_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -2407,6 +2770,27 @@ define amdgpu_kernel void @local_workgroup_release_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_release_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_release_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -2552,6 +2936,30 @@ define amdgpu_kernel void @local_workgroup_acq_rel_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acq_rel_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acq_rel_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -2697,6 +3105,30 @@ define amdgpu_kernel void @local_workgroup_seq_cst_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -2829,6 +3261,27 @@ define amdgpu_kernel void @local_workgroup_monotonic_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -2961,6 +3414,27 @@ define amdgpu_kernel void @local_workgroup_acquire_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -3106,6 +3580,30 @@ define amdgpu_kernel void @local_workgroup_release_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_release_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_release_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -3251,6 +3749,30 @@ define amdgpu_kernel void @local_workgroup_acq_rel_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acq_rel_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acq_rel_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -3396,6 +3918,30 @@ define amdgpu_kernel void @local_workgroup_seq_cst_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -3541,6 +4087,30 @@ define amdgpu_kernel void @local_workgroup_monotonic_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -3686,6 +4256,30 @@ define amdgpu_kernel void @local_workgroup_acquire_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -3831,6 +4425,30 @@ define amdgpu_kernel void @local_workgroup_release_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_release_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_release_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -3976,6 +4594,30 @@ define amdgpu_kernel void @local_workgroup_acq_rel_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acq_rel_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acq_rel_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -4121,6 +4763,30 @@ define amdgpu_kernel void @local_workgroup_seq_cst_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -4262,6 +4928,28 @@ define amdgpu_kernel void @local_workgroup_monotonic_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -4409,6 +5097,29 @@ define amdgpu_kernel void @local_workgroup_acquire_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -4565,6 +5276,31 @@ define amdgpu_kernel void @local_workgroup_release_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_release_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_release_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -4725,6 +5461,32 @@ define amdgpu_kernel void @local_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acq_rel_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acq_rel_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -4885,6 +5647,32 @@ define amdgpu_kernel void @local_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -5032,6 +5820,29 @@ define amdgpu_kernel void @local_workgroup_monotonic_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -5179,6 +5990,29 @@ define amdgpu_kernel void @local_workgroup_acquire_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -5339,6 +6173,32 @@ define amdgpu_kernel void @local_workgroup_release_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_release_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_release_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -5499,6 +6359,32 @@ define amdgpu_kernel void @local_workgroup_acq_rel_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acq_rel_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acq_rel_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -5659,6 +6545,32 @@ define amdgpu_kernel void @local_workgroup_seq_cst_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -5819,6 +6731,32 @@ define amdgpu_kernel void @local_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_monotonic_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_monotonic_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -5979,6 +6917,32 @@ define amdgpu_kernel void @local_workgroup_acquire_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acquire_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acquire_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -6139,6 +7103,32 @@ define amdgpu_kernel void @local_workgroup_release_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_release_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_release_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -6299,6 +7289,32 @@ define amdgpu_kernel void @local_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_acq_rel_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_acq_rel_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -6459,6 +7475,32 @@ define amdgpu_kernel void @local_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_seq_cst_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    buffer_gl0_inv
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_seq_cst_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -6590,6 +7632,26 @@ define amdgpu_kernel void @local_workgroup_one_as_unordered_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v1, v0
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_unordered_load:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_load_b32 v0, v0
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v1, v0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_unordered_load:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_load_b32 v0, v0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v1, v0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("workgroup-one-as") unordered, align 4
@@ -6719,6 +7781,26 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v1, v0
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_load:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_load_b32 v0, v0
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v1, v0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_load:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_load_b32 v0, v0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v1, v0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("workgroup-one-as") monotonic, align 4
@@ -6848,6 +7930,26 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v1, v0
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_load:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_load_b32 v0, v0
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v1, v0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_load:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_load_b32 v0, v0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v1, v0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("workgroup-one-as") acquire, align 4
@@ -6977,6 +8079,26 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_load(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v1, v0
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_load:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_load_b32 v0, v0
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v1, v0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_load:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_load_b32 v0, v0
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v1, v0
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
 entry:
   %val = load atomic i32, ptr addrspace(3) %in syncscope("workgroup-one-as") seq_cst, align 4
@@ -7084,6 +8206,22 @@ define amdgpu_kernel void @local_workgroup_one_as_unordered_store(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_unordered_store:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_unordered_store:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("workgroup-one-as") unordered, align 4
@@ -7190,6 +8328,22 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_store(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_store:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_store:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("workgroup-one-as") monotonic, align 4
@@ -7296,6 +8450,22 @@ define amdgpu_kernel void @local_workgroup_one_as_release_store(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_release_store:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_release_store:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("workgroup-one-as") release, align 4
@@ -7402,6 +8572,22 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_store(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_store:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_store:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     i32 %in, ptr addrspace(3) %out) {
 entry:
   store atomic i32 %in, ptr addrspace(3) %out syncscope("workgroup-one-as") seq_cst, align 4
@@ -7508,6 +8694,22 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_atomicrmw(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup-one-as") monotonic
@@ -7614,6 +8816,22 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_atomicrmw(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup-one-as") acquire
@@ -7720,6 +8938,22 @@ define amdgpu_kernel void @local_workgroup_one_as_release_atomicrmw(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_release_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_release_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup-one-as") release
@@ -7826,6 +9060,22 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_atomicrmw(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acq_rel_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acq_rel_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup-one-as") acq_rel
@@ -7932,6 +9182,22 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_atomicrmw(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v0, v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup-one-as") seq_cst
@@ -8060,6 +9326,26 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_ret_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_ret_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup-one-as") acquire
@@ -8189,6 +9475,26 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acq_rel_ret_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acq_rel_ret_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup-one-as") acq_rel
@@ -8318,6 +9624,26 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_ret_atomicrmw(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_ret_atomicrmw:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_ret_atomicrmw:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    ds_storexchg_rtn_b32 v1, v0, v1
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr addrspace(3) %out, i32 %in syncscope("workgroup-one-as") seq_cst
@@ -8437,6 +9763,24 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -8556,6 +9900,24 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -8675,6 +10037,24 @@ define amdgpu_kernel void @local_workgroup_one_as_release_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_release_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_release_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -8794,6 +10174,24 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acq_rel_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acq_rel_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -8913,6 +10311,24 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_monotonic_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_monotonic_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9032,6 +10448,24 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9151,6 +10585,24 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9270,6 +10722,24 @@ define amdgpu_kernel void @local_workgroup_one_as_release_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_release_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_release_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9389,6 +10859,24 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acq_rel_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acq_rel_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9508,6 +10996,24 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_acquire_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_acquire_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9627,6 +11133,24 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9746,6 +11270,24 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9865,6 +11407,24 @@ define amdgpu_kernel void @local_workgroup_one_as_release_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_release_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_release_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -9984,6 +11544,24 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acq_rel_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acq_rel_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -10103,6 +11681,24 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_seq_cst_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_seq_cst_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_b32 v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -10244,6 +11840,28 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_monotonic_ret_cmpxch
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -10387,6 +12005,28 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -10530,6 +12170,28 @@ define amdgpu_kernel void @local_workgroup_one_as_release_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_release_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_release_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -10673,6 +12335,28 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -10816,6 +12500,28 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -10959,6 +12665,28 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -11102,6 +12830,28 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -11245,6 +12995,28 @@ define amdgpu_kernel void @local_workgroup_one_as_release_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_release_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_release_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -11388,6 +13160,28 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acq_rel_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acq_rel_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -11531,6 +13325,28 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_acquire_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_acquire_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -11674,6 +13490,28 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -11817,6 +13655,28 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acquire_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acquire_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -11960,6 +13820,28 @@ define amdgpu_kernel void @local_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_release_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_release_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -12103,6 +13985,28 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
@@ -12246,6 +14150,28 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    ds_store_b32 v0, v1
 ; GFX11-CU-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: local_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
+; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-WGP-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
+; GFX12-WGP-NEXT:    ds_store_b32 v0, v1
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: local_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
+; GFX12-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s2
+; GFX12-CU-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:16
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    ds_store_b32 v0, v1
+; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr addrspace(3) %out, i32 4
