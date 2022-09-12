@@ -119,8 +119,20 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
                         stable_hash_combine_string(MO.getSymbolName()));
 
   case MachineOperand::MO_RegisterMask:
-  case MachineOperand::MO_RegisterLiveOut:
-    return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getRegMask());
+  case MachineOperand::MO_RegisterLiveOut: {
+    const uint32_t *RegMask = MO.getRegMask();
+    const unsigned RegMaskSize = MO.getRegMaskSize();
+
+    if (RegMaskSize != 0) {
+      std::vector<llvm::stable_hash> RegMaskHashes(RegMask,
+                                                   RegMask + RegMaskSize);
+      return hash_combine(MO.getType(), MO.getTargetFlags(),
+                          stable_hash_combine_array(RegMaskHashes.data(),
+                                                    RegMaskHashes.size()));
+    }
+
+    return hash_combine(MO.getType(), MO.getTargetFlags());
+  }
 
   case MachineOperand::MO_ShuffleMask: {
     std::vector<llvm::stable_hash> ShuffleMaskHashes;
