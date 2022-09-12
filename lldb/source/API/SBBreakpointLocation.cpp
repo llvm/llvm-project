@@ -28,6 +28,8 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
+#include "SBBreakpointOptionCommon.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -196,6 +198,21 @@ bool SBBreakpointLocation::GetAutoContinue() {
     return loc_sp->IsAutoContinue();
   }
   return false;
+}
+
+void SBBreakpointLocation::SetCallback(SBBreakpointHitCallback callback,
+                                       void *baton) {
+  LLDB_INSTRUMENT_VA(this, callback, baton);
+
+  BreakpointLocationSP loc_sp = GetSP();
+
+  if (loc_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        loc_sp->GetTarget().GetAPIMutex());
+    BatonSP baton_sp(new SBBreakpointCallbackBaton(callback, baton));
+    loc_sp->SetCallback(SBBreakpointCallbackBaton::PrivateBreakpointHitCallback,
+                        baton_sp, false);
+  }
 }
 
 void SBBreakpointLocation::SetScriptCallbackFunction(
