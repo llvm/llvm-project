@@ -1060,18 +1060,3 @@ DWARFUnit::FindRnglistFromIndex(uint32_t index) {
     return maybe_offset.takeError();
   return FindRnglistFromOffset(*maybe_offset);
 }
-
-
-bool DWARFUnit::HasAny(llvm::ArrayRef<dw_tag_t> tags) {
-  ExtractUnitDIEIfNeeded();
-  if (m_dwo)
-    return m_dwo->HasAny(tags);
-
-  for (const auto &die: m_die_array) {
-    for (const auto tag: tags) {
-      if (tag == die.Tag())
-        return true;
-    }
-  }
-  return false;
-}

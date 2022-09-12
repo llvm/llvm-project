@@ -20,7 +20,6 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContextScope.h"
-#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
@@ -421,12 +420,10 @@ StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
   return m_sc;
 }
 
-VariableList *StackFrame::GetVariableList(bool get_file_globals,
-                                          Status *error_ptr) {
+VariableList *StackFrame::GetVariableList(bool get_file_globals) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_flags.IsClear(RESOLVED_VARIABLES)) {
     m_flags.Set(RESOLVED_VARIABLES);
-    m_variable_list_sp = std::make_shared<VariableList>();
 
     Block *frame_block = GetFrameBlock();
 
@@ -434,6 +431,7 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals,
       const bool get_child_variables = true;
       const bool can_create = true;
       const bool stop_if_child_block_is_inlined_function = true;
+      m_variable_list_sp = std::make_shared<VariableList>();
       frame_block->AppendBlockVariables(can_create, get_child_variables,
                                         stop_if_child_block_is_inlined_function,
                                         [](Variable *v) { return true; },
@@ -454,17 +452,6 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals,
         m_variable_list_sp->AddVariables(global_variable_list_sp.get());
       else
         m_variable_list_sp = global_variable_list_sp;
-    }
-  }
-
-  if (error_ptr && m_variable_list_sp->GetSize() == 0) {
-    // Check with the symbol file to check if there is an error for why we
-    // don't have variables that the user might need to know about.
-    GetSymbolContext(eSymbolContextEverything);
-    if (m_sc.module_sp) {
-      SymbolFile *sym_file = m_sc.module_sp->GetSymbolFile();
-      if (sym_file)
-        *error_ptr = sym_file->GetFrameVariableError(*this);
     }
   }
 
@@ -1160,16 +1147,16 @@ StackFrame::GetValueObjectForFrameVariable(const VariableSP &variable_sp,
                                            DynamicValueType use_dynamic) {
   ValueObjectSP valobj_sp;
   { // Scope for stack frame mutex.  We need to drop this mutex before we figure
-    // out the dynamic value.  That will require converting the StackID in the
-    // VO back to a StackFrame, which will in turn require locking the
-    // StackFrameList.  If we still hold the StackFrame mutex, we could suffer
-    // lock inversion against the pattern of getting the StackFrameList and
+    // out the dynamic value.  That will require converting the StackID in the 
+    // VO back to a StackFrame, which will in turn require locking the 
+    // StackFrameList.  If we still hold the StackFrame mutex, we could suffer 
+    // lock inversion against the pattern of getting the StackFrameList and 
     // then the stack frame, which is fairly common.
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (IsHistorical()) {
       return valobj_sp;
     }
-    VariableList *var_list = GetVariableList(true, nullptr);
+    VariableList *var_list = GetVariableList(true);
     if (var_list) {
       // Make sure the variable is a frame variable
       const uint32_t var_idx = var_list->FindIndexForVariable(variable_sp.get());
@@ -1711,7 +1698,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
   }
 
   const bool get_file_globals = false;
-  VariableList *variables = GetVariableList(get_file_globals, nullptr);
+  VariableList *variables = GetVariableList(get_file_globals);
 
   if (!variables) {
     return ValueObjectSP();
