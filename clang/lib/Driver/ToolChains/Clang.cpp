@@ -5399,6 +5399,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   else if (UnwindTables)
     CmdArgs.push_back("-funwind-tables=1");
 
+  if (Args.hasFlag(options::OPT_fyk_noinline_funcs_with_loops,
+                   options::OPT_fno_yk_noinline_funcs_with_loops, false))
+    CmdArgs.push_back("-fyk-noinline-funcs-with-loops");
+
   // Prepare `-aux-target-cpu` and `-aux-target-feature` unless
   // `--gpu-use-aux-triple-only` is specified.
   if (!Args.getLastArg(options::OPT_gpu_use_aux_triple_only) &&

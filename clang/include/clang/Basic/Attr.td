@@ -4072,3 +4072,10 @@ def YkOutline : InheritableAttr {
   let Documentation = [YkOutlineDocs];
   let SimpleHandler = 1;
 }
+
+def YkUnrollSafe : InheritableAttr {
+  let Spellings = [GCC<"yk_unroll_safe">, Declspec<"yk_unroll_safe">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [YkUnrollSafeDocs];
+  let SimpleHandler = 1;
+}

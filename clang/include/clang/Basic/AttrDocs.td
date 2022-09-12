@@ -6667,3 +6667,12 @@ def YkOutlineDocs : Documentation {
   to the annotated function.
   }];
 }
+
+def YkUnrollSafeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+  The ``yk_unroll_safe`` attribute tells the Yk JIT that during tracing, calls
+  to the annotated function can be inlined, even if it contains loops. By
+  default only calls to functions that contain no loops are inlined.
+  }];
+}
