@@ -12,14 +12,18 @@
 
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/DIEBuilder.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAddr.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
@@ -42,6 +46,16 @@ namespace llvm {
 class MCSymbol;
 
 namespace bolt {
+
+static void replaceLocValbyForm(DIEBuilder &DIEBldr, DIE &Die, DIEValue DIEVal,
+                                dwarf::Form Format, uint64_t NewVal) {
+  if (Format == dwarf::DW_FORM_loclistx)
+    DIEBldr.replaceValue(&Die, DIEVal.getAttribute(), Format,
+                         DIELocList(NewVal));
+  else
+    DIEBldr.replaceValue(&Die, DIEVal.getAttribute(), Format,
+                         DIEInteger(NewVal));
+}
 
 std::optional<AttrInfo>
 findAttributeInfo(const DWARFDie DIE,
@@ -580,12 +594,11 @@ void DebugLocWriter::init() {
 }
 
 uint32_t DebugLocWriter::LocSectionOffset = 0;
-void DebugLocWriter::addList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
-                             DebugInfoBinaryPatcher &DebugInfoPatcher,
-                             DebugAbbrevWriter &AbbrevWriter) {
-  const uint64_t AttrOffset = AttrVal.Offset;
+void DebugLocWriter::addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
+                             DebugLocationsVector &LocList) {
   if (LocList.empty()) {
-    DebugInfoPatcher.addLE32Patch(AttrOffset, DebugLocWriter::EmptyListOffset);
+    replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(),
+                        DebugLocWriter::EmptyListOffset);
     return;
   }
   // Since there is a separate DebugLocWriter for each thread,
@@ -605,8 +618,9 @@ void DebugLocWriter::addList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
   }
   LocStream->write_zeros(16);
   LocSectionOffset += 16;
-  LocListDebugInfoPatches.push_back({AttrOffset, EntryOffset});
-  DebugInfoPatcher.addLE32Patch(AttrOffset, EntryOffset);
+  LocListDebugInfoPatches.push_back({0xdeadbeee, EntryOffset}); // never seen
+                                                                // use
+  replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(), EntryOffset);
 }
 
 std::unique_ptr<DebugBufferVector> DebugLocWriter::getBuffer() {
@@ -614,8 +628,7 @@ std::unique_ptr<DebugBufferVector> DebugLocWriter::getBuffer() {
 }
 
 // DWARF 4: 2.6.2
-void DebugLocWriter::finalize(DebugInfoBinaryPatcher &DebugInfoPatcher,
-                              DebugAbbrevWriter &AbbrevWriter) {}
+void DebugLocWriter::finalize(DIEBuilder &DIEBldr, DIE &Die) {}
 
 static void writeEmptyListDwarf5(raw_svector_ostream &Stream) {
   support::endian::write(Stream, static_cast<uint32_t>(4), support::little);
@@ -629,14 +642,15 @@ static void writeEmptyListDwarf5(raw_svector_ostream &Stream) {
       Stream, static_cast<uint8_t>(dwarf::DW_LLE_end_of_list), support::little);
 }
 
-static void writeLegacyLocList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
-                               DebugInfoBinaryPatcher &DebugInfoPatcher,
+static void writeLegacyLocList(DIEValue &AttrInfo,
+                               DebugLocationsVector &LocList,
+                               DIEBuilder &DIEBldr, DIE &Die,
                                DebugAddrWriter &AddrWriter,
-                               DebugBufferVector &LocBuffer, DWARFUnit &CU,
+                               DebugBufferVector LocBuffer, DWARFUnit &CU,
                                raw_svector_ostream &LocStream) {
-  const uint64_t AttrOffset = AttrVal.Offset;
   if (LocList.empty()) {
-    DebugInfoPatcher.addLE32Patch(AttrOffset, DebugLocWriter::EmptyListOffset);
+    replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(),
+                        DebugLocWriter::EmptyListOffset);
     return;
   }
 
@@ -659,21 +673,20 @@ static void writeLegacyLocList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
   support::endian::write(LocStream,
                          static_cast<uint8_t>(dwarf::DW_LLE_end_of_list),
                          support::little);
-  DebugInfoPatcher.addLE32Patch(AttrOffset, EntryOffset);
+  replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(), EntryOffset);
 }
 
-static void writeDWARF5LocList(
-    uint32_t &NumberOfEntries, AttrInfo &AttrVal, DebugLocationsVector &LocList,
-    DebugInfoBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter,
-    DebugAddrWriter &AddrWriter, DebugBufferVector &LocBodyBuffer,
-    std::vector<uint32_t> &RelativeLocListOffsets, DWARFUnit &CU,
-    raw_svector_ostream &LocBodyStream) {
-  if (AttrVal.V.getForm() != dwarf::DW_FORM_loclistx) {
-    AbbrevWriter.addAttributePatch(CU, AttrVal.AbbrevDecl,
-                                   dwarf::DW_AT_location, dwarf::DW_AT_location,
-                                   dwarf::DW_FORM_loclistx);
-  }
-  DebugInfoPatcher.addUDataPatch(AttrVal.Offset, NumberOfEntries, AttrVal.Size);
+static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
+                               DebugLocationsVector &LocList, DIE &Die,
+                               DIEBuilder &DIEBldr, DebugAddrWriter &AddrWriter,
+                               DebugBufferVector &LocBodyBuffer,
+                               std::vector<uint32_t> &RelativeLocListOffsets,
+                               DWARFUnit &CU,
+                               raw_svector_ostream &LocBodyStream) {
+
+  replaceLocValbyForm(DIEBldr, Die, AttrInfo, dwarf::DW_FORM_loclistx,
+                      NumberOfEntries);
+
   RelativeLocListOffsets.push_back(LocBodyBuffer.size());
   ++NumberOfEntries;
   if (LocList.empty()) {
@@ -716,30 +729,29 @@ static void writeDWARF5LocList(
                            support::little);
 }
 
-void DebugLoclistWriter::addList(AttrInfo &AttrVal,
-                                 DebugLocationsVector &LocList,
-                                 DebugInfoBinaryPatcher &DebugInfoPatcher,
-                                 DebugAbbrevWriter &AbbrevWriter) {
+void DebugLoclistWriter::addList(DIEBuilder &DIEBldr, DIE &Die,
+                                 DIEValue &AttrInfo,
+                                 DebugLocationsVector &LocList) {
   if (DwarfVersion < 5)
-    writeLegacyLocList(AttrVal, LocList, DebugInfoPatcher, *AddrWriter,
-                       *LocBuffer, CU, *LocStream);
+    writeLegacyLocList(AttrInfo, LocList, DIEBldr, Die, *AddrWriter, *LocBuffer,
+                       CU, *LocStream);
   else
-    writeDWARF5LocList(NumberOfEntries, AttrVal, LocList, DebugInfoPatcher,
-                       AbbrevWriter, *AddrWriter, *LocBodyBuffer,
-                       RelativeLocListOffsets, CU, *LocBodyStream);
+    writeDWARF5LocList(NumberOfEntries, AttrInfo, LocList, Die, DIEBldr,
+                       *AddrWriter, *LocBodyBuffer, RelativeLocListOffsets, CU,
+                       *LocBodyStream);
 }
 
 uint32_t DebugLoclistWriter::LoclistBaseOffset = 0;
-void DebugLoclistWriter::finalizeDWARF5(
-    DebugInfoBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter) {
+void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
   if (LocBodyBuffer->empty()) {
-    std::optional<AttrInfo> AttrInfoVal =
-        findAttributeInfo(CU.getUnitDIE(), dwarf::DW_AT_loclists_base);
+    DIEValue LocListBaseAttrInfo =
+        Die.findAttribute(dwarf::DW_AT_loclists_base);
     // Pointing to first one, because it doesn't matter. There are no uses of it
     // in this CU.
-    if (!isSplitDwarf() && AttrInfoVal)
-      DebugInfoPatcher.addLE32Patch(AttrInfoVal->Offset,
-                                    getDWARF5RngListLocListHeaderSize());
+    if (!isSplitDwarf() && LocListBaseAttrInfo.getType())
+      DIEBldr.replaceValue(&Die, dwarf::DW_AT_loclists_base,
+                           LocListBaseAttrInfo.getForm(),
+                           DIEInteger(getDWARF5RngListLocListHeaderSize()));
     return;
   }
 
@@ -764,17 +776,16 @@ void DebugLoclistWriter::finalizeDWARF5(
   *LocStream << *LocBodyBuffer;
 
   if (!isSplitDwarf()) {
-    if (std::optional<AttrInfo> AttrInfoVal =
-            findAttributeInfo(CU.getUnitDIE(), dwarf::DW_AT_loclists_base))
-      DebugInfoPatcher.addLE32Patch(AttrInfoVal->Offset,
-                                    LoclistBaseOffset +
-                                        getDWARF5RngListLocListHeaderSize());
-    else {
-      AbbrevWriter.addAttribute(
-          CU, CU.getUnitDIE().getAbbreviationDeclarationPtr(),
-          dwarf::DW_AT_loclists_base, dwarf::DW_FORM_sec_offset);
-      DebugInfoPatcher.insertNewEntry(CU.getUnitDIE(),
-                                      LoclistBaseOffset + Header->size());
+    DIEValue LocListBaseAttrInfo =
+        Die.findAttribute(dwarf::DW_AT_loclists_base);
+    if (LocListBaseAttrInfo.getType()) {
+      DIEBldr.replaceValue(
+          &Die, dwarf::DW_AT_loclists_base, LocListBaseAttrInfo.getForm(),
+          DIEInteger(LoclistBaseOffset + getDWARF5RngListLocListHeaderSize()));
+    } else {
+      DIEBldr.addValue(&Die, dwarf::DW_AT_loclists_base,
+                       dwarf::DW_FORM_sec_offset,
+                       DIEInteger(LoclistBaseOffset + Header->size()));
     }
     LoclistBaseOffset += LocBuffer->size();
   }
@@ -783,10 +794,9 @@ void DebugLoclistWriter::finalizeDWARF5(
   clearList(*LocBodyBuffer);
 }
 
-void DebugLoclistWriter::finalize(DebugInfoBinaryPatcher &DebugInfoPatcher,
-                                  DebugAbbrevWriter &AbbrevWriter) {
+void DebugLoclistWriter::finalize(DIEBuilder &DIEBldr, DIE &Die) {
   if (DwarfVersion >= 5)
-    finalizeDWARF5(DebugInfoPatcher, AbbrevWriter);
+    finalizeDWARF5(DIEBldr, Die);
 }
 
 DebugAddrWriter *DebugLoclistWriter::AddrWriter = nullptr;

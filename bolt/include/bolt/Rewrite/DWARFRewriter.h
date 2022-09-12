@@ -9,11 +9,15 @@
 #ifndef BOLT_REWRITE_DWARF_REWRITER_H
 #define BOLT_REWRITE_DWARF_REWRITER_H
 
+#include "bolt/Core/DIEBuilder.h"
 #include "bolt/Core/DebugData.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/DIE.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -89,15 +93,28 @@ private:
 
   std::mutex LocListDebugInfoPatchesMutex;
 
+  /// Dwo id specific its .debug_info.dwo section content.
+  std::unordered_map<uint64_t, std::string> DwoDebufInfoMap;
+
+  /// Dwo id specific its .debug_abbrev.dwo section content.
+  std::unordered_map<uint64_t, std::string> DwoDebugAbbrevMap;
+
+  /// Dwo id specific its .debug_types.dwo section content.
+  std::unordered_map<uint64_t, std::string> DwoDebugTypeMap;
+
+  /// Dwo id specific its RangesBase.
+  std::unordered_map<uint64_t, uint64_t> DwoRangesBase;
+
+  std::unordered_map<DWARFUnit *, uint64_t> LineTablePatchMap;
+  std::unordered_map<DWARFUnit *, uint64_t> TypeUnitRelocMap;
+
   /// DWARFLegacy is all DWARF versions before DWARF 5.
   enum class DWARFVersion { DWARFLegacy, DWARF5 };
 
   /// Update debug info for all DIEs in \p Unit.
-  void updateUnitDebugInfo(DWARFUnit &Unit,
-                           DebugInfoBinaryPatcher &DebugInfoPatcher,
-                           DebugAbbrevWriter &AbbrevWriter,
+  void updateUnitDebugInfo(DWARFUnit &Unit, DIEBuilder &DIEBldr,
                            DebugLocWriter &DebugLocWriter,
-                           DebugRangesSectionWriter &RangesWriter,
+                           DebugRangesSectionWriter &RangesSectionWriter,
                            std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Patches the binary for an object's address ranges to be updated.
@@ -110,16 +127,15 @@ private:
   /// \p RangesBase if present, update \p DIE to use  DW_AT_GNU_ranges_base
   ///    attribute.
   void updateDWARFObjectAddressRanges(
-      const DWARFDie DIE, uint64_t DebugRangesOffset,
-      SimpleBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter,
-      uint64_t LowPCToUse, std::optional<uint64_t> RangesBase = std::nullopt);
+      DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die,
+      uint64_t DebugRangesOffset, uint64_t LowPCToUse,
+      std::optional<uint64_t> RangesBase = std::nullopt);
 
   std::unique_ptr<DebugBufferVector>
-  makeFinalLocListsSection(DebugInfoBinaryPatcher &DebugInfoPatcher,
-                           DWARFVersion Version);
+  makeFinalLocListsSection(DWARFVersion Version);
 
   /// Finalize debug sections in the main binary.
-  CUOffsetMap finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher);
+  CUOffsetMap finalizeDebugSections(DIEBuilder &DIEBlder);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.
@@ -170,8 +186,9 @@ private:
   /// Updates to the DIE should be synced with abbreviation updates using the
   /// function above.
   void convertToRangesPatchDebugInfo(
-      DWARFDie DIE, uint64_t RangesSectionOffset,
-      SimpleBinaryPatcher &DebugInfoPatcher, uint64_t LowPCToUse,
+      DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die,
+      uint64_t RangesSectionOffset, DIEValue &LowPCAttrInfo,
+      DIEValue &HighPCAttrInfo, uint64_t LowPCToUse,
       std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Helper function for creating and returning per-DWO patchers/writers.
@@ -194,9 +211,8 @@ private:
   /// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
   /// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
   /// for this contribution of \p Unit.
-  void addStringHelper(DebugInfoBinaryPatcher &DebugInfoPatcher,
-                       const DWARFUnit &Unit, const AttrInfo &AttrInfoVal,
-                       StringRef Str);
+  void addStringHelper(DIEBuilder &DIEBldr, DIE &Die, const DWARFUnit &Unit,
+                       DIEValue &DIEAttrInfo, StringRef Str);
 
 public:
   DWARFRewriter(BinaryContext &BC) : BC(BC) {}
@@ -236,6 +252,36 @@ public:
     auto Iter = LocListWritersByCU.find(DWOId);
     return Iter == LocListWritersByCU.end() ? nullptr
                                             : LocListWritersByCU[DWOId].get();
+  }
+
+  StringRef getDwoDebugInfoStr(uint64_t DWOId) {
+    return DwoDebufInfoMap[DWOId];
+  }
+
+  StringRef getDwoDebugAbbrevStr(uint64_t DWOId) {
+    return DwoDebugAbbrevMap[DWOId];
+  }
+
+  StringRef getDwoDebugTypeStr(uint64_t DWOId) {
+    return DwoDebugTypeMap[DWOId];
+  }
+
+  uint64_t getDwoRangesBase(uint64_t DWOId) { return DwoRangesBase[DWOId]; }
+
+  void setDwoDebugInfoStr(uint64_t DWOId, StringRef Str) {
+    DwoDebufInfoMap[DWOId] = Str.str();
+  }
+
+  void setDwoDebugAbbrevStr(uint64_t DWOId, StringRef Str) {
+    DwoDebugAbbrevMap[DWOId] = Str.str();
+  }
+
+  void setDwoDebugTypeStr(uint64_t DWOId, StringRef Str) {
+    DwoDebugTypeMap[DWOId] = Str.str();
+  }
+
+  void setDwoRangesBase(uint64_t DWOId, uint64_t RangesBase) {
+    DwoRangesBase[DWOId] = RangesBase;
   }
 };
 
