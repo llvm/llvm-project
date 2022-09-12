@@ -549,7 +549,7 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, i64 %b) {
 ; XOPAVX2-LABEL: 'splatvar_shift_v4i64'
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert = insertelement <4 x i64> undef, i64 %b, i32 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %splat = shufflevector <4 x i64> %insert, <4 x i64> undef, <4 x i32> zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %shift = ashr <4 x i64> %a, %splat
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %shift = ashr <4 x i64> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v4i64'
@@ -604,7 +604,7 @@ define <8 x i64> @splatvar_shift_v8i64(<8 x i64> %a, i64 %b) {
 ; XOPAVX2-LABEL: 'splatvar_shift_v8i64'
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert = insertelement <8 x i64> undef, i64 %b, i32 0
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %splat = shufflevector <8 x i64> %insert, <8 x i64> undef, <8 x i32> zeroinitializer
-; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %shift = ashr <8 x i64> %a, %splat
+; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %shift = ashr <8 x i64> %a, %splat
 ; XOPAVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %shift
 ;
 ; AVX512-LABEL: 'splatvar_shift_v8i64'
