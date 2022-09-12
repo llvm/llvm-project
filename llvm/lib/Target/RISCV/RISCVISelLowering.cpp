@@ -2012,8 +2012,7 @@ struct VIDSequence {
 static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
   unsigned NumElts = Op.getNumOperands();
   assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Unexpected BUILD_VECTOR");
-  if (!Op.getValueType().isInteger())
-    return None;
+  bool IsInteger = Op.getValueType().isInteger();
 
   Optional<unsigned> SeqStepDenom;
   Optional<int64_t> SeqStepNum, SeqAddend;
@@ -2024,12 +2023,30 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
     // when interpolating across them.
     if (Op.getOperand(Idx).isUndef())
       continue;
-    // The BUILD_VECTOR must be all constants.
-    if (!isa<ConstantSDNode>(Op.getOperand(Idx)))
-      return None;
 
-    uint64_t Val = Op.getConstantOperandVal(Idx) &
-                   maskTrailingOnes<uint64_t>(EltSizeInBits);
+    uint64_t Val;
+    if (IsInteger) {
+      // The BUILD_VECTOR must be all constants.
+      if (!isa<ConstantSDNode>(Op.getOperand(Idx)))
+        return None;
+      Val = Op.getConstantOperandVal(Idx) &
+            maskTrailingOnes<uint64_t>(EltSizeInBits);
+    } else {
+      // The BUILD_VECTOR must be all constants.
+      if (!isa<ConstantFPSDNode>(Op.getOperand(Idx)))
+        return None;
+      const APFloat &APF =
+          cast<ConstantFPSDNode>(Op.getOperand(Idx))->getValueAPF();
+      APSInt ValInt(EltSizeInBits, !APF.isNegative());
+      bool IsExact;
+      // If it is out of signed integer range, it will return an invalid
+      // operation.
+      if ((APF.convertToInteger(ValInt, RoundingMode::Dynamic, &IsExact) ==
+           APFloatBase::opInvalidOp) ||
+          !IsExact)
+        return None;
+      Val = ValInt.extractBitsAsZExtValue(EltSizeInBits, 0);
+    }
 
     if (PrevElt) {
       // Calculate the step since the last non-undef element, and ensure
@@ -2078,8 +2095,18 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
   for (unsigned Idx = 0; Idx < NumElts; Idx++) {
     if (Op.getOperand(Idx).isUndef())
       continue;
-    uint64_t Val = Op.getConstantOperandVal(Idx) &
-                   maskTrailingOnes<uint64_t>(EltSizeInBits);
+    uint64_t Val;
+    if (IsInteger) {
+      Val = Op.getConstantOperandVal(Idx) &
+            maskTrailingOnes<uint64_t>(EltSizeInBits);
+    } else {
+      const APFloat &APF =
+          cast<ConstantFPSDNode>(Op.getOperand(Idx))->getValueAPF();
+      APSInt ValInt(EltSizeInBits, !APF.isNegative());
+      bool DontCare;
+      APF.convertToInteger(ValInt, RoundingMode::Dynamic, &DontCare);
+      Val = ValInt.extractBitsAsZExtValue(EltSizeInBits, 0);
+    }
     uint64_t ExpectedVal =
         (int64_t)(Idx * (uint64_t)*SeqStepNum) / *SeqStepDenom;
     int64_t Addend = SignExtend64(Val - ExpectedVal, EltSizeInBits);
@@ -2289,27 +2316,36 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
          (StepOpcode == ISD::SHL && isUInt<5>(SplatStepVal))) &&
         isPowerOf2_32(StepDenominator) &&
         (SplatStepVal >= 0 || StepDenominator == 1) && isInt<5>(Addend)) {
-      SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
+      MVT VIDVT =
+          VT.isFloatingPoint() ? VT.changeVectorElementTypeToInteger() : VT;
+      MVT VIDContainerVT =
+          getContainerForFixedLengthVector(DAG, VIDVT, Subtarget);
+      SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, VIDContainerVT, Mask, VL);
       // Convert right out of the scalable type so we can use standard ISD
       // nodes for the rest of the computation. If we used scalable types with
       // these, we'd lose the fixed-length vector info and generate worse
       // vsetvli code.
-      VID = convertFromScalableVector(VT, VID, DAG, Subtarget);
+      VID = convertFromScalableVector(VIDVT, VID, DAG, Subtarget);
       if ((StepOpcode == ISD::MUL && SplatStepVal != 1) ||
           (StepOpcode == ISD::SHL && SplatStepVal != 0)) {
         SDValue SplatStep = DAG.getSplatBuildVector(
-            VT, DL, DAG.getConstant(SplatStepVal, DL, XLenVT));
-        VID = DAG.getNode(StepOpcode, DL, VT, VID, SplatStep);
+            VIDVT, DL, DAG.getConstant(SplatStepVal, DL, XLenVT));
+        VID = DAG.getNode(StepOpcode, DL, VIDVT, VID, SplatStep);
       }
       if (StepDenominator != 1) {
         SDValue SplatStep = DAG.getSplatBuildVector(
-            VT, DL, DAG.getConstant(Log2_64(StepDenominator), DL, XLenVT));
-        VID = DAG.getNode(ISD::SRL, DL, VT, VID, SplatStep);
+            VIDVT, DL, DAG.getConstant(Log2_64(StepDenominator), DL, XLenVT));
+        VID = DAG.getNode(ISD::SRL, DL, VIDVT, VID, SplatStep);
       }
       if (Addend != 0 || Negate) {
         SDValue SplatAddend = DAG.getSplatBuildVector(
-            VT, DL, DAG.getConstant(Addend, DL, XLenVT));
-        VID = DAG.getNode(Negate ? ISD::SUB : ISD::ADD, DL, VT, SplatAddend, VID);
+            VIDVT, DL, DAG.getConstant(Addend, DL, XLenVT));
+        VID = DAG.getNode(Negate ? ISD::SUB : ISD::ADD, DL, VIDVT, SplatAddend,
+                          VID);
+      }
+      if (VT.isFloatingPoint()) {
+        // TODO: Use vfwcvt to reduce register pressure.
+        VID = DAG.getNode(ISD::SINT_TO_FP, DL, VT, VID);
       }
       return VID;
     }
