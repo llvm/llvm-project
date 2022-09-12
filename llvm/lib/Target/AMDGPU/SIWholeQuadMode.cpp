@@ -1448,14 +1448,10 @@ void SIWholeQuadMode::lowerCopyInstrs() {
     assert(MI->getNumExplicitOperands() == 2);
 
     const Register Reg = MI->getOperand(0).getReg();
-    const unsigned SubReg = MI->getOperand(0).getSubReg();
 
-    if (TRI->isVGPR(*MRI, Reg)) {
-      const TargetRegisterClass *regClass =
-          Reg.isVirtual() ? MRI->getRegClass(Reg) : TRI->getPhysRegClass(Reg);
-      if (SubReg)
-        regClass = TRI->getSubRegClass(regClass, SubReg);
-
+    const TargetRegisterClass *regClass =
+        TRI->getRegClassForOperandReg(*MRI, MI->getOperand(0));
+    if (TRI->isVGPRClass(regClass)) {
       const unsigned MovOp = TII->getMovOpcode(regClass);
       MI->setDesc(TII->get(MovOp));
 
