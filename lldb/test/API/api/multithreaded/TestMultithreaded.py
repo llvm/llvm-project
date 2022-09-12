@@ -18,6 +18,7 @@ class SBBreakpointCallbackCase(TestBase):
         self.generateSource('driver.cpp')
         self.generateSource('listener_test.cpp')
         self.generateSource('test_breakpoint_callback.cpp')
+        self.generateSource('test_breakpoint_location_callback.cpp')
         self.generateSource('test_listener_event_description.cpp')
         self.generateSource('test_listener_event_process_state.cpp')
         self.generateSource('test_listener_resume.cpp')
@@ -40,6 +41,15 @@ class SBBreakpointCallbackCase(TestBase):
         """Test the that SBBreakpoint callback is invoked when a breakpoint is hit. """
         self.build_and_test('driver.cpp test_breakpoint_callback.cpp',
                             'test_breakpoint_callback')
+
+    @skipIfRemote
+    @skipIfNoSBHeaders
+    # clang-cl does not support throw or catch (llvm.org/pr24538)
+    @skipIfWindows
+    def test_breakpoint_location_callback(self):
+        """Test the that SBBreakpointLocation callback is invoked when a breakpoint is hit. """
+        self.build_and_test('driver.cpp test_breakpoint_location_callback.cpp',
+                            'test_breakpoint_location_callback')
 
     @skipIfRemote
     @skipIfNoSBHeaders
