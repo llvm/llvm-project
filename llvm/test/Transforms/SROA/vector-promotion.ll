@@ -534,10 +534,9 @@ define <2 x float> @test11(<4 x i16> %x, i32 %y) {
 ; heuristic for making a deterministic decision.
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[Y:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[A_SROA_0_4_VEC_EXPAND:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
-; CHECK-NEXT:    [[A_SROA_0_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i16> [[A_SROA_0_4_VEC_EXPAND]], <4 x i16> [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[A_SROA_0_4_VECBLEND]] to <2 x float>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[A_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[A_SROA_0_4_VEC_INSERT]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
 entry:
@@ -564,4 +563,68 @@ define <4 x float> @test12(<4 x i32> %val) {
   %vec = load <4 x float>, ptr %a
 
   ret <4 x float> %vec
+}
+
+define <2 x i64> @test13(i32 %a, i32 %b, i32 %c, i32 %d) {
+; Ensure that we can promote an alloca that needs to be
+; cast to a different vector type
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_SROA_0_0_VEC_INSERT:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[X_SROA_0_4_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_0_VEC_INSERT]], i32 [[B:%.*]], i32 1
+; CHECK-NEXT:    [[X_SROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_4_VEC_INSERT]], i32 [[C:%.*]], i32 2
+; CHECK-NEXT:    [[X_SROA_0_12_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X_SROA_0_8_VEC_INSERT]], i32 [[D:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[X_SROA_0_12_VEC_INSERT]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP0]]
+;
+entry:
+  %x = alloca [4 x i32]
+
+  store i32 %a, ptr %x
+  %x.tmp2 = getelementptr inbounds i32, ptr %x, i64 1
+  store i32 %b, ptr %x.tmp2
+  %x.tmp3 = getelementptr inbounds i32, ptr %x, i64 2
+  store i32 %c, ptr %x.tmp3
+  %x.tmp4 = getelementptr inbounds i32, ptr %x, i64 3
+  store i32 %d, ptr %x.tmp4
+
+
+  %result = load <2 x i64>, ptr %x
+
+  ret <2 x i64> %result
+}
+
+define i32 @test14(<2 x i64> %x) {
+; Ensure that we can promote an alloca that needs to be
+; cast to a different vector type
+; CHECK-LABEL: @test14(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[X_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[X_SROA_0_4_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[X_SROA_0_8_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
+; CHECK-NEXT:    [[X_SROA_0_12_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X_SROA_0_0_VEC_EXTRACT]], [[X_SROA_0_4_VEC_EXTRACT]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X_SROA_0_8_VEC_EXTRACT]], [[X_SROA_0_12_VEC_EXTRACT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD]], [[ADD1]]
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+entry:
+
+  %x.addr = alloca <2 x i64>, align 16
+  store <2 x i64> %x, <2 x i64>* %x.addr, align 16
+  %x.cast = bitcast <2 x i64>* %x.addr to i32*
+
+  %a = load i32, ptr %x.cast
+  %x.tmp2 = getelementptr inbounds i32, ptr %x.cast, i64 1
+  %b = load i32, ptr %x.tmp2
+  %x.tmp3 = getelementptr inbounds i32, ptr %x.cast, i64 2
+  %c = load i32, ptr %x.tmp3
+  %x.tmp4 = getelementptr inbounds i32, ptr %x.cast, i64 3
+  %d = load i32, ptr %x.tmp4
+
+  %add = add i32 %a, %b
+  %add1 = add i32 %c, %d
+  %add2 = add i32 %add, %add1
+  ret i32 %add2
 }
