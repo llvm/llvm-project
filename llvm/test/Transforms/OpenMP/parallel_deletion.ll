@@ -279,7 +279,6 @@ entry:
 ;
 ; FIXME: We do not realize that `a` is dead and all accesses to it can be removed
 ;        making the parallel regions readonly and deletable.
-;        This is still true except the (non-atomic) reduction update is already deleted.
 define void @delete_parallel_2() {
 ; CHECK-LABEL: define {{[^@]+}}@delete_parallel_2() {
 ; CHECK-NEXT:  entry:
@@ -554,6 +553,10 @@ define internal void @.omp_outlined..6(i32* noalias %.global_tid., i32* noalias 
 ; CHECK-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       .omp.reduction.case1:
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A1]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    store i32 [[ADD]], i32* [[A]], align 4
 ; CHECK-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* noundef nonnull @[[GLOB2]], i32 [[TMP2]], [8 x i32]* noundef nonnull @.gomp_critical_user_.reduction.var)
 ; CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 ; CHECK:       .omp.reduction.case2:

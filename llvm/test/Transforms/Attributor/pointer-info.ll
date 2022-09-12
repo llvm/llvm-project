@@ -21,12 +21,13 @@ define void @foo(i8* %ptr) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: (i8* nocapture nofree readnone [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-SAME: (i8* nocapture nofree writeonly [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_TEST_A:%.*]], align 8
 ; IS__CGSCC____-NEXT:    br label [[CALL_BR:%.*]]
 ; IS__CGSCC____:       call.br:
 ; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], %struct.test.a* [[TMP0]], i64 0, i32 2
+; IS__CGSCC____-NEXT:    store i8* [[PTR]], i8** [[TMP1]], align 8
 ; IS__CGSCC____-NEXT:    tail call void @bar(%struct.test.a* noalias nocapture nofree noundef nonnull readnone byval([[STRUCT_TEST_A]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC____-NEXT:    ret void
 ;

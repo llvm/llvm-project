@@ -27,9 +27,7 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
-#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -47,7 +45,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <cstdint>
 
 #ifdef EXPENSIVE_CHECKS
 #include "llvm/IR/Verifier.h"
@@ -222,9 +219,7 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
 }
 
 Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
-                                    const TargetLibraryInfo *TLI,
-                                    const DataLayout &DL,
-                                    AA::OffsetAndSize *OASPtr) {
+                                    const TargetLibraryInfo *TLI) {
   if (isa<AllocaInst>(Obj))
     return UndefValue::get(&Ty);
   if (Constant *Init = getInitialValueOfAllocation(&Obj, TLI, &Ty))
@@ -236,25 +231,7 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
     return nullptr;
   if (!GV->hasInitializer())
     return UndefValue::get(&Ty);
-
-  // Handle constant initializers by extracting the relevant parts for
-  // aggregates.
-  Constant *C = GV->getInitializer();
-  if (OASPtr && !OASPtr->offsetOrSizeAreUnknown() &&
-      isa<ConstantAggregate>(C)) {
-    Type *CTy = C->getType();
-    APInt Offset = APInt(64, OASPtr->getOffset());
-    Optional<APInt> Idx = DL.getGEPIndexForOffset(CTy, Offset);
-    // Check if the indexing worked out properly.
-    // TODO: Handle partial accesses, e.g., Offset is > 0 or Size < CTy.size().
-    if (Idx && Offset.isZero() &&
-        DL.getTypeSizeInBits(CTy) == uint64_t(OASPtr->getSize() * 8)) {
-      if (auto *Folded =
-              ConstantFoldExtractValueInstruction(C, Idx->getZExtValue()))
-        C = Folded;
-    }
-  }
-  return dyn_cast_or_null<Constant>(getWithType(*C, Ty));
+  return dyn_cast_or_null<Constant>(getWithType(*GV->getInitializer(), Ty));
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {
@@ -464,11 +441,10 @@ static bool getPotentialCopiesOfMemoryValue(
     // object.
     bool HasBeenWrittenTo = false;
 
-    AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnknown();
     auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(*Obj),
                                          DepClassTy::NONE);
     if (!PI.forallInterferingAccesses(A, QueryingAA, I, CheckAccess,
-                                      HasBeenWrittenTo, &OAS)) {
+                                      HasBeenWrittenTo)) {
       LLVM_DEBUG(
           dbgs()
           << "Failed to verify all interfering accesses for underlying object: "
@@ -476,15 +452,10 @@ static bool getPotentialCopiesOfMemoryValue(
       return false;
     }
 
-    if (IsLoad && !HasBeenWrittenTo && !OAS.offsetAndSizeAreUnknown()) {
-      const DataLayout &DL = A.getDataLayout();
-      Value *InitialValue =
-          AA::getInitialValueForObj(*Obj, *I.getType(), TLI, DL, &OAS);
-      if (!InitialValue) {
-        LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
-                             "underlying object, abort!\n");
+    if (IsLoad && !HasBeenWrittenTo) {
+      Value *InitialValue = AA::getInitialValueForObj(*Obj, *I.getType(), TLI);
+      if (!InitialValue)
         return false;
-      }
       CheckForNullOnlyAndUndef(InitialValue, /* IsExact */ true);
       if (NullRequired && !NullOnly) {
         LLVM_DEBUG(dbgs() << "Non exact access but initial value that is not "
@@ -622,7 +593,8 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
     // Check if the current instruction is already known to reach the ToFn.
     const auto &FnReachabilityAA = A.getAAFor<AAFunctionReachability>(
         QueryingAA, IRPosition::function(*FromFn), DepClassTy::OPTIONAL);
-    bool Result = FnReachabilityAA.instructionCanReach(A, *CurFromI, ToFn);
+    bool Result = FnReachabilityAA.instructionCanReach(
+        A, *CurFromI, ToFn);
     LLVM_DEBUG(dbgs() << "[AA] " << *CurFromI << " in @" << FromFn->getName()
                       << " " << (Result ? "can potentially " : "cannot ")
                       << "reach @" << ToFn.getName() << " [FromFn]\n");
