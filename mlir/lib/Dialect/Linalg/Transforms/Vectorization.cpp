@@ -1488,13 +1488,14 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
   Value conv1dSliceAsContraction(OpBuilder &b, Location loc, Value lhs,
                                  Value rhs, Value res) {
-    StringRef par = Par().strRef, red = Red().strRef;
+    vector::IteratorType par = vector::IteratorType::parallel;
+    vector::IteratorType red = vector::IteratorType::reduction;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
     return builder.create<vector::ContractionOp>(
         loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
-        /*iteratorTypes=*/ArrayRef<StringRef>{par, par, par, red});
+        /*iteratorTypes=*/ArrayRef<vector::IteratorType>{par, par, par, red});
   }
 
   /// Generate a vector implementation for:

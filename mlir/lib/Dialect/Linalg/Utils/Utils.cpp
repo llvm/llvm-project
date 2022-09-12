@@ -199,6 +199,16 @@ bool isPermutation(ArrayRef<int64_t> permutation) {
   return count(indexCounts, 1) == static_cast<int64_t>(permutation.size());
 }
 
+bool isParallelIterator(Attribute attr) {
+  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
+  return strAttr && strAttr.getValue() == getParallelIteratorTypeName();
+}
+
+bool isReductionIterator(Attribute attr) {
+  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
+  return strAttr && strAttr.getValue() == getReductionIteratorTypeName();
+}
+
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
 Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim) {

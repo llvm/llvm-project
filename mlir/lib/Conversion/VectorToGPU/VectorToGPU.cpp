@@ -74,9 +74,9 @@ static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
   AffineExpr m, n, k;
   bindDims(contract.getContext(), m, n, k);
   auto iteratorTypes = contract.getIteratorTypes().getValue();
-  if (!(isParallelIterator(iteratorTypes[0]) &&
-        isParallelIterator(iteratorTypes[1]) &&
-        isReductionIterator(iteratorTypes[2])))
+  if (!(vector::isParallelIterator(iteratorTypes[0]) &&
+        vector::isParallelIterator(iteratorTypes[1]) &&
+        vector::isReductionIterator(iteratorTypes[2])))
     return false;
 
   // The contract needs to represent a matmul to be able to convert to
@@ -296,9 +296,9 @@ struct PrepareContractToGPUMMA
     static constexpr std::array<int64_t, 2> perm = {1, 0};
     auto iteratorTypes = op.getIteratorTypes().getValue();
     SmallVector<AffineMap, 4> maps = op.getIndexingMapsArray();
-    if (!(isParallelIterator(iteratorTypes[0]) &&
-          isParallelIterator(iteratorTypes[1]) &&
-          isReductionIterator(iteratorTypes[2])))
+    if (!(vector::isParallelIterator(iteratorTypes[0]) &&
+          vector::isParallelIterator(iteratorTypes[1]) &&
+          vector::isReductionIterator(iteratorTypes[2])))
       return failure();
     //
     // Two outer parallel, one inner reduction (matmat flavor).
