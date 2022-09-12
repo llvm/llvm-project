@@ -1934,6 +1934,12 @@ public:
     return MaxAtomicSizeInBitsSupported;
   }
 
+  /// Returns the size in bits of the maximum div/rem the backend supports.
+  /// Larger operations will be expanded by ExpandLargeDivRem.
+  unsigned getMaxDivRemBitWidthSupported() const {
+    return MaxDivRemBitWidthSupported;
+  }
+
   /// Returns the size of the smallest cmpxchg or ll/sc instruction
   /// the backend supports.  Any smaller operations are widened in
   /// AtomicExpandPass.
@@ -2489,6 +2495,12 @@ protected:
   /// AtomicExpandPass into an __atomic_* library call.
   void setMaxAtomicSizeInBitsSupported(unsigned SizeInBits) {
     MaxAtomicSizeInBitsSupported = SizeInBits;
+  }
+
+  /// Set the size in bits of the maximum div/rem the backend supports.
+  /// Larger operations will be expanded by ExpandLargeDivRem.
+  void setMaxDivRemBitWidthSupported(unsigned SizeInBits) {
+    MaxDivRemBitWidthSupported = SizeInBits;
   }
 
   /// Sets the minimum cmpxchg or ll/sc size supported by the backend.
@@ -3178,6 +3190,10 @@ private:
   /// Size in bits of the maximum atomics size the backend supports.
   /// Accesses larger than this will be expanded by AtomicExpandPass.
   unsigned MaxAtomicSizeInBitsSupported;
+
+  /// Size in bits of the maximum div/rem size the backend supports.
+  /// Larger operations will be expanded by ExpandLargeDivRem.
+  unsigned MaxDivRemBitWidthSupported;
 
   /// Size in bits of the minimum cmpxchg or ll/sc operation the
   /// backend supports.
@@ -4573,6 +4589,7 @@ public:
   //===--------------------------------------------------------------------===//
   // Div utility functions
   //
+
   SDValue BuildSDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,
                     SmallVectorImpl<SDNode *> &Created) const;
   SDValue BuildUDIV(SDNode *N, SelectionDAG &DAG, bool IsAfterLegalization,

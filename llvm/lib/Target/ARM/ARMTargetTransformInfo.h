@@ -207,8 +207,6 @@ public:
     return isLegalMaskedGather(Ty, Alignment);
   }
 
-  unsigned maxLegalDivRemBitWidth() const { return 64; }
-
   InstructionCost getMemcpyCost(const Instruction *I);
 
   int getNumMemOps(const IntrinsicInst *I) const;
