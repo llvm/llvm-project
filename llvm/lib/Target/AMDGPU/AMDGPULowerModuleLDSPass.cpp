@@ -32,6 +32,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -144,6 +145,79 @@ class AMDGPULowerModuleLDS : public ModulePass {
                        "");
   }
 
+  static bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M) {
+    // Constants are uniqued within LLVM. A ConstantExpr referring to a LDS
+    // global may have uses from multiple different functions as a result.
+    // This pass specialises LDS variables with respect to the kernel that
+    // allocates them.
+
+    // This is semantically equivalent to:
+    // for (auto &F : M.functions())
+    //   for (auto &BB : F)
+    //     for (auto &I : BB)
+    //       for (Use &Op : I.operands())
+    //         if (constantExprUsesLDS(Op))
+    //           replaceConstantExprInFunction(I, Op);
+
+    bool Changed = false;
+
+    // Find all ConstantExpr that are direct users of an LDS global
+    SmallVector<ConstantExpr *> Stack;
+    for (auto &GV : M.globals())
+      if (AMDGPU::isLDSVariableToLower(GV))
+        for (User *U : GV.users())
+          if (ConstantExpr *C = dyn_cast<ConstantExpr>(U))
+            Stack.push_back(C);
+
+    // Expand to include constexpr users of direct users
+    SetVector<ConstantExpr *> ConstExprUsersOfLDS;
+    while (!Stack.empty()) {
+      ConstantExpr *V = Stack.pop_back_val();
+      if (ConstExprUsersOfLDS.contains(V))
+        continue;
+
+      ConstExprUsersOfLDS.insert(V);
+
+      for (auto *Nested : V->users())
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Nested))
+          Stack.push_back(CE);
+    }
+
+    // Find all instructions that use any of the ConstExpr users of LDS
+    SetVector<Instruction *> InstructionWorklist;
+    for (ConstantExpr *CE : ConstExprUsersOfLDS)
+      for (User *U : CE->users())
+        if (auto *I = dyn_cast<Instruction>(U))
+          InstructionWorklist.insert(I);
+
+    // Replace those ConstExpr operands with instructions
+    while (!InstructionWorklist.empty()) {
+      Instruction *I = InstructionWorklist.pop_back_val();
+      for (Use &U : I->operands()) {
+
+        auto *BI = I;
+        if (auto *Phi = dyn_cast<PHINode>(I)) {
+          BasicBlock *BB = Phi->getIncomingBlock(U);
+          BasicBlock::iterator It = BB->getFirstInsertionPt();
+          assert(It != BB->end() && "Unexpected empty basic block");
+          BI = &(*(It));
+        }
+
+        if (ConstantExpr *C = dyn_cast<ConstantExpr>(U.get())) {
+          if (ConstExprUsersOfLDS.contains(C)) {
+            Changed = true;
+            Instruction *NI = C->getAsInstruction(BI);
+            InstructionWorklist.insert(NI);
+            U.set(NI);
+            C->removeDeadConstantUsers();
+          }
+        }
+      }
+    }
+
+    return Changed;
+  }
+
 public:
   static char ID;
 
@@ -155,6 +229,8 @@ public:
     LLVMContext &Ctx = M.getContext();
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
+
+    Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
 
     // Move variables used by functions into amdgcn.module.lds
     std::vector<GlobalVariable *> ModuleScopeVariables =
@@ -216,16 +292,6 @@ public:
       std::vector<GlobalVariable *> KernelUsedVariables =
           AMDGPU::findLDSVariablesToLower(M, &F);
 
-      // Replace all constant uses with instructions if they belong to the
-      // current kernel. Unnecessary, removing will cause test churn.
-      for (GlobalVariable *GV : KernelUsedVariables) {
-        for (User *U : make_early_inc_range(GV->users())) {
-          if (ConstantExpr *C = dyn_cast<ConstantExpr>(U))
-            AMDGPU::replaceConstantUsesInFunction(C, &F);
-        }
-        GV->removeDeadConstantUsers();
-      }
-
       if (!KernelUsedVariables.empty()) {
         std::string VarName =
             (Twine("llvm.amdgcn.kernel.") + F.getName() + ".lds").str();
@@ -245,9 +311,12 @@ public:
     }
 
     for (auto &GV : make_early_inc_range(M.globals()))
-      if (AMDGPU::isLDSVariableToLower(GV) && GV.use_empty())
-        GV.eraseFromParent();
-    
+      if (AMDGPU::isLDSVariableToLower(GV)) {
+        GV.removeDeadConstantUsers();
+        if (GV.use_empty())
+          GV.eraseFromParent();
+      }
+
     return Changed;
   }
 
@@ -361,8 +430,7 @@ private:
 
     StructType *LDSTy = StructType::create(Ctx, LocalVarTypes, VarName + ".t");
 
-    Align StructAlign =
-        AMDGPU::getAlign(DL, LocalVars[0]);
+    Align StructAlign = AMDGPU::getAlign(DL, LocalVars[0]);
 
     GlobalVariable *SGV = new GlobalVariable(
         M, LDSTy, false, GlobalValue::InternalLinkage, UndefValue::get(LDSTy),
