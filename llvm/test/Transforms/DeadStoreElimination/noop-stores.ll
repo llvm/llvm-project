@@ -673,3 +673,118 @@ if.then:
 if.end:
   ret i8* %3
 }
+
+define void @store_same_i32_to_mayalias_loc(i32* %q, i32* %p) {
+; CHECK-LABEL: @store_same_i32_to_mayalias_loc(
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V]], i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, i32* %p, align 4
+  store i32 %v, i32* %q, align 4
+  store i32 %v, i32* %p, align 4
+  ret void
+}
+
+define void @store_same_i32_to_mayalias_loc_unalign(i32* %q, i32* %p) {
+; CHECK-LABEL: @store_same_i32_to_mayalias_loc_unalign(
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 1
+; CHECK-NEXT:    store i32 [[V]], i32* [[Q:%.*]], align 1
+; CHECK-NEXT:    store i32 [[V]], i32* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, i32* %p, align 1
+  store i32 %v, i32* %q, align 1
+  store i32 %v, i32* %p, align 1
+  ret void
+}
+
+define void @store_same_i12_to_mayalias_loc(i12* %q, i12* %p) {
+; CHECK-LABEL: @store_same_i12_to_mayalias_loc(
+; CHECK-NEXT:    [[V:%.*]] = load i12, i12* [[P:%.*]], align 2
+; CHECK-NEXT:    store i12 [[V]], i12* [[Q:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+  %v = load i12, i12* %p, align 2
+  store i12 %v, i12* %q, align 2
+  store i12 %v, i12* %p, align 2
+  ret void
+}
+
+define void @store_same_i12_to_mayalias_loc_unalign(i12* %q, i12* %p) {
+; CHECK-LABEL: @store_same_i12_to_mayalias_loc_unalign(
+; CHECK-NEXT:    [[V:%.*]] = load i12, i12* [[P:%.*]], align 1
+; CHECK-NEXT:    store i12 [[V]], i12* [[Q:%.*]], align 1
+; CHECK-NEXT:    store i12 [[V]], i12* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %v = load i12, i12* %p, align 1
+  store i12 %v, i12* %q, align 1
+  store i12 %v, i12* %p, align 1
+  ret void
+}
+
+define void @store_same_ptr_to_mayalias_loc(i32** %q, i32** %p) {
+; CHECK-LABEL: @store_same_ptr_to_mayalias_loc(
+; CHECK-NEXT:    [[V:%.*]] = load i32*, i32** [[P:%.*]], align 8
+; CHECK-NEXT:    store i32* [[V]], i32** [[Q:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %v = load i32*, i32** %p, align 8
+  store i32* %v, i32** %q, align 8
+  store i32* %v, i32** %p, align 8
+  ret void
+}
+
+define void @store_same_scalable_to_mayalias_loc(<vscale x 4 x i32>* %q, <vscale x 4 x i32>* %p) {
+; CHECK-LABEL: @store_same_scalable_to_mayalias_loc(
+; CHECK-NEXT:    [[V:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[P:%.*]], align 4
+; CHECK-NEXT:    store <vscale x 4 x i32> [[V]], <vscale x 4 x i32>* [[Q:%.*]], align 4
+; CHECK-NEXT:    store <vscale x 4 x i32> [[V]], <vscale x 4 x i32>* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = load <vscale x 4 x i32>, <vscale x 4 x i32>* %p, align 4
+  store <vscale x 4 x i32> %v, <vscale x 4 x i32>* %q, align 4
+  store <vscale x 4 x i32> %v, <vscale x 4 x i32>* %p, align 4
+  ret void
+}
+
+define void @store_same_i32_to_mayalias_loc_inconsistent_align(i32* %q, i32* %p) {
+; CHECK-LABEL: @store_same_i32_to_mayalias_loc_inconsistent_align(
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 2
+; CHECK-NEXT:    store i32 [[V]], i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V]], i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = load i32, i32* %p, align 2
+  store i32 %v, i32* %q, align 4
+  store i32 %v, i32* %p, align 4
+  ret void
+}
+
+define void @do_not_crash_on_liveonentrydef(i1 %c, i8* %p, i8* noalias %q) {
+; CHECK-LABEL: @do_not_crash_on_liveonentrydef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    store i8 0, i8* [[Q:%.*]], align 1
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[Q]], align 1
+; CHECK-NEXT:    store i8 0, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[V]], i8* [[Q]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  store i8 0, i8* %q, align 1
+  br label %join
+
+join:
+  %v = load i8, i8* %q, align 1
+  store i8 0, i8* %p, align 1
+  store i8 %v, i8* %q, align 1
+  ret void
+}
