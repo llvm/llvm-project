@@ -24,7 +24,8 @@ void InitializeX86ExegesisTarget();
 
 class X86TestBase : public ::testing::Test {
 protected:
-  X86TestBase() : State("x86_64-unknown-linux", "haswell") {}
+  X86TestBase()
+      : State(cantFail(LLVMState::Create("x86_64-unknown-linux", "haswell"))) {}
 
   static void SetUpTestCase() {
     LLVMInitializeX86TargetInfo();

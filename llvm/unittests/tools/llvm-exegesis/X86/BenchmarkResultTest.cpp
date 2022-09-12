@@ -28,6 +28,8 @@ using ::testing::Property;
 namespace llvm {
 namespace exegesis {
 
+void InitializeX86ExegesisTarget();
+
 static std::string Dump(const MCInst &McInst) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
@@ -51,9 +53,11 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   LLVMInitializeX86TargetInfo();
   LLVMInitializeX86Target();
   LLVMInitializeX86TargetMC();
+  InitializeX86ExegesisTarget();
 
   // Read benchmarks.
-  const LLVMState State("x86_64-unknown-linux", "haswell");
+  const LLVMState State =
+      cantFail(LLVMState::Create("x86_64-unknown-linux", "haswell"));
 
   ExitOnError ExitOnErr;
 
