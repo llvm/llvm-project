@@ -495,10 +495,6 @@ class LLVMConfig(object):
 
         self.clear_environment(possibly_dangerous_env_vars)
 
-        # Make the default module cache path invalid so that tests are forced to
-        # provide a cache path if they use implicit modules.
-        self.with_environment('CLANG_MODULE_CACHE_PATH', '/dev/null')
-
         # Tweak the PATH to include the tools dir and the scripts dir.
         # Put Clang first to avoid LLVM from overriding out-of-tree clang
         # builds.
