@@ -91,6 +91,9 @@ public:
 
   BitVector getStrictlyReservedRegs(const MachineFunction &MF) const;
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+  llvm::Optional<std::string>
+  explainReservedReg(const MachineFunction &MF,
+                     MCRegister PhysReg) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
   const TargetRegisterClass *
