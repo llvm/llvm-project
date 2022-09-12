@@ -1604,22 +1604,50 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateICmpNE(V, ConstantInt::get(VTy, 0), name);
   }
 
+  Type *ptrToIntPtrType(Type *PtrTy) const {
+    if (FixedVectorType *VectTy = dyn_cast<FixedVectorType>(PtrTy)) {
+      return FixedVectorType::get(ptrToIntPtrType(VectTy->getElementType()),
+                                  VectTy->getNumElements());
+    }
+    assert(PtrTy->isIntOrPtrTy());
+    return MS.IntptrTy;
+  }
+
+  Type *getPtrToShadowPtrType(Type *IntPtrTy, Type *ShadowTy) const {
+    if (FixedVectorType *VectTy = dyn_cast<FixedVectorType>(IntPtrTy)) {
+      return FixedVectorType::get(
+          getPtrToShadowPtrType(VectTy->getElementType(), ShadowTy),
+          VectTy->getNumElements());
+    }
+    assert(IntPtrTy == MS.IntptrTy);
+    return ShadowTy->getPointerTo();
+  }
+
+  Constant *constToIntPtr(Type *IntPtrTy, uint64_t C) const {
+    if (FixedVectorType *VectTy = dyn_cast<FixedVectorType>(IntPtrTy)) {
+      return ConstantDataVector::getSplat(
+          VectTy->getNumElements(), constToIntPtr(VectTy->getElementType(), C));
+    }
+    assert(IntPtrTy == MS.IntptrTy);
+    return ConstantInt::get(MS.IntptrTy, C);
+  }
+
   /// Compute the integer shadow offset that corresponds to a given
   /// application address.
   ///
   /// Offset = (Addr & ~AndMask) ^ XorMask
+  /// Addr can be a ptr or <N x ptr>. In both cases ShadowTy the shadow type of
+  /// a single pointee.
+  /// Returns <shadow_ptr, origin_ptr> or <<N x shadow_ptr>, <N x origin_ptr>>.
   Value *getShadowPtrOffset(Value *Addr, IRBuilder<> &IRB) {
-    Value *OffsetLong = IRB.CreatePointerCast(Addr, MS.IntptrTy);
+    Type *IntptrTy = ptrToIntPtrType(Addr->getType());
+    Value *OffsetLong = IRB.CreatePointerCast(Addr, IntptrTy);
 
-    uint64_t AndMask = MS.MapParams->AndMask;
-    if (AndMask)
-      OffsetLong =
-          IRB.CreateAnd(OffsetLong, ConstantInt::get(MS.IntptrTy, ~AndMask));
+    if (uint64_t AndMask = MS.MapParams->AndMask)
+      OffsetLong = IRB.CreateAnd(OffsetLong, constToIntPtr(IntptrTy, ~AndMask));
 
-    uint64_t XorMask = MS.MapParams->XorMask;
-    if (XorMask)
-      OffsetLong =
-          IRB.CreateXor(OffsetLong, ConstantInt::get(MS.IntptrTy, XorMask));
+    if (uint64_t XorMask = MS.MapParams->XorMask)
+      OffsetLong = IRB.CreateXor(OffsetLong, constToIntPtr(IntptrTy, XorMask));
     return OffsetLong;
   }
 
@@ -1628,40 +1656,43 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Shadow = ShadowBase + Offset
   /// Origin = (OriginBase + Offset) & ~3ULL
+  /// Addr can be a ptr or <N x ptr>. In both cases ShadowTy the shadow type of
+  /// a single pointee.
+  /// Returns <shadow_ptr, origin_ptr> or <<N x shadow_ptr>, <N x origin_ptr>>.
   std::pair<Value *, Value *>
   getShadowOriginPtrUserspace(Value *Addr, IRBuilder<> &IRB, Type *ShadowTy,
                               MaybeAlign Alignment) {
+    Type *IntptrTy = ptrToIntPtrType(Addr->getType());
     Value *ShadowOffset = getShadowPtrOffset(Addr, IRB);
     Value *ShadowLong = ShadowOffset;
-    uint64_t ShadowBase = MS.MapParams->ShadowBase;
-    if (ShadowBase != 0) {
+    if (uint64_t ShadowBase = MS.MapParams->ShadowBase) {
       ShadowLong =
-          IRB.CreateAdd(ShadowLong, ConstantInt::get(MS.IntptrTy, ShadowBase));
+          IRB.CreateAdd(ShadowLong, constToIntPtr(IntptrTy, ShadowBase));
     }
-    Value *ShadowPtr =
-        IRB.CreateIntToPtr(ShadowLong, PointerType::get(ShadowTy, 0));
+    Value *ShadowPtr = IRB.CreateIntToPtr(
+        ShadowLong, getPtrToShadowPtrType(IntptrTy, ShadowTy));
+
     Value *OriginPtr = nullptr;
     if (MS.TrackOrigins) {
       Value *OriginLong = ShadowOffset;
       uint64_t OriginBase = MS.MapParams->OriginBase;
       if (OriginBase != 0)
-        OriginLong = IRB.CreateAdd(OriginLong,
-                                   ConstantInt::get(MS.IntptrTy, OriginBase));
+        OriginLong =
+            IRB.CreateAdd(OriginLong, constToIntPtr(IntptrTy, OriginBase));
       if (!Alignment || *Alignment < kMinOriginAlignment) {
         uint64_t Mask = kMinOriginAlignment.value() - 1;
-        OriginLong =
-            IRB.CreateAnd(OriginLong, ConstantInt::get(MS.IntptrTy, ~Mask));
+        OriginLong = IRB.CreateAnd(OriginLong, constToIntPtr(IntptrTy, ~Mask));
       }
-      OriginPtr =
-          IRB.CreateIntToPtr(OriginLong, PointerType::get(MS.OriginTy, 0));
+      OriginPtr = IRB.CreateIntToPtr(
+          OriginLong, getPtrToShadowPtrType(IntptrTy, MS.OriginTy));
     }
     return std::make_pair(ShadowPtr, OriginPtr);
   }
 
-  std::pair<Value *, Value *> getShadowOriginPtrKernel(Value *Addr,
-                                                       IRBuilder<> &IRB,
-                                                       Type *ShadowTy,
-                                                       bool isStore) {
+  std::pair<Value *, Value *> getShadowOriginPtrKernelNoVec(Value *Addr,
+                                                            IRBuilder<> &IRB,
+                                                            Type *ShadowTy,
+                                                            bool isStore) {
     Value *ShadowOriginPtrs;
     const DataLayout &DL = F.getParent()->getDataLayout();
     int Size = DL.getTypeStoreSize(ShadowTy);
@@ -1682,6 +1713,42 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *OriginPtr = IRB.CreateExtractValue(ShadowOriginPtrs, 1);
 
     return std::make_pair(ShadowPtr, OriginPtr);
+  }
+
+  /// Addr can be a ptr or <N x ptr>. In both cases ShadowTy the shadow type of
+  /// a single pointee.
+  /// Returns <shadow_ptr, origin_ptr> or <<N x shadow_ptr>, <N x origin_ptr>>.
+  std::pair<Value *, Value *> getShadowOriginPtrKernel(Value *Addr,
+                                                       IRBuilder<> &IRB,
+                                                       Type *ShadowTy,
+                                                       bool isStore) {
+    FixedVectorType *VectTy = dyn_cast<FixedVectorType>(Addr->getType());
+    if (!VectTy) {
+      assert(Addr->getType()->isPointerTy());
+      return getShadowOriginPtrKernelNoVec(Addr, IRB, ShadowTy, isStore);
+    }
+
+    // TODO: Support callbacs with vectors of addresses.
+    unsigned NumElements = VectTy->getNumElements();
+    Value *ShadowPtrs = ConstantInt::getNullValue(
+        FixedVectorType::get(ShadowTy->getPointerTo(), NumElements));
+    Value *OriginPtrs = nullptr;
+    if (MS.TrackOrigins)
+      OriginPtrs = ConstantInt::getNullValue(
+          FixedVectorType::get(MS.OriginTy->getPointerTo(), NumElements));
+    for (unsigned i = 0; i < NumElements; ++i) {
+      Value *OneAddr =
+          IRB.CreateExtractElement(Addr, ConstantInt::get(IRB.getInt32Ty(), i));
+      auto [ShadowPtr, OriginPtr] =
+          getShadowOriginPtrKernelNoVec(OneAddr, IRB, ShadowTy, isStore);
+
+      ShadowPtrs = IRB.CreateInsertElement(
+          ShadowPtrs, ShadowPtr, ConstantInt::get(IRB.getInt32Ty(), i));
+      if (MS.TrackOrigins)
+        OriginPtrs = IRB.CreateInsertElement(
+            OriginPtrs, OriginPtr, ConstantInt::get(IRB.getInt32Ty(), i));
+    }
+    return {ShadowPtrs, OriginPtrs};
   }
 
   std::pair<Value *, Value *> getShadowOriginPtr(Value *Addr, IRBuilder<> &IRB,
