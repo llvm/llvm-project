@@ -76,11 +76,13 @@ getInputMemoryBuffer(StringRef InputFileName) {
 }
 
 /// Parses all remarks in the input file.
+/// \p [out] ParsedRemarks - Filled with remarks parsed from the input file.
 /// \p [out] StrTab - A string table populated for later remark serialization.
-/// \returns A vector of parsed remarks on success, and an Error otherwise.
-static Expected<std::vector<std::unique_ptr<Remark>>>
-tryParseRemarksFromInputFile(StringRef InputFileName, Format InputFormat,
-                             StringTable &StrTab) {
+/// \returns Error::success() if all remarks were successfully parsed, and an
+/// Error otherwise.
+Error tryParseRemarksFromInputFile(
+    StringRef InputFileName, Format InputFormat,
+    std::vector<std::unique_ptr<Remark>> &ParsedRemarks, StringTable &StrTab) {
   auto MaybeBuf = getInputMemoryBuffer(InputFileName);
   if (!MaybeBuf)
     return MaybeBuf.takeError();
@@ -91,16 +93,15 @@ tryParseRemarksFromInputFile(StringRef InputFileName, Format InputFormat,
   auto MaybeRemark = Parser.next();
   // TODO: If we are converting from bitstream to YAML, we don't need to parse
   // early because the string table is not necessary.
-  std::vector<std::unique_ptr<Remark>> ParsedRemarks;
   for (; MaybeRemark; MaybeRemark = Parser.next()) {
     StrTab.internalize(**MaybeRemark);
     ParsedRemarks.push_back(std::move(*MaybeRemark));
   }
   auto E = MaybeRemark.takeError();
   if (!E.isA<EndOfFileError>())
-    return std::move(E);
+    return E;
   consumeError(std::move(E));
-  return ParsedRemarks;
+  return Error::success();
 }
 
 /// \returns A ToolOutputFile which can be used for writing remarks on success,
@@ -148,12 +149,11 @@ static Error tryReserializeParsedRemarks(
 static Error tryReserialize(StringRef InputFileName, StringRef OutputFileName,
                             Format InputFormat, Format OutputFormat) {
   StringTable StrTab;
-  auto MaybeParsedRemarks =
-      tryParseRemarksFromInputFile(InputFileName, InputFormat, StrTab);
-  if (!MaybeParsedRemarks)
-    return MaybeParsedRemarks.takeError();
+  std::vector<std::unique_ptr<Remark>> ParsedRemarks;
+  ExitOnErr(tryParseRemarksFromInputFile(InputFileName, InputFormat,
+                                         ParsedRemarks, StrTab));
   return tryReserializeParsedRemarks(OutputFileName, OutputFormat,
-                                     *MaybeParsedRemarks, StrTab);
+                                     ParsedRemarks, StrTab);
 }
 
 /// Reserialize bitstream remarks as YAML remarks.
