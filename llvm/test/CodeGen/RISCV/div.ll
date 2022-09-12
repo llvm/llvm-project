@@ -181,13 +181,26 @@ define i64 @udiv64_constant(i64 %a) nounwind {
 ;
 ; RV32IM-LABEL: udiv64_constant:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    addi sp, sp, -16
-; RV32IM-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IM-NEXT:    li a2, 5
-; RV32IM-NEXT:    li a3, 0
-; RV32IM-NEXT:    call __udivdi3@plt
-; RV32IM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IM-NEXT:    addi sp, sp, 16
+; RV32IM-NEXT:    add a2, a0, a1
+; RV32IM-NEXT:    sltu a3, a2, a0
+; RV32IM-NEXT:    add a2, a2, a3
+; RV32IM-NEXT:    lui a3, 838861
+; RV32IM-NEXT:    addi a4, a3, -819
+; RV32IM-NEXT:    mulhu a5, a2, a4
+; RV32IM-NEXT:    srli a6, a5, 2
+; RV32IM-NEXT:    andi a5, a5, -4
+; RV32IM-NEXT:    add a5, a5, a6
+; RV32IM-NEXT:    sub a2, a2, a5
+; RV32IM-NEXT:    sub a5, a0, a2
+; RV32IM-NEXT:    addi a3, a3, -820
+; RV32IM-NEXT:    mul a3, a5, a3
+; RV32IM-NEXT:    mulhu a6, a5, a4
+; RV32IM-NEXT:    add a3, a6, a3
+; RV32IM-NEXT:    sltu a0, a0, a2
+; RV32IM-NEXT:    sub a0, a1, a0
+; RV32IM-NEXT:    mul a0, a0, a4
+; RV32IM-NEXT:    add a1, a3, a0
+; RV32IM-NEXT:    mul a0, a5, a4
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv64_constant:
