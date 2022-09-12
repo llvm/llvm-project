@@ -1204,11 +1204,11 @@ SUnit *ScheduleDAGRRList::CopyAndMoveSuccessors(SUnit *SU) {
       D.setSUnit(NewSU);
       AddPredQueued(SuccSU, D);
       D.setSUnit(SU);
-      DelDeps.push_back(std::make_pair(SuccSU, D));
+      DelDeps.emplace_back(SuccSU, D);
     }
   }
-  for (auto &DelDep : DelDeps)
-    RemovePred(DelDep.first, DelDep.second);
+  for (const auto &[DelSU, DelD] : DelDeps)
+    RemovePred(DelSU, DelD);
 
   AvailableQueue->updateNode(SU);
   AvailableQueue->addNode(NewSU);
@@ -1242,17 +1242,17 @@ void ScheduleDAGRRList::InsertCopiesAndMoveSuccs(SUnit *SU, unsigned Reg,
       SDep D = Succ;
       D.setSUnit(CopyToSU);
       AddPredQueued(SuccSU, D);
-      DelDeps.push_back(std::make_pair(SuccSU, Succ));
+      DelDeps.emplace_back(SuccSU, Succ);
     }
     else {
-      // Avoid scheduling the def-side copy before other successors. Otherwise
+      // Avoid scheduling the def-side copy before other successors. Otherwise,
       // we could introduce another physreg interference on the copy and
       // continue inserting copies indefinitely.
       AddPredQueued(SuccSU, SDep(CopyFromSU, SDep::Artificial));
     }
   }
-  for (auto &DelDep : DelDeps)
-    RemovePred(DelDep.first, DelDep.second);
+  for (const auto &[DelSU, DelD] : DelDeps)
+    RemovePred(DelSU, DelD);
 
   SDep FromDep(SU, SDep::Data, Reg);
   FromDep.setLatency(SU->Latency);
@@ -1484,16 +1484,15 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
                  if (LRegs[0] == TRI->getNumRegs()) dbgs() << "CallResource";
                  else dbgs() << printReg(LRegs[0], TRI);
                  dbgs() << " SU #" << CurSU->NodeNum << '\n');
-      std::pair<LRegsMapT::iterator, bool> LRegsPair =
-        LRegsMap.insert(std::make_pair(CurSU, LRegs));
-      if (LRegsPair.second) {
+      auto [LRegsIter, LRegsInserted] = LRegsMap.try_emplace(CurSU, LRegs);
+      if (LRegsInserted) {
         CurSU->isPending = true;  // This SU is not in AvailableQueue right now.
         Interferences.push_back(CurSU);
       }
       else {
         assert(CurSU->isPending && "Interferences are pending");
         // Update the interference with current live regs.
-        LRegsPair.first->second = LRegs;
+        LRegsIter->second = LRegs;
       }
       CurSU = AvailableQueue->pop();
     }
