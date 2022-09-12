@@ -403,11 +403,11 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
     Sections.push_back(&S);
 
   llvm::sort(Sections, [](const Section *LHS, const Section *RHS) {
-    if (llvm::empty(LHS->symbols()) && llvm::empty(RHS->symbols()))
+    if (LHS->symbols().empty() && RHS->symbols().empty())
       return false;
-    if (llvm::empty(LHS->symbols()))
+    if (LHS->symbols().empty())
       return false;
-    if (llvm::empty(RHS->symbols()))
+    if (RHS->symbols().empty())
       return true;
     SectionRange LHSRange(*LHS);
     SectionRange RHSRange(*RHS);
@@ -416,7 +416,7 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
 
   for (auto *S : Sections) {
     OS << S->getName() << " content:";
-    if (llvm::empty(S->symbols())) {
+    if (S->symbols().empty()) {
       OS << "\n  section empty\n";
       continue;
     }

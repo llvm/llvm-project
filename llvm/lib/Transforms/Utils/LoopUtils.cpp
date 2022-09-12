@@ -1843,7 +1843,7 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop &L,
           if (L.contains(Succ))
             continue;
 
-          Info.PathIsNoop &= llvm::empty(Succ->phis()) &&
+          Info.PathIsNoop &= Succ->phis().empty() &&
                              (!Info.ExitForPath || Info.ExitForPath == Succ);
           if (!Info.PathIsNoop)
             break;
