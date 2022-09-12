@@ -344,6 +344,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
         llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
     auto [_, InsertSuccess] =
         AnnotationStates.insert({It->second, StateT{*Lattice, State.Env}});
+    (void)_;
     (void)InsertSuccess;
     assert(InsertSuccess);
   };
