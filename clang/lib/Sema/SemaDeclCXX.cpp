@@ -13009,7 +13009,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
     Previous.clear();
   }
 
-  assert(Name.Kind == UnqualifiedIdKind::IK_Identifier &&
+  assert(Name.getKind() == UnqualifiedIdKind::IK_Identifier &&
          "name in alias declaration must be an identifier");
   TypeAliasDecl *NewTD = TypeAliasDecl::Create(Context, CurContext, UsingLoc,
                                                Name.StartLocation,
