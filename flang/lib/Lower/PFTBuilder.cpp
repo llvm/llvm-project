@@ -503,7 +503,7 @@ private:
     for (auto it = evaluationList.begin(), end = evaluationList.end();
          it != end; ++it) {
       auto &eval = *it;
-      if (eval.isA<parser::EntryStmt>()) {
+      if (eval.isA<parser::EntryStmt>() || eval.isIntermediateConstructStmt()) {
         ifCandidateStack.clear();
         continue;
       }

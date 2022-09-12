@@ -308,6 +308,16 @@ const uint32_t *AArch64RegisterInfo::getWindowsStackProbePreservedMask() const {
   return CSR_AArch64_StackProbe_Windows_RegMask;
 }
 
+llvm::Optional<std::string>
+AArch64RegisterInfo::explainReservedReg(const MachineFunction &MF,
+                                        MCRegister PhysReg) const {
+  if (hasBasePointer(MF) &&
+      (PhysReg == AArch64::X19 || PhysReg == AArch64::W19))
+    return std::string("X19 is used as the frame base pointer register.");
+
+  return {};
+}
+
 BitVector
 AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   const AArch64FrameLowering *TFI = getFrameLowering(MF);
