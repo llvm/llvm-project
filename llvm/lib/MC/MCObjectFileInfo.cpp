@@ -405,7 +405,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   // MIPS .debug_* sections should have SHT_MIPS_DWARF section type
   // to distinguish among sections contain DWARF and ECOFF debug formats.
   // Sections with ECOFF debug format are obsoleted and marked by SHT_PROGBITS.
-  if (T.isMIPS())
+  if (T.isMIPS() && !T.isNanoMips())
     DebugSecType = ELF::SHT_MIPS_DWARF;
 
   // Debug Info Sections.
