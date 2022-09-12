@@ -700,6 +700,51 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
   return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, OverloadedTypes);
 }
 
+/// Create a call to Masked Expand Load intrinsic
+/// \p Ty        - vector type to load
+/// \p Ptr       - base pointer for the load
+/// \p Mask      - vector of booleans which indicates what vector lanes should
+///                be accessed in memory
+/// \p PassThru  - pass-through value that is used to fill the masked-off lanes
+///                of the result
+/// \p Name      - name of the result variable
+CallInst *IRBuilderBase::CreateMaskedExpandLoad(Type *Ty, Value *Ptr,
+                                                Value *Mask, Value *PassThru,
+                                                const Twine &Name) {
+  auto *PtrTy = cast<PointerType>(Ptr->getType());
+  assert(Ty->isVectorTy() && "Type should be vector");
+  assert(PtrTy->isOpaqueOrPointeeTypeMatches(
+             cast<FixedVectorType>(Ty)->getElementType()) &&
+         "Wrong element type");
+  assert(Mask && "Mask should not be all-ones (null)");
+  if (!PassThru)
+    PassThru = UndefValue::get(Ty);
+  Type *OverloadedTypes[] = {Ty};
+  Value *Ops[] = {Ptr, Mask, PassThru};
+  return CreateMaskedIntrinsic(Intrinsic::masked_expandload, Ops,
+                               OverloadedTypes, Name);
+}
+
+/// Create a call to Masked Compress Store intrinsic
+/// \p Val       - data to be stored,
+/// \p Ptr       - base pointer for the store
+/// \p Mask      - vector of booleans which indicates what vector lanes should
+///                be accessed in memory
+CallInst *IRBuilderBase::CreateMaskedCompressStore(Value *Val, Value *Ptr,
+                                                   Value *Mask) {
+  auto *PtrTy = cast<PointerType>(Ptr->getType());
+  Type *DataTy = Val->getType();
+  assert(DataTy->isVectorTy() && "Val should be a vector");
+  assert(PtrTy->isOpaqueOrPointeeTypeMatches(
+             cast<FixedVectorType>(DataTy)->getElementType()) &&
+         "Wrong element type");
+  assert(Mask && "Mask should not be all-ones (null)");
+  Type *OverloadedTypes[] = {DataTy};
+  Value *Ops[] = {Val, Ptr, Mask};
+  return CreateMaskedIntrinsic(Intrinsic::masked_compressstore, Ops,
+                               OverloadedTypes);
+}
+
 template <typename T0>
 static std::vector<Value *>
 getStatepointArgs(IRBuilderBase &B, uint64_t ID, uint32_t NumPatchBytes,
