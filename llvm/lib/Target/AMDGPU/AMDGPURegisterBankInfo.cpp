@@ -2539,7 +2539,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     LLT SrcTy = MRI.getType(SrcReg);
     const bool Signed = Opc == AMDGPU::G_SEXT;
 
-    assert(empty(OpdMapper.getVRegs(1)));
+    assert(OpdMapper.getVRegs(1).empty());
 
     MachineIRBuilder B(MI);
     const RegisterBank *SrcBank =
