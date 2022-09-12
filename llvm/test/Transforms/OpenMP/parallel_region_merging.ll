@@ -5181,6 +5181,7 @@ entry:
 ; CHECK1-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* noundef nonnull [[TMP4]])
 ; CHECK1-NEXT:    [[TMP5:%.*]] = ptrtoint i32* [[B]] to i64
 ; CHECK1-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; CHECK1-NEXT:    store i32 [[TMP6]], i32* [[B]], align 4
 ; CHECK1-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* noundef nonnull [[TMP4]])
 ; CHECK1-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK1:       omp.par.merged.split:
@@ -6396,6 +6397,7 @@ entry:
 ; CHECK2-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 4, i8* noundef nonnull [[TMP4]])
 ; CHECK2-NEXT:    [[TMP5:%.*]] = ptrtoint i32* [[B]] to i64
 ; CHECK2-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
+; CHECK2-NEXT:    store i32 [[TMP6]], i32* [[B]], align 4
 ; CHECK2-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 4, i8* noundef nonnull [[TMP4]])
 ; CHECK2-NEXT:    br label [[OMP_PAR_MERGED_SPLIT:%.*]]
 ; CHECK2:       omp.par.merged.split:
