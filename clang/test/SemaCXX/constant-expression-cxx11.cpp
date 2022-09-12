@@ -11,6 +11,10 @@ static_assert(false, "test"); // expected-error {{test}}
 
 }
 
+int array[(long)(char *)0]; // expected-warning {{variable length arrays are a C99 feature}} \
+                            // expected-warning {{variable length array folded to constant array as an extension}} \
+                            // expected-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+
 typedef decltype(sizeof(char)) size_t;
 
 template<typename T> constexpr T id(const T &t) { return t; }
