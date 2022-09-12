@@ -15,10 +15,19 @@
 using namespace clang;
 using namespace clang::cas;
 
+/// \returns \p DependencyOutputOptions but with \p ExtraDeps cleared out.
+///
+/// This is useful to avoid recording these filenames in the CAS.
+static DependencyOutputOptions dropExtraDeps(DependencyOutputOptions Opts) {
+  Opts.ExtraDeps.clear();
+  return Opts;
+}
+
 CASDependencyCollector::CASDependencyCollector(
-    const DependencyOutputOptions &Opts, cas::ObjectStore &CAS,
+    DependencyOutputOptions Opts, cas::ObjectStore &CAS,
     std::function<void(Optional<cas::ObjectRef>)> Callback)
-    : DependencyFileGenerator(Opts, llvm::vfs::makeNullOutputBackend()),
+    : DependencyFileGenerator(dropExtraDeps(std::move(Opts)),
+                              llvm::vfs::makeNullOutputBackend()),
       CAS(CAS), Callback(std::move(Callback)) {}
 
 llvm::Error CASDependencyCollector::replay(const DependencyOutputOptions &Opts,
@@ -29,6 +38,15 @@ llvm::Error CASDependencyCollector::replay(const DependencyOutputOptions &Opts,
     return Refs.takeError();
 
   CASDependencyCollector DC(Opts, CAS, nullptr);
+
+  // Add the filenames from DependencyOutputOptions::ExtraDeps. These are kept
+  // out of the compilation cache key since they can be passed-in and added at
+  // the point where the dependency file is generated, without needing to affect
+  // the cached compilation.
+  for (const std::pair<std::string, ExtraDepKind> &Dep : Opts.ExtraDeps) {
+    DC.addDependency(Dep.first);
+  }
+
   auto Err = Refs->forEachReference([&](ObjectRef Ref) -> llvm::Error {
     auto PathHandle = CAS.getProxy(Ref);
     if (!PathHandle)
