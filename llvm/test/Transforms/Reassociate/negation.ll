@@ -44,13 +44,14 @@ define <2 x i32> @negate_vec_undefs(<2 x i32> %a, <2 x i32> %b, <2 x i32> %z) {
   ret <2 x i32> %f
 }
 
-; FIXME: Replacing x with a partial undef negation is a miscompile.
+; Replacing %x with a partial undef negation is a miscompile.
 
 define <2 x i32> @PR57683(<2 x i32> %x) {
 ; CHECK-LABEL: @PR57683(
 ; CHECK-NEXT:    [[PARTIAL_NEG:%.*]] = sub <2 x i32> <i32 poison, i32 0>, [[X:%.*]]
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[PARTIAL_NEG]], <2 x i32> [[X]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i32> [[PARTIAL_NEG]], <i32 1, i32 1>
+; CHECK-NEXT:    [[X_NEG:%.*]] = sub <2 x i32> zeroinitializer, [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i32> [[X_NEG]], <i32 1, i32 1>
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[SUB]], [[SHUF]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -65,7 +66,8 @@ define <2 x float> @PR57683_FP(<2 x float> %x) {
 ; CHECK-LABEL: @PR57683_FP(
 ; CHECK-NEXT:    [[PARTIAL_NEG:%.*]] = fsub reassoc nsz <2 x float> <float poison, float 0.000000e+00>, [[X:%.*]]
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[PARTIAL_NEG]], <2 x float> [[X]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[SUB:%.*]] = fadd reassoc nsz <2 x float> [[PARTIAL_NEG]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[X_NEG:%.*]] = fneg reassoc nsz <2 x float> [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = fadd reassoc nsz <2 x float> [[X_NEG]], <float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz <2 x float> [[SUB]], [[SHUF]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
