@@ -887,6 +887,12 @@ static Value *NegateValue(Value *V, Instruction *BI,
     // be zapped by reassociate later, so we don't need much finesse here.
     Instruction *TheNeg = dyn_cast<Instruction>(U);
 
+    // We can't safely propagate a vector zero constant with poison/undef lanes.
+    Constant *C;
+    if (match(TheNeg, m_BinOp(m_Constant(C), m_Value())) &&
+        C->containsUndefOrPoisonElement())
+      continue;
+
     // Verify that the negate is in this function, V might be a constant expr.
     if (!TheNeg ||
         TheNeg->getParent()->getParent() != BI->getParent()->getParent())
