@@ -6588,8 +6588,8 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
     Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_invalid_constexpr)
         << 1 << static_cast<int>(D.getDeclSpec().getConstexprSpecifier());
 
-  if (D.getName().Kind != UnqualifiedIdKind::IK_Identifier) {
-    if (D.getName().Kind == UnqualifiedIdKind::IK_DeductionGuideName)
+  if (D.getName().getKind() != UnqualifiedIdKind::IK_Identifier) {
+    if (D.getName().getKind() == UnqualifiedIdKind::IK_DeductionGuideName)
       Diag(D.getName().StartLocation,
            diag::err_deduction_guide_invalid_specifier)
           << "typedef";
