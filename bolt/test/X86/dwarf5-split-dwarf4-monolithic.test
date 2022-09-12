@@ -170,15 +170,15 @@
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_subprogram [7]
+# POSTCHECK: DW_TAG_subprogram [8]
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_variable [9]
+# POSTCHECK: DW_TAG_variable [10]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_inlined_subroutine [10]
+# POSTCHECK: DW_TAG_inlined_subroutine [11]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
@@ -186,7 +186,7 @@
 
 # helper1.cpp
 # POSTCHECK: version = 0x0005
-# POSTCHECK: DW_TAG_skeleton_unit [1]
+# POSTCHECK: DW_TAG_skeleton_unit [12]
 # POSTCHECK-NEXT: DW_AT_stmt_list [DW_FORM_sec_offset]  (0x000000fe)
 # POSTCHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000018)
 # POSTCHECK-NEXT: DW_AT_comp_dir [DW_FORM_strx1]  (indexed (00000000) string = ".")
@@ -200,7 +200,7 @@
 
 # helper2.cpp
 # POSTCHECK: version = 0x0004
-# POSTCHECK: DW_TAG_compile_unit [1] *
+# POSTCHECK: DW_TAG_compile_unit [2] *
 # POSTCHECK-NEXT: DW_AT_producer
 # POSTCHECK-NEXT: DW_AT_language
 # POSTCHECK-NEXT: DW_AT_name
@@ -209,15 +209,15 @@
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_subprogram [7]
+# POSTCHECK: DW_TAG_subprogram [8]
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_variable [9]
+# POSTCHECK: DW_TAG_variable [10]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_inlined_subroutine [10]
+# POSTCHECK: DW_TAG_inlined_subroutine [11]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]

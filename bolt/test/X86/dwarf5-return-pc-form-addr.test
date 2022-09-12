@@ -20,7 +20,7 @@
 # PRECHECK: callq
 # PRECHECK-NEXT: [[#ADDR]]:
 
-# POSTCHECK: DW_TAG_call_site [11]
+# POSTCHECK: DW_TAG_call_site [12]
 # POSTCHECK-NEXT: DW_AT_call_origin [DW_FORM_ref4]
 # POSTCHECK-NEXT: DW_AT_call_return_pc [DW_FORM_addr]
 # POSTCHECK-SAME: 0x[[#%x,ADDR:]])
