@@ -744,7 +744,7 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
   auto ObjCImageInfoBlocks = ObjCImageInfo->blocks();
 
   // Check that the section is not empty if present.
-  if (llvm::empty(ObjCImageInfoBlocks))
+  if (ObjCImageInfoBlocks.empty())
     return make_error<StringError>("Empty " + ObjCImageInfoSectionName +
                                        " section in " + G.getName(),
                                    inconvertibleErrorCode());

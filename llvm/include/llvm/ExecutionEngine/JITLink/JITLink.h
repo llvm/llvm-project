@@ -774,7 +774,7 @@ class SectionRange {
 public:
   SectionRange() = default;
   SectionRange(const Section &Sec) {
-    if (llvm::empty(Sec.blocks()))
+    if (Sec.blocks().empty())
       return;
     First = Last = *Sec.blocks().begin();
     for (auto *B : Sec.blocks()) {

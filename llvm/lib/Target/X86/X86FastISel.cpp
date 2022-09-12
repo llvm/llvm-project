@@ -274,9 +274,7 @@ bool X86FastISel::foldX86XALUIntrinsic(X86::CondCode &CC, const Instruction *I,
 
   // Make sure no potentially eflags clobbering phi moves can be inserted in
   // between.
-  auto HasPhis = [](const BasicBlock *Succ) {
-    return !llvm::empty(Succ->phis());
-  };
+  auto HasPhis = [](const BasicBlock *Succ) { return !Succ->phis().empty(); };
   if (I->isTerminator() && llvm::any_of(successors(I), HasPhis))
     return false;
 
