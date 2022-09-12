@@ -162,11 +162,12 @@ private:
 };
 
 /// Extracts system include search path from drivers matching QueryDriverGlobs
-/// and adds them to the compile flags. Base may not be nullptr.
-/// Returns Base when \p QueryDriverGlobs is empty.
-std::unique_ptr<GlobalCompilationDatabase>
-getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
-                       std::unique_ptr<GlobalCompilationDatabase> Base);
+/// and adds them to the compile flags.
+/// Returns null when \p QueryDriverGlobs is empty.
+using SystemIncludeExtractorFn = llvm::unique_function<void(
+    tooling::CompileCommand &, llvm::StringRef) const>;
+SystemIncludeExtractorFn
+getSystemIncludeExtractor(llvm::ArrayRef<std::string> QueryDriverGlobs);
 
 /// Wraps another compilation database, and supports overriding the commands
 /// using an in-memory mapping.
