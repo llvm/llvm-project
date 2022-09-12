@@ -1611,16 +1611,16 @@ define <2 x i64> @test_v4i32_v2i64(i32 %arg1, i64 %arg) {
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v4i32_v2i64:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
+; CHECK-AIX-32-P9-NEXT:    stw r4, -32(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r3, -48(r1)
 ; CHECK-AIX-32-P9-NEXT:    lwz r3, L..C0(r2) # %const.0
-; CHECK-AIX-32-P9-NEXT:    stw r4, -32(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -32(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs1, -48(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r5, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v4, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v3, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    xxmrghw v2, vs1, vs0
-; CHECK-AIX-32-P9-NEXT:    vperm v2, v2, v4, v3
+; CHECK-AIX-32-P9-NEXT:    lxv v2, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    xxmrghw v3, vs1, vs0
+; CHECK-AIX-32-P9-NEXT:    lxv vs0, 0(r3)
+; CHECK-AIX-32-P9-NEXT:    xxperm v2, v3, vs0
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:
   %lhs.tmp = insertelement <4 x i32> undef, i32 %arg1, i32 0
