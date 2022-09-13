@@ -70,24 +70,24 @@ int bar(int n){
 }
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l37(
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 
 // CHECK: call void @__kmpc_distribute_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: call void @__kmpc_distribute_static_fini(
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l43(
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 
 // CHECK: call void @__kmpc_distribute_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: call void @__kmpc_distribute_static_fini(
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l48(
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 
 // CHECK: call void @__kmpc_distribute_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: call void @__kmpc_distribute_static_fini(
@@ -95,8 +95,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+}}_l53({{.+}}, i{{32|64}} [[F_IN:%.+]])
 // CHECK: store {{.+}} [[F_IN]], {{.+}}* {{.+}},
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 
 // CHECK: store {{.+}} 99, {{.+}}* [[COMB_UB:%.+]], align
 // CHECK: call void @__kmpc_distribute_static_init_4({{.+}}, {{.+}}, {{.+}} 91, {{.+}}, {{.+}}, {{.+}}* [[COMB_UB]],
