@@ -176,6 +176,12 @@ uint32_t BreakpointLocationList::GetHitCount() const {
   return hit_count;
 }
 
+void BreakpointLocationList::ResetHitCount() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  for (auto &loc : m_locations)
+    loc->ResetHitCount();
+}
+
 size_t BreakpointLocationList::GetNumResolvedLocations() const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   size_t resolve_count = 0;

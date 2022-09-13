@@ -313,8 +313,9 @@ class BreakpointCommandTestCase(TestBase):
                     substrs=['stopped',
                              'stop reason = breakpoint'])
 
-        # The breakpoint should have a hit count of 2.
-        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 2)
+        # The breakpoint should have a hit count of 1, since we reset counts
+        # for each run.
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
     def breakpoint_command_script_parameters(self):
         """Test that the frame and breakpoint location are being properly passed to the script breakpoint command function."""
