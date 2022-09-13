@@ -180,10 +180,12 @@ static void genRuntimeSumBody(fir::FirOpBuilder &builder,
   // end function RTNAME(Sum)<T>_simplified
   auto zero = [](fir::FirOpBuilder builder, mlir::Location loc,
                  mlir::Type elementType) {
-    return elementType.isa<mlir::FloatType>()
-               ? builder.createRealConstant(loc, elementType,
-                                            llvm::APFloat(0.0))
-               : builder.createIntegerConstant(loc, elementType, 0);
+    if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
+      const llvm::fltSemantics &sem = ty.getFloatSemantics();
+      return builder.createRealConstant(loc, elementType,
+                                        llvm::APFloat::getZero(sem));
+    }
+    return builder.createIntegerConstant(loc, elementType, 0);
   };
 
   auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
@@ -464,17 +466,22 @@ void SimplifyIntrinsicsPass::simplifyReduction(fir::CallOp call,
   unsigned rank = getDimCount(args[0]);
   if (dimAndMaskAbsent && rank == 1) {
     mlir::Location loc = call.getLoc();
-    mlir::Type type;
     fir::FirOpBuilder builder(call, kindMap);
-    if (funcName.endswith("Integer4")) {
-      type = mlir::IntegerType::get(builder.getContext(), 32);
-    } else if (funcName.endswith("Real8")) {
-      type = mlir::FloatType::getF64(builder.getContext());
-    } else {
+
+    // Support only floating point and integer results now.
+    mlir::Type resultType = call.getResult(0).getType();
+    if (!resultType.isa<mlir::FloatType>() &&
+        !resultType.isa<mlir::IntegerType>())
       return;
-    }
-    auto typeGenerator = [&type](fir::FirOpBuilder &builder) {
-      return genNoneBoxType(builder, type);
+
+    auto argType = getArgElementType(args[0]);
+    if (!argType)
+      return;
+    assert(*argType == resultType &&
+           "Argument/result types mismatch in reduction");
+
+    auto typeGenerator = [&resultType](fir::FirOpBuilder &builder) {
+      return genNoneBoxType(builder, resultType);
     };
     mlir::func::FuncOp newFunc =
         getOrCreateFunction(builder, funcName, typeGenerator, genBodyFunc);
