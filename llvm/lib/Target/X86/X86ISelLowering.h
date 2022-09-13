@@ -1465,6 +1465,9 @@ namespace llvm {
 
     unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
+    bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
+                                 unsigned OpNo) const override;
+
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
     bool lowerInterleavedLoad(LoadInst *LI,
