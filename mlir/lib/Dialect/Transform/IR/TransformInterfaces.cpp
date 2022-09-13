@@ -13,6 +13,7 @@
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "transform-dialect"
+#define DEBUG_PRINT_AFTER_ALL "transform-dialect-print-top-level-after-all"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 
 using namespace mlir;
@@ -194,6 +195,13 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
   LLVM_DEBUG(DBGS() << "applying: " << transform << "\n");
+  auto printOnFailureRAII = llvm::make_scope_exit([this] {
+    DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
+      DBGS() << "Top-level payload:\n";
+      getTopLevel()->print(llvm::dbgs(),
+                           mlir::OpPrintingFlags().printGenericOpForm());
+    });
+  });
   if (options.getExpensiveChecksEnabled()) {
     if (failed(checkAndRecordHandleInvalidation(transform)))
       return DiagnosedSilenceableFailure::definiteFailure();
@@ -247,6 +255,11 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
       return DiagnosedSilenceableFailure::definiteFailure();
   }
 
+  printOnFailureRAII.release();
+  DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
+    DBGS() << "Top-level payload:\n";
+    getTopLevel()->print(llvm::dbgs());
+  });
   return DiagnosedSilenceableFailure::success();
 }
 
