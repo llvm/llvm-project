@@ -267,26 +267,26 @@ void SwiftASTManipulatorBase::DoInitialization() {
     /// This is an optional extension holding the above function.
     swift::ExtensionDecl *extension_decl = nullptr;
 
-    bool walkToDeclPre(swift::Decl *D) override {
+    PreWalkAction walkToDeclPre(swift::Decl *D) override {
       auto *FD = llvm::dyn_cast<swift::FuncDecl>(D);
       // Traverse into any non-function-decls.
       if (!FD)
-        return true;
+        return Action::Continue();
 
       if (!FD->getAttrs().hasAttribute<swift::LLDBDebuggerFunctionAttr>())
-        return false;
+        return Action::SkipChildren();
 
       // Walk up the DeclContext chain, searching for an extension.
       for (auto *DC = FD->getDeclContext(); DC; DC = DC->getParent()) {
         if (auto *extension = llvm::dyn_cast<swift::ExtensionDecl>(DC)) {
           extension_decl = extension;
           ext_method_decl = FD;
-          return false;
+          return Action::SkipChildren();
         }
       }
       // Not in an extenstion,
       toplevel_decl = FD;
-      return false;
+      return Action::SkipChildren();
     }
   };
 
@@ -354,7 +354,7 @@ void SwiftASTManipulator::FindSpecialNames(
     SpecialNameFinder(NameVector &names, llvm::StringRef &prefix)
         : m_names(names), m_prefix(prefix) {}
 
-    std::pair<bool, swift::Expr *> walkToExprPre(swift::Expr *E) override {
+    PreWalkResult<swift::Expr *> walkToExprPre(swift::Expr *E) override {
       if (auto *UDRE = llvm::dyn_cast<swift::UnresolvedDeclRefExpr>(E)) {
         swift::Identifier name = UDRE->getName().getBaseIdentifier();
 
@@ -362,7 +362,7 @@ void SwiftASTManipulator::FindSpecialNames(
           m_names.push_back(name);
       }
 
-      return {true, E};
+      return Action::Continue(E);
     }
 
   private:
@@ -476,9 +476,9 @@ bool SwiftASTManipulator::RewriteResult() {
       m_decl_context = decl_context;
     }
 
-    bool walkToDeclPre(swift::Decl *D) override {
+    PreWalkAction walkToDeclPre(swift::Decl *D) override {
       switch (D->getKind()) {
-      default: return true;
+      default: return Action::Continue();
 
       // Don't step into function declarations, they may have returns, but we
       // don't want to instrument them.
@@ -486,34 +486,34 @@ bool SwiftASTManipulator::RewriteResult() {
       case swift::DeclKind::Func:
       case swift::DeclKind::Class:
       case swift::DeclKind::Struct:
-        return false;
+        return Action::SkipChildren();
       }
     }
 
-    std::pair<bool, swift::Expr *> walkToExprPre(swift::Expr *expr) override {
+    PreWalkResult<swift::Expr *> walkToExprPre(swift::Expr *expr) override {
       switch (expr->getKind()) {
-      default: return {true, expr};
+      default: return Action::Continue(expr);
 
       // Don't step into closure definitions, they may have returns, but we
       // don't want to instrument them either.
       case swift::ExprKind::Closure:
-        return {false, expr};
+        return Action::SkipChildren(expr);
       }
     }
 
-    swift::Stmt *walkToStmtPost(swift::Stmt *S) override {
+    PostWalkResult<swift::Stmt *> walkToStmtPost(swift::Stmt *S) override {
       auto *RS = swift::dyn_cast<swift::ReturnStmt>(S);
       if (!RS || !RS->getResult())
-        return S;
+        return Action::Continue(S);
 
       if (swift::Expr *RE = RS->getResult()) {
         if (swift::Stmt *S =
                 m_manipulator.ConvertExpressionToTmpReturnVarAccess(
                     RE, RS->getStartLoc(), /*add_return=*/true, m_decl_context))
-          return S;
+          return Action::Continue(S);
       }
 
-      return S;
+      return Action::Continue(S);
     }
 
   private:
@@ -629,9 +629,9 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
       return true;
     }
 
-    bool walkToDeclPre(swift::Decl *D) override {
+    PreWalkAction walkToDeclPre(swift::Decl *D) override {
       if (!canMakePublic(D))
-        return true;
+        return Action::Continue();
 
       if (auto *VD = llvm::dyn_cast<swift::ValueDecl>(D)) {
         auto access = swift::AccessLevel::Public;
@@ -650,7 +650,7 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
         if (auto *ASD = llvm::dyn_cast<swift::AbstractStorageDecl>(D))
           ASD->overwriteSetterAccess(access);
       }
-      return true;
+      return Action::Continue();
     }
   };
 
