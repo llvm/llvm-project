@@ -220,6 +220,9 @@ Non-comprehensive list of changes in this release
   temporarily reversed with ``-Xclang
   -fno-modules-validate-textual-header-includes``, but this flag will be
   removed in a future Clang release.
+- Unicode support has been updated to support Unicode 15.0.
+  New unicode codepoints are supported as appropriate in diagnostics,
+  C and C++ identifiers, and escape sequences.
 
 New Compiler Flags
 ------------------
