@@ -3,7 +3,7 @@ import("//clang/resource_dir.gni")
 copy("include") {
   sources = [
     "fuzzer/FuzzedDataProvider.h",
-    "orc/c_api.h",
+    "orc_rt/c_api.h",
     "profile/InstrProfData.inc",
     "profile/MemProfData.inc",
     "sanitizer/allocator_interface.h",
