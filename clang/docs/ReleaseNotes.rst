@@ -188,6 +188,11 @@ Attribute Changes in Clang
   supported the ability to specify a message in the attribute, so there were no
   changes to the attribute behavior.
 
+- Updated the value returned by ``__has_c_attribute(fallthrough)`` to ``201910L``
+  based on the final date specified by the C2x committee draft. We previously
+  used ``201904L`` (the date the proposal was seen by the committee) by mistake.
+  There were no other changes to the attribute behavior.
+
 Windows Support
 ---------------
 - For the MinGW driver, added the options ``-mguard=none``, ``-mguard=cf`` and
