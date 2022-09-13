@@ -24,6 +24,8 @@
  * this file.
  */
 
+#include "test_macros.h"
+
 #if TEST_STD_VER < 20
 #error "The format header requires at least C++20"
 #endif
