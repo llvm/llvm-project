@@ -1003,6 +1003,10 @@ bool Target::EnableBreakpointByID(break_id_t break_id) {
   return false;
 }
 
+void Target::ResetBreakpointHitCounts() {
+  GetBreakpointList().ResetHitCounts();
+}
+
 Status Target::SerializeBreakpointsToFile(const FileSpec &file,
                                           const BreakpointIDList &bp_ids,
                                           bool append) {

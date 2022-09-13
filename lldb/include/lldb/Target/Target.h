@@ -780,6 +780,9 @@ public:
 
   bool RemoveBreakpointByID(lldb::break_id_t break_id);
 
+  /// Resets the hit count of all breakpoints.
+  void ResetBreakpointHitCounts();
+
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.
 

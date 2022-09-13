@@ -330,6 +330,9 @@ public:
   ///     The current hit count for all locations.
   uint32_t GetHitCount() const;
 
+  /// Resets the current hit count for all locations.
+  void ResetHitCount();
+
   /// If \a one_shot is \b true, breakpoint will be deleted on first hit.
   void SetOneShot(bool one_shot);
 
