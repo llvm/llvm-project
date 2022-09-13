@@ -105,7 +105,7 @@ Other approaches were explored that involved adding specialized operations and
 rules. However, these resulted in the need for more operations that did not
 compose. It also resulted in operations with context sensitive semantics and
 corner cases that had to be defined. The observation was that numerous
-specialized context sensitive operations are harder for both produces and
+specialized context sensitive operations are harder for both producers and
 consumers than a smaller number of general composable operations that have
 consistent semantics regardless of context.
 
