@@ -6,7 +6,7 @@
 // CHECK: fallthrough: 201904L
 C2x(fallthrough)
 
-// CHECK: __nodiscard__: 201904L
+// CHECK: __nodiscard__: 202003L
 C2x(__nodiscard__)
 
 // CHECK: selectany: 0
@@ -27,10 +27,10 @@ C2x(deprecated)
 // CHECK: maybe_unused: 201904L
 C2x(maybe_unused)
 
-// CHECK: __gnu__::warn_unused_result: 201904L
+// CHECK: __gnu__::warn_unused_result: 202003L
 C2x(__gnu__::warn_unused_result)
 
-// CHECK: gnu::__warn_unused_result__: 201904L
+// CHECK: gnu::__warn_unused_result__: 202003L
 C2x(gnu::__warn_unused_result__)
 
 // Test that macro expansion of the builtin argument works.
