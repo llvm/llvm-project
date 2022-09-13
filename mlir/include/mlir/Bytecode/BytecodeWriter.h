@@ -27,6 +27,10 @@ public:
   /// of the bytecode when reading. It has no functional effect on the bytecode
   /// serialization.
   BytecodeWriterConfig(StringRef producer = "MLIR" LLVM_VERSION_STRING);
+  /// `map` is a fallback resource map, which when provided will attach resource
+  /// printers for the fallback resources within the map.
+  BytecodeWriterConfig(FallbackAsmResourceMap &map,
+                       StringRef producer = "MLIR" LLVM_VERSION_STRING);
   ~BytecodeWriterConfig();
 
   /// An internal implementation class that contains the state of the
@@ -51,6 +55,13 @@ public:
   attachResourcePrinter(StringRef name, CallableT &&printFn) {
     attachResourcePrinter(AsmResourcePrinter::fromCallable(
         name, std::forward<CallableT>(printFn)));
+  }
+
+  /// Attach resource printers to the AsmState for the fallback resources
+  /// in the given map.
+  void attachFallbackResourcePrinter(FallbackAsmResourceMap &map) {
+    for (auto &printer : map.getPrinters())
+      attachResourcePrinter(std::move(printer));
   }
 
 private:
