@@ -246,6 +246,7 @@ class ImageType<Type _Ty, string _AccessQualifier> :
   let Extension = !cond(
       !and(!eq(_Ty.Name, "image3d_t"), !eq(_AccessQualifier, "WO")) : TypeExtension<"cl_khr_3d_image_writes">,
       !and(!eq(_Ty.Name, "image3d_t"), !eq(_AccessQualifier, "RW")) : TypeExtension<"cl_khr_3d_image_writes __opencl_c_read_write_images">,
+      !or(!eq(_Ty.Name, "image2d_depth_t"), !eq(_Ty.Name, "image2d_array_depth_t")) : TypeExtension<"cl_khr_depth_images">,
       !eq(_AccessQualifier, "RW") : TypeExtension<"__opencl_c_read_write_images">,
       true : _Ty.Extension);
 }
