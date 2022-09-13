@@ -28,7 +28,7 @@ TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
   errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/dup.test";
+  constexpr const char *TEST_FILE = "testdata/dup3.test";
   int fd = __llvm_libc::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_EQ(errno, 0);
   ASSERT_GT(fd, 0);
