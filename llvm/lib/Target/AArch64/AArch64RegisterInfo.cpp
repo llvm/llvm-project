@@ -421,6 +421,13 @@ void AArch64RegisterInfo::emitReservedArgRegCallError(
 
 bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
                                           MCRegister PhysReg) const {
+  // SLH uses register X16 as the taint register but it will fallback to a different
+  // method if the user clobbers it. So X16 is not reserved for inline asm but is
+  // for normal codegen.
+  if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening) &&
+        MCRegisterInfo::regsOverlap(PhysReg, AArch64::X16))
+    return true;
+
   return !isReservedReg(MF, PhysReg);
 }
 
