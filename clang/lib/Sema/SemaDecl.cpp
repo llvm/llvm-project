@@ -9503,7 +9503,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     bool ImplicitInlineCXX20 = !getLangOpts().CPlusPlusModules ||
                                !NewFD->getOwningModule() ||
                                NewFD->getOwningModule()->isGlobalModule() ||
-                               NewFD->getOwningModule()->isModuleMapModule();
+                               NewFD->getOwningModule()->isHeaderLikeModule();
     bool isInline = D.getDeclSpec().isInlineSpecified();
     bool isVirtual = D.getDeclSpec().isVirtualSpecified();
     bool hasExplicit = D.getDeclSpec().hasExplicitSpecifier();
