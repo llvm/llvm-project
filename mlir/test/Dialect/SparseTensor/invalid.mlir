@@ -355,6 +355,40 @@ func.func @invalid_reduce_wrong_yield(%arg0: f64, %arg1: f64) -> f64 {
 
 // -----
 
+func.func @invalid_select_num_args_mismatch(%arg0: f64) -> f64 {
+  // expected-error@+1 {{select region must have exactly 1 arguments}}
+  %r = sparse_tensor.select %arg0 : f64 {
+      ^bb0(%x: f64, %y: f64):
+        %ret = arith.constant 1 : i1
+        sparse_tensor.yield %ret : i1
+    }
+  return %r : f64
+}
+
+// -----
+
+func.func @invalid_select_return_type_mismatch(%arg0: f64) -> f64 {
+  // expected-error@+1 {{select region yield type mismatch}}
+  %r = sparse_tensor.select %arg0 : f64 {
+      ^bb0(%x: f64):
+        sparse_tensor.yield %x : f64
+    }
+  return %r : f64
+}
+
+// -----
+
+func.func @invalid_select_wrong_yield(%arg0: f64) -> f64 {
+  // expected-error@+1 {{select region must end with sparse_tensor.yield}}
+  %r = sparse_tensor.select %arg0 : f64 {
+      ^bb0(%x: f64):
+        tensor.yield %x : f64
+    }
+  return %r : f64
+}
+
+// -----
+
 #DC = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
 func.func @invalid_concat_less_inputs(%arg: tensor<9x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
   // expected-error@+1 {{Need at least two tensors to concatenate.}}
