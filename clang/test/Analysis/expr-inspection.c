@@ -36,7 +36,7 @@ void foo(int x) {
 // CHECK-NEXT:   ]},
 // CHECK-NEXT:   "environment": { "pointer": "{{0x[0-9a-f]+}}", "items": [
 // CHECK-NEXT:     { "lctx_id": {{[0-9]+}}, "location_context": "#0 Call", "calling": "foo", "location": null, "items": [
-// CHECK-NEXT:       { "stmt_id": {{[0-9]+}}, "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
+// CHECK-NEXT:       { "stmt_id": {{[0-9]+}}, "kind": "ImplicitCastExpr", "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
 // CHECK-NEXT:     ]}
 // CHECK-NEXT:   ]},
 // CHECK-NEXT:   "constraints": [
