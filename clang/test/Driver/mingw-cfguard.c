@@ -3,7 +3,7 @@
 // NO_CF: "-cc1"
 // NO_CF-NOT: "-cfguard"
 // NO_CF-NOT: "-cfguard-no-checks"
-// NO_CF-NEXT: ld"
+// NO_CF-NEXT: ld{{(.lld)?}}{{(.exe)?}}"
 // NO_CF-NOT: "--guard-cf"
 // DEFAULT-NOT: "--no-guard-cf"
 // GUARD_NONE-SAME: "--no-guard-cf"
@@ -11,7 +11,7 @@
 // RUN: %clang --target=x86_64-w64-windows-gnu -### %s -mguard=cf 2>&1 | FileCheck -check-prefix=GUARD_CF %s
 // GUARD_CF: "-cc1"
 // GUARD_CF-SAME: "-cfguard"
-// GUARD_CF-NEXT: ld"
+// GUARD_CF-NEXT: ld{{(.lld)?}}{{(.exe)?}}"
 // GUARD_CF-SAME: "--guard-cf"
 // GUARD_CF-NOT: "--no-guard-cf"
 
@@ -20,7 +20,7 @@
 // GUARD_NOCHECKS-NOT: "-cfguard"
 // GUARD_NOCHECKS-SAME: "-cfguard-no-checks"
 // GUARD_NOCHECKS-NOT: "-cfguard"
-// GUARD_NOCHECKS-NEXT: ld"
+// GUARD_NOCHECKS-NEXT: ld{{(.lld)?}}{{(.exe)?}}"
 // GUARD_NOCHECKS-SAME: "--guard-cf"
 // GUARD_NOCHECKS-NOT: "--no-guard-cf"
 
