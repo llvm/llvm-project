@@ -23,6 +23,7 @@ typedef struct FloatAFItem {
   int ResultNodeID;
   char *WRTInstructionString;
   int WRTNodeID;
+  CGNode *AFPathPointer;
   float AF;
   float AmplifiedRelativeError;
   char *AFString;
@@ -33,6 +34,7 @@ typedef struct DoubleAFItem {
   int ResultNodeID;
   char *WRTInstructionString;
   int WRTNodeID;
+  CGNode *AFPathPointer;
   double AF;
   double AmplifiedRelativeError;
   char *AFString;
@@ -76,8 +78,7 @@ void fAFInitialize() {
     printf("#AF: Queue out of memory error!");
     exit(EXIT_FAILURE);
   }
-//  AFResult->ProcessingQ = NULL;
-//  AFResult->PoisonValue = 0xFA84ACA5843FBDB8;
+
   AFResult->FloatAFItemPointer = NULL;
   AFResult->DoubleAFItemPointer = NULL;
   AFResult->FloatAFRecords = 0;
@@ -1015,7 +1016,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
   return ;
 }
 
-void fAFStoreResult() {
+void fAFStoreAFs() {
   // Create a directory if not present
   char *DirectoryName = (char *)malloc((strlen(LOG_DIRECTORY_NAME)+1) * sizeof(char));
   strcpy(DirectoryName, LOG_DIRECTORY_NAME);

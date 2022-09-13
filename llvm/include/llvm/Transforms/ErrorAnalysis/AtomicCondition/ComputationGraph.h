@@ -675,7 +675,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
   return ;
 }
 
-void fCGStoreResult() {
+void fCGStoreCG() {
 #if FAF_DEBUG
   // Create a directory if not present
   char *DirectoryName = (char *)malloc(strlen(LOG_DIRECTORY_NAME) * sizeof(char));

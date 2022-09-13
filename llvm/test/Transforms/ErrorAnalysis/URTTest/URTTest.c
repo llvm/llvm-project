@@ -21,7 +21,7 @@ int main() {
 
   c = sum(a, b);
   printf("Sum: %f\n", c);
-  fURTff(0.1, sum, -1, 1, -1, 1);
+  fURTff(0.1, sum, a-1, a+1, b-1, b+1);
 
   return 0;
 }

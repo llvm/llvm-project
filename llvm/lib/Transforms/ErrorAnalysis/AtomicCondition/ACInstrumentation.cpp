@@ -101,14 +101,14 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
       confFunction(CurrentFunction, &CGCreateNode,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
-    else if (CurrentFunction->getName().str().find("fACStoreResult") != std::string::npos) {
+    else if (CurrentFunction->getName().str().find("fACStoreACs") != std::string::npos) {
       confFunction(CurrentFunction, &ACStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
-    else if (CurrentFunction->getName().str().find("fCGStoreResult") != std::string::npos) {
+    else if (CurrentFunction->getName().str().find("fCGStoreCG") != std::string::npos) {
       confFunction(CurrentFunction, &CGStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-    }else if (CurrentFunction->getName().str().find("fAFStoreResult") != std::string::npos) {
+    }else if (CurrentFunction->getName().str().find("fAFStoreAFs") != std::string::npos) {
       confFunction(CurrentFunction, &AFStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
@@ -967,6 +967,7 @@ bool ACInstrumentation::isUnwantedFunction(const Function *Func) {
   return Func->getName().str().find("fAC") != std::string::npos ||
          Func->getName().str().find("fCG") != std::string::npos ||
          Func->getName().str().find("fAF") != std::string::npos ||
+         Func->getName().str().find("fRS") != std::string::npos ||
          Func->getName().str().find("ACItem") != std::string::npos;
 }
 

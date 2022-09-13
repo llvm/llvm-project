@@ -77,7 +77,7 @@ typedef struct ACTable {
 } ACTable;
 
 /*----------------------------------------------------------------------------*/
-/* Constants                                                                    */
+/* Constants                                                                  */
 /*----------------------------------------------------------------------------*/
 #define LOG_DIRECTORY_NAME ".fAF_logs"
 
@@ -87,6 +87,11 @@ typedef struct ACTable {
 
 ACTable *StorageTable;
 int NodeCounter;
+
+FloatACItem *FP32ResultList;
+uint64_t FP32ResultListSize;
+DoubleACItem *FP64ResultList;
+uint64_t FP64ResultListSize;
 
 // ULP error introduced by each operation on x86_64 architecture as given in
 // https://www.gnu.org/software/libc/manual/html_node/Errors-in-Math-Functions.html
@@ -799,6 +804,7 @@ void fAFcreateLogDirectory(char *DirectoryName) {
 void fACCreate() {
   ACTable *AtomicConditionsTable = NULL;
   int64_t Size = 1000000;
+  int64_t ResultSize = 10000;
 
   // Allocating the table itself
   if(( AtomicConditionsTable = (ACTable*)malloc(sizeof(ACTable))) == NULL) {
@@ -830,6 +836,20 @@ void fACCreate() {
   StorageTable = AtomicConditionsTable;
 
   NodeCounter=0;
+
+  // Allocate pointers to the FP32 Result head nodes
+  if( (FP32ResultList =
+           (struct FloatACItem *)malloc((size_t)((int64_t)sizeof(FloatACItem) * ResultSize))) == NULL) {
+    printf("#fAC: FP32: Out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  // Allocate pointers to the FP64 Result head nodes
+  if( (FP64ResultList =
+           (struct DoubleACItem *)malloc((size_t)((int64_t)sizeof(DoubleACItem) * ResultSize))) == NULL) {
+    printf("#fAC: FP64: Out of memory error!");
+    exit(EXIT_FAILURE);
+  }
 }
 
 
@@ -1269,8 +1289,7 @@ void fACGenerateExecutionID(char* ExecutionId) {
   strcat(ExecutionId, PIDStr);
 }
 
-void fACStoreResult() {
-#if FAF_DEBUG
+void fACStoreACs() {
   // Create a directory if not present
   char *DirectoryName = (char *)malloc((strlen(LOG_DIRECTORY_NAME)+1) * sizeof(char));
   strcpy(DirectoryName, LOG_DIRECTORY_NAME);
@@ -1386,7 +1405,6 @@ void fACStoreResult() {
   fclose(FP);
 
   printf("\nAtomic Conditions written to file: %s\n", FileName);
-#endif
 }
 
 
