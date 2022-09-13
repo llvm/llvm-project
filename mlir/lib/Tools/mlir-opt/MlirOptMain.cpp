@@ -66,8 +66,11 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
   pm.enableTiming(timing);
 
   // Prepare the parser config, and attach any useful/necessary resource
-  // handlers.
-  ParserConfig config(context);
+  // handlers. Unhandled external resources are treated as passthrough, i.e.
+  // they are not processed and will be emitted directly to the output
+  // untouched.
+  FallbackAsmResourceMap fallbackResourceMap;
+  ParserConfig config(context, &fallbackResourceMap);
   attachPassReproducerAsmResource(config, pm, wasThreadingEnabled);
 
   // Parse the input file and reset the context threading state.
@@ -89,9 +92,12 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
   // Print the output.
   TimingScope outputTiming = timing.nest("Output");
   if (emitBytecode) {
-    writeBytecodeToFile(module->getOperation(), os);
+    BytecodeWriterConfig writerConfig(fallbackResourceMap);
+    writeBytecodeToFile(module->getOperation(), os, writerConfig);
   } else {
-    module->print(os);
+    AsmState asmState(*module, OpPrintingFlags(), /*locationMap=*/nullptr,
+                      &fallbackResourceMap);
+    module->print(os, asmState);
     os << '\n';
   }
   return success();

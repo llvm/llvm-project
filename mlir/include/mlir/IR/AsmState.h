@@ -16,6 +16,8 @@
 
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringMap.h"
 
 #include <memory>
 
@@ -401,6 +403,50 @@ private:
   std::string name;
 };
 
+/// A fallback map containing external resources not explicitly handled by
+/// another parser/printer.
+class FallbackAsmResourceMap {
+public:
+  /// This class represents an opaque resource.
+  struct OpaqueAsmResource {
+    OpaqueAsmResource(StringRef key,
+                      std::variant<AsmResourceBlob, bool, std::string> value)
+        : key(key.str()), value(std::move(value)) {}
+
+    /// The key identifying the resource.
+    std::string key;
+    /// An opaque value for the resource, whose variant values align 1-1 with
+    /// the kinds defined in AsmResourceEntryKind.
+    std::variant<AsmResourceBlob, bool, std::string> value;
+  };
+
+  /// Return a parser than can be used for parsing entries for the given
+  /// identifier key.
+  AsmResourceParser &getParserFor(StringRef key);
+
+  /// Build a set of resource printers to print the resources within this map.
+  std::vector<std::unique_ptr<AsmResourcePrinter>> getPrinters();
+
+private:
+  struct ResourceCollection : public AsmResourceParser {
+    ResourceCollection(StringRef name) : AsmResourceParser(name) {}
+
+    /// Parse a resource into this collection.
+    LogicalResult parseResource(AsmParsedResourceEntry &entry) final;
+
+    /// Build the resources held by this collection.
+    void buildResources(Operation *op, AsmResourceBuilder &builder) const;
+
+    /// The set of resources parsed into this collection.
+    SmallVector<OpaqueAsmResource> resources;
+  };
+
+  /// The set of opaque resources.
+  llvm::MapVector<std::string, std::unique_ptr<ResourceCollection>,
+                  llvm::StringMap<unsigned>>
+      keyToResources;
+};
+
 //===----------------------------------------------------------------------===//
 // ParserConfig
 //===----------------------------------------------------------------------===//
@@ -409,7 +455,12 @@ private:
 /// contains all of the necessary state to parse a MLIR source file.
 class ParserConfig {
 public:
-  ParserConfig(MLIRContext *context) : context(context) {
+  /// Construct a parser configuration with the given context.
+  /// `fallbackResourceMap` is an optional fallback handler that can be used to
+  /// parse external resources not explicitly handled by another parser.
+  ParserConfig(MLIRContext *context,
+               FallbackAsmResourceMap *fallbackResourceMap = nullptr)
+      : context(context), fallbackResourceMap(fallbackResourceMap) {
     assert(context && "expected valid MLIR context");
   }
 
@@ -420,7 +471,11 @@ public:
   /// parser with `name` is registered.
   AsmResourceParser *getResourceParser(StringRef name) const {
     auto it = resourceParsers.find(name);
-    return it == resourceParsers.end() ? nullptr : it->second.get();
+    if (it != resourceParsers.end())
+      return it->second.get();
+    if (fallbackResourceMap)
+      return &fallbackResourceMap->getParserFor(name);
+    return nullptr;
   }
 
   /// Attach the given resource parser.
@@ -444,6 +499,7 @@ public:
 private:
   MLIRContext *context;
   DenseMap<StringRef, std::unique_ptr<AsmResourceParser>> resourceParsers;
+  FallbackAsmResourceMap *fallbackResourceMap;
 };
 
 //===----------------------------------------------------------------------===//
@@ -466,13 +522,17 @@ public:
   using LocationMap = DenseMap<Operation *, std::pair<unsigned, unsigned>>;
 
   /// Initialize the asm state at the level of the given operation. A location
-  /// map may optionally be provided to be populated when printing.
+  /// map may optionally be provided to be populated when printing. `map` is an
+  /// optional fallback resource map, which when provided will attach resource
+  /// printers for the fallback resources within the map.
   AsmState(Operation *op,
            const OpPrintingFlags &printerFlags = OpPrintingFlags(),
-           LocationMap *locationMap = nullptr);
+           LocationMap *locationMap = nullptr,
+           FallbackAsmResourceMap *map = nullptr);
   AsmState(MLIRContext *ctx,
            const OpPrintingFlags &printerFlags = OpPrintingFlags(),
-           LocationMap *locationMap = nullptr);
+           LocationMap *locationMap = nullptr,
+           FallbackAsmResourceMap *map = nullptr);
   ~AsmState();
 
   /// Get the printer flags.
@@ -496,6 +556,13 @@ public:
   attachResourcePrinter(StringRef name, CallableT &&printFn) {
     attachResourcePrinter(AsmResourcePrinter::fromCallable(
         name, std::forward<CallableT>(printFn)));
+  }
+
+  /// Attach resource printers to the AsmState for the fallback resources
+  /// in the given map.
+  void attachFallbackResourcePrinter(FallbackAsmResourceMap &map) {
+    for (auto &printer : map.getPrinters())
+      attachResourcePrinter(std::move(printer));
   }
 
   /// Returns a map of dialect resources that were referenced when using this

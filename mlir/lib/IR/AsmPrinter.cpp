@@ -1283,6 +1283,69 @@ StringRef mlir::toString(AsmResourceEntryKind kind) {
   llvm_unreachable("unknown AsmResourceEntryKind");
 }
 
+AsmResourceParser &FallbackAsmResourceMap::getParserFor(StringRef key) {
+  std::unique_ptr<ResourceCollection> &collection = keyToResources[key.str()];
+  if (!collection)
+    collection = std::make_unique<ResourceCollection>(key);
+  return *collection;
+}
+
+std::vector<std::unique_ptr<AsmResourcePrinter>>
+FallbackAsmResourceMap::getPrinters() {
+  std::vector<std::unique_ptr<AsmResourcePrinter>> printers;
+  for (auto &it : keyToResources) {
+    ResourceCollection *collection = it.second.get();
+    auto buildValues = [=](Operation *op, AsmResourceBuilder &builder) {
+      return collection->buildResources(op, builder);
+    };
+    printers.emplace_back(
+        AsmResourcePrinter::fromCallable(collection->getName(), buildValues));
+  }
+  return printers;
+}
+
+LogicalResult FallbackAsmResourceMap::ResourceCollection::parseResource(
+    AsmParsedResourceEntry &entry) {
+  switch (entry.getKind()) {
+  case AsmResourceEntryKind::Blob: {
+    FailureOr<AsmResourceBlob> blob = entry.parseAsBlob();
+    if (failed(blob))
+      return failure();
+    resources.emplace_back(entry.getKey(), std::move(*blob));
+    return success();
+  }
+  case AsmResourceEntryKind::Bool: {
+    FailureOr<bool> value = entry.parseAsBool();
+    if (failed(value))
+      return failure();
+    resources.emplace_back(entry.getKey(), *value);
+    break;
+  }
+  case AsmResourceEntryKind::String: {
+    FailureOr<std::string> str = entry.parseAsString();
+    if (failed(str))
+      return failure();
+    resources.emplace_back(entry.getKey(), std::move(*str));
+    break;
+  }
+  }
+  return success();
+}
+
+void FallbackAsmResourceMap::ResourceCollection::buildResources(
+    Operation *op, AsmResourceBuilder &builder) const {
+  for (const auto &entry : resources) {
+    if (const auto *value = std::get_if<AsmResourceBlob>(&entry.value))
+      builder.buildBlob(entry.key, *value);
+    else if (const auto *value = std::get_if<bool>(&entry.value))
+      builder.buildBool(entry.key, *value);
+    else if (const auto *value = std::get_if<std::string>(&entry.value))
+      builder.buildString(entry.key, *value);
+    else
+      llvm_unreachable("unknown AsmResourceEntryKind");
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // AsmState
 //===----------------------------------------------------------------------===//
@@ -1401,12 +1464,18 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
 }
 
 AsmState::AsmState(Operation *op, const OpPrintingFlags &printerFlags,
-                   LocationMap *locationMap)
+                   LocationMap *locationMap, FallbackAsmResourceMap *map)
     : impl(std::make_unique<AsmStateImpl>(
-          op, verifyOpAndAdjustFlags(op, printerFlags), locationMap)) {}
+          op, verifyOpAndAdjustFlags(op, printerFlags), locationMap)) {
+  if (map)
+    attachFallbackResourcePrinter(*map);
+}
 AsmState::AsmState(MLIRContext *ctx, const OpPrintingFlags &printerFlags,
-                   LocationMap *locationMap)
-    : impl(std::make_unique<AsmStateImpl>(ctx, printerFlags, locationMap)) {}
+                   LocationMap *locationMap, FallbackAsmResourceMap *map)
+    : impl(std::make_unique<AsmStateImpl>(ctx, printerFlags, locationMap)) {
+  if (map)
+    attachFallbackResourcePrinter(*map);
+}
 AsmState::~AsmState() = default;
 
 const OpPrintingFlags &AsmState::getPrinterFlags() const {
@@ -3308,14 +3377,6 @@ void Value::printAsOperand(raw_ostream &os, AsmState &state) {
 }
 
 void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
-  // If this is a top level operation, we also print aliases.
-  if (!getParent() && !printerFlags.shouldUseLocalScope()) {
-    AsmState state(this, printerFlags);
-    state.getImpl().initializeAliases(this);
-    print(os, state);
-    return;
-  }
-
   // Find the operation to number from based upon the provided flags.
   Operation *op = this;
   bool shouldUseLocalScope = printerFlags.shouldUseLocalScope();
@@ -3337,10 +3398,12 @@ void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
 }
 void Operation::print(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
-  if (!getParent() && !state.getPrinterFlags().shouldUseLocalScope())
+  if (!getParent() && !state.getPrinterFlags().shouldUseLocalScope()) {
+    state.getImpl().initializeAliases(this);
     printer.printTopLevelOperation(this);
-  else
+  } else {
     printer.print(this);
+  }
 }
 
 void Operation::dump() {

@@ -39,6 +39,11 @@ struct BytecodeWriterConfig::Impl {
 
 BytecodeWriterConfig::BytecodeWriterConfig(StringRef producer)
     : impl(std::make_unique<Impl>(producer)) {}
+BytecodeWriterConfig::BytecodeWriterConfig(FallbackAsmResourceMap &map,
+                                           StringRef producer)
+    : BytecodeWriterConfig(producer) {
+  attachFallbackResourcePrinter(map);
+}
 BytecodeWriterConfig::~BytecodeWriterConfig() = default;
 
 void BytecodeWriterConfig::attachResourcePrinter(

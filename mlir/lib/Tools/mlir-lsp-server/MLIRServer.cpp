@@ -319,6 +319,10 @@ struct MLIRDocument {
   /// The container for the IR parsed from the input file.
   Block parsedIR;
 
+  /// A collection of external resources, which we want to propagate up to the
+  /// user.
+  FallbackAsmResourceMap fallbackResourceMap;
+
   /// The source manager containing the contents of the input file.
   llvm::SourceMgr sourceMgr;
 };
@@ -338,11 +342,13 @@ MLIRDocument::MLIRDocument(MLIRContext &context, const lsp::URIForFile &uri,
     return;
   }
 
+  ParserConfig config(&context, &fallbackResourceMap);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  if (failed(parseAsmSourceFile(sourceMgr, &parsedIR, &context, &asmState))) {
+  if (failed(parseAsmSourceFile(sourceMgr, &parsedIR, config, &asmState))) {
     // If parsing failed, clear out any of the current state.
     parsedIR.clear();
     asmState = AsmParserState();
+    fallbackResourceMap = FallbackAsmResourceMap();
     return;
   }
 }
@@ -875,9 +881,11 @@ MLIRDocument::convertToBytecode() {
 
   lsp::MLIRConvertBytecodeResult result;
   {
+    BytecodeWriterConfig writerConfig(fallbackResourceMap);
+
     std::string rawBytecodeBuffer;
     llvm::raw_string_ostream os(rawBytecodeBuffer);
-    writeBytecodeToFile(&parsedIR.front(), os);
+    writeBytecodeToFile(&parsedIR.front(), os, writerConfig);
     result.output = llvm::encodeBase64(rawBytecodeBuffer);
   }
   return result;
@@ -1284,11 +1292,15 @@ lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
       &tempContext,
       [&](mlir::Diagnostic &diag) { errorMsg += diag.str() + "\n"; });
 
+  // Handling for external resources, which we want to propagate up to the user.
+  FallbackAsmResourceMap fallbackResourceMap;
+
+  // Setup the parser config.
+  ParserConfig parserConfig(&tempContext, &fallbackResourceMap);
+
   // Try to parse the given source file.
-  // TODO: This won't preserve external resources or the producer, we should try
-  // to fix this.
   Block parsedBlock;
-  if (failed(parseSourceFile(uri.file(), &parsedBlock, &tempContext))) {
+  if (failed(parseSourceFile(uri.file(), &parsedBlock, parserConfig))) {
     return llvm::make_error<lsp::LSPError>(
         "failed to parse bytecode source file: " + errorMsg,
         lsp::ErrorCode::RequestFailed);
@@ -1310,8 +1322,11 @@ lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
     OwningOpRef<Operation *> topOp = &parsedBlock.front();
     (*topOp)->remove();
 
+    AsmState state(*topOp, OpPrintingFlags().enableDebugInfo().assumeVerified(),
+                   /*locationMap=*/nullptr, &fallbackResourceMap);
+
     llvm::raw_string_ostream os(result.output);
-    (*topOp)->print(os, OpPrintingFlags().enableDebugInfo().assumeVerified());
+    (*topOp)->print(os, state);
   }
   return std::move(result);
 }
