@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target && aarch64-registered-target
 # RUN: llvm-as %p/Inputs/arm64-asm.ll -o %t-arm64-asm.o
 # RUN: llvm-as %p/Inputs/x86_64-asm.ll -o %t-x86_64-asm.o
 
