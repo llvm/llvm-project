@@ -123,6 +123,32 @@ enum AttributeCode {
   ///     handle: ResourceHandle
   ///   }
   kDenseResourceElementsAttr = 16,
+
+  ///   DenseArrayAttr {
+  ///     type: RankedTensorType,
+  ///     data: blob
+  ///   }
+  kDenseArrayAttr = 17,
+
+  ///   DenseIntOrFPElementsAttr {
+  ///     type: ShapedType,
+  ///     data: blob
+  ///   }
+  kDenseIntOrFPElementsAttr = 18,
+
+  ///   DenseStringElementsAttr {
+  ///     type: ShapedType,
+  ///     isSplat: varint,
+  ///     data: string[]
+  ///   }
+  kDenseStringElementsAttr = 19,
+
+  ///   SparseElementsAttr {
+  ///     type: ShapedType,
+  ///     indices: DenseIntElementsAttr,
+  ///     values: DenseElementsAttr
+  ///   }
+  kSparseElementsAttr = 20,
 };
 
 /// This enum contains marker codes used to indicate which type is currently
@@ -279,11 +305,18 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
 
   Attribute readAttribute(DialectBytecodeReader &reader) const override;
   ArrayAttr readArrayAttr(DialectBytecodeReader &reader) const;
+  DenseArrayAttr readDenseArrayAttr(DialectBytecodeReader &reader) const;
+  DenseElementsAttr
+  readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader) const;
+  DenseStringElementsAttr
+  readDenseStringElementsAttr(DialectBytecodeReader &reader) const;
   DenseResourceElementsAttr
   readDenseResourceElementsAttr(DialectBytecodeReader &reader) const;
   DictionaryAttr readDictionaryAttr(DialectBytecodeReader &reader) const;
   FloatAttr readFloatAttr(DialectBytecodeReader &reader) const;
   IntegerAttr readIntegerAttr(DialectBytecodeReader &reader) const;
+  SparseElementsAttr
+  readSparseElementsAttr(DialectBytecodeReader &reader) const;
   StringAttr readStringAttr(DialectBytecodeReader &reader, bool hasType) const;
   SymbolRefAttr readSymbolRefAttr(DialectBytecodeReader &reader,
                                   bool hasNestedRefs) const;
@@ -298,11 +331,16 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const override;
   void write(ArrayAttr attr, DialectBytecodeWriter &writer) const;
+  void write(DenseArrayAttr attr, DialectBytecodeWriter &writer) const;
+  void write(DenseIntOrFPElementsAttr attr,
+             DialectBytecodeWriter &writer) const;
+  void write(DenseStringElementsAttr attr, DialectBytecodeWriter &writer) const;
   void write(DenseResourceElementsAttr attr,
              DialectBytecodeWriter &writer) const;
   void write(DictionaryAttr attr, DialectBytecodeWriter &writer) const;
   void write(IntegerAttr attr, DialectBytecodeWriter &writer) const;
   void write(FloatAttr attr, DialectBytecodeWriter &writer) const;
+  void write(SparseElementsAttr attr, DialectBytecodeWriter &writer) const;
   void write(StringAttr attr, DialectBytecodeWriter &writer) const;
   void write(SymbolRefAttr attr, DialectBytecodeWriter &writer) const;
   void write(TypeAttr attr, DialectBytecodeWriter &writer) const;
@@ -394,6 +432,14 @@ Attribute BuiltinDialectBytecodeInterface::readAttribute(
     return UnknownLoc::get(getContext());
   case builtin_encoding::kDenseResourceElementsAttr:
     return readDenseResourceElementsAttr(reader);
+  case builtin_encoding::kDenseArrayAttr:
+    return readDenseArrayAttr(reader);
+  case builtin_encoding::kDenseIntOrFPElementsAttr:
+    return readDenseIntOrFPElementsAttr(reader);
+  case builtin_encoding::kDenseStringElementsAttr:
+    return readDenseStringElementsAttr(reader);
+  case builtin_encoding::kSparseElementsAttr:
+    return readSparseElementsAttr(reader);
   default:
     reader.emitError() << "unknown builtin attribute code: " << code;
     return Attribute();
@@ -403,8 +449,10 @@ Attribute BuiltinDialectBytecodeInterface::readAttribute(
 LogicalResult BuiltinDialectBytecodeInterface::writeAttribute(
     Attribute attr, DialectBytecodeWriter &writer) const {
   return TypeSwitch<Attribute, LogicalResult>(attr)
-      .Case<ArrayAttr, DenseResourceElementsAttr, DictionaryAttr, FloatAttr,
-            IntegerAttr, StringAttr, SymbolRefAttr, TypeAttr>([&](auto attr) {
+      .Case<ArrayAttr, DenseArrayAttr, DenseIntOrFPElementsAttr,
+            DenseStringElementsAttr, DenseResourceElementsAttr, DictionaryAttr,
+            FloatAttr, IntegerAttr, SparseElementsAttr, StringAttr,
+            SymbolRefAttr, TypeAttr>([&](auto attr) {
         write(attr, writer);
         return success();
       })
@@ -439,6 +487,78 @@ void BuiltinDialectBytecodeInterface::write(
     ArrayAttr attr, DialectBytecodeWriter &writer) const {
   writer.writeVarInt(builtin_encoding::kArrayAttr);
   writer.writeAttributes(attr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// DenseArrayAttr
+
+DenseArrayAttr BuiltinDialectBytecodeInterface::readDenseArrayAttr(
+    DialectBytecodeReader &reader) const {
+  RankedTensorType type;
+  ArrayRef<char> blob;
+  if (failed(reader.readType(type)) || failed(reader.readBlob(blob)))
+    return DenseArrayAttr();
+  return DenseArrayAttr::get(type, blob);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    DenseArrayAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kDenseArrayAttr);
+  writer.writeType(attr.getType());
+  writer.writeOwnedBlob(attr.getRawData());
+}
+
+//===----------------------------------------------------------------------===//
+// DenseIntOrFPElementsAttr
+
+DenseElementsAttr BuiltinDialectBytecodeInterface::readDenseIntOrFPElementsAttr(
+    DialectBytecodeReader &reader) const {
+  ShapedType type;
+  ArrayRef<char> blob;
+  if (failed(reader.readType(type)) || failed(reader.readBlob(blob)))
+    return DenseIntOrFPElementsAttr();
+  return DenseIntOrFPElementsAttr::getFromRawBuffer(type, blob);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    DenseIntOrFPElementsAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kDenseIntOrFPElementsAttr);
+  writer.writeType(attr.getType());
+  writer.writeOwnedBlob(attr.getRawData());
+}
+
+//===----------------------------------------------------------------------===//
+// DenseStringElementsAttr
+
+DenseStringElementsAttr
+BuiltinDialectBytecodeInterface::readDenseStringElementsAttr(
+    DialectBytecodeReader &reader) const {
+  ShapedType type;
+  uint64_t isSplat;
+  if (failed(reader.readType(type)) || failed(reader.readVarInt(isSplat)))
+    return DenseStringElementsAttr();
+
+  SmallVector<StringRef> values(isSplat ? 1 : type.getNumElements());
+  for (StringRef &value : values)
+    if (failed(reader.readString(value)))
+      return DenseStringElementsAttr();
+  return DenseStringElementsAttr::get(type, values);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    DenseStringElementsAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kDenseStringElementsAttr);
+  writer.writeType(attr.getType());
+
+  bool isSplat = attr.isSplat();
+  writer.writeVarInt(isSplat);
+
+  // If the attribute is a splat, only write out the single value.
+  if (isSplat)
+    return writer.writeOwnedString(attr.getRawStringData().front());
+
+  for (StringRef str : attr.getRawStringData())
+    writer.writeOwnedString(str);
 }
 
 //===----------------------------------------------------------------------===//
@@ -548,6 +668,28 @@ void BuiltinDialectBytecodeInterface::write(
   writer.writeVarInt(builtin_encoding::kIntegerAttr);
   writer.writeType(attr.getType());
   writer.writeAPIntWithKnownWidth(attr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// SparseElementsAttr
+
+SparseElementsAttr BuiltinDialectBytecodeInterface::readSparseElementsAttr(
+    DialectBytecodeReader &reader) const {
+  ShapedType type;
+  DenseIntElementsAttr indices;
+  DenseElementsAttr values;
+  if (failed(reader.readType(type)) || failed(reader.readAttribute(indices)) ||
+      failed(reader.readAttribute(values)))
+    return SparseElementsAttr();
+  return SparseElementsAttr::get(type, indices, values);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    SparseElementsAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kSparseElementsAttr);
+  writer.writeType(attr.getType());
+  writer.writeAttribute(attr.getIndices());
+  writer.writeAttribute(attr.getValues());
 }
 
 //===----------------------------------------------------------------------===//
