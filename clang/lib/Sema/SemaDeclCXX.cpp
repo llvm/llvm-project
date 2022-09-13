@@ -11582,9 +11582,7 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
   Args.addArgument(TemplateArgumentLoc(TemplateArgument(Element),
                                        Context.getTrivialTypeSourceInfo(Element,
                                                                         Loc)));
-  return Context.getElaboratedType(
-      ElaboratedTypeKeyword::ETK_None,
-      NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()),
+  return Context.getCanonicalType(
       CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
 }
 
