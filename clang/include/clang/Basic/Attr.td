@@ -2893,7 +2893,7 @@ def ObjCRequiresPropertyDefs : InheritableAttr {
 
 def Unused : InheritableAttr {
   let Spellings = [CXX11<"", "maybe_unused", 201603>, GCC<"unused">,
-                   C2x<"", "maybe_unused", 201904>];
+                   C2x<"", "maybe_unused", 202106>];
   let Subjects = SubjectList<[Var, ObjCIvar, Type, Enum, EnumConstant, Label,
                               Field, ObjCMethod, FunctionLike]>;
   let Documentation = [WarnMaybeUnusedDocs];

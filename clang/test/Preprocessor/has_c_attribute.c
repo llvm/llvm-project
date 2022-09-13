@@ -24,7 +24,7 @@ C2x(clang::annotate)
 // CHECK: deprecated: 201904L
 C2x(deprecated)
 
-// CHECK: maybe_unused: 201904L
+// CHECK: maybe_unused: 202106L
 C2x(maybe_unused)
 
 // CHECK: __gnu__::warn_unused_result: 202003L
