@@ -16,7 +16,6 @@ define i32 @needless_promotion(ptr nocapture noundef readonly %S, i64 noundef %r
 ; CHECK-O2-NEXT:  .LBB0_3:
 ; CHECK-O2-NEXT:    mov w9, #1
 ; CHECK-O2-NEXT:  .LBB0_4: // %lor.end.sink.split
-; CHECK-O2-NEXT:    and w8, w8, #0xffff
 ; CHECK-O2-NEXT:    cmp w8, w9
 ; CHECK-O2-NEXT:    cset w0, eq
 ; CHECK-O2-NEXT:    ret
@@ -32,13 +31,11 @@ define i32 @needless_promotion(ptr nocapture noundef readonly %S, i64 noundef %r
 ; CHECK-O3-NEXT:    cbz x1, .LBB0_4
 ; CHECK-O3-NEXT:  // %bb.2:
 ; CHECK-O3-NEXT:    mov w9, #2
-; CHECK-O3-NEXT:    and w8, w8, #0xffff
 ; CHECK-O3-NEXT:    cmp w8, w9
 ; CHECK-O3-NEXT:    cset w0, eq
 ; CHECK-O3-NEXT:    ret
 ; CHECK-O3-NEXT:  .LBB0_3:
 ; CHECK-O3-NEXT:    mov w9, #1
-; CHECK-O3-NEXT:    and w8, w8, #0xffff
 ; CHECK-O3-NEXT:    cmp w8, w9
 ; CHECK-O3-NEXT:    cset w0, eq
 ; CHECK-O3-NEXT:    ret
@@ -69,10 +66,11 @@ lor.end:                                          ; preds = %lor.end.sink.split,
 define i8 @loopcmp(ptr nocapture noundef readonly %x, i8 noundef %y) {
 ; CHECK-O2-LABEL: loopcmp:
 ; CHECK-O2:       // %bb.0: // %entry
+; CHECK-O2-NEXT:    and w9, w1, #0xff
 ; CHECK-O2-NEXT:  .LBB1_1: // %while.cond
 ; CHECK-O2-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-O2-NEXT:    ldrb w8, [x0], #1
-; CHECK-O2-NEXT:    cmp w8, w1, uxtb
+; CHECK-O2-NEXT:    cmp w8, w9
 ; CHECK-O2-NEXT:    b.lo .LBB1_1
 ; CHECK-O2-NEXT:  // %bb.2: // %while.end
 ; CHECK-O2-NEXT:    mov w0, w8
