@@ -506,6 +506,19 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
             Suffix,
         Plugin);
     CmdArgs.push_back(Args.MakeArgString(Plugin));
+  } else {
+    // NOTE:
+    // - it is not possible to use lld for PS4
+    // - addLTOOptions() is not used for PS5
+    // Hence no need to handle SCE (like in Clang.cpp::renderDebugOptions()).
+    //
+    // But note, this solution is far from perfect, better to encode it into IR
+    // metadata, but this may not be worth it, since it looks like aranges is
+    // on the way out.
+    if (Args.hasArg(options::OPT_gdwarf_aranges)) {
+      CmdArgs.push_back(Args.MakeArgString("-mllvm"));
+      CmdArgs.push_back(Args.MakeArgString("-generate-arange-section"));
+    }
   }
 
   // Try to pass driver level flags relevant to LTO code generation down to
