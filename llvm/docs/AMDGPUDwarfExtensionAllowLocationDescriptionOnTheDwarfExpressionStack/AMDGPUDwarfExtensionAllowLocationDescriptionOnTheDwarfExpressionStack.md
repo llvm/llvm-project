@@ -11,6 +11,7 @@
     - [3.2.4 Variable Spread Across Different Locations](#variable-spread-across-different-locations)
     - [3.2.5 Offsetting a Composite Location](#offsetting-a-composite-location)
     - [3.2.6 Pointer to Member](#pointer-to-member)
+    - [3.2.7 Virtual Base Class](#virtual-base-class)
   - [3.3 Limitations](#limitations)
 - [4. Extension Solution](#extension-solution)
   - [4.1 Location Description](#location-description)
@@ -629,6 +630,193 @@ description", as is described in [A.5 Type Entries](#a-5-type-entries).
 To implement the fully generalized version of this attribute, GCC would only
 need to change the expression from `DW_OP_plus` to `DW_OP_swap,
 DW_OP_LLVM_offset`.
+
+### 3.2.7 Virtual Base Class
+
+> NOTE: Without loss of generality, DWARF 4 is used in this example as full
+> support for DWARF 5 is not present in the versions of the tools used. No
+> feature of DWARF 5 provides a remedy for this issue.
+
+This example highlights the inability of DWARF 5 to describe C++
+virtual inheritance semantics.
+
+The mechanism DWARF 5 provides for describing the location of an inherited
+subobject is `DW_AT_data_member_location`. This attribute is overloaded to
+describe both data member locations and inherited subobject locations, and
+in each case has multiple possible forms:
+
+* If an integral constant form, it encodes the byte offset from the derived
+  object to the data member or subobject.
+* Otherwise, it encodes a location description to compute the address of the
+  data member or subobject given the address of the derived object.
+
+Only the attribute describing a subobject, and only the location description
+form are considered here.
+
+In this case, when a debug agent wishes to locate the subobject, it first
+pushes the address of the derived object onto the DWARF expression stack. It
+then evaluates the location description associated with the
+`DW_AT_data_member_location` of the `DW_TAG_inheritence` DIE corresponding to
+the inherited subobject.
+
+Consider the following C++ source file `ab.cc`:
+
+```cpp
+class A {
+public:
+    char x;
+};
+class B
+: public virtual A {} o;
+```
+
+When compiled with GCC and inspected with dwarfdump:
+
+```
+$ g++ -gdwarf-5 -O3 -c ab.cc
+$ dwarfdump ab.o
+< 1><0x0000002a>    DW_TAG_class_type
+                      DW_AT_name                  A
+                      DW_AT_byte_size             0x00000001
+                      DW_AT_sibling               <0x00000042>
+< 1><0x00000049>    DW_TAG_class_type
+                      DW_AT_name                  B
+                      DW_AT_byte_size             0x00000010
+                      DW_AT_containing_type       <0x00000049>
+                      DW_AT_sibling               <0x000000f9>
+< 2><0x00000058>      DW_TAG_inheritance
+                        DW_AT_type                  <0x0000002a>
+                        DW_AT_data_member_location  len 0x0006: 1206481c0622:
+                          DW_OP_dup DW_OP_deref DW_OP_lit24 DW_OP_minus DW_OP_deref DW_OP_plus
+                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                        DW_AT_accessibility         DW_ACCESS_public
+```
+
+This `DW_AT_data_member_location` expression describes the dynamic process of
+locating the `A`-in-`B` subobject according to the [Itanium
+ABI](https://refspecs.linuxfoundation.org/cxxabi-1.86.html#layout). A diagram
+of the logical layout of class `B` is:
+
+```
+0: class B
+0:   vptr B
+8:   class A
+8:     A::x
+```
+
+That is, the address of an object of class `B` is equivalent to the address for
+the `vtable` pointer for `B`. As there are no other direct data members of `B`
+the primary base class subobject of class `A` comes next, and there is no
+intervening padding as the subobject alignment requirements are already
+satisfied.
+
+The `vtable` pointer for `B` contains an entry `vbase_offset` for each virtual
+base class. In this case, that table layout is:
+
+```
+-24: vbase_offset[A]=8
+-16: offset_to_top=0
+ -8: B RTTI
+  0: <vtable for B>
+```
+
+That is, to find the `vbase_offset` for the `A`-in-`B` subobject the address
+`vptr B` is offset by the statically determined value `-24`.
+
+Thus, in order to implement `DW_AT_data_member_location` for `A`-in-`B`, the
+expression needs to index to a statically known byte offset of `-24` through
+`vptr B` to lookup `vbase_offset` for `A`-in-`B`. It must then offset the
+location of `B` by the dynamic value of `vbase_offset` (in this case `8`) to
+arrive at the location of the inherited subobject.
+
+This definition shares the same problem as example [3.2.6](#pointer-to-member)
+in that it relies on the address of the derived object and inherited subobject,
+when there is no guarantee either or both have any address at all.
+
+To demonstrate the problem, consider a program which GCC chooses to optimize in
+such a way that the derived object is not in memory at all:
+
+f.h:
+```cpp
+class A {
+public:
+    char x;
+};
+class B
+: public virtual A {};
+void f(B b);
+```
+
+f.cc:
+```cpp
+#include "f.h"
+void f(B b) {}
+```
+
+main.cc:
+```cpp
+#include "f.h"
+int main(int argc, char *argv[]) {
+    B b;
+    b.x = 42;
+    f(b);
+    return b.x;
+}
+```
+
+When compiled and run under GDB:
+
+```
+$ g++-9 -gdwarf-4 -O3 -c main.cc -o main.o
+$ g++-9 -gdwarf-4 -O3 -c f.cc -o f.o
+$ g++-9 main.o f.o -o cpp-vbase.out
+(gdb) maint set dwarf always-disassemble
+(gdb) b main.cc:6
+Breakpoint 1 at 0x1090: file main.cc, line 6.
+(gdb) r
+
+Breakpoint 1, main (argc=<optimized out>, argv=<optimized out>) at main.cc:6
+6           return b.x;
+```
+
+Note that the compiler has elided storage for the entire object `x` in the
+body of `main()`:
+
+```
+(gdb) info addr b
+Symbol "b" is multi-location:
+  Range 0x555555555078-0x5555555550af: a complex DWARF expression:
+     0: DW_OP_piece 8 (bytes)
+     2: DW_OP_const1u 42
+     4: DW_OP_stack_value
+     5: DW_OP_piece 1 (bytes)
+     7: DW_OP_piece 7 (bytes)
+
+.
+(gdb) p $pc
+$1 = (void (*)(void)) 0x555555555090 <main(int, char**)+48>
+```
+
+And so it is impossible to interpret `DW_OP_data_member_location` in this case:
+
+```
+(gdb) p b
+$2 = {<A> = <invalid address>, _vptr.B = <optimized out>}
+```
+
+> NOTE: The `vptr B` which should occupy the first 8 bytes of the object `b`
+> are undefined in the DWARF, but could be described as an implicit value by
+> the compiler. This change would be trivial and would directly expose the
+> issue in DWARF 5 described here.
+
+With location descriptions on the stack, the definition of
+`DW_OP_data_member_location` can be modified by replacing every instance of
+"address" with "location description", as is described in [A.5 Type
+Entries](#a-5-type-entries).
+
+To implement the fully generalized version of this attribute, GCC would only
+need to change the last operation in the expression from `DW_OP_plus` to
+`DW_OP_LLVM_offset`.
 
 ## 3.3 Limitations
 
