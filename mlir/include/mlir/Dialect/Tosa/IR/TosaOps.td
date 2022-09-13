@@ -1464,6 +1464,8 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
   let results = (outs
     Tosa_Tensor1Dto4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

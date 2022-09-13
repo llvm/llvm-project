@@ -846,6 +846,21 @@ OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+OpFoldResult ReverseOp::fold(ArrayRef<Attribute> operands) {
+  auto operand = getInput();
+  auto operandTy = operand.getType().cast<ShapedType>();
+  auto axis = getAxis();
+  auto operandAttr = operands[0].dyn_cast_or_null<SplatElementsAttr>();
+  if (operandAttr)
+    return operandAttr;
+
+  // If the dim-length is 1, tosa.reverse is a no-op.
+  if (operandTy.hasRank() && operandTy.getDimSize(axis) == 1)
+    return operand;
+
+  return {};
+}
+
 OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
   auto inputTy = getInput().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
