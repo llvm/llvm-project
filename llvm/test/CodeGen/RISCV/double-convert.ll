@@ -289,14 +289,25 @@ define i32 @fcvt_wu_d_multiple_use(double %x, i32* %y) nounwind {
 }
 
 define i32 @fcvt_wu_d_sat(double %a) nounwind {
-; CHECKIFD-LABEL: fcvt_wu_d_sat:
-; CHECKIFD:       # %bb.0: # %start
-; CHECKIFD-NEXT:    feq.d a0, fa0, fa0
-; CHECKIFD-NEXT:    beqz a0, .LBB6_2
-; CHECKIFD-NEXT:  # %bb.1:
-; CHECKIFD-NEXT:    fcvt.wu.d a0, fa0, rtz
-; CHECKIFD-NEXT:  .LBB6_2: # %start
-; CHECKIFD-NEXT:    ret
+; RV32IFD-LABEL: fcvt_wu_d_sat:
+; RV32IFD:       # %bb.0: # %start
+; RV32IFD-NEXT:    feq.d a0, fa0, fa0
+; RV32IFD-NEXT:    beqz a0, .LBB6_2
+; RV32IFD-NEXT:  # %bb.1:
+; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; RV32IFD-NEXT:  .LBB6_2: # %start
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: fcvt_wu_d_sat:
+; RV64IFD:       # %bb.0: # %start
+; RV64IFD-NEXT:    feq.d a0, fa0, fa0
+; RV64IFD-NEXT:    beqz a0, .LBB6_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; RV64IFD-NEXT:    slli a0, a0, 32
+; RV64IFD-NEXT:    srli a0, a0, 32
+; RV64IFD-NEXT:  .LBB6_2: # %start
+; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_d_sat:
 ; RV32I:       # %bb.0: # %start
@@ -1965,14 +1976,25 @@ start:
 declare i8 @llvm.fptoui.sat.i8.f64(double)
 
 define zeroext i32 @fcvt_wu_d_sat_zext(double %a) nounwind {
-; CHECKIFD-LABEL: fcvt_wu_d_sat_zext:
-; CHECKIFD:       # %bb.0: # %start
-; CHECKIFD-NEXT:    feq.d a0, fa0, fa0
-; CHECKIFD-NEXT:    beqz a0, .LBB33_2
-; CHECKIFD-NEXT:  # %bb.1:
-; CHECKIFD-NEXT:    fcvt.wu.d a0, fa0, rtz
-; CHECKIFD-NEXT:  .LBB33_2: # %start
-; CHECKIFD-NEXT:    ret
+; RV32IFD-LABEL: fcvt_wu_d_sat_zext:
+; RV32IFD:       # %bb.0: # %start
+; RV32IFD-NEXT:    feq.d a0, fa0, fa0
+; RV32IFD-NEXT:    beqz a0, .LBB33_2
+; RV32IFD-NEXT:  # %bb.1:
+; RV32IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; RV32IFD-NEXT:  .LBB33_2: # %start
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: fcvt_wu_d_sat_zext:
+; RV64IFD:       # %bb.0: # %start
+; RV64IFD-NEXT:    feq.d a0, fa0, fa0
+; RV64IFD-NEXT:    beqz a0, .LBB33_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; RV64IFD-NEXT:    slli a0, a0, 32
+; RV64IFD-NEXT:    srli a0, a0, 32
+; RV64IFD-NEXT:  .LBB33_2: # %start
+; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_d_sat_zext:
 ; RV32I:       # %bb.0: # %start
