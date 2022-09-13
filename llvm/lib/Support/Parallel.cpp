@@ -18,11 +18,19 @@
 #include <vector>
 
 llvm::ThreadPoolStrategy llvm::parallel::strategy;
-thread_local unsigned llvm::parallel::threadIndex;
 
 namespace llvm {
 namespace parallel {
 #if LLVM_ENABLE_THREADS
+
+#ifdef _WIN32
+static thread_local unsigned threadIndex;
+
+unsigned getThreadIndex() { return threadIndex; }
+#else
+thread_local unsigned threadIndex;
+#endif
+
 namespace detail {
 
 namespace {
