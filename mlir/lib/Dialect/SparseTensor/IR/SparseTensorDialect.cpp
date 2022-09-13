@@ -458,12 +458,27 @@ LogicalResult ReduceOp::verify() {
 
   // Check correct number of block arguments and return type.
   Region &formula = getRegion();
-  if (!formula.empty()) {
-    regionResult = verifyNumBlockArgs(
-        this, formula, "reduce", TypeRange{inputType, inputType}, inputType);
-    if (failed(regionResult))
-      return regionResult;
-  }
+  regionResult = verifyNumBlockArgs(this, formula, "reduce",
+                                    TypeRange{inputType, inputType}, inputType);
+  if (failed(regionResult))
+    return regionResult;
+
+  return success();
+}
+
+LogicalResult SelectOp::verify() {
+  Builder b(getContext());
+
+  Type inputType = getX().getType();
+  Type boolType = b.getI1Type();
+  LogicalResult regionResult = success();
+
+  // Check correct number of block arguments and return type.
+  Region &formula = getRegion();
+  regionResult = verifyNumBlockArgs(this, formula, "select",
+                                    TypeRange{inputType}, boolType);
+  if (failed(regionResult))
+    return regionResult;
 
   return success();
 }
@@ -472,11 +487,11 @@ LogicalResult YieldOp::verify() {
   // Check for compatible parent.
   auto *parentOp = (*this)->getParentOp();
   if (isa<BinaryOp>(parentOp) || isa<UnaryOp>(parentOp) ||
-      isa<ReduceOp>(parentOp))
+      isa<ReduceOp>(parentOp) || isa<SelectOp>(parentOp))
     return success();
 
-  return emitOpError(
-      "expected parent op to be sparse_tensor unary, binary, or reduce");
+  return emitOpError("expected parent op to be sparse_tensor unary, binary, "
+                     "reduce, or select");
 }
 
 //===----------------------------------------------------------------------===//
