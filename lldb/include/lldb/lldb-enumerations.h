@@ -834,6 +834,15 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindNullPtr,
 };
 
+/// Type of match to be performed when looking for a formatter for a data type.
+/// Used by classes like SBTypeNameSpecifier or lldb_private::TypeMatcher.
+enum FormatterMatchType {
+  eFormatterMatchExact,
+  eFormatterMatchRegex,
+
+  eLastFormatterMatchType = eFormatterMatchRegex,
+};
+
 /// Kind of argument for generics, either bound or unbound.
 enum GenericKind {
   eNullGenericKindType = 0,

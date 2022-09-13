@@ -20,8 +20,15 @@ using namespace lldb_private;
 SBTypeNameSpecifier::SBTypeNameSpecifier() { LLDB_INSTRUMENT_VA(this); }
 
 SBTypeNameSpecifier::SBTypeNameSpecifier(const char *name, bool is_regex)
-    : m_opaque_sp(new TypeNameSpecifierImpl(name, is_regex)) {
+    : SBTypeNameSpecifier(name, is_regex ? eFormatterMatchRegex
+                                         : eFormatterMatchExact) {
   LLDB_INSTRUMENT_VA(this, name, is_regex);
+}
+
+SBTypeNameSpecifier::SBTypeNameSpecifier(const char *name,
+                                         FormatterMatchType match_type)
+    : m_opaque_sp(new TypeNameSpecifierImpl(name, match_type)) {
+  LLDB_INSTRUMENT_VA(this, name, match_type);
 
   if (name == nullptr || (*name) == 0)
     m_opaque_sp.reset();
@@ -72,13 +79,20 @@ SBType SBTypeNameSpecifier::GetType() {
   return SBType();
 }
 
+FormatterMatchType SBTypeNameSpecifier::GetMatchType() {
+  LLDB_INSTRUMENT_VA(this);
+  if (!IsValid())
+    return eFormatterMatchExact;
+  return m_opaque_sp->GetMatchType();
+}
+
 bool SBTypeNameSpecifier::IsRegex() {
   LLDB_INSTRUMENT_VA(this);
 
   if (!IsValid())
     return false;
 
-  return m_opaque_sp->IsRegex();
+  return m_opaque_sp->GetMatchType() == eFormatterMatchRegex;
 }
 
 bool SBTypeNameSpecifier::GetDescription(
@@ -116,7 +130,7 @@ bool SBTypeNameSpecifier::IsEqualTo(lldb::SBTypeNameSpecifier &rhs) {
   if (!IsValid())
     return !rhs.IsValid();
 
-  if (IsRegex() != rhs.IsRegex())
+  if (GetMatchType() != rhs.GetMatchType())
     return false;
   if (GetName() == nullptr || rhs.GetName() == nullptr)
     return false;
