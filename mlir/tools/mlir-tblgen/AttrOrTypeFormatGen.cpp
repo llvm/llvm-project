@@ -56,18 +56,19 @@ public:
   /// Returns the name of the parameter.
   StringRef getName() const { return param.getName(); }
 
+  /// Return the code to check whether the parameter is present.
+  auto genIsPresent(FmtContext &ctx, const Twine &self) const {
+    assert(isOptional() && "cannot guard on a mandatory parameter");
+    std::string valueStr = tgfmt(*param.getDefaultValue(), &ctx).str();
+    ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
+    return tgfmt(getParam().getComparator(), &ctx);
+  }
+
   /// Generate the code to check whether the parameter should be printed.
   MethodBody &genPrintGuard(FmtContext &ctx, MethodBody &os) const {
+    assert(isOptional() && "cannot guard on a mandatory parameter");
     std::string self = param.getAccessorName() + "()";
-    ctx.withSelf(self);
-    os << tgfmt("($_self", &ctx);
-    if (llvm::Optional<StringRef> defaultValue = getParam().getDefaultValue()) {
-      // Use the `comparator` field if it exists, else the equality operator.
-      std::string valueStr = tgfmt(*defaultValue, &ctx).str();
-      ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
-      os << " && !(" << tgfmt(getParam().getComparator(), &ctx) << ")";
-    }
-    return os << ")";
+    return os << "!(" << genIsPresent(ctx, self) << ")";
   }
 
 private:
@@ -332,13 +333,9 @@ void DefFormat::genParser(MethodBody &os) {
     os << ",\n    ";
     std::string paramSelfStr;
     llvm::raw_string_ostream selfOs(paramSelfStr);
-    if (param.isOptional()) {
-      selfOs << formatv("(_result_{0}.value_or(", param.getName());
-      if (Optional<StringRef> defaultValue = param.getDefaultValue())
-        selfOs << tgfmt(*defaultValue, &ctx);
-      else
-        selfOs << param.getCppStorageType() << "()";
-      selfOs << "))";
+    if (Optional<StringRef> defaultValue = param.getDefaultValue()) {
+      selfOs << formatv("(_result_{0}.value_or(", param.getName())
+             << tgfmt(*defaultValue, &ctx) << "))";
     } else {
       selfOs << formatv("(*_result_{0})", param.getName());
     }
@@ -447,8 +444,9 @@ void DefFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
     ParameterElement *el = *std::prev(it);
     // Parse a comma if the last optional parameter had a value.
     if (el->isOptional()) {
-      os << formatv("if (::mlir::succeeded(_result_{0}) && *_result_{0}) {{\n",
-                    el->getName());
+      os << formatv("if (::mlir::succeeded(_result_{0}) && !({1})) {{\n",
+                    el->getName(),
+                    el->genIsPresent(ctx, "(*_result_" + el->getName() + ")"));
       os.indent();
     }
     if (it <= lastReqIt) {
@@ -522,18 +520,6 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
     }
 )";
 
-  // Optional parameters in a struct must be parsed successfully if the
-  // keyword is present.
-  //
-  // {0}: Name of the parameter.
-  // {1}: Emit error string
-  const char *const checkOptionalParam = R"(
-    if (::mlir::succeeded(_result_{0}) && !*_result_{0}) {{
-      {1}"expected a value for parameter '{0}'");
-      return {{};
-    }
-)";
-
   // First iteration of the loop parsing an optional struct.
   const char *const optionalStructFirst = R"(
   ::llvm::StringRef _paramKey;
@@ -558,11 +544,6 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
                   "  _seen_{0} = true;\n",
                   param->getName());
     genVariableParser(param, ctx, os.indent());
-    if (param->isOptional()) {
-      os.getStream().printReindented(strfmt(checkOptionalParam,
-                                            param->getName(),
-                                            tgfmt(parserErrorStr, &ctx).str()));
-    }
     os.unindent() << "} else ";
     // Print the check for duplicate or unknown parameter.
   }
