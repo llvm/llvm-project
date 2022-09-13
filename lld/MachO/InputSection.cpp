@@ -332,6 +332,11 @@ bool macho::isClassRefsSection(const InputSection *isec) {
          isec->getSegName() == segment_names::data;
 }
 
+bool macho::isSelRefsSection(const InputSection *isec) {
+  return isec->getName() == section_names::objcSelrefs &&
+         isec->getSegName() == segment_names::data;
+}
+
 bool macho::isEhFrameSection(const InputSection *isec) {
   return isec->getName() == section_names::ehFrame &&
          isec->getSegName() == segment_names::text;

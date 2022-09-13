@@ -414,25 +414,30 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   std::vector<ConcatInputSection *> foldable;
   uint64_t icfUniqueID = inputSections.size();
   for (ConcatInputSection *isec : inputSections) {
-    bool isFoldableWithAddendsRemoved =
-        isCfStringSection(isec) || isClassRefsSection(isec);
+    bool isFoldableWithAddendsRemoved = isCfStringSection(isec) ||
+                                        isClassRefsSection(isec) ||
+                                        isSelRefsSection(isec);
+    // NOTE: __objc_selrefs is typically marked as no_dead_strip by MC, but we
+    // can still fold it.
+    bool hasFoldableFlags = (isSelRefsSection(isec) ||
+                             sectionType(isec->getFlags()) == MachO::S_REGULAR);
     // FIXME: consider non-code __text sections as foldable?
     bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&
-                      (isCodeSection(isec) || isGccExceptTabSection(isec) ||
-                       isFoldableWithAddendsRemoved) &&
+                      (isCodeSection(isec) || isFoldableWithAddendsRemoved ||
+                       isGccExceptTabSection(isec)) &&
                       !isec->keepUnique && !isec->shouldOmitFromOutput() &&
-                      sectionType(isec->getFlags()) == MachO::S_REGULAR;
+                      hasFoldableFlags;
     if (isFoldable) {
       foldable.push_back(isec);
       for (Defined *d : isec->symbols)
         if (d->unwindEntry)
           foldable.push_back(d->unwindEntry);
 
-      // __cfstring has embedded addends that foil ICF's hashing / equality
+      // Some sections have embedded addends that foil ICF's hashing / equality
       // checks. (We can ignore embedded addends when doing ICF because the same
       // information gets recorded in our Reloc structs.) We therefore create a
-      // mutable copy of the CFString and zero out the embedded addends before
-      // performing any hashing / equality checks.
+      // mutable copy of the the section data and zero out the embedded addends
+      // before performing any hashing / equality checks.
       if (isFoldableWithAddendsRemoved) {
         // We have to do this copying serially as the BumpPtrAllocator is not
         // thread-safe. FIXME: Make a thread-safe allocator.
@@ -443,7 +448,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
         isec->data = copy;
       }
     } else if (!isEhFrameSection(isec)) {
-      // EH frames are gathered as foldable from unwindEntry above; give a
+      // EH frames are gathered as foldables from unwindEntry above; give a
       // unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;
     }
