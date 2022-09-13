@@ -2170,9 +2170,9 @@ protected:
   verifyCustomDirectiveArguments(SMLoc loc,
                                  ArrayRef<FormatElement *> arguments) override;
   /// Verify the elements of an optional group.
-  LogicalResult
-  verifyOptionalGroupElements(SMLoc loc, ArrayRef<FormatElement *> elements,
-                              Optional<unsigned> anchorIndex) override;
+  LogicalResult verifyOptionalGroupElements(SMLoc loc,
+                                            ArrayRef<FormatElement *> elements,
+                                            FormatElement *anchor) override;
   LogicalResult verifyOptionalGroupElement(SMLoc loc, FormatElement *element,
                                            bool isAnchor);
 
@@ -3150,13 +3150,10 @@ OpFormatParser::parseTypeDirectiveOperand(SMLoc loc, bool isRefChild) {
   return element;
 }
 
-LogicalResult
-OpFormatParser::verifyOptionalGroupElements(SMLoc loc,
-                                            ArrayRef<FormatElement *> elements,
-                                            Optional<unsigned> anchorIndex) {
-  for (auto &it : llvm::enumerate(elements)) {
-    if (failed(verifyOptionalGroupElement(
-            loc, it.value(), anchorIndex && *anchorIndex == it.index())))
+LogicalResult OpFormatParser::verifyOptionalGroupElements(
+    SMLoc loc, ArrayRef<FormatElement *> elements, FormatElement *anchor) {
+  for (FormatElement *element : elements) {
+    if (failed(verifyOptionalGroupElement(loc, element, element == anchor)))
       return failure();
   }
   return success();

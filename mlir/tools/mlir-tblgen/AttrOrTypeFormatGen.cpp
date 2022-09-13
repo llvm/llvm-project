@@ -917,9 +917,9 @@ protected:
   verifyCustomDirectiveArguments(SMLoc loc,
                                  ArrayRef<FormatElement *> arguments) override;
   /// Verify the elements of an optional group.
-  LogicalResult
-  verifyOptionalGroupElements(SMLoc loc, ArrayRef<FormatElement *> elements,
-                              Optional<unsigned> anchorIndex) override;
+  LogicalResult verifyOptionalGroupElements(SMLoc loc,
+                                            ArrayRef<FormatElement *> elements,
+                                            FormatElement *anchor) override;
 
   /// Parse an attribute or type variable.
   FailureOr<FormatElement *> parseVariableImpl(SMLoc loc, StringRef name,
@@ -989,7 +989,7 @@ LogicalResult DefFormatParser::verifyCustomDirectiveArguments(
 LogicalResult
 DefFormatParser::verifyOptionalGroupElements(llvm::SMLoc loc,
                                              ArrayRef<FormatElement *> elements,
-                                             Optional<unsigned> anchorIndex) {
+                                             FormatElement *anchor) {
   // `params` and `struct` directives are allowed only if all the contained
   // parameters are optional.
   for (FormatElement *el : elements) {
@@ -1011,8 +1011,8 @@ DefFormatParser::verifyOptionalGroupElements(llvm::SMLoc loc,
     }
   }
   // The anchor must be a parameter or one of the aforementioned directives.
-  if (anchorIndex && !isa<ParameterElement, ParamsDirective, StructDirective>(
-                         elements[*anchorIndex])) {
+  if (anchor &&
+      !isa<ParameterElement, ParamsDirective, StructDirective>(anchor)) {
     return emitError(loc,
                      "optional group anchor must be a parameter or directive");
   }

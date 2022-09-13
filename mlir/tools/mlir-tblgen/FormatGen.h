@@ -378,9 +378,9 @@ public:
   /// Create an optional group with the given child elements.
   OptionalElement(std::vector<FormatElement *> &&thenElements,
                   std::vector<FormatElement *> &&elseElements,
-                  unsigned anchorIndex, unsigned parseStart)
+                  FormatElement *anchor, unsigned parseStart)
       : thenElements(std::move(thenElements)),
-        elseElements(std::move(elseElements)), anchorIndex(anchorIndex),
+        elseElements(std::move(elseElements)), anchor(anchor),
         parseStart(parseStart) {}
 
   /// Return the `then` elements of the optional group.
@@ -390,7 +390,7 @@ public:
   ArrayRef<FormatElement *> getElseElements() const { return elseElements; }
 
   /// Return the anchor of the optional group.
-  FormatElement *getAnchor() const { return thenElements[anchorIndex]; }
+  FormatElement *getAnchor() const { return anchor; }
 
   /// Return the index of the first element to be parsed.
   unsigned getParseStart() const { return parseStart; }
@@ -400,9 +400,8 @@ private:
   std::vector<FormatElement *> thenElements;
   /// The child elements emitted when the anchor is not present.
   std::vector<FormatElement *> elseElements;
-  /// The index of the anchor element of the optional group within
-  /// `thenElements`.
-  unsigned anchorIndex;
+  /// The anchor element of the optional group.
+  FormatElement *anchor;
   /// The index of the first element that is parsed in `thenElements`. That is,
   /// the first non-whitespace element.
   unsigned parseStart;
@@ -496,7 +495,7 @@ protected:
   virtual LogicalResult
   verifyOptionalGroupElements(llvm::SMLoc loc,
                               ArrayRef<FormatElement *> elements,
-                              Optional<unsigned> anchorIndex) = 0;
+                              FormatElement *anchor) = 0;
 
   //===--------------------------------------------------------------------===//
   // Lexer Utilities

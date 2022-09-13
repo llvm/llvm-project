@@ -320,17 +320,17 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
 
   // Parse the child elements for this optional group.
   std::vector<FormatElement *> thenElements, elseElements;
-  Optional<unsigned> anchorIndex;
+  FormatElement *anchor = nullptr;
   do {
     FailureOr<FormatElement *> element = parseElement(TopLevelContext);
     if (failed(element))
       return failure();
     // Check for an anchor.
     if (curToken.is(FormatToken::caret)) {
-      if (anchorIndex)
+      if (anchor)
         return emitError(curToken.getLoc(), "only one element can be marked as "
                                             "the anchor of an optional group");
-      anchorIndex = thenElements.size();
+      anchor = *element;
       consumeToken();
     }
     thenElements.push_back(*element);
@@ -357,12 +357,12 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
     return failure();
 
   // The optional group is required to have an anchor.
-  if (!anchorIndex)
+  if (!anchor)
     return emitError(loc, "optional group has no anchor element");
 
   // Verify the child elements.
-  if (failed(verifyOptionalGroupElements(loc, thenElements, anchorIndex)) ||
-      failed(verifyOptionalGroupElements(loc, elseElements, llvm::None)))
+  if (failed(verifyOptionalGroupElements(loc, thenElements, anchor)) ||
+      failed(verifyOptionalGroupElements(loc, elseElements, nullptr)))
     return failure();
 
   // Get the first parsable element. It must be an element that can be
@@ -377,8 +377,7 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
 
   unsigned parseStart = std::distance(thenElements.begin(), parseBegin);
   return create<OptionalElement>(std::move(thenElements),
-                                 std::move(elseElements), *anchorIndex,
-                                 parseStart);
+                                 std::move(elseElements), anchor, parseStart);
 }
 
 FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
