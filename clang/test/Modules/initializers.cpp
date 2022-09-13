@@ -174,12 +174,12 @@ inline void use(bool b, ...) {
 
 // CHECK: define {{.*}} @[[G_INIT:__cxx_global.*]]()
 // CHECK: load {{.*}} (i64* @_ZGV
-// CHECK: [[G_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @[[G]])
+// CHECK: [[G_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @[[G]])
 // CHECK: store {{.*}}, i32* [[G_ADDR]]
 
 // CHECK: define {{.*}} @[[H_INIT:__cxx_global.*]]()
 // CHECK: load {{.*}} (i64* @_ZGV
-// CHECK: [[H_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @[[H]])
+// CHECK: [[H_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @[[H]])
 // CHECK: store {{.*}}, i32* [[H_ADDR]],
 
 // FIXME: Should this use __cxa_guard_acquire?
@@ -189,7 +189,7 @@ inline void use(bool b, ...) {
 
 // CHECK: define {{.*}} @[[XC_INIT:__cxx_global.*]]()
 // CHECK: load {{.*}} (i64* @_ZGV
-// CHECK: [[XC_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @[[XC]])
+// CHECK: [[XC_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @[[XC]])
 // CHECK: store {{.*}}, i32* [[XC_ADDR]],
 
 // FIXME: Should this use __cxa_guard_acquire?
@@ -199,12 +199,12 @@ inline void use(bool b, ...) {
 
 // CHECK: define {{.*}} @[[XG_INIT:__cxx_global.*]]()
 // CHECK: load {{.*}} (i64* @_ZGV
-// CHECK: [[XG_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @[[XG]])
+// CHECK: [[XG_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @[[XG]])
 // CHECK: store {{.*}}, i32* [[XG_ADDR]],
 
 // CHECK: define {{.*}} @[[XH_INIT:__cxx_global.*]]()
 // CHECK: load {{.*}} (i64* @_ZGV
-// CHECK: [[XH_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @[[XH]])
+// CHECK: [[XH_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @[[XH]])
 // CHECK: store {{.*}}, i32* [[XH_ADDR]],
 
 // FIXME: Should this use __cxa_guard_acquire?
@@ -214,7 +214,7 @@ inline void use(bool b, ...) {
 
 // CHECK: define {{.*}} @[[XD_INIT:__cxx_global.*]]()
 // CHECK: load {{.*}} (i64* @_ZGV
-// CHECK: [[XD_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @[[XD]])
+// CHECK: [[XD_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @[[XD]])
 // CHECK: store {{.*}}, i32* [[XD_ADDR]],
 
 // FIXME: Should this use __cxa_guard_acquire?
@@ -232,12 +232,12 @@ inline void use(bool b, ...) {
 
 // CHECK-IMPORT: define {{.*}} @[[C_INIT:__cxx_global.*]]()
 // CHECK-IMPORT: call noundef i32 @_Z11non_trivialv(
-// CHECK-IMPORT: [[C_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @[[C]])
+// CHECK-IMPORT: [[C_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @[[C]])
 // CHECK-IMPORT: store {{.*}}, i32* [[C_ADDR]],
 
 // CHECK-IMPORT: define {{.*}} @[[D_INIT:__cxx_global.*]]()
 // CHECK-IMPORT: load {{.*}} (i64* @_ZGV
-// CHECK-IMPORT: [[D_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @[[D]])
+// CHECK-IMPORT: [[D_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @[[D]])
 // CHECK-IMPORT: store {{.*}}, i32* [[D_ADDR]],
 
 

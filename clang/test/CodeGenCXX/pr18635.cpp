@@ -5,7 +5,7 @@
 
 // returned somewhere in TLS wrapper:
 // CHECK: define {{.+}} ptr @_ZTW1x(
-// CHECK: [[X_GLOBAL_ADDR:%[^ ]+]] = call ptr @llvm.threadlocal.address.p0(ptr [[X_GLOBAL]])
+// CHECK: [[X_GLOBAL_ADDR:%[^ ]+]] = call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 [[X_GLOBAL]])
 // CHECK: ret{{.*}}[[X_GLOBAL_ADDR]]
 
 template <typename T> class unique_ptr {
