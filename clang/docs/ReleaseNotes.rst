@@ -210,6 +210,9 @@ C Language Changes in Clang
 
 C2x Feature Support
 -------------------
+- Implemented `WG14 N2662 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2662.pdf>`_,
+  so the [[maybe_unused]] attribute may be applied to a label to silence an
+  ``-Wunused-label`` warning.
 
 C++ Language Changes in Clang
 -----------------------------
