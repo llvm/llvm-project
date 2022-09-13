@@ -8,10 +8,14 @@
 
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/MakeSupport.h"
+#include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/CAS/CASID.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -119,6 +123,9 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
+  CI.getCASOpts() = CASOpts;
+  CI.getFrontendOpts().CacheCompileJob = CacheCompileJob;
+  CI.getFrontendOpts().IncludeTimestamps = false;
 
   // Inputs
   InputKind ModuleMapInputKind(CI.getFrontendOpts().DashX.getLanguage(),
@@ -214,6 +221,13 @@ void ModuleDepCollector::addModuleFiles(
   for (const ModuleID &MID : ClangModuleDeps) {
     std::string PCMPath =
         Consumer.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+
+    ModuleDeps *MD = ModuleDepsByID.lookup(MID);
+    assert(MD && "Inconsistent dependency info");
+    if (MD->ModuleCacheKey)
+      CI.getFrontendOpts().ModuleCacheKeys.emplace_back(PCMPath,
+                                                        *MD->ModuleCacheKey);
+
     if (EagerLoadModules)
       CI.getFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
@@ -235,6 +249,15 @@ static bool needsModules(FrontendInputFile FIF) {
 
 void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
+
+  // FIXME: refactor to share common code with scanAndUpdateCC1InlineWithTool
+  // and apply prefix mappings, if available.
+  CI.getCASOpts() = CASOpts;
+  CI.getFrontendOpts().CacheCompileJob = CacheCompileJob;
+  if (auto ID = MainFileCASFileSystemRootID)
+    CI.getFileSystemOpts().CASFileSystemRootID = ID->toString();
+  if (CacheCompileJob)
+    CI.getFrontendOpts().IncludeTimestamps = false;
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
@@ -259,6 +282,11 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
     for (const auto &KV : DirectPrebuiltModularDeps)
       CI.getFrontendOpts().ModuleFiles.push_back(KV.second.PCMFile);
   }
+}
+
+void ModuleDepCollector::setMainFileCASFileSystemRootID(cas::CASID ID) {
+  assert(!MainFileCASFileSystemRootID || *MainFileCASFileSystemRootID == ID);
+  MainFileCASFileSystemRootID = std::move(ID);
 }
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
@@ -419,6 +447,15 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
   MD.IsSystem = M->IsSystem;
 
+  if (auto ID = M->getCASFileSystemRootID()) {
+    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    if (auto Err = CAS.parseID(*ID).moveInto(MD.CASFileSystemRootID)) {
+      MDC.ScanInstance.getDiagnostics().Report(
+          diag::err_cas_cannot_parse_root_id_for_module)
+          << *ID << MD.ID.ModuleName;
+    }
+  }
+
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
@@ -468,8 +505,23 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   MDC.associateWithContextHash(CI, MD);
 
+  // Set CAS filesystem root ID after we compute the module hash. The root ID
+  // represents the contents of the filesystem which is not part of the hash.
+  // FIXME: refactor to share common code with scanAndUpdateCC1InlineWithTool
+  // and apply prefix mappings, if available.
+  if (auto ID = MD.CASFileSystemRootID)
+    CI.getFileSystemOpts().CASFileSystemRootID = ID->toString();
+
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(CI, MD);
+
+  // Compute the cache key, if needed. Requires dependencies and outputs.
+  if (MDC.CacheCompileJob) {
+    auto &CAS = MDC.ScanInstance.getOrCreateObjectStore();
+    auto &Diags = MDC.ScanInstance.getDiagnostics();
+    if (auto Key = createCompileJobCacheKey(CAS, Diags, CI))
+      MD.ModuleCacheKey = Key->toString();
+  }
 
   MD.BuildArguments = CI.getCC1CommandLine();
 
@@ -562,8 +614,10 @@ ModuleDepCollector::ModuleDepCollector(
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
     : ScanInstance(ScanInstance), Consumer(C), Opts(std::move(Opts)),
-      OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs),
-      EagerLoadModules(EagerLoadModules) {}
+      OriginalInvocation(std::move(OriginalCI)),
+      CASOpts(ScanInstance.getCASOpts()),
+      CacheCompileJob(ScanInstance.getFrontendOpts().CacheCompileJob),
+      OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));

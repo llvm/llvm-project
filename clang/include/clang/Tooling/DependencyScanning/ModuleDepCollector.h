@@ -18,6 +18,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/CAS/CASID.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <unordered_map>
@@ -113,6 +114,12 @@ struct ModuleDeps {
   // the primary TU.
   bool ImportedByMainFile = false;
 
+  /// The CASID for the module input dependency tree, if any.
+  llvm::Optional<llvm::cas::CASID> CASFileSystemRootID;
+
+  /// The \c ActionCache key for this module, if any.
+  llvm::Optional<std::string> ModuleCacheKey;
+
   /// Compiler invocation that can be used to build this module. Does not
   /// include argv[0].
   std::vector<std::string> BuildArguments;
@@ -191,6 +198,10 @@ public:
   /// invocation, (e.g. disable implicit modules, add explicit module paths).
   void applyDiscoveredDependencies(CompilerInvocation &CI);
 
+  /// Set a CAS filesystem root ID for the main file, which will be included by
+  /// \c applyDiscoveredDependencies.
+  void setMainFileCASFileSystemRootID(cas::CASID ID);
+
 private:
   friend ModuleDepCollectorPP;
 
@@ -216,6 +227,13 @@ private:
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// The original Clang invocation passed to dependency scanner.
   CompilerInvocation OriginalInvocation;
+  /// The CAS filesystem root ID for the main input file, if any. This is used
+  /// in \c applyDiscoveredDependencies.
+  Optional<cas::CASID> MainFileCASFileSystemRootID;
+  /// CAS options to apply to invocations.
+  CASOptions CASOpts;
+  /// CAS options to apply to invocations.
+  bool CacheCompileJob;
   /// Whether to optimize the modules' command-line arguments.
   bool OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.

@@ -11,15 +11,24 @@
 // CHECK:      tree {{.*}} for '[[PREFIX]]/t1.c'
 // CHECK-NEXT: tree {{.*}} for '[[PREFIX]]/t2.c'
 
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -format experimental-tree-full -mode preprocess | FileCheck %s -DPREFIX=%/t --check-prefix=FULL-TREE
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -action-cache-path %t/cache -format experimental-tree-full -mode preprocess > %t/full_result.json
+// RUN: cat %t/full_result.json | FileCheck %s -DPREFIX=%/t --check-prefix=FULL-TREE
+
 // FULL-TREE:      {
 // FULL-TREE-NEXT:   "modules": [],
 // FULL-TREE-NEXT:   "translation-units": [
 // FULL-TREE-NEXT:     {
-// FULL-TREE:            "casfs-root-id": "llvmcas://{{[[:xdigit:]]+}}"
+// FULL-TREE:            "casfs-root-id": "[[T1_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // FULL-TREE-NEXT:       "clang-context-hash": "{{[A-Z0-9]+}}",
 // FULL-TREE-NEXT:       "clang-module-deps": [],
 // FULL-TREE-NEXT:       "command-line": [
+// FULL-TREE:              "-fcas-path"
+// FULL-TREE-NEXT:         "[[PREFIX]]{{.}}cas"
+// FULL-TREE:              "-faction-cache-path"
+// FULL-TREE-NEXT:         "[[PREFIX]]{{.}}cache"
+// FULL-TREE:              "-fcas-fs"
+// FULL-TREE-NEXT:         "[[T1_ROOT_ID]]"
+// FULL-TREE:              "-fcache-compile-job"
 // FULL-TREE:            ],
 // FULL-TREE:            "file-deps": [
 // FULL-TREE-NEXT:         "[[PREFIX]]/t1.c",
@@ -29,10 +38,17 @@
 // FULL-TREE-NEXT:       "input-file": "[[PREFIX]]/t1.c"
 // FULL-TREE-NEXT:     }
 // FULL-TREE:          {
-// FULL-TREE:            "casfs-root-id": "llvmcas://{{[[:xdigit:]]+}}"
+// FULL-TREE:            "casfs-root-id": "[[T2_ROOT_ID:llvmcas://[[:xdigit:]]+]]"
 // FULL-TREE-NEXT:       "clang-context-hash": "{{[A-Z0-9]+}}",
 // FULL-TREE-NEXT:       "clang-module-deps": [],
 // FULL-TREE-NEXT:       "command-line": [
+// FULL-TREE:              "-fcas-path"
+// FULL-TREE-NEXT:         "[[PREFIX]]{{.}}cas"
+// FULL-TREE:              "-faction-cache-path"
+// FULL-TREE-NEXT:         "[[PREFIX]]{{.}}cache"
+// FULL-TREE:              "-fcas-fs"
+// FULL-TREE-NEXT:         "[[T2_ROOT_ID]]"
+// FULL-TREE:              "-fcache-compile-job"
 // FULL-TREE:            ],
 // FULL-TREE:            "file-deps": [
 // FULL-TREE-NEXT:         "[[PREFIX]]/t2.c",
@@ -40,6 +56,16 @@
 // FULL-TREE-NEXT:       ],
 // FULL-TREE-NEXT:       "input-file": "[[PREFIX]]/t2.c"
 // FULL-TREE-NEXT:     }
+
+// Build with caching
+// RUN: %deps-to-rsp %t/full_result.json --tu-index 0 > %t/t1.cc1.rsp
+// RUN: %deps-to-rsp %t/full_result.json --tu-index 1 > %t/t2.cc1.rsp
+// RUN: %clang @%t/t1.cc1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
+// RUN: %clang @%t/t1.cc1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
+// RUN: %clang @%t/t2.cc1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-MISS
+// RUN: %clang @%t/t2.cc1.rsp -Rcompile-job-cache 2>&1 | FileCheck %s -check-prefix=CACHE-HIT
+// CACHE-HIT: remark: compile job cache hit
+// CACHE-MISS: remark: compile job cache miss
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -format experimental-tree -emit-cas-compdb | FileCheck %s -DPREFIX=%/t -check-prefix=COMPDB
 // COMPDB: [
