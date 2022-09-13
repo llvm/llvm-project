@@ -111,13 +111,7 @@ int main(int argc, char **argv) {
   for (const auto &ExecFilename : ExecFilenames) {
     auto DWOs = getDWOFilenames(ExecFilename);
     if (!DWOs) {
-      logAllUnhandledErrors(
-          handleErrors(DWOs.takeError(),
-                       [&](std::unique_ptr<ECError> EC) -> Error {
-                         return createFileError(ExecFilename,
-                                                Error(std::move(EC)));
-                       }),
-          WithColor::error());
+      logAllUnhandledErrors(DWOs.takeError(), WithColor::error());
       return 1;
     }
     DWOFilenames.insert(DWOFilenames.end(),
@@ -133,13 +127,7 @@ int main(int argc, char **argv) {
 
   auto ErrOrTriple = readTargetTriple(DWOFilenames.front());
   if (!ErrOrTriple) {
-    logAllUnhandledErrors(
-        handleErrors(ErrOrTriple.takeError(),
-                     [&](std::unique_ptr<ECError> EC) -> Error {
-                       return createFileError(DWOFilenames.front(),
-                                              Error(std::move(EC)));
-                     }),
-        WithColor::error());
+    logAllUnhandledErrors(ErrOrTriple.takeError(), WithColor::error());
     return 1;
   }
 
