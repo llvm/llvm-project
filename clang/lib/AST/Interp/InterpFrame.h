@@ -123,7 +123,7 @@ private:
   }
 
   /// Returns a pointer to a local's block.
-  void *localBlock(unsigned Offset) {
+  void *localBlock(unsigned Offset) const {
     return Locals.get() + Offset - sizeof(Block);
   }
 
