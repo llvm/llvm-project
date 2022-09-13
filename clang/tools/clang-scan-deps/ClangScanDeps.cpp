@@ -233,6 +233,11 @@ llvm::cl::opt<bool> InMemoryCAS(
     llvm::cl::desc("Use an in-memory CAS instead of on-disk."),
     llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::opt<std::string>
+    ActionCachePath("action-cache-path",
+                    llvm::cl::desc("Path for on-disk action cache."),
+                    llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
                             llvm::cl::desc("Use verbose output."),
                             llvm::cl::init(false),
@@ -486,6 +491,10 @@ static bool outputFormatRequiresCAS() {
   }
 }
 
+static bool useCAS() {
+  return InMemoryCAS || !OnDiskCASPath.empty() || outputFormatRequiresCAS();
+}
+
 static llvm::json::Array toJSONSorted(const llvm::StringSet<> &Set) {
   std::vector<llvm::StringRef> Strings;
   for (auto &&I : Set)
@@ -564,6 +573,8 @@ public:
           {"clang-modulemap-file", MD.ClangModuleMapFile},
           {"command-line", MD.BuildArguments},
       };
+      if (MD.CASFileSystemRootID)
+        O.try_emplace("casfs-root-id", MD.CASFileSystemRootID->toString());
       OutModules.push_back(std::move(O));
     }
 
@@ -798,15 +809,17 @@ int main(int argc, const char **argv) {
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
-  if (outputFormatRequiresCAS()) {
+  if (useCAS()) {
     if (!InMemoryCAS) {
       if (!OnDiskCASPath.empty())
         CASOpts.CASPath = OnDiskCASPath;
       else
         CASOpts.ensurePersistentCAS();
     }
+    if (!ActionCachePath.empty())
+      CASOpts.CachePath = ActionCachePath;
+
     CAS = CASOpts.getOrCreateObjectStore(Diags);
-    // FIXME: Cache is not used here so just create a dummy in-memory cache.
     Cache = CASOpts.getOrCreateActionCache(Diags);
     if (!CAS)
       return 1;

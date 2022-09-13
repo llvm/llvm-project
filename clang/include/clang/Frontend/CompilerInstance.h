@@ -175,11 +175,13 @@ class CompilerInstance : public ModuleLoader {
   /// The list of active output files.
   std::list<llvm::vfs::OutputFile> OutputFiles;
 
-  /// \brief An optional callback function used to wrap all FrontendActions
+  using GenModuleActionWrapperFunc =
+      std::function<std::unique_ptr<FrontendAction>(
+          const FrontendOptions &opts, std::unique_ptr<FrontendAction> action)>;
+
+  /// An optional callback function used to wrap all FrontendActions
   /// produced to generate imported modules before they are executed.
-  std::function<std::unique_ptr<FrontendAction>
-    (const FrontendOptions &opts, std::unique_ptr<FrontendAction> action)>
-    GenModuleActionWrapper;
+  GenModuleActionWrapperFunc GenModuleActionWrapper;
 
   /// Force an output buffer.
   std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
@@ -858,14 +860,13 @@ public:
 
   bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override;
 
-  void setGenModuleActionWrapper(std::function<std::unique_ptr<FrontendAction>
-    (const FrontendOptions &Opts, std::unique_ptr<FrontendAction> Action)> Wrapper) {
+  void setGenModuleActionWrapper(GenModuleActionWrapperFunc Wrapper) {
     GenModuleActionWrapper = Wrapper;
-  };
+  }
 
-  std::function<std::unique_ptr<FrontendAction>
-    (const FrontendOptions &Opts, std::unique_ptr<FrontendAction> Action)>
-  getGenModuleActionWrapper() const { return GenModuleActionWrapper; }
+  GenModuleActionWrapperFunc getGenModuleActionWrapper() const {
+    return GenModuleActionWrapper;
+  }
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));
