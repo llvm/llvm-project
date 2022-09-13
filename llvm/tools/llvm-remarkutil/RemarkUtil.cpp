@@ -75,35 +75,6 @@ getInputMemoryBuffer(StringRef InputFileName) {
   return std::move(*MaybeBuf);
 }
 
-/// Parses all remarks in the input file.
-/// \p [out] ParsedRemarks - Filled with remarks parsed from the input file.
-/// \p [out] StrTab - A string table populated for later remark serialization.
-/// \returns Error::success() if all remarks were successfully parsed, and an
-/// Error otherwise.
-static Error tryParseRemarksFromInputFile(
-    StringRef InputFileName, Format InputFormat,
-    std::vector<std::unique_ptr<Remark>> &ParsedRemarks, StringTable &StrTab) {
-  auto MaybeBuf = getInputMemoryBuffer(InputFileName);
-  if (!MaybeBuf)
-    return MaybeBuf.takeError();
-  auto MaybeParser = createRemarkParser(InputFormat, (*MaybeBuf)->getBuffer());
-  if (!MaybeParser)
-    return MaybeParser.takeError();
-  auto &Parser = **MaybeParser;
-  auto MaybeRemark = Parser.next();
-  // TODO: If we are converting from bitstream to YAML, we don't need to parse
-  // early because the string table is not necessary.
-  for (; MaybeRemark; MaybeRemark = Parser.next()) {
-    StrTab.internalize(**MaybeRemark);
-    ParsedRemarks.push_back(std::move(*MaybeRemark));
-  }
-  auto E = MaybeRemark.takeError();
-  if (!E.isA<EndOfFileError>())
-    return E;
-  consumeError(std::move(E));
-  return Error::success();
-}
-
 /// \returns A ToolOutputFile which can be used for writing remarks on success,
 /// and an Error otherwise.
 static Expected<std::unique_ptr<ToolOutputFile>>
@@ -119,13 +90,39 @@ getOutputFile(StringRef OutputFileName, Format OutputFormat) {
   return std::move(OF);
 }
 
-/// Reserialize a list of remarks into the desired output format, and output
-/// to the user-specified output file.
+namespace yaml2bitstream {
+/// Parses all remarks in the input YAML file.
+/// \p [out] ParsedRemarks - Filled with remarks parsed from the input file.
+/// \p [out] StrTab - A string table populated for later remark serialization.
+/// \returns Error::success() if all remarks were successfully parsed, and an
+/// Error otherwise.
+static Error
+tryParseRemarksFromYAMLFile(std::vector<std::unique_ptr<Remark>> &ParsedRemarks,
+                            StringTable &StrTab) {
+  auto MaybeBuf = getInputMemoryBuffer(InputFileName);
+  if (!MaybeBuf)
+    return MaybeBuf.takeError();
+  auto MaybeParser = createRemarkParser(InputFormat, (*MaybeBuf)->getBuffer());
+  if (!MaybeParser)
+    return MaybeParser.takeError();
+  auto &Parser = **MaybeParser;
+  auto MaybeRemark = Parser.next();
+  for (; MaybeRemark; MaybeRemark = Parser.next()) {
+    StrTab.internalize(**MaybeRemark);
+    ParsedRemarks.push_back(std::move(*MaybeRemark));
+  }
+  auto E = MaybeRemark.takeError();
+  if (!E.isA<EndOfFileError>())
+    return E;
+  consumeError(std::move(E));
+  return Error::success();
+}
+
+/// Reserialize a list of parsed YAML remarks into bitstream remarks.
 /// \p ParsedRemarks - A list of remarks.
 /// \p StrTab - The string table for the remarks.
 /// \returns Error::success() on success.
-static Error tryReserializeParsedRemarks(
-    StringRef OutputFileName, Format OutputFormat,
+static Error tryReserializeYAML2Bitstream(
     const std::vector<std::unique_ptr<Remark>> &ParsedRemarks,
     StringTable &StrTab) {
   auto MaybeOF = getOutputFile(OutputFileName, OutputFormat);
@@ -143,45 +140,60 @@ static Error tryReserializeParsedRemarks(
   return Error::success();
 }
 
-/// Parses remarks in the input format, and reserializes them in the desired
-/// output format.
+/// Parse YAML remarks and reserialize as bitstream remarks.
 /// \returns Error::success() on success, and an Error otherwise.
-static Error tryReserialize(StringRef InputFileName, StringRef OutputFileName,
-                            Format InputFormat, Format OutputFormat) {
+static Error tryYAML2Bitstream() {
   StringTable StrTab;
   std::vector<std::unique_ptr<Remark>> ParsedRemarks;
-  ExitOnErr(tryParseRemarksFromInputFile(InputFileName, InputFormat,
-                                         ParsedRemarks, StrTab));
-  return tryReserializeParsedRemarks(OutputFileName, OutputFormat,
-                                     ParsedRemarks, StrTab);
+  ExitOnErr(tryParseRemarksFromYAMLFile(ParsedRemarks, StrTab));
+  return tryReserializeYAML2Bitstream(ParsedRemarks, StrTab);
 }
+} // namespace yaml2bitstream
 
-/// Reserialize bitstream remarks as YAML remarks.
+namespace bitstream2yaml {
+/// Parse bitstream remarks and reserialize as YAML remarks.
 /// \returns An Error if reserialization fails, or Error::success() on success.
 static Error tryBitstream2YAML() {
-  // Use the namespace to get the correct command line globals.
-  using namespace bitstream2yaml;
-  return tryReserialize(InputFileName, OutputFileName, InputFormat,
-                        OutputFormat);
-}
+  // Create the serializer.
+  auto MaybeOF = getOutputFile(OutputFileName, OutputFormat);
+  if (!MaybeOF)
+    return MaybeOF.takeError();
+  auto OF = std::move(*MaybeOF);
+  auto MaybeSerializer = createRemarkSerializer(
+      OutputFormat, SerializerMode::Standalone, OF->os());
+  if (!MaybeSerializer)
+    return MaybeSerializer.takeError();
 
-/// Reserialize YAML remarks as bitstream remarks.
-/// \returns An Error if reserialization fails, or Error::success() on success.
-static Error tryYAML2Bitstream() {
-  // Use the namespace to get the correct command line globals.
-  using namespace yaml2bitstream;
-  return tryReserialize(InputFileName, OutputFileName, InputFormat,
-                        OutputFormat);
+  // Create the parser.
+  auto MaybeBuf = getInputMemoryBuffer(InputFileName);
+  if (!MaybeBuf)
+    return MaybeBuf.takeError();
+  auto Serializer = std::move(*MaybeSerializer);
+  auto MaybeParser = createRemarkParser(InputFormat, (*MaybeBuf)->getBuffer());
+  if (!MaybeParser)
+    return MaybeParser.takeError();
+  auto &Parser = **MaybeParser;
+
+  // Parse + reserialize all remarks.
+  auto MaybeRemark = Parser.next();
+  for (; MaybeRemark; MaybeRemark = Parser.next())
+    Serializer->emit(**MaybeRemark);
+  auto E = MaybeRemark.takeError();
+  if (!E.isA<EndOfFileError>())
+    return E;
+  consumeError(std::move(E));
+  return Error::success();
 }
+} // namespace bitstream2yaml
 
 /// Handle user-specified suboptions (e.g. yaml2bitstream, bitstream2yaml).
 /// \returns An Error if the specified suboption fails or if no suboption was
 /// specified. Otherwise, Error::success().
 static Error handleSuboptions() {
   if (subopts::Bitstream2YAML)
-    return tryBitstream2YAML();
+    return bitstream2yaml::tryBitstream2YAML();
   if (subopts::YAML2Bitstream)
-    return tryYAML2Bitstream();
+    return yaml2bitstream::tryYAML2Bitstream();
   return make_error<StringError>(
       "Please specify a subcommand. (See -help for options)",
       inconvertibleErrorCode());
