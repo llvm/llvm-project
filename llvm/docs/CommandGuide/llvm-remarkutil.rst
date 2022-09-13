@@ -1,5 +1,5 @@
 llvm-remarkutil - Remark utility
-==============================================================
+================================
 
 .. program:: llvm-remarkutil
 
@@ -23,28 +23,28 @@ Subcommands
 .. _bitstream2yaml_subcommand:
 
 bitstream2yaml
-~~~~~~
+~~~~~~~~~~~~~~
 
 .. program:: llvm-remarkutil bitstream2yaml
 
 USAGE: :program:`llvm-remarkutil` bitstream2yaml <input file> -o <output file>
 
 Summary
-^^^^^^^^^^^
+^^^^^^^
 
 Takes a bitstream remark file as input, and reserializes that file as YAML.
 
 .. _yaml2bitstream_subcommand:
 
 yaml2bitstream
-~~~~~~
+~~~~~~~~~~~~~~
 
 .. program:: llvm-remarkutil yaml2bitstream
 
 USAGE: :program:`llvm-remarkutil` yaml2bitstream <input file> -o <output file>
 
 Summary
-^^^^^^^^^^^
+^^^^^^^
 
 Takes a YAML remark file as input, and reserializes that file in the bitstream
 format.
