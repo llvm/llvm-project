@@ -531,23 +531,14 @@ for.body:                                         ; preds = %for.body.preheader1
 define void @sink_v2z64_1(i32 *%p, i32 *%d, i64 %n, <2 x i32> %a) {
 ; CHECK-LABEL: sink_v2z64_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    dup v0.2d, v0.d[1]
-; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:  .LBB6_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    add x9, x9, #8
+; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    subs x2, x2, #8
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    fmov x11, d1
-; CHECK-NEXT:    mov x12, v1.d[1]
-; CHECK-NEXT:    mul x10, x11, x10
-; CHECK-NEXT:    mul x11, x12, x8
-; CHECK-NEXT:    fmov d1, x10
-; CHECK-NEXT:    mov v1.d[1], x11
+; CHECK-NEXT:    umull v1.2d, v1.2s, v0.s[1]
 ; CHECK-NEXT:    shrn v1.2s, v1.2d, #15
 ; CHECK-NEXT:    str d1, [x0], #32
 ; CHECK-NEXT:    b.ne .LBB6_1
@@ -581,34 +572,18 @@ exit:
 define void @sink_v4i64_1(i32 *%p, i32 *%d, i64 %n, <2 x i32> %a) {
 ; CHECK-LABEL: sink_v4i64_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    dup v0.2d, v0.d[1]
-; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:  .LBB7_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    fmov x13, d0
-; CHECK-NEXT:    add x9, x9, #8
+; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    subs x2, x2, #8
-; CHECK-NEXT:    sshll v2.2d, v1.2s, #0
-; CHECK-NEXT:    sshll2 v1.2d, v1.4s, #0
-; CHECK-NEXT:    fmov x11, d2
-; CHECK-NEXT:    mov x12, v2.d[1]
-; CHECK-NEXT:    fmov x14, d1
-; CHECK-NEXT:    mul x10, x11, x10
-; CHECK-NEXT:    mov x11, v1.d[1]
-; CHECK-NEXT:    mul x13, x14, x13
-; CHECK-NEXT:    mul x12, x12, x8
-; CHECK-NEXT:    fmov d1, x10
-; CHECK-NEXT:    mul x10, x11, x8
-; CHECK-NEXT:    fmov d2, x13
-; CHECK-NEXT:    mov v1.d[1], x12
-; CHECK-NEXT:    mov v2.d[1], x10
-; CHECK-NEXT:    shrn v1.2s, v1.2d, #15
-; CHECK-NEXT:    shrn2 v1.4s, v2.2d, #15
-; CHECK-NEXT:    str q1, [x0], #32
+; CHECK-NEXT:    smull v2.2d, v1.2s, v0.s[1]
+; CHECK-NEXT:    smull2 v1.2d, v1.4s, v0.s[1]
+; CHECK-NEXT:    shrn v2.2s, v2.2d, #15
+; CHECK-NEXT:    shrn2 v2.4s, v1.2d, #15
+; CHECK-NEXT:    str q2, [x0], #32
 ; CHECK-NEXT:    b.ne .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
@@ -640,16 +615,14 @@ exit:
 define void @sink_v8z16_0(i32 *%p, i32 *%d, i64 %n, <16 x i8> %a) {
 ; CHECK-LABEL: sink_v8z16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    dup v0.8b, v0.b[0]
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:  .LBB8_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    subs x2, x2, #8
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    mul v1.8h, v1.8h, v0.8h
+; CHECK-NEXT:    umull v1.8h, v1.8b, v0.8b
 ; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
 ; CHECK-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-NEXT:    str d1, [x0], #32
@@ -684,22 +657,20 @@ exit:
 define void @sink_v16s16_8(i32 *%p, i32 *%d, i64 %n, <16 x i8> %a) {
 ; CHECK-LABEL: sink_v16s16_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-NEXT:    dup v1.8b, v0.b[10]
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    dup v0.8h, v0.h[2]
+; CHECK-NEXT:    dup v0.16b, v0.b[10]
 ; CHECK-NEXT:  .LBB9_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q1, [x0]
+; CHECK-NEXT:    ldr q2, [x0]
 ; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    subs x2, x2, #8
-; CHECK-NEXT:    sshll2 v2.8h, v1.16b, #0
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    mul v2.8h, v2.8h, v0.8h
-; CHECK-NEXT:    mul v1.8h, v1.8h, v0.8h
+; CHECK-NEXT:    smull2 v3.8h, v2.16b, v0.16b
+; CHECK-NEXT:    smull v2.8h, v2.8b, v1.8b
+; CHECK-NEXT:    cmlt v3.8h, v3.8h, #0
 ; CHECK-NEXT:    cmlt v2.8h, v2.8h, #0
-; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
-; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    str q1, [x0], #32
+; CHECK-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
+; CHECK-NEXT:    str q2, [x0], #32
 ; CHECK-NEXT:    b.ne .LBB9_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret

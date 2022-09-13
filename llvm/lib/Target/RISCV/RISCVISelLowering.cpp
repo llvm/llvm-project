@@ -1178,6 +1178,9 @@ bool RISCVTargetLowering::hasAndNotCompare(SDValue Y) const {
 }
 
 bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
+  // Zbs provides BEXT[_I], which can be used with SEQZ/SNEZ as a bit test.
+  if (Subtarget.hasStdExtZbs())
+    return X.getValueType().isScalarInteger();
   // We can use ANDI+SEQZ/SNEZ as a bit test. Y contains the bit position.
   auto *C = dyn_cast<ConstantSDNode>(Y);
   return C && C->getAPIntValue().ule(10);
@@ -1836,6 +1839,11 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   SDValue FpToInt = DAG.getNode(
       Opc, DL, DstVT, Src,
       DAG.getTargetConstant(RISCVFPRndMode::RTZ, DL, Subtarget.getXLenVT()));
+
+  // fcvt.wu.* sign extends bit 31 on RV64. FP_TO_UINT_SAT expects to zero
+  // extend.
+  if (Opc == RISCVISD::FCVT_WU_RV64)
+    FpToInt = DAG.getZeroExtendInReg(FpToInt, DL, MVT::i32);
 
   SDValue ZeroInt = DAG.getConstant(0, DL, DstVT);
   return DAG.getSelectCC(DL, Src, Src, ZeroInt, FpToInt, ISD::CondCode::SETUO);
@@ -8892,6 +8900,11 @@ static SDValue performFP_TO_INT_SATCombine(SDNode *N,
   SDLoc DL(N);
   SDValue FpToInt = DAG.getNode(Opc, DL, XLenVT, Src,
                                 DAG.getTargetConstant(FRM, DL, XLenVT));
+
+  // fcvt.wu.* sign extends bit 31 on RV64. FP_TO_UINT_SAT expects to zero
+  // extend.
+  if (Opc == RISCVISD::FCVT_WU_RV64)
+    FpToInt = DAG.getZeroExtendInReg(FpToInt, DL, MVT::i32);
 
   // RISCV FP-to-int conversions saturate to the destination register size, but
   // don't produce 0 for nan.

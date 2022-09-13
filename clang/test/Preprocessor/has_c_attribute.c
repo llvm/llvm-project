@@ -3,7 +3,7 @@
 
 #define C2x(x) x: __has_c_attribute(x)
 
-// CHECK: fallthrough: 201904L
+// CHECK: fallthrough: 201910L
 C2x(fallthrough)
 
 // CHECK: __nodiscard__: 202003L

@@ -13115,6 +13115,18 @@ bool AArch64TargetLowering::shouldSinkOperands(
         continue;
 
       ShuffleVectorInst *Shuffle = dyn_cast<ShuffleVectorInst>(Op);
+
+      // If the Shuffle is a splat and the operand is a zext/sext, sinking the
+      // operand and the s/zext can help create indexed s/umull. This is
+      // especially useful to prevent i64 mul being scalarized.
+      if (Shuffle && isSplatShuffle(Shuffle) &&
+          match(Shuffle->getOperand(0), m_ZExtOrSExt(m_Value()))) {
+        Ops.push_back(&Shuffle->getOperandUse(0));
+        Ops.push_back(&Op);
+        IsProfitable = true;
+        continue;
+      }
+
       if (!Shuffle || !Shuffle->isZeroEltSplat())
         continue;
 
