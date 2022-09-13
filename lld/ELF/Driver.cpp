@@ -1363,6 +1363,7 @@ static void readConfigs(opt::InputArgList &args) {
   }
   if (auto *arg = args.getLastArg(OPT_thinlto_jobs))
     config->thinLTOJobs = arg->getValue();
+  config->threadCount = parallel::strategy.compute_thread_count();
 
   if (config->ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(config->ltoo));
