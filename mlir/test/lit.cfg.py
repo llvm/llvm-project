@@ -66,10 +66,12 @@ tools = [
     'mlir-cpu-runner',
     'mlir-linalg-ods-yaml-gen',
     'mlir-reduce',
-    'mlir-spirv-cpu-runner',
     'mlir-pdll',
     'not',
 ]
+
+if config.enable_spirv_cpu_runner:
+  tools.extend(['mlir-spirv-cpu-runner'])
 
 # The following tools are optional
 tools.extend([
