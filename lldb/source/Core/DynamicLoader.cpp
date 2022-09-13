@@ -62,7 +62,7 @@ DynamicLoader *DynamicLoader::FindPlugin(Process *process,
 
 DynamicLoader::DynamicLoader(Process *process) : m_process(process) {}
 
-// Accessosors to the global setting as to whether to stop at image (shared
+// Accessors to the global setting as to whether to stop at image (shared
 // library) loading/unloading.
 
 bool DynamicLoader::GetStopWhenImagesChange() const {
