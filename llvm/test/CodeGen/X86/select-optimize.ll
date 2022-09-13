@@ -187,6 +187,7 @@ define i32 @expensive_val_operand2(ptr nocapture %a, i32 %x, i1 %cmp) {
 
 ; Cold value operand with load in its one-use dependence slice shoud result
 ; into a branch with sinked dependence slice.
+; The lifetime-end intrinsics should be soundly preserved.
 define i32 @expensive_val_operand3(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
 ; CHECK-LABEL: @expensive_val_operand3(
 ; CHECK-NEXT:    [[SEL_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
@@ -197,9 +198,11 @@ define i32 @expensive_val_operand3(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
 ; CHECK-NEXT:    br label [[SELECT_END]]
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X]], [[SELECT_TRUE_SINK]] ], [ [[Y:%.*]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[A]])
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %load = load i32, ptr %a, align 8
+  call void @llvm.lifetime.end.p0(i64 2, ptr nonnull %a)
   %x = add i32 %load, %b
   %sel = select i1 %cmp, i32 %x, i32 %y, !prof !17
   ret i32 %sel
@@ -446,6 +449,9 @@ for.body:                                         ; preds = %for.body.preheader,
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.module.flags = !{!0, !26, !27}
 !0 = !{i32 1, !"ProfileSummary", !1}
