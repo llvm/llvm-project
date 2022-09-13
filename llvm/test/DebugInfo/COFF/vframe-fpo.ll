@@ -125,8 +125,7 @@
 ; CODEVIEW-NEXT:     BytesOfCalleeSavedRegisters: 0xC
 ; CODEVIEW-NEXT:     OffsetOfExceptionHandler: 0x0
 ; CODEVIEW-NEXT:     SectionIdOfExceptionHandler: 0x0
-; CODEVIEW-NEXT:     Flags [ (0x16000)
-; CODEVIEW-NEXT:       SafeBuffers (0x2000)
+; CODEVIEW-NEXT:     Flags [ (0x14000)
 ; CODEVIEW-NEXT:     ]
 ; CODEVIEW-NEXT:     LocalFramePtrReg: VFRAME (0x7536)
 ; CODEVIEW-NEXT:     ParamFramePtrReg: VFRAME (0x7536)
