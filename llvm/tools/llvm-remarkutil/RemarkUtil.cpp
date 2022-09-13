@@ -80,7 +80,7 @@ getInputMemoryBuffer(StringRef InputFileName) {
 /// \p [out] StrTab - A string table populated for later remark serialization.
 /// \returns Error::success() if all remarks were successfully parsed, and an
 /// Error otherwise.
-Error tryParseRemarksFromInputFile(
+static Error tryParseRemarksFromInputFile(
     StringRef InputFileName, Format InputFormat,
     std::vector<std::unique_ptr<Remark>> &ParsedRemarks, StringTable &StrTab) {
   auto MaybeBuf = getInputMemoryBuffer(InputFileName);
