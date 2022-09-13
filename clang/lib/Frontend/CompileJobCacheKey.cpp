@@ -79,6 +79,9 @@ clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
   if (!DepOpts.Targets.empty())
     DepOpts.Targets = {"-"};
   DepOpts.UsePhonyTargets = false;
+  // These are added in when the dependency file is generated, but they don't
+  // affect the actual compilation.
+  DepOpts.ExtraDeps.clear();
 
   // Generate a new command-line in case Invocation has been canonicalized.
   llvm::BumpPtrAllocator Alloc;

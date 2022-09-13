@@ -27,7 +27,7 @@ public:
   /// \param Callback Callback that receives the resulting dependencies on
   ///                 completion, or \c None if an error occurred.
   CASDependencyCollector(
-      const DependencyOutputOptions &Opts, cas::ObjectStore &CAS,
+      DependencyOutputOptions Opts, cas::ObjectStore &CAS,
       std::function<void(Optional<cas::ObjectRef>)> Callback);
 
   /// Replay the given result, which should have been created by a
