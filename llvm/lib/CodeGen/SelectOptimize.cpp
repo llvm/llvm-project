@@ -29,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -468,6 +469,22 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
                                       EndBlock->getParent(), EndBlock);
       auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(SI->getDebugLoc());
+    }
+    // If there was sinking, move any lifetime-end intrinsic calls found in the
+    // StartBlock to the newly-created end block to ensure sound lifetime info
+    // after sinking (in case any use is sinked).
+    else {
+      SmallVector<Instruction *, 2> EndLifetimeCalls;
+      for (Instruction &I : *StartBlock) {
+        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
+          if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
+            EndLifetimeCalls.push_back(&I);
+          }
+        }
+      }
+      for (auto *LC : EndLifetimeCalls) {
+        LC->moveBefore(&*EndBlock->getFirstInsertionPt());
+      }
     }
 
     // Insert the real conditional branch based on the original condition.
