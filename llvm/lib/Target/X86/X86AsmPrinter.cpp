@@ -792,13 +792,14 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->switchSection(getObjFileLowering().getTextSection());
 
   if (TT.isOSBinFormatCOFF()) {
-    // Emit an absolute @feat.00 symbol.
+    // Emit an absolute @feat.00 symbol.  This appears to be some kind of
+    // compiler features bitfield read by link.exe.
     MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
     OutStreamer->beginCOFFSymbolDef(S);
     OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
     OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
     OutStreamer->endCOFFSymbolDef();
-    int64_t Feat00Value = 0;
+    int64_t Feat00Flags = 0;
 
     if (TT.getArch() == Triple::x86) {
       // According to the PE-COFF spec, the LSB of this value marks the object
@@ -806,27 +807,24 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       // must be registered in .sxdata.  Use of any unregistered handlers will
       // cause the process to terminate immediately.  LLVM does not know how to
       // register any SEH handlers, so its object files should be safe.
-      Feat00Value |= COFF::Feat00Flags::SafeSEH;
+      Feat00Flags |= 1;
     }
 
     if (M.getModuleFlag("cfguard")) {
-      // Object is CFG-aware.
-      Feat00Value |= COFF::Feat00Flags::GuardCF;
+      Feat00Flags |= 0x800; // Object is CFG-aware.
     }
 
     if (M.getModuleFlag("ehcontguard")) {
-      // Object also has EHCont.
-      Feat00Value |= COFF::Feat00Flags::GuardEHCont;
+      Feat00Flags |= 0x4000; // Object also has EHCont.
     }
 
     if (M.getModuleFlag("ms-kernel")) {
-      // Object is compiled with /kernel.
-      Feat00Value |= COFF::Feat00Flags::Kernel;
+      Feat00Flags |= 0x40000000; // Object is compiled with /kernel.
     }
 
     OutStreamer->emitSymbolAttribute(S, MCSA_Global);
     OutStreamer->emitAssignment(
-        S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+        S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
   }
   OutStreamer->emitSyntaxDirective();
 
