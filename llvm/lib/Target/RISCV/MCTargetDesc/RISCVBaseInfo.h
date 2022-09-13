@@ -188,6 +188,11 @@ static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
   return Desc.getNumOperands() - Offset;
 }
 
+static inline unsigned getVecPolicyOpNum(const MCInstrDesc &Desc) {
+  assert(hasVecPolicyOp(Desc.TSFlags));
+  return Desc.getNumOperands() - 1;
+}
+
 // RISC-V Specific Machine Operand Flags
 enum {
   MO_None = 0,
