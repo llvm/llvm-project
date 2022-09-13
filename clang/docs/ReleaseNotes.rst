@@ -183,6 +183,11 @@ Attribute Changes in Clang
 - Introduced a new function attribute ``__attribute__((nouwtable))`` to suppress
   LLVM IR ``uwtable`` function attribute.
 
+- Updated the value returned by ``__has_c_attribute(nodiscard)`` to ``202003L``
+  based on the final date specified by the C2x committee draft. We already
+  supported the ability to specify a message in the attribute, so there were no
+  changes to the attribute behavior.
+
 Windows Support
 ---------------
 - For the MinGW driver, added the options ``-mguard=none``, ``-mguard=cf`` and

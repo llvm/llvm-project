@@ -2987,7 +2987,7 @@ def WarnUnused : InheritableAttr {
 
 def WarnUnusedResult : InheritableAttr {
   let Spellings = [CXX11<"", "nodiscard", 201907>,
-                   C2x<"", "nodiscard", 201904>,
+                   C2x<"", "nodiscard", 202003>,
                    CXX11<"clang", "warn_unused_result">,
                    GCC<"warn_unused_result">];
   let Subjects = SubjectList<[ObjCMethod, Enum, Record, FunctionLike, TypedefName]>;
