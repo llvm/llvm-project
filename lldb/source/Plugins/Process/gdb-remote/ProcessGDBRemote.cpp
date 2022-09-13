@@ -575,7 +575,7 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
           const bool force_symbol_search = true;
           const bool notify = true;
           DynamicLoader::LoadBinaryWithUUIDAndAddress(
-              this, standalone_uuid, standalone_value,
+              this, llvm::StringRef(), standalone_uuid, standalone_value,
               standalone_value_is_offset, force_symbol_search, notify);
         }
       }
@@ -607,7 +607,8 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
           const bool force_symbol_search = true;
           // Second manually load this binary into the Target.
           DynamicLoader::LoadBinaryWithUUIDAndAddress(
-              this, uuid, addr, value_is_slide, force_symbol_search, notify);
+              this, llvm::StringRef(), uuid, addr, value_is_slide,
+              force_symbol_search, notify);
         }
       }
 
