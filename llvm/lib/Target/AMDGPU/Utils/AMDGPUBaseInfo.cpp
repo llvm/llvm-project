@@ -427,6 +427,8 @@ unsigned getVOPDOpcode(unsigned Opc) {
   return Info ? Info->VOPDOp : ~0u;
 }
 
+bool isVOPD(unsigned Opc) { return getVOPDOpcodeHelper(Opc); }
+
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
   const WMMAOpcodeMappingInfo *Info = getWMMAMappingInfoFrom2AddrOpcode(Opc);
   return Info ? Info->Opcode3Addr : ~0u;
