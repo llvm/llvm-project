@@ -75,6 +75,8 @@ private:
 };
 
 class OptBisectInstrumentation {
+  bool HasWrittenIR = false;
+
 public:
   OptBisectInstrumentation() = default;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
