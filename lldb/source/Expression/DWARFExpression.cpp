@@ -471,7 +471,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
       // by a file address on the stack. We assume that DW_OP_const4u or
       // DW_OP_const8u is used for these values, and we check that the last
       // opcode we got before either of these was DW_OP_const4u or
-      // DW_OP_const8u. If so, then we can link the value accodingly. For
+      // DW_OP_const8u. If so, then we can link the value accordingly. For
       // Darwin, the value in the DW_OP_const4u or DW_OP_const8u is the file
       // address of a structure that contains a function pointer, the pthread
       // key and the offset into the data pointed to by the pthread key. So we
@@ -735,7 +735,7 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
                                             Value *value = nullptr) {
   // Note that this function is conflating DWARF expressions with
   // DWARF location descriptions. Perhaps it would be better to define
-  // a wrapper for DWARFExpresssion::Eval() that deals with DWARF
+  // a wrapper for DWARFExpression::Eval() that deals with DWARF
   // location descriptions (which consist of one or more DWARF
   // expressions). But doing this would mean we'd also need factor the
   // handling of DW_OP_(bit_)piece out of this function.
@@ -773,7 +773,7 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 /// \param dw_op_type C-style string used to vary the error output
 /// \param file_addr the file address we are trying to resolve and turn into a
 ///                  load address
-/// \param so_addr out parameter, will be set to load addresss or section offset
+/// \param so_addr out parameter, will be set to load address or section offset
 /// \param check_sectionoffset bool which determines if having a section offset
 ///                            but not a load address is considerd a success
 /// \returns llvm::Optional containing the load address if resolving and getting
