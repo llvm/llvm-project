@@ -75,7 +75,7 @@ func.func @log2_nofold2_64() -> f64 {
 }
 
 // CHECK-LABEL: @log2_fold_vec
-// CHECK: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00, 1.58496249, 2.000000e+00]> : vector<4xf32>
+// CHECK: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00, 1.58{{[0-9]+}}, 2.000000e+00]> : vector<4xf32>
 // CHECK: return %[[cst]]
 func.func @log2_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
@@ -112,7 +112,7 @@ func.func @sqrt_fold() -> f32 {
 }
 
 // CHECK-LABEL: @sqrt_fold_vec
-// CHECK: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 1.41421354, 1.73205078, 2.000000e+00]> : vector<4xf32>
+// CHECK: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 1.41{{[0-9]+}}, 1.73{{[0-9]+}}, 2.000000e+00]> : vector<4xf32>
 // CHECK: return %[[cst]]
 func.func @sqrt_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
@@ -185,7 +185,7 @@ func.func @log10_fold() -> f32 {
 }
 
 // CHECK-LABEL: @log10_fold_vec
-// CHECK: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00, 2.000000e+00, 2.301030e+00]> : vector<4xf32>
+// CHECK: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00, 2.000000e+00, 2.30{{[0-9]+}}e+00]> : vector<4xf32>
 // CHECK: return %[[cst]]
 func.func @log10_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[1.0, 10.0, 100.0, 200.0]> : vector<4xf32>
@@ -203,7 +203,7 @@ func.func @log1p_fold() -> f32 {
 }
 
 // CHECK-LABEL: @log1p_fold_vec
-// CHECK: %[[cst:.+]] = arith.constant dense<[1.38629436, 1.79175949, 2.07944155, 2.48490667]> : vector<4xf32>
+// CHECK: %[[cst:.+]] = arith.constant dense<[1.38{{[0-9]+}}, 1.79{{[0-9]+}}, 2.07{{[0-9]+}}, 2.48{{[0-9]+}}]> : vector<4xf32>
 // CHECK: return %[[cst]]
 func.func @log1p_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[3.0, 5.0, 7.0, 11.0]> : vector<4xf32>
@@ -221,7 +221,7 @@ func.func @log_fold() -> f32 {
 }
 
 // CHECK-LABEL: @log_fold_vec
-// CHECK: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.693147182, 1.09861231, 1.38629436]> : vector<4xf32
+// CHECK: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.69{{[0-9]+}}, 1.09{{[0-9]+}}, 1.38{{[0-9]+}}]> : vector<4xf32
 // CHECK: return %[[cst]]
 func.func @log_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
@@ -239,7 +239,7 @@ func.func @exp_fold() -> f32 {
 }
 
 // CHECK-LABEL: @exp_fold_vec
-// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[2.71828175, 7.3890562, 20.085537, 54.5981483]> : vector<4xf32>
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[2.71{{[0-9]+}}, 7.38{{[0-9]+}}, 20.08{{[0-9]+}}, 54.59{{[0-9]+}}]> : vector<4xf32>
 // CHECK-NEXT:   return %[[cst]]
 func.func @exp_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : vector<4xf32>
@@ -294,7 +294,7 @@ func.func @tan_fold() -> f32 {
 }
 
 // CHECK-LABEL: @tan_fold_vec
-// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.55740774, 0.000000e+00, 1.55740774]> : vector<4xf32>
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 1.55{{[0-9]+}}, 0.000000e+00, 1.55{{[0-9]+}}]> : vector<4xf32>
 // CHECK-NEXT:   return %[[cst]]
 func.func @tan_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
@@ -303,7 +303,7 @@ func.func @tan_fold_vec() -> (vector<4xf32>) {
 }
 
 // CHECK-LABEL: @tanh_fold
-// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.761594176 : f32
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.76{{[0-9]+}} : f32
 // CHECK-NEXT:   return %[[cst]]
 func.func @tanh_fold() -> f32 {
   %c = arith.constant 1.0 : f32
@@ -312,7 +312,7 @@ func.func @tanh_fold() -> f32 {
 }
 
 // CHECK-LABEL: @tanh_fold_vec
-// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.761594176, 0.000000e+00, 0.761594176]> : vector<4xf32>
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.76{{[0-9]+}}, 0.000000e+00, 0.76{{[0-9]+}}]> : vector<4xf32>
 // CHECK-NEXT:   return %[[cst]]
 func.func @tanh_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
@@ -321,7 +321,7 @@ func.func @tanh_fold_vec() -> (vector<4xf32>) {
 }
 
 // CHECK-LABEL: @atan_fold
-// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.785398185 : f32
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.78{{[0-9]+}} : f32
 // CHECK-NEXT:   return %[[cst]]
 func.func @atan_fold() -> f32 {
   %c = arith.constant 1.0 : f32
@@ -330,7 +330,7 @@ func.func @atan_fold() -> f32 {
 }
 
 // CHECK-LABEL: @atan_fold_vec
-// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.785398185, 0.000000e+00, 0.785398185]> : vector<4xf32>
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.78{{[0-9]+}}, 0.000000e+00, 0.78{{[0-9]+}}]> : vector<4xf32>
 // CHECK-NEXT:   return %[[cst]]
 func.func @atan_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
@@ -349,7 +349,7 @@ func.func @atan2_fold() -> f32 {
 }
 
 // CHECK-LABEL: @atan2_fold_vec
-// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.000000e+00, 0.463647604, 0.463647604]> : vector<4xf32>
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.000000e+00, 0.46{{[0-9]+}}, 0.46{{[0-9]+}}]> : vector<4xf32>
 // CHECK-NEXT:   return %[[cst]]
 func.func @atan2_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[0.0, 0.0, 1.0, 1.0]> : vector<4xf32>
@@ -359,7 +359,7 @@ func.func @atan2_fold_vec() -> (vector<4xf32>) {
 }
 
 // CHECK-LABEL: @cos_fold
-// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.540302277 : f32
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.54{{[0-9]+}} : f32
 // CHECK-NEXT:   return %[[cst]]
 func.func @cos_fold() -> f32 {
   %c = arith.constant 1.0 : f32
@@ -368,7 +368,7 @@ func.func @cos_fold() -> f32 {
 }
 
 // CHECK-LABEL: @cos_fold_vec
-// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 0.540302277, 1.000000e+00, 0.540302277]> : vector<4xf32>
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 0.54{{[0-9]+}}, 1.000000e+00, 0.54{{[0-9]+}}]> : vector<4xf32>
 // CHECK-NEXT:   return %[[cst]]
 func.func @cos_fold_vec() -> (vector<4xf32>) {
   %v1 = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
