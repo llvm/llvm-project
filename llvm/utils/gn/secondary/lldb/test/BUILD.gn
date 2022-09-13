@@ -56,7 +56,7 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_TEST_COMMON_ARGS=",
     "LLDB_TEST_USER_ARGS=",
     "LLDB_ENABLE_PYTHON=0",
-    "LLDB_HAS_LIBCXX=",  # FIXME: support this (?)
+    "LLDB_HAS_LIBCXX=0",  # FIXME: support this (?)
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_TEST_ARCH=$current_cpu",
     "LLDB_TEST_COMPILER=" + rebase_path("$root_build_dir/bin/clang"),
