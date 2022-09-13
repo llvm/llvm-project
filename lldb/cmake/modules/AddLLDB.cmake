@@ -161,12 +161,10 @@ function(add_properties_for_swift_modules target)
         target_link_directories(${target} PRIVATE
             "${CMAKE_OSX_SYSROOT}/usr/lib/swift"
             "${LLDB_SWIFT_LIBS}/macosx")
-        set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH
-            "/usr/lib/swift")
+	set(SWIFT_RPATH "/usr/lib/swift")
       elseif(BOOTSTRAPPING_MODE STREQUAL "BOOTSTRAPPING")
         target_link_directories(${target} PRIVATE "${LLDB_SWIFT_LIBS}/macosx")
-        set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH
-            "${LLDB_SWIFT_LIBS}/macosx")
+	set(SWIFT_RPATH "${LLDB_SWIFT_LIBS}/macosx")
       else()
         message(FATAL_ERROR "Unknown BOOTSTRAPPING_MODE '${BOOTSTRAPPING_MODE}'")
       endif()
@@ -177,12 +175,11 @@ function(add_properties_for_swift_modules target)
     elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
       string(REGEX MATCH "^[^-]*" arch ${LLVM_TARGET_TRIPLE})
       target_link_libraries(${target} PRIVATE swiftCore-linux-${arch})
-  
-      # TODO: add "${LLDB_SWIFT_LIBS}/linux" to BUILD_RPATH and not INSTALL_RPATH.
-      # This does not work for some reason.
-      set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH
-          "${LLDB_SWIFT_LIBS}/linux;$ORIGIN/../lib/swift/linux")
+      set(SWIFT_RPATH "${LLDB_SWIFT_LIBS}/linux;$ORIGIN/../lib/swift/linux")
     endif()
+
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_RPATH}")
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_RPATH}")
   endif()
 endfunction()
 # END Swift Mods
