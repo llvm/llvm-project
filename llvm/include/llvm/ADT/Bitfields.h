@@ -119,7 +119,7 @@ template <typename T, unsigned Bits> struct BitPatterns {
 /// The `pack` method also checks that the passed in `UserValue` is valid.
 template <typename T, unsigned Bits, bool = std::is_unsigned<T>::value>
 struct Compressor {
-  static_assert(std::is_unsigned<T>::value, "T is unsigned");
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
   using BP = BitPatterns<T, Bits>;
 
   static T pack(T UserValue, T UserMaxValue) {
@@ -132,7 +132,7 @@ struct Compressor {
 };
 
 template <typename T, unsigned Bits> struct Compressor<T, Bits, false> {
-  static_assert(std::is_signed<T>::value, "T is signed");
+  static_assert(std::is_signed<T>::value, "T must be signed");
   using BP = BitPatterns<T, Bits>;
 
   static T pack(T UserValue, T UserMaxValue) {
