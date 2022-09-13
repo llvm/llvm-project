@@ -91,7 +91,7 @@
 ; X86-NEXT: .long   0                       # Bytes of callee saved registers
 ; X86-NEXT: .long   0                       # Exception handler offset
 ; X86-NEXT: .short  0                       # Exception handler section
-; X86-NEXT: .long   8192                    # Flags (defines frame register)
+; X86-NEXT: .long   0                       # Flags (defines frame register)
 ; X86-NEXT: .p2align 2
 ; X86-NEXT: [[FPROC_END]]:
 ; X86-NEXT: .short  2
@@ -130,7 +130,7 @@
 ; X86-NEXT: .long   0                       # Bytes of callee saved registers
 ; X86-NEXT: .long   0                       # Exception handler offset
 ; X86-NEXT: .short  0                       # Exception handler section
-; X86-NEXT: .long   8192                    # Flags (defines frame register)
+; X86-NEXT: .long   0                       # Flags (defines frame register)
 ; X86-NEXT: .p2align 2
 ; X86-NEXT: [[FPROC_END]]:
 ; X86-NEXT: .short  2
@@ -169,7 +169,7 @@
 ; X86-NEXT: .long   0                       # Bytes of callee saved registers
 ; X86-NEXT: .long   0                       # Exception handler offset
 ; X86-NEXT: .short  0                       # Exception handler section
-; X86-NEXT: .long   8192                    # Flags (defines frame register)
+; X86-NEXT: .long   0                       # Flags (defines frame register)
 ; X86-NEXT: .p2align 2
 ; X86-NEXT: [[FPROC_END]]:
 ; X86-NEXT: .short  2
@@ -403,7 +403,7 @@
 ; X64-NEXT: .long   0                       # Bytes of callee saved registers
 ; X64-NEXT: .long   0                       # Exception handler offset
 ; X64-NEXT: .short  0                       # Exception handler section
-; X64-NEXT: .long   90112                   # Flags (defines frame register)
+; X64-NEXT: .long   81920                       # Flags (defines frame register)
 ; X64-NEXT: .p2align 2
 ; X64-NEXT: [[FPROC_END]]:
 ; X64-NEXT: .short  2
@@ -441,7 +441,7 @@
 ; X64-NEXT: .long   0                       # Bytes of callee saved registers
 ; X64-NEXT: .long   0                       # Exception handler offset
 ; X64-NEXT: .short  0                       # Exception handler section
-; X64-NEXT: .long   90112                   # Flags (defines frame register)
+; X64-NEXT: .long   81920                       # Flags (defines frame register)
 ; X64-NEXT: .p2align 2
 ; X64-NEXT: [[FPROC_END]]:
 ; X64-NEXT: .short  2
@@ -479,7 +479,7 @@
 ; X64-NEXT: .long   0                       # Bytes of callee saved registers
 ; X64-NEXT: .long   0                       # Exception handler offset
 ; X64-NEXT: .short  0                       # Exception handler section
-; X64-NEXT: .long   90112                   # Flags (defines frame register)
+; X64-NEXT: .long   81920                       # Flags (defines frame register)
 ; X64-NEXT: .p2align 2
 ; X64-NEXT: [[FPROC_END]]:
 ; X64-NEXT: .short  2
