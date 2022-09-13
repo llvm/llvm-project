@@ -1,4 +1,17 @@
 add_entrypoint_object(
+  access
+  SRCS
+    access.cpp
+  HDRS
+    ../access.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   chdir
   SRCS
     chdir.cpp
