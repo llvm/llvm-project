@@ -105,9 +105,9 @@ static constexpr const char *InitFileWarning =
     "and\n"
     "accept the security risk.";
 
-constexpr const char *CommandInterpreter::g_no_argument = "<no-argument>";
-constexpr const char *CommandInterpreter::g_need_argument = "<need-argument>";
-constexpr const char *CommandInterpreter::g_argument = "<argument>";
+const char * const CommandInterpreter::g_no_argument = "<no-argument>";
+const char * const CommandInterpreter::g_need_argument = "<need-argument>";
+const char * const CommandInterpreter::g_argument = "<argument>";
 
 
 #define LLDB_PROPERTIES_interpreter
