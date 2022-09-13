@@ -111,6 +111,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
+    setOperationAction(ISD::FMA, MVT::f32, Legal);
   }
   if (Subtarget.hasBasicD()) {
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
@@ -118,6 +119,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::f64, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+    setOperationAction(ISD::FMA, MVT::f64, Legal);
   }
 
   // Effectively disable jump table generation.
@@ -1868,4 +1870,22 @@ Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
   if (GRLen == 64)
     Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
+}
+
+bool LoongArchTargetLowering::isFMAFasterThanFMulAndFAdd(
+    const MachineFunction &MF, EVT VT) const {
+  VT = VT.getScalarType();
+
+  if (!VT.isSimple())
+    return false;
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::f32:
+  case MVT::f64:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
 }
