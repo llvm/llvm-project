@@ -168,7 +168,7 @@ class TypePromotion : public FunctionPass {
   // Is V an instruction thats result can trivially promoted, or has safe
   // wrapping.
   bool isLegalToPromote(Value *V);
-  bool TryToPromote(Value *V, unsigned PromotedWidth);
+  bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI);
 
 public:
   static char ID;
@@ -762,7 +762,8 @@ bool TypePromotion::isLegalToPromote(Value *V) {
   return false;
 }
 
-bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
+bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth,
+                                 const LoopInfo &LI) {
   Type *OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedSize();
   SafeToPromote.clear();
@@ -856,6 +857,7 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
 
   unsigned ToPromote = 0;
   unsigned NonFreeArgs = 0;
+  unsigned NonLoopSources = 0, LoopSinks = 0;
   SmallPtrSet<BasicBlock *, 4> Blocks;
   for (auto *CV : CurrentVisited) {
     if (auto *I = dyn_cast<Instruction>(CV))
@@ -865,9 +867,16 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
       if (auto *Arg = dyn_cast<Argument>(CV))
         if (!Arg->hasZExtAttr() && !Arg->hasSExtAttr())
           ++NonFreeArgs;
+      if (!isa<Instruction>(CV) ||
+          !LI.getLoopFor(cast<Instruction>(CV)->getParent()))
+        ++NonLoopSources;
       continue;
     }
 
+    if (isa<PHINode>(CV))
+      continue;
+    if (LI.getLoopFor(cast<Instruction>(CV)->getParent()))
+      ++LoopSinks;
     if (Sinks.count(cast<Instruction>(CV)))
       continue;
     ++ToPromote;
@@ -875,8 +884,8 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
 
   // DAG optimizations should be able to handle these cases better, especially
   // for function arguments.
-  if (!isa<PHINode>(V) && (ToPromote < 2 || (Blocks.size() == 1 &&
-                                             (NonFreeArgs > SafeWrap.size()))))
+  if (!isa<PHINode>(V) && !(LoopSinks && NonLoopSources) &&
+      (ToPromote < 2 || (Blocks.size() == 1 && NonFreeArgs > SafeWrap.size())))
     return false;
 
   IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
@@ -958,7 +967,7 @@ bool TypePromotion::runOnFunction(Function &F) {
                             << "register for ZExt type\n");
           continue;
         }
-        MadeChange |= TryToPromote(Phi, PromoteWidth);
+        MadeChange |= TryToPromote(Phi, PromoteWidth, LI);
       } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
         // Search up from icmps to try to promote their operands.
         // Skip signed or pointer compares
@@ -970,7 +979,7 @@ bool TypePromotion::runOnFunction(Function &F) {
         for (auto &Op : ICmp->operands()) {
           if (auto *OpI = dyn_cast<Instruction>(Op)) {
             if (auto PromotedWidth = GetPromoteWidth(OpI)) {
-              MadeChange |= TryToPromote(OpI, PromotedWidth);
+              MadeChange |= TryToPromote(OpI, PromotedWidth, LI);
               break;
             }
           }
