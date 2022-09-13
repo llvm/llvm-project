@@ -317,7 +317,7 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
 
-  const unsigned threadCount = parallel::strategy.compute_thread_count();
+  const unsigned threadCount = config->threadCount;
   for (Partition &part : partitions) {
     auto add = [&](SyntheticSection &sec) {
       sec.partition = part.getNumber();
