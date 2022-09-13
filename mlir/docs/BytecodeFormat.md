@@ -89,17 +89,23 @@ Strings are blobs of characters with an associated length.
 
 ```
 section {
-  id: byte
-  length: varint
+  idAndIsAligned: byte // id | (hasAlign << 7)
+  length: varint,
+
+  alignment: varint?,
+  padding: byte[], // Padding bytes are always `0xCB`.
+
+  data: byte[]
 }
 ```
 
-Sections are a mechanism for grouping data within the bytecode. The enable
+Sections are a mechanism for grouping data within the bytecode. They enable
 delayed processing, which is useful for out-of-order processing of data,
-lazy-loading, and more. Each section contains a Section ID and a length (which
-allowing for skipping over the section).
-
-TODO: Sections should also carry an optional alignment. Add this when necessary.
+lazy-loading, and more. Each section contains a Section ID, whose high bit
+indicates if the section has alignment requirements, a length (which allows for
+skipping over the section), and an optional alignment. When an alignment is
+present, a variable number of padding bytes (0xCB) may appear before the section
+data. The alignment of a section must be a power of 2.
 
 ## MLIR Encoding
 
@@ -243,6 +249,56 @@ or type is being encoded; the bytecode reader will only know that it has
 encountered an attribute or type of a given dialect, it doesn't encode any
 further information. As such, a common encoding idiom is to use a leading
 `varint` code to indicate how the attribute or type was encoded.
+
+### Resource Section
+
+Resources are encoded using two [sections](#sections), one section
+(`resource_section`) containing the actual encoded representation, and another
+section (`resource_offset_section`) containing the offsets of each encoded
+resource into the previous section.
+
+```
+resource_section {
+  resources: resource[]
+}
+resource {
+  value: resource_bool | resource_string | resource_blob
+}
+resource_bool {
+  value: byte
+}
+resource_string {
+  value: varint
+}
+resource_blob {
+  alignment: varint,
+  size: varint,
+  padding: byte[],
+  blob: byte[]
+}
+
+resource_offset_section {
+  numExternalResourceGroups: varint,
+  resourceGroups: resource_group[]
+}
+resource_group {
+  key: varint,
+  numResources: varint,
+  resources: resource_info[]
+}
+resource_info {
+  key: varint,
+  size: varint
+  kind: byte,
+}
+```
+
+Resources are grouped by the provider, either an external entity or a dialect,
+with each `resource_group` in the offset section containing the corresponding
+provider, number of elements, and info for each element within the group. For
+each element, we record the key, the value kind, and the encoded size. We avoid
+using the direct offset into the `resource_section`, as a smaller relative
+offsets provides more effective compression.
 
 ### IR Section
 
