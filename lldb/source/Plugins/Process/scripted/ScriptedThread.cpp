@@ -164,7 +164,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
         llvm::Twine(
             "StackFrame array size (" + llvm::Twine(arr_size) +
             llvm::Twine(
-                ") is greater than maximum autorized for a StackFrameList."))
+                ") is greater than maximum authorized for a StackFrameList."))
             .str(),
         error, LLDBLog::Thread);
 

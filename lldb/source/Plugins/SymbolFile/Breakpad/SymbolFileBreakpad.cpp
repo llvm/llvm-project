@@ -294,7 +294,7 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
   ParseInlineOriginRecords();
   // A vector of current each level's parent block. For example, when parsing
   // "INLINE 0 ...", the current level is 0 and its parent block is the
-  // funciton block at index 0.
+  // function block at index 0.
   std::vector<Block *> blocks;
   Block &block = func.GetBlock(false);
   block.AddRange(Block::Range(0, func.GetAddressRange().GetByteSize()));
