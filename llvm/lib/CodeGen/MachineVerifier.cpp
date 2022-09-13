@@ -3383,26 +3383,28 @@ void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
   assert(Reg.isVirtual());
   verifyLiveRange(LI, Reg);
 
-  LaneBitmask Mask;
-  LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
-  for (const LiveInterval::SubRange &SR : LI.subranges()) {
-    if ((Mask & SR.LaneMask).any()) {
-      report("Lane masks of sub ranges overlap in live interval", MF);
-      report_context(LI);
-    }
-    if ((SR.LaneMask & ~MaxMask).any()) {
-      report("Subrange lanemask is invalid", MF);
-      report_context(LI);
-    }
-    if (SR.empty()) {
-      report("Subrange must not be empty", MF);
-      report_context(SR, LI.reg(), SR.LaneMask);
-    }
-    Mask |= SR.LaneMask;
-    verifyLiveRange(SR, LI.reg(), SR.LaneMask);
-    if (!LI.covers(SR)) {
-      report("A Subrange is not covered by the main range", MF);
-      report_context(LI);
+  if (LI.hasSubRanges()) {
+    LaneBitmask Mask;
+    LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
+    for (const LiveInterval::SubRange &SR : LI.subranges()) {
+      if ((Mask & SR.LaneMask).any()) {
+        report("Lane masks of sub ranges overlap in live interval", MF);
+        report_context(LI);
+      }
+      if ((SR.LaneMask & ~MaxMask).any()) {
+        report("Subrange lanemask is invalid", MF);
+        report_context(LI);
+      }
+      if (SR.empty()) {
+        report("Subrange must not be empty", MF);
+        report_context(SR, LI.reg(), SR.LaneMask);
+      }
+      Mask |= SR.LaneMask;
+      verifyLiveRange(SR, LI.reg(), SR.LaneMask);
+      if (!LI.covers(SR)) {
+        report("A Subrange is not covered by the main range", MF);
+        report_context(LI);
+      }
     }
   }
 
