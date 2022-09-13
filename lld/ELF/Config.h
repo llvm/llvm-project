@@ -364,6 +364,8 @@ struct Configuration {
   // this means to map the primary and thread stacks as PROT_MTE. Note: This is
   // not supported on Android 11 & 12.
   bool androidMemtagStack;
+
+  unsigned threadCount;
 };
 
 // The only instance of Configuration struct.
