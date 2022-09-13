@@ -399,12 +399,6 @@ def MOVEBALC_NM : MoveBalcBase;
 let isReMaterializable = 1 in {
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 def LA_NM : RegImmNM<"la", simm32_relaxed, GPR32NMOpnd>, InstSize48;
-
-def LAGPB_NM : RegImmNM<"addiu.b", simm32_relaxed, GPR32NMOpnd>, InstSize48 {
-    let AsmString = "addiu.b $rt, $$gp, %gprel( $imm )";
-    let isReMaterializable = 1;
-}
-
 } // isReMaterializable = 1
 
 def ALUIPC_NM : RegImmNM<"aluipc", simm32_relaxed, GPR32NMOpnd>, InstSize32;
@@ -452,6 +446,7 @@ def : NMPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>;
 
 def : NMPat<(MipsJmpLink (i32 texternalsym:$dst)), (BALC_NM texternalsym:$dst)>;
 
+def : NMPat<(MipsFullAddr tglobaladdr:$in), (LA_NM tglobaladdr:$in)>;
 def : NMPat<(MipsFullAddr tglobaltlsaddr:$in), (LA_NM tglobaltlsaddr:$in)>;
 def : NMPat<(MipsFullAddr tblockaddress:$in), (LA_NM tblockaddress:$in)>;
 def : NMPat<(MipsFullAddr tjumptable:$in), (LA_NM tjumptable:$in)>;
@@ -781,22 +776,6 @@ def : NMPat<(i32 (load (add GP_NM, (MipsGPRel tglobaladdr:$in)))),
             (LWGP_NM GP_NM, tglobaladdr:$in)>;
 def : NMPat<(add GP_NM, (MipsGPRel tglobaladdr:$in)),
             (ADDiu_NM GP_NM, tglobaladdr:$in)>;
-
-// GP-relative address
-
-def alignedglobaladdr : PatFrag<(ops),
-                                (tglobaladdr),
-  [{ // Only match if aligned to at least word size
-      Align A = N->getGlobal()->getPointerAlignment(MF->getDataLayout());
-      return commonAlignment(A, 4).value() == 4;
-    }]>;
-
-def : NMPat<(MipsFullAddr alignedglobaladdr:$in),
-            (LA_NM  alignedglobaladdr:$in)>;
-
-def : NMPat<(MipsFullAddr tglobaladdr:$in),
-            (LAGPB_NM tglobaladdr:$in)>;
-
 
 // Atomic load patterns.
 def : NMPat<(atomic_load_8 addr:$a), (LB_NM addr:$a)>;
