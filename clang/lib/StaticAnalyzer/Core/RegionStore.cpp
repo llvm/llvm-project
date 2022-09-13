@@ -2400,7 +2400,11 @@ RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
 
   // Clear out bindings that may overlap with this binding.
   RegionBindingsRef NewB = removeSubRegionBindings(B, cast<SubRegion>(R));
-  return NewB.addBinding(BindingKey::Make(R, BindingKey::Direct), V);
+
+  // LazyCompoundVals should be always bound as 'default' bindings.
+  auto KeyKind = isa<nonloc::LazyCompoundVal>(V) ? BindingKey::Default
+                                                 : BindingKey::Direct;
+  return NewB.addBinding(BindingKey::Make(R, KeyKind), V);
 }
 
 RegionBindingsRef
