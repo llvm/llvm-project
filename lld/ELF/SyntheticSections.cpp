@@ -1572,10 +1572,11 @@ uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
 RelocationBaseSection::RelocationBaseSection(StringRef name, uint32_t type,
                                              int32_t dynamicTag,
                                              int32_t sizeDynamicTag,
-                                             bool combreloc)
+                                             bool combreloc,
+                                             unsigned concurrency)
     : SyntheticSection(SHF_ALLOC, type, config->wordsize, name),
       dynamicTag(dynamicTag), sizeDynamicTag(sizeDynamicTag),
-      combreloc(combreloc) {}
+      relocsVec(concurrency), combreloc(combreloc) {}
 
 void RelocationBaseSection::addSymbolReloc(RelType dynType,
                                            InputSectionBase &isec,
@@ -1584,19 +1585,6 @@ void RelocationBaseSection::addSymbolReloc(RelType dynType,
                                            Optional<RelType> addendRelType) {
   addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
            R_ADDEND, addendRelType ? *addendRelType : target->noneRel);
-}
-
-void RelocationBaseSection::addRelativeReloc(
-    RelType dynType, InputSectionBase &inputSec, uint64_t offsetInSec,
-    Symbol &sym, int64_t addend, RelType addendRelType, RelExpr expr) {
-  // This function should only be called for non-preemptible symbols or
-  // RelExpr values that refer to an address inside the output file (e.g. the
-  // address of the GOT entry for a potentially preemptible symbol).
-  assert((!sym.isPreemptible || expr == R_GOT) &&
-         "cannot add relative relocation against preemptible symbol");
-  assert(expr != R_ADDEND && "expected non-addend relocation expression");
-  addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, inputSec, offsetInSec,
-           sym, addend, expr, addendRelType);
 }
 
 void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
@@ -1611,17 +1599,14 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
              sym, 0, R_ABS, addendRelType);
 }
 
-void RelocationBaseSection::addReloc(DynamicReloc::Kind kind, RelType dynType,
-                                     InputSectionBase &inputSec,
-                                     uint64_t offsetInSec, Symbol &sym,
-                                     int64_t addend, RelExpr expr,
-                                     RelType addendRelType) {
-  // Write the addends to the relocated address if required. We skip
-  // it if the written value would be zero.
-  if (config->writeAddends && (expr != R_ADDEND || addend != 0))
-    inputSec.relocations.push_back(
-        {expr, addendRelType, offsetInSec, addend, &sym});
-  addReloc({dynType, &inputSec, offsetInSec, kind, sym, addend, expr});
+void RelocationBaseSection::mergeRels() {
+  size_t newSize = relocs.size();
+  for (const auto &v : relocsVec)
+    newSize += v.size();
+  relocs.reserve(newSize);
+  for (const auto &v : relocsVec)
+    llvm::append_range(relocs, v);
+  relocsVec.clear();
 }
 
 void RelocationBaseSection::partitionRels() {
@@ -1680,10 +1665,12 @@ void RelocationBaseSection::computeRels() {
 }
 
 template <class ELFT>
-RelocationSection<ELFT>::RelocationSection(StringRef name, bool combreloc)
+RelocationSection<ELFT>::RelocationSection(StringRef name, bool combreloc,
+                                           unsigned concurrency)
     : RelocationBaseSection(name, config->isRela ? SHT_RELA : SHT_REL,
                             config->isRela ? DT_RELA : DT_REL,
-                            config->isRela ? DT_RELASZ : DT_RELSZ, combreloc) {
+                            config->isRela ? DT_RELASZ : DT_RELSZ, combreloc,
+                            concurrency) {
   this->entsize = config->isRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 }
 
@@ -1699,19 +1686,30 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
   }
 }
 
-RelrBaseSection::RelrBaseSection()
+RelrBaseSection::RelrBaseSection(unsigned concurrency)
     : SyntheticSection(SHF_ALLOC,
                        config->useAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR,
-                       config->wordsize, ".relr.dyn") {}
+                       config->wordsize, ".relr.dyn"),
+      relocsVec(concurrency) {}
+
+void RelrBaseSection::mergeRels() {
+  size_t newSize = relocs.size();
+  for (const auto &v : relocsVec)
+    newSize += v.size();
+  relocs.reserve(newSize);
+  for (const auto &v : relocsVec)
+    llvm::append_range(relocs, v);
+  relocsVec.clear();
+}
 
 template <class ELFT>
 AndroidPackedRelocationSection<ELFT>::AndroidPackedRelocationSection(
-    StringRef name)
+    StringRef name, unsigned concurrency)
     : RelocationBaseSection(
           name, config->isRela ? SHT_ANDROID_RELA : SHT_ANDROID_REL,
           config->isRela ? DT_ANDROID_RELA : DT_ANDROID_REL,
           config->isRela ? DT_ANDROID_RELASZ : DT_ANDROID_RELSZ,
-          /*combreloc=*/false) {
+          /*combreloc=*/false, concurrency) {
   this->entsize = 1;
 }
 
@@ -1959,7 +1957,9 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
   return relocData.size() != oldSize;
 }
 
-template <class ELFT> RelrSection<ELFT>::RelrSection() {
+template <class ELFT>
+RelrSection<ELFT>::RelrSection(unsigned concurrency)
+    : RelrBaseSection(concurrency) {
   this->entsize = config->wordsize;
 }
 
@@ -2769,10 +2769,8 @@ createSymbols(
   // of millions for very large executables, so we use multi-threading to
   // speed it up.
   constexpr size_t numShards = 32;
-  size_t concurrency = PowerOf2Floor(
-      std::min<size_t>(hardware_concurrency(parallel::strategy.ThreadsRequested)
-                           .compute_thread_count(),
-                       numShards));
+  const size_t concurrency =
+      PowerOf2Floor(std::min<size_t>(config->threadCount, numShards));
 
   // A sharded map to uniquify symbols by name.
   auto map =
@@ -3257,10 +3255,8 @@ void MergeNoTailSection::finalizeContents() {
 
   // Concurrency level. Must be a power of 2 to avoid expensive modulo
   // operations in the following tight loop.
-  size_t concurrency = PowerOf2Floor(
-      std::min<size_t>(hardware_concurrency(parallel::strategy.ThreadsRequested)
-                           .compute_thread_count(),
-                       numShards));
+  const size_t concurrency =
+      PowerOf2Floor(std::min<size_t>(config->threadCount, numShards));
 
   // Add section pieces to the builders.
   parallelFor(0, concurrency, [&](size_t threadId) {

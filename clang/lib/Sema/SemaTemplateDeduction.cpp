@@ -236,13 +236,11 @@ checkDeducedTemplateArguments(ASTContext &Context,
   case TemplateArgument::Null:
     llvm_unreachable("Non-deduced template arguments handled above");
 
-  case TemplateArgument::Type: {
+  case TemplateArgument::Type:
     // If two template type arguments have the same type, they're compatible.
-    QualType TX = X.getAsType(), TY = Y.getAsType();
-    if (Y.getKind() == TemplateArgument::Type && Context.hasSameType(TX, TY))
-      return DeducedTemplateArgument(Context.getCommonSugaredType(TX, TY),
-                                     X.wasDeducedFromArrayBound() ||
-                                         Y.wasDeducedFromArrayBound());
+    if (Y.getKind() == TemplateArgument::Type &&
+        Context.hasSameType(X.getAsType(), Y.getAsType()))
+      return X;
 
     // If one of the two arguments was deduced from an array bound, the other
     // supersedes it.
@@ -251,7 +249,6 @@ checkDeducedTemplateArguments(ASTContext &Context,
 
     // The arguments are not compatible.
     return DeducedTemplateArgument();
-  }
 
   case TemplateArgument::Integral:
     // If we deduced a constant in one case and either a dependent expression or
@@ -329,9 +326,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
     // If we deduced a null pointer and a dependent expression, keep the
     // null pointer.
     if (Y.getKind() == TemplateArgument::Expression)
-      return TemplateArgument(Context.getCommonSugaredType(
-                                  X.getNullPtrType(), Y.getAsExpr()->getType()),
-                              true);
+      return X;
 
     // If we deduced a null pointer and an integral constant, keep the
     // integral constant.
@@ -340,9 +335,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
 
     // If we deduced two null pointers, they are the same.
     if (Y.getKind() == TemplateArgument::NullPtr)
-      return TemplateArgument(
-          Context.getCommonSugaredType(X.getNullPtrType(), Y.getNullPtrType()),
-          true);
+      return X;
 
     // All other combinations are incompatible.
     return DeducedTemplateArgument();
@@ -4581,9 +4574,42 @@ namespace {
 
 } // namespace
 
-static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
-                                               AutoTypeLoc TypeLoc,
-                                               QualType Deduced) {
+Sema::DeduceAutoResult
+Sema::DeduceAutoType(TypeSourceInfo *Type, Expr *&Init, QualType &Result,
+                     Optional<unsigned> DependentDeductionDepth,
+                     bool IgnoreConstraints) {
+  return DeduceAutoType(Type->getTypeLoc(), Init, Result,
+                        DependentDeductionDepth, IgnoreConstraints);
+}
+
+/// Attempt to produce an informative diagostic explaining why auto deduction
+/// failed.
+/// \return \c true if diagnosed, \c false if not.
+static bool diagnoseAutoDeductionFailure(Sema &S,
+                                         Sema::TemplateDeductionResult TDK,
+                                         TemplateDeductionInfo &Info,
+                                         ArrayRef<SourceRange> Ranges) {
+  switch (TDK) {
+  case Sema::TDK_Inconsistent: {
+    // Inconsistent deduction means we were deducing from an initializer list.
+    auto D = S.Diag(Info.getLocation(), diag::err_auto_inconsistent_deduction);
+    D << Info.FirstArg << Info.SecondArg;
+    for (auto R : Ranges)
+      D << R;
+    return true;
+  }
+
+  // FIXME: Are there other cases for which a custom diagnostic is more useful
+  // than the basic "types don't match" diagnostic?
+
+  default:
+    return false;
+  }
+}
+
+static Sema::DeduceAutoResult
+CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
+                                   AutoTypeLoc TypeLoc, QualType Deduced) {
   ConstraintSatisfaction Satisfaction;
   ConceptDecl *Concept = Type.getTypeConstraintConcept();
   TemplateArgumentListInfo TemplateArgs(TypeLoc.getLAngleLoc(),
@@ -4598,13 +4624,13 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
   llvm::SmallVector<TemplateArgument, 4> Converted;
   if (S.CheckTemplateArgumentList(Concept, SourceLocation(), TemplateArgs,
                                   /*PartialTemplateArgs=*/false, Converted))
-    return true;
+    return Sema::DAR_FailedAlreadyDiagnosed;
   MultiLevelTemplateArgumentList MLTAL;
   MLTAL.addOuterTemplateArguments(Converted);
   if (S.CheckConstraintSatisfaction(Concept, {Concept->getConstraintExpr()},
                                     MLTAL, TypeLoc.getLocalSourceRange(),
                                     Satisfaction))
-    return true;
+    return Sema::DAR_FailedAlreadyDiagnosed;
   if (!Satisfaction.IsSatisfied) {
     std::string Buf;
     llvm::raw_string_ostream OS(Buf);
@@ -4618,11 +4644,11 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     OS.flush();
     S.Diag(TypeLoc.getConceptNameLoc(),
            diag::err_placeholder_constraints_not_satisfied)
-        << Deduced << Buf << TypeLoc.getLocalSourceRange();
+         << Deduced << Buf << TypeLoc.getLocalSourceRange();
     S.DiagnoseUnsatisfiedConstraint(Satisfaction);
-    return true;
+    return Sema::DAR_FailedAlreadyDiagnosed;
   }
-  return false;
+  return Sema::DAR_Succeeded;
 }
 
 /// Deduce the type for an auto type-specifier (C++11 [dcl.spec.auto]p6)
@@ -4635,165 +4661,184 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
 /// \param Init the initializer for the variable whose type is to be deduced.
 /// \param Result if type deduction was successful, this will be set to the
 ///        deduced type.
-/// \param Info the argument will be updated to provide additional information
-///        about template argument deduction.
-/// \param DependentDeduction Set if we should permit deduction in
+/// \param DependentDeductionDepth Set if we should permit deduction in
 ///        dependent cases. This is necessary for template partial ordering with
-///        'auto' template parameters. The template parameter depth to be used
-///        should be specified in the 'Info' parameter.
+///        'auto' template parameters. The value specified is the template
+///        parameter depth at which we should perform 'auto' deduction.
 /// \param IgnoreConstraints Set if we should not fail if the deduced type does
 ///                          not satisfy the type-constraint in the auto type.
-Sema::TemplateDeductionResult Sema::DeduceAutoType(TypeLoc Type, Expr *Init,
-                                                   QualType &Result,
-                                                   TemplateDeductionInfo &Info,
-                                                   bool DependentDeduction,
-                                                   bool IgnoreConstraints) {
-  assert(DependentDeduction || Info.getDeducedDepth() == 0);
+Sema::DeduceAutoResult
+Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
+                     Optional<unsigned> DependentDeductionDepth,
+                     bool IgnoreConstraints) {
   if (Init->containsErrors())
-    return TDK_AlreadyDiagnosed;
-
-  const AutoType *AT = Type.getType()->getContainedAutoType();
-  assert(AT);
-
-  if (Init->getType()->isNonOverloadPlaceholderType() || AT->isDecltypeAuto()) {
+    return DAR_FailedAlreadyDiagnosed;
+  if (Init->getType()->isNonOverloadPlaceholderType()) {
     ExprResult NonPlaceholder = CheckPlaceholderExpr(Init);
     if (NonPlaceholder.isInvalid())
-      return TDK_AlreadyDiagnosed;
+      return DAR_FailedAlreadyDiagnosed;
     Init = NonPlaceholder.get();
   }
 
   DependentAuto DependentResult = {
       /*.IsPack = */ (bool)Type.getAs<PackExpansionTypeLoc>()};
 
-  if (!DependentDeduction &&
+  if (!DependentDeductionDepth &&
       (Type.getType()->isDependentType() || Init->isTypeDependent() ||
        Init->containsUnexpandedParameterPack())) {
     Result = SubstituteDeducedTypeTransform(*this, DependentResult).Apply(Type);
     assert(!Result.isNull() && "substituting DependentTy can't fail");
-    return TDK_Success;
+    return DAR_Succeeded;
   }
 
-  auto *InitList = dyn_cast<InitListExpr>(Init);
-  if (!getLangOpts().CPlusPlus && InitList) {
-    Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c);
-    return TDK_AlreadyDiagnosed;
+  // Find the depth of template parameter to synthesize.
+  unsigned Depth = DependentDeductionDepth.value_or(0);
+
+  // If this is a 'decltype(auto)' specifier, do the decltype dance.
+  // Since 'decltype(auto)' can only occur at the top of the type, we
+  // don't need to go digging for it.
+  if (const AutoType *AT = Type.getType()->getAs<AutoType>()) {
+    if (AT->isDecltypeAuto()) {
+      if (isa<InitListExpr>(Init)) {
+        Diag(Init->getBeginLoc(), diag::err_decltype_auto_initializer_list);
+        return DAR_FailedAlreadyDiagnosed;
+      }
+
+      ExprResult ER = CheckPlaceholderExpr(Init);
+      if (ER.isInvalid())
+        return DAR_FailedAlreadyDiagnosed;
+      QualType Deduced = getDecltypeForExpr(ER.get());
+      assert(!Deduced.isNull());
+      if (AT->isConstrained() && !IgnoreConstraints) {
+        auto ConstraintsResult =
+            CheckDeducedPlaceholderConstraints(*this, *AT,
+                                               Type.getContainedAutoTypeLoc(),
+                                               Deduced);
+        if (ConstraintsResult != DAR_Succeeded)
+          return ConstraintsResult;
+      }
+      Result = SubstituteDeducedTypeTransform(*this, Deduced).Apply(Type);
+      if (Result.isNull())
+        return DAR_FailedAlreadyDiagnosed;
+      return DAR_Succeeded;
+    } else if (!getLangOpts().CPlusPlus) {
+      if (isa<InitListExpr>(Init)) {
+        Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c);
+        return DAR_FailedAlreadyDiagnosed;
+      }
+    }
   }
+
+  SourceLocation Loc = Init->getExprLoc();
+
+  LocalInstantiationScope InstScope(*this);
+
+  // Build template<class TemplParam> void Func(FuncParam);
+  TemplateTypeParmDecl *TemplParam = TemplateTypeParmDecl::Create(
+      Context, nullptr, SourceLocation(), Loc, Depth, 0, nullptr, false, false,
+      false);
+  QualType TemplArg = QualType(TemplParam->getTypeForDecl(), 0);
+  NamedDecl *TemplParamPtr = TemplParam;
+  FixedSizeTemplateParameterListStorage<1, false> TemplateParamsSt(
+      Context, Loc, Loc, TemplParamPtr, Loc, nullptr);
+
+  QualType FuncParam =
+      SubstituteDeducedTypeTransform(*this, TemplArg, /*UseTypeSugar*/ true)
+          .Apply(Type);
+  assert(!FuncParam.isNull() &&
+         "substituting template parameter for 'auto' failed");
 
   // Deduce type of TemplParam in Func(Init)
   SmallVector<DeducedTemplateArgument, 1> Deduced;
   Deduced.resize(1);
 
+  TemplateDeductionInfo Info(Loc, Depth);
+
   // If deduction failed, don't diagnose if the initializer is dependent; it
   // might acquire a matching type in the instantiation.
-  auto DeductionFailed = [&](TemplateDeductionResult TDK) {
+  auto DeductionFailed = [&](TemplateDeductionResult TDK,
+                             ArrayRef<SourceRange> Ranges) -> DeduceAutoResult {
     if (Init->isTypeDependent()) {
       Result =
           SubstituteDeducedTypeTransform(*this, DependentResult).Apply(Type);
       assert(!Result.isNull() && "substituting DependentTy can't fail");
-      return TDK_Success;
+      return DAR_Succeeded;
     }
-    return TDK;
+    if (diagnoseAutoDeductionFailure(*this, TDK, Info, Ranges))
+      return DAR_FailedAlreadyDiagnosed;
+    return DAR_Failed;
   };
 
   SmallVector<OriginalCallArg, 4> OriginalCallArgs;
 
-  QualType DeducedType;
-  // If this is a 'decltype(auto)' specifier, do the decltype dance.
-  if (AT->isDecltypeAuto()) {
-    if (InitList) {
-      Diag(Init->getBeginLoc(), diag::err_decltype_auto_initializer_list);
-      return TDK_AlreadyDiagnosed;
-    }
+  InitListExpr *InitList = dyn_cast<InitListExpr>(Init);
+  if (InitList) {
+    // Notionally, we substitute std::initializer_list<T> for 'auto' and deduce
+    // against that. Such deduction only succeeds if removing cv-qualifiers and
+    // references results in std::initializer_list<T>.
+    if (!Type.getType().getNonReferenceType()->getAs<AutoType>())
+      return DAR_Failed;
 
-    DeducedType = getDecltypeForExpr(Init);
-    assert(!DeducedType.isNull());
-  } else {
-    LocalInstantiationScope InstScope(*this);
+    // Resolving a core issue: a braced-init-list containing any designators is
+    // a non-deduced context.
+    for (Expr *E : InitList->inits())
+      if (isa<DesignatedInitExpr>(E))
+        return DAR_Failed;
 
-    // Build template<class TemplParam> void Func(FuncParam);
-    SourceLocation Loc = Init->getExprLoc();
-    TemplateTypeParmDecl *TemplParam = TemplateTypeParmDecl::Create(
-        Context, nullptr, SourceLocation(), Loc, Info.getDeducedDepth(), 0,
-        nullptr, false, false, false);
-    QualType TemplArg = QualType(TemplParam->getTypeForDecl(), 0);
-    NamedDecl *TemplParamPtr = TemplParam;
-    FixedSizeTemplateParameterListStorage<1, false> TemplateParamsSt(
-        Context, Loc, Loc, TemplParamPtr, Loc, nullptr);
+    SourceRange DeducedFromInitRange;
+    for (unsigned i = 0, e = InitList->getNumInits(); i < e; ++i) {
+      Expr *Init = InitList->getInit(i);
 
-    if (InitList) {
-      // Notionally, we substitute std::initializer_list<T> for 'auto' and
-      // deduce against that. Such deduction only succeeds if removing
-      // cv-qualifiers and references results in std::initializer_list<T>.
-      if (!Type.getType().getNonReferenceType()->getAs<AutoType>())
-        return TDK_Invalid;
-
-      SourceRange DeducedFromInitRange;
-      for (Expr *Init : InitList->inits()) {
-        // Resolving a core issue: a braced-init-list containing any designators
-        // is a non-deduced context.
-        if (isa<DesignatedInitExpr>(Init))
-          return TDK_Invalid;
-        if (auto TDK = DeduceTemplateArgumentsFromCallArgument(
-                *this, TemplateParamsSt.get(), 0, TemplArg, Init, Info, Deduced,
-                OriginalCallArgs, /*Decomposed=*/true,
-                /*ArgIdx=*/0, /*TDF=*/0)) {
-          if (TDK == TDK_Inconsistent) {
-            Diag(Info.getLocation(), diag::err_auto_inconsistent_deduction)
-                << Info.FirstArg << Info.SecondArg << DeducedFromInitRange
-                << Init->getSourceRange();
-            return DeductionFailed(TDK_AlreadyDiagnosed);
-          }
-          return DeductionFailed(TDK);
-        }
-
-        if (DeducedFromInitRange.isInvalid() &&
-            Deduced[0].getKind() != TemplateArgument::Null)
-          DeducedFromInitRange = Init->getSourceRange();
-      }
-    } else {
-      if (!getLangOpts().CPlusPlus && Init->refersToBitField()) {
-        Diag(Loc, diag::err_auto_bitfield);
-        return TDK_AlreadyDiagnosed;
-      }
-      QualType FuncParam =
-          SubstituteDeducedTypeTransform(*this, TemplArg).Apply(Type);
-      assert(!FuncParam.isNull() &&
-             "substituting template parameter for 'auto' failed");
       if (auto TDK = DeduceTemplateArgumentsFromCallArgument(
-              *this, TemplateParamsSt.get(), 0, FuncParam, Init, Info, Deduced,
-              OriginalCallArgs, /*Decomposed=*/false, /*ArgIdx=*/0, /*TDF=*/0))
-        return DeductionFailed(TDK);
+              *this, TemplateParamsSt.get(), 0, TemplArg, Init,
+              Info, Deduced, OriginalCallArgs, /*Decomposed*/ true,
+              /*ArgIdx*/ 0, /*TDF*/ 0))
+        return DeductionFailed(TDK, {DeducedFromInitRange,
+                                     Init->getSourceRange()});
+
+      if (DeducedFromInitRange.isInvalid() &&
+          Deduced[0].getKind() != TemplateArgument::Null)
+        DeducedFromInitRange = Init->getSourceRange();
+    }
+  } else {
+    if (!getLangOpts().CPlusPlus && Init->refersToBitField()) {
+      Diag(Loc, diag::err_auto_bitfield);
+      return DAR_FailedAlreadyDiagnosed;
     }
 
-    // Could be null if somehow 'auto' appears in a non-deduced context.
-    if (Deduced[0].getKind() != TemplateArgument::Type)
-      return DeductionFailed(TDK_Incomplete);
-    DeducedType = Deduced[0].getAsType();
-
-    if (InitList) {
-      DeducedType = BuildStdInitializerList(DeducedType, Loc);
-      if (DeducedType.isNull())
-        return TDK_AlreadyDiagnosed;
-    }
+    if (auto TDK = DeduceTemplateArgumentsFromCallArgument(
+            *this, TemplateParamsSt.get(), 0, FuncParam, Init, Info, Deduced,
+            OriginalCallArgs, /*Decomposed*/ false, /*ArgIdx*/ 0, /*TDF*/ 0))
+      return DeductionFailed(TDK, {});
   }
 
-  if (!Result.isNull()) {
-    if (!Context.hasSameType(DeducedType, Result)) {
-      Info.FirstArg = Result;
-      Info.SecondArg = DeducedType;
-      return DeductionFailed(TDK_Inconsistent);
-    }
-    DeducedType = Context.getCommonSugaredType(Result, DeducedType);
+  // Could be null if somehow 'auto' appears in a non-deduced context.
+  if (Deduced[0].getKind() != TemplateArgument::Type)
+    return DeductionFailed(TDK_Incomplete, {});
+
+  QualType DeducedType = Deduced[0].getAsType();
+
+  if (InitList) {
+    DeducedType = BuildStdInitializerList(DeducedType, Loc);
+    if (DeducedType.isNull())
+      return DAR_FailedAlreadyDiagnosed;
   }
 
-  if (AT->isConstrained() && !IgnoreConstraints &&
-      CheckDeducedPlaceholderConstraints(
-          *this, *AT, Type.getContainedAutoTypeLoc(), DeducedType))
-    return TDK_AlreadyDiagnosed;
+  QualType MaybeAuto = Type.getType().getNonReferenceType();
+  while (MaybeAuto->isPointerType())
+    MaybeAuto = MaybeAuto->getPointeeType();
+  if (const auto *AT = MaybeAuto->getAs<AutoType>()) {
+    if (AT->isConstrained() && !IgnoreConstraints) {
+      auto ConstraintsResult = CheckDeducedPlaceholderConstraints(
+          *this, *AT, Type.getContainedAutoTypeLoc(), DeducedType);
+      if (ConstraintsResult != DAR_Succeeded)
+        return ConstraintsResult;
+    }
+  }
 
   Result = SubstituteDeducedTypeTransform(*this, DeducedType).Apply(Type);
   if (Result.isNull())
-    return TDK_AlreadyDiagnosed;
+    return DAR_FailedAlreadyDiagnosed;
 
   // Check that the deduced argument type is compatible with the original
   // argument type per C++ [temp.deduct.call]p4.
@@ -4804,11 +4849,11 @@ Sema::TemplateDeductionResult Sema::DeduceAutoType(TypeLoc Type, Expr *Init,
     if (auto TDK =
             CheckOriginalCallArgDeduction(*this, Info, OriginalArg, DeducedA)) {
       Result = QualType();
-      return DeductionFailed(TDK);
+      return DeductionFailed(TDK, {});
     }
   }
 
-  return TDK_Success;
+  return DAR_Succeeded;
 }
 
 QualType Sema::SubstAutoType(QualType TypeWithAuto,

@@ -18,5 +18,6 @@ unittest("AArch64Tests") {
     "DecomposeStackOffsetTest.cpp",
     "InstSizes.cpp",
     "MatrixRegisterAliasing.cpp",
+    "SMEAttributesTest.cpp",
   ]
 }

@@ -108,7 +108,7 @@ if (APPLE)
     CFLAGS ${ORC_CFLAGS}
     DEPS ${ORC_DEPS})
 
-  add_compiler_rt_runtime(clang_rt.orc
+  add_compiler_rt_runtime(orc_rt
     STATIC
     OS ${ORC_SUPPORTED_OS}
     ARCHS ${ORC_SUPPORTED_ARCH}
@@ -167,7 +167,7 @@ else() # not Apple
       DEPS ${ORC_DEPS})
 
     # Common ORC archive for instrumented binaries.
-    add_compiler_rt_runtime(clang_rt.orc
+    add_compiler_rt_runtime(orc_rt
       ${ORC_BUILD_TYPE}
       ARCHS ${arch}
       CFLAGS ${ORC_CFLAGS}

@@ -20,9 +20,9 @@ llvm_jitlink = os.path.join(config.llvm_tools_dir, 'llvm-jitlink')
 orc_rt_executor_stem = os.path.join(config.compiler_rt_obj_root, 'lib/orc/tests/tools/orc-rt-executor')
 lli = os.path.join(config.llvm_tools_dir, 'lli')
 if config.host_os == 'Darwin':
-  orc_rt_path = '%s/libclang_rt.orc_osx.a' % config.compiler_rt_libdir
+  orc_rt_path = '%s/liborc_rt_osx.a' % config.compiler_rt_libdir
 else:
-  orc_rt_path = '%s/libclang_rt.orc%s.a' % (config.compiler_rt_libdir, config.target_suffix)
+  orc_rt_path = '%s/liborc_rt%s.a' % (config.compiler_rt_libdir, config.target_suffix)
 
 if config.libunwind_shared:
   config.available_features.add('libunwind-available')

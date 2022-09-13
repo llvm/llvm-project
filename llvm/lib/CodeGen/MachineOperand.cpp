@@ -279,6 +279,17 @@ void MachineOperand::ChangeToRegister(Register Reg, bool isDef, bool isImp,
     RegInfo->addRegOperandToUseList(this);
 }
 
+/// getRegMaskSize - Return the size of regmask array if we are able to figure
+/// it out from this operand. Return zero otherwise.
+unsigned MachineOperand::getRegMaskSize() const {
+  if (const MachineFunction *MF = getMFIfAvailable(*this)) {
+    const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+    unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
+    return RegMaskSize;
+  }
+  return 0;
+}
+
 /// isIdenticalTo - Return true if this operand is identical to the specified
 /// operand. Note that this should stay in sync with the hash_value overload
 /// below.
@@ -322,11 +333,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
     if (RegMask == OtherRegMask)
       return true;
 
-    if (const MachineFunction *MF = getMFIfAvailable(*this)) {
-      // Calculate the size of the RegMask
-      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-      unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
-
+    const unsigned RegMaskSize = getRegMaskSize();
+    if (RegMaskSize != 0) {
       // Deep compare of the two RegMasks
       return std::equal(RegMask, RegMask + RegMaskSize, OtherRegMask);
     }

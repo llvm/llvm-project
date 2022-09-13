@@ -387,7 +387,61 @@ if.end:
   ret i16 %w
 }
 
+;; Don't hoist stacksaves across inalloca allocas
+;; FIXME: currently this is miscompiled
+define void @f10(i1 %cond) {
+; CHECK-LABEL: @f10(
+; CHECK-NEXT:    [[SS:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[SS2:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[I2:%.*]] = alloca inalloca i64, align 8
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[I1:%.*]] = alloca inalloca i32, align 4
+; CHECK-NEXT:    call void @inalloca_i64(ptr inalloca(i64) [[I2]])
+; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[SS2]])
+; CHECK-NEXT:    call void @inalloca_i32(ptr inalloca(i32) [[I1]])
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[I3:%.*]] = alloca inalloca i64, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @inalloca_i64(ptr inalloca(i64) [[I2]])
+; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[SS2]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @inalloca_i64(ptr inalloca(i64) [[I3]])
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    call void @llvm.stackrestore(ptr [[SS]])
+; CHECK-NEXT:    ret void
+;
+  %ss = call ptr @llvm.stacksave()
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  %i1 = alloca inalloca i32
+  %ss2 = call ptr @llvm.stacksave()
+  %i2 = alloca inalloca i64
+  call void @inalloca_i64(ptr inalloca(i64) %i2)
+  call void @llvm.stackrestore(ptr %ss2)
+  call void @inalloca_i32(ptr inalloca(i32) %i1)
+  br label %end
+
+bb2:
+  %i3 = alloca inalloca i64
+  %ss3 = call ptr @llvm.stacksave()
+  %i4 = alloca inalloca i64
+  call ptr @inalloca_i64(ptr inalloca(i64) %i4)
+  call void @llvm.stackrestore(ptr %ss3)
+  call ptr @inalloca_i64(ptr inalloca(i64) %i3)
+  br label %end
+
+end:
+  call void @llvm.stackrestore(ptr %ss)
+  ret void
+}
+
 declare void @side_effects0()
 declare void @side_effects1()
 declare void @no_side_effects0() readonly nounwind willreturn
 declare void @no_side_effects1() readonly nounwind willreturn
+declare void @inalloca_i64(ptr inalloca(i64))
+declare void @inalloca_i32(ptr inalloca(i32))
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)

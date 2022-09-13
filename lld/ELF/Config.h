@@ -323,9 +323,6 @@ struct Configuration {
   // if that's true.)
   bool isMips64EL;
 
-  // True if we need to reserve two .got entries for local-dynamic TLS model.
-  bool needsTlsLd = false;
-
   // True if we need to set the DF_STATIC_TLS flag to an output file, which
   // works as a hint to the dynamic loader that the shared object contains code
   // compiled with the initial-exec TLS model.
@@ -367,6 +364,8 @@ struct Configuration {
   // this means to map the primary and thread stacks as PROT_MTE. Note: This is
   // not supported on Android 11 & 12.
   bool androidMemtagStack;
+
+  unsigned threadCount;
 };
 
 // The only instance of Configuration struct.
@@ -393,6 +392,8 @@ struct Ctx {
   SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
   // True if SHT_LLVM_SYMPART is used.
   std::atomic<bool> hasSympart{false};
+  // True if we need to reserve two .got entries for local-dynamic TLS model.
+  std::atomic<bool> needsTlsLd{false};
   // A tuple of (reference, extractedFile, sym). Used by --why-extract=.
   SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
       whyExtractRecords;

@@ -4794,6 +4794,39 @@ bool CombinerHelper::matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo) {
   return true;
 }
 
+bool CombinerHelper::matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  // (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
+  // (G_*SUBE x, y, 0) -> (G_*SUBO x, y)
+  assert(MI.getOpcode() == TargetOpcode::G_UADDE ||
+         MI.getOpcode() == TargetOpcode::G_SADDE ||
+         MI.getOpcode() == TargetOpcode::G_USUBE ||
+         MI.getOpcode() == TargetOpcode::G_SSUBE);
+  if (!mi_match(MI.getOperand(4).getReg(), MRI, m_SpecificICstOrSplat(0)))
+    return false;
+  MatchInfo = [&](MachineIRBuilder &B) {
+    unsigned NewOpcode;
+    switch (MI.getOpcode()) {
+    case TargetOpcode::G_UADDE:
+      NewOpcode = TargetOpcode::G_UADDO;
+      break;
+    case TargetOpcode::G_SADDE:
+      NewOpcode = TargetOpcode::G_SADDO;
+      break;
+    case TargetOpcode::G_USUBE:
+      NewOpcode = TargetOpcode::G_USUBO;
+      break;
+    case TargetOpcode::G_SSUBE:
+      NewOpcode = TargetOpcode::G_SSUBO;
+      break;
+    }
+    Observer.changingInstr(MI);
+    MI.setDesc(B.getTII().get(NewOpcode));
+    MI.removeOperand(4);
+    Observer.changedInstr(MI);
+  };
+  return true;
+}
+
 MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UDIV);
   auto &UDiv = cast<GenericMachineInstr>(MI);

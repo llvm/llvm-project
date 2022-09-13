@@ -45,6 +45,13 @@ constexpr T getElementOf(T* array, int i) {
 static_assert(getElementOf(foo[0], 1) == &m, "");
 
 
+template <typename T, int N>
+constexpr T& getElementOfArray(T (&array)[N], int I) {
+  return array[I];
+}
+static_assert(getElementOfArray(foo[2], 3) == &m, "");
+
+
 constexpr int data[] = {5, 4, 3, 2, 1};
 static_assert(data[0] == 4, ""); // expected-error{{failed}} \
                                  // expected-note{{5 == 4}} \

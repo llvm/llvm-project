@@ -2697,14 +2697,15 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
 
     SDLoc DL(N);
     unsigned MaskedOpc = Info->MaskedPseudo;
+    assert(RISCVII::hasVecPolicyOp(TII->get(MaskedOpc).TSFlags) &&
+           "Expected instructions with mask have policy operand.");
+
     SmallVector<SDValue, 8> Ops;
     Ops.push_back(Merge);
     Ops.append(True->op_begin(), True->op_begin() + TrueVLIndex);
     Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
-
-    if (RISCVII::hasVecPolicyOp(TII->get(MaskedOpc).TSFlags))
-      Ops.push_back(
-          CurDAG->getTargetConstant(/* TUMU */ 0, DL, Subtarget->getXLenVT()));
+    Ops.push_back(
+        CurDAG->getTargetConstant(/* TUMU */ 0, DL, Subtarget->getXLenVT()));
 
     // Result node should have chain operand of True.
     if (HasChainOp)
