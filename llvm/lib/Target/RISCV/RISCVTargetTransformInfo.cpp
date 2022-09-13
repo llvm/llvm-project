@@ -754,8 +754,10 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     case CmpInst::FCMP_OLE:
     case CmpInst::FCMP_UNE:
       return LT.first * 1;
-    }
     // TODO: Other comparisons?
+    default:
+      break;
+    }
   }
 
   // TODO: Add cost for scalar type.
