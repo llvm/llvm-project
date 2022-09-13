@@ -12,9 +12,8 @@
 define i1 @ulo(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ulo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    minu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp ult i64 %a, %c
   %l1 = icmp ult i64 %b, %c
@@ -25,9 +24,8 @@ define i1 @ulo(i64 %c, i64 %a, i64 %b) {
 define i1 @ulo_swap1(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ulo_swap1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    minu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp ugt i64 %c, %a
   %l1 = icmp ult i64 %b, %c
@@ -38,9 +36,8 @@ define i1 @ulo_swap1(i64 %c, i64 %a, i64 %b) {
 define i1 @ulo_swap2(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ulo_swap2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    minu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp ult i64 %a, %c
   %l1 = icmp ugt i64 %c, %b
@@ -51,9 +48,8 @@ define i1 @ulo_swap2(i64 %c, i64 %a, i64 %b) {
 define i1 @ulo_swap12(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ulo_swap12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    minu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp ugt i64 %c, %a
   %l1 = icmp ugt i64 %c, %b
@@ -65,9 +61,8 @@ define i1 @ulo_swap12(i64 %c, i64 %a, i64 %b) {
 define i1 @ula(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ula:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp ult i64 %a, %c
   %l1 = icmp ult i64 %b, %c
@@ -78,9 +73,8 @@ define i1 @ula(i64 %c, i64 %a, i64 %b) {
 define i1 @ula_swap1(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ula_swap1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp ugt i64 %c, %a
   %l1 = icmp ult i64 %b, %c
@@ -91,9 +85,8 @@ define i1 @ula_swap1(i64 %c, i64 %a, i64 %b) {
 define i1 @ula_swap2(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ula_swap2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp ult i64 %a, %c
   %l1 = icmp ugt i64 %c, %b
@@ -104,9 +97,8 @@ define i1 @ula_swap2(i64 %c, i64 %a, i64 %b) {
 define i1 @ula_swap12(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ula_swap12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp ugt i64 %c, %a
   %l1 = icmp ugt i64 %c, %b
@@ -119,9 +111,8 @@ define i1 @ula_swap12(i64 %c, i64 %a, i64 %b) {
 define i1 @ugo(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ugo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a0, a1
-; CHECK-NEXT:    sltu a0, a0, a2
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    ret
   %l0 = icmp ugt i64 %a, %c
   %l1 = icmp ugt i64 %b, %c
@@ -132,9 +123,8 @@ define i1 @ugo(i64 %c, i64 %a, i64 %b) {
 define i1 @ugo_swap1(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ugo_swap1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a0, a1
-; CHECK-NEXT:    sltu a0, a0, a2
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    ret
   %l0 = icmp ult i64 %c, %a
   %l1 = icmp ugt i64 %b, %c
@@ -145,9 +135,8 @@ define i1 @ugo_swap1(i64 %c, i64 %a, i64 %b) {
 define i1 @ugo_swap2(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ugo_swap2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a0, a1
-; CHECK-NEXT:    sltu a0, a0, a2
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    ret
   %l0 = icmp ugt i64 %a, %c
   %l1 = icmp ult i64 %c, %b
@@ -158,9 +147,8 @@ define i1 @ugo_swap2(i64 %c, i64 %a, i64 %b) {
 define i1 @ugo_swap12(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ugo_swap12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a0, a1
-; CHECK-NEXT:    sltu a0, a0, a2
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    maxu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    ret
   %l0 = icmp ult i64 %c, %a
   %l1 = icmp ult i64 %c, %b
@@ -173,9 +161,8 @@ define i1 @ugo_swap12(i64 %c, i64 %a, i64 %b) {
 define i1 @ugea(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: ugea:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a1, a0
-; CHECK-NEXT:    sltu a0, a2, a0
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    minu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a1, a0
 ; CHECK-NEXT:    xori a0, a0, 1
 ; CHECK-NEXT:    ret
   %l0 = icmp uge i64 %a, %c
@@ -189,9 +176,8 @@ define i1 @ugea(i64 %c, i64 %a, i64 %b) {
 define i1 @uga(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: uga:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a1, a0, a1
-; CHECK-NEXT:    sltu a0, a0, a2
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    minu a1, a1, a2
+; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    ret
   %l0 = icmp ugt i64 %a, %c
   %l1 = icmp ugt i64 %b, %c
@@ -204,9 +190,8 @@ define i1 @uga(i64 %c, i64 %a, i64 %b) {
 define i1 @sla(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: sla:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slt a1, a1, a0
-; CHECK-NEXT:    slt a0, a2, a0
-; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    max a1, a1, a2
+; CHECK-NEXT:    slt a0, a1, a0
 ; CHECK-NEXT:    ret
   %l0 = icmp slt i64 %a, %c
   %l1 = icmp slt i64 %b, %c
@@ -214,6 +199,7 @@ define i1 @sla(i64 %c, i64 %a, i64 %b) {
   ret i1 %res
 }
 
+; Negative test
 ; Float check.
 define i1 @flo(float %c, float %a, float %b) {
 ; CHECK-RV64I-LABEL: flo:
@@ -259,6 +245,7 @@ define i1 @flo(float %c, float %a, float %b) {
   ret i1 %res
 }
 
+; Negative test
 ; Double check.
 define i1 @dlo(double %c, double %a, double %b) {
 ; CHECK-LABEL: dlo:
@@ -296,6 +283,7 @@ define i1 @dlo(double %c, double %a, double %b) {
   ret i1 %res
 }
 
+; Negative test
 ; More than one user
 define i1 @multi_user(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: multi_user:
@@ -313,6 +301,7 @@ define i1 @multi_user(i64 %c, i64 %a, i64 %b) {
   ret i1 %out
 }
 
+; Negative test
 ; No same comparations
 define i1 @no_same_ops(i64 %c, i64 %a, i64 %b) {
 ; CHECK-LABEL: no_same_ops:
