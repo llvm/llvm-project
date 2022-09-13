@@ -84,7 +84,7 @@ TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
 
               ^auto i = {1,2};
           )cpp",
-          "std::initializer_list<int>",
+          "class std::initializer_list<int>",
       },
       {
           R"cpp( // auto in function return type with trailing return type
