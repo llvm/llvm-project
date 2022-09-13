@@ -78,24 +78,12 @@ constexpr StringRef getPaddingAttrName() { return "padding"; }
 
 /// Use to encode that a particular iterator type has parallel semantics.
 constexpr StringRef getParallelIteratorTypeName() { return "parallel"; }
-inline bool isParallelIterator(Attribute attr) {
-  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
-  return strAttr && strAttr.getValue() == getParallelIteratorTypeName();
-}
 
 /// Use to encode that a particular iterator type has reduction semantics.
 constexpr StringRef getReductionIteratorTypeName() { return "reduction"; }
-inline bool isReductionIterator(Attribute attr) {
-  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
-  return strAttr && strAttr.getValue() == getReductionIteratorTypeName();
-}
 
 /// Use to encode that a particular iterator type has window semantics.
 constexpr StringRef getWindowIteratorTypeName() { return "window"; }
-inline bool isWindowIterator(Attribute attr) {
-  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
-  return strAttr && strAttr.getValue() == getWindowIteratorTypeName();
-}
 
 /// Use to encode that a particular iterator type has window semantics.
 inline ArrayRef<StringRef> getAllIteratorTypeNames() {
@@ -122,19 +110,6 @@ inline unsigned getNumIterators(ArrayAttr iteratorTypes) {
   return res;
 }
 
-/// Typed representation for loop type strings.
-enum class IteratorType { Parallel, Reduction };
-
-inline StringRef toString(IteratorType t) {
-  switch (t) {
-  case IteratorType::Parallel:
-    return getParallelIteratorTypeName();
-  case IteratorType::Reduction:
-    return getReductionIteratorTypeName();
-  }
-  llvm_unreachable("Unsupported IteratorType");
-}
-
 /// Helper StructuredGenerator class to manipulate and rewrite ops with
 /// `StructuredOpInterface`. This is templated for now because VectorOps do not
 /// yet implement the StructuredOpInterface itself.
@@ -145,10 +120,7 @@ public:
 
   struct IteratorType {
     IteratorType(StringRef strRef) : strRef(strRef) {}
-    bool isOfType(Attribute attr) const {
-      auto sAttr = attr.dyn_cast<StringAttr>();
-      return sAttr && sAttr.getValue() == strRef;
-    }
+    bool isOfType(StringRef typeName) const { return typeName == strRef; }
     StringRef strRef;
   };
   struct Par : public IteratorType {
@@ -163,7 +135,7 @@ public:
 
   StructuredGenerator(OpBuilder &builder, StructuredOpInterface op)
       : builder(builder), ctx(op.getContext()), loc(op.getLoc()),
-        iterators(op.getIteratorTypes()), maps(op.getIndexingMapsArray()),
+        iterators(op.getIteratorTypeNames()), maps(op.getIndexingMapsArray()),
         op(op) {}
 
   bool iters(ArrayRef<IteratorType> its) {
@@ -185,7 +157,7 @@ protected:
   OpBuilder &builder;
   MLIRContext *ctx;
   Location loc;
-  ArrayAttr iterators;
+  SmallVector<StringRef> iterators;
   SmallVector<AffineMap, 4> maps;
   Operation *op;
 };

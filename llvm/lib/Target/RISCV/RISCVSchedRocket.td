@@ -111,14 +111,14 @@ def : WriteRes<WriteAtomicSTD, [RocketUnitMem]>;
 
 // Single precision.
 let Latency = 4 in {
-def : WriteRes<WriteFALU32, [RocketUnitFPALU]>;
+def : WriteRes<WriteFAdd32, [RocketUnitFPALU]>;
 def : WriteRes<WriteFSGNJ32, [RocketUnitFPALU]>;
 def : WriteRes<WriteFMinMax32, [RocketUnitFPALU]>;
 }
 
 // Double precision
 let Latency = 6 in {
-def : WriteRes<WriteFALU64, [RocketUnitFPALU]>;
+def : WriteRes<WriteFAdd64, [RocketUnitFPALU]>;
 def : WriteRes<WriteFSGNJ64, [RocketUnitFPALU]>;
 def : WriteRes<WriteFMinMax64, [RocketUnitFPALU]>;
 }
@@ -203,11 +203,11 @@ def : ReadAdvance<ReadAtomicSTW, 0>;
 def : ReadAdvance<ReadAtomicSTD, 0>;
 def : ReadAdvance<ReadFStoreData, 0>;
 def : ReadAdvance<ReadFMemBase, 0>;
-def : ReadAdvance<ReadFALU32, 0>;
-def : ReadAdvance<ReadFALU64, 0>;
+def : ReadAdvance<ReadFAdd32, 0>;
+def : ReadAdvance<ReadFAdd64, 0>;
 def : ReadAdvance<ReadFMul32, 0>;
-def : ReadAdvance<ReadFMA32, 0>;
 def : ReadAdvance<ReadFMul64, 0>;
+def : ReadAdvance<ReadFMA32, 0>;
 def : ReadAdvance<ReadFMA64, 0>;
 def : ReadAdvance<ReadFDiv32, 0>;
 def : ReadAdvance<ReadFDiv64, 0>;

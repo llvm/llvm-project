@@ -314,7 +314,7 @@ defm : FPFMADynFrmAlias_m<FMSUB_S,  "fmsub.s",  FINX>;
 defm : FPFMADynFrmAlias_m<FNMSUB_S, "fnmsub.s", FINX>;
 defm : FPFMADynFrmAlias_m<FNMADD_S, "fnmadd.s", FINX>;
 
-let SchedRW = [WriteFALU32, ReadFALU32, ReadFALU32] in {
+let SchedRW = [WriteFAdd32, ReadFAdd32, ReadFAdd32] in {
 defm FADD_S : FPALU_rr_frm_m<0b0000000, "fadd.s", FINX, /*Commutable*/1>;
 defm FSUB_S : FPALU_rr_frm_m<0b0000100, "fsub.s", FINX>;
 }

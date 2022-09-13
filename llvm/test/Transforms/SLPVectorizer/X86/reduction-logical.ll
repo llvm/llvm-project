@@ -345,11 +345,11 @@ define i1 @logical_and_icmp_clamp_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-NEXT:    [[Y1:%.*]] = extractelement <8 x i32> [[Y]], i32 1
 ; CHECK-NEXT:    [[Y2:%.*]] = extractelement <8 x i32> [[Y]], i32 2
 ; CHECK-NEXT:    [[Y3:%.*]] = extractelement <8 x i32> [[Y]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[X1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[X0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[X0]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[X1]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[X2]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[X3]], i32 3
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 poison, i32 poison, i32 poison, i32 poison>, i32 [[Y0]], i32 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[Y1]], i32 5
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[Y2]], i32 6

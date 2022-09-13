@@ -311,3 +311,46 @@ TEST(Decl, MemberFunctionInModules) {
   EXPECT_TRUE(bar->isInlined());
 }
 
+TEST(Decl, MemberFunctionInHeaderUnit) {
+  llvm::Annotations Code(R"(
+    class foo {
+    public:
+      int memFn() {
+        return 43;
+      }
+    };
+    )");
+
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code.code(), {"-std=c++20", " -xc++-user-header ", "-emit-header-unit"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *memFn = selectFirst<FunctionDecl>(
+      "memFn", match(functionDecl(hasName("memFn")).bind("memFn"), Ctx));
+
+  EXPECT_TRUE(memFn->isInlined());
+}
+
+TEST(Decl, FriendFunctionWithinClassInHeaderUnit) {
+  llvm::Annotations Code(R"(
+    class foo {
+      int value;
+    public:
+      foo(int v) : value(v) {}
+
+      friend int getFooValue(foo f) {
+        return f.value;
+      }
+    };
+    )");
+
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code.code(), {"-std=c++20", " -xc++-user-header ", "-emit-header-unit"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *getFooValue = selectFirst<FunctionDecl>(
+      "getFooValue",
+      match(functionDecl(hasName("getFooValue")).bind("getFooValue"), Ctx));
+
+  EXPECT_TRUE(getFooValue->isInlined());
+}

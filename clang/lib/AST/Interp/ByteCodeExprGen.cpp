@@ -814,15 +814,38 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   const auto *Decl = E->getDecl();
+  bool IsReference = Decl->getType()->isReferenceType();
+  bool FoundDecl = false;
 
   if (auto It = Locals.find(Decl); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
-    return this->emitGetPtrLocal(Offset, E);
+    if (!this->emitGetPtrLocal(Offset, E))
+      return false;
+
+    FoundDecl = true;
   } else if (auto GlobalIndex = P.getGlobal(Decl)) {
-    return this->emitGetPtrGlobal(*GlobalIndex, E);
+    if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+      return false;
+
+    FoundDecl = true;
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(Decl)) {
-    if (auto It = this->Params.find(PVD); It != this->Params.end())
-      return this->emitGetPtrParam(It->second, E);
+    if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+      if (!this->emitGetPtrParam(It->second, E))
+        return false;
+
+      FoundDecl = true;
+    }
+  }
+
+  // References are implemented using pointers, so when we get here,
+  // we have a pointer to a pointer, which we need to de-reference once.
+  if (FoundDecl) {
+    if (IsReference) {
+      if (!this->emitLoadPopPtr(E))
+        return false;
+    }
+
+    return true;
   }
 
   return false;

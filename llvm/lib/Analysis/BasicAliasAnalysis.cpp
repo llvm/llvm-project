@@ -605,24 +605,25 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         continue;
       }
 
-      TypeSize AllocaTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
       // For an array/pointer, add the element offset, explicitly scaled.
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
 
         // Don't attempt to analyze GEPs if the scalable index is not zero.
-        if (AllocaTypeSize.isScalable()) {
+        TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+        if (AllocTypeSize.isScalable()) {
           Decomposed.Base = V;
           return Decomposed;
         }
 
-        Decomposed.Offset += AllocaTypeSize.getFixedSize() *
+        Decomposed.Offset += AllocTypeSize.getFixedSize() *
                              CIdx->getValue().sextOrTrunc(MaxIndexSize);
         continue;
       }
 
-      if (AllocaTypeSize.isScalable()) {
+      TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+      if (AllocTypeSize.isScalable()) {
         Decomposed.Base = V;
         return Decomposed;
       }
@@ -638,7 +639,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
 
       // Scale by the type size.
-      unsigned TypeSize = AllocaTypeSize.getFixedSize();
+      unsigned TypeSize = AllocTypeSize.getFixedSize();
       LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);

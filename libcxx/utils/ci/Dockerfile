@@ -38,6 +38,9 @@ RUN apt-get update && apt-get install -y bash curl
 # Install various tools used by the build or the test suite
 RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils python3-psutil git gdb
 
+# Install dependencies required to run the LLDB data formatter tests
+RUN apt-get update && apt-get install -y python3 python3-dev libpython3-dev uuid-dev libncurses5-dev swig3.0 libxml2-dev libedit-dev
+
 # Locales for gdb and localization tests
 RUN apt-get update && apt-get install -y language-pack-en language-pack-fr \
                                          language-pack-ja language-pack-ru \

@@ -249,6 +249,11 @@ def ImmSubFrom32 : SDNodeXForm<imm, [{
 
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 
+def fma_nsz : PatFrag<(ops node:$fj, node:$fk, node:$fa),
+                      (fma node:$fj, node:$fk, node:$fa), [{
+  return N->getFlags().hasNoSignedZeros();
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//

@@ -248,8 +248,14 @@ public:
   Instruction *getIVIncOperand(Instruction *IncV, Instruction *InsertPos,
                                bool allowScale);
 
-  /// Utility for hoisting an IV increment.
-  bool hoistIVInc(Instruction *IncV, Instruction *InsertPos);
+  /// Utility for hoisting \p IncV (with all subexpressions requried for its
+  /// computation) before \p InsertPos. If \p RecomputePoisonFlags is set, drops
+  /// all poison-generating flags from instructions being hoisted and tries to
+  /// re-infer them in the new location. It should be used when we are going to
+  /// introduce a new use in the new position that didn't exist before, and may
+  /// trigger new UB in case of poison.
+  bool hoistIVInc(Instruction *IncV, Instruction *InsertPos,
+                  bool RecomputePoisonFlags = false);
 
   /// replace congruent phis with their most canonical representative. Return
   /// the number of phis eliminated.

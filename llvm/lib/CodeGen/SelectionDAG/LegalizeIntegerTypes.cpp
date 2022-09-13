@@ -4427,6 +4427,22 @@ void DAGTypeLegalizer::ExpandIntRes_UDIV(SDNode *N,
     return;
   }
 
+  // Try to expand UDIV by constant.
+  if (isa<ConstantSDNode>(N->getOperand(1))) {
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+    // Only if the new type is legal.
+    if (isTypeLegal(NVT)) {
+      SDValue InL, InH;
+      GetExpandedInteger(N->getOperand(0), InL, InH);
+      SmallVector<SDValue> Result;
+      if (TLI.expandDIVREMByConstant(N, Result, NVT, DAG, InL, InH)) {
+        Lo = Result[0];
+        Hi = Result[1];
+        return;
+      }
+    }
+  }
+
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
   if (VT == MVT::i16)
     LC = RTLIB::UDIV_I16;
@@ -4452,6 +4468,22 @@ void DAGTypeLegalizer::ExpandIntRes_UREM(SDNode *N,
     SDValue Res = DAG.getNode(ISD::UDIVREM, dl, DAG.getVTList(VT, VT), Ops);
     SplitInteger(Res.getValue(1), Lo, Hi);
     return;
+  }
+
+  // Try to expand UREM by constant.
+  if (isa<ConstantSDNode>(N->getOperand(1))) {
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+    // Only if the new type is legal.
+    if (isTypeLegal(NVT)) {
+      SDValue InL, InH;
+      GetExpandedInteger(N->getOperand(0), InL, InH);
+      SmallVector<SDValue> Result;
+      if (TLI.expandDIVREMByConstant(N, Result, NVT, DAG, InL, InH)) {
+        Lo = Result[0];
+        Hi = Result[1];
+        return;
+      }
+    }
   }
 
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
