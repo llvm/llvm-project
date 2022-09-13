@@ -34,20 +34,21 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[A_BOX_I32:.*]] = fir.embox %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
 // CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_I32]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
 // CHECK-NOT:       fir.call @_FortranASumInteger4({{.*}})
-// CHECK:           %[[RES:.*]] = fir.call @_FortranASumInteger4_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> i32
+// CHECK:           %[[RES:.*]] = fir.call @_FortranASumInteger4x1_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> i32
 // CHECK-NOT:       fir.call @_FortranASumInteger4({{.*}})
 // CHECK:           return %{{.*}} : i32
 // CHECK:         }
 // CHECK:         func.func private @_FortranASumInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
 
-// CHECK-LABEL:   func.func private @_FortranASumInteger4_simplified(
+// CHECK-LABEL:   func.func private @_FortranASumInteger4x1_simplified(
 // CHECK-SAME:                                                       %[[ARR:.*]]: !fir.box<none>) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
 // CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[ARR_BOX_I32:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[CI32_0:.*]] = arith.constant 0 : i32
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM:.*]] = %[[CI32_0]]) -> (i32) {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
@@ -59,7 +60,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // -----
 
-// Call to SUM with 2D I32 arrays is not replaced.
+// Call to SUM with 2D I32 arrays is replaced.
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
   func.func @sum_2d_array_int(%arg0: !fir.ref<!fir.array<10x10xi32>> {fir.bindc_name = "a"}) -> i32 {
     %c10 = arith.constant 10 : index
@@ -88,9 +89,39 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 }
 
 // CHECK-LABEL:   func.func @sum_2d_array_int({{.*}} !fir.ref<!fir.array<10x10xi32>> {fir.bindc_name = "a"}) -> i32 {
-// CHECK-NOT:       fir.call @_FortranASumInteger4_simplified({{.*}})
-// CHECK:           fir.call @_FortranASumInteger4({{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
-// CHECK-NOT:       fir.call @_FortranASumInteger4_simplified({{.*}})
+// CHECK:           %[[SHAPE:.*]] = fir.shape %{{.*}} : (index, index) -> !fir.shape<2>
+// CHECK:           %[[A_BOX_I32:.*]] = fir.embox %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10x10xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10xi32>>
+// CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_I32]] : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<none>
+// CHECK-NOT:       fir.call @_FortranASumInteger4({{.*}})
+// CHECK:           %[[RES:.*]] = fir.call @_FortranASumInteger4x2_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> i32
+// CHECK-NOT:       fir.call @_FortranASumInteger4({{.*}})
+// CHECK:           return %{{.*}} : i32
+// CHECK:         }
+// CHECK:         func.func private @_FortranASumInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
+
+// CHECK-LABEL:   func.func private @_FortranASumInteger4x2_simplified(
+// CHECK-SAME:                                                       %[[ARR:.*]]: !fir.box<none>) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ARR_BOX_I32:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?x?xi32>>
+// CHECK:           %[[CI32_0:.*]] = arith.constant 0 : i32
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS_0:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT_0:.*]] = arith.subi %[[DIMS_0]]#1, %[[CINDEX_1]] : index
+// CHECK:           %[[DIMIDX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMS_1:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_1]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT_1:.*]] = arith.subi %[[DIMS_1]]#1, %[[CINDEX_1]] : index
+// CHECK:           %[[RES_1:.*]] = fir.do_loop %[[ITER_1:.*]] = %[[CINDEX_0]] to %[[EXTENT_1]] step %[[CINDEX_1]] iter_args(%[[SUM_1:.*]] = %[[CI32_0]]) -> (i32) {
+// CHECK:             %[[RES_0:.*]] = fir.do_loop %[[ITER_0:.*]] = %[[CINDEX_0]] to %[[EXTENT_0]] step %[[CINDEX_1]] iter_args(%[[SUM_0:.*]] = %[[SUM_1]]) -> (i32) {
+// CHECK:               %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER_0]], %[[ITER_1]] : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
+// CHECK:               %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
+// CHECK:               %[[NEW_SUM:.*]] = arith.addi %[[ITEM_VAL]], %[[SUM_0]] : i32
+// CHECK:               fir.result %[[NEW_SUM]] : i32
+// CHECK:             }
+// CHECK:             fir.result %[[RES_0]]
+// CHECK:           }
+// CHECK:           return %[[RES_1]] : i32
+// CHECK:         }
 
 // -----
 
@@ -129,19 +160,20 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[A_BOX_F64:.*]] = fir.embox %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
 // CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_F64]] : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
 // CHECK-NOT:       fir.call @_FortranASumReal8({{.*}})
-// CHECK:           %[[RES:.*]] = fir.call @_FortranASumReal8_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> f64
+// CHECK:           %[[RES:.*]] = fir.call @_FortranASumReal8x1_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> f64
 // CHECK-NOT:       fir.call @_FortranASumReal8({{.*}})
 // CHECK:           return %{{.*}} : f64
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_FortranASumReal8_simplified(
+// CHECK-LABEL:   func.func private @_FortranASumReal8x1_simplified(
 // CHECK-SAME:                                                    %[[ARR:.*]]: !fir.box<none>) -> f64 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
 // CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[ARR_BOX_F64:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf64>>
-// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F64]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
-// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[ZERO:.*]] = arith.constant 0.000000e+00 : f64
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F64]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM]] = %[[ZERO]]) -> (f64) {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F64]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f64>
@@ -188,19 +220,20 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[A_BOX_F32:.*]] = fir.embox %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
 // CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_F32]] : (!fir.box<!fir.array<10xf32>>) -> !fir.box<none>
 // CHECK-NOT:       fir.call @_FortranASumReal4({{.*}})
-// CHECK:           %[[RES:.*]] = fir.call @_FortranASumReal4_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> f32
+// CHECK:           %[[RES:.*]] = fir.call @_FortranASumReal4x1_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> f32
 // CHECK-NOT:       fir.call @_FortranASumReal4({{.*}})
 // CHECK:           return %{{.*}} : f32
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_FortranASumReal4_simplified(
+// CHECK-LABEL:   func.func private @_FortranASumReal4x1_simplified(
 // CHECK-SAME:                                                    %[[ARR:.*]]: !fir.box<none>) -> f32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
 // CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[ARR_BOX_F32:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf32>>
-// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F32]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM]] = %[[ZERO]]) -> (f32) {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F32]], %[[ITER]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f32>
@@ -243,9 +276,9 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 }
 
 // CHECK-LABEL:   func.func @sum_1d_complex(%{{.*}}: !fir.ref<!fir.array<10x!fir.complex<4>>> {fir.bindc_name = "a"}) -> !fir.complex<4> {
-// CHECK-NOT:       fir.call @_FortranACppSumComplex4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACppSumComplex4x1_simplified({{.*}})
 // CHECK:           fir.call @_FortranACppSumComplex4({{.*}}) : (!fir.ref<complex<f32>>, !fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> none
-// CHECK-NOT:       fir.call @_FortranACppSumComplex4_simplified({{.*}})
+// CHECK-NOT:       fir.call @_FortranACppSumComplex4x1_simplified({{.*}})
 
 // -----
 
@@ -298,20 +331,20 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // CHECK-LABEL:   func.func @sum_1d_calla(%{{.*}}) -> i32 {
 // CHECK-NOT:       fir.call @_FortranASumInteger4({{.*}})
-// CHECK:           fir.call @_FortranASumInteger4_simplified(%{{.*}})
+// CHECK:           fir.call @_FortranASumInteger4x1_simplified(%{{.*}})
 // CHECK-NOT:       fir.call @_FortranASumInteger4({{.*}})
 // CHECK:         }
 
 // CHECK-LABEL:   func.func @sum_1d_callb(%{{.*}}) -> i32 {
 // CHECK-NOT:       fir.call @_FortranASumInteger4({{.*}})
-// CHECK:           fir.call @_FortranASumInteger4_simplified(%{{.*}})
+// CHECK:           fir.call @_FortranASumInteger4x1_simplified(%{{.*}})
 // CHECK-NOT:       fir.call @_FortranASumInteger4({{.*}})
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_FortranASumInteger4_simplified({{.*}}) -> i32 {{.*}} {
+// CHECK-LABEL:   func.func private @_FortranASumInteger4x1_simplified({{.*}}) -> i32 {{.*}} {
 // CHECK:           return %{{.*}} : i32
 // CHECK:         }
-// CHECK-NOT:   func.func private @_FortranASumInteger4_simplified({{.*}})
+// CHECK-NOT:   func.func private @_FortranASumInteger4x1_simplified({{.*}})
 
 // -----
 
@@ -354,14 +387,14 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[SLICE:.*]] = fir.slice %{{.*}}, %{{.*}}, %[[CINDEX_2]] : (index, index, index) -> !fir.slice<1>
 // CHECK:           %[[A_BOX_I32:.*]] = fir.embox %{{.*}}(%[[SHAPE]]) {{\[}}%[[SLICE]]] : (!fir.ref<!fir.array<20xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_I32]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-// CHECK:           %{{.*}} = fir.call @_FortranASumInteger4_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> i32
+// CHECK:           %{{.*}} = fir.call @_FortranASumInteger4x1_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> i32
 // CHECK:           return %{{.*}} : i32
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_FortranASumInteger4_simplified(%{{.*}}) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK-LABEL:   func.func private @_FortranASumInteger4x1_simplified(%{{.*}}) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
 // CHECK:           %[[ARR_BOX_I32:.*]] = fir.convert %{{.*}} : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %{{.*}} to %[[EXTENT]] step %[[CINDEX_1]] iter_args({{.*}}) -> (i32) {
 // CHECK:             %{{.*}} = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -792,18 +825,19 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
 // CHECK:           %[[A_BOX_I32:.*]] = fir.embox %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
 // CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_I32]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
-// CHECK:           %[[RES:.*]] = fir.call @_FortranAMaxvalInteger4_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> i32
+// CHECK:           %[[RES:.*]] = fir.call @_FortranAMaxvalInteger4x1_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> i32
 // CHECK:           return %{{.*}} : i32
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_FortranAMaxvalInteger4_simplified(
+// CHECK-LABEL:   func.func private @_FortranAMaxvalInteger4x1_simplified(
 // CHECK-SAME:                                                       %[[ARR:.*]]: !fir.box<none>) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
 // CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[ARR_BOX_I32:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[CI32_MININT:.*]] = arith.constant -2147483648 : i32
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX:.*]] = %[[CI32_MININT]]) -> (i32) {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
@@ -849,18 +883,19 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[SHAPE:.*]] = fir.shape %[[CINDEX_10]] : (index) -> !fir.shape<1>
 // CHECK:           %[[A_BOX_F64:.*]] = fir.embox %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
 // CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_F64]] : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
-// CHECK:           %[[RES:.*]] = fir.call @_FortranAMaxvalReal8_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> f64
+// CHECK:           %[[RES:.*]] = fir.call @_FortranAMaxvalReal8x1_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> f64
 // CHECK:           return %{{.*}} : f64
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_FortranAMaxvalReal8_simplified(
+// CHECK-LABEL:   func.func private @_FortranAMaxvalReal8x1_simplified(
 // CHECK-SAME:                                                    %[[ARR:.*]]: !fir.box<none>) -> f64 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
 // CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[ARR_BOX_F64:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf64>>
-// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F64]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
-// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[NEG_DBL_MAX:.*]] = arith.constant -1.7976931348623157E+308 : f64
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F64]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX]] = %[[NEG_DBL_MAX]]) -> (f64) {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F64]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f64>
@@ -869,3 +904,97 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           }
 // CHECK:           return %[[RES]] : f64
 // CHECK:         }
+
+// -----
+
+// SUM reduction of sliced explicit-shape array is replaced with
+// 2D simplified implementation.
+func.func @sum_sliced_embox_i64(%arg0: !fir.ref<!fir.array<10x10x10xi64>> {fir.bindc_name = "a"}) -> f32 {
+  %c10 = arith.constant 10 : index
+  %c10_0 = arith.constant 10 : index
+  %c10_1 = arith.constant 10 : index
+  %0 = fir.alloca f32 {bindc_name = "sum_sliced_embox_i64", uniq_name = "_QFsum_sliced_embox_i64Esum_sliced_embox_i64"}
+  %1 = fir.alloca i64 {bindc_name = "sum_sliced_i64", uniq_name = "_QFsum_sliced_embox_i64Esum_sliced_i64"}
+  %c1 = arith.constant 1 : index
+  %c1_i64 = arith.constant 1 : i64
+  %2 = fir.convert %c1_i64 : (i64) -> index
+  %3 = arith.addi %c1, %c10 : index
+  %4 = arith.subi %3, %c1 : index
+  %c1_i64_2 = arith.constant 1 : i64
+  %5 = fir.convert %c1_i64_2 : (i64) -> index
+  %6 = arith.addi %c1, %c10_0 : index
+  %7 = arith.subi %6, %c1 : index
+  %c1_i64_3 = arith.constant 1 : i64
+  %8 = fir.undefined index
+  %9 = fir.shape %c10, %c10_0, %c10_1 : (index, index, index) -> !fir.shape<3>
+  %10 = fir.slice %c1, %4, %2, %c1, %7, %5, %c1_i64_3, %8, %8 : (index, index, index, index, index, index, i64, index, index) -> !fir.slice<3>
+  %11 = fir.embox %arg0(%9) [%10] : (!fir.ref<!fir.array<10x10x10xi64>>, !fir.shape<3>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xi64>>
+  %12 = fir.absent !fir.box<i1>
+  %c0 = arith.constant 0 : index
+  %13 = fir.address_of(@_QQcl.2E2F746573742E66393000) : !fir.ref<!fir.char<1,11>>
+  %c3_i32 = arith.constant 3 : i32
+  %14 = fir.convert %11 : (!fir.box<!fir.array<?x?xi64>>) -> !fir.box<none>
+  %15 = fir.convert %13 : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
+  %16 = fir.convert %c0 : (index) -> i32
+  %17 = fir.convert %12 : (!fir.box<i1>) -> !fir.box<none>
+  %18 = fir.call @_FortranASumInteger8(%14, %15, %c3_i32, %16, %17) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i64
+  fir.store %18 to %1 : !fir.ref<i64>
+  %19 = fir.load %0 : !fir.ref<f32>
+  return %19 : f32
+}
+func.func private @_FortranASumInteger8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i64 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F746573742E66393000 constant : !fir.char<1,11> {
+  %0 = fir.string_lit "./test.f90\00"(11) : !fir.char<1,11>
+  fir.has_value %0 : !fir.char<1,11>
+}
+
+// CHECK-NOT: call{{.*}}_FortranASumInteger8(
+// CHECK: call @_FortranASumInteger8x2_simplified(
+// CHECK-NOT: call{{.*}}_FortranASumInteger8(
+
+// -----
+
+// SUM reduction of sliced assumed-shape array is replaced with
+// 2D simplified implementation.
+func.func @_QPsum_sliced_rebox_i64(%arg0: !fir.box<!fir.array<?x?x?xi64>> {fir.bindc_name = "a"}) -> f32 {
+  %0 = fir.alloca i64 {bindc_name = "sum_sliced_i64", uniq_name = "_QFsum_sliced_rebox_i64Esum_sliced_i64"}
+  %1 = fir.alloca f32 {bindc_name = "sum_sliced_rebox_i64", uniq_name = "_QFsum_sliced_rebox_i64Esum_sliced_rebox_i64"}
+  %c1 = arith.constant 1 : index
+  %c1_i64 = arith.constant 1 : i64
+  %2 = fir.convert %c1_i64 : (i64) -> index
+  %c0 = arith.constant 0 : index
+  %3:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?x?x?xi64>>, index) -> (index, index, index)
+  %4 = arith.addi %c1, %3#1 : index
+  %5 = arith.subi %4, %c1 : index
+  %c1_i64_0 = arith.constant 1 : i64
+  %6 = fir.convert %c1_i64_0 : (i64) -> index
+  %c1_1 = arith.constant 1 : index
+  %7:3 = fir.box_dims %arg0, %c1_1 : (!fir.box<!fir.array<?x?x?xi64>>, index) -> (index, index, index)
+  %8 = arith.addi %c1, %7#1 : index
+  %9 = arith.subi %8, %c1 : index
+  %c1_i64_2 = arith.constant 1 : i64
+  %10 = fir.undefined index
+  %11 = fir.slice %c1, %5, %2, %c1, %9, %6, %c1_i64_2, %10, %10 : (index, index, index, index, index, index, i64, index, index) -> !fir.slice<3>
+  %12 = fir.rebox %arg0 [%11] : (!fir.box<!fir.array<?x?x?xi64>>, !fir.slice<3>) -> !fir.box<!fir.array<?x?xi64>>
+  %13 = fir.absent !fir.box<i1>
+  %c0_3 = arith.constant 0 : index
+  %14 = fir.address_of(@_QQcl.2E2F746573742E66393000) : !fir.ref<!fir.char<1,11>>
+  %c8_i32 = arith.constant 8 : i32
+  %15 = fir.convert %12 : (!fir.box<!fir.array<?x?xi64>>) -> !fir.box<none>
+  %16 = fir.convert %14 : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
+  %17 = fir.convert %c0_3 : (index) -> i32
+  %18 = fir.convert %13 : (!fir.box<i1>) -> !fir.box<none>
+  %19 = fir.call @_FortranASumInteger8(%15, %16, %c8_i32, %17, %18) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i64
+  fir.store %19 to %0 : !fir.ref<i64>
+  %20 = fir.load %1 : !fir.ref<f32>
+  return %20 : f32
+}
+func.func private @_FortranASumInteger8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i64 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F746573742E66393000 constant : !fir.char<1,11> {
+  %0 = fir.string_lit "./test.f90\00"(11) : !fir.char<1,11>
+  fir.has_value %0 : !fir.char<1,11>
+}
+
+// CHECK-NOT: call{{.*}}_FortranASumInteger8(
+// CHECK: call @_FortranASumInteger8x2_simplified(
+// CHECK-NOT: call{{.*}}_FortranASumInteger8(
