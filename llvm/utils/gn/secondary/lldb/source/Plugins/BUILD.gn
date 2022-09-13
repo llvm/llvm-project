@@ -183,6 +183,11 @@ lldb_plugins += [
   ],
 
   [
+    "//lldb/source/Plugins/SymbolVendor/PECOFF",
+    "SymbolVendorPECOFF",
+  ],
+
+  [
     "//lldb/source/Plugins/TypeSystem/Clang",
     "TypeSystemClang",
   ],
