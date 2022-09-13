@@ -604,11 +604,72 @@ def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [NoSideEffect, SameOperand
   let hasVerifier = 1;
 }
 
+def SparseTensor_SelectOp : SparseTensor_Op<"select", [NoSideEffect, SameOperandsAndResultType]>,
+    Arguments<(ins AnyType:$x)>,
+    Results<(outs AnyType:$output)> {
+  let summary = "Select operation utilized within linalg.generic";
+  let description = [{
+      Defines an evaluation within a `linalg.generic` operation that takes a single
+      operand and decides whether or not to keep that operand in the output.
+
+      A single region must contain exactly one block taking one argument. The block
+      must end with a sparse_tensor.yield and the output type must be boolean.
+
+      Value threshold is an obvious usage of the select operation. However, by using
+      `linalg.index`, other useful selection can be achieved, such as selecting the
+      upper triangle of a matrix.
+
+      Example of selecting A >= 4.0:
+
+      ```mlir
+      %C = bufferization.alloc_tensor...
+      %0 = linalg.generic #trait
+         ins(%A: tensor<?xf64, #SparseVector>)
+        outs(%C: tensor<?xf64, #SparseVector>) {
+        ^bb0(%a: f64, %c: f64) :
+          %result = sparse_tensor.select %a : f64 {
+              ^bb0(%arg0: f64):
+                %cf4 = arith.constant 4.0 : f64
+                %keep = arith.cmpf "uge", %arg0, %cf4 : f64
+                sparse_tensor.yield %keep : i1
+            }
+          linalg.yield %result : f64
+      } -> tensor<?xf64, #SparseVector>
+      ```
+
+      Example of selecting lower triangle of a matrix:
+
+      ```mlir
+      %C = bufferization.alloc_tensor...
+      %0 = linalg.generic #trait
+         ins(%A: tensor<?x?xf64, #CSR>)
+        outs(%C: tensor<?x?xf64, #CSR>) {
+        ^bb0(%a: f64, %c: f64) :
+          %row = linalg.index 0 : index
+          %col = linalg.index 1 : index
+          %result = sparse_tensor.select %a : f64 {
+              ^bb0(%arg0: f64):
+                %keep = arith.cmpf "olt", %col, %row : f64
+                sparse_tensor.yield %keep : i1
+            }
+          linalg.yield %result : f64
+      } -> tensor<?x?xf64, #CSR>
+      ```
+  }];
+
+  let regions = (region SizedRegion<1>:$region);
+  let assemblyFormat = [{
+         $x attr-dict `:` type($x) $region
+  }];
+  let hasVerifier = 1;
+}
+
 def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
     Arguments<(ins AnyType:$result)> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{
-      Yields a value from within a `binary` or `unary` block.
+      Yields a value from within a `binary`, `unary`, `reduce`,
+      or `select` block.
 
       Example:
 

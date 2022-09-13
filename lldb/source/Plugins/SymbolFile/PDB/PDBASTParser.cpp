@@ -686,7 +686,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       if (TypeSystemClang::StartTagDeclarationDefinition(element_ast_type)) {
         TypeSystemClang::CompleteTagDeclarationDefinition(element_ast_type);
       } else {
-        // We are not able to start defintion.
+        // We are not able to start definition.
         return nullptr;
       }
     }

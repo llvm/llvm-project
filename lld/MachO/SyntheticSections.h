@@ -380,8 +380,9 @@ private:
   size_t size = 0;
 };
 
-// Stores 'data in code' entries that describe the locations of
-// data regions inside code sections.
+// Stores 'data in code' entries that describe the locations of data regions
+// inside code sections. This is used by llvm-objdump to distinguish jump tables
+// and stop them from being disassembled as instructions.
 class DataInCodeSection final : public LinkEditSection {
 public:
   DataInCodeSection();
