@@ -284,6 +284,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::FunctionNoProto:
     case Type::Paren:
     case Type::PackExpansion:
+
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
       CanPrefixQualifiers = false;
@@ -295,6 +296,11 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
       const auto *AttrTy = cast<AttributedType>(UnderlyingType);
       CanPrefixQualifiers = AttrTy->getAttrKind() == attr::AddressSpace;
       break;
+    }
+    case Type::PackIndexing: {
+      return canPrefixQualifiers(
+          cast<PackIndexingType>(UnderlyingType)->getPattern().getTypePtr(),
+          NeedARCStrongQualifier);
     }
   }
 
@@ -1187,6 +1193,18 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
   OS << ')';
   spaceBeforePlaceHolder(OS);
 }
+
+void TypePrinter::printPackIndexingBefore(const PackIndexingType *T,
+                                          raw_ostream &OS) {
+  if (T->isInstantiationDependentType())
+    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
+  else
+    OS << T->getSelectedType();
+  spaceBeforePlaceHolder(OS);
+}
+
+void TypePrinter::printPackIndexingAfter(const PackIndexingType *T,
+                                         raw_ostream &OS) {}
 
 void TypePrinter::printDecltypeAfter(const DecltypeType *T, raw_ostream &OS) {}
 

@@ -1196,6 +1196,95 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   PP.AnnotateCachedTokens(Tok);
 }
 
+SourceLocation Parser::ParseIndexedTypeNamePack(DeclSpec &DS) {
+  assert(Tok.isOneOf(tok::annot_indexed_pack_type, tok::identifier) &&
+         "Expected an identifier");
+
+  TypeResult Type;
+  SourceLocation StartLoc;
+  SourceLocation EllipsisLoc;
+  const char *PrevSpec;
+  unsigned DiagID;
+  const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
+
+  if (Tok.is(tok::annot_indexed_pack_type)) {
+    StartLoc = Tok.getLocation();
+    SourceLocation EndLoc;
+    Type = getTypeAnnotation(Tok);
+    EndLoc = Tok.getAnnotationEndLoc();
+    // Unfortunately, we don't know the LParen source location as the annotated
+    // token doesn't have it.
+    DS.setTypeArgumentRange(SourceRange(SourceLocation(), EndLoc));
+    ConsumeAnnotationToken();
+    if (Type.isInvalid()) {
+      DS.SetTypeSpecError();
+      return EndLoc;
+    }
+    DS.SetTypeSpecType(DeclSpec::TST_indexed_typename_pack, StartLoc, PrevSpec,
+                       DiagID, Type, Policy);
+    return EndLoc;
+  } else {
+    if (!NextToken().is(tok::ellipsis) ||
+        !GetLookAheadToken(2).is(tok::l_square)) {
+      DS.SetTypeSpecError();
+      return Tok.getEndLoc();
+    }
+
+    ParsedType Ty = Actions.getTypeName(*Tok.getIdentifierInfo(),
+                                        Tok.getLocation(), getCurScope());
+    if (!Ty) {
+      DS.SetTypeSpecError();
+      return Tok.getEndLoc();
+    }
+    Type = Ty;
+
+    StartLoc = ConsumeToken();
+    EllipsisLoc = ConsumeToken();
+    BalancedDelimiterTracker T(*this, tok::l_square);
+    T.consumeOpen();
+    ExprResult IndexExpr = ParseConstantExpression();
+    if (T.consumeClose()) {
+      DS.SetTypeSpecError();
+      return IndexExpr.isInvalid() ? StartLoc : IndexExpr.get()->getEndLoc();
+    }
+    if (IndexExpr.isInvalid()) {
+      DS.SetTypeSpecError();
+      return T.getCloseLocation();
+    }
+    DS.SetRangeStart(StartLoc);
+    DS.SetRangeEnd(T.getCloseLocation());
+    DS.SetTypeSpecType(DeclSpec::TST_typename, StartLoc, PrevSpec, DiagID, Type,
+                       Policy);
+    DS.SetPackIndexingExpr(EllipsisLoc, IndexExpr.get());
+    return T.getCloseLocation();
+    ;
+  }
+  return SourceLocation();
+}
+
+void Parser::AnnotateExistingIndexedTypeNamePack(ParsedType T,
+                                                 SourceLocation StartLoc,
+                                                 SourceLocation EndLoc) {
+  // make sure we have a token we can turn into an annotation token
+  if (PP.isBacktrackEnabled()) {
+    PP.RevertCachedTokens(1);
+    if (!T) {
+      // We encountered an error in parsing 'decltype(...)' so lets annotate all
+      // the tokens in the backtracking cache - that we likely had to skip over
+      // to get to a token that allows us to resume parsing, such as a
+      // semi-colon.
+      EndLoc = PP.getLastCachedTokenLocation();
+    }
+  } else
+    PP.EnterToken(Tok, /*IsReinject*/ true);
+
+  Tok.setKind(tok::annot_indexed_pack_type);
+  setTypeAnnotation(Tok, T);
+  Tok.setAnnotationEndLoc(EndLoc);
+  Tok.setLocation(StartLoc);
+  PP.AnnotateCachedTokens(Tok);
+}
+
 DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
   switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
@@ -1291,6 +1380,14 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
     Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
                               DeclaratorContext::TypeName);
     return Actions.ActOnTypeName(DeclaratorInfo);
+  }
+
+  if (Tok.is(tok::annot_indexed_pack_type)) {
+    DeclSpec DS(AttrFactory);
+    ParseIndexedTypeNamePack(DS);
+    Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
+                              DeclaratorContext::TypeName);
+    return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
   }
 
   // Check whether we have a template-id that names a type.
@@ -3836,6 +3933,10 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     // ParseOptionalCXXScopeSpecifier at this point.
     // FIXME: Can we get here with a scope specifier?
     ParseDecltypeSpecifier(DS);
+  } else if (Tok.is(tok::annot_indexed_pack_type)) {
+    // Uses of T...[N] will already have been converted to
+    // annot_indexed_pack_type by ParseOptionalCXXScopeSpecifier at this point.
+    ParseIndexedTypeNamePack(DS);
   } else {
     TemplateIdAnnotation *TemplateId = Tok.is(tok::annot_template_id)
                                            ? takeTemplateIdAnnotation(Tok)

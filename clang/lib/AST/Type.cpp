@@ -3813,6 +3813,45 @@ void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
   E->Profile(ID, Context, true);
 }
 
+PackIndexingType::PackIndexingType(const ASTContext &Context,
+                                   QualType Canonical, QualType Pattern,
+                                   Expr *IndexExpr,
+                                   ArrayRef<QualType> Expansions, int Index)
+    : Type(PackIndexing, Canonical,
+           computeDependence(Pattern, IndexExpr, Expansions)),
+      Context(Context), Pattern(Pattern), IndexExpr(IndexExpr),
+      Size(Expansions.size()), Index(Index) {
+
+  std::uninitialized_copy(Expansions.begin(), Expansions.end(),
+                          getTrailingObjects<QualType>());
+}
+
+TypeDependence
+PackIndexingType::computeDependence(QualType Pattern, Expr *IndexExpr,
+                                    ArrayRef<QualType> Expansions) {
+  TypeDependence IndexD = toTypeDependence(IndexExpr->getDependence());
+
+  TypeDependence TD = IndexD | (IndexExpr->isInstantiationDependent()
+                                    ? TypeDependence::DependentInstantiation
+                                    : TypeDependence::None);
+  if (Expansions.empty())
+    TD |= Pattern->getDependence() & TypeDependence::DependentInstantiation;
+  else
+    for (const QualType &T : Expansions)
+      TD |= T->getDependence();
+
+  if (!(IndexD & TypeDependence::UnexpandedPack))
+    TD &= ~TypeDependence::UnexpandedPack;
+  return TD;
+}
+
+void PackIndexingType::Profile(llvm::FoldingSetNodeID &ID,
+                               const ASTContext &Context, QualType Pattern,
+                               Expr *E) {
+  Pattern.Profile(ID);
+  E->Profile(ID, Context, true);
+}
+
 UnaryTransformType::UnaryTransformType(QualType BaseType,
                                        QualType UnderlyingType, UTTKind UKind,
                                        QualType CanonicalType)
@@ -4488,6 +4527,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::TypeOfExpr:
   case Type::TypeOf:
   case Type::Decltype:
+  case Type::PackIndexing:
   case Type::UnaryTransform:
   case Type::TemplateTypeParm:
   case Type::SubstTemplateTypeParmPack:

@@ -5721,8 +5721,11 @@ def err_function_parameter_pack_without_parameter_packs : Error<
 def err_ellipsis_in_declarator_not_parameter : Error<
   "only function and template parameters can be parameter packs">;
 
-def err_sizeof_pack_no_pack_name : Error<
+def err_expected_name_of_pack : Error<
   "%0 does not refer to the name of a parameter pack">;
+
+def err_pack_index_out_of_bound : Error<
+  "%0 is not a valid index for pack %1 of size %2">;
 
 def err_fold_expression_packs_both_sides : Error<
   "binary fold expression has unexpanded parameter packs in both operands">;

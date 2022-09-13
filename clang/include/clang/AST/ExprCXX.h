@@ -4331,6 +4331,112 @@ public:
   }
 };
 
+class PackIndexingExpr final
+    : public Expr,
+      private llvm::TrailingObjects<PackIndexingExpr, Expr *> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
+  SourceLocation EllipsisLoc;
+
+  // The location of the closing bracket
+  SourceLocation RSquareLoc;
+
+  // The pack being indexed, followed by the index
+  Stmt *SubExprs[2];
+
+  // The evaluated index
+  std::optional<int64_t> Index;
+
+  size_t TransformedExpressions;
+
+  PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
+                   SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
+                   std::optional<int64_t> Index = std::nullopt,
+                   ArrayRef<Expr *> SubstitutedExprs = {})
+      : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
+        EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
+        SubExprs{PackIdExpr, IndexExpr}, Index(Index),
+        TransformedExpressions(SubstitutedExprs.size()) {
+
+    auto *Exprs = getTrailingObjects<Expr *>();
+    std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
+                            Exprs);
+
+    ExprDependence D = IndexExpr->getDependence();
+    if (SubstitutedExprs.empty())
+      D |= (PackIdExpr->getDependence() |
+            ExprDependence::TypeValueInstantiation) &
+           ~ExprDependence::UnexpandedPack;
+    else if (!IndexExpr->isValueDependent()) {
+      assert(Index && *Index < int64_t(SubstitutedExprs.size()) &&
+             "pack index out of bound");
+      D |= SubstitutedExprs[*Index]->getDependence();
+      setValueKind(SubstitutedExprs[*Index]->getValueKind());
+    }
+    setDependence(D);
+  }
+
+  /// Create an empty expression.
+  PackIndexingExpr(EmptyShell Empty) : Expr(PackIndexingExprClass, Empty) {}
+
+  unsigned numTrailingObjects(OverloadToken<Expr *>) const {
+    return TransformedExpressions;
+  }
+
+public:
+  static PackIndexingExpr *Create(ASTContext &Context,
+                                  SourceLocation EllipsisLoc,
+                                  SourceLocation RSquareLoc, Expr *PackIdExpr,
+                                  Expr *IndexExpr,
+                                  std::optional<int64_t> Index = std::nullopt,
+                                  ArrayRef<Expr *> SubstitutedExprs = {});
+  static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
+                                              unsigned NumTransformedExprs);
+
+  /// Determine the location of the 'sizeof' keyword.
+  SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
+
+  /// Determine the location of the parameter pack.
+  SourceLocation getPackLoc() const { return SubExprs[0]->getBeginLoc(); }
+
+  /// Determine the location of the right parenthesis.
+  SourceLocation getRSquareLoc() const { return RSquareLoc; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return getPackLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RSquareLoc; }
+
+  Expr *getPackIdExpression() const { return cast<Expr>(SubExprs[0]); }
+
+  NamedDecl *getPackDecl() const;
+
+  Expr *getIndexExpr() const { return cast<Expr>(SubExprs[1]); }
+
+  Expr *getSelectedExpr() const {
+    assert(Index && !isInstantiationDependent() &&
+           "extracting the indexed expression of a dependant pack");
+    return getTrailingObjects<Expr *>()[*Index];
+  }
+
+  llvm::ArrayRef<Expr *> getExpressions() const {
+    if (TransformedExpressions == 0)
+      return {};
+    return {getTrailingObjects<Expr *>(), TransformedExpressions};
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == PackIndexingExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(SubExprs, SubExprs + 2); }
+
+  const_child_range children() const {
+    return const_child_range(SubExprs, SubExprs + 2);
+  }
+};
+
 /// Represents a reference to a non-type template parameter
 /// that has been substituted with a template argument.
 class SubstNonTypeTemplateParmExpr : public Expr {
