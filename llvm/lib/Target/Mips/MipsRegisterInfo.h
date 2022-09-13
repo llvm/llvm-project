@@ -36,6 +36,8 @@ public:
     StackPointer = 2,
     /// The global pointer only.
     GlobalPointer = 3,
+    /// The GPR32_NM on nanoMIPS, otherwise GPR32
+    GPR32_M_NM = 4,
   };
 
   MipsRegisterInfo();

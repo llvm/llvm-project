@@ -1985,6 +1985,24 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
 
   unsigned AtomicOp = 0;
   bool NeedsAdditionalReg = false;
+  unsigned SLL = Mips::SLL;
+  unsigned ANDi = Mips::ANDi;
+  unsigned XORi = Mips::XORi;
+  unsigned ORi = Mips::ORi;
+  unsigned SLLV = Mips::SLLV;
+  unsigned NOR = Mips::NOR;
+  unsigned ZERO = Mips::ZERO;
+
+  if (Subtarget.hasNanoMips()) {
+    SLL = Mips::SLL_NM;
+    ANDi = Mips::ANDI_NM;
+    XORi = Mips::XORI_NM;
+    ORi = Mips::ORI_NM;
+    SLLV = Mips::SLLV_NM;
+    NOR = Mips::NOR_NM;
+    ZERO = Mips::ZERO_NM;
+  }
+
   switch (MI.getOpcode()) {
   case Mips::ATOMIC_LOAD_NAND_I8:
     AtomicOp = Mips::ATOMIC_LOAD_NAND_I8_POSTRA;
@@ -2092,22 +2110,22 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
     .addReg(ABI.GetNullPtr()).addImm(-4);
   BuildMI(BB, DL, TII->get(ABI.GetPtrAndOp()), AlignedAddr)
     .addReg(Ptr).addReg(MaskLSB2);
-  BuildMI(BB, DL, TII->get(Mips::ANDi), PtrLSB2)
+  BuildMI(BB, DL, TII->get(ANDi), PtrLSB2)
       .addReg(Ptr, 0, ArePtrs64bit ? Mips::sub_32 : 0).addImm(3);
   if (Subtarget.isLittle()) {
-    BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
+    BuildMI(BB, DL, TII->get(SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
   } else {
     Register Off = RegInfo.createVirtualRegister(RC);
-    BuildMI(BB, DL, TII->get(Mips::XORi), Off)
+    BuildMI(BB, DL, TII->get(XORi), Off)
       .addReg(PtrLSB2).addImm((Size == 1) ? 3 : 2);
-    BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
+    BuildMI(BB, DL, TII->get(SLL), ShiftAmt).addReg(Off).addImm(3);
   }
-  BuildMI(BB, DL, TII->get(Mips::ORi), MaskUpper)
-    .addReg(Mips::ZERO).addImm(MaskImm);
-  BuildMI(BB, DL, TII->get(Mips::SLLV), Mask)
+  BuildMI(BB, DL, TII->get(ORi), MaskUpper)
+    .addReg(ZERO).addImm(MaskImm);
+  BuildMI(BB, DL, TII->get(SLLV), Mask)
     .addReg(MaskUpper).addReg(ShiftAmt);
-  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::ZERO).addReg(Mask);
-  BuildMI(BB, DL, TII->get(Mips::SLLV), Incr2).addReg(Incr).addReg(ShiftAmt);
+  BuildMI(BB, DL, TII->get(NOR), Mask2).addReg(ZERO).addReg(Mask);
+  BuildMI(BB, DL, TII->get(SLLV), Incr2).addReg(Incr).addReg(ShiftAmt);
 
 
   // The purposes of the flags on the scratch registers is explained in
@@ -2235,6 +2253,24 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
                           ? Mips::ATOMIC_CMP_SWAP_I8_POSTRA
                           : Mips::ATOMIC_CMP_SWAP_I16_POSTRA;
 
+  unsigned SLL = Mips::SLL;
+  unsigned ANDi = Mips::ANDi;
+  unsigned XORi = Mips::XORi;
+  unsigned ORi = Mips::ORi;
+  unsigned SLLV = Mips::SLLV;
+  unsigned NOR = Mips::NOR;
+  unsigned ZERO = Mips::ZERO;
+  
+  if (Subtarget.hasNanoMips()) {
+    SLL = Mips::SLL_NM;
+    ANDi = Mips::ANDI_NM;
+    XORi = Mips::XORI_NM;
+    ORi = Mips::ORI_NM;
+    SLLV = Mips::SLLV_NM;
+    NOR = Mips::NOR_NM;
+    ZERO = Mips::ZERO_NM;
+  }
+
   // The scratch registers here with the EarlyClobber | Define | Dead | Implicit
   // flags are used to coerce the register allocator and the machine verifier to
   // accept the usage of these registers.
@@ -2275,32 +2311,32 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
   //    andi    maskednewval,newval,255
   //    sll     shiftednewval,maskednewval,shiftamt
   int64_t MaskImm = (Size == 1) ? 255 : 65535;
-  BuildMI(BB, DL, TII->get(ArePtrs64bit ? Mips::DADDiu : Mips::ADDiu), MaskLSB2)
+  BuildMI(BB, DL, TII->get(ABI.GetPtrAddiuOp()), MaskLSB2)
     .addReg(ABI.GetNullPtr()).addImm(-4);
-  BuildMI(BB, DL, TII->get(ArePtrs64bit ? Mips::AND64 : Mips::AND), AlignedAddr)
+  BuildMI(BB, DL, TII->get(ABI.GetPtrAndOp()), AlignedAddr)
     .addReg(Ptr).addReg(MaskLSB2);
-  BuildMI(BB, DL, TII->get(Mips::ANDi), PtrLSB2)
+  BuildMI(BB, DL, TII->get(ANDi), PtrLSB2)
       .addReg(Ptr, 0, ArePtrs64bit ? Mips::sub_32 : 0).addImm(3);
   if (Subtarget.isLittle()) {
-    BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
+    BuildMI(BB, DL, TII->get(SLL), ShiftAmt).addReg(PtrLSB2).addImm(3);
   } else {
     Register Off = RegInfo.createVirtualRegister(RC);
-    BuildMI(BB, DL, TII->get(Mips::XORi), Off)
+    BuildMI(BB, DL, TII->get(XORi), Off)
       .addReg(PtrLSB2).addImm((Size == 1) ? 3 : 2);
-    BuildMI(BB, DL, TII->get(Mips::SLL), ShiftAmt).addReg(Off).addImm(3);
+    BuildMI(BB, DL, TII->get(SLL), ShiftAmt).addReg(Off).addImm(3);
   }
-  BuildMI(BB, DL, TII->get(Mips::ORi), MaskUpper)
-    .addReg(Mips::ZERO).addImm(MaskImm);
-  BuildMI(BB, DL, TII->get(Mips::SLLV), Mask)
+  BuildMI(BB, DL, TII->get(ORi), MaskUpper)
+    .addReg(ZERO).addImm(MaskImm);
+  BuildMI(BB, DL, TII->get(SLLV), Mask)
     .addReg(MaskUpper).addReg(ShiftAmt);
-  BuildMI(BB, DL, TII->get(Mips::NOR), Mask2).addReg(Mips::ZERO).addReg(Mask);
-  BuildMI(BB, DL, TII->get(Mips::ANDi), MaskedCmpVal)
+  BuildMI(BB, DL, TII->get(NOR), Mask2).addReg(ZERO).addReg(Mask);
+  BuildMI(BB, DL, TII->get(ANDi), MaskedCmpVal)
     .addReg(CmpVal).addImm(MaskImm);
-  BuildMI(BB, DL, TII->get(Mips::SLLV), ShiftedCmpVal)
+  BuildMI(BB, DL, TII->get(SLLV), ShiftedCmpVal)
     .addReg(MaskedCmpVal).addReg(ShiftAmt);
-  BuildMI(BB, DL, TII->get(Mips::ANDi), MaskedNewVal)
+  BuildMI(BB, DL, TII->get(ANDi), MaskedNewVal)
     .addReg(NewVal).addImm(MaskImm);
-  BuildMI(BB, DL, TII->get(Mips::SLLV), ShiftedNewVal)
+  BuildMI(BB, DL, TII->get(SLLV), ShiftedNewVal)
     .addReg(MaskedNewVal).addReg(ShiftAmt);
 
   // The purposes of the flags on the scratch registers are explained in

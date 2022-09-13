@@ -78,12 +78,16 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
   MachineFunction *MF = BB.getParent();
 
   const bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
+  const bool IsNanoMips = STI->hasNanoMips();
   DebugLoc DL = I->getDebugLoc();
   unsigned LL, SC;
 
   unsigned ZERO = Mips::ZERO;
   unsigned BNE = Mips::BNE;
   unsigned BEQ = Mips::BEQ;
+  unsigned OR = Mips::OR;
+  unsigned AND = Mips::AND;
+  unsigned SRLV = Mips::SRLV;
   unsigned SEOp =
       I->getOpcode() == Mips::ATOMIC_CMP_SWAP_I8_POSTRA ? Mips::SEB : Mips::SEH;
 
@@ -92,11 +96,21 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
       SC = STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM;
       BNE = STI->hasMips32r6() ? Mips::BNEC_MMR6 : Mips::BNE_MM;
       BEQ = STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM;
-  } else {
+  } else if (!IsNanoMips) {
     LL = STI->hasMips32r6() ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
                             : (ArePtrs64bit ? Mips::LL64 : Mips::LL);
     SC = STI->hasMips32r6() ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
                             : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
+  } else {
+    LL = Mips::LL_NM;
+    SC = Mips::SC_NM;
+    BNE = Mips::BNEC_NM;
+    BEQ = Mips::BEQC_NM;
+    ZERO = Mips::ZERO_NM;
+    SEOp = (SEOp == Mips::SEB) ? Mips::SEB_NM : Mips::SEH_NM;
+    OR = Mips::OR_NM;
+    AND = Mips::AND_NM;
+    SRLV = Mips::SRLV_NM;
   }
 
   Register Dest = I->getOperand(0).getReg();
@@ -143,7 +157,7 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
   //   and Mask', dest, Mask
   //   bne Mask', ShiftCmpVal, exitMBB
   BuildMI(loop1MBB, DL, TII->get(LL), Scratch).addReg(Ptr).addImm(0);
-  BuildMI(loop1MBB, DL, TII->get(Mips::AND), Scratch2)
+  BuildMI(loop1MBB, DL, TII->get(AND), Scratch2)
       .addReg(Scratch)
       .addReg(Mask);
   BuildMI(loop1MBB, DL, TII->get(BNE))
@@ -154,10 +168,10 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
   //   or dest, dest, ShiftNewVal
   //   sc dest, dest, 0(ptr)
   //   beq dest, $0, loop1MBB
-  BuildMI(loop2MBB, DL, TII->get(Mips::AND), Scratch)
+  BuildMI(loop2MBB, DL, TII->get(AND), Scratch)
       .addReg(Scratch, RegState::Kill)
       .addReg(Mask2);
-  BuildMI(loop2MBB, DL, TII->get(Mips::OR), Scratch)
+  BuildMI(loop2MBB, DL, TII->get(OR), Scratch)
       .addReg(Scratch, RegState::Kill)
       .addReg(ShiftNewVal);
   BuildMI(loop2MBB, DL, TII->get(SC), Scratch)
@@ -172,10 +186,10 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
   //  sinkMBB:
   //    srl     srlres, Mask', shiftamt
   //    sign_extend dest,srlres
-  BuildMI(sinkMBB, DL, TII->get(Mips::SRLV), Dest)
+  BuildMI(sinkMBB, DL, TII->get(SRLV), Dest)
       .addReg(Scratch2)
       .addReg(ShiftAmnt);
-  if (STI->hasMips32r2()) {
+  if (STI->hasMips32r2() || IsNanoMips) {
     BuildMI(sinkMBB, DL, TII->get(SEOp), Dest).addReg(Dest);
   } else {
     const unsigned ShiftImm =
@@ -208,29 +222,39 @@ bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
   MachineFunction *MF = BB.getParent();
 
   const bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
+  const bool IsNanoMips = STI->hasNanoMips();
   DebugLoc DL = I->getDebugLoc();
 
   unsigned LL, SC, ZERO, BNE, BEQ, MOVE;
 
   if (Size == 4) {
-    if (STI->inMicroMipsMode()) {
-      LL = STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM;
-      SC = STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM;
-      BNE = STI->hasMips32r6() ? Mips::BNEC_MMR6 : Mips::BNE_MM;
-      BEQ = STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM;
-    } else {
-      LL = STI->hasMips32r6()
-               ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
-               : (ArePtrs64bit ? Mips::LL64 : Mips::LL);
-      SC = STI->hasMips32r6()
-               ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
-               : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
-      BNE = Mips::BNE;
-      BEQ = Mips::BEQ;
-    }
+    if (!IsNanoMips) {
+      if (STI->inMicroMipsMode()) {
+        LL = STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM;
+        SC = STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM;
+        BNE = STI->hasMips32r6() ? Mips::BNEC_MMR6 : Mips::BNE_MM;
+        BEQ = STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM;
+      } else {
+        LL = STI->hasMips32r6()
+                 ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
+                 : (ArePtrs64bit ? Mips::LL64 : Mips::LL);
+        SC = STI->hasMips32r6()
+                 ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
+                 : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
+        BNE = Mips::BNE;
+        BEQ = Mips::BEQ;
+      }
 
-    ZERO = Mips::ZERO;
-    MOVE = Mips::OR;
+      ZERO = Mips::ZERO;
+      MOVE = Mips::OR;
+    } else {
+      LL = Mips::LL_NM;
+      SC = Mips::SC_NM;
+      BNE = Mips::BNEC_NM;
+      BEQ = Mips::BEQC_NM;
+      MOVE = Mips::MOVE_NM;
+      ZERO = Mips::ZERO_NM;
+    }
   } else {
     LL = STI->hasMips64r6() ? Mips::LLD_R6 : Mips::LLD;
     SC = STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
@@ -283,7 +307,10 @@ bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
   //   move scratch, NewVal
   //   sc Scratch, Scratch, 0(ptr)
   //   beq Scratch, $0, loop1MBB
-  BuildMI(loop2MBB, DL, TII->get(MOVE), Scratch).addReg(NewVal).addReg(ZERO);
+  if (!IsNanoMips)
+    BuildMI(loop2MBB, DL, TII->get(MOVE), Scratch).addReg(NewVal).addReg(ZERO);
+  else
+    BuildMI(loop2MBB, DL, TII->get(MOVE), Scratch).addReg(NewVal);
   BuildMI(loop2MBB, DL, TII->get(SC), Scratch)
     .addReg(Scratch).addReg(Ptr).addImm(0);
   BuildMI(loop2MBB, DL, TII->get(BEQ))
@@ -306,11 +333,20 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   MachineFunction *MF = BB.getParent();
 
   const bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
+  const bool IsNanoMips = STI->hasNanoMips();
   DebugLoc DL = I->getDebugLoc();
 
   unsigned LL, SC, SLT, SLTu, OR, MOVN, MOVZ, SELNEZ, SELEQZ;
   unsigned BEQ = Mips::BEQ;
   unsigned SEOp = Mips::SEH;
+  unsigned ZERO = Mips::ZERO;
+  unsigned SEB = Mips::SEB;
+  unsigned ADD = Mips::ADDu;
+  unsigned SUB = Mips::SUBu;
+  unsigned XOR = Mips::XOR;
+  unsigned AND = Mips::AND;
+  unsigned NOR = Mips::NOR;
+  unsigned SRLV = Mips::SRLV;
 
   if (STI->inMicroMipsMode()) {
       LL = STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM;
@@ -323,7 +359,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
       MOVZ = Mips::MOVZ_I_MM;
       SELNEZ = STI->hasMips32r6() ? Mips::SELNEZ_MMR6 : Mips::SELNEZ;
       SELEQZ = STI->hasMips32r6() ? Mips::SELEQZ_MMR6 : Mips::SELEQZ;
-  } else {
+  } else if (!IsNanoMips) {
     LL = STI->hasMips32r6() ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
                             : (ArePtrs64bit ? Mips::LL64 : Mips::LL);
     SC = STI->hasMips32r6() ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
@@ -335,6 +371,23 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     MOVZ = Mips::MOVZ_I_I;
     SELNEZ = Mips::SELNEZ;
     SELEQZ = Mips::SELEQZ;
+  } else {
+    LL = Mips::LL_NM;
+    SC = Mips::SC_NM;
+    SLT = Mips::SLT_NM;
+    SLTu = Mips::SLTu_MM;
+    OR = Mips::OR_NM;
+    MOVN = Mips::MOVN_NM;
+    MOVZ = Mips::MOVZ_NM;
+    ZERO = Mips::ZERO_NM;
+    BEQ = Mips::BEQC_NM;
+    SEOp = Mips::SEH_NM;
+    SEB = Mips::SEB_NM;
+    ADD = Mips::ADDu_NM;
+    SUB = Mips::SUBu_NM;
+    NOR = Mips::NOR_NM;
+    SRLV = Mips::SRLV_NM;
+    AND = Mips::AND_NM;
   }
 
   bool IsSwap = false;
@@ -346,46 +399,46 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   unsigned Opcode = 0;
   switch (I->getOpcode()) {
   case Mips::ATOMIC_LOAD_NAND_I8_POSTRA:
-    SEOp = Mips::SEB;
+    SEOp = SEB;
     LLVM_FALLTHROUGH;
   case Mips::ATOMIC_LOAD_NAND_I16_POSTRA:
     IsNand = true;
     break;
   case Mips::ATOMIC_SWAP_I8_POSTRA:
-    SEOp = Mips::SEB;
+    SEOp = SEB;
     LLVM_FALLTHROUGH;
   case Mips::ATOMIC_SWAP_I16_POSTRA:
     IsSwap = true;
     break;
   case Mips::ATOMIC_LOAD_ADD_I8_POSTRA:
-    SEOp = Mips::SEB;
+    SEOp = SEB;
     LLVM_FALLTHROUGH;
   case Mips::ATOMIC_LOAD_ADD_I16_POSTRA:
-    Opcode = Mips::ADDu;
+    Opcode = ADD;
     break;
   case Mips::ATOMIC_LOAD_SUB_I8_POSTRA:
-    SEOp = Mips::SEB;
+    SEOp = SEB;
     LLVM_FALLTHROUGH;
   case Mips::ATOMIC_LOAD_SUB_I16_POSTRA:
-    Opcode = Mips::SUBu;
+    Opcode = SUB;
     break;
   case Mips::ATOMIC_LOAD_AND_I8_POSTRA:
-    SEOp = Mips::SEB;
+    SEOp = SEB;
     LLVM_FALLTHROUGH;
   case Mips::ATOMIC_LOAD_AND_I16_POSTRA:
-    Opcode = Mips::AND;
+    Opcode = AND;
     break;
   case Mips::ATOMIC_LOAD_OR_I8_POSTRA:
-    SEOp = Mips::SEB;
+    SEOp = SEB;
     LLVM_FALLTHROUGH;
   case Mips::ATOMIC_LOAD_OR_I16_POSTRA:
-    Opcode = Mips::OR;
+    Opcode = OR;
     break;
   case Mips::ATOMIC_LOAD_XOR_I8_POSTRA:
-    SEOp = Mips::SEB;
+    SEOp = SEB;
     LLVM_FALLTHROUGH;
   case Mips::ATOMIC_LOAD_XOR_I16_POSTRA:
-    Opcode = Mips::XOR;
+    Opcode = XOR;
     break;
   case Mips::ATOMIC_LOAD_UMIN_I8_POSTRA:
   case Mips::ATOMIC_LOAD_UMIN_I16_POSTRA:
@@ -439,13 +492,13 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     //  and andres, oldval, incr2
     //  nor binopres, $0, andres
     //  and newval, binopres, mask
-    BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
+    BuildMI(loopMBB, DL, TII->get(AND), BinOpRes)
         .addReg(OldVal)
         .addReg(Incr);
-    BuildMI(loopMBB, DL, TII->get(Mips::NOR), BinOpRes)
-        .addReg(Mips::ZERO)
+    BuildMI(loopMBB, DL, TII->get(NOR), BinOpRes)
+        .addReg(ZERO)
         .addReg(BinOpRes);
-    BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
+    BuildMI(loopMBB, DL, TII->get(AND), BinOpRes)
         .addReg(BinOpRes)
         .addReg(Mask);
   } else if (IsMin || IsMax) {
@@ -463,10 +516,10 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     if (STI->isLittle()) {
       // and OldVal, OldVal, Mask
       // and Incr, Incr, Mask
-      BuildMI(loopMBB, DL, TII->get(Mips::AND), OldVal)
+      BuildMI(loopMBB, DL, TII->get(AND), OldVal)
           .addReg(OldVal)
           .addReg(Mask);
-      BuildMI(loopMBB, DL, TII->get(Mips::AND), Incr).addReg(Incr).addReg(Mask);
+      BuildMI(loopMBB, DL, TII->get(AND), Incr).addReg(Incr).addReg(Mask);
     }
 
     // unsigned: sltu Scratch4, oldVal, Incr
@@ -498,7 +551,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
       //      movz BinOpRes, Incr, Scratch4, BinOpRes
       BuildMI(loopMBB, DL, TII->get(OR), BinOpRes)
           .addReg(OldVal)
-          .addReg(Mips::ZERO);
+          .addReg(ZERO);
       BuildMI(loopMBB, DL, TII->get(MOVIncr), BinOpRes)
           .addReg(Incr)
           .addReg(Scratch4)
@@ -506,7 +559,7 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     }
 
     //  and BinOpRes, BinOpRes, Mask
-    BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
+    BuildMI(loopMBB, DL, TII->get(AND), BinOpRes)
         .addReg(BinOpRes)
         .addReg(Mask);
 
@@ -516,12 +569,12 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     BuildMI(loopMBB, DL, TII->get(Opcode), BinOpRes)
         .addReg(OldVal)
         .addReg(Incr);
-    BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
+    BuildMI(loopMBB, DL, TII->get(AND), BinOpRes)
         .addReg(BinOpRes)
         .addReg(Mask);
   } else { // atomic.swap
     //  and newval, incr2, mask
-    BuildMI(loopMBB, DL, TII->get(Mips::AND), BinOpRes)
+    BuildMI(loopMBB, DL, TII->get(AND), BinOpRes)
         .addReg(Incr)
         .addReg(Mask);
   }
@@ -530,14 +583,14 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   // or StoreVal, StoreVal, BinOpRes
   // StoreVal<tied1> = sc StoreVal, 0(Ptr)
   // beq StoreVal, zero, loopMBB
-  BuildMI(loopMBB, DL, TII->get(Mips::AND), StoreVal)
+  BuildMI(loopMBB, DL, TII->get(AND), StoreVal)
     .addReg(OldVal).addReg(Mask2);
-  BuildMI(loopMBB, DL, TII->get(Mips::OR), StoreVal)
+  BuildMI(loopMBB, DL, TII->get(OR), StoreVal)
     .addReg(StoreVal).addReg(BinOpRes);
   BuildMI(loopMBB, DL, TII->get(SC), StoreVal)
     .addReg(StoreVal).addReg(Ptr).addImm(0);
   BuildMI(loopMBB, DL, TII->get(BEQ))
-    .addReg(StoreVal).addReg(Mips::ZERO).addMBB(loopMBB);
+    .addReg(StoreVal).addReg(ZERO).addMBB(loopMBB);
 
   //  sinkMBB:
   //    and     maskedoldval1,oldval,mask
@@ -546,12 +599,12 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
 
   sinkMBB->addSuccessor(exitMBB, BranchProbability::getOne());
 
-  BuildMI(sinkMBB, DL, TII->get(Mips::AND), Dest)
+  BuildMI(sinkMBB, DL, TII->get(AND), Dest)
     .addReg(OldVal).addReg(Mask);
-  BuildMI(sinkMBB, DL, TII->get(Mips::SRLV), Dest)
+  BuildMI(sinkMBB, DL, TII->get(SRLV), Dest)
       .addReg(Dest).addReg(ShiftAmnt);
 
-  if (STI->hasMips32r2()) {
+  if (STI->hasMips32r2() || IsNanoMips) {
     BuildMI(sinkMBB, DL, TII->get(SEOp), Dest).addReg(Dest);
   } else {
     const unsigned ShiftImm = SEOp == Mips::SEH ? 16 : 24;
@@ -581,40 +634,62 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   MachineFunction *MF = BB.getParent();
 
   const bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
+  const bool IsNanoMips = STI->hasNanoMips();
   DebugLoc DL = I->getDebugLoc();
 
   unsigned LL, SC, ZERO, BEQ, SLT, SLTu, OR, MOVN, MOVZ, SELNEZ, SELEQZ;
-
+  unsigned ADD = Mips::ADDu;
+  unsigned AND = Mips::AND;
+  unsigned NOR = Mips::NOR;
+  unsigned XOR = Mips::XOR;
+  unsigned SUB = Mips::SUBu;
   if (Size == 4) {
-    if (STI->inMicroMipsMode()) {
-      LL = STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM;
-      SC = STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM;
-      BEQ = STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM;
-      SLT = Mips::SLT_MM;
-      SLTu = Mips::SLTu_MM;
-      OR = STI->hasMips32r6() ? Mips::OR_MMR6 : Mips::OR_MM;
-      MOVN = Mips::MOVN_I_MM;
-      MOVZ = Mips::MOVZ_I_MM;
-      SELNEZ = STI->hasMips32r6() ? Mips::SELNEZ_MMR6 : Mips::SELNEZ;
-      SELEQZ = STI->hasMips32r6() ? Mips::SELEQZ_MMR6 : Mips::SELEQZ;
-    } else {
-      LL = STI->hasMips32r6()
-               ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
-               : (ArePtrs64bit ? Mips::LL64 : Mips::LL);
-      SC = STI->hasMips32r6()
-               ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
-               : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
-      BEQ = Mips::BEQ;
-      SLT = Mips::SLT;
-      SLTu = Mips::SLTu;
-      OR = Mips::OR;
-      MOVN = Mips::MOVN_I_I;
-      MOVZ = Mips::MOVZ_I_I;
-      SELNEZ = Mips::SELNEZ;
-      SELEQZ = Mips::SELEQZ;
-    }
+    if (!IsNanoMips) {
+      if (STI->inMicroMipsMode()) {
+        LL = STI->hasMips32r6() ? Mips::LL_MMR6 : Mips::LL_MM;
+        SC = STI->hasMips32r6() ? Mips::SC_MMR6 : Mips::SC_MM;
+        BEQ = STI->hasMips32r6() ? Mips::BEQC_MMR6 : Mips::BEQ_MM;
+        SLT = Mips::SLT_MM;
+        SLTu = Mips::SLTu_MM;
+        OR = STI->hasMips32r6() ? Mips::OR_MMR6 : Mips::OR_MM;
+        MOVN = Mips::MOVN_I_MM;
+        MOVZ = Mips::MOVZ_I_MM;
+        SELNEZ = STI->hasMips32r6() ? Mips::SELNEZ_MMR6 : Mips::SELNEZ;
+        SELEQZ = STI->hasMips32r6() ? Mips::SELEQZ_MMR6 : Mips::SELEQZ;
+      } else {
+        LL = STI->hasMips32r6()
+                 ? (ArePtrs64bit ? Mips::LL64_R6 : Mips::LL_R6)
+                 : (ArePtrs64bit ? Mips::LL64 : Mips::LL);
+        SC = STI->hasMips32r6()
+                 ? (ArePtrs64bit ? Mips::SC64_R6 : Mips::SC_R6)
+                 : (ArePtrs64bit ? Mips::SC64 : Mips::SC);
+        BEQ = Mips::BEQ;
+        SLT = Mips::SLT;
+        SLTu = Mips::SLTu;
+        OR = Mips::OR;
+        MOVN = Mips::MOVN_I_I;
+        MOVZ = Mips::MOVZ_I_I;
+        SELNEZ = Mips::SELNEZ;
+        SELEQZ = Mips::SELEQZ;
+      }
 
-    ZERO = Mips::ZERO;
+      ZERO = Mips::ZERO;
+    } else {
+        LL = Mips::LL_NM;
+        SC = Mips::SC_NM;
+        BEQ = Mips::BEQC_NM;
+        SLT = Mips::SLT_NM;
+        SLTu = Mips::SLTU_NM;
+        OR = Mips::OR_NM;
+        MOVN = Mips::MOVN_NM;
+        MOVZ = Mips::MOVZ_NM;
+        ZERO = Mips::ZERO_NM;
+        ADD = Mips::ADDu_NM;
+        AND = Mips::AND_NM;
+        NOR = Mips::NOR_NM;
+        XOR = Mips::XOR_NM;
+        SUB = Mips::SUB_NM;
+    }
   } else {
     LL = STI->hasMips64r6() ? Mips::LLD_R6 : Mips::LLD;
     SC = STI->hasMips64r6() ? Mips::SCD_R6 : Mips::SCD;
@@ -635,8 +710,8 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   Register Scratch = I->getOperand(3).getReg();
 
   unsigned Opcode = 0;
-  unsigned AND = 0;
-  unsigned NOR = 0;
+  unsigned ANDOp = 0;
+  unsigned NOROp = 0;
 
   bool IsOr = false;
   bool IsNand = false;
@@ -646,24 +721,24 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
 
   switch (I->getOpcode()) {
   case Mips::ATOMIC_LOAD_ADD_I32_POSTRA:
-    Opcode = Mips::ADDu;
+    Opcode = ADD;
     break;
   case Mips::ATOMIC_LOAD_SUB_I32_POSTRA:
-    Opcode = Mips::SUBu;
+    Opcode = SUB;
     break;
   case Mips::ATOMIC_LOAD_AND_I32_POSTRA:
-    Opcode = Mips::AND;
+    Opcode = AND;
     break;
   case Mips::ATOMIC_LOAD_OR_I32_POSTRA:
-    Opcode = Mips::OR;
+    Opcode = OR;
     break;
   case Mips::ATOMIC_LOAD_XOR_I32_POSTRA:
-    Opcode = Mips::XOR;
+    Opcode = XOR;
     break;
   case Mips::ATOMIC_LOAD_NAND_I32_POSTRA:
     IsNand = true;
-    AND = Mips::AND;
-    NOR = Mips::NOR;
+    ANDOp = AND;
+    NOROp = NOR;
     break;
   case Mips::ATOMIC_SWAP_I32_POSTRA:
     IsOr = true;
@@ -685,8 +760,8 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
     break;
   case Mips::ATOMIC_LOAD_NAND_I64_POSTRA:
     IsNand = true;
-    AND = Mips::AND64;
-    NOR = Mips::NOR64;
+    ANDOp = Mips::AND64;
+    NOROp = Mips::NOR64;
     break;
   case Mips::ATOMIC_SWAP_I64_POSTRA:
     IsOr = true;
@@ -784,10 +859,10 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   } else if (Opcode) {
     BuildMI(loopMBB, DL, TII->get(Opcode), Scratch).addReg(OldVal).addReg(Incr);
   } else if (IsNand) {
-    assert(AND && NOR &&
+    assert(ANDOp && NOROp &&
            "Unknown nand instruction for atomic pseudo expansion");
-    BuildMI(loopMBB, DL, TII->get(AND), Scratch).addReg(OldVal).addReg(Incr);
-    BuildMI(loopMBB, DL, TII->get(NOR), Scratch).addReg(ZERO).addReg(Scratch);
+    BuildMI(loopMBB, DL, TII->get(ANDOp), Scratch).addReg(OldVal).addReg(Incr);
+    BuildMI(loopMBB, DL, TII->get(NOROp), Scratch).addReg(ZERO).addReg(Scratch);
   } else {
     assert(IsOr && OR && "Unknown instruction for atomic pseudo expansion!");
     (void)IsOr;

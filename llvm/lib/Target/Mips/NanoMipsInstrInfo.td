@@ -801,6 +801,19 @@ def : NMPat<(atomic_store_8 addr:$a, GPR32:$v), (SB_NM GPR32:$v, addr:$a)>;
 def : NMPat<(atomic_store_16 addr:$a, GPR32:$v), (SH_NM GPR32:$v, addr:$a)>;
 def : NMPat<(atomic_store_32 addr:$a, GPR32:$v), (SW_NM GPR32:$v, addr:$a)>;
 
+def LL_NM : InstNM<(outs GPR32NMOpnd:$rd), (ins mem_simm9:$addr),
+                    "ll\t$rd, $addr", []>, InstSize32 {
+  let mayLoad = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
+def SC_NM : InstNM<(outs GPR32NMOpnd:$dst), (ins GPR32NMOpnd:$rt, mem_simm9:$addr),
+                   "sc\t$rt, $addr", []>, InstSize32 {
+  let mayStore = 1;
+  let Constraints = "$rt = $dst";
+  let hasNoSchedulingInfo = 1;
+}
+
 // Conditional Moves
 def MOVZ_NM : InstNM<(outs GPR32NMOpnd:$rd),
                      (ins GPR32NMOpnd:$rs, GPR32NMOpnd:$rt, GPR32NMOpnd:$F),
