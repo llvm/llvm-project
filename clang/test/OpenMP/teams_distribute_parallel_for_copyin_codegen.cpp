@@ -103,7 +103,7 @@ int main() {
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x i8*], align 8
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK1-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK1-NEXT:    [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[X_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[CONV]], align 4
@@ -325,7 +325,7 @@ int main() {
 // CHECK1-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x i8*], align 8
 // CHECK1-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x i8*], align 8
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK1-NEXT:    [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = bitcast i64* [[X_CASTED]] to i32*
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[CONV]], align 4
@@ -539,7 +539,7 @@ int main() {
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZTW1x
 // CHECK1-SAME: () #[[ATTR5:[0-9]+]] comdat {
-// CHECK1-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK1-NEXT:    [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK1-NEXT:    ret i32* [[TMP1]]
 //
 //
@@ -561,7 +561,7 @@ int main() {
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x i8*], align 4
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    store i32 0, i32* [[RETVAL]], align 4
-// CHECK3-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK3-NEXT:    [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[X_CASTED]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X_CASTED]], align 4
@@ -776,7 +776,7 @@ int main() {
 // CHECK3-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x i8*], align 4
 // CHECK3-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [2 x i8*], align 4
 // CHECK3-NEXT:    [[TMP:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK3-NEXT:    [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], i32* [[X_CASTED]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X_CASTED]], align 4
@@ -983,7 +983,7 @@ int main() {
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZTW1x
 // CHECK3-SAME: () #[[ATTR5:[0-9]+]] comdat {
-// CHECK3-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK3-NEXT:    [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK3-NEXT:    ret i32* [[TMP1]]
 //
 //
@@ -1177,7 +1177,7 @@ int main() {
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZTW1x
 // CHECK9-SAME: () #[[ATTR5:[0-9]+]] comdat {
-// CHECK9-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK9-NEXT:    [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK9-NEXT:    ret i32* [[TMP1]]
 //
 //

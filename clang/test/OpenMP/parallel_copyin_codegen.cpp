@@ -1106,12 +1106,12 @@ void foo() {
 // CHECK11-NEXT:    store i8 1, i8* @_ZGVZ4mainE3var, align 1
 // CHECK11-NEXT:    br label [[INIT_END3]]
 // CHECK11:       init.end3:
-// CHECK11-NEXT:    [[TMP4:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ4mainE5t_var)
-// CHECK11-NEXT:    [[TMP5:%.*]] = call [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* @_ZZ4mainE3vec)
-// CHECK11-NEXT:    [[TMP6:%.*]] = call [2 x %struct.S]* @llvm.threadlocal.address.p0a2s_struct.Ss([2 x %struct.S]* @_ZZ4mainE5s_arr)
-// CHECK11-NEXT:    [[TMP7:%.*]] = call %struct.S* @llvm.threadlocal.address.p0s_struct.Ss(%struct.S* @_ZZ4mainE3var)
+// CHECK11-NEXT:    [[TMP4:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ4mainE5t_var)
+// CHECK11-NEXT:    [[TMP5:%.*]] = call align 4 [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* align 4 @_ZZ4mainE3vec)
+// CHECK11-NEXT:    [[TMP6:%.*]] = call align 4 [2 x %struct.S]* @llvm.threadlocal.address.p0a2s_struct.Ss([2 x %struct.S]* align 4 @_ZZ4mainE5s_arr)
+// CHECK11-NEXT:    [[TMP7:%.*]] = call align 4 %struct.S* @llvm.threadlocal.address.p0s_struct.Ss(%struct.S* align 4 @_ZZ4mainE3var)
 // CHECK11-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, [2 x i32]*, [2 x %struct.S]*, %struct.S*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[TMP4]], [2 x i32]* [[TMP5]], [2 x %struct.S]* [[TMP6]], %struct.S* [[TMP7]])
-// CHECK11-NEXT:    [[TMP8:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ4mainE5t_var)
+// CHECK11-NEXT:    [[TMP8:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ4mainE5t_var)
 // CHECK11-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*), i32* [[TMP8]])
 // CHECK11-NEXT:    [[CALL4:%.*]] = call noundef i32 @_Z5tmainIiET_v()
 // CHECK11-NEXT:    store i32 [[CALL4]], i32* [[RETVAL]], align 4
@@ -1199,7 +1199,7 @@ void foo() {
 // CHECK11-NEXT:    [[TMP1:%.*]] = load [2 x i32]*, [2 x i32]** [[VEC_ADDR]], align 8
 // CHECK11-NEXT:    [[TMP2:%.*]] = load [2 x %struct.S]*, [2 x %struct.S]** [[S_ARR_ADDR]], align 8
 // CHECK11-NEXT:    [[TMP3:%.*]] = load %struct.S*, %struct.S** [[VAR_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP4:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ4mainE5t_var)
+// CHECK11-NEXT:    [[TMP4:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ4mainE5t_var)
 // CHECK11-NEXT:    [[TMP5:%.*]] = ptrtoint i32* [[TMP0]] to i64
 // CHECK11-NEXT:    [[TMP6:%.*]] = ptrtoint i32* [[TMP4]] to i64
 // CHECK11-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP5]], [[TMP6]]
@@ -1207,11 +1207,11 @@ void foo() {
 // CHECK11:       copyin.not.master:
 // CHECK11-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP0]], align 4
 // CHECK11-NEXT:    store i32 [[TMP8]], i32* [[TMP4]], align 4
-// CHECK11-NEXT:    [[TMP9:%.*]] = call [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* @_ZZ4mainE3vec)
+// CHECK11-NEXT:    [[TMP9:%.*]] = call align 4 [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* align 4 @_ZZ4mainE3vec)
 // CHECK11-NEXT:    [[TMP10:%.*]] = bitcast [2 x i32]* [[TMP9]] to i8*
 // CHECK11-NEXT:    [[TMP11:%.*]] = bitcast [2 x i32]* [[TMP1]] to i8*
 // CHECK11-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP10]], i8* align 4 [[TMP11]], i64 8, i1 false)
-// CHECK11-NEXT:    [[TMP12:%.*]] = call [2 x %struct.S]* @llvm.threadlocal.address.p0a2s_struct.Ss([2 x %struct.S]* @_ZZ4mainE5s_arr)
+// CHECK11-NEXT:    [[TMP12:%.*]] = call align 4 [2 x %struct.S]* @llvm.threadlocal.address.p0a2s_struct.Ss([2 x %struct.S]* align 4 @_ZZ4mainE5s_arr)
 // CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], [2 x %struct.S]* [[TMP12]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP13:%.*]] = bitcast [2 x %struct.S]* [[TMP2]] to %struct.S*
 // CHECK11-NEXT:    [[TMP14:%.*]] = getelementptr [[STRUCT_S:%.*]], %struct.S* [[ARRAY_BEGIN]], i64 2
@@ -1226,20 +1226,20 @@ void foo() {
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S* [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP14]]
 // CHECK11-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE1]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK11:       omp.arraycpy.done1:
-// CHECK11-NEXT:    [[TMP15:%.*]] = call %struct.S* @llvm.threadlocal.address.p0s_struct.Ss(%struct.S* @_ZZ4mainE3var)
+// CHECK11-NEXT:    [[TMP15:%.*]] = call align 4 %struct.S* @llvm.threadlocal.address.p0s_struct.Ss(%struct.S* align 4 @_ZZ4mainE3var)
 // CHECK11-NEXT:    [[CALL2:%.*]] = call noundef nonnull align 4 dereferenceable(4) %struct.S* @_ZN1SIfEaSERKS0_(%struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP15]], %struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP3]])
 // CHECK11-NEXT:    br label [[COPYIN_NOT_MASTER_END]]
 // CHECK11:       copyin.not.master.end:
 // CHECK11-NEXT:    [[TMP16:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK11-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP16]], align 4
 // CHECK11-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP17]])
-// CHECK11-NEXT:    [[TMP18:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ4mainE5t_var)
+// CHECK11-NEXT:    [[TMP18:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ4mainE5t_var)
 // CHECK11-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP18]], align 4
-// CHECK11-NEXT:    [[TMP20:%.*]] = call [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* @_ZZ4mainE3vec)
+// CHECK11-NEXT:    [[TMP20:%.*]] = call align 4 [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* align 4 @_ZZ4mainE3vec)
 // CHECK11-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[TMP20]], i64 0, i64 0
 // CHECK11-NEXT:    store i32 [[TMP19]], i32* [[ARRAYIDX]], align 4
-// CHECK11-NEXT:    [[TMP21:%.*]] = call %struct.S* @llvm.threadlocal.address.p0s_struct.Ss(%struct.S* @_ZZ4mainE3var)
-// CHECK11-NEXT:    [[TMP22:%.*]] = call [2 x %struct.S]* @llvm.threadlocal.address.p0a2s_struct.Ss([2 x %struct.S]* @_ZZ4mainE5s_arr)
+// CHECK11-NEXT:    [[TMP21:%.*]] = call align 4 %struct.S* @llvm.threadlocal.address.p0s_struct.Ss(%struct.S* align 4 @_ZZ4mainE3var)
+// CHECK11-NEXT:    [[TMP22:%.*]] = call align 4 [2 x %struct.S]* @llvm.threadlocal.address.p0a2s_struct.Ss([2 x %struct.S]* align 4 @_ZZ4mainE5s_arr)
 // CHECK11-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [2 x %struct.S], [2 x %struct.S]* [[TMP22]], i64 0, i64 0
 // CHECK11-NEXT:    [[CALL4:%.*]] = call noundef nonnull align 4 dereferenceable(4) %struct.S* @_ZN1SIfEaSERKS0_(%struct.S* noundef nonnull align 4 dereferenceable(4) [[ARRAYIDX3]], %struct.S* noundef nonnull align 4 dereferenceable(4) [[TMP21]])
 // CHECK11-NEXT:    ret void
@@ -1255,7 +1255,7 @@ void foo() {
 // CHECK11-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK11-NEXT:    store i32* [[T_VAR]], i32** [[T_VAR_ADDR]], align 8
 // CHECK11-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[T_VAR_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ4mainE5t_var)
+// CHECK11-NEXT:    [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ4mainE5t_var)
 // CHECK11-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[TMP0]] to i64
 // CHECK11-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
 // CHECK11-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
@@ -1268,7 +1268,7 @@ void foo() {
 // CHECK11-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK11-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
 // CHECK11-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB1]], i32 [[TMP7]])
-// CHECK11-NEXT:    [[TMP8:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ4mainE5t_var)
+// CHECK11-NEXT:    [[TMP8:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ4mainE5t_var)
 // CHECK11-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
 // CHECK11-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP9]], 1
 // CHECK11-NEXT:    store i32 [[INC]], i32* [[TMP8]], align 4
@@ -1303,12 +1303,12 @@ void foo() {
 // CHECK11-NEXT:    store i8 1, i8* bitcast (i64* @_ZGVZ5tmainIiET_vE3var to i8*), align 8
 // CHECK11-NEXT:    br label [[INIT_END3]]
 // CHECK11:       init.end3:
-// CHECK11-NEXT:    [[TMP4:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ5tmainIiET_vE5t_var)
-// CHECK11-NEXT:    [[TMP5:%.*]] = call [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* @_ZZ5tmainIiET_vE3vec)
-// CHECK11-NEXT:    [[TMP6:%.*]] = call [2 x %struct.S.0]* @llvm.threadlocal.address.p0a2s_struct.S.0s([2 x %struct.S.0]* @_ZZ5tmainIiET_vE5s_arr)
-// CHECK11-NEXT:    [[TMP7:%.*]] = call %struct.S.0* @llvm.threadlocal.address.p0s_struct.S.0s(%struct.S.0* @_ZZ5tmainIiET_vE3var)
+// CHECK11-NEXT:    [[TMP4:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @_ZZ5tmainIiET_vE5t_var)
+// CHECK11-NEXT:    [[TMP5:%.*]] = call align 128 [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* align 128 @_ZZ5tmainIiET_vE3vec)
+// CHECK11-NEXT:    [[TMP6:%.*]] = call align 128 [2 x %struct.S.0]* @llvm.threadlocal.address.p0a2s_struct.S.0s([2 x %struct.S.0]* align 128 @_ZZ5tmainIiET_vE5s_arr)
+// CHECK11-NEXT:    [[TMP7:%.*]] = call align 128 %struct.S.0* @llvm.threadlocal.address.p0s_struct.S.0s(%struct.S.0* align 128 @_ZZ5tmainIiET_vE3var)
 // CHECK11-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, [2 x i32]*, [2 x %struct.S.0]*, %struct.S.0*)* @.omp_outlined..3 to void (i32*, i32*, ...)*), i32* [[TMP4]], [2 x i32]* [[TMP5]], [2 x %struct.S.0]* [[TMP6]], %struct.S.0* [[TMP7]])
-// CHECK11-NEXT:    [[TMP8:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ5tmainIiET_vE5t_var)
+// CHECK11-NEXT:    [[TMP8:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @_ZZ5tmainIiET_vE5t_var)
 // CHECK11-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*), i32* [[TMP8]])
 // CHECK11-NEXT:    call void @_ZN1SIiED1Ev(%struct.S.0* noundef nonnull align 4 dereferenceable(4) [[TEST]]) #[[ATTR4]]
 // CHECK11-NEXT:    ret i32 0
@@ -1321,7 +1321,7 @@ void foo() {
 // CHECK11-NEXT:    store %struct.S* [[THIS]], %struct.S** [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK11-NEXT:    [[TMP0:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK11-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* [[TMP0]], align 128
 // CHECK11-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
 // CHECK11-NEXT:    store float [[CONV]], float* [[F]], align 4
@@ -1347,7 +1347,7 @@ void foo() {
 // CHECK11-NEXT:    [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP0:%.*]] = load float, float* [[A_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK11-NEXT:    [[TMP1:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK11-NEXT:    [[TMP2:%.*]] = load volatile i32, i32* [[TMP1]], align 128
 // CHECK11-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP2]] to float
 // CHECK11-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[CONV]]
@@ -1434,7 +1434,7 @@ void foo() {
 // CHECK11-NEXT:    [[TMP1:%.*]] = load [2 x i32]*, [2 x i32]** [[VEC_ADDR]], align 8
 // CHECK11-NEXT:    [[TMP2:%.*]] = load [2 x %struct.S.0]*, [2 x %struct.S.0]** [[S_ARR_ADDR]], align 8
 // CHECK11-NEXT:    [[TMP3:%.*]] = load %struct.S.0*, %struct.S.0** [[VAR_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP4:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ5tmainIiET_vE5t_var)
+// CHECK11-NEXT:    [[TMP4:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @_ZZ5tmainIiET_vE5t_var)
 // CHECK11-NEXT:    [[TMP5:%.*]] = ptrtoint i32* [[TMP0]] to i64
 // CHECK11-NEXT:    [[TMP6:%.*]] = ptrtoint i32* [[TMP4]] to i64
 // CHECK11-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP5]], [[TMP6]]
@@ -1442,11 +1442,11 @@ void foo() {
 // CHECK11:       copyin.not.master:
 // CHECK11-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP0]], align 128
 // CHECK11-NEXT:    store i32 [[TMP8]], i32* [[TMP4]], align 128
-// CHECK11-NEXT:    [[TMP9:%.*]] = call [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* @_ZZ5tmainIiET_vE3vec)
+// CHECK11-NEXT:    [[TMP9:%.*]] = call align 128 [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* align 128 @_ZZ5tmainIiET_vE3vec)
 // CHECK11-NEXT:    [[TMP10:%.*]] = bitcast [2 x i32]* [[TMP9]] to i8*
 // CHECK11-NEXT:    [[TMP11:%.*]] = bitcast [2 x i32]* [[TMP1]] to i8*
 // CHECK11-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 128 [[TMP10]], i8* align 128 [[TMP11]], i64 8, i1 false)
-// CHECK11-NEXT:    [[TMP12:%.*]] = call [2 x %struct.S.0]* @llvm.threadlocal.address.p0a2s_struct.S.0s([2 x %struct.S.0]* @_ZZ5tmainIiET_vE5s_arr)
+// CHECK11-NEXT:    [[TMP12:%.*]] = call align 128 [2 x %struct.S.0]* @llvm.threadlocal.address.p0a2s_struct.S.0s([2 x %struct.S.0]* align 128 @_ZZ5tmainIiET_vE5s_arr)
 // CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[TMP12]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP13:%.*]] = bitcast [2 x %struct.S.0]* [[TMP2]] to %struct.S.0*
 // CHECK11-NEXT:    [[TMP14:%.*]] = getelementptr [[STRUCT_S_0:%.*]], %struct.S.0* [[ARRAY_BEGIN]], i64 2
@@ -1461,20 +1461,20 @@ void foo() {
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq %struct.S.0* [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP14]]
 // CHECK11-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE1]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK11:       omp.arraycpy.done1:
-// CHECK11-NEXT:    [[TMP15:%.*]] = call %struct.S.0* @llvm.threadlocal.address.p0s_struct.S.0s(%struct.S.0* @_ZZ5tmainIiET_vE3var)
+// CHECK11-NEXT:    [[TMP15:%.*]] = call align 128 %struct.S.0* @llvm.threadlocal.address.p0s_struct.S.0s(%struct.S.0* align 128 @_ZZ5tmainIiET_vE3var)
 // CHECK11-NEXT:    [[CALL2:%.*]] = call noundef nonnull align 4 dereferenceable(4) %struct.S.0* @_ZN1SIiEaSERKS0_(%struct.S.0* noundef nonnull align 4 dereferenceable(4) [[TMP15]], %struct.S.0* noundef nonnull align 4 dereferenceable(4) [[TMP3]])
 // CHECK11-NEXT:    br label [[COPYIN_NOT_MASTER_END]]
 // CHECK11:       copyin.not.master.end:
 // CHECK11-NEXT:    [[TMP16:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK11-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP16]], align 4
 // CHECK11-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB1]], i32 [[TMP17]])
-// CHECK11-NEXT:    [[TMP18:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ5tmainIiET_vE5t_var)
+// CHECK11-NEXT:    [[TMP18:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @_ZZ5tmainIiET_vE5t_var)
 // CHECK11-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP18]], align 128
-// CHECK11-NEXT:    [[TMP20:%.*]] = call [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* @_ZZ5tmainIiET_vE3vec)
+// CHECK11-NEXT:    [[TMP20:%.*]] = call align 128 [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* align 128 @_ZZ5tmainIiET_vE3vec)
 // CHECK11-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[TMP20]], i64 0, i64 0
 // CHECK11-NEXT:    store i32 [[TMP19]], i32* [[ARRAYIDX]], align 128
-// CHECK11-NEXT:    [[TMP21:%.*]] = call %struct.S.0* @llvm.threadlocal.address.p0s_struct.S.0s(%struct.S.0* @_ZZ5tmainIiET_vE3var)
-// CHECK11-NEXT:    [[TMP22:%.*]] = call [2 x %struct.S.0]* @llvm.threadlocal.address.p0a2s_struct.S.0s([2 x %struct.S.0]* @_ZZ5tmainIiET_vE5s_arr)
+// CHECK11-NEXT:    [[TMP21:%.*]] = call align 128 %struct.S.0* @llvm.threadlocal.address.p0s_struct.S.0s(%struct.S.0* align 128 @_ZZ5tmainIiET_vE3var)
+// CHECK11-NEXT:    [[TMP22:%.*]] = call align 128 [2 x %struct.S.0]* @llvm.threadlocal.address.p0a2s_struct.S.0s([2 x %struct.S.0]* align 128 @_ZZ5tmainIiET_vE5s_arr)
 // CHECK11-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [2 x %struct.S.0], [2 x %struct.S.0]* [[TMP22]], i64 0, i64 0
 // CHECK11-NEXT:    [[CALL4:%.*]] = call noundef nonnull align 4 dereferenceable(4) %struct.S.0* @_ZN1SIiEaSERKS0_(%struct.S.0* noundef nonnull align 4 dereferenceable(4) [[ARRAYIDX3]], %struct.S.0* noundef nonnull align 4 dereferenceable(4) [[TMP21]])
 // CHECK11-NEXT:    ret void
@@ -1490,7 +1490,7 @@ void foo() {
 // CHECK11-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK11-NEXT:    store i32* [[T_VAR]], i32** [[T_VAR_ADDR]], align 8
 // CHECK11-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[T_VAR_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ5tmainIiET_vE5t_var)
+// CHECK11-NEXT:    [[TMP1:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @_ZZ5tmainIiET_vE5t_var)
 // CHECK11-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[TMP0]] to i64
 // CHECK11-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
 // CHECK11-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
@@ -1513,7 +1513,7 @@ void foo() {
 // CHECK11-NEXT:    store %struct.S.0* [[THIS]], %struct.S.0** [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[THIS1:%.*]] = load %struct.S.0*, %struct.S.0** [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[THIS1]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK11-NEXT:    [[TMP0:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK11-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* [[TMP0]], align 128
 // CHECK11-NEXT:    store i32 [[TMP1]], i32* [[F]], align 4
 // CHECK11-NEXT:    ret void
@@ -1538,7 +1538,7 @@ void foo() {
 // CHECK11-NEXT:    [[THIS1:%.*]] = load %struct.S.0*, %struct.S.0** [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], %struct.S.0* [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK11-NEXT:    [[TMP1:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK11-NEXT:    [[TMP2:%.*]] = load volatile i32, i32* [[TMP1]], align 128
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP2]]
 // CHECK11-NEXT:    store i32 [[ADD]], i32* [[F]], align 4
@@ -1547,7 +1547,7 @@ void foo() {
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZTW1g
 // CHECK11-SAME: () #[[ATTR9:[0-9]+]] comdat {
-// CHECK11-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK11-NEXT:    [[TMP1:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK11-NEXT:    ret i32* [[TMP1]]
 //
 //
@@ -1572,7 +1572,7 @@ void foo() {
 // CHECK13-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK13-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK13-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[G_ADDR]], align 8
-// CHECK13-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK13-NEXT:    [[TMP1:%.*]] = call align 128 i32*  @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK13-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[TMP0]] to i64
 // CHECK13-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
 // CHECK13-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
@@ -1585,7 +1585,7 @@ void foo() {
 // CHECK13-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK13-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
 // CHECK13-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP7]])
-// CHECK13-NEXT:    [[TMP8:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK13-NEXT:    [[TMP8:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK13-NEXT:    store volatile i32 1, i32* [[TMP8]], align 128
 // CHECK13-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(%class.anon.0* noundef nonnull align 1 dereferenceable(1) [[REF_TMP]])
 // CHECK13-NEXT:    ret void
@@ -1593,7 +1593,7 @@ void foo() {
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZTW1g
 // CHECK13-SAME: () #[[ATTR6:[0-9]+]] comdat {
-// CHECK13-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK13-NEXT:    [[TMP1:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK13-NEXT:    ret i32* [[TMP1]]
 //
 //
@@ -1616,7 +1616,7 @@ void foo() {
 // CHECK14-NEXT:    store i8* [[DOTBLOCK_DESCRIPTOR]], i8** [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
 // CHECK14-NEXT:    [[BLOCK:%.*]] = bitcast i8* [[DOTBLOCK_DESCRIPTOR]] to <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>*
 // CHECK14-NEXT:    store <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>* [[BLOCK]], <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>** [[BLOCK_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK14-NEXT:    [[TMP0:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK14-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[TMP0]])
 // CHECK14-NEXT:    ret void
 //
@@ -1631,7 +1631,7 @@ void foo() {
 // CHECK14-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK14-NEXT:    store i32* [[G]], i32** [[G_ADDR]], align 8
 // CHECK14-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[G_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK14-NEXT:    [[TMP1:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK14-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[TMP0]] to i64
 // CHECK14-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
 // CHECK14-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
@@ -1644,7 +1644,7 @@ void foo() {
 // CHECK14-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK14-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
 // CHECK14-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP7]])
-// CHECK14-NEXT:    [[TMP8:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK14-NEXT:    [[TMP8:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK14-NEXT:    store volatile i32 1, i32* [[TMP8]], align 128
 // CHECK14-NEXT:    [[TMP9:%.*]] = load i8*, i8** getelementptr inbounds ([[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], %struct.__block_literal_generic* bitcast ({ i8**, i32, i32, i8*, %struct.__block_descriptor* }* @__block_literal_global.2 to %struct.__block_literal_generic*), i32 0, i32 3), align 8
 // CHECK14-NEXT:    [[TMP10:%.*]] = bitcast i8* [[TMP9]] to void (i8*)*
@@ -1660,14 +1660,14 @@ void foo() {
 // CHECK14-NEXT:    store i8* [[DOTBLOCK_DESCRIPTOR]], i8** [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
 // CHECK14-NEXT:    [[BLOCK:%.*]] = bitcast i8* [[DOTBLOCK_DESCRIPTOR]] to <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>*
 // CHECK14-NEXT:    store <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>* [[BLOCK]], <{ i8*, i32, i32, i8*, %struct.__block_descriptor* }>** [[BLOCK_ADDR]], align 8
-// CHECK14-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK14-NEXT:    [[TMP0:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK14-NEXT:    store volatile i32 2, i32* [[TMP0]], align 128
 // CHECK14-NEXT:    ret void
 //
 //
 // CHECK14-LABEL: define {{[^@]+}}@_ZTW1g
 // CHECK14-SAME: () #[[ATTR7:[0-9]+]] comdat {
-// CHECK14-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @g)
+// CHECK14-NEXT:    [[TMP1:%.*]] = call align 128 i32* @llvm.threadlocal.address.p0i32(i32* align 128 @g)
 // CHECK14-NEXT:    ret i32* [[TMP1]]
 //
 //
@@ -1690,8 +1690,8 @@ void foo() {
 // CHECK15-NEXT:    store i8 1, i8* @_ZGVZ10array_funcvE1s, align 1
 // CHECK15-NEXT:    br label [[INIT_END]]
 // CHECK15:       init.end:
-// CHECK15-NEXT:    [[TMP2:%.*]] = call [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* @_ZZ10array_funcvE1a)
-// CHECK15-NEXT:    [[TMP3:%.*]] = call [2 x %struct.St]* @llvm.threadlocal.address.p0a2s_struct.Sts([2 x %struct.St]* @_ZZ10array_funcvE1s)
+// CHECK15-NEXT:    [[TMP2:%.*]] = call align 4 [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* align 4 @_ZZ10array_funcvE1a)
+// CHECK15-NEXT:    [[TMP3:%.*]] = call align 16 [2 x %struct.St]* @llvm.threadlocal.address.p0a2s_struct.Sts([2 x %struct.St]* align 16 @_ZZ10array_funcvE1s)
 // CHECK15-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [2 x i32]*, [2 x %struct.St]*)* @.omp_outlined. to void (i32*, i32*, ...)*), [2 x i32]* [[TMP2]], [2 x %struct.St]* [[TMP3]])
 // CHECK15-NEXT:    ret void
 //
@@ -1745,7 +1745,7 @@ void foo() {
 // CHECK15-NEXT:    store [2 x %struct.St]* [[S]], [2 x %struct.St]** [[S_ADDR]], align 8
 // CHECK15-NEXT:    [[TMP0:%.*]] = load [2 x i32]*, [2 x i32]** [[A_ADDR]], align 8
 // CHECK15-NEXT:    [[TMP1:%.*]] = load [2 x %struct.St]*, [2 x %struct.St]** [[S_ADDR]], align 8
-// CHECK15-NEXT:    [[TMP2:%.*]] = call [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* @_ZZ10array_funcvE1a)
+// CHECK15-NEXT:    [[TMP2:%.*]] = call align 4 [2 x i32]* @llvm.threadlocal.address.p0a2i32([2 x i32]* align 4 @_ZZ10array_funcvE1a)
 // CHECK15-NEXT:    [[TMP3:%.*]] = ptrtoint [2 x i32]* [[TMP0]] to i64
 // CHECK15-NEXT:    [[TMP4:%.*]] = ptrtoint [2 x i32]* [[TMP2]] to i64
 // CHECK15-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP3]], [[TMP4]]
@@ -1754,7 +1754,7 @@ void foo() {
 // CHECK15-NEXT:    [[TMP6:%.*]] = bitcast [2 x i32]* [[TMP2]] to i8*
 // CHECK15-NEXT:    [[TMP7:%.*]] = bitcast [2 x i32]* [[TMP0]] to i8*
 // CHECK15-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP6]], i8* align 4 [[TMP7]], i64 8, i1 false)
-// CHECK15-NEXT:    [[TMP8:%.*]] = call [2 x %struct.St]* @llvm.threadlocal.address.p0a2s_struct.Sts([2 x %struct.St]* @_ZZ10array_funcvE1s)
+// CHECK15-NEXT:    [[TMP8:%.*]] = call align 16 [2 x %struct.St]* @llvm.threadlocal.address.p0a2s_struct.Sts([2 x %struct.St]* align 16 @_ZZ10array_funcvE1s)
 // CHECK15-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.St], [2 x %struct.St]* [[TMP8]], i32 0, i32 0
 // CHECK15-NEXT:    [[TMP9:%.*]] = bitcast [2 x %struct.St]* [[TMP1]] to %struct.St*
 // CHECK15-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_ST:%.*]], %struct.St* [[ARRAY_BEGIN]], i64 2
@@ -1814,7 +1814,7 @@ void foo() {
 // CHECK16-SAME: () #[[ATTR0:[0-9]+]] section ".text.startup" {
 // CHECK16-NEXT:  entry:
 // CHECK16-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z6t_initv()
-// CHECK16-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @t)
+// CHECK16-NEXT:    [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @t)
 // CHECK16-NEXT:    store i32 [[CALL]], i32* [[TMP0]], align 4
 // CHECK16-NEXT:    ret void
 //
@@ -1871,7 +1871,7 @@ void foo() {
 // CHECK16-LABEL: define {{[^@]+}}@_ZTW1t
 // CHECK16-SAME: () #[[ATTR5:[0-9]+]] comdat {
 // CHECK16-NEXT:    call void @_ZTH1t()
-// CHECK16-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @t)
+// CHECK16-NEXT:    [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @t)
 // CHECK16-NEXT:    ret i32* [[TMP1]]
 //
 //
