@@ -105,11 +105,6 @@ static constexpr const char *InitFileWarning =
     "and\n"
     "accept the security risk.";
 
-constexpr const char *CommandInterpreter::g_no_argument = "<no-argument>";
-constexpr const char *CommandInterpreter::g_need_argument = "<need-argument>";
-constexpr const char *CommandInterpreter::g_argument = "<argument>";
-
-
 #define LLDB_PROPERTIES_interpreter
 #include "InterpreterProperties.inc"
 
@@ -1639,7 +1634,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
   std::string value;
   for (const auto &entry : *option_arg_vector) {
     std::tie(option, value_type, value) = entry;
-    if (option == g_argument) {
+    if (option == "<argument>") {
       result_str.Printf(" %s", value.c_str());
       continue;
     }
@@ -1661,33 +1656,11 @@ CommandObject *CommandInterpreter::BuildAliasResult(
                                    index);
       return nullptr;
     } else {
-      const Args::ArgEntry &entry = cmd_args[index];
-      size_t strpos = raw_input_string.find(entry.c_str());
-      const char quote_char = entry.GetQuoteChar();
-      if (strpos != std::string::npos) {
-        const size_t start_fudge = quote_char == '\0' ? 0 : 1;
-        const size_t len_fudge = quote_char == '\0' ? 0 : 2;
-
-        // Make sure we aren't going outside the bounds of the cmd string:
-        if (strpos < start_fudge) {
-          result.AppendError("Unmatched quote at command beginning.");
-          return nullptr;
-        }
-        llvm::StringRef arg_text = entry.ref();
-        if (strpos - start_fudge + arg_text.size() + len_fudge 
-            > raw_input_string.size()) {
-          result.AppendError("Unmatched quote at command end.");
-          return nullptr;  
-        }
+      size_t strpos = raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
+      if (strpos != std::string::npos)
         raw_input_string = raw_input_string.erase(
-            strpos - start_fudge, 
-            strlen(cmd_args.GetArgumentAtIndex(index)) + len_fudge);
-      }
-      if (quote_char == '\0')
-        result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
-      else
-        result_str.Printf("%c%s%c", quote_char, 
-                          entry.c_str(), quote_char);
+            strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
+      result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
     }
   }
 
@@ -1938,6 +1911,13 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     return true;
   }
 
+  Status error(PreprocessCommand(command_string));
+
+  if (error.Fail()) {
+    result.AppendError(error.AsCString());
+    return false;
+  }
+
   // Phase 1.
 
   // Before we do ANY kind of argument processing, we need to figure out what
@@ -1954,20 +1934,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // input or not.
 
   CommandObject *cmd_obj = ResolveCommandImpl(command_string, result);
-
-  // We have to preprocess the whole command string for Raw commands, since we 
-  // don't know the structure of the command.  For parsed commands, we only
-  // treat backticks as quote characters specially.
-  // FIXME: We probably want to have raw commands do their own preprocessing.
-  // For instance, I don't think people expect substitution in expr expressions. 
-  if (cmd_obj && cmd_obj->WantsRawCommandString()) {
-    Status error(PreprocessCommand(command_string));
-
-    if (error.Fail()) {
-      result.AppendError(error.AsCString());
-      return false;
-    }
-  }
 
   // Although the user may have abbreviated the command, the command_string now
   // has the command expanded to the full name.  For example, if the input was
@@ -2197,7 +2163,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
     std::string value;
     for (const auto &option_entry : *option_arg_vector) {
       std::tie(option, value_type, value) = option_entry;
-      if (option == g_argument) {
+      if (option == "<argument>") {
         if (!wants_raw_input || (value != "--")) {
           // Since we inserted this above, make sure we don't insert it twice
           new_args.AppendArgument(value);
@@ -2208,7 +2174,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
       if (value_type != OptionParser::eOptionalArgument)
         new_args.AppendArgument(option);
 
-      if (value == g_no_argument)
+      if (value == "<no-argument>")
         continue;
 
       int index = GetOptionArgumentPosition(value.c_str());
