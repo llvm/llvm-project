@@ -10,6 +10,7 @@
     - [3.2.3 Variable Location in Memory](#variable-location-in-memory)
     - [3.2.4 Variable Spread Across Different Locations](#variable-spread-across-different-locations)
     - [3.2.5 Offsetting a Composite Location](#offsetting-a-composite-location)
+    - [3.2.6 Pointer to Member](#pointer-to-member)
   - [3.3 Limitations](#limitations)
 - [4. Extension Solution](#extension-solution)
   - [4.1 Location Description](#location-description)
@@ -442,6 +443,192 @@ the offset. For example:
 
 This illustrates that operations on stack values are not composable with
 operations on location descriptions.
+
+### 3.2.6 Pointer to Member
+
+> NOTE: Without loss of generality, DWARF 4 is used in this example as full
+> support for DWARF 5 is not present in the versions of the tools used. No
+> feature of DWARF 5 provides a remedy for this issue.
+
+This example highlights the inability of DWARF 5 to describe C++
+pointer-to-member use semantics.
+
+The mechanism DWARF 5 provides for describing pointer-to-member use is
+`DW_AT_use_location`, which is defined as encoding a location description which
+computes the address of the member pointed to by a pointer-to-member, given the
+pointer-to-member object and the address of the containing object.
+
+That is, when a debug agent wishes to evaluate a pointer-to-member access
+operation, it first pushes two values onto the DWARF expression stack:
+
+* The pointer-to-member object
+* The address of the containing object
+
+It then evaluates the location description associated with the
+`DW_AT_use_location` of the pointer-to-member type, and interprets the result
+as the address of the member pointed to by the pointer-to-member.
+
+Consider the following C++ source file `s.cc`:
+
+```cpp
+struct s {
+  int m;
+  int n;
+};
+int s::* p;
+```
+
+When compiled with GCC and inspected with dwarfdump:
+
+```
+$ g++ -gdwarf-5 -O3 -c s.cc
+$ dwarfdump s.o
+< 1><0x0000001e>    DW_TAG_structure_type
+                      DW_AT_name                  s
+                      DW_AT_byte_size             0x00000008
+                      DW_AT_sibling               <0x0000003c>
+< 2><0x00000029>      DW_TAG_member
+                        DW_AT_name                  m
+                        DW_AT_type                  <0x0000003c>
+                        DW_AT_data_member_location  0
+< 2><0x00000032>      DW_TAG_member
+                        DW_AT_name                  n
+                        DW_AT_type                  <0x0000003c>
+                        DW_AT_data_member_location  4
+< 1><0x0000003c>    DW_TAG_base_type
+                      DW_AT_byte_size             0x00000004
+                      DW_AT_encoding              DW_ATE_signed
+                      DW_AT_name                  int
+< 1><0x00000043>    DW_TAG_ptr_to_member_type
+                      DW_AT_containing_type       <0x0000001e>
+                      DW_AT_type                  <0x0000003c>
+                      DW_AT_use_location          len 0x0001: 22: DW_OP_plus
+< 1><0x0000004e>    DW_TAG_variable
+                      DW_AT_name                  p
+                      DW_AT_type                  <0x00000043>
+                      DW_AT_external              yes(1)
+                      DW_AT_location              len 0x0009: 030000000000000000: DW_OP_addr 0x00000000
+```
+
+Note the location description for `DW_AT_use_location` is `DW_OP_plus`, which
+reflects the GCC implementation of the pointer-to-member as an integral byte
+offset within the containing object. For example, the value of `&s::m` in this
+implementation is `offsetof(s, m)` and the value of `&s::n` is `offsetof(s, n)`:
+
+```cpp
+struct s {
+    int m;   // offsetof(s, m) == 0
+    int n;   // offsetof(s, n) == 4
+} o;         // &o == 0xff00
+int s::* p;
+int *i;
+
+p = &s::m;   // p == 0
+i = &(o.*p); // i == 0xff00 + 0
+p = &s::n;   // p == 4
+i = &(o.*p); // i == 0xff00 + 4
+```
+
+The expression `DW_OP_plus` accurately describes this implementation so long as
+the entire containing object resides in memory in the default address space.
+
+However, what if the containing object or the member pointed to are not at any
+default address space address?
+
+The compiler may store the containing object in memory in any address space,
+in a register, recompute its value at each use, or compose any of these in
+arbitrary ways.
+
+The richness of the existing DWARF 5 expression language is a reflection of the
+diversity of possible implementation strategies and optimization choices
+affecting the location of an object in a program, and (modulo address spaces)
+it can describe all of these locations for variables. However, the moment we
+look at a pointer-to-member use we are restricted to only objects residing in a
+contiguous piece of memory in the default address space.
+
+To demonstrate the problem, consider a program which GCC chooses to optimize in
+such a way that the containing object is not in memory at all:
+
+ptm.h:
+```cpp
+struct s {
+    int m;
+    int n;
+};
+void i(int);
+extern int t;
+void f(s x, int s::* p);
+```
+
+ptm.cc:
+```cpp
+#include "ptm.h"
+void f(s x, int s::* p) {
+    for (int a = 0; a < t; ++a) {
+        x.m += a + x.n;
+        i(x.*p);
+    }
+}
+```
+
+main.cc:
+```cpp
+#include "ptm.h"
+int t = 100;
+void i(int) {}
+int main(int argc, char *argv[]) {
+    s x = { 0, 1 };
+    f(x, &s::m);
+}
+```
+
+When compiled and run under GDB:
+
+```
+$ g++-9 -gdwarf-4 -O3 -c main.cc -o main.o
+$ g++-9 -gdwarf-4 -O3 -c ptm.cc -o ptm.o
+$ g++-9 main.o ptm.o -o use_location.out
+$ gdb ./use_location.out
+(gdb) maint set dwarf always-disassemble
+(gdb) b ptm.cc:5
+Breakpoint 1 at 0x119e: file ptm.cc, line 5.
+(gdb) r
+
+Breakpoint 1, f (x=..., p=<optimized out>) at ptm.cc:5
+5               i(x.*p);
+```
+
+Note that the compiler has promoted the entire object `x` into register `rdi`
+for the body of the loop:
+
+```
+(gdb) info addr x
+Symbol "x" is multi-location:
+  Range 0x555555555160-0x5555555551af: a complex DWARF expression:
+     0: DW_OP_reg5 [$rdi]
+
+  Range 0x5555555551af-0x5555555551ba: a complex DWARF expression:
+     0: DW_OP_fbreg -56
+
+.
+(gdb) p $pc
+$1 = (void (*)(void)) 0x55555555519e <f(s, int s::*)+62>
+```
+
+And so it is impossible to interpret `DW_OP_use_location` in this case:
+
+```
+(gdb) p x.*p
+Address requested for identifier "x" which is in register $rdi
+```
+
+With location descriptions on the stack, the definition of `DW_OP_use_location`
+can be modified by replacing every instance of "address" with "location
+description", as is described in [A.5 Type Entries](#a-5-type-entries).
+
+To implement the fully generalized version of this attribute, GCC would only
+need to change the expression from `DW_OP_plus` to `DW_OP_swap,
+DW_OP_LLVM_offset`.
 
 ## 3.3 Limitations
 
