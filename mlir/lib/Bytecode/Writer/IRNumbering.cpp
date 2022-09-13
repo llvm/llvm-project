@@ -39,6 +39,7 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
     // references. This could potentially be useful for optimizing things like
     // file locations.
   }
+  void writeOwnedBlob(ArrayRef<char> blob) override {}
 
   /// The parent numbering state that is populated by this writer.
   IRNumberingState &state;

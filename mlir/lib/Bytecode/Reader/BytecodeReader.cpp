@@ -887,6 +887,17 @@ public:
     return stringReader.parseString(reader, result);
   }
 
+  LogicalResult readBlob(ArrayRef<char> &result) override {
+    uint64_t dataSize;
+    ArrayRef<uint8_t> data;
+    if (failed(reader.parseVarInt(dataSize)) ||
+        failed(reader.parseBytes(dataSize, data)))
+      return failure();
+    result = llvm::makeArrayRef(reinterpret_cast<const char *>(data.data()),
+                                data.size());
+    return success();
+  }
+
 private:
   AttrTypeReader &attrTypeReader;
   StringSectionReader &stringReader;
