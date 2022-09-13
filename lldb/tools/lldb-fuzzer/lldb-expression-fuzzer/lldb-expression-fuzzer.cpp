@@ -35,7 +35,7 @@ using namespace lldb;
 using namespace llvm;
 using namespace clang_fuzzer;
 
-char *target_path;
+const char *target_path = nullptr;
 
 void ReportError(llvm::StringRef message) {
   WithColor::error() << message << '\n';
@@ -47,10 +47,24 @@ extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
   signal(SIGPIPE, SIG_IGN);
 #endif
 
-  target_path = ::getenv("LLDB_FUZZER_TARGET");
+  // `target_path` can be set by either the "--lldb_fuzzer_target" commandline
+  // flag or the "LLDB_FUZZER_TARGET" environment variable. Arbitrarily, we
+  // always do flag parsing and only check the environment variable if the
+  // commandline flag is not set.
+  for (int i = 1; i < *argc; ++i) {
+    auto this_arg = llvm::StringRef((*argv)[i]);
+    WithColor::note() << "argv[" << i << "] = " << this_arg << "\n";
+    if (this_arg.consume_front("--lldb_fuzzer_target="))
+      target_path = this_arg.data();
+  }
+
   if (!target_path)
-    ReportError(
-        "no target path specified in with the LLDB_FUZZER_TARGET variable");
+    target_path = ::getenv("LLDB_FUZZER_TARGET");
+
+  if (!target_path)
+    ReportError("No target path specified. Set one either as an environment "
+                "variable (i.e. LLDB_FUZZER_TARGET=target_path) or pass as a "
+                "command line flag (i.e. --lldb_fuzzer_target=target_path).");
 
   if (!sys::fs::exists(target_path))
     ReportError(formatv("target path '{0}' does not exist", target_path).str());
