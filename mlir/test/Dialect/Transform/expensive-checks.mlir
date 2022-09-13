@@ -1,8 +1,8 @@
 // RUN: mlir-opt --test-transform-dialect-interpreter='enable-expensive-checks=1' --split-input-file --verify-diagnostics %s
 
-// expected-note @below {{ancestor op}}
+// expected-note @below {{ancestor payload op}}
 func.func @func() {
-  // expected-note @below {{nested op}}
+  // expected-note @below {{nested payload op}}
   return
 }
 
@@ -17,11 +17,12 @@ transform.with_pdl_patterns {
 
   sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    // expected-note @below {{other handle}}
+    // expected-note @below {{handle to invalidated ops}}
     %0 = pdl_match @return in %arg1
     %1 = get_closest_isolated_parent %0
-    // expected-error @below {{invalidated the handle to payload operations nested in the payload operation associated with its operand #0}}
+    // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
     test_consume_operand %1
+    // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
     test_print_remark_at_operand %0, "remark"
   }
 }
