@@ -2495,7 +2495,7 @@ public:
       // what is written inside the pointer.
       bool CanDereference = true;
       if (const auto *SR = L->getRegionAs<SymbolicRegion>()) {
-        if (SR->getSymbol()->getType()->getPointeeType()->isVoidType())
+        if (SR->getPointeeStaticType()->isVoidType())
           CanDereference = false;
       } else if (L->getRegionAs<AllocaRegion>())
         CanDereference = false;
