@@ -543,6 +543,12 @@ public:
     emitter.emitVarInt(stringSection.insert(str));
   }
 
+  void writeOwnedBlob(ArrayRef<char> blob) override {
+    emitter.emitVarInt(blob.size());
+    emitter.emitOwnedBlob(ArrayRef<uint8_t>(
+        reinterpret_cast<const uint8_t *>(blob.data()), blob.size()));
+  }
+
 private:
   EncodingEmitter &emitter;
   IRNumberingState &numberingState;
