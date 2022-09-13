@@ -17,6 +17,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64InstPrinter.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -311,9 +312,26 @@ const uint32_t *AArch64RegisterInfo::getWindowsStackProbePreservedMask() const {
 llvm::Optional<std::string>
 AArch64RegisterInfo::explainReservedReg(const MachineFunction &MF,
                                         MCRegister PhysReg) const {
-  if (hasBasePointer(MF) &&
-      (PhysReg == AArch64::X19 || PhysReg == AArch64::W19))
+  if (hasBasePointer(MF) && MCRegisterInfo::regsOverlap(PhysReg, AArch64::X19))
     return std::string("X19 is used as the frame base pointer register.");
+
+  if (MF.getSubtarget<AArch64Subtarget>().isWindowsArm64EC()) {
+    bool warn = false;
+    if (MCRegisterInfo::regsOverlap(PhysReg, AArch64::X13) ||
+        MCRegisterInfo::regsOverlap(PhysReg, AArch64::X14) ||
+        MCRegisterInfo::regsOverlap(PhysReg, AArch64::X23) ||
+        MCRegisterInfo::regsOverlap(PhysReg, AArch64::X24) ||
+        MCRegisterInfo::regsOverlap(PhysReg, AArch64::X28))
+      warn = true;
+
+    for (unsigned i = AArch64::B16; i <= AArch64::B31; ++i)
+      if (MCRegisterInfo::regsOverlap(PhysReg, i))
+        warn = true;
+
+    if (warn)
+      return std::string(AArch64InstPrinter::getRegisterName(PhysReg)) +
+             " is clobbered by asynchronous signals when using Arm64EC.";
+  }
 
   return {};
 }
