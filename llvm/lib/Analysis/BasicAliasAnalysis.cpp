@@ -585,13 +585,6 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
-    // Don't attempt to analyze GEPs if index scale is not a compile-time
-    // constant.
-    if (isa<ScalableVectorType>(GEPOp->getSourceElementType())) {
-      Decomposed.Base = V;
-      return Decomposed;
-    }
-
     unsigned AS = GEPOp->getPointerAddressSpace();
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
@@ -616,10 +609,23 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
-        Decomposed.Offset +=
-            DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize() *
-            CIdx->getValue().sextOrTrunc(MaxIndexSize);
+
+        // Don't attempt to analyze GEPs if the scalable index is not zero.
+        TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+        if (AllocTypeSize.isScalable()) {
+          Decomposed.Base = V;
+          return Decomposed;
+        }
+
+        Decomposed.Offset += AllocTypeSize.getFixedSize() *
+                             CIdx->getValue().sextOrTrunc(MaxIndexSize);
         continue;
+      }
+
+      TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+      if (AllocTypeSize.isScalable()) {
+        Decomposed.Base = V;
+        return Decomposed;
       }
 
       GepHasConstantOffset = false;
@@ -633,8 +639,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
 
       // Scale by the type size.
-      unsigned TypeSize =
-          DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
+      unsigned TypeSize = AllocTypeSize.getFixedSize();
       LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);

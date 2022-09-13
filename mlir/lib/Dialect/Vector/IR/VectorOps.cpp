@@ -455,14 +455,18 @@ void ReductionOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   Value lhs, Value rhs, Value acc,
                                   ArrayRef<ArrayRef<AffineExpr>> indexingExprs,
-                                  ArrayRef<StringRef> iteratorTypes) {
+                                  ArrayRef<IteratorType> iteratorTypes) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
   result.addAttribute(::mlir::getIndexingMapsAttrName(),
                       builder.getAffineMapArrayAttr(
                           AffineMap::inferFromExprList(indexingExprs)));
-  result.addAttribute(::mlir::getIteratorTypesAttrName(),
-                      builder.getStrArrayAttr(iteratorTypes));
+  result.addAttribute(
+      ::mlir::getIteratorTypesAttrName(),
+      builder.getArrayAttr(llvm::to_vector(llvm::map_range(
+          iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
+            return IteratorTypeAttr::get(builder.getContext(), t);
+          }))));
 }
 
 void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
@@ -510,6 +514,27 @@ ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   result.attributes.assign(dictAttr.getValue().begin(),
                            dictAttr.getValue().end());
+
+  // Convert array of string into an array of IteratyType enums. This is needed,
+  // because tests still use the old format when 'iterator_types' attribute is
+  // represented as an array of strings.
+  // TODO: Remove this conversion once tests are fixed.
+  ArrayAttr iteratorTypes =
+      result.attributes.get("iterator_types").cast<ArrayAttr>();
+
+  SmallVector<Attribute> iteratorTypeAttrs;
+
+  for (StringRef s : iteratorTypes.getAsValueRange<StringAttr>()) {
+    auto maybeIteratorType = symbolizeIteratorType(s);
+    if (!maybeIteratorType.has_value())
+      return parser.emitError(loc) << "unexpected iterator_type (" << s << ")";
+
+    iteratorTypeAttrs.push_back(IteratorTypeAttr::get(
+        parser.getContext(), maybeIteratorType.value()));
+  }
+  result.attributes.set("iterator_types",
+                        parser.getBuilder().getArrayAttr(iteratorTypeAttrs));
+
   if (!result.attributes.get(ContractionOp::getKindAttrStrName())) {
     result.addAttribute(
         ContractionOp::getKindAttrStrName(),
@@ -538,9 +563,26 @@ void ContractionOp::print(OpAsmPrinter &p) {
   llvm::StringSet<> traitAttrsSet;
   traitAttrsSet.insert(attrNames.begin(), attrNames.end());
   SmallVector<NamedAttribute, 8> attrs;
-  for (auto attr : (*this)->getAttrs())
-    if (traitAttrsSet.count(attr.getName().strref()) > 0)
+  for (auto attr : (*this)->getAttrs()) {
+    if (attr.getName() == getIteratorTypesAttrName()) {
+      auto iteratorTypes =
+          attr.getValue()
+              .cast<ArrayAttr>()
+              .getAsValueRange<IteratorTypeAttr, IteratorType>();
+      // Convert IteratorType enums into the string representation. This is
+      // needed, because tests still use the old format when 'iterator_types'
+      // attribute is represented as an array of strings.
+      // TODO: Remove this conversion once tests are fixed.
+      SmallVector<Attribute> iteratorTypeNames = llvm::to_vector(
+          llvm::map_range(iteratorTypes, [&](IteratorType t) -> Attribute {
+            return StringAttr::get(getContext(), stringifyIteratorType(t));
+          }));
+
+      attrs.emplace_back(getIteratorTypesAttrName(),
+                         ArrayAttr::get(getContext(), iteratorTypeNames));
+    } else if (traitAttrsSet.count(attr.getName().strref()) > 0)
       attrs.push_back(attr);
+  }
 
   auto dictAttr = DictionaryAttr::get(getContext(), attrs);
   p << " " << dictAttr << " " << getLhs() << ", ";
@@ -746,11 +788,11 @@ static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
 
 static std::vector<std::pair<int64_t, int64_t>>
 getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
-          StringRef targetIteratorTypeName, MLIRContext *context) {
+          IteratorType targetIteratorType, MLIRContext *context) {
   std::vector<std::pair<int64_t, int64_t>> dimMap;
   for (const auto &it : llvm::enumerate(iteratorTypes)) {
-    auto iteratorTypeName = it.value().cast<StringAttr>().getValue();
-    if (iteratorTypeName != targetIteratorTypeName)
+    auto iteratorType = it.value().cast<IteratorTypeAttr>().getValue();
+    if (iteratorType != targetIteratorType)
       continue;
     // Search lhs/rhs map results for 'targetExpr'.
     auto targetExpr = getAffineDimExpr(it.index(), context);
@@ -771,8 +813,8 @@ void ContractionOp::getIterationBounds(
   for (const auto &it : llvm::enumerate(getIteratorTypes())) {
     // Search lhs/rhs map results for 'targetExpr'.
     auto targetExpr = getAffineDimExpr(it.index(), getContext());
-    auto iteratorTypeName = it.value().cast<StringAttr>().getValue();
-    if (iteratorTypeName == getReductionIteratorTypeName()) {
+    auto iteratorType = it.value().cast<IteratorTypeAttr>().getValue();
+    if (iteratorType == IteratorType::reduction) {
       // Get reduction dim size from lhs shape (same size in rhsShape).
       int64_t lhsDimIndex = getResultIndex(indexingMaps[0], targetExpr);
       assert(lhsDimIndex >= 0);
@@ -803,14 +845,14 @@ void ContractionOp::getIterationIndexMap(
 
 std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  return getDimMap(indexingMaps, getIteratorTypes(),
-                   getReductionIteratorTypeName(), getContext());
+  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::reduction,
+                   getContext());
 }
 
 std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  return getDimMap(indexingMaps, getIteratorTypes(),
-                   getParallelIteratorTypeName(), getContext());
+  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::parallel,
+                   getContext());
 }
 
 Optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {

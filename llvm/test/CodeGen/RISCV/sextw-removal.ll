@@ -65,9 +65,10 @@ bb7:                                              ; preds = %bb2
 
 declare signext i32 @bar(i32 signext)
 
-; The load here will be an anyext load in isel and sext.w will be emitted for
-; the ret. Make sure we can look through logic ops to prove the sext.w is
-; unnecessary.
+; The load here was previously an aext load, but this has since been changed
+; to a signext load allowing us to remove a sext.w before isel. Thus we get
+; the same result with or without the sext.w removal pass.
+; Test has been left for coverage purposes.
 define signext i32 @test2(i32* %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: test2:
 ; RV64I:       # %bb.0:
@@ -92,7 +93,6 @@ define signext i32 @test2(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    li a2, -2
 ; NOREMOVAL-NEXT:    rolw a1, a2, a1
 ; NOREMOVAL-NEXT:    and a0, a1, a0
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b
@@ -125,7 +125,6 @@ define signext i32 @test3(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    li a2, -2
 ; NOREMOVAL-NEXT:    rolw a1, a2, a1
 ; NOREMOVAL-NEXT:    or a0, a1, a0
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b
@@ -158,7 +157,6 @@ define signext i32 @test4(i32* %p, i32 signext %b) nounwind {
 ; NOREMOVAL-NEXT:    li a2, 1
 ; NOREMOVAL-NEXT:    sllw a1, a2, a1
 ; NOREMOVAL-NEXT:    xnor a0, a1, a0
-; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, i32* %p
   %shl = shl i32 1, %b

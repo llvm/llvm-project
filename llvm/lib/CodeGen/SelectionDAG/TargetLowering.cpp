@@ -7150,6 +7150,152 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
   return Ok;
 }
 
+// Optimize unsigned division or remainder by constants for types twice as large
+// as a legal VT.
+//
+// If (1 << (BitWidth / 2)) % Constant == 1, then the remainder
+// can be computed
+// as:
+//   Sum += __builtin_uadd_overflow(Lo, High, &Sum);
+//   Remainder = Sum % Constant
+// This is based on "Remainder by Summing Digits" from Hacker's Delight.
+//
+// For division, we can compute the remainder, subtract it from the dividend,
+// and then multiply by the multiplicative inverse modulo (1 << (BitWidth / 2)).
+bool TargetLowering::expandDIVREMByConstant(SDNode *N,
+                                            SmallVectorImpl<SDValue> &Result,
+                                            EVT HiLoVT, SelectionDAG &DAG,
+                                            SDValue LL, SDValue LH) const {
+  unsigned Opcode = N->getOpcode();
+  EVT VT = N->getValueType(0);
+
+  // TODO: Support signed division/remainder.
+  if (Opcode == ISD::SREM || Opcode == ISD::SDIV || Opcode == ISD::SDIVREM)
+    return false;
+  assert(
+      (Opcode == ISD::UREM || Opcode == ISD::UDIV || Opcode == ISD::UDIVREM) &&
+      "Unexpected opcode");
+
+  auto *CN = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!CN)
+    return false;
+
+  const APInt &Divisor = CN->getAPIntValue();
+  unsigned BitWidth = Divisor.getBitWidth();
+  unsigned HBitWidth = BitWidth / 2;
+  assert(VT.getScalarSizeInBits() == BitWidth &&
+         HiLoVT.getScalarSizeInBits() == HBitWidth && "Unexpected VTs");
+
+  // Divisor needs to less than (1 << HBitWidth).
+  APInt HalfMaxPlus1 = APInt::getOneBitSet(BitWidth, HBitWidth);
+  if (Divisor.uge(HalfMaxPlus1))
+    return false;
+
+  // We depend on the UREM by constant optimization in DAGCombiner that requires
+  // high multiply.
+  if (!isOperationLegalOrCustom(ISD::MULHU, HiLoVT) &&
+      !isOperationLegalOrCustom(ISD::UMUL_LOHI, HiLoVT))
+    return false;
+
+  // Don't expand if optimizing for size.
+  if (DAG.shouldOptForSize())
+    return false;
+
+  // Early out for 0, 1 or even divisors.
+  if (Divisor.ule(1) || Divisor[0] == 0)
+    return false;
+
+  SDLoc dl(N);
+  SDValue Sum;
+
+  // If (1 << HBitWidth) % divisor == 1, we can add the two halves together and
+  // then add in the carry.
+  // TODO: If we can't split it in half, we might be able to split into 3 or
+  // more pieces using a smaller bit width.
+  if (HalfMaxPlus1.urem(Divisor).isOneValue()) {
+    assert(!LL == !LH && "Expected both input halves or no input halves!");
+    if (!LL) {
+      LL = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, N->getOperand(0),
+                       DAG.getIntPtrConstant(0, dl));
+      LH = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, N->getOperand(0),
+                       DAG.getIntPtrConstant(1, dl));
+    }
+
+    // Use addcarry if we can, otherwise use a compare to detect overflow.
+    EVT SetCCType =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), HiLoVT);
+    if (isOperationLegalOrCustom(ISD::ADDCARRY, HiLoVT)) {
+      SDVTList VTList = DAG.getVTList(HiLoVT, SetCCType);
+      Sum = DAG.getNode(ISD::UADDO, dl, VTList, LL, LH);
+      Sum = DAG.getNode(ISD::ADDCARRY, dl, VTList, Sum,
+                        DAG.getConstant(0, dl, HiLoVT), Sum.getValue(1));
+    } else {
+      Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, LL, LH);
+      SDValue Carry = DAG.getSetCC(dl, SetCCType, Sum, LL, ISD::SETULT);
+      // If the boolean for the target is 0 or 1, we can add the setcc result
+      // directly.
+      if (getBooleanContents(HiLoVT) ==
+          TargetLoweringBase::ZeroOrOneBooleanContent)
+        Carry = DAG.getZExtOrTrunc(Carry, dl, HiLoVT);
+      else
+        Carry = DAG.getSelect(dl, HiLoVT, Carry, DAG.getConstant(1, dl, HiLoVT),
+                              DAG.getConstant(0, dl, HiLoVT));
+      Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Carry);
+    }
+  }
+
+  // If we didn't find a sum, we can't do the expansion.
+  if (!Sum)
+    return false;
+
+  // Perform a HiLoVT urem on the Sum using truncated divisor.
+  SDValue RemL =
+      DAG.getNode(ISD::UREM, dl, HiLoVT, Sum,
+                  DAG.getConstant(Divisor.trunc(HBitWidth), dl, HiLoVT));
+  // High half of the remainder is 0.
+  SDValue RemH = DAG.getConstant(0, dl, HiLoVT);
+
+  // If we only want remainder, we're done.
+  if (Opcode == ISD::UREM) {
+    Result.push_back(RemL);
+    Result.push_back(RemH);
+    return true;
+  }
+
+  // Otherwise, we need to compute the quotient.
+
+  // Join the remainder halves.
+  SDValue Rem = DAG.getNode(ISD::BUILD_PAIR, dl, VT, RemL, RemH);
+
+  // Subtract the remainder from the input.
+  SDValue In = DAG.getNode(ISD::SUB, dl, VT, N->getOperand(0), Rem);
+
+  // Multiply by the multiplicative inverse of the divisor modulo
+  // (1 << BitWidth).
+  APInt Mod = APInt::getSignedMinValue(BitWidth + 1);
+  APInt MulFactor = Divisor.zext(BitWidth + 1);
+  MulFactor = MulFactor.multiplicativeInverse(Mod);
+  MulFactor = MulFactor.trunc(BitWidth);
+
+  SDValue Quotient =
+      DAG.getNode(ISD::MUL, dl, VT, In, DAG.getConstant(MulFactor, dl, VT));
+
+  // Split the quotient into low and high parts.
+  SDValue QuotL = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, Quotient,
+                              DAG.getIntPtrConstant(0, dl));
+  SDValue QuotH = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, HiLoVT, Quotient,
+                              DAG.getIntPtrConstant(1, dl));
+  Result.push_back(QuotL);
+  Result.push_back(QuotH);
+  // For DIVREM, also return the remainder parts.
+  if (Opcode == ISD::UDIVREM) {
+    Result.push_back(RemL);
+    Result.push_back(RemH);
+  }
+
+  return true;
+}
+
 // Check that (every element of) Z is undef or not an exact multiple of BW.
 static bool isNonZeroModBitWidthOrUndef(SDValue Z, unsigned BW) {
   return ISD::matchUnaryPredicate(

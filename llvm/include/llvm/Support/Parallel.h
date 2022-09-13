@@ -28,6 +28,7 @@ namespace parallel {
 // this file. It defaults to using all hardware threads and should be
 // initialized before the first use of parallel routines.
 extern ThreadPoolStrategy strategy;
+extern thread_local unsigned threadIndex;
 
 namespace detail {
 class Latch {

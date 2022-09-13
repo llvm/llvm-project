@@ -795,25 +795,25 @@ define void @icmp_sle() {
 
 define void @fcmp_oeq() {
 ; CHECK-LABEL: 'fcmp_oeq'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fcmp oeq <2 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fcmp oeq <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = fcmp oeq <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = fcmp oeq <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fcmp oeq <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f16 = fcmp oeq <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f16 = fcmp oeq <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f16 = fcmp oeq <16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f16 = fcmp oeq <vscale x 2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f16 = fcmp oeq <vscale x 4 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f16 = fcmp oeq <vscale x 8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f16 = fcmp oeq <vscale x 16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fcmp oeq <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fcmp oeq <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = fcmp oeq <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = fcmp oeq <16 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32 = fcmp oeq <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32 = fcmp oeq <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32 = fcmp oeq <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32 = fcmp oeq <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f32 = fcmp oeq <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f32 = fcmp oeq <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f32 = fcmp oeq <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f32 = fcmp oeq <vscale x 16 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = fcmp oeq <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = fcmp oeq <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f64 = fcmp oeq <8 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f64 = fcmp oeq <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f64 = fcmp oeq <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f64 = fcmp oeq <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f64 = fcmp oeq <vscale x 2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f64 = fcmp oeq <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f64 = fcmp oeq <vscale x 8 x double> undef, undef
@@ -909,25 +909,25 @@ define void @fcmp_one() {
 
 define void @fcmp_olt() {
 ; CHECK-LABEL: 'fcmp_olt'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fcmp olt <2 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fcmp olt <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = fcmp olt <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = fcmp olt <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fcmp olt <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f16 = fcmp olt <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f16 = fcmp olt <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f16 = fcmp olt <16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f16 = fcmp olt <vscale x 2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f16 = fcmp olt <vscale x 4 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f16 = fcmp olt <vscale x 8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f16 = fcmp olt <vscale x 16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fcmp olt <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fcmp olt <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = fcmp olt <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = fcmp olt <16 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32 = fcmp olt <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32 = fcmp olt <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32 = fcmp olt <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32 = fcmp olt <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f32 = fcmp olt <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f32 = fcmp olt <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f32 = fcmp olt <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f32 = fcmp olt <vscale x 16 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = fcmp olt <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = fcmp olt <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f64 = fcmp olt <8 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f64 = fcmp olt <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f64 = fcmp olt <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f64 = fcmp olt <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f64 = fcmp olt <vscale x 2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f64 = fcmp olt <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f64 = fcmp olt <vscale x 8 x double> undef, undef
@@ -966,25 +966,25 @@ define void @fcmp_olt() {
 
 define void @fcmp_ole() {
 ; CHECK-LABEL: 'fcmp_ole'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fcmp ole <2 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fcmp ole <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = fcmp ole <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = fcmp ole <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fcmp ole <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f16 = fcmp ole <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f16 = fcmp ole <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f16 = fcmp ole <16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f16 = fcmp ole <vscale x 2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f16 = fcmp ole <vscale x 4 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f16 = fcmp ole <vscale x 8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f16 = fcmp ole <vscale x 16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fcmp ole <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fcmp ole <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = fcmp ole <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = fcmp ole <16 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32 = fcmp ole <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32 = fcmp ole <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32 = fcmp ole <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32 = fcmp ole <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f32 = fcmp ole <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f32 = fcmp ole <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f32 = fcmp ole <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f32 = fcmp ole <vscale x 16 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = fcmp ole <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = fcmp ole <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f64 = fcmp ole <8 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f64 = fcmp ole <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f64 = fcmp ole <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f64 = fcmp ole <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f64 = fcmp ole <vscale x 2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f64 = fcmp ole <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f64 = fcmp ole <vscale x 8 x double> undef, undef
@@ -1023,25 +1023,25 @@ define void @fcmp_ole() {
 
 define void @fcmp_ogt() {
 ; CHECK-LABEL: 'fcmp_ogt'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fcmp ogt <2 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fcmp ogt <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = fcmp ogt <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = fcmp ogt <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fcmp ogt <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f16 = fcmp ogt <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f16 = fcmp ogt <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f16 = fcmp ogt <16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f16 = fcmp ogt <vscale x 2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f16 = fcmp ogt <vscale x 4 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f16 = fcmp ogt <vscale x 8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f16 = fcmp ogt <vscale x 16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fcmp ogt <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fcmp ogt <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = fcmp ogt <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = fcmp ogt <16 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32 = fcmp ogt <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32 = fcmp ogt <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32 = fcmp ogt <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32 = fcmp ogt <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f32 = fcmp ogt <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f32 = fcmp ogt <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f32 = fcmp ogt <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f32 = fcmp ogt <vscale x 16 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = fcmp ogt <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = fcmp ogt <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f64 = fcmp ogt <8 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f64 = fcmp ogt <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f64 = fcmp ogt <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f64 = fcmp ogt <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f64 = fcmp ogt <vscale x 2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f64 = fcmp ogt <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f64 = fcmp ogt <vscale x 8 x double> undef, undef
@@ -1080,25 +1080,25 @@ define void @fcmp_ogt() {
 
 define void @fcmp_oge() {
 ; CHECK-LABEL: 'fcmp_oge'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fcmp oge <2 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fcmp oge <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = fcmp oge <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = fcmp oge <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fcmp oge <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f16 = fcmp oge <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f16 = fcmp oge <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f16 = fcmp oge <16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f16 = fcmp oge <vscale x 2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f16 = fcmp oge <vscale x 4 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f16 = fcmp oge <vscale x 8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f16 = fcmp oge <vscale x 16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fcmp oge <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fcmp oge <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = fcmp oge <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = fcmp oge <16 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32 = fcmp oge <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32 = fcmp oge <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32 = fcmp oge <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32 = fcmp oge <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f32 = fcmp oge <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f32 = fcmp oge <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f32 = fcmp oge <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f32 = fcmp oge <vscale x 16 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = fcmp oge <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = fcmp oge <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f64 = fcmp oge <8 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f64 = fcmp oge <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f64 = fcmp oge <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f64 = fcmp oge <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f64 = fcmp oge <vscale x 2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f64 = fcmp oge <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f64 = fcmp oge <vscale x 8 x double> undef, undef
@@ -1194,25 +1194,25 @@ define void @fcmp_ueq() {
 
 define void @fcmp_une() {
 ; CHECK-LABEL: 'fcmp_une'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = fcmp une <2 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = fcmp une <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f16 = fcmp une <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = fcmp une <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fcmp une <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f16 = fcmp une <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f16 = fcmp une <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f16 = fcmp une <16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f16 = fcmp une <vscale x 2 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f16 = fcmp une <vscale x 4 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f16 = fcmp une <vscale x 8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f16 = fcmp une <vscale x 16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = fcmp une <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = fcmp une <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = fcmp une <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = fcmp une <16 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32 = fcmp une <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f32 = fcmp une <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f32 = fcmp une <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v16f32 = fcmp une <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f32 = fcmp une <vscale x 2 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f32 = fcmp une <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f32 = fcmp une <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv16f32 = fcmp une <vscale x 16 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = fcmp une <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = fcmp une <4 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f64 = fcmp une <8 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f64 = fcmp une <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4f64 = fcmp une <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8f64 = fcmp une <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv2f64 = fcmp une <vscale x 2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv4f64 = fcmp une <vscale x 4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv8f64 = fcmp une <vscale x 8 x double> undef, undef

@@ -340,11 +340,11 @@ struct s {
 void struct_pointer_canon(struct s *ps) {
   struct s ss = *ps;
   clang_analyzer_dump((*ps).v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<struct s * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<struct s * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_dump(ps[0].v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<struct s * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<struct s * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_dump(ps->v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<struct s * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<struct s * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_eval((*ps).v == ps[0].v); // expected-warning{{TRUE}}
   clang_analyzer_eval((*ps).v == ps->v);   // expected-warning{{TRUE}}
   clang_analyzer_eval(ps[0].v == ps->v);   // expected-warning{{TRUE}}
@@ -360,11 +360,11 @@ typedef struct s T2;
 void struct_pointer_canon_typedef(T1 *ps) {
   T2 ss = *ps;
   clang_analyzer_dump((*ps).v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<T1 * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<T1 * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_dump(ps[0].v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<T1 * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<T1 * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_dump(ps->v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<T1 * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<T1 * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_eval((*ps).v == ps[0].v); // expected-warning{{TRUE}}
   clang_analyzer_eval((*ps).v == ps->v);   // expected-warning{{TRUE}}
   clang_analyzer_eval(ps[0].v == ps->v);   // expected-warning{{TRUE}}
@@ -378,11 +378,11 @@ void struct_pointer_canon_bidim_typedef(T1 **ps) {
 void struct_pointer_canon_const(const struct s *ps) {
   struct s ss = *ps;
   clang_analyzer_dump((*ps).v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<const struct s * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<const struct s * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_dump(ps[0].v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<const struct s * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<const struct s * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_dump(ps->v);
-  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int SymRegion{reg_${{[[:digit:]]+}}<const struct s * ps>}.v>}}
+  // expected-warning-re@-1{{reg_${{[[:digit:]]+}}<int Element{SymRegion{reg_${{[[:digit:]]+}}<const struct s * ps>},0 S64b,struct s}.v>}}
   clang_analyzer_eval((*ps).v == ps[0].v); // expected-warning{{TRUE}}
   clang_analyzer_eval((*ps).v == ps->v);   // expected-warning{{TRUE}}
   clang_analyzer_eval(ps[0].v == ps->v);   // expected-warning{{TRUE}}

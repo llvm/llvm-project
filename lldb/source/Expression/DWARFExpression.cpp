@@ -2374,9 +2374,11 @@ bool DWARFExpression::Evaluate(
           return false;
         }
       } else {
-        // Retrieve the type DIE that the value is being converted to.
+        // Retrieve the type DIE that the value is being converted to. This
+        // offset is compile unit relative so we need to fix it up.
+        const uint64_t abs_die_offset = die_offset +  dwarf_cu->GetOffset();
         // FIXME: the constness has annoying ripple effects.
-        DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_offset);
+        DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(abs_die_offset);
         if (!die) {
           if (error_ptr)
             error_ptr->SetErrorString("Cannot resolve DW_OP_convert type DIE");

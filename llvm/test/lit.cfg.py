@@ -171,7 +171,7 @@ tools.extend([
     'llvm-tblgen', 'llvm-tapi-diff', 'llvm-undname', 'llvm-windres',
     'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
     'yaml-bench', 'verify-uselistorder', 'bugpoint', 'llc', 'llvm-symbolizer',
-    'opt', 'sancov', 'sanstats'])
+    'opt', 'sancov', 'sanstats', 'llvm-remarkutil'])
 
 # The following tools are optional
 tools.extend([

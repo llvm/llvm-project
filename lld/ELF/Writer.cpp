@@ -319,6 +319,7 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
 
+  const unsigned threadCount = config->threadCount;
   for (Partition &part : partitions) {
     auto add = [&](SyntheticSection &sec) {
       sec.partition = part.getNumber();
@@ -352,11 +353,11 @@ template <class ELFT> void elf::createSyntheticSections() {
     }
 
     if (config->androidPackDynRelocs)
-      part.relaDyn =
-          std::make_unique<AndroidPackedRelocationSection<ELFT>>(relaDynName);
+      part.relaDyn = std::make_unique<AndroidPackedRelocationSection<ELFT>>(
+          relaDynName, threadCount);
     else
       part.relaDyn = std::make_unique<RelocationSection<ELFT>>(
-          relaDynName, config->zCombreloc);
+          relaDynName, config->zCombreloc, threadCount);
 
     if (config->hasDynSymTab) {
       add(*part.dynSymTab);
@@ -388,7 +389,7 @@ template <class ELFT> void elf::createSyntheticSections() {
     }
 
     if (config->relrPackDynRelocs) {
-      part.relrDyn = std::make_unique<RelrSection<ELFT>>();
+      part.relrDyn = std::make_unique<RelrSection<ELFT>>(threadCount);
       add(*part.relrDyn);
     }
 
@@ -470,7 +471,8 @@ template <class ELFT> void elf::createSyntheticSections() {
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   in.relaPlt = std::make_unique<RelocationSection<ELFT>>(
-      config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false);
+      config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false,
+      /*threadCount=*/1);
   add(*in.relaPlt);
 
   // The relaIplt immediately follows .rel[a].dyn to ensure that the IRelative
@@ -481,7 +483,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   // behaviour by placing the iplt section in .rel.plt.
   in.relaIplt = std::make_unique<RelocationSection<ELFT>>(
       config->androidPackDynRelocs ? in.relaPlt->name : relaDynName,
-      /*sort=*/false);
+      /*sort=*/false, /*threadCount=*/1);
   add(*in.relaIplt);
 
   if ((config->emachine == EM_386 || config->emachine == EM_X86_64) &&
@@ -2076,16 +2078,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : partitions) {
       if (part.relaDyn) {
+        part.relaDyn->mergeRels();
         // Compute DT_RELACOUNT to be used by part.dynamic.
         part.relaDyn->partitionRels();
         finalizeSynthetic(part.relaDyn.get());
+      }
+      if (part.relrDyn) {
+        part.relrDyn->mergeRels();
+        finalizeSynthetic(part.relrDyn.get());
       }
 
       finalizeSynthetic(part.dynSymTab.get());
       finalizeSynthetic(part.gnuHashTab.get());
       finalizeSynthetic(part.hashTab.get());
       finalizeSynthetic(part.verDef.get());
-      finalizeSynthetic(part.relrDyn.get());
       finalizeSynthetic(part.ehFrameHdr.get());
       finalizeSynthetic(part.verSym.get());
       finalizeSynthetic(part.verNeed.get());

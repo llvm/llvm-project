@@ -166,9 +166,17 @@ public:
     ImmTyWaitEXP,
   };
 
+  // Immediate operand kind.
+  // It helps to identify the location of an offending operand after an error.
+  // Note that regular literals and mandatory literals (KImm) must be handled
+  // differently. When looking for an offending operand, we should usually
+  // ignore mandatory literals because they are part of the instruction and
+  // cannot be changed. Report location of mandatory operands only for VOPD,
+  // when both OpX and OpY have a KImm and there are no other literals.
   enum ImmKindTy {
     ImmKindTyNone,
     ImmKindTyLiteral,
+    ImmKindTyMandatoryLiteral,
     ImmKindTyConst,
   };
 
@@ -228,6 +236,11 @@ public:
     Imm.Kind = ImmKindTyLiteral;
   }
 
+  void setImmKindMandatoryLiteral() const {
+    assert(isImm());
+    Imm.Kind = ImmKindTyMandatoryLiteral;
+  }
+
   void setImmKindConst() const {
     assert(isImm());
     Imm.Kind = ImmKindTyConst;
@@ -235,6 +248,10 @@ public:
 
   bool IsImmKindLiteral() const {
     return isImm() && Imm.Kind == ImmKindTyLiteral;
+  }
+
+  bool IsImmKindMandatoryLiteral() const {
+    return isImm() && Imm.Kind == ImmKindTyMandatoryLiteral;
   }
 
   bool isImmKindConst() const {
@@ -1619,8 +1636,11 @@ private:
                       const OperandVector &Operands) const;
   SMLoc getImmLoc(AMDGPUOperand::ImmTy Type, const OperandVector &Operands) const;
   SMLoc getRegLoc(unsigned Reg, const OperandVector &Operands) const;
-  SMLoc getLitLoc(const OperandVector &Operands) const;
+  SMLoc getLitLoc(const OperandVector &Operands,
+                  bool SearchMandatoryLiterals = false) const;
+  SMLoc getMandatoryLitLoc(const OperandVector &Operands) const;
   SMLoc getConstLoc(const OperandVector &Operands) const;
+  SMLoc getInstLoc(const OperandVector &Operands) const;
 
   bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc, const OperandVector &Operands);
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
@@ -2173,7 +2193,11 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
 
       uint64_t ImmVal = FPLiteral.bitcastToAPInt().getZExtValue();
       Inst.addOperand(MCOperand::createImm(ImmVal));
-      setImmKindLiteral();
+      if (OpTy == AMDGPU::OPERAND_KIMM32 || OpTy == AMDGPU::OPERAND_KIMM16) {
+        setImmKindMandatoryLiteral();
+      } else {
+        setImmKindLiteral();
+      }
       return;
     }
     default:
@@ -2258,11 +2282,11 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   }
   case AMDGPU::OPERAND_KIMM32:
     Inst.addOperand(MCOperand::createImm(Literal.getLoBits(32).getZExtValue()));
-    setImmKindNone();
+    setImmKindMandatoryLiteral();
     return;
   case AMDGPU::OPERAND_KIMM16:
     Inst.addOperand(MCOperand::createImm(Literal.getLoBits(16).getZExtValue()));
-    setImmKindNone();
+    setImmKindMandatoryLiteral();
     return;
   default:
     llvm_unreachable("invalid operand size");
@@ -2272,7 +2296,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
 template <unsigned Bitwidth>
 void AMDGPUOperand::addKImmFPOperands(MCInst &Inst, unsigned N) const {
   APInt Literal(64, Imm.Val);
-  setImmKindNone();
+  setImmKindMandatoryLiteral();
 
   if (!Imm.IsFPImm) {
     // We got int literal token.
@@ -7170,6 +7194,10 @@ AMDGPUAsmParser::lex() {
   Parser.Lex();
 }
 
+SMLoc AMDGPUAsmParser::getInstLoc(const OperandVector &Operands) const {
+  return ((AMDGPUOperand &)*Operands[0]).getStartLoc();
+}
+
 SMLoc
 AMDGPUAsmParser::getOperandLoc(std::function<bool(const AMDGPUOperand&)> Test,
                                const OperandVector &Operands) const {
@@ -7178,7 +7206,7 @@ AMDGPUAsmParser::getOperandLoc(std::function<bool(const AMDGPUOperand&)> Test,
     if (Test(Op))
       return Op.getStartLoc();
   }
-  return ((AMDGPUOperand &)*Operands[0]).getStartLoc();
+  return getInstLoc(Operands);
 }
 
 SMLoc
@@ -7197,10 +7225,20 @@ AMDGPUAsmParser::getRegLoc(unsigned Reg,
   return getOperandLoc(Test, Operands);
 }
 
-SMLoc
-AMDGPUAsmParser::getLitLoc(const OperandVector &Operands) const {
+SMLoc AMDGPUAsmParser::getLitLoc(const OperandVector &Operands,
+                                 bool SearchMandatoryLiterals) const {
   auto Test = [](const AMDGPUOperand& Op) {
     return Op.IsImmKindLiteral() || Op.isExpr();
+  };
+  SMLoc Loc = getOperandLoc(Test, Operands);
+  if (SearchMandatoryLiterals && Loc == getInstLoc(Operands))
+    Loc = getMandatoryLitLoc(Operands);
+  return Loc;
+}
+
+SMLoc AMDGPUAsmParser::getMandatoryLitLoc(const OperandVector &Operands) const {
+  auto Test = [](const AMDGPUOperand &Op) {
+    return Op.IsImmKindMandatoryLiteral();
   };
   return getOperandLoc(Test, Operands);
 }
