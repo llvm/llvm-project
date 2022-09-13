@@ -1571,7 +1571,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
       bool hasVariadicResult = numVariadicResults != 0;
 
       // Avoid emitting "resultTypes.size() >= 0u" which is always true.
-      if (!(hasVariadicResult && numNonVariadicResults == 0))
+      if (!hasVariadicResult || numNonVariadicResults != 0)
         body << "  "
              << "assert(resultTypes.size() "
              << (hasVariadicResult ? ">=" : "==") << " "
