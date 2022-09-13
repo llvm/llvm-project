@@ -1421,7 +1421,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
       if (const TypedRegion *TR = dyn_cast<TypedRegion>(MR))
         T = TR->getLocationType()->getPointeeType();
       else if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(MR))
-        T = SR->getSymbol()->getType()->getPointeeType();
+        T = SR->getPointeeStaticType();
     }
     assert(!T.isNull() && "Unable to auto-detect binding type!");
     assert(!T->isVoidType() && "Attempting to dereference a void pointer!");
@@ -2390,15 +2390,10 @@ RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
       return bindAggregate(B, TR, V);
   }
 
-  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(R)) {
-    // Binding directly to a symbolic region should be treated as binding
-    // to element 0.
-    QualType T = SR->getSymbol()->getType();
-    if (T->isAnyPointerType() || T->isReferenceType())
-      T = T->getPointeeType();
-
-    R = GetElementZeroRegion(SR, T);
-  }
+  // Binding directly to a symbolic region should be treated as binding
+  // to element 0.
+  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(R))
+    R = GetElementZeroRegion(SR, SR->getPointeeStaticType());
 
   assert((!isa<CXXThisRegion>(R) || !B.lookup(R)) &&
          "'this' pointer is not an l-value and is not assignable");
