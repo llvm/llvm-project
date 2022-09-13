@@ -4464,9 +4464,10 @@ public:
   }
 
   using param_type_iterator = const QualType *;
+  using param_type_range = llvm::iterator_range<param_type_iterator>;
 
-  ArrayRef<QualType> param_types() const {
-    return llvm::makeArrayRef(param_type_begin(), param_type_end());
+  param_type_range param_types() const {
+    return param_type_range(param_type_begin(), param_type_end());
   }
 
   param_type_iterator param_type_begin() const {

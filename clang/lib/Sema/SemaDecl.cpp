@@ -4111,9 +4111,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         // The old declaration provided a function prototype, but the
         // new declaration does not. Merge in the prototype.
         assert(!OldProto->hasExceptionSpec() && "Exception spec in C");
-        NewQType = Context.getFunctionType(NewFuncType->getReturnType(),
-                                           OldProto->getParamTypes(),
-                                           OldProto->getExtProtoInfo());
+        SmallVector<QualType, 16> ParamTypes(OldProto->param_types());
+        NewQType =
+            Context.getFunctionType(NewFuncType->getReturnType(), ParamTypes,
+                                    OldProto->getExtProtoInfo());
         New->setType(NewQType);
         New->setHasInheritedPrototype();
 
@@ -12375,10 +12376,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
                                     Type.getQualifiers());
 
   QualType DeducedType;
-  TemplateDeductionInfo Info(DeduceInit->getExprLoc());
-  TemplateDeductionResult Result =
-      DeduceAutoType(TSI->getTypeLoc(), DeduceInit, DeducedType, Info);
-  if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed) {
+  if (DeduceAutoType(TSI, DeduceInit, DeducedType) == DAR_Failed) {
     if (!IsInitCapture)
       DiagnoseAutoDeductionFailure(VDecl, DeduceInit);
     else if (isa<InitListExpr>(Init))

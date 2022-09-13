@@ -6885,6 +6885,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     // When checking a deduced template argument, deduce from its type even if
     // the type is dependent, in order to check the types of non-type template
     // arguments line up properly in partial ordering.
+    Optional<unsigned> Depth = Param->getDepth() + 1;
     Expr *DeductionArg = Arg;
     if (auto *PE = dyn_cast<PackExpansionExpr>(DeductionArg))
       DeductionArg = PE->getPattern();
@@ -6900,27 +6901,20 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
           DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind, Inits);
       if (ParamType.isNull())
         return ExprError();
-    } else {
-      TemplateDeductionInfo Info(DeductionArg->getExprLoc(),
-                                 Param->getDepth() + 1);
-      ParamType = QualType();
-      TemplateDeductionResult Result =
-          DeduceAutoType(TSI->getTypeLoc(), DeductionArg, ParamType, Info,
-                         /*DependentDeduction=*/true,
-                         // We do not check constraints right now because the
-                         // immediately-declared constraint of the auto type is
-                         // also an associated constraint, and will be checked
-                         // along with the other associated constraints after
-                         // checking the template argument list.
-                         /*IgnoreConstraints=*/true);
-      if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed) {
-        Diag(Arg->getExprLoc(),
-             diag::err_non_type_template_parm_type_deduction_failure)
-            << Param->getDeclName() << Param->getType() << Arg->getType()
-            << Arg->getSourceRange();
-        Diag(Param->getLocation(), diag::note_template_param_here);
-        return ExprError();
-      }
+    } else if (DeduceAutoType(
+                   TSI, DeductionArg, ParamType, Depth,
+                   // We do not check constraints right now because the
+                   // immediately-declared constraint of the auto type is also
+                   // an associated constraint, and will be checked along with
+                   // the other associated constraints after checking the
+                   // template argument list.
+                   /*IgnoreConstraints=*/true) == DAR_Failed) {
+      Diag(Arg->getExprLoc(),
+           diag::err_non_type_template_parm_type_deduction_failure)
+        << Param->getDeclName() << Param->getType() << Arg->getType()
+        << Arg->getSourceRange();
+      Diag(Param->getLocation(), diag::note_template_param_here);
+      return ExprError();
     }
     // CheckNonTypeTemplateParameterType will produce a diagnostic if there's
     // an error. The error message normally references the parameter

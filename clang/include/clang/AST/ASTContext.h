@@ -2820,23 +2820,6 @@ public:
     return AddrSpaceMapMangling || isTargetAddressSpace(AS);
   }
 
-  // Merges two exception specifications, such that the resulting
-  // exception spec is the union of both. For example, if either
-  // of them can throw something, the result can throw it as well.
-  FunctionProtoType::ExceptionSpecInfo
-  mergeExceptionSpecs(FunctionProtoType::ExceptionSpecInfo ESI1,
-                      FunctionProtoType::ExceptionSpecInfo ESI2,
-                      SmallVectorImpl<QualType> &ExceptionTypeStorage,
-                      bool AcceptDependent);
-
-  // For two "same" types, return a type which has
-  // the common sugar between them. If Unqualified is true,
-  // both types need only be the same unqualified type.
-  // The result will drop the qualifiers which do not occur
-  // in both types.
-  QualType getCommonSugaredType(QualType X, QualType Y,
-                                bool Unqualified = false);
-
 private:
   // Helper for integer ordering
   unsigned getIntegerRank(const Type *T) const;
