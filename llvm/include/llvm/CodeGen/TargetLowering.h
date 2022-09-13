@@ -3530,6 +3530,21 @@ public:
   /// legal.  It is frequently not legal in PIC relocation models.
   virtual bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const;
 
+  /// Return true if the operand with index OpNo corresponding to a target
+  /// branch, for example, in following case
+  ///
+  /// call void asm "lea r8, $0\0A\09call qword ptr ${1:P}\0A\09ret",
+  ///               "*m,*m,~{r8},~{dirflag},~{fpsr},~{flags}"
+  ///                ([9 x i32]* @Arr), void (...)* @sincos_asm)
+  ///
+  /// the operand $1 (sincos_asm) is target branch in inline asm, but the
+  /// operand $0 (Arr) is not.
+  virtual bool
+  isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
+                          unsigned OpNo) const {
+    return false;
+  }
+
   bool isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
                             SDValue &Chain) const;
 
