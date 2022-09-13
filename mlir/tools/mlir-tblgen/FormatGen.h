@@ -378,33 +378,48 @@ public:
   /// Create an optional group with the given child elements.
   OptionalElement(std::vector<FormatElement *> &&thenElements,
                   std::vector<FormatElement *> &&elseElements,
-                  FormatElement *anchor, unsigned parseStart)
+                  unsigned thenParseStart, unsigned elseParseStart,
+                  FormatElement *anchor, bool inverted)
       : thenElements(std::move(thenElements)),
-        elseElements(std::move(elseElements)), anchor(anchor),
-        parseStart(parseStart) {}
+        elseElements(std::move(elseElements)), thenParseStart(thenParseStart),
+        elseParseStart(elseParseStart), anchor(anchor), inverted(inverted) {}
 
-  /// Return the `then` elements of the optional group.
-  ArrayRef<FormatElement *> getThenElements() const { return thenElements; }
+  /// Return the `then` elements of the optional group. Drops the first
+  /// `thenParseStart` whitespace elements if `parseable` is true.
+  ArrayRef<FormatElement *> getThenElements(bool parseable = false) const {
+    return llvm::makeArrayRef(thenElements)
+        .drop_front(parseable ? thenParseStart : 0);
+  }
 
-  /// Return the `else` elements of the optional group.
-  ArrayRef<FormatElement *> getElseElements() const { return elseElements; }
+  /// Return the `else` elements of the optional group. Drops the first
+  /// `elseParseStart` whitespace elements if `parseable` is true.
+  ArrayRef<FormatElement *> getElseElements(bool parseable = false) const {
+    return llvm::makeArrayRef(elseElements)
+        .drop_front(parseable ? elseParseStart : 0);
+  }
 
   /// Return the anchor of the optional group.
   FormatElement *getAnchor() const { return anchor; }
 
-  /// Return the index of the first element to be parsed.
-  unsigned getParseStart() const { return parseStart; }
+  /// Return true if the optional group is inverted.
+  bool isInverted() const { return inverted; }
 
 private:
   /// The child elements emitted when the anchor is present.
   std::vector<FormatElement *> thenElements;
   /// The child elements emitted when the anchor is not present.
   std::vector<FormatElement *> elseElements;
-  /// The anchor element of the optional group.
-  FormatElement *anchor;
   /// The index of the first element that is parsed in `thenElements`. That is,
   /// the first non-whitespace element.
-  unsigned parseStart;
+  unsigned thenParseStart;
+  /// The index of the first element that is parsed in `elseElements`. That is,
+  /// the first non-whitespace element.
+  unsigned elseParseStart;
+  /// The anchor element of the optional group.
+  FormatElement *anchor;
+  /// Whether the optional group condition is inverted and the anchor element is
+  /// in the else group.
+  bool inverted;
 };
 
 //===----------------------------------------------------------------------===//

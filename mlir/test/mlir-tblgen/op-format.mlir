@@ -463,3 +463,18 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 
 // CHECK: test.has_str_value
 test.has_str_value {}
+
+//===----------------------------------------------------------------------===//
+// ElseAnchorOp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @else_anchor_op
+func.func @else_anchor_op(%a: !test.else_anchor<?>, %b: !test.else_anchor<5>) {
+  // CHECK: test.else_anchor(?) {a = !test.else_anchor_struct<?>}
+  test.else_anchor(?) {a = !test.else_anchor_struct<?>}
+  // CHECK: test.else_anchor(%{{.*}} : !test.else_anchor<?>) {a = !test.else_anchor_struct<a = 0>}
+  test.else_anchor(%a : !test.else_anchor<?>) {a = !test.else_anchor_struct<a = 0>}
+  // CHECK: test.else_anchor(%{{.*}} : !test.else_anchor<5>) {a = !test.else_anchor_struct<b = 0>}
+  test.else_anchor(%b : !test.else_anchor<5>) {a = !test.else_anchor_struct<b = 0>}
+  return
+}

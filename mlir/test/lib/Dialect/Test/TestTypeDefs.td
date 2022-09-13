@@ -332,4 +332,17 @@ def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
                               custom<BarString>(ref($foo)) `>` }];
 }
 
+def TestTypeElseAnchor : Test_Type<"TestTypeElseAnchor"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a);
+  let mnemonic = "else_anchor";
+  let assemblyFormat = "`<` (`?`) : ($a^)? `>`";
+}
+
+def TestTypeElseAnchorStruct : Test_Type<"TestTypeElseAnchorStruct"> {
+  let parameters = (ins OptionalParameter<"mlir::Optional<int>">:$a,
+                        OptionalParameter<"mlir::Optional<int>">:$b);
+  let mnemonic = "else_anchor_struct";
+  let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
+}
+
 #endif // TEST_TYPEDEFS
