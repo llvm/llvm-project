@@ -27,10 +27,10 @@ void copy_on_heap(Node* n1) {
   clang_analyzer_dump(n2); // expected-warning-re {{&HeapSymRegion{conj_${{[0-9]+}}{Node *, LC{{[0-9]+}}, S{{[0-9]+}}, #{{[0-9]+}}}}}}
 
   clang_analyzer_dump(n1->ptr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<int * Element{SymRegion{reg_${{[0-9]+}}<Node * n1>},0 S64b,struct Node}.ptr>}}}
-  clang_analyzer_dump(n2->ptr); // expected-warning {{Unknown}} FIXME: This should be the same as above.
+  clang_analyzer_dump(n2->ptr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<int * Element{SymRegion{reg_${{[0-9]+}}<Node * n1>},0 S64b,struct Node}.ptr>}}}
 
   if (n1->ptr != n2->ptr)
-    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}} FIXME: This should not be reachable.
+    clang_analyzer_warnIfReached(); // unreachable
   (void)(n1->ptr);
   (void)(n2->ptr);
 }
