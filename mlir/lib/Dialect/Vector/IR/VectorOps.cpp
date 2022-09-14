@@ -3294,7 +3294,7 @@ public:
       return failure();
     if (xferOp.hasOutOfBoundsDim())
       return failure();
-    if (!xferOp.getPermutationMap().isIdentity())
+    if (!xferOp.getPermutationMap().isMinorIdentity())
       return failure();
     if (xferOp.getMask())
       return failure();
