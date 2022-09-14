@@ -430,10 +430,12 @@ static void computeDirectionVector(
   dependenceComponents->resize(numCommonLoops);
   for (unsigned j = 0; j < numCommonLoops; ++j) {
     (*dependenceComponents)[j].op = commonLoops[j].getOperation();
-    auto lbConst = dependenceDomain->getConstantBound(IntegerPolyhedron::LB, j);
+    auto lbConst =
+        dependenceDomain->getConstantBound64(IntegerPolyhedron::LB, j);
     (*dependenceComponents)[j].lb =
         lbConst.value_or(std::numeric_limits<int64_t>::min());
-    auto ubConst = dependenceDomain->getConstantBound(IntegerPolyhedron::UB, j);
+    auto ubConst =
+        dependenceDomain->getConstantBound64(IntegerPolyhedron::UB, j);
     (*dependenceComponents)[j].ub =
         ubConst.value_or(std::numeric_limits<int64_t>::max());
   }
