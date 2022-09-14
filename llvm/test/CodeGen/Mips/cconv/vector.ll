@@ -1751,12 +1751,10 @@ define <2 x i32> @i32_2(<2 x i32> %a, <2 x i32> %b) {
 ; MIPS64R5EB:       # %bb.0:
 ; MIPS64R5EB-NEXT:    daddiu $sp, $sp, -32
 ; MIPS64R5EB-NEXT:    .cfi_def_cfa_offset 32
-; MIPS64R5EB-NEXT:    sd $5, 16($sp)
-; MIPS64R5EB-NEXT:    sd $4, 24($sp)
-; MIPS64R5EB-NEXT:    lw $1, 16($sp)
+; MIPS64R5EB-NEXT:    dsrl $1, $5, 32
 ; MIPS64R5EB-NEXT:    insert.d $w0[0], $1
 ; MIPS64R5EB-NEXT:    insert.d $w0[1], $5
-; MIPS64R5EB-NEXT:    lw $1, 24($sp)
+; MIPS64R5EB-NEXT:    dsrl $1, $4, 32
 ; MIPS64R5EB-NEXT:    insert.d $w1[0], $1
 ; MIPS64R5EB-NEXT:    insert.d $w1[1], $4
 ; MIPS64R5EB-NEXT:    addv.d $w0, $w1, $w0
