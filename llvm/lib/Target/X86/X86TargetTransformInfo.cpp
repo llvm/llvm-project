@@ -370,9 +370,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVX512BWUniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v64i8, { 2 } }, // psllw + pand.
-    { ISD::SRL,  MVT::v64i8, { 2 } }, // psrlw + pand.
-    { ISD::SRA,  MVT::v64i8, { 4 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v64i8,  { 2 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8,  { 2 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8,  { 4 } }, // psrlw, pand, pxor, psubb.
+
+    { ISD::SHL,  MVT::v16i16, { 1 } }, // psllw
+    { ISD::SRL,  MVT::v16i16, { 1 } }, // psrlw
+    { ISD::SRA,  MVT::v16i16, { 1 } }, // psrlw
+    { ISD::SHL,  MVT::v32i16, { 1 } }, // psllw
+    { ISD::SRL,  MVT::v32i16, { 1 } }, // psrlw
+    { ISD::SRA,  MVT::v32i16, { 1 } }, // psrlw
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasBWI())
