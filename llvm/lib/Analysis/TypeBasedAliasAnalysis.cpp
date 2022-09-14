@@ -409,16 +409,14 @@ TypeBasedAAResult::getModRefBehavior(const CallBase *Call) {
   if (!EnableTBAA)
     return AAResultBase::getModRefBehavior(Call);
 
-  FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
-
   // If this is an "immutable" type, we can assume the call doesn't write
   // to memory.
   if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
     if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
         (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
-      Min = FMRB_OnlyReadsMemory;
+      return FMRB_OnlyReadsMemory;
 
-  return FunctionModRefBehavior(AAResultBase::getModRefBehavior(Call) & Min);
+  return AAResultBase::getModRefBehavior(Call);
 }
 
 FunctionModRefBehavior TypeBasedAAResult::getModRefBehavior(const Function *F) {
