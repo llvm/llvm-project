@@ -37,13 +37,12 @@ def err_clang_cache_cannot_find_binary: Error<
   "clang-cache cannot find compiler binary %0">;
 def err_clang_cache_missing_compiler_command: Error<
   "missing compiler command for clang-cache">;
+def err_caching_backend_fail: Error<
+  "caching backend error: %0">, DefaultFatal;
 
 def remark_compile_job_cache_hit : Remark<
   "compile job cache hit for '%0' => '%1'">, InGroup<CompileJobCacheHit>;
 def remark_compile_job_cache_miss : Remark<
   "compile job cache miss for '%0'">, InGroup<CompileJobCacheMiss>;
-def remark_compile_job_cache_miss_result_not_found : Remark<
-  "compile job cache miss for '%0' (result not found: '%1')">,
-  InGroup<CompileJobCacheMiss>;
 
 } // let Component = "CAS" in
