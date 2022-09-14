@@ -411,28 +411,29 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   // coexist with equivalence-class IDs, this is not necessary, but might help
   // someone keep the numbers straight in case we ever need to debug the
   // ICF::segregate()
-  std::vector<ConcatInputSection *> hashable;
+  std::vector<ConcatInputSection *> foldable;
   uint64_t icfUniqueID = inputSections.size();
   for (ConcatInputSection *isec : inputSections) {
-    // FIXME: consider non-code __text sections as hashable?
-    bool isHashable =
-        (!onlyCfStrings || isCfStringSection(isec)) &&
-        (isCodeSection(isec) || isCfStringSection(isec) ||
-         isClassRefsSection(isec) || isGccExceptTabSection(isec)) &&
-        !isec->keepUnique && !isec->shouldOmitFromOutput() &&
-        sectionType(isec->getFlags()) == MachO::S_REGULAR;
-    if (isHashable) {
-      hashable.push_back(isec);
+    bool isFoldableWithAddendsRemoved =
+        isCfStringSection(isec) || isClassRefsSection(isec);
+    // FIXME: consider non-code __text sections as foldable?
+    bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&
+                      (isCodeSection(isec) || isGccExceptTabSection(isec) ||
+                       isFoldableWithAddendsRemoved) &&
+                      !isec->keepUnique && !isec->shouldOmitFromOutput() &&
+                      sectionType(isec->getFlags()) == MachO::S_REGULAR;
+    if (isFoldable) {
+      foldable.push_back(isec);
       for (Defined *d : isec->symbols)
         if (d->unwindEntry)
-          hashable.push_back(d->unwindEntry);
+          foldable.push_back(d->unwindEntry);
 
       // __cfstring has embedded addends that foil ICF's hashing / equality
       // checks. (We can ignore embedded addends when doing ICF because the same
       // information gets recorded in our Reloc structs.) We therefore create a
       // mutable copy of the CFString and zero out the embedded addends before
       // performing any hashing / equality checks.
-      if (isCfStringSection(isec) || isClassRefsSection(isec)) {
+      if (isFoldableWithAddendsRemoved) {
         // We have to do this copying serially as the BumpPtrAllocator is not
         // thread-safe. FIXME: Make a thread-safe allocator.
         MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
@@ -442,12 +443,12 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
         isec->data = copy;
       }
     } else if (!isEhFrameSection(isec)) {
-      // EH frames are gathered as hashables from unwindEntry above; give a
+      // EH frames are gathered as foldable from unwindEntry above; give a
       // unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
-  parallelForEach(hashable, [](ConcatInputSection *isec) {
+  parallelForEach(foldable, [](ConcatInputSection *isec) {
     assert(isec->icfEqClass[0] == 0); // don't overwrite a unique ID!
     // Turn-on the top bit to guarantee that valid hashes have no collisions
     // with the small-integer unique IDs for ICF-ineligible sections
@@ -455,5 +456,5 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
   });
   // Now that every input section is either hashed or marked as unique, run the
   // segregation algorithm to detect foldable subsections.
-  ICF(hashable).run();
+  ICF(foldable).run();
 }
