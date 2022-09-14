@@ -32,7 +32,7 @@ class DebugBreakTestCase(TestBase):
             thread, "Unable to find thread stopped at the __debugbreak()")
         frame = thread.GetFrameAtIndex(0)
 
-        # We should be in funciton 'bar'.
+        # We should be in function 'bar'.
         self.assertTrue(frame.IsValid())
         function_name = frame.GetFunctionName()
         self.assertIn('bar', function_name,

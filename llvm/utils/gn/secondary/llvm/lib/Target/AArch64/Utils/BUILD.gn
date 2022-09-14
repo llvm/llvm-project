@@ -20,5 +20,8 @@ static_library("Utils") {
 
   # AArch64BaseInfo.h includes a header from MCTargetDesc :-/
   include_dirs = [ ".." ]
-  sources = [ "AArch64BaseInfo.cpp" ]
+  sources = [
+    "AArch64BaseInfo.cpp",
+    "AArch64SMEAttributes.cpp",
+  ]
 }

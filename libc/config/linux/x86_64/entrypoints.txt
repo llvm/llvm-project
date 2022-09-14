@@ -113,6 +113,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # unistd.h entrypoints
     libc.src.unistd.chdir
     libc.src.unistd.close
+    libc.src.unistd.dup
+    libc.src.unistd.dup2
+    libc.src.unistd.dup3
     libc.src.unistd.fchdir
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate

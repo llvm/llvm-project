@@ -18,6 +18,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Twine.h"
 
@@ -105,6 +106,18 @@ public:
                        << ", but got: " << baseResult;
   }
 
+  /// Read a handle to a dialect resource.
+  template <typename ResourceT>
+  FailureOr<ResourceT> readResourceHandle() {
+    FailureOr<AsmDialectResourceHandle> handle = readResourceHandle();
+    if (failed(handle))
+      return failure();
+    if (auto *result = dyn_cast<ResourceT>(&*handle))
+      return std::move(*result);
+    return emitError() << "provided resource handle differs from the "
+                          "expected resource type";
+  }
+
   //===--------------------------------------------------------------------===//
   // Primitives
   //===--------------------------------------------------------------------===//
@@ -129,6 +142,13 @@ public:
 
   /// Read a string from the bytecode.
   virtual LogicalResult readString(StringRef &result) = 0;
+
+  /// Read a blob from the bytecode.
+  virtual LogicalResult readBlob(ArrayRef<char> &result) = 0;
+
+private:
+  /// Read a handle to a dialect resource.
+  virtual FailureOr<AsmDialectResourceHandle> readResourceHandle() = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -171,6 +191,10 @@ public:
     writeList(types, [this](T type) { writeType(type); });
   }
 
+  /// Write the given handle to a dialect resource.
+  virtual void
+  writeResourceHandle(const AsmDialectResourceHandle &resource) = 0;
+
   //===--------------------------------------------------------------------===//
   // Primitives
   //===--------------------------------------------------------------------===//
@@ -204,6 +228,11 @@ public:
   /// only be called if such a guarantee can be made, such as when the string is
   /// owned by an attribute or type.
   virtual void writeOwnedString(StringRef str) = 0;
+
+  /// Write a blob to the bytecode, which is owned by the caller and is
+  /// guaranteed to not die before the end of the bytecode process. The blob is
+  /// written as-is, with no additional compression or compaction.
+  virtual void writeOwnedBlob(ArrayRef<char> blob) = 0;
 };
 
 //===----------------------------------------------------------------------===//

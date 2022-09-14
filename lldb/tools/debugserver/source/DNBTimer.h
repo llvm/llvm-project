@@ -53,7 +53,7 @@ public:
     PTHREAD_MUTEX_LOCKER(locker, m_mutexAP.get());
     gettimeofday(&m_timeval, NULL);
   }
-  // Get the total mircoseconds since Jan 1, 1970
+  // Get the total microseconds since Jan 1, 1970
   uint64_t TotalMicroSeconds() const {
     PTHREAD_MUTEX_LOCKER(locker, m_mutexAP.get());
     return (uint64_t)(m_timeval.tv_sec) * 1000000ull +

@@ -103,7 +103,7 @@ struct SegmentOffsetLength {
 struct VariableInfo {
   llvm::StringRef name;
   llvm::codeview::TypeIndex type;
-  llvm::Optional<DWARFExpressionList> location;
+  DWARFExpressionList location;
   bool is_param;
 };
 

@@ -163,6 +163,7 @@ class TestFrameVar(TestBase):
 
 
     @skipIfRemote
+    @skipIfWindows # Windows can't set breakpoints by name 'main' in this case.
     def test_gline_tables_only(self):
         '''
             Test that if we build a binary with "-gline-tables-only" that we can
@@ -170,7 +171,7 @@ class TestFrameVar(TestBase):
             letting us know that this build option was enabled when trying to
             read variables.
         '''
-        self.build(dictionary={'CFLAGS_EXTRAS': '-gline-tables-only -grecord-command-line'})
+        self.build(dictionary={'CFLAGS_EXTRAS': '-gline-tables-only'})
         exe = self.getBuildArtifact("a.out")
 
         # We have to set a named breakpoint because we don't have any debug info

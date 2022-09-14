@@ -128,8 +128,13 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
         bool IsGeneric = MRI->getRegClassOrNull(Reg) == nullptr;
         unsigned ImpDef = IsGeneric ? TargetOpcode::G_IMPLICIT_DEF
                                     : TargetOpcode::IMPLICIT_DEF;
+
+        unsigned State = getRegState(MO);
+        if (MO.getSubReg())
+          State |= RegState::Undef;
+
         BuildMI(*EntryMBB, EntryInsPt, DebugLoc(), TII->get(ImpDef))
-          .addReg(NewReg, getRegState(MO), MO.getSubReg());
+          .addReg(NewReg, State, MO.getSubReg());
       }
 
       // Update all uses.

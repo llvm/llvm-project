@@ -190,7 +190,7 @@ private:
 
   /// Stores the data. data.size() is equal to nRows * nReservedColumns.
   /// data.capacity() / nReservedColumns is the number of reserved rows.
-  SmallVector<int64_t, 64> data;
+  SmallVector<int64_t, 16> data;
 };
 
 } // namespace presburger

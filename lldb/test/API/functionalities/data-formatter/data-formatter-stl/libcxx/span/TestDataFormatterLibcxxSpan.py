@@ -44,6 +44,7 @@ class LibcxxSpanDataFormatterTestCase(TestBase):
 
     @add_test_categories(['libc++'])
     @skipIf(compiler='clang', compiler_version=['<', '11.0'])
+    @skipIf(debug_info='gmodules', bugnumber="rdar://99758046") # Crashes Clang while compiling module. 
     def test_with_run_command(self):
         """Test that std::span variables are formatted correctly when printed."""
         self.build()
@@ -135,6 +136,7 @@ class LibcxxSpanDataFormatterTestCase(TestBase):
 
     @add_test_categories(['libc++'])
     @skipIf(compiler='clang', compiler_version=['<', '11.0'])
+    @skipIf(debug_info='gmodules', bugnumber="rdar://99758046") # Crashes Clang while compiling module. 
     def test_ref_and_ptr(self):
         """Test that std::span is correctly formatted when passed by ref and ptr"""
         self.build()

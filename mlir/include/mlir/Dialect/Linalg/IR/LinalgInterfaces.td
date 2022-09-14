@@ -727,6 +727,10 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     // TODO: Remove once prefixing is flipped.
     ArrayAttr getIteratorTypes() { return iterator_types(); }
 
+    SmallVector<StringRef> getIteratorTypeNames() {
+      return llvm::to_vector(getIteratorTypes().getAsValueRange<StringAttr>());
+    }
+
     //========================================================================//
     // Forwarding functions to access interface methods from the
     // DestinationStyleOpInterface.

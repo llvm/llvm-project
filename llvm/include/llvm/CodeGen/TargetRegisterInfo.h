@@ -637,6 +637,14 @@ public:
     return RC;
   }
 
+  /// Return a register class that can be used for a subregister copy from/into
+  /// \p SuperRC at \p SubRegIdx.
+  virtual const TargetRegisterClass *
+  getSubRegisterClass(const TargetRegisterClass *SuperRC,
+                      unsigned SubRegIdx) const {
+    return nullptr;
+  }
+
   /// Return the subregister index you get from composing
   /// two subregister indices.
   ///
