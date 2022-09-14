@@ -30,7 +30,6 @@
 #include "llvm/Support/Endian.h"
 #include <limits>
 #include <type_traits>
-#include <vector>
 
 namespace clang {
 namespace interp {
