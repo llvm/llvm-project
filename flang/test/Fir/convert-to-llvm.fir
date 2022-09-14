@@ -867,15 +867,23 @@ func.func @test_load_index(%addr : !fir.ref<index>) {
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
 
+func.func private @takes_box(!fir.box<!fir.array<10xf32>>) -> ()
+
 func.func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
   %0 = fir.load %addr : !fir.ref<!fir.box<!fir.array<10xf32>>>
+  fir.call @takes_box(%0) : (!fir.box<!fir.array<10xf32>>) -> ()
   return
 }
 
-// Loading a `fir.ref<!fir.box>> is a no-op
-// CHECK-LABEL: llvm.func @test_load_box
-// CHECK-SAME: (%{{.*}}: !llvm.ptr<struct<(ptr<array<10 x f{{.*}}>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>)>>) {
-// CHECK-NEXT:  llvm.return
+// Loading a `fir.ref<!fir.box>> is creating a descriptor copy
+// CHECK-LABEL: llvm.func @test_load_box(
+// CHECK-SAME:      %[[arg0:.*]]: !llvm.ptr<struct<([[DESC_TYPE:.*]])>>) {
+// CHECK-NEXT:    %[[c1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK-NEXT:    %[[box_copy:.*]] = llvm.alloca %[[c1]] x !llvm.struct<([[DESC_TYPE]])>
+// CHECK-NEXT:    %[[box_val:.*]] = llvm.load %[[arg0]] : !llvm.ptr<struct<([[DESC_TYPE]])>>
+// CHECK-NEXT:    llvm.store %[[box_val]], %[[box_copy]] : !llvm.ptr<struct<([[DESC_TYPE]])>>
+// CHECK-NEXT:    llvm.call @takes_box(%[[box_copy]]) : (!llvm.ptr<struct<([[DESC_TYPE]])>>) -> ()
+// CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
 
 // -----

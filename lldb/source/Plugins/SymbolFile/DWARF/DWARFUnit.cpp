@@ -598,7 +598,7 @@ void DWARFUnit::ClearDIEsRWLocked() {
   m_die_array.clear();
   m_die_array.shrink_to_fit();
 
-  if (m_dwo)
+  if (m_dwo && !m_dwo->m_cancel_scopes)
     m_dwo->ClearDIEsRWLocked();
 }
 

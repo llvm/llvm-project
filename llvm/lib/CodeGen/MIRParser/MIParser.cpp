@@ -509,6 +509,7 @@ public:
   bool parseMachineMemoryOperand(MachineMemOperand *&Dest);
   bool parsePreOrPostInstrSymbol(MCSymbol *&Symbol);
   bool parseHeapAllocMarker(MDNode *&Node);
+  bool parsePCSections(MDNode *&Node);
 
   bool parseTargetImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
                               MachineOperand &Dest, const MIRFormatter &MF);
@@ -1016,6 +1017,7 @@ bool MIParser::parse(MachineInstr *&MI) {
   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_pre_instr_symbol) &&
          Token.isNot(MIToken::kw_post_instr_symbol) &&
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
+         Token.isNot(MIToken::kw_pcsections) &&
          Token.isNot(MIToken::kw_cfi_type) &&
          Token.isNot(MIToken::kw_debug_location) &&
          Token.isNot(MIToken::kw_debug_instr_number) &&
@@ -1045,6 +1047,10 @@ bool MIParser::parse(MachineInstr *&MI) {
   MDNode *HeapAllocMarker = nullptr;
   if (Token.is(MIToken::kw_heap_alloc_marker))
     if (parseHeapAllocMarker(HeapAllocMarker))
+      return true;
+  MDNode *PCSections = nullptr;
+  if (Token.is(MIToken::kw_pcsections))
+    if (parsePCSections(PCSections))
       return true;
 
   unsigned CFIType = 0;
@@ -1140,6 +1146,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setPostInstrSymbol(MF, PostInstrSymbol);
   if (HeapAllocMarker)
     MI->setHeapAllocMarker(MF, HeapAllocMarker);
+  if (PCSections)
+    MI->setPCSections(MF, PCSections);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
   if (!MemOperands.empty())
@@ -3408,6 +3416,22 @@ bool MIParser::parseHeapAllocMarker(MDNode *&Node) {
   parseMDNode(Node);
   if (!Node)
     return error("expected a MDNode after 'heap-alloc-marker'");
+  if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
+      Token.is(MIToken::lbrace))
+    return false;
+  if (Token.isNot(MIToken::comma))
+    return error("expected ',' before the next machine operand");
+  lex();
+  return false;
+}
+
+bool MIParser::parsePCSections(MDNode *&Node) {
+  assert(Token.is(MIToken::kw_pcsections) &&
+         "Invalid token for a PC sections!");
+  lex();
+  parseMDNode(Node);
+  if (!Node)
+    return error("expected a MDNode after 'pcsections'");
   if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
       Token.is(MIToken::lbrace))
     return false;
