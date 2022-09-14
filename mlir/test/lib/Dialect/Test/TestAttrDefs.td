@@ -270,7 +270,7 @@ def TestExtern1DI64ElementsAttr : Test_Attr<"TestExtern1DI64Elements", [
 // An array of nested attributes.
 def TestArrayOfUglyAttrs : ArrayOfAttr<Test_Dialect, "ArrayOfUglyAttrs",
     "array_of_ugly", "TestAttrUglyAttr"> {
-  let assemblyFormat = "`[` $value ` ` `]`";
+  let assemblyFormat = "`[` (`]`) : ($value^ ` ` `]`)?";
 }
 
 // An array of integers.
