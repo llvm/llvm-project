@@ -578,3 +578,206 @@ exit.2:
   %res.2 = xor i1 %c.3, %f.1
   ret i1 %res.2
 }
+
+define i1 @test_chained_adds_nuw_1(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_chained_adds_nuw_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_A:%.*]] = icmp uge i8 [[A:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_A]])
+; CHECK-NEXT:    [[C_B:%.*]] = icmp uge i8 [[B:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_B]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[ADD_1]], 2
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_2]], 13
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_2]], 14
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+entry:
+  %c.a = icmp uge i8 %a, 5
+  call void @llvm.assume(i1 %c.a)
+  %c.b = icmp uge i8 %b, 6
+  call void @llvm.assume(i1 %c.b)
+  %add.1 = add nuw i8 %a, %b
+  %add.2 = add nuw i8 %add.1, 2
+  %t.1 = icmp uge i8 %add.2, 13
+  %c.1 = icmp uge i8 %add.2, 14
+  %res.1 = xor i1 %t.1, %c.1
+  ret i1 %res.1
+}
+
+define i1 @test_chained_adds_nuw_2(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_chained_adds_nuw_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_A:%.*]] = icmp uge i8 [[A:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_A]])
+; CHECK-NEXT:    [[C_B:%.*]] = icmp uge i8 [[B:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_B]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[ADD_1]], 2
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[ADD_2]], [[A]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_3]], 18
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 19
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+entry:
+  %c.a = icmp uge i8 %a, 5
+  call void @llvm.assume(i1 %c.a)
+  %c.b = icmp uge i8 %b, 6
+  call void @llvm.assume(i1 %c.b)
+  %add.1 = add nuw i8 %a, %b
+  %add.2 = add nuw i8 %add.1, 2
+  %add.3 = add nuw i8 %add.2, %a
+  %t.1 = icmp uge i8 %add.3, 18
+  %c.1 = icmp uge i8 %add.3, 19
+  %res.1 = xor i1 %t.1, %c.1
+  ret i1 %res.1
+}
+
+define i1 @test_chained_adds_nuw_3(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_chained_adds_nuw_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_A:%.*]] = icmp uge i8 [[A:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_A]])
+; CHECK-NEXT:    [[C_B:%.*]] = icmp uge i8 [[B:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_B]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], 2
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[ADD_1]], [[B]]
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[ADD_2]], [[A]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_3]], 18
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 19
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+entry:
+  %c.a = icmp uge i8 %a, 5
+  call void @llvm.assume(i1 %c.a)
+  %c.b = icmp uge i8 %b, 6
+  call void @llvm.assume(i1 %c.b)
+  %add.1 = add nuw i8 %a, 2
+  %add.2 = add nuw i8 %add.1, %b
+  %add.3 = add nuw i8 %add.2, %a
+  %t.1 = icmp uge i8 %add.3, 18
+  %c.1 = icmp uge i8 %add.3, 19
+  %res.1 = xor i1 %t.1, %c.1
+  ret i1 %res.1
+}
+
+define i1 @test_chained_adds_nuw_4(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_chained_adds_nuw_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_A:%.*]] = icmp uge i8 [[A:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_A]])
+; CHECK-NEXT:    [[C_B:%.*]] = icmp uge i8 [[B:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_B]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], 2
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[ADD_1]], [[B]]
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[ADD_2]], 10
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_3]], 23
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 24
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+entry:
+  %c.a = icmp uge i8 %a, 5
+  call void @llvm.assume(i1 %c.a)
+  %c.b = icmp uge i8 %b, 6
+  call void @llvm.assume(i1 %c.b)
+  %add.1 = add nuw i8 %a, 2
+  %add.2 = add nuw i8 %add.1, %b
+  %add.3 = add nuw i8 %add.2, 10
+  %t.1 = icmp uge i8 %add.3, 23
+  %c.1 = icmp uge i8 %add.3, 24
+  %res.1 = xor i1 %t.1, %c.1
+  ret i1 %res.1
+}
+
+define i1 @test_chained_adds_missing_nuw_1(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_chained_adds_missing_nuw_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_A:%.*]] = icmp uge i8 [[A:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_A]])
+; CHECK-NEXT:    [[C_B:%.*]] = icmp uge i8 [[B:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_B]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[A]], 2
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[ADD_1]], [[B]]
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[ADD_2]], [[A]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 18
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[ADD_3]], 19
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+entry:
+  %c.a = icmp uge i8 %a, 5
+  call void @llvm.assume(i1 %c.a)
+  %c.b = icmp uge i8 %b, 6
+  call void @llvm.assume(i1 %c.b)
+  %add.1 = add i8 %a, 2
+  %add.2 = add nuw i8 %add.1, %b
+  %add.3 = add nuw i8 %add.2, %a
+  %c.1 = icmp uge i8 %add.3, 18
+  %c.2 = icmp uge i8 %add.3, 19
+  %res.1 = xor i1 %c.1, %c.2
+  ret i1 %res.1
+}
+
+define i1 @test_chained_adds_missing_nuw_2(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_chained_adds_missing_nuw_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_A:%.*]] = icmp uge i8 [[A:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_A]])
+; CHECK-NEXT:    [[C_B:%.*]] = icmp uge i8 [[B:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_B]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], 2
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i8 [[ADD_1]], [[B]]
+; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[ADD_2]], [[A]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 18
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[ADD_3]], 19
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+entry:
+  %c.a = icmp uge i8 %a, 5
+  call void @llvm.assume(i1 %c.a)
+  %c.b = icmp uge i8 %b, 6
+  call void @llvm.assume(i1 %c.b)
+  %add.1 = add nuw i8 %a, 2
+  %add.2 = add i8 %add.1, %b
+  %add.3 = add nuw i8 %add.2, %a
+  %c.1 = icmp uge i8 %add.3, 18
+  %c.2 = icmp uge i8 %add.3, 19
+  %res.1 = xor i1 %c.1, %c.2
+  ret i1 %res.1
+}
+
+define i1 @test_chained_adds_missing_nuw_3(i8 %a, i8 %b) {
+; CHECK-LABEL: @test_chained_adds_missing_nuw_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_A:%.*]] = icmp uge i8 [[A:%.*]], 5
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_A]])
+; CHECK-NEXT:    [[C_B:%.*]] = icmp uge i8 [[B:%.*]], 6
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_B]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], 2
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[ADD_1]], [[B]]
+; CHECK-NEXT:    [[ADD_3:%.*]] = add i8 [[ADD_2]], [[A]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 18
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge i8 [[ADD_3]], 19
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+entry:
+  %c.a = icmp uge i8 %a, 5
+  call void @llvm.assume(i1 %c.a)
+  %c.b = icmp uge i8 %b, 6
+  call void @llvm.assume(i1 %c.b)
+  %add.1 = add nuw i8 %a, 2
+  %add.2 = add nuw i8 %add.1, %b
+  %add.3 = add i8 %add.2, %a
+  %c.1 = icmp uge i8 %add.3, 18
+  %c.2 = icmp uge i8 %add.3, 19
+  %res.1 = xor i1 %c.1, %c.2
+  ret i1 %res.1
+}
+
+declare void @llvm.assume(i1)
