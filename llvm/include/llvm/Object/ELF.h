@@ -1038,7 +1038,7 @@ ELFFile<ELFT>::getVersionDependencies(const Elf_Shdr &Sec,
     VN.Offset = VerneedBuf - Start;
 
     if (Verneed->vn_file < StrTab.size())
-      VN.File = std::string(StrTab.drop_front(Verneed->vn_file));
+      VN.File = std::string(StrTab.data() + Verneed->vn_file);
     else
       VN.File = ("<corrupt vn_file: " + Twine(Verneed->vn_file) + ">").str();
 
