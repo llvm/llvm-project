@@ -36,8 +36,8 @@ define void  @vector_broadcast() {
 
 define void @vector_insert_extract(<vscale x 4 x i32> %v0, <vscale x 16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: 'vector_insert_extract'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %extract_fixed_from_scalable = call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %extract_fixed_from_scalable = call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 62 for instruction: %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void

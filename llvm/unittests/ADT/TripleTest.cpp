@@ -704,91 +704,105 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Pixel, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-vertex");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Vertex, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-geometry");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Geometry, T.getEnvironment());
-
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-hull");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Hull, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-domain");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Domain, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-compute");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Compute, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-library");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Library, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-raygeneration");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::RayGeneration, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-intersection");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Intersection, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-anyhit");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::AnyHit, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-closesthit");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::ClosestHit, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-miss");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Miss, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-callable");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Callable, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
   
   T = Triple("dxil-unknown-shadermodel-mesh");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Mesh, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("dxil-unknown-shadermodel-amplification");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Amplification, T.getEnvironment());
+  EXPECT_FALSE(T.supportsCOMDAT());
 
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());

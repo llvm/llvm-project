@@ -1922,6 +1922,28 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   if (CandidateTys.empty())
     return nullptr;
 
+  // Generate new candidate type based on load/store size.
+  for (const Slice &S : P) {
+    Type *Ty;
+    if (LoadInst *LI = dyn_cast<LoadInst>(S.getUse()->getUser()))
+      Ty = LI->getType();
+    else if (StoreInst *SI = dyn_cast<StoreInst>(S.getUse()->getUser()))
+      Ty = SI->getValueOperand()->getType();
+    else
+      continue;
+    if (isa<VectorType>(Ty))
+      continue;
+    // Create Vector with size of V, and each element of type Ty
+    VectorType *V = CandidateTys[0];
+    uint64_t ElementSize = DL.getTypeStoreSizeInBits(Ty).getFixedSize();
+    uint64_t VectorSize = DL.getTypeSizeInBits(V).getFixedSize();
+    if ((ElementSize != VectorSize) && (VectorSize % ElementSize == 0)) {
+      VectorType *VTy = VectorType::get(Ty, VectorSize / ElementSize, false);
+      CandidateTys.push_back(VTy);
+      if (CommonEltTy != Ty)
+        HaveCommonEltTy = false;
+    }
+  }
   // Remove non-integer vector types if we had multiple common element types.
   // FIXME: It'd be nice to replace them with integer vector types, but we can't
   // do that until all the backends are known to produce good code for all
@@ -1949,10 +1971,14 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       return cast<FixedVectorType>(RHSTy)->getNumElements() <
              cast<FixedVectorType>(LHSTy)->getNumElements();
     };
+    auto RankVectorTypesEq = [&](VectorType *LHSTy, VectorType *RHSTy) {
+      return cast<FixedVectorType>(LHSTy)->getNumElements() ==
+             cast<FixedVectorType>(RHSTy)->getNumElements();
+    };
     llvm::sort(CandidateTys, RankVectorTypes);
-    CandidateTys.erase(
-        std::unique(CandidateTys.begin(), CandidateTys.end(), RankVectorTypes),
-        CandidateTys.end());
+    CandidateTys.erase(std::unique(CandidateTys.begin(), CandidateTys.end(),
+                                   RankVectorTypesEq),
+                       CandidateTys.end());
   } else {
 // The only way to have the same element type in every vector type is to
 // have the same vector type. Check that and remove all but one.

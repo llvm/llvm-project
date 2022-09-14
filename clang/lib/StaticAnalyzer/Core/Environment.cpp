@@ -274,7 +274,8 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
 
       const Stmt *S = I->first.getStmt();
       Indent(Out, InnerSpace, IsDot)
-          << "{ \"stmt_id\": " << S->getID(Ctx) << ", \"pretty\": ";
+          << "{ \"stmt_id\": " << S->getID(Ctx) << ", \"kind\": \""
+          << S->getStmtClassName() << "\", \"pretty\": ";
       S->printJson(Out, nullptr, PP, /*AddQuotes=*/true);
 
       Out << ", \"value\": ";

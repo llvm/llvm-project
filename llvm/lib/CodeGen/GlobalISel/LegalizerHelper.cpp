@@ -7231,6 +7231,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   if (!DstTy.isVector())
     return UnableToLegalize;
 
+  bool IsEltPtr = DstTy.getElementType().isPointer();
+  if (IsEltPtr) {
+    LLT ScalarPtrTy = LLT::scalar(DstTy.getScalarSizeInBits());
+    LLT NewTy = DstTy.changeElementType(ScalarPtrTy);
+    Op1Reg = MIRBuilder.buildPtrToInt(NewTy, Op1Reg).getReg(0);
+    Op2Reg = MIRBuilder.buildPtrToInt(NewTy, Op2Reg).getReg(0);
+    DstTy = NewTy;
+  }
+
   if (MaskTy.isScalar()) {
     // Turn the scalar condition into a vector condition mask.
 
@@ -7260,7 +7269,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   auto NotMask = MIRBuilder.buildNot(MaskTy, MaskReg);
   auto NewOp1 = MIRBuilder.buildAnd(MaskTy, Op1Reg, MaskReg);
   auto NewOp2 = MIRBuilder.buildAnd(MaskTy, Op2Reg, NotMask);
-  MIRBuilder.buildOr(DstReg, NewOp1, NewOp2);
+  if (IsEltPtr) {
+    auto Or = MIRBuilder.buildOr(DstTy, NewOp1, NewOp2);
+    MIRBuilder.buildIntToPtr(DstReg, Or);
+  } else {
+    MIRBuilder.buildOr(DstReg, NewOp1, NewOp2);
+  }
   MI.eraseFromParent();
   return Legalized;
 }

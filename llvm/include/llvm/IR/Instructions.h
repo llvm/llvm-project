@@ -2393,6 +2393,21 @@ public:
   /// Return true if this shuffle mask is a replication mask.
   bool isReplicationMask(int &ReplicationFactor, int &VF) const;
 
+  /// Return true if this shuffle mask represents "clustered" mask of size VF,
+  /// i.e. each index between [0..VF) is used exactly once in each submask of
+  /// size VF.
+  /// For example, the mask for \p VF=4 is:
+  /// 0, 1, 2, 3, 3, 2, 0, 1 - "clustered", because each submask of size 4
+  /// (0,1,2,3 and 3,2,0,1) uses indices [0..VF) exactly one time.
+  /// 0, 1, 2, 3, 3, 3, 1, 0 - not "clustered", because
+  ///                          element 3 is used twice in the second submask
+  ///                          (3,3,1,0) and index 2 is not used at all.
+  static bool isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF);
+
+  /// Return true if this shuffle mask is a one-use-single-source("clustered")
+  /// mask.
+  bool isOneUseSingleSourceMask(int VF) const;
+
   /// Change values in a shuffle permute mask assuming the two vector operands
   /// of length InVecNumElts have swapped position.
   static void commuteShuffleMask(MutableArrayRef<int> Mask,

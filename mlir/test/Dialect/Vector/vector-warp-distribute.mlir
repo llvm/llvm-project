@@ -691,3 +691,46 @@ func.func @dedup(%laneid: index, %v0: vector<4xf32>, %v1: vector<4xf32>)
   // CHECK-PROP: return %[[SINGLE_RES]], %[[SINGLE_RES]] : vector<1xf32>, vector<1xf32>
   return %r#0, %r#1 : vector<1xf32>, vector<1xf32>
 }
+
+// -----
+
+// CHECK-SCF-IF:   func @warp_execute_has_broadcast_semantics
+func.func @warp_execute_has_broadcast_semantics(%laneid: index, %s0: f32, %v0: vector<f32>, %v1: vector<1xf32>, %v2: vector<1x1xf32>) 
+    -> (f32, vector<f32>, vector<1xf32>, vector<1x1xf32>) {
+  // CHECK-SCF-IF-DAG: %[[C0:.*]] = arith.constant 0 : index
+
+  // CHECK-SCF-IF: scf.if{{.*}}{
+  %r:4 = vector.warp_execute_on_lane_0(%laneid)[32]
+      args(%s0, %v0, %v1, %v2 : f32, vector<f32>, vector<1xf32>, vector<1x1xf32>) -> (f32, vector<f32>, vector<1xf32>, vector<1x1xf32>) {
+    ^bb0(%bs0: f32, %bv0: vector<f32>, %bv1: vector<1xf32>, %bv2: vector<1x1xf32>):
+
+      // CHECK-SCF-IF: vector.transfer_read {{.*}}[%[[C0]], %[[C0]]]{{.*}} {in_bounds = [true, true]} : memref<1x1xf32, 3>, vector<1x1xf32>
+      // CHECK-SCF-IF: vector.transfer_read {{.*}}[%[[C0]]]{{.*}} {in_bounds = [true]} : memref<1xf32, 3>, vector<1xf32>
+      // CHECK-SCF-IF: vector.transfer_read {{.*}}[]{{.*}} : memref<f32, 3>, vector<f32>
+      // CHECK-SCF-IF: memref.load {{.*}}[%[[C0]]] : memref<1xf32, 3>
+      // CHECK-SCF-IF: "some_def_0"(%{{.*}}) : (f32) -> f32
+      // CHECK-SCF-IF: "some_def_1"(%{{.*}}) : (vector<f32>) -> vector<f32>
+      // CHECK-SCF-IF: "some_def_1"(%{{.*}}) : (vector<1xf32>) -> vector<1xf32>
+      // CHECK-SCF-IF: "some_def_1"(%{{.*}}) : (vector<1x1xf32>) -> vector<1x1xf32>
+      // CHECK-SCF-IF: memref.store {{.*}}[%[[C0]]] : memref<1xf32, 3>
+      // CHECK-SCF-IF: vector.transfer_write {{.*}}[] : vector<f32>, memref<f32, 3>
+      // CHECK-SCF-IF: vector.transfer_write {{.*}}[%[[C0]]] {in_bounds = [true]} : vector<1xf32>, memref<1xf32, 3>
+      // CHECK-SCF-IF: vector.transfer_write {{.*}}[%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<1x1xf32>, memref<1x1xf32, 3>
+
+      %rs0 = "some_def_0"(%bs0) : (f32) -> f32
+      %rv0 = "some_def_1"(%bv0) : (vector<f32>) -> vector<f32>
+      %rv1 = "some_def_1"(%bv1) : (vector<1xf32>) -> vector<1xf32>
+      %rv2 = "some_def_1"(%bv2) : (vector<1x1xf32>) -> vector<1x1xf32>
+
+      // CHECK-SCF-IF-NOT: vector.yield
+      vector.yield %rs0, %rv0, %rv1, %rv2 : f32, vector<f32>, vector<1xf32>, vector<1x1xf32>
+  }
+
+  // CHECK-SCF-IF: gpu.barrier
+  // CHECK-SCF-IF: %[[RV2:.*]] = vector.transfer_read {{.*}}[%[[C0]], %[[C0]]]{{.*}} {in_bounds = [true, true]} : memref<1x1xf32, 3>, vector<1x1xf32>
+  // CHECK-SCF-IF: %[[RV1:.*]] = vector.transfer_read {{.*}}[%[[C0]]]{{.*}} {in_bounds = [true]} : memref<1xf32, 3>, vector<1xf32>
+  // CHECK-SCF-IF: %[[RV0:.*]] = vector.transfer_read {{.*}}[]{{.*}} : memref<f32, 3>, vector<f32>
+  // CHECK-SCF-IF: %[[RS0:.*]] = memref.load {{.*}}[%[[C0]]] : memref<1xf32, 3>
+  // CHECK-SCF-IF: return %[[RS0]], %[[RV0]], %[[RV1]], %[[RV2]] : f32, vector<f32>, vector<1xf32>, vector<1x1xf32>
+  return %r#0, %r#1, %r#2, %r#3 : f32, vector<f32>, vector<1xf32>, vector<1x1xf32>
+}

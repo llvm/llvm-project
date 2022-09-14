@@ -89,7 +89,7 @@ def BCLRXForm : SDNodeXForm<imm, [{
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
-def BSETINVXForm : SDNodeXForm<imm, [{
+def SingleBitSetMaskToIndex : SDNodeXForm<imm, [{
   // Find the lowest 1.
   return CurDAG->getTargetConstant(countTrailingZeros(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
@@ -103,11 +103,11 @@ def BCLRMask : ImmLeaf<XLenVT, [{
 }], BCLRXForm>;
 
 // Checks if this mask has a single 1 bit and cannot be used with ORI/XORI.
-def BSETINVMask : ImmLeaf<XLenVT, [{
+def SingleBitSetMask : ImmLeaf<XLenVT, [{
   if (Subtarget->is64Bit())
     return !isInt<12>(Imm) && isPowerOf2_64(Imm);
   return !isInt<12>(Imm) && isPowerOf2_32(Imm);
-}], BSETINVXForm>;
+}], SingleBitSetMaskToIndex>;
 
 // Check if (or r, i) can be optimized to (BSETI (BSETI r, i0), i1),
 // in which i = (1 << i0) | (1 << i1).
@@ -885,16 +885,16 @@ def : Pat<(shiftop<shl> 1, GPR:$rs2),
 
 def : Pat<(and GPR:$rs1, BCLRMask:$mask),
           (BCLRI GPR:$rs1, BCLRMask:$mask)>;
-def : Pat<(or GPR:$rs1, BSETINVMask:$mask),
-          (BSETI GPR:$rs1, BSETINVMask:$mask)>;
-def : Pat<(xor GPR:$rs1, BSETINVMask:$mask),
-          (BINVI GPR:$rs1, BSETINVMask:$mask)>;
+def : Pat<(or GPR:$rs1, SingleBitSetMask:$mask),
+          (BSETI GPR:$rs1, SingleBitSetMask:$mask)>;
+def : Pat<(xor GPR:$rs1, SingleBitSetMask:$mask),
+          (BINVI GPR:$rs1, SingleBitSetMask:$mask)>;
 
 def : Pat<(and (srl GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1)),
           (BEXTI GPR:$rs1, uimmlog2xlen:$shamt)>;
 
-def : Pat<(and (not (srl GPR:$rs1, uimmlog2xlen:$shamt)), (XLenVT 1)),
-          (XORI (BEXTI GPR:$rs1, uimmlog2xlen:$shamt), (XLenVT 1))>;
+def : Pat<(seteq (and GPR:$rs1, SingleBitSetMask:$mask), 0),
+          (BEXTI (XORI GPR:$rs1, -1), SingleBitSetMask:$mask)>;
 
 def : Pat<(or GPR:$r, BSETINVTwoBitsMask:$i),
           (BSETI (BSETI GPR:$r, (TrailingZerosXForm BSETINVTwoBitsMask:$i)),

@@ -81,6 +81,10 @@ public:
   // The file from which this symbol was created.
   InputFile *file;
 
+  // The default copy constructor is deleted due to atomic flags. Define one for
+  // places where no atomic is needed.
+  Symbol(const Symbol &o) { memcpy(this, &o, sizeof(o)); }
+
 protected:
   const char *nameData;
   // 32-bit size saves space.
@@ -295,7 +299,7 @@ public:
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();
-  uint16_t flags = 0;
+  std::atomic<uint16_t> flags = 0;
 
   // A symAux index used to access GOT/PLT entry indexes. This is allocated in
   // postScanRelocations().
@@ -309,15 +313,15 @@ public:
   uint16_t versionId;
 
   void setFlags(uint16_t bits) {
-    flags |= bits;
+    flags.fetch_or(bits, std::memory_order_relaxed);
   }
   bool hasFlag(uint16_t bit) const {
     assert(bit && (bit & (bit - 1)) == 0 && "bit must be a power of 2");
-    return flags & bit;
+    return flags.load(std::memory_order_relaxed) & bit;
   }
 
   bool needsDynReloc() const {
-    return flags &
+    return flags.load(std::memory_order_relaxed) &
            (NEEDS_COPY | NEEDS_GOT | NEEDS_PLT | NEEDS_TLSDESC | NEEDS_TLSGD |
             NEEDS_TLSGD_TO_IE | NEEDS_GOT_DTPREL | NEEDS_TLSIE);
   }

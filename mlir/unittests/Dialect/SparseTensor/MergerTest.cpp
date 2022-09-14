@@ -310,15 +310,15 @@ protected:
   MergerTest3T1L() : MergerTestBase(3, 1) {
     // Tensor 0: sparse input vector.
     merger.addExp(Kind::kTensor, t0, -1u);
-    merger.setDim(t0, l0, Dim::kSparse);
+    merger.setDimLevelFormat(t0, l0, DimLevelFormat(DimLvlType::kCompressed));
 
     // Tensor 1: sparse input vector.
     merger.addExp(Kind::kTensor, t1, -1u);
-    merger.setDim(t1, l0, Dim::kSparse);
+    merger.setDimLevelFormat(t1, l0, DimLevelFormat(DimLvlType::kCompressed));
 
     // Tensor 2: dense output vector.
     merger.addExp(Kind::kTensor, t2, -1u);
-    merger.setDim(t2, l0, Dim::kDense);
+    merger.setDimLevelFormat(t2, l0, DimLevelFormat(DimLvlType::kDense));
   }
 };
 
@@ -333,19 +333,19 @@ protected:
   MergerTest4T1L() : MergerTestBase(4, 1) {
     // Tensor 0: sparse input vector.
     merger.addExp(Kind::kTensor, t0, -1u);
-    merger.setDim(t0, l0, Dim::kSparse);
+    merger.setDimLevelFormat(t0, l0, DimLevelFormat(DimLvlType::kCompressed));
 
     // Tensor 1: sparse input vector.
     merger.addExp(Kind::kTensor, t1, -1u);
-    merger.setDim(t1, l0, Dim::kSparse);
+    merger.setDimLevelFormat(t1, l0, DimLevelFormat(DimLvlType::kCompressed));
 
     // Tensor 2: sparse input vector
     merger.addExp(Kind::kTensor, t2, -1u);
-    merger.setDim(t2, l0, Dim::kSparse);
+    merger.setDimLevelFormat(t2, l0, DimLevelFormat(DimLvlType::kCompressed));
 
     // Tensor 3: dense output vector
     merger.addExp(Kind::kTensor, t3, -1u);
-    merger.setDim(t3, l0, Dim::kDense);
+    merger.setDimLevelFormat(t3, l0, DimLevelFormat(DimLvlType::kDense));
   }
 };
 
@@ -364,15 +364,15 @@ protected:
   MergerTest3T1LD() : MergerTestBase(3, 1) {
     // Tensor 0: sparse input vector.
     merger.addExp(Kind::kTensor, t0, -1u);
-    merger.setDim(t0, l0, Dim::kSparse);
+    merger.setDimLevelFormat(t0, l0, DimLevelFormat(DimLvlType::kCompressed));
 
     // Tensor 1: dense input vector.
     merger.addExp(Kind::kTensor, t1, -1u);
-    merger.setDim(t1, l0, Dim::kDense);
+    merger.setDimLevelFormat(t1, l0, DimLevelFormat(DimLvlType::kDense));
 
     // Tensor 2: dense output vector.
     merger.addExp(Kind::kTensor, t2, -1u);
-    merger.setDim(t2, l0, Dim::kDense);
+    merger.setDimLevelFormat(t2, l0, DimLevelFormat(DimLvlType::kDense));
   }
 };
 

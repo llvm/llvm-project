@@ -81,7 +81,7 @@ IRMaterializationUnit::IRMaterializationUnit(
     }
 
     // If we need an init symbol for this module then create one.
-    if (!llvm::empty(getStaticInitGVs(M))) {
+    if (!getStaticInitGVs(M).empty()) {
       size_t Counter = 0;
 
       do {

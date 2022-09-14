@@ -1442,7 +1442,9 @@ static unsigned skippedInstrFlags(Instruction *I) {
   unsigned Flags = 0;
   if (I->mayReadFromMemory())
     Flags |= SkipReadMem;
-  if (I->mayHaveSideEffects())
+  // We can't arbitrarily move around allocas, e.g. moving allocas (especially
+  // inalloca) across stacksave/stackrestore boundaries.
+  if (I->mayHaveSideEffects() || isa<AllocaInst>(I))
     Flags |= SkipSideEffect;
   if (!isGuaranteedToTransferExecutionToSuccessor(I))
     Flags |= SkipImplicitControlFlow;

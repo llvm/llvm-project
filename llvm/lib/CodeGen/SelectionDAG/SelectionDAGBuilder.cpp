@@ -27,6 +27,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -4102,11 +4103,6 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   SDValue Ptr = getValue(SV);
 
   Type *Ty = I.getType();
-  Align Alignment = I.getAlign();
-
-  AAMDNodes AAInfo = I.getAAMetadata();
-  const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
-
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<uint64_t, 4> Offsets;
   ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets);
@@ -4114,6 +4110,9 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (NumValues == 0)
     return;
 
+  Align Alignment = I.getAlign();
+  AAMDNodes AAInfo = I.getAAMetadata();
+  const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
   bool isVolatile = I.isVolatile();
   MachineMemOperand::Flags MMOFlags =
       TLI.getLoadMemOperandFlags(I, DAG.getDataLayout());
@@ -4134,15 +4133,14 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     Root = DAG.getEntryNode();
     ConstantMemory = true;
     MMOFlags |= MachineMemOperand::MOInvariant;
-
-    // FIXME: pointsToConstantMemory probably does not imply dereferenceable,
-    // but the previous usage implied it did. Probably should check
-    // isDereferenceableAndAlignedPointer.
-    MMOFlags |= MachineMemOperand::MODereferenceable;
   } else {
     // Do not serialize non-volatile loads against each other.
     Root = DAG.getRoot();
   }
+
+  if (isDereferenceableAndAlignedPointer(SV, Ty, Alignment, DAG.getDataLayout(),
+                                         &I, nullptr, LibInfo))
+    MMOFlags |= MachineMemOperand::MODereferenceable;
 
   SDLoc dl = getCurSDLoc();
 

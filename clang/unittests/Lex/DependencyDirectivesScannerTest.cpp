@@ -124,6 +124,21 @@ TEST(MinimizeSourceToDependencyDirectivesTest, EmptyHash) {
   EXPECT_STREQ("#define MACRO a\n", Out.data());
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, HashHash) {
+  SmallVector<char, 128> Out;
+
+  StringRef Source = R"(
+    #define S
+    #if 0
+      ##pragma cool
+      ##include "t.h"
+    #endif
+    #define E
+    )";
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
+  EXPECT_STREQ("#define S\n#if 0\n#endif\n#define E\n", Out.data());
+}
+
 TEST(MinimizeSourceToDependencyDirectivesTest, Define) {
   SmallVector<char, 128> Out;
   SmallVector<dependency_directives_scan::Token, 4> Tokens;

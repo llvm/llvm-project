@@ -278,7 +278,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     if (TargetHint.first == 0 && TargetHint.second)
       MRI.clearSimpleHint(LI.reg());
 
-    std::set<Register> HintedRegs;
+    SmallSet<Register, 4> HintedRegs;
     for (const auto &Hint : CopyHints) {
       if (!HintedRegs.insert(Hint.Reg).second ||
           (TargetHint.first != 0 && Hint.Reg == TargetHint.second))

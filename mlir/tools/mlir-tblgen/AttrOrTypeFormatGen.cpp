@@ -747,7 +747,7 @@ void DefFormat::genLiteralPrinter(StringRef value, FmtContext &ctx,
   // Update the flags.
   shouldEmitSpace =
       value.size() != 1 || !StringRef("<({[").contains(value.front());
-  lastWasPunctuation = !(value.front() == '_' || isalpha(value.front()));
+  lastWasPunctuation = value.front() != '_' && !isalpha(value.front());
 }
 
 void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
