@@ -47,6 +47,10 @@ class Boolean {
   Boolean operator~() const { return Boolean(true); }
 
   explicit operator unsigned() const { return V; }
+  explicit operator int8_t() const { return V; }
+  explicit operator uint8_t() const { return V; }
+  explicit operator int16_t() const { return V; }
+  explicit operator uint16_t() const { return V; }
   explicit operator int64_t() const { return V; }
   explicit operator uint64_t() const { return V; }
   explicit operator int() const { return V; }

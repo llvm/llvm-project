@@ -80,6 +80,7 @@ public:
   bool VisitArraySubscriptExpr(const ArraySubscriptExpr *E);
   bool VisitInitListExpr(const InitListExpr *E);
   bool VisitConstantExpr(const ConstantExpr *E);
+  bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

@@ -281,7 +281,29 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
+bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
+    const UnaryExprOrTypeTraitExpr *E) {
+
+  if (E->getKind() == UETT_SizeOf) {
+    QualType ArgType = E->getTypeOfArgument();
+
+    CharUnits Size;
+    if (ArgType->isVoidType() || ArgType->isFunctionType())
+      Size = CharUnits::One();
+    else {
+      if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
+        return false;
+
+      Size = Ctx.getASTContext().getTypeSizeInChars(ArgType);
+    }
+
+    return this->emitConst(E, Size.getQuantity());
+  }
+
+  return false;
+}
+
+template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);
 }
