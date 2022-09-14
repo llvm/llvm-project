@@ -39,8 +39,8 @@ makeSetFromConstraints(unsigned ids, ArrayRef<SmallVector<int64_t, 4>> ineqs,
   return set;
 }
 
-static void dump(ArrayRef<int64_t> vec) {
-  for (int64_t x : vec)
+static void dump(ArrayRef<MPInt> vec) {
+  for (const MPInt &x : vec)
     llvm::errs() << x << ' ';
   llvm::errs() << '\n';
 }
@@ -58,8 +58,8 @@ static void dump(ArrayRef<int64_t> vec) {
 /// opposite of hasSample.
 static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
                         TestFunction fn = TestFunction::Sample) {
-  Optional<SmallVector<int64_t, 8>> maybeSample;
-  MaybeOptimum<SmallVector<int64_t, 8>> maybeLexMin;
+  Optional<SmallVector<MPInt, 8>> maybeSample;
+  MaybeOptimum<SmallVector<MPInt, 8>> maybeLexMin;
   switch (fn) {
   case TestFunction::Sample:
     maybeSample = poly.findIntegerSample();
@@ -426,6 +426,12 @@ TEST(IntegerPolyhedronTest, FindSampleTest) {
                               "-7*x - 4*y + z + 1 >= 0,"
                               "2*x - 7*y - 8*z - 7 >= 0,"
                               "9*x + 8*y - 9*z - 7 >= 0)"));
+
+  checkSample(
+      true,
+      parsePoly(
+          "(x) : (1152921504606846977*(x floordiv 1152921504606846977) == x, "
+          "1152921504606846976*(x floordiv 1152921504606846976) == x)"));
 }
 
 TEST(IntegerPolyhedronTest, IsIntegerEmptyTest) {
@@ -569,10 +575,10 @@ TEST(IntegerPolyhedronTest, removeRedundantConstraintsTest) {
   // y >= 128x >= 0.
   poly5.removeRedundantConstraints();
   EXPECT_EQ(poly5.getNumInequalities(), 3u);
-  SmallVector<int64_t, 8> redundantConstraint = {0, 1, 0};
+  SmallVector<MPInt, 8> redundantConstraint = getMPIntVec({0, 1, 0});
   for (unsigned i = 0; i < 3; ++i) {
     // Ensure that the removed constraint was the redundant constraint [3].
-    EXPECT_NE(poly5.getInequality(i), ArrayRef<int64_t>(redundantConstraint));
+    EXPECT_NE(poly5.getInequality(i), ArrayRef<MPInt>(redundantConstraint));
   }
 }
 
@@ -611,11 +617,12 @@ TEST(IntegerPolyhedronTest, addConstantLowerBound) {
 static void checkDivisionRepresentation(
     IntegerPolyhedron &poly,
     const std::vector<SmallVector<int64_t, 8>> &expectedDividends,
-    ArrayRef<unsigned> expectedDenominators) {
+    ArrayRef<int64_t> expectedDenominators) {
   DivisionRepr divs = poly.getLocalReprs();
 
   // Check that the `denominators` and `expectedDenominators` match.
-  EXPECT_TRUE(expectedDenominators == divs.getDenoms());
+  EXPECT_EQ(ArrayRef<MPInt>(getMPIntVec(expectedDenominators)),
+            divs.getDenoms());
 
   // Check that the `dividends` and `expectedDividends` match. If the
   // denominator for a division is zero, we ignore its dividend.
@@ -637,7 +644,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprSimple) {
 
   std::vector<SmallVector<int64_t, 8>> divisions = {{1, 0, 0, 4},
                                                     {1, 0, 0, 100}};
-  SmallVector<unsigned, 8> denoms = {10, 10};
+  SmallVector<int64_t, 8> denoms = {10, 10};
 
   // Check if floordivs can be computed when no other inequalities exist
   // and floor divs do not depend on each other.
@@ -656,7 +663,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprConstantFloorDiv) {
 
   std::vector<SmallVector<int64_t, 8>> divisions = {{0, 0, 0, 0, 0, 0, 3},
                                                     {0, 0, 0, 0, 0, 0, 2}};
-  SmallVector<unsigned, 8> denoms = {1, 1};
+  SmallVector<int64_t, 8> denoms = {1, 1};
 
   // Check if floordivs with constant numerator can be computed.
   checkDivisionRepresentation(poly, divisions, denoms);
@@ -680,7 +687,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprRecursive) {
       {3, 0, 9, 2, 2, 0, 0, 10},
       {0, 1, -123, 2, 0, -4, 0, 10}};
 
-  SmallVector<unsigned, 8> denoms = {3, 5, 3};
+  SmallVector<int64_t, 8> denoms = {3, 5, 3};
 
   // Check if floordivs which may depend on other floordivs can be computed.
   checkDivisionRepresentation(poly, divisions, denoms);
@@ -701,7 +708,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprTightUpperBound) {
     poly.removeRedundantConstraints();
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 0, 0}};
-    SmallVector<unsigned, 8> denoms = {3};
+    SmallVector<int64_t, 8> denoms = {3};
 
     // Check if the divisions can be computed even with a tighter upper bound.
     checkDivisionRepresentation(poly, divisions, denoms);
@@ -714,7 +721,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprTightUpperBound) {
     poly.convertToLocal(VarKind::SetDim, 2, 3);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 1}};
-    SmallVector<unsigned, 8> denoms = {4};
+    SmallVector<int64_t, 8> denoms = {4};
 
     // Check if the divisions can be computed even with a tighter upper bound.
     checkDivisionRepresentation(poly, divisions, denoms);
@@ -728,7 +735,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
     poly.convertToLocal(VarKind::SetDim, 2, 3);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 0}};
-    SmallVector<unsigned, 8> denoms = {4};
+    SmallVector<int64_t, 8> denoms = {4};
 
     checkDivisionRepresentation(poly, divisions, denoms);
   }
@@ -738,7 +745,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
     poly.convertToLocal(VarKind::SetDim, 2, 3);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 0}};
-    SmallVector<unsigned, 8> denoms = {4};
+    SmallVector<int64_t, 8> denoms = {4};
 
     checkDivisionRepresentation(poly, divisions, denoms);
   }
@@ -748,7 +755,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
     poly.convertToLocal(VarKind::SetDim, 2, 3);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{-1, -1, 0, 2}};
-    SmallVector<unsigned, 8> denoms = {3};
+    SmallVector<int64_t, 8> denoms = {3};
 
     checkDivisionRepresentation(poly, divisions, denoms);
   }
@@ -764,7 +771,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEqualityAndInequality) {
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 0, 1},
                                                       {1, 1, 0, 0, 0}};
-    SmallVector<unsigned, 8> denoms = {4, 3};
+    SmallVector<int64_t, 8> denoms = {4, 3};
 
     checkDivisionRepresentation(poly, divisions, denoms);
   }
@@ -777,7 +784,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprNoRepr) {
   poly.convertToLocal(VarKind::SetDim, 1, 2);
 
   std::vector<SmallVector<int64_t, 8>> divisions = {{0, 0, 0}};
-  SmallVector<unsigned, 8> denoms = {0};
+  SmallVector<int64_t, 8> denoms = {0};
 
   // Check that no division is computed.
   checkDivisionRepresentation(poly, divisions, denoms);
@@ -793,7 +800,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprNegConstNormalize) {
   //   = floor((1/3) + (-1 - x)/2)
   //   = floor((-1 - x)/2).
   std::vector<SmallVector<int64_t, 8>> divisions = {{-1, 0, -1}};
-  SmallVector<unsigned, 8> denoms = {2};
+  SmallVector<int64_t, 8> denoms = {2};
   checkDivisionRepresentation(poly, divisions, denoms);
 }
 
@@ -1061,7 +1068,7 @@ TEST(IntegerPolyhedronTest, negativeDividends) {
   // Merging triggers normalization.
   std::vector<SmallVector<int64_t, 8>> divisions = {{-1, 0, 0, 1},
                                                     {-1, 0, 0, -2}};
-  SmallVector<unsigned, 8> denoms = {2, 3};
+  SmallVector<int64_t, 8> denoms = {2, 3};
   checkDivisionRepresentation(poly1, divisions, denoms);
 }
 
@@ -1139,9 +1146,9 @@ TEST(IntegerPolyhedronTest, findRationalLexMin) {
 }
 
 void expectIntegerLexMin(const IntegerPolyhedron &poly, ArrayRef<int64_t> min) {
-  auto lexMin = poly.findIntegerLexMin();
+  MaybeOptimum<SmallVector<MPInt, 8>> lexMin = poly.findIntegerLexMin();
   ASSERT_TRUE(lexMin.isBounded());
-  EXPECT_EQ(ArrayRef<int64_t>(*lexMin), min);
+  EXPECT_EQ(*lexMin, getMPIntVec(min));
 }
 
 void expectNoIntegerLexMin(OptimumKind kind, const IntegerPolyhedron &poly) {
@@ -1389,8 +1396,8 @@ TEST(IntegerPolyhedronTest, findSymbolicIntegerLexMin) {
 
 static void
 expectComputedVolumeIsValidOverapprox(const IntegerPolyhedron &poly,
-                                      Optional<uint64_t> trueVolume,
-                                      Optional<uint64_t> resultBound) {
+                                      Optional<int64_t> trueVolume,
+                                      Optional<int64_t> resultBound) {
   expectComputedVolumeIsValidOverapprox(poly.computeVolume(), trueVolume,
                                         resultBound);
 }
@@ -1442,19 +1449,24 @@ TEST(IntegerPolyhedronTest, computeVolume) {
       /*trueVolume=*/{}, /*resultBound=*/{});
 }
 
+bool containsPointNoLocal(const IntegerPolyhedron &poly,
+                          ArrayRef<int64_t> point) {
+  return poly.containsPointNoLocal(getMPIntVec(point)).has_value();
+}
+
 TEST(IntegerPolyhedronTest, containsPointNoLocal) {
   IntegerPolyhedron poly1 = parsePoly("(x) : ((x floordiv 2) - x == 0)");
-  EXPECT_TRUE(poly1.containsPointNoLocal({0}));
-  EXPECT_FALSE(poly1.containsPointNoLocal({1}));
+  EXPECT_TRUE(containsPointNoLocal(poly1, {0}));
+  EXPECT_FALSE(containsPointNoLocal(poly1, {1}));
 
   IntegerPolyhedron poly2 = parsePoly(
       "(x) : (x - 2*(x floordiv 2) == 0, x - 4*(x floordiv 4) - 2 == 0)");
-  EXPECT_TRUE(poly2.containsPointNoLocal({6}));
-  EXPECT_FALSE(poly2.containsPointNoLocal({4}));
+  EXPECT_TRUE(containsPointNoLocal(poly2, {6}));
+  EXPECT_FALSE(containsPointNoLocal(poly2, {4}));
 
   IntegerPolyhedron poly3 = parsePoly("(x, y) : (2*x - y >= 0, y - 3*x >= 0)");
-  EXPECT_TRUE(poly3.containsPointNoLocal({0, 0}));
-  EXPECT_FALSE(poly3.containsPointNoLocal({1, 0}));
+  EXPECT_TRUE(containsPointNoLocal(poly3, {0, 0}));
+  EXPECT_FALSE(containsPointNoLocal(poly3, {1, 0}));
 }
 
 TEST(IntegerPolyhedronTest, truncateEqualityRegressionTest) {

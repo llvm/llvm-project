@@ -166,7 +166,7 @@ public:
   /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
   /// is the current number of variables, then the corresponding inequality is
   /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} >= 0.
-  virtual void addInequality(ArrayRef<int64_t> coeffs) = 0;
+  virtual void addInequality(ArrayRef<MPInt> coeffs) = 0;
 
   /// Returns the number of variables in the tableau.
   unsigned getNumVariables() const;
@@ -177,14 +177,16 @@ public:
   /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
   /// is the current number of variables, then the corresponding equality is
   /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} == 0.
-  void addEquality(ArrayRef<int64_t> coeffs);
+  void addEquality(ArrayRef<MPInt> coeffs);
 
   /// Add new variables to the end of the list of variables.
   void appendVariable(unsigned count = 1);
 
   /// Append a new variable to the simplex and constrain it such that its only
   /// integer value is the floor div of `coeffs` and `denom`.
-  void addDivisionVariable(ArrayRef<int64_t> coeffs, int64_t denom);
+  ///
+  /// `denom` must be positive.
+  void addDivisionVariable(ArrayRef<MPInt> coeffs, const MPInt &denom);
 
   /// Mark the tableau as being empty.
   void markEmpty();
@@ -293,7 +295,7 @@ protected:
   /// con.
   ///
   /// Returns the index of the new Unknown in con.
-  unsigned addRow(ArrayRef<int64_t> coeffs, bool makeRestricted = false);
+  unsigned addRow(ArrayRef<MPInt> coeffs, bool makeRestricted = false);
 
   /// Swap the two rows/columns in the tableau and associated data structures.
   void swapRows(unsigned i, unsigned j);
@@ -421,7 +423,7 @@ public:
   ///
   /// This just adds the inequality to the tableau and does not try to create a
   /// consistent tableau configuration.
-  void addInequality(ArrayRef<int64_t> coeffs) final;
+  void addInequality(ArrayRef<MPInt> coeffs) final;
 
   /// Get a snapshot of the current state. This is used for rolling back.
   unsigned getSnapshot() { return SimplexBase::getSnapshotBasis(); }
@@ -493,15 +495,15 @@ public:
   ///
   /// Note: this should be used only when the lexmin is really needed. To obtain
   /// any integer sample, use Simplex::findIntegerSample as that is more robust.
-  MaybeOptimum<SmallVector<int64_t, 8>> findIntegerLexMin();
+  MaybeOptimum<SmallVector<MPInt, 8>> findIntegerLexMin();
 
   /// Return whether the specified inequality is redundant/separate for the
   /// polytope. Redundant means every point satisfies the given inequality, and
   /// separate means no point satisfies it.
   ///
   /// These checks are integer-exact.
-  bool isSeparateInequality(ArrayRef<int64_t> coeffs);
-  bool isRedundantInequality(ArrayRef<int64_t> coeffs);
+  bool isSeparateInequality(ArrayRef<MPInt> coeffs);
+  bool isRedundantInequality(ArrayRef<MPInt> coeffs);
 
 private:
   /// Returns the current sample point, which may contain non-integer (rational)
@@ -654,11 +656,11 @@ private:
   /// Get the numerator of the symbolic sample of the specific row.
   /// This is an affine expression in the symbols with integer coefficients.
   /// The last element is the constant term. This ignores the big M coefficient.
-  SmallVector<int64_t, 8> getSymbolicSampleNumerator(unsigned row) const;
+  SmallVector<MPInt, 8> getSymbolicSampleNumerator(unsigned row) const;
 
   /// Get an affine inequality in the symbols with integer coefficients that
   /// holds iff the symbolic sample of the specified row is non-negative.
-  SmallVector<int64_t, 8> getSymbolicSampleIneq(unsigned row) const;
+  SmallVector<MPInt, 8> getSymbolicSampleIneq(unsigned row) const;
 
   /// Return whether all the coefficients of the symbolic sample are integers.
   ///
@@ -708,7 +710,7 @@ public:
   ///
   /// This also tries to restore the tableau configuration to a consistent
   /// state and marks the Simplex empty if this is not possible.
-  void addInequality(ArrayRef<int64_t> coeffs) final;
+  void addInequality(ArrayRef<MPInt> coeffs) final;
 
   /// Compute the maximum or minimum value of the given row, depending on
   /// direction. The specified row is never pivoted. On return, the row may
@@ -724,7 +726,7 @@ public:
   /// Returns a Fraction denoting the optimum, or a null value if no optimum
   /// exists, i.e., if the expression is unbounded in this direction.
   MaybeOptimum<Fraction> computeOptimum(Direction direction,
-                                        ArrayRef<int64_t> coeffs);
+                                        ArrayRef<MPInt> coeffs);
 
   /// Returns whether the perpendicular of the specified constraint is a
   /// is a direction along which the polytope is bounded.
@@ -766,8 +768,8 @@ public:
   /// Returns a (min, max) pair denoting the minimum and maximum integer values
   /// of the given expression. If no integer value exists, both results will be
   /// of kind Empty.
-  std::pair<MaybeOptimum<int64_t>, MaybeOptimum<int64_t>>
-  computeIntegerBounds(ArrayRef<int64_t> coeffs);
+  std::pair<MaybeOptimum<MPInt>, MaybeOptimum<MPInt>>
+  computeIntegerBounds(ArrayRef<MPInt> coeffs);
 
   /// Returns true if the polytope is unbounded, i.e., extends to infinity in
   /// some direction. Otherwise, returns false.
@@ -779,7 +781,7 @@ public:
 
   /// Returns an integer sample point if one exists, or None
   /// otherwise. This should only be called for bounded sets.
-  Optional<SmallVector<int64_t, 8>> findIntegerSample();
+  Optional<SmallVector<MPInt, 8>> findIntegerSample();
 
   enum class IneqType { Redundant, Cut, Separate };
 
@@ -789,13 +791,13 @@ public:
   /// Redundant   The inequality is satisfied in the polytope
   /// Cut         The inequality is satisfied by some points, but not by others
   /// Separate    The inequality is not satisfied by any point
-  IneqType findIneqType(ArrayRef<int64_t> coeffs);
+  IneqType findIneqType(ArrayRef<MPInt> coeffs);
 
   /// Check if the specified inequality already holds in the polytope.
-  bool isRedundantInequality(ArrayRef<int64_t> coeffs);
+  bool isRedundantInequality(ArrayRef<MPInt> coeffs);
 
   /// Check if the specified equality already holds in the polytope.
-  bool isRedundantEquality(ArrayRef<int64_t> coeffs);
+  bool isRedundantEquality(ArrayRef<MPInt> coeffs);
 
   /// Returns true if this Simplex's polytope is a rational subset of `rel`.
   /// Otherwise, returns false.
@@ -803,7 +805,7 @@ public:
 
   /// Returns the current sample point if it is integral. Otherwise, returns
   /// None.
-  Optional<SmallVector<int64_t, 8>> getSamplePointIfIntegral() const;
+  Optional<SmallVector<MPInt, 8>> getSamplePointIfIntegral() const;
 
   /// Returns the current sample point, which may contain non-integer (rational)
   /// coordinates. Returns an empty optional when the tableau is empty.

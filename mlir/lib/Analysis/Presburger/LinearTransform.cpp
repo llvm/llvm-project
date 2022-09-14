@@ -25,7 +25,7 @@ static void modEntryColumnOperation(Matrix &m, unsigned row, unsigned sourceCol,
   assert(m(row, sourceCol) != 0 && "Cannot divide by zero!");
   assert((m(row, sourceCol) > 0 && m(row, targetCol) > 0) &&
          "Operands must be positive!");
-  int64_t ratio = m(row, targetCol) / m(row, sourceCol);
+  MPInt ratio = m(row, targetCol) / m(row, sourceCol);
   m.addToColumn(sourceCol, targetCol, -ratio);
   otherMatrix.addToColumn(sourceCol, targetCol, -ratio);
 }
@@ -116,21 +116,21 @@ IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
   IntegerRelation result(rel.getSpace());
 
   for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i) {
-    ArrayRef<int64_t> eq = rel.getEquality(i);
+    ArrayRef<MPInt> eq = rel.getEquality(i);
 
-    int64_t c = eq.back();
+    const MPInt &c = eq.back();
 
-    SmallVector<int64_t, 8> newEq = preMultiplyWithRow(eq.drop_back());
+    SmallVector<MPInt, 8> newEq = preMultiplyWithRow(eq.drop_back());
     newEq.push_back(c);
     result.addEquality(newEq);
   }
 
   for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i) {
-    ArrayRef<int64_t> ineq = rel.getInequality(i);
+    ArrayRef<MPInt> ineq = rel.getInequality(i);
 
-    int64_t c = ineq.back();
+    const MPInt &c = ineq.back();
 
-    SmallVector<int64_t, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
+    SmallVector<MPInt, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
     newIneq.push_back(c);
     result.addInequality(newIneq);
   }
