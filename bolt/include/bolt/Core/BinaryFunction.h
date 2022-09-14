@@ -388,6 +388,9 @@ private:
   /// Original LSDA address for the function.
   uint64_t LSDAAddress{0};
 
+  /// Original LSDA type encoding
+  unsigned LSDATypeEncoding{dwarf::DW_EH_PE_omit};
+
   /// Containing compilation unit for the function.
   DWARFUnit *DwarfUnit{nullptr};
 
@@ -1437,6 +1440,8 @@ public:
   ArrayRef<uint8_t> getLSDAActionTable() const { return LSDAActionTable; }
 
   const LSDATypeTableTy &getLSDATypeTable() const { return LSDATypeTable; }
+
+  unsigned getLSDATypeEncoding() const { return LSDATypeEncoding; }
 
   const LSDATypeTableTy &getLSDATypeAddressTable() const {
     return LSDATypeAddressTable;
