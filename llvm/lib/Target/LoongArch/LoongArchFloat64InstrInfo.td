@@ -263,8 +263,16 @@ let Predicates = [HasBasicD, IsLA64] in {
 def : Pat<(f64 fpimm0), (MOVGR2FR_D R0)>;
 def : Pat<(f64 fpimm0neg), (FNEG_D (MOVGR2FR_D R0))>;
 def : Pat<(f64 fpimm1), (FFINT_D_L (MOVGR2FR_D (ADDI_D R0, 1)))>;
+} // Predicates = [HasBasicD, IsLA64]
+let Predicates = [HasBasicD, IsLA32] in {
+def : Pat<(f64 fpimm0), (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0)>;
+def : Pat<(f64 fpimm0neg), (FNEG_D (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0))>;
+def : Pat<(f64 fpimm1), (FCVT_D_S (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1))))>;
+} // Predicates = [HasBasicD, IsLA32]
 
-// Convert int to FP
+/// Convert int to FP
+
+let Predicates = [HasBasicD, IsLA64] in {
 def : Pat<(f64 (sint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
           (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
 def : Pat<(f64 (sint_to_fp GPR:$src)), (FFINT_D_L (MOVGR2FR_D GPR:$src))>;
@@ -273,8 +281,13 @@ def : Pat<(f64 (uint_to_fp (i64 (zexti32 (i64 GPR:$src))))),
           (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
 
 def : Pat<(bitconvert GPR:$src), (MOVGR2FR_D GPR:$src)>;
+} // Predicates = [HasBasicD, IsLA64]
+let Predicates = [HasBasicD, IsLA32] in {
+def : Pat<(f64 (sint_to_fp (i32 GPR:$src))), (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
+} // Predicates = [HasBasicD, IsLA32]
 
 // Convert FP to int
+let Predicates = [HasBasicD, IsLA64] in {
 def : Pat<(bitconvert FPR64:$src), (MOVFR2GR_D FPR64:$src)>;
 } // Predicates = [HasBasicD, IsLA64]
 
@@ -282,12 +295,3 @@ def : Pat<(bitconvert FPR64:$src), (MOVFR2GR_D FPR64:$src)>;
 let Predicates = [HasBasicD, IsLA64] in {
 def : PatFpr<frint, FRINT_D, FPR64>;
 } // Predicates = [HasBasicD, IsLA64]
-
-let Predicates = [HasBasicD, IsLA32] in {
-def : Pat<(f64 fpimm0), (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0)>;
-def : Pat<(f64 fpimm0neg), (FNEG_D (MOVGR2FRH_W (MOVGR2FR_W_64 R0), R0))>;
-def : Pat<(f64 fpimm1), (FCVT_D_S (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1))))>;
-
-// Convert int to FP
-def : Pat<(f64 (sint_to_fp (i32 GPR:$src))), (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
-} // Predicates = [HasBasicD, IsLA32]
