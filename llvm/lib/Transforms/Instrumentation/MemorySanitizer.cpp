@@ -1117,6 +1117,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   SmallSetVector<AllocaInst *, 16> AllocaSet;
   SmallVector<std::pair<IntrinsicInst *, AllocaInst *>, 16> LifetimeStartList;
   SmallVector<StoreInst *, 16> StoreList;
+  int64_t SplittableBlocksCount = 0;
 
   MemorySanitizerVisitor(Function &F, MemorySanitizer &MS,
                          const TargetLibraryInfo &TLI)
@@ -1146,6 +1147,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     LLVM_DEBUG(if (!InsertChecks) dbgs()
                << "MemorySanitizer is not inserting checks into '"
                << F.getName() << "'\n");
+  }
+
+  bool instrumentWithCalls(Value *V) {
+    // Constants likely will be eliminated by follow-up passes.
+    if (isa<Constant>(V))
+      return false;
+
+    ++SplittableBlocksCount;
+    return ClInstrumentationWithCallThreshold >= 0 &&
+           SplittableBlocksCount > ClInstrumentationWithCallThreshold;
   }
 
   bool isInPrologue(Instruction &I) {
@@ -1206,7 +1217,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void storeOrigin(IRBuilder<> &IRB, Value *Addr, Value *Shadow, Value *Origin,
-                   Value *OriginPtr, Align Alignment, bool AsCall) {
+                   Value *OriginPtr, Align Alignment) {
     const DataLayout &DL = F.getParent()->getDataLayout();
     const Align OriginAlignment = std::max(kMinOriginAlignment, Alignment);
     unsigned StoreSize = DL.getTypeStoreSize(Shadow->getType());
@@ -1228,7 +1239,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     unsigned TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
-    if (AsCall && SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
+    if (instrumentWithCalls(ConvertedShadow) &&
+        SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
       FunctionCallee Fn = MS.MaybeStoreOriginFn[SizeIndex];
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
@@ -1247,7 +1259,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  void materializeStores(bool InstrumentWithCalls) {
+  void materializeStores() {
     for (StoreInst *SI : StoreList) {
       IRBuilder<> IRB(SI);
       Value *Val = SI->getValueOperand();
@@ -1269,7 +1281,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       if (MS.TrackOrigins && !SI->isAtomic())
         storeOrigin(IRB, Addr, Shadow, getOrigin(Val), OriginPtr,
-                    OriginAlignment, InstrumentWithCalls);
+                    OriginAlignment);
     }
   }
 
@@ -1319,11 +1331,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void materializeOneCheck(IRBuilder<> &IRB, Value *ConvertedShadow,
-                           Value *Origin, bool AsCall) {
+                           Value *Origin) {
     const DataLayout &DL = F.getParent()->getDataLayout();
     unsigned TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
-    if (AsCall && SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
+    if (instrumentWithCalls(ConvertedShadow) &&
+        SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
       FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
@@ -1345,12 +1358,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void materializeInstructionChecks(
-      bool InstrumentWithCalls,
       ArrayRef<ShadowOriginAndInsertPoint> InstructionChecks) {
     const DataLayout &DL = F.getParent()->getDataLayout();
     // Disable combining in some cases. TrackOrigins checks each shadow to pick
-    // correct origin. InstrumentWithCalls expects to reduce shadow using API.
-    bool Combine = !InstrumentWithCalls && !MS.TrackOrigins;
+    // correct origin.
+    bool Combine = !MS.TrackOrigins;
     Instruction *Instruction = InstructionChecks.front().OrigIns;
     Value *Shadow = nullptr;
     for (const auto &ShadowData : InstructionChecks) {
@@ -1377,9 +1389,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         // Fallback to runtime check, which still can be optimized out later.
       }
 
+      // Work around to keep existing tests.
+      // FIXME: update tests and remove.
+      if (ClInstrumentationWithCallThreshold >= 0 &&
+          SplittableBlocksCount >= ClInstrumentationWithCallThreshold) {
+        materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin);
+        continue;
+      }
+
       if (!Combine) {
-        materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin,
-                            InstrumentWithCalls);
+        materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin);
         continue;
       }
 
@@ -1390,11 +1409,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (Shadow) {
       assert(Combine);
       IRBuilder<> IRB(Instruction);
-      materializeOneCheck(IRB, Shadow, nullptr, false);
+      materializeOneCheck(IRB, Shadow, nullptr);
     }
   }
 
-  void materializeChecks(bool InstrumentWithCalls) {
+  void materializeChecks() {
     llvm::stable_sort(InstrumentationList,
                       [](const ShadowOriginAndInsertPoint &L,
                          const ShadowOriginAndInsertPoint &R) {
@@ -1409,8 +1428,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                          return L != R.OrigIns;
                        });
       // Process all checks of instruction at once.
-      materializeInstructionChecks(InstrumentWithCalls,
-                                   ArrayRef<ShadowOriginAndInsertPoint>(I, J));
+      materializeInstructionChecks(ArrayRef<ShadowOriginAndInsertPoint>(I, J));
       I = J;
     }
 
@@ -1474,16 +1492,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     for (AllocaInst *AI : AllocaSet)
       instrumentAlloca(*AI);
 
-    bool InstrumentWithCalls = ClInstrumentationWithCallThreshold >= 0 &&
-                               InstrumentationList.size() + StoreList.size() >
-                                   (unsigned)ClInstrumentationWithCallThreshold;
-
     // Insert shadow value checks.
-    materializeChecks(InstrumentWithCalls);
+    materializeChecks();
 
     // Delayed instrumentation of StoreInst.
     // This may not add new address checks.
-    materializeStores(InstrumentWithCalls);
+    materializeStores();
 
     return true;
   }
