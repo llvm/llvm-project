@@ -984,9 +984,11 @@ private:
 
 Error OnDiskCAS::TempFile::discard() {
   Done = true;
-  if (FD != -1)
-    if (std::error_code EC = sys::fs::closeFile(FD))
+  if (FD != -1) {
+    sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
+    if (std::error_code EC = sys::fs::closeFile(File))
       return errorCodeToError(EC);
+  }
   FD = -1;
 
   // Always try to close and remove.
@@ -1008,7 +1010,8 @@ Error OnDiskCAS::TempFile::keep(const Twine &Name) {
   if (!RenameEC)
     TmpName = "";
 
-  if (std::error_code EC = sys::fs::closeFile(FD))
+  sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
+  if (std::error_code EC = sys::fs::closeFile(File))
     return errorCodeToError(EC);
   FD = -1;
 
