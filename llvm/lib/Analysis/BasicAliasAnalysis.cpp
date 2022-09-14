@@ -790,6 +790,15 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   if (F->doesNotAccessMemory())
     return FunctionModRefBehavior::none();
 
+  switch (F->getIntrinsicID()) {
+  case Intrinsic::experimental_guard:
+  case Intrinsic::experimental_deoptimize:
+    // These intrinsics can read arbitrary memory, and additionally modref
+    // inaccessible memory to model control dependence.
+    return FunctionModRefBehavior::readOnly() |
+           FunctionModRefBehavior::inaccessibleMemOnly(ModRefInfo::ModRef);
+  }
+
   // If the function declares it only reads memory, go with that.
   ModRefInfo MR = ModRefInfo::ModRef;
   if (F->onlyReadsMemory())
@@ -979,19 +988,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
                                  AAQI) == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
   }
-
-  // Guard intrinsics are marked as arbitrarily writing so that proper control
-  // dependencies are maintained but they never mods any particular memory
-  // location.
-  //
-  // *Unlike* assumes, guard intrinsics are modeled as reading memory since the
-  // heap state at the point the guard is issued needs to be consistent in case
-  // the guard invokes the "deopt" continuation.
-  if (isIntrinsicCall(Call, Intrinsic::experimental_guard))
-    return ModRefInfo::Ref;
-  // The same applies to deoptimize which is essentially a guard(false).
-  if (isIntrinsicCall(Call, Intrinsic::experimental_deoptimize))
-    return ModRefInfo::Ref;
 
   // Like assumes, invariant.start intrinsics were also marked as arbitrarily
   // writing so that proper control dependencies are maintained but they never
