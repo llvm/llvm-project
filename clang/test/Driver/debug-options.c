@@ -246,11 +246,7 @@
 // RUN: %clang -### -c -glldb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -glldb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
-// RUN: %clang -### -target x86_64-unknown-linux -c -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=GARANGE %s
-// RUN: %clang -### -target x86_64-unknown-linux -flto -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=LDGARANGE %s
-// RUN: %clang -### -target x86_64-unknown-linux -flto=thin -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=LDGARANGE %s
-// RUN: %clang -### -target x86_64-unknown-linux -fuse-ld=lld -flto -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=LLDGARANGE %s
-// RUN: %clang -### -target x86_64-unknown-linux -fuse-ld=lld -flto=thin -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=LLDGARANGE %s
+// RUN: %clang -### -c -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=GARANGE %s
 //
 // RUN: %clang -### -fdebug-types-section -target x86_64-unknown-linux %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=FDTS %s
@@ -375,8 +371,6 @@
 // NORNGBSE-NOT: -fdebug-ranges-base-address
 //
 // GARANGE-DAG: -generate-arange-section
-// LDGARANGE-NOT: {{".*lld.*"}} {{.*}} "-generate-arange-section"
-// LLDGARANGE: {{".*lld.*"}} {{.*}} "-generate-arange-section"
 //
 // FDTS: "-mllvm" "-generate-type-units"
 // FDTSE: error: unsupported option '-fdebug-types-section' for target 'x86_64-apple-darwin'
