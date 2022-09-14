@@ -199,6 +199,7 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
         names.
       - attribute: the matched op must have all specified attributes (with their
         specified values).
+      - filter_result_type: the matched op must return exactly this one type.
       
     Note: Only ops that satisfy all specified constraints are matched.
 
@@ -219,7 +220,8 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
   let arguments = (ins PDL_Operation:$target,
                        OptionalAttr<StrArrayAttr>:$ops,
                        OptionalAttr<MatchInterfaceEnum>:$interface,
-                       OptionalAttr<DictionaryAttr>:$op_attrs);
+                       OptionalAttr<DictionaryAttr>:$op_attrs,
+                       OptionalAttr<TypeAttr>:$filter_result_type);
   // TODO: variadic results when needed.
   let results = (outs PDL_Operation:$results);
 
@@ -227,6 +229,7 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
     (`ops` `{` $ops^ `}`)?
     (`interface` `{` $interface^ `}`)?
     (`attributes` $op_attrs^)?
+    (`filter_result_type` `=` $filter_result_type^)?
     `in` $target attr-dict
   }];
 }
