@@ -239,16 +239,14 @@ void GlobalsAAResult::DeletionCallbackHandle::deleted() {
 }
 
 FunctionModRefBehavior GlobalsAAResult::getModRefBehavior(const Function *F) {
-  FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
-
   if (FunctionInfo *FI = getFunctionInfo(F)) {
     if (!isModOrRefSet(FI->getModRefInfo()))
-      Min = FMRB_DoesNotAccessMemory;
+      return FMRB_DoesNotAccessMemory;
     else if (!isModSet(FI->getModRefInfo()))
-      Min = FMRB_OnlyReadsMemory;
+      return FMRB_OnlyReadsMemory;
   }
 
-  return FunctionModRefBehavior(AAResultBase::getModRefBehavior(F) & Min);
+  return AAResultBase::getModRefBehavior(F);
 }
 
 /// Returns the function info for the function, or null if we don't have
