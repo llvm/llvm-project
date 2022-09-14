@@ -584,11 +584,6 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
   // support for _dl_find_object on other unwind formats is not implemented,
   // yet.
 #if defined(DLFO_STRUCT_HAS_EH_DBASE) & defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
-  // We expect to run on a platform which does not use a base address for
-  // exception information.
-#if DLFO_STRUCT_HAS_EH_DBASE
-#error dlfo_eh_dbase is not supported for DWARF-based unwinding
-#endif
   // We expect `_dl_find_object` to return PT_GNU_EH_FRAME.
 #if DLFO_EH_SEGMENT_TYPE != PT_GNU_EH_FRAME
 #error _dl_find_object retrieves an unexpected section type
