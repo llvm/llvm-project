@@ -165,6 +165,18 @@ public:
   /// this matrix, say M, and return Mv.
   SmallVector<MPInt, 8> postMultiplyWithColumn(ArrayRef<MPInt> colVec) const;
 
+  /// Given the current matrix M, returns the matrices H, U such that H is the
+  /// column hermite normal form of M, i.e. H = M * U, where U is unimodular and
+  /// the matrix H has the following restrictions:
+  ///  - H is lower triangular.
+  ///  - The leading coefficient (the first non-zero entry from the top, called
+  ///    the pivot) of a non-zero column is always strictly below of the leading
+  ///    coefficient of the column before it; moreover, it is positive.
+  ///  - The elements to the right of the pivots are zero and the elements to
+  ///    the left of the pivots are nonnegative and strictly smaller than the
+  ///    pivot.
+  std::pair<Matrix, Matrix> computeHermiteNormalForm() const;
+
   /// Resize the matrix to the specified dimensions. If a dimension is smaller,
   /// the values are truncated; if it is bigger, the new values are initialized
   /// to zero.
