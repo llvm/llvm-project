@@ -589,7 +589,8 @@ template <class ELFT> void Writer<ELFT>::run() {
       return;
 
     if (auto e = buffer->commit())
-      error("failed to write to the output file: " + toString(std::move(e)));
+      fatal("failed to write output '" + buffer->getPath() +
+            "': " + toString(std::move(e)));
   }
 }
 
