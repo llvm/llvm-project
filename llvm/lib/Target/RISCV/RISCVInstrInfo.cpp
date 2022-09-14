@@ -1219,6 +1219,29 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (RISCVII::hasSEWOp(TSFlags)) {
+    unsigned OpIdx = RISCVII::getSEWOpNum(Desc);
+    uint64_t Log2SEW = MI.getOperand(OpIdx).getImm();
+    if (Log2SEW > 31) {
+      ErrInfo = "Unexpected SEW value";
+      return false;
+    }
+    unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
+    if (!RISCVVType::isValidSEW(SEW)) {
+      ErrInfo = "Unexpected SEW value";
+      return false;
+    }
+  }
+  if (RISCVII::hasVecPolicyOp(TSFlags)) {
+    unsigned OpIdx = RISCVII::getVecPolicyOpNum(Desc);
+    uint64_t Policy = MI.getOperand(OpIdx).getImm();
+    if (Policy > (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) {
+      ErrInfo = "Invalid Policy Value";
+      return false;
+    }
+  }
+
   return true;
 }
 
