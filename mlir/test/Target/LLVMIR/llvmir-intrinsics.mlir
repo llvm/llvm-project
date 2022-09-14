@@ -635,13 +635,13 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
          (vector<8xi1>, vector<8xi32>, vector<8xi32>, i32) -> vector<8xi32>
 
   // CHECK: call void @llvm.vp.store.v8i32.p0
-  "llvm.intr.vp.store" (%A, %iptr, %mask, %evl) : 
+  "llvm.intr.vp.store" (%A, %iptr, %mask, %evl) :
          (vector<8xi32>, !llvm.ptr<i32>, vector<8xi1>, i32) -> ()
   // CHECK: call <8 x i32> @llvm.vp.load.v8i32.p0
   "llvm.intr.vp.load" (%iptr, %mask, %evl) :
          (!llvm.ptr<i32>, vector<8xi1>, i32) -> vector<8xi32>
   // CHECK: call void @llvm.experimental.vp.strided.store.v8i32.p0.i32
-  "llvm.intr.experimental.vp.strided.store" (%A, %iptr, %i, %mask, %evl) : 
+  "llvm.intr.experimental.vp.strided.store" (%A, %iptr, %i, %mask, %evl) :
          (vector<8xi32>, !llvm.ptr<i32>, i32, vector<8xi1>, i32) -> ()
   // CHECK: call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i32
   "llvm.intr.experimental.vp.strided.load" (%iptr, %i, %mask, %evl) :
@@ -704,6 +704,15 @@ llvm.func @vector_insert_extract(%f256: vector<8xi32>, %f128: vector<4xi32>,
   // CHECK: call <2 x i32> @llvm.vector.extract.v2i32.v8i32
   %6 = llvm.intr.vector.extract %f256[6] :
               vector<2xi32> from vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @lifetime
+llvm.func @lifetime(%p: !llvm.ptr) {
+  // CHECK: call void @llvm.lifetime.start
+  llvm.intr.lifetime.start 16, %p : !llvm.ptr
+  // CHECK: call void @llvm.lifetime.end
+  llvm.intr.lifetime.end 16, %p : !llvm.ptr
   llvm.return
 }
 
@@ -814,3 +823,5 @@ llvm.func @vector_insert_extract(%f256: vector<8xi32>, %f128: vector<4xi32>,
 // CHECK-DAG: declare <8 x i32> @llvm.vector.extract.v8i32.nxv4i32(<vscale x 4 x i32>, i64 immarg) #0
 // CHECK-DAG: declare <4 x i32> @llvm.vector.extract.v4i32.nxv4i32(<vscale x 4 x i32>, i64 immarg) #0
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg) #0
+// CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
