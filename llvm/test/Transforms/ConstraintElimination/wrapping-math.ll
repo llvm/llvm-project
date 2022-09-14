@@ -271,3 +271,86 @@ exit.1:
   %xor.8 = xor i1 %xor.7, %c.7
   ret i1 %xor.8
 }
+
+define i1 @wrapping_add_known_1_add_nuw(i8 %a) {
+; CHECK-LABEL: @wrapping_add_known_1_add_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i8 [[A:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[A]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[SUB_1]], 10
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD]], 10
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[ADD]], 10
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[ADD]], 10
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[F_1]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+;
+entry:
+  %pre = icmp eq i8 %a, 1
+  call void @llvm.assume(i1 %pre)
+  %sub.1 = add i8 %a, -1
+  %add = add nuw i8 %sub.1, 10
+  %t.1 = icmp uge i8 %add, 10
+  %t.2 = icmp ule i8 %add, 10
+  %res.1 = xor i1 %t.1, %t.2
+  %f.1 = icmp ult i8 %add, 10
+  %res.2 = xor i1 %res.1, %f.1
+  ret i1 %res.2
+}
+
+define i1 @add_nuw_wrapping_add_known_1(i8 %a) {
+; CHECK-LABEL: @add_nuw_wrapping_add_known_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp eq i8 [[A:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[A]], 10
+; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[ADD]], -1
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[SUB_1]], 10
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[SUB_1]], 10
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[SUB_1]], 10
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[F_1]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+;
+entry:
+  %pre = icmp eq i8 %a, 1
+  call void @llvm.assume(i1 %pre)
+  %add = add nuw i8 %a, 10
+  %sub.1 = add i8 %add, -1
+  %t.1 = icmp uge i8 %sub.1, 10
+  %t.2 = icmp ule i8 %sub.1, 10
+  %res.1 = xor i1 %t.1, %t.2
+  %f.1 = icmp ult i8 %sub.1, 10
+  %res.2 = xor i1 %res.1, %f.1
+  ret i1 %res.2
+}
+
+define i1 @add_nuw_wrapping_add_not_known_1(i8 %a) {
+; CHECK-LABEL: @add_nuw_wrapping_add_not_known_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp sge i8 [[A:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[A]], 10
+; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[ADD]], -1
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[SUB_1]], 10
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[SUB_1]], 10
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[SUB_1]], 10
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[F_1]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+;
+entry:
+  %pre = icmp sge i8 %a, -1
+  call void @llvm.assume(i1 %pre)
+  %add = add nuw i8 %a, 10
+  %sub.1 = add i8 %add, -1
+  %t.1 = icmp uge i8 %sub.1, 10
+  %t.2 = icmp ule i8 %sub.1, 10
+  %res.1 = xor i1 %t.1, %t.2
+  %f.1 = icmp ult i8 %sub.1, 10
+  %res.2 = xor i1 %res.1, %f.1
+  ret i1 %res.2
+}
+
+declare void @llvm.assume(i1)
