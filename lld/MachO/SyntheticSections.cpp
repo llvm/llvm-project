@@ -752,11 +752,7 @@ ObjCStubsSection::ObjCStubsSection()
 
 void ObjCStubsSection::addEntry(Symbol *sym) {
   assert(sym->getName().startswith(symbolPrefix) && "not an objc stub");
-  // Ensure our lookup string has the length of the actual string + the null
-  // terminator to mirror
-  StringRef methname =
-      StringRef(sym->getName().data() + symbolPrefix.size(),
-                sym->getName().size() - symbolPrefix.size() + 1);
+  StringRef methname = sym->getName().drop_front(symbolPrefix.size());
   offsets.push_back(
       in.objcMethnameSection->getStringOffset(methname).outSecOff);
   Defined *newSym = replaceSymbol<Defined>(
@@ -1572,7 +1568,7 @@ void CStringSection::finalizeContents() {
       isec->pieces[i].outSecOff = offset;
       isec->isFinal = true;
       StringRef string = isec->getStringRef(i);
-      offset += string.size();
+      offset += string.size() + 1; // account for null terminator
     }
   }
   size = offset;
@@ -1645,7 +1641,8 @@ void DeduplicatedCStringSection::finalizeContents() {
       StringOffset &offsetInfo = it->second;
       if (offsetInfo.outSecOff == UINT64_MAX) {
         offsetInfo.outSecOff = alignTo(size, 1ULL << offsetInfo.trailingZeros);
-        size = offsetInfo.outSecOff + s.size();
+        size =
+            offsetInfo.outSecOff + s.size() + 1; // account for null terminator
       }
       isec->pieces[i].outSecOff = offsetInfo.outSecOff;
     }
