@@ -344,7 +344,7 @@ define i1 @test_n_must_ule_1_due_to_nuw(i8 %n, i8 %i) {
 ; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[T:%.*]] = icmp ule i8 [[N]], 1
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[F:%.*]] = icmp ule i8 [[N]], 1
 ; CHECK-NEXT:    ret i1 [[F]]
@@ -403,7 +403,7 @@ define i1 @test_n_must_ule_2_due_to_nuw(i8 %n, i8 %i) {
 ; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[T:%.*]] = icmp ule i8 [[N]], 2
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[F:%.*]] = icmp ule i8 [[N]], 2
 ; CHECK-NEXT:    ret i1 [[F]]
@@ -590,7 +590,7 @@ define i1 @test_chained_adds_nuw_1(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[ADD_1]], 2
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_2]], 13
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_2]], 14
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ;
 entry:
@@ -618,7 +618,7 @@ define i1 @test_chained_adds_nuw_2(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[ADD_2]], [[A]]
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_3]], 18
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 19
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ;
 entry:
@@ -647,7 +647,7 @@ define i1 @test_chained_adds_nuw_3(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[ADD_2]], [[A]]
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_3]], 18
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 19
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ;
 entry:
@@ -676,7 +676,7 @@ define i1 @test_chained_adds_nuw_4(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[ADD_2]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_3]], 23
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_3]], 24
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[C_1]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ;
 entry:
