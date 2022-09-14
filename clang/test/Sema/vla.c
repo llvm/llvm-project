@@ -72,7 +72,7 @@ int TransformBug(int a) {
 // PR36157
 struct {
   int a[ // expected-error {{variable length array in struct}}
-    implicitly_declared() // expected-error {{call to undeclared function 'implicitly_declared'; ISO C99 and later do not support implicit function declarations}}
+    implicitly_declared() // expected-warning {{call to undeclared function 'implicitly_declared'; ISO C99 and later do not support implicit function declarations}}
   ];
 };
 int (*use_implicitly_declared)(void) = implicitly_declared; // ok, was implicitly declared at file scope

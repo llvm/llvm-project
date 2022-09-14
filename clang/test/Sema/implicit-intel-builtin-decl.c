@@ -3,26 +3,26 @@
 
 void f(void) {
   (void)_mm_getcsr(); // cxx-warning{{implicitly declaring library function '_mm_getcsr'}} \
-                         c-error{{call to undeclared library function '_mm_getcsr'}} \
+                         c-warning{{call to undeclared library function '_mm_getcsr'}} \
                          expected-note{{include the header <xmmintrin.h> or explicitly provide a declaration for '_mm_getcsr'}}
   _mm_setcsr(1); // cxx-warning{{implicitly declaring library function '_mm_setcsr'}} \
-                    c-error{{call to undeclared library function '_mm_setcsr'}} \
+                    c-warning{{call to undeclared library function '_mm_setcsr'}} \
                     expected-note{{include the header <xmmintrin.h> or explicitly provide a declaration for '_mm_setcsr'}}
   _mm_sfence(); // cxx-warning{{implicitly declaring library function '_mm_sfence'}} \
-                   c-error{{call to undeclared library function '_mm_sfence'}} \
+                   c-warning{{call to undeclared library function '_mm_sfence'}} \
                    expected-note{{include the header <xmmintrin.h> or explicitly provide a declaration for '_mm_sfence'}}
 
   _mm_clflush((void*)0); // cxx-warning{{implicitly declaring library function '_mm_clflush'}} \
-                            c-error{{call to undeclared library function '_mm_clflush'}} \
+                            c-warning{{call to undeclared library function '_mm_clflush'}} \
                             expected-note{{include the header <emmintrin.h> or explicitly provide a declaration for '_mm_clflush'}}
   _mm_lfence(); // cxx-warning{{implicitly declaring library function '_mm_lfence'}} \
-                   c-error{{call to undeclared library function '_mm_lfence'}} \
+                   c-warning{{call to undeclared library function '_mm_lfence'}} \
                    expected-note{{include the header <emmintrin.h> or explicitly provide a declaration for '_mm_lfence'}}
   _mm_mfence(); // cxx-warning{{implicitly declaring library function '_mm_mfence'}} \
-                   c-error{{call to undeclared library function '_mm_mfence'}} \
+                   c-warning{{call to undeclared library function '_mm_mfence'}} \
                    expected-note{{include the header <emmintrin.h> or explicitly provide a declaration for '_mm_mfence'}}
   _mm_pause(); // cxx-warning{{implicitly declaring library function '_mm_pause'}} \
-                  c-error{{call to undeclared library function '_mm_pause'}} \
+                  c-warning{{call to undeclared library function '_mm_pause'}} \
                   expected-note{{include the header <emmintrin.h> or explicitly provide a declaration for '_mm_pause'}}
 }
 

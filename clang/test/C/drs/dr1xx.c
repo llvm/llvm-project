@@ -369,7 +369,7 @@ void dr163(void) {
   int i;
   i = undeclared; /* expected-error {{use of undeclared identifier 'undeclared'}} */
   sdfsdfsf = 1;   /* expected-error {{use of undeclared identifier 'sdfsdfsf'}} */
-  i = also_undeclared(); /* c99untilc2x-error {{call to undeclared function 'also_undeclared'; ISO C99 and later do not support implicit function declarations}}
+  i = also_undeclared(); /* c99untilc2x-warning {{call to undeclared function 'also_undeclared'; ISO C99 and later do not support implicit function declarations}}
                             c2xandup-error {{use of undeclared identifier 'also_undeclared'}}
                           */
 }

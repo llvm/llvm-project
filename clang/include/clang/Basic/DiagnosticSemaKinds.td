@@ -419,7 +419,7 @@ def warn_implicit_function_decl : Warning<
   InGroup<ImplicitFunctionDeclare>, DefaultIgnore;
 def ext_implicit_function_decl_c99 : ExtWarn<
   "call to undeclared function %0; ISO C99 and later do not support implicit "
-  "function declarations">, InGroup<ImplicitFunctionDeclare>, DefaultError;
+  "function declarations">, InGroup<ImplicitFunctionDeclare>;
 def note_function_suggestion : Note<"did you mean %0?">;
 
 def err_ellipsis_first_param : Error<
@@ -705,7 +705,7 @@ def ext_implicit_lib_function_decl : ExtWarn<
 def ext_implicit_lib_function_decl_c99 : ExtWarn<
   "call to undeclared library function '%0' with type %1; ISO C99 and later "
   "do not support implicit function declarations">,
-  InGroup<ImplicitFunctionDeclare>, DefaultError;
+  InGroup<ImplicitFunctionDeclare>;
 def note_include_header_or_declare : Note<
   "include the header <%0> or explicitly provide a declaration for '%1'">;
 def note_previous_builtin_declaration : Note<"%0 is a builtin with type %1">;
@@ -4359,7 +4359,7 @@ def err_ident_list_in_fn_declaration : Error<
   "a parameter list without types is only allowed in a function definition">;
 def ext_param_not_declared : ExtWarn<
   "parameter %0 was not declared, defaults to 'int'; ISO C99 and later do not "
-  "support implicit int">, InGroup<ImplicitInt>, DefaultError;
+  "support implicit int">, InGroup<ImplicitInt>;
 def err_param_default_argument : Error<
   "C does not support default arguments">;
 def err_param_default_argument_redefinition : Error<
@@ -10029,7 +10029,7 @@ def warn_receiver_forward_class : Warning<
 def note_method_sent_forward_class : Note<"method %0 is used for the forward class">;
 def ext_missing_type_specifier : ExtWarn<
   "type specifier missing, defaults to 'int'; ISO C99 and later do not support "
-  "implicit int">, InGroup<ImplicitInt>, DefaultError;
+  "implicit int">, InGroup<ImplicitInt>;
 def err_missing_type_specifier : Error<
   "a type specifier is required for all declarations">;
 def err_decimal_unsupported : Error<

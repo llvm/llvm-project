@@ -5,7 +5,7 @@ int *test_foo(void) {
 }
 
 char *test_bar(void) {
-  return bar(); // expected-error{{call to undeclared function 'bar'; ISO C99 and later do not support implicit function declarations}} \
+  return bar(); // expected-warning{{call to undeclared function 'bar'; ISO C99 and later do not support implicit function declarations}} \
                 // expected-error{{incompatible integer to pointer conversion}}
 }
 

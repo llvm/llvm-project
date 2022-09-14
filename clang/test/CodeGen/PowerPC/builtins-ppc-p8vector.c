@@ -143,7 +143,7 @@ void test1() {
   res_vui = vec_mergee(vui, vui);
 // CHECK: @llvm.ppc.altivec.vperm
 // CHECK-LE: @llvm.ppc.altivec.vperm
-// CHECK-PPC: error: call to undeclared function 'vec_mergee'
+// CHECK-PPC: warning: call to undeclared function 'vec_mergee'
 
   res_vbll = vec_mergee(vbll, vbll);
 // CHECK: @llvm.ppc.altivec.vperm
@@ -177,7 +177,7 @@ void test1() {
   res_vui = vec_mergeo(vui, vui);
 // CHECK: @llvm.ppc.altivec.vperm
 // CHECK-LE: @llvm.ppc.altivec.vperm
-// CHECK-PPC: error: call to undeclared function 'vec_mergeo'
+// CHECK-PPC: warning: call to undeclared function 'vec_mergeo'
 
   /* vec_cmpeq */
   res_vbll = vec_cmpeq(vbll, vbll);
@@ -403,7 +403,7 @@ void test1() {
   res_vsc = vec_cntlz(vsc);
 // CHECK: call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %{{.+}}, i1 false)
 // CHECK-LE: call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %{{.+}}, i1 false)
-// CHECK-PPC: error: call to undeclared function 'vec_cntlz'
+// CHECK-PPC: warning: call to undeclared function 'vec_cntlz'
 
   res_vuc = vec_cntlz(vuc);
 // CHECK: call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %{{.+}}, i1 false)
@@ -754,19 +754,19 @@ void test1() {
   res_vsi = vec_vpksdss(vsll, vsll);
 // CHECK: llvm.ppc.altivec.vpksdss
 // CHECK-LE: llvm.ppc.altivec.vpksdss
-// CHECK-PPC: error: call to undeclared function 'vec_vpksdss'
+// CHECK-PPC: warning: call to undeclared function 'vec_vpksdss'
 
   /* vec_vpksdus */
   res_vui = vec_vpksdus(vsll, vsll);
 // CHECK: llvm.ppc.altivec.vpksdus
 // CHECK-LE: llvm.ppc.altivec.vpksdus
-// CHECK-PPC: error: call to undeclared function 'vec_vpksdus'
+// CHECK-PPC: warning: call to undeclared function 'vec_vpksdus'
 
   /* vec_vpkudum */
   res_vsi = vec_vpkudum(vsll, vsll);
 // CHECK: vperm
 // CHECK-LE: vperm
-// CHECK-PPC: error: call to undeclared function 'vec_vpkudum'
+// CHECK-PPC: warning: call to undeclared function 'vec_vpkudum'
 
   res_vui = vec_vpkudum(vull, vull);
 // CHECK: vperm
@@ -775,13 +775,13 @@ void test1() {
   res_vui = vec_vpkudus(vull, vull);
 // CHECK: llvm.ppc.altivec.vpkudus
 // CHECK-LE: llvm.ppc.altivec.vpkudus
-// CHECK-PPC: error: call to undeclared function 'vec_vpkudus'
+// CHECK-PPC: warning: call to undeclared function 'vec_vpkudus'
 
   /* vec_vupkhsw */
   res_vsll = vec_vupkhsw(vsi);
 // CHECK: llvm.ppc.altivec.vupkhsw
 // CHECK-LE: llvm.ppc.altivec.vupklsw
-// CHECK-PPC: error: call to undeclared function 'vec_vupkhsw'
+// CHECK-PPC: warning: call to undeclared function 'vec_vupkhsw'
 
   res_vbll = vec_vupkhsw(vbi);
 // CHECK: llvm.ppc.altivec.vupkhsw
@@ -791,7 +791,7 @@ void test1() {
   res_vsll = vec_vupklsw(vsi);
 // CHECK: llvm.ppc.altivec.vupklsw
 // CHECK-LE: llvm.ppc.altivec.vupkhsw
-// CHECK-PPC: error: call to undeclared function 'vec_vupklsw'
+// CHECK-PPC: warning: call to undeclared function 'vec_vupklsw'
 
   res_vbll = vec_vupklsw(vbi);
 // CHECK: llvm.ppc.altivec.vupklsw
@@ -845,7 +845,7 @@ void test1() {
 // CHECK: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 // CHECK-LE: [[T1:%.+]] = and <16 x i8>
 // CHECK-LE: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
-// CHECK-PPC: error: call to undeclared function 'vec_nand'
+// CHECK-PPC: warning: call to undeclared function 'vec_nand'
 
   res_vbc = vec_nand(vbc, vbc);
 // CHECK: [[T1:%.+]] = and <16 x i8>
@@ -937,7 +937,7 @@ void test1() {
 // CHECK: or <16 x i8> {{%.+}}, [[T1]]
 // CHECK-LE: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 // CHECK-LE: or <16 x i8> {{%.+}}, [[T1]]
-// CHECK-PPC: error: call to undeclared function 'vec_orc'
+// CHECK-PPC: warning: call to undeclared function 'vec_orc'
 
   res_vsc = vec_orc(vsc, vbc);
 // CHECK: [[T1:%.+]] = xor <16 x i8> {{%.+}}, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -1166,7 +1166,7 @@ void test1() {
   res_vsll = vec_vbpermq(vuc, vuc);
 // CHECK: llvm.ppc.altivec.vbpermq
 // CHECK-LE: llvm.ppc.altivec.vbpermq
-// CHECK-PPC: error: call to undeclared function 'vec_vbpermq'
+// CHECK-PPC: warning: call to undeclared function 'vec_vbpermq'
 
   /* vec_vgbbd */
   res_vsc = vec_vgbbd(vsc);
@@ -1176,12 +1176,12 @@ void test1() {
   res_vuc = vec_vgbbd(vuc);
 // CHECK: llvm.ppc.altivec.vgbbd
 // CHECK-LE: llvm.ppc.altivec.vgbbd
-// CHECK-PPC: error: call to undeclared function 'vec_vgbbd'
+// CHECK-PPC: warning: call to undeclared function 'vec_vgbbd'
 
   res_vuc = vec_gb(vuc);
 // CHECK: llvm.ppc.altivec.vgbbd
 // CHECK-LE: llvm.ppc.altivec.vgbbd
-// CHECK-PPC: error: call to undeclared function 'vec_gb'
+// CHECK-PPC: warning: call to undeclared function 'vec_gb'
 
   res_vsll = vec_gbb(vsll);
 // CHECK: llvm.ppc.altivec.vgbbd

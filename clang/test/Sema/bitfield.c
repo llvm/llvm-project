@@ -84,5 +84,5 @@ struct Test6 {
 };
 
 struct PR36157 {
-  int n : 1 ? 1 : implicitly_declare_function(); // expected-error {{call to undeclared function 'implicitly_declare_function'; ISO C99 and later do not support implicit function declarations}}
+  int n : 1 ? 1 : implicitly_declare_function(); // expected-warning {{call to undeclared function 'implicitly_declare_function'; ISO C99 and later do not support implicit function declarations}}
 };

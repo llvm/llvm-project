@@ -29,7 +29,7 @@ int array0[5] = { [3] 3 }; // expected-warning {{GNU 'missing ='}}
 
 // CHECK: int x
 // CHECK: int y
-void f1(x, y) // expected-error 2{{was not declared, defaults to 'int'; ISO C99 and later do not support implicit int}}
+void f1(x, y) // expected-warning 2{{was not declared, defaults to 'int'; ISO C99 and later do not support implicit int}}
 {
 }
 

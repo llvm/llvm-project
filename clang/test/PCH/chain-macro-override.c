@@ -10,7 +10,7 @@ int foo(void) {
   f();
   g();
   h();
-  h2(); // expected-error {{call to undeclared function 'h2'; ISO C99 and later do not support implicit function declarations}}
+  h2(); // expected-warning {{call to undeclared function 'h2'; ISO C99 and later do not support implicit function declarations}}
   h3();
   return x;
 }

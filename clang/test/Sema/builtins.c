@@ -206,9 +206,9 @@ void test18(void) {
 }
 
 void no_ms_builtins(void) {
-  __assume(1); // expected-error {{call to undeclared function '__assume'; ISO C99 and later do not support implicit function declarations}}
-  __noop(1); // expected-error {{call to undeclared function '__noop'; ISO C99 and later do not support implicit function declarations}}
-  __debugbreak(); // expected-error {{call to undeclared function '__debugbreak'; ISO C99 and later do not support implicit function declarations}}
+  __assume(1); // expected-warning {{call to undeclared function '__assume'; ISO C99 and later do not support implicit function declarations}}
+  __noop(1); // expected-warning {{call to undeclared function '__noop'; ISO C99 and later do not support implicit function declarations}}
+  __debugbreak(); // expected-warning {{call to undeclared function '__debugbreak'; ISO C99 and later do not support implicit function declarations}}
 }
 
 void unavailable(void) {

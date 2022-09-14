@@ -37,6 +37,22 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
+Potentially Breaking Changes
+============================
+These changes are ones which we think may surprise users when upgrading to
+Clang |release| because of the opportunity they pose for disruption to existing
+code bases.
+
+- The ``-Wimplicit-function-declaration`` and ``-Wimplicit-int`` warning
+  diagnostics are now enabled by default in C99, C11, and C17. As of C2x,
+  support for implicit function declarations and implicit int has been removed,
+  and the warning options will have no effect. Specifying ``-Wimplicit-int`` in
+  C89 mode will now issue warnings instead of being a noop.
+  *NOTE* these warnings are expected to default to an error in Clang 16. We
+  recommend that projects using configure scripts verify the results do not
+  change before/after setting ``-Werror=implicit-function-declarations`` or
+  ``-Wimplicit-int`` to avoid incompatibility with Clang 16.
+
 Major New Features
 ------------------
 
@@ -245,18 +261,6 @@ Improvements to Clang's diagnostics
   without a prototype and with no arguments is an invalid redeclaration of a
   function with a prototype. e.g., ``void f(int); void f() {}`` is now properly
   diagnosed.
-- The ``-Wimplicit-function-declaration`` warning diagnostic now defaults to
-  an error in C99 and later. Prior to C2x, it may be downgraded to a warning
-  with ``-Wno-error=implicit-function-declaration``, or disabled entirely with
-  ``-Wno-implicit-function-declaration``. As of C2x, support for implicit
-  function declarations has been removed, and the warning options will have no
-  effect.
-- The ``-Wimplicit-int`` warning diagnostic now defaults to an error in C99 and
-  later. Prior to C2x, it may be downgraded to a warning with
-  ``-Wno-error=implicit-int``, or disabled entirely with ``-Wno-implicit-int``.
-  As of C2x, support for implicit int has been removed, and the warning options
-  will have no effect. Specifying ``-Wimplicit-int`` in C89 mode will now issue
-  warnings instead of being a noop.
 - No longer issue a "declaration specifiers missing, defaulting to int"
   diagnostic in C89 mode because it is not an extension in C89, it was valid
   code. The diagnostic has been removed entirely as it did not have a
