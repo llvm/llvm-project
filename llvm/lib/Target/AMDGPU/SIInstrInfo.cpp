@@ -2379,6 +2379,16 @@ MachineBasicBlock *SIInstrInfo::getBranchDestBlock(
   return MI.getOperand(0).getMBB();
 }
 
+bool SIInstrInfo::hasDivergentBranch(const MachineBasicBlock *MBB) const {
+  for (const MachineInstr &MI : MBB->terminators()) {
+    if (MI.getOpcode() == AMDGPU::SI_NON_UNIFORM_BRCOND_PSEUDO ||
+        MI.getOpcode() == AMDGPU::SI_IF || MI.getOpcode() == AMDGPU::SI_ELSE ||
+        MI.getOpcode() == AMDGPU::SI_LOOP)
+      return true;
+  }
+  return false;
+}
+
 void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                                        MachineBasicBlock &DestBB,
                                        MachineBasicBlock &RestoreBB,
