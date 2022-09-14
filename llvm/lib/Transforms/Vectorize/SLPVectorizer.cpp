@@ -2167,6 +2167,12 @@ private:
                                 const APInt &ShuffledIndices,
                                 bool NeedToShuffle) const;
 
+  /// Returns the instruction in the bundle, which can be used as a base point
+  /// for scheduling. Usually it is the last instruction in the bundle, except
+  /// for the case when all operands are external (in this case, it is the first
+  /// instruction in the list).
+  Instruction &getLastInstructionInBundle(const TreeEntry *E);
+
   /// Checks if the gathered \p VL can be represented as shuffle(s) of previous
   /// tree entries.
   /// \returns ShuffleKind, if gathered values can be represented as shuffles of
@@ -7546,7 +7552,7 @@ void BoUpSLP::reorderInputsAccordingToOpcode(ArrayRef<Value *> VL,
   Right = Ops.getVL(1);
 }
 
-void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
+Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block (except for extractelement-like instructions with
   // constant indeces).
@@ -7616,13 +7622,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
       InsertInst = FindLastInst();
     else
       InsertInst = FindFirstInst();
-    // If the instruction is PHI, set the insert point after all the PHIs.
-    if (isa<PHINode>(InsertInst))
-      InsertInst = BB->getFirstNonPHI();
-    BasicBlock::iterator InsertPt = InsertInst->getIterator();
-    Builder.SetInsertPoint(BB, InsertPt);
-    Builder.SetCurrentDebugLocation(Front->getDebugLoc());
-    return;
+    return *InsertInst;
   }
 
   // The last instruction in the bundle in program order.
@@ -7661,17 +7661,29 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   // not ideal. However, this should be exceedingly rare since it requires that
   // we both exit early from buildTree_rec and that the bundle be out-of-order
   // (causing us to iterate all the way to the end of the block).
-  if (!LastInst) {
+  if (!LastInst)
     LastInst = FindLastInst();
-    // If the instruction is PHI, set the insert point after all the PHIs.
-    if (isa<PHINode>(LastInst))
-      LastInst = BB->getFirstNonPHI()->getPrevNode();
-  }
   assert(LastInst && "Failed to find last instruction in bundle");
+  return *LastInst;
+}
 
-  // Set the insertion point after the last instruction in the bundle. Set the
-  // debug location to Front.
-  Builder.SetInsertPoint(BB, std::next(LastInst->getIterator()));
+void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
+  auto *Front = E->getMainOp();
+  Instruction *LastInst = &getLastInstructionInBundle(E);
+  assert(LastInst && "Failed to find last instruction in bundle");
+  // If the instruction is PHI, set the insert point after all the PHIs.
+  bool IsPHI = isa<PHINode>(LastInst);
+  if (IsPHI)
+    LastInst = LastInst->getParent()->getFirstNonPHI();
+  if (IsPHI || (E->State != TreeEntry::NeedToGather &&
+                doesNotNeedToSchedule(E->Scalars))) {
+    Builder.SetInsertPoint(LastInst);
+  } else {
+    // Set the insertion point after the last instruction in the bundle. Set the
+    // debug location to Front.
+    Builder.SetInsertPoint(LastInst->getParent(),
+                           std::next(LastInst->getIterator()));
+  }
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
 
