@@ -1469,7 +1469,7 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
     case Conv1DOpOrder::Nwc:
       // Base case, so no transposes necessary.
       break;
-    case Conv1DOpOrder::Ncw:
+    case Conv1DOpOrder::Ncw: {
       // To match base vectorization case, we pre-transpose current case.
       // ncw -> nwc
       static constexpr std::array<int64_t, 3> permLhs = {0, 2, 1};
@@ -1481,6 +1481,7 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
       static constexpr std::array<int64_t, 3> permRes = {0, 2, 1};
       res = builder.create<vector::TransposeOp>(loc, res, permRes);
       break;
+    }
     default:
       return failure();
     }
@@ -1545,11 +1546,12 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
     case Conv1DOpOrder::Nwc:
       // Base case, so no transposes necessary.
       break;
-    case Conv1DOpOrder::Ncw:
+    case Conv1DOpOrder::Ncw: {
       // nwf -> nfw
       static constexpr std::array<int64_t, 3> perm = {0, 2, 1};
       res = builder.create<vector::TransposeOp>(loc, res, perm);
       break;
+    }
     default:
       return failure();
     }
