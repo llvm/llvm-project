@@ -467,7 +467,7 @@ class LinuxCoreTestCase(TestBase):
 
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_pac_regs(self):
-        # Test AArch64/Linux Pointer Authenication register read
+        # Test AArch64/Linux Pointer Authentication register read
         target = self.dbg.CreateTarget(None)
         self.assertTrue(target, VALID_TARGET)
         process = target.LoadCore("linux-aarch64-pac.core")

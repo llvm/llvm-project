@@ -12,6 +12,9 @@
 include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 
+// Create zero attribute of type matching the argument's type.
+def GetZeroAttr : NativeCodeCall<"$_builder.getZeroAttr($0.getType())">;
+
 // Add two integer attributes and create a new one with the result.
 def AddIntAttrs : NativeCodeCall<"addIntegerAttrs($_builder, $0, $1, $2)">;
 
@@ -91,6 +94,11 @@ def SubILHSSubConstantLHS :
           (Arith_ConstantOp APIntAttr:$c1),
           (Arith_SubIOp (Arith_ConstantOp APIntAttr:$c0), $x)),
         (Arith_AddIOp $x, (Arith_ConstantOp (SubIntAttrs $res, $c1, $c0)))>;
+
+// subi(subi(a, b), a) -> subi(0, b)
+def SubISubILHSRHSLHS :
+    Pat<(Arith_SubIOp:$res (Arith_SubIOp $x, $y), $x),
+        (Arith_SubIOp (Arith_ConstantOp (GetZeroAttr $y)), $y)>;
 
 //===----------------------------------------------------------------------===//
 // XOrIOp

@@ -3662,7 +3662,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_S3:%.*]], %struct.S3* [[TMP4]], i32 0, i32 0
 // CHECK-TLS1-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A1]], align 4
 // CHECK-TLS1-NEXT:    store i32 [[TMP5]], i32* [[RES]], align 4
-// CHECK-TLS1-NEXT:    [[TMP6:%.*]] = call %struct.Smain* @llvm.threadlocal.address.p0s_struct.Smains(%struct.Smain* @_ZZ4mainE2sm)
+// CHECK-TLS1-NEXT:    [[TMP6:%.*]] = call align 8 %struct.Smain* @llvm.threadlocal.address.p0s_struct.Smains(%struct.Smain* align 8 @_ZZ4mainE2sm)
 // CHECK-TLS1-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SMAIN:%.*]], %struct.Smain* [[TMP6]], i32 0, i32 0
 // CHECK-TLS1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A2]], align 8
 // CHECK-TLS1-NEXT:    [[TMP8:%.*]] = load i32, i32* [[RES]], align 4
@@ -3692,12 +3692,12 @@ int foobar() {
 // CHECK-TLS1-NEXT:    [[TMP19:%.*]] = load i32, i32* [[RES]], align 4
 // CHECK-TLS1-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP19]], [[TMP18]]
 // CHECK-TLS1-NEXT:    store i32 [[ADD10]], i32* [[RES]], align 4
-// CHECK-TLS1-NEXT:    [[TMP20:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN2STIiE2stE)
+// CHECK-TLS1-NEXT:    [[TMP20:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN2STIiE2stE)
 // CHECK-TLS1-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
 // CHECK-TLS1-NEXT:    [[TMP22:%.*]] = load i32, i32* [[RES]], align 4
 // CHECK-TLS1-NEXT:    [[ADD11:%.*]] = add nsw i32 [[TMP22]], [[TMP21]]
 // CHECK-TLS1-NEXT:    store i32 [[ADD11]], i32* [[RES]], align 4
-// CHECK-TLS1-NEXT:    [[TMP23:%.*]] = call float* @llvm.threadlocal.address.p0f32(float* @_ZN2STIfE2stE)
+// CHECK-TLS1-NEXT:    [[TMP23:%.*]] = call align 4 float* @llvm.threadlocal.address.p0f32(float* align 4 @_ZN2STIfE2stE)
 // CHECK-TLS1-NEXT:    [[TMP24:%.*]] = load float, float* [[TMP23]], align 4
 // CHECK-TLS1-NEXT:    [[CONV:%.*]] = fptosi float [[TMP24]] to i32
 // CHECK-TLS1-NEXT:    [[TMP25:%.*]] = load i32, i32* [[RES]], align 4
@@ -3716,7 +3716,7 @@ int foobar() {
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZTWL3gs1
 // CHECK-TLS1-SAME: () #[[ATTR5:[0-9]+]] {
 // CHECK-TLS1-NEXT:    call void @_ZTHL3gs1()
-// CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call %struct.S1* @llvm.threadlocal.address.p0s_struct.S1s(%struct.S1* @_ZL3gs1)
+// CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call align 4 %struct.S1* @llvm.threadlocal.address.p0s_struct.S1s(%struct.S1* align 4 @_ZL3gs1)
 // CHECK-TLS1-NEXT:    ret %struct.S1* [[TMP1]]
 //
 //
@@ -3750,7 +3750,7 @@ int foobar() {
 // CHECK-TLS1-NEXT:    call void @_ZTHN6Static1sE()
 // CHECK-TLS1-NEXT:    br label [[TMP2]]
 // CHECK-TLS1:       2:
-// CHECK-TLS1-NEXT:    [[TMP3:%.*]] = call %struct.S3* @llvm.threadlocal.address.p0s_struct.S3s(%struct.S3* @_ZN6Static1sE)
+// CHECK-TLS1-NEXT:    [[TMP3:%.*]] = call align 4 %struct.S3* @llvm.threadlocal.address.p0s_struct.S3s(%struct.S3* align 4 @_ZN6Static1sE)
 // CHECK-TLS1-NEXT:    ret %struct.S3* [[TMP3]]
 //
 //
@@ -3761,21 +3761,21 @@ int foobar() {
 // CHECK-TLS1-NEXT:    call void @_ZTH3gs3()
 // CHECK-TLS1-NEXT:    br label [[TMP2]]
 // CHECK-TLS1:       2:
-// CHECK-TLS1-NEXT:    [[TMP3:%.*]] = call %struct.S5* @llvm.threadlocal.address.p0s_struct.S5s(%struct.S5* @gs3)
+// CHECK-TLS1-NEXT:    [[TMP3:%.*]] = call align 4 %struct.S5* @llvm.threadlocal.address.p0s_struct.S5s(%struct.S5* align 4 @gs3)
 // CHECK-TLS1-NEXT:    ret %struct.S5* [[TMP3]]
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZTW5arr_x
 // CHECK-TLS1-SAME: () #[[ATTR5]] comdat {
 // CHECK-TLS1-NEXT:    call void @_ZTH5arr_x()
-// CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call [2 x [3 x %struct.S1]]* @llvm.threadlocal.address.p0a2a3s_struct.S1s([2 x [3 x %struct.S1]]* @arr_x)
+// CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call align 16 [2 x [3 x %struct.S1]]* @llvm.threadlocal.address.p0a2a3s_struct.S1s([2 x [3 x %struct.S1]]* align 16 @arr_x)
 // CHECK-TLS1-NEXT:    ret [2 x [3 x %struct.S1]]* [[TMP1]]
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_ZTWN2STI2S4E2stE
 // CHECK-TLS1-SAME: () #[[ATTR5]] comdat {
 // CHECK-TLS1-NEXT:    call void @_ZTHN2STI2S4E2stE()
-// CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call %struct.S4* @llvm.threadlocal.address.p0s_struct.S4s(%struct.S4* @_ZN2STI2S4E2stE)
+// CHECK-TLS1-NEXT:    [[TMP1:%.*]] = call align 4 %struct.S4* @llvm.threadlocal.address.p0s_struct.S4s(%struct.S4* align 4 @_ZN2STI2S4E2stE)
 // CHECK-TLS1-NEXT:    ret %struct.S4* [[TMP1]]
 //
 //
@@ -3836,12 +3836,12 @@ int foobar() {
 // CHECK-TLS1-NEXT:    [[TMP12:%.*]] = load i32, i32* [[RES]], align 4
 // CHECK-TLS1-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP12]], [[TMP11]]
 // CHECK-TLS1-NEXT:    store i32 [[ADD7]], i32* [[RES]], align 4
-// CHECK-TLS1-NEXT:    [[TMP13:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN2STIiE2stE)
+// CHECK-TLS1-NEXT:    [[TMP13:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN2STIiE2stE)
 // CHECK-TLS1-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP13]], align 4
 // CHECK-TLS1-NEXT:    [[TMP15:%.*]] = load i32, i32* [[RES]], align 4
 // CHECK-TLS1-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP15]], [[TMP14]]
 // CHECK-TLS1-NEXT:    store i32 [[ADD8]], i32* [[RES]], align 4
-// CHECK-TLS1-NEXT:    [[TMP16:%.*]] = call float* @llvm.threadlocal.address.p0f32(float* @_ZN2STIfE2stE)
+// CHECK-TLS1-NEXT:    [[TMP16:%.*]] = call align 4 float* @llvm.threadlocal.address.p0f32(float* align 4 @_ZN2STIfE2stE)
 // CHECK-TLS1-NEXT:    [[TMP17:%.*]] = load float, float* [[TMP16]], align 4
 // CHECK-TLS1-NEXT:    [[CONV:%.*]] = fptosi float [[TMP17]] to i32
 // CHECK-TLS1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[RES]], align 4
@@ -3964,7 +3964,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_S3:%.*]], %struct.S3* [[TMP4]], i32 0, i32 0
 // CHECK-TLS2-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A1]], align 4
 // CHECK-TLS2-NEXT:    store i32 [[TMP5]], i32* [[RES]], align 4
-// CHECK-TLS2-NEXT:    [[TMP6:%.*]] = call %struct.Smain* @llvm.threadlocal.address.p0s_struct.Smains(%struct.Smain* @_ZZ4mainE2sm)
+// CHECK-TLS2-NEXT:    [[TMP6:%.*]] = call align 8 %struct.Smain* @llvm.threadlocal.address.p0s_struct.Smains(%struct.Smain* align 8 @_ZZ4mainE2sm)
 // CHECK-TLS2-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SMAIN:%.*]], %struct.Smain* [[TMP6]], i32 0, i32 0
 // CHECK-TLS2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A2]], align 8
 // CHECK-TLS2-NEXT:    [[TMP8:%.*]] = load i32, i32* [[RES]], align 4
@@ -4018,7 +4018,7 @@ int foobar() {
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZTWL3gs1
 // CHECK-TLS2-SAME: () #[[ATTR1:[0-9]+]] {
 // CHECK-TLS2-NEXT:    call void @_ZTHL3gs1()
-// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call %struct.S1* @llvm.threadlocal.address.p0s_struct.S1s(%struct.S1* @_ZL3gs1)
+// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call align 4 %struct.S1* @llvm.threadlocal.address.p0s_struct.S1s(%struct.S1* align 4 @_ZL3gs1)
 // CHECK-TLS2-NEXT:    ret %struct.S1* [[TMP1]]
 //
 //
@@ -4052,7 +4052,7 @@ int foobar() {
 // CHECK-TLS2-NEXT:    call void @_ZTHN6Static1sE()
 // CHECK-TLS2-NEXT:    br label [[TMP2]]
 // CHECK-TLS2:       2:
-// CHECK-TLS2-NEXT:    [[TMP3:%.*]] = call %struct.S3* @llvm.threadlocal.address.p0s_struct.S3s(%struct.S3* @_ZN6Static1sE)
+// CHECK-TLS2-NEXT:    [[TMP3:%.*]] = call align 4 %struct.S3* @llvm.threadlocal.address.p0s_struct.S3s(%struct.S3* align 4 @_ZN6Static1sE)
 // CHECK-TLS2-NEXT:    ret %struct.S3* [[TMP3]]
 //
 //
@@ -4063,33 +4063,33 @@ int foobar() {
 // CHECK-TLS2-NEXT:    call void @_ZTH3gs3()
 // CHECK-TLS2-NEXT:    br label [[TMP2]]
 // CHECK-TLS2:       2:
-// CHECK-TLS2-NEXT:    [[TMP3:%.*]] = call %struct.S5* @llvm.threadlocal.address.p0s_struct.S5s(%struct.S5* @gs3)
+// CHECK-TLS2-NEXT:    [[TMP3:%.*]] = call align 4 %struct.S5* @llvm.threadlocal.address.p0s_struct.S5s(%struct.S5* align 4 @gs3)
 // CHECK-TLS2-NEXT:    ret %struct.S5* [[TMP3]]
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZTW5arr_x
 // CHECK-TLS2-SAME: () #[[ATTR1]] comdat {
 // CHECK-TLS2-NEXT:    call void @_ZTH5arr_x()
-// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call [2 x [3 x %struct.S1]]* @llvm.threadlocal.address.p0a2a3s_struct.S1s([2 x [3 x %struct.S1]]* @arr_x)
+// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call align 16 [2 x [3 x %struct.S1]]* @llvm.threadlocal.address.p0a2a3s_struct.S1s([2 x [3 x %struct.S1]]* align 16 @arr_x)
 // CHECK-TLS2-NEXT:    ret [2 x [3 x %struct.S1]]* [[TMP1]]
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZTWN2STIiE2stE
 // CHECK-TLS2-SAME: () #[[ATTR1]] comdat {
-// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN2STIiE2stE)
+// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN2STIiE2stE)
 // CHECK-TLS2-NEXT:    ret i32* [[TMP1]]
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZTWN2STIfE2stE
 // CHECK-TLS2-SAME: () #[[ATTR1]] comdat {
-// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call float* @llvm.threadlocal.address.p0f32(float* @_ZN2STIfE2stE)
+// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call align 4 float* @llvm.threadlocal.address.p0f32(float* align 4 @_ZN2STIfE2stE)
 // CHECK-TLS2-NEXT:    ret float* [[TMP1]]
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_ZTWN2STI2S4E2stE
 // CHECK-TLS2-SAME: () #[[ATTR1]] comdat {
 // CHECK-TLS2-NEXT:    call void @_ZTHN2STI2S4E2stE()
-// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call %struct.S4* @llvm.threadlocal.address.p0s_struct.S4s(%struct.S4* @_ZN2STI2S4E2stE)
+// CHECK-TLS2-NEXT:    [[TMP1:%.*]] = call align 4 %struct.S4* @llvm.threadlocal.address.p0s_struct.S4s(%struct.S4* align 4 @_ZN2STI2S4E2stE)
 // CHECK-TLS2-NEXT:    ret %struct.S4* [[TMP1]]
 //
 //
@@ -4734,7 +4734,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_S3:%.*]], %struct.S3* [[TMP4]], i32 0, i32 0, !dbg [[DBG212:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A1]], align 4, !dbg [[DBG212]]
 // CHECK-TLS3-NEXT:    store i32 [[TMP5]], i32* [[RES]], align 4, !dbg [[DBG213:![0-9]+]]
-// CHECK-TLS3-NEXT:    [[TMP6:%.*]] = call %struct.Smain* @llvm.threadlocal.address.p0s_struct.Smains(%struct.Smain* @_ZZ4mainE2sm), !dbg [[DBG214:![0-9]+]]
+// CHECK-TLS3-NEXT:    [[TMP6:%.*]] = call align 8 %struct.Smain* @llvm.threadlocal.address.p0s_struct.Smains(%struct.Smain* align 8 @_ZZ4mainE2sm), !dbg [[DBG214:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SMAIN:%.*]], %struct.Smain* [[TMP6]], i32 0, i32 0, !dbg [[DBG215:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A2]], align 8, !dbg [[DBG215]]
 // CHECK-TLS3-NEXT:    [[TMP8:%.*]] = load i32, i32* [[RES]], align 4, !dbg [[DBG216:![0-9]+]]
@@ -4764,12 +4764,12 @@ int foobar() {
 // CHECK-TLS3-NEXT:    [[TMP19:%.*]] = load i32, i32* [[RES]], align 4, !dbg [[DBG227:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP19]], [[TMP18]], !dbg [[DBG227]]
 // CHECK-TLS3-NEXT:    store i32 [[ADD10]], i32* [[RES]], align 4, !dbg [[DBG227]]
-// CHECK-TLS3-NEXT:    [[TMP20:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN2STIiE2stE), !dbg [[DBG228:![0-9]+]]
+// CHECK-TLS3-NEXT:    [[TMP20:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN2STIiE2stE), !dbg [[DBG228:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4, !dbg [[DBG228]]
 // CHECK-TLS3-NEXT:    [[TMP22:%.*]] = load i32, i32* [[RES]], align 4, !dbg [[DBG229:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[ADD11:%.*]] = add nsw i32 [[TMP22]], [[TMP21]], !dbg [[DBG229]]
 // CHECK-TLS3-NEXT:    store i32 [[ADD11]], i32* [[RES]], align 4, !dbg [[DBG229]]
-// CHECK-TLS3-NEXT:    [[TMP23:%.*]] = call float* @llvm.threadlocal.address.p0f32(float* @_ZN2STIfE2stE), !dbg [[DBG230:![0-9]+]]
+// CHECK-TLS3-NEXT:    [[TMP23:%.*]] = call align 4 float* @llvm.threadlocal.address.p0f32(float* align 4 @_ZN2STIfE2stE), !dbg [[DBG230:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP24:%.*]] = load float, float* [[TMP23]], align 4, !dbg [[DBG230]]
 // CHECK-TLS3-NEXT:    [[CONV:%.*]] = fptosi float [[TMP24]] to i32, !dbg [[DBG230]]
 // CHECK-TLS3-NEXT:    [[TMP25:%.*]] = load i32, i32* [[RES]], align 4, !dbg [[DBG231:![0-9]+]]
@@ -4788,7 +4788,7 @@ int foobar() {
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZTWL3gs1
 // CHECK-TLS3-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK-TLS3-NEXT:    call void @_ZTHL3gs1()
-// CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call %struct.S1* @llvm.threadlocal.address.p0s_struct.S1s(%struct.S1* @_ZL3gs1)
+// CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call align 4 %struct.S1* @llvm.threadlocal.address.p0s_struct.S1s(%struct.S1* align 4 @_ZL3gs1)
 // CHECK-TLS3-NEXT:    ret %struct.S1* [[TMP1]]
 //
 //
@@ -4825,7 +4825,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:    call void @_ZTHN6Static1sE()
 // CHECK-TLS3-NEXT:    br label [[TMP2]]
 // CHECK-TLS3:       2:
-// CHECK-TLS3-NEXT:    [[TMP3:%.*]] = call %struct.S3* @llvm.threadlocal.address.p0s_struct.S3s(%struct.S3* @_ZN6Static1sE)
+// CHECK-TLS3-NEXT:    [[TMP3:%.*]] = call align 4 %struct.S3* @llvm.threadlocal.address.p0s_struct.S3s(%struct.S3* align 4 @_ZN6Static1sE)
 // CHECK-TLS3-NEXT:    ret %struct.S3* [[TMP3]]
 //
 //
@@ -4836,21 +4836,21 @@ int foobar() {
 // CHECK-TLS3-NEXT:    call void @_ZTH3gs3()
 // CHECK-TLS3-NEXT:    br label [[TMP2]]
 // CHECK-TLS3:       2:
-// CHECK-TLS3-NEXT:    [[TMP3:%.*]] = call %struct.S5* @llvm.threadlocal.address.p0s_struct.S5s(%struct.S5* @gs3)
+// CHECK-TLS3-NEXT:    [[TMP3:%.*]] = call align 4 %struct.S5* @llvm.threadlocal.address.p0s_struct.S5s(%struct.S5* align 4 @gs3)
 // CHECK-TLS3-NEXT:    ret %struct.S5* [[TMP3]]
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZTW5arr_x
 // CHECK-TLS3-SAME: () #[[ATTR6]] comdat {
 // CHECK-TLS3-NEXT:    call void @_ZTH5arr_x()
-// CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call [2 x [3 x %struct.S1]]* @llvm.threadlocal.address.p0a2a3s_struct.S1s([2 x [3 x %struct.S1]]* @arr_x)
+// CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call align 16 [2 x [3 x %struct.S1]]* @llvm.threadlocal.address.p0a2a3s_struct.S1s([2 x [3 x %struct.S1]]* align 16 @arr_x)
 // CHECK-TLS3-NEXT:    ret [2 x [3 x %struct.S1]]* [[TMP1]]
 //
 //
 // CHECK-TLS3-LABEL: define {{[^@]+}}@_ZTWN2STI2S4E2stE
 // CHECK-TLS3-SAME: () #[[ATTR6]] comdat {
 // CHECK-TLS3-NEXT:    call void @_ZTHN2STI2S4E2stE()
-// CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call %struct.S4* @llvm.threadlocal.address.p0s_struct.S4s(%struct.S4* @_ZN2STI2S4E2stE)
+// CHECK-TLS3-NEXT:    [[TMP1:%.*]] = call align 4 %struct.S4* @llvm.threadlocal.address.p0s_struct.S4s(%struct.S4* align 4 @_ZN2STI2S4E2stE)
 // CHECK-TLS3-NEXT:    ret %struct.S4* [[TMP1]]
 //
 //
@@ -4915,12 +4915,12 @@ int foobar() {
 // CHECK-TLS3-NEXT:    [[TMP12:%.*]] = load i32, i32* [[RES]], align 4, !dbg [[DBG281:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP12]], [[TMP11]], !dbg [[DBG281]]
 // CHECK-TLS3-NEXT:    store i32 [[ADD7]], i32* [[RES]], align 4, !dbg [[DBG281]]
-// CHECK-TLS3-NEXT:    [[TMP13:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN2STIiE2stE), !dbg [[DBG282:![0-9]+]]
+// CHECK-TLS3-NEXT:    [[TMP13:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN2STIiE2stE), !dbg [[DBG282:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP13]], align 4, !dbg [[DBG282]]
 // CHECK-TLS3-NEXT:    [[TMP15:%.*]] = load i32, i32* [[RES]], align 4, !dbg [[DBG283:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[ADD8:%.*]] = add nsw i32 [[TMP15]], [[TMP14]], !dbg [[DBG283]]
 // CHECK-TLS3-NEXT:    store i32 [[ADD8]], i32* [[RES]], align 4, !dbg [[DBG283]]
-// CHECK-TLS3-NEXT:    [[TMP16:%.*]] = call float* @llvm.threadlocal.address.p0f32(float* @_ZN2STIfE2stE), !dbg [[DBG284:![0-9]+]]
+// CHECK-TLS3-NEXT:    [[TMP16:%.*]] = call align 4 float* @llvm.threadlocal.address.p0f32(float* align 4 @_ZN2STIfE2stE), !dbg [[DBG284:![0-9]+]]
 // CHECK-TLS3-NEXT:    [[TMP17:%.*]] = load float, float* [[TMP16]], align 4, !dbg [[DBG284]]
 // CHECK-TLS3-NEXT:    [[CONV:%.*]] = fptosi float [[TMP17]] to i32, !dbg [[DBG284]]
 // CHECK-TLS3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[RES]], align 4, !dbg [[DBG285:![0-9]+]]
@@ -5050,7 +5050,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT_S3:%.*]], %struct.S3* [[TMP4]], i32 0, i32 0, !dbg [[DBG124:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[TMP5:%.*]] = load i32, i32* [[A1]], align 4, !dbg [[DBG124]]
 // CHECK-TLS4-NEXT:    store i32 [[TMP5]], i32* [[RES]], align 4, !dbg [[DBG125:![0-9]+]]
-// CHECK-TLS4-NEXT:    [[TMP6:%.*]] = call %struct.Smain* @llvm.threadlocal.address.p0s_struct.Smains(%struct.Smain* @_ZZ4mainE2sm), !dbg [[DBG126:![0-9]+]]
+// CHECK-TLS4-NEXT:    [[TMP6:%.*]] = call align 8 %struct.Smain* @llvm.threadlocal.address.p0s_struct.Smains(%struct.Smain* align 8 @_ZZ4mainE2sm), !dbg [[DBG126:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[A2:%.*]] = getelementptr inbounds [[STRUCT_SMAIN:%.*]], %struct.Smain* [[TMP6]], i32 0, i32 0, !dbg [[DBG127:![0-9]+]]
 // CHECK-TLS4-NEXT:    [[TMP7:%.*]] = load i32, i32* [[A2]], align 8, !dbg [[DBG127]]
 // CHECK-TLS4-NEXT:    [[TMP8:%.*]] = load i32, i32* [[RES]], align 4, !dbg [[DBG128:![0-9]+]]
@@ -5104,7 +5104,7 @@ int foobar() {
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZTWL3gs1
 // CHECK-TLS4-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-TLS4-NEXT:    call void @_ZTHL3gs1()
-// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call %struct.S1* @llvm.threadlocal.address.p0s_struct.S1s(%struct.S1* @_ZL3gs1)
+// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call align 4 %struct.S1* @llvm.threadlocal.address.p0s_struct.S1s(%struct.S1* align 4 @_ZL3gs1)
 // CHECK-TLS4-NEXT:    ret %struct.S1* [[TMP1]]
 //
 //
@@ -5141,7 +5141,7 @@ int foobar() {
 // CHECK-TLS4-NEXT:    call void @_ZTHN6Static1sE()
 // CHECK-TLS4-NEXT:    br label [[TMP2]]
 // CHECK-TLS4:       2:
-// CHECK-TLS4-NEXT:    [[TMP3:%.*]] = call %struct.S3* @llvm.threadlocal.address.p0s_struct.S3s(%struct.S3* @_ZN6Static1sE)
+// CHECK-TLS4-NEXT:    [[TMP3:%.*]] = call align 4 %struct.S3* @llvm.threadlocal.address.p0s_struct.S3s(%struct.S3* align 4 @_ZN6Static1sE)
 // CHECK-TLS4-NEXT:    ret %struct.S3* [[TMP3]]
 //
 //
@@ -5152,33 +5152,33 @@ int foobar() {
 // CHECK-TLS4-NEXT:    call void @_ZTH3gs3()
 // CHECK-TLS4-NEXT:    br label [[TMP2]]
 // CHECK-TLS4:       2:
-// CHECK-TLS4-NEXT:    [[TMP3:%.*]] = call %struct.S5* @llvm.threadlocal.address.p0s_struct.S5s(%struct.S5* @gs3)
+// CHECK-TLS4-NEXT:    [[TMP3:%.*]] = call align 4 %struct.S5* @llvm.threadlocal.address.p0s_struct.S5s(%struct.S5* align 4 @gs3)
 // CHECK-TLS4-NEXT:    ret %struct.S5* [[TMP3]]
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZTW5arr_x
 // CHECK-TLS4-SAME: () #[[ATTR2]] comdat {
 // CHECK-TLS4-NEXT:    call void @_ZTH5arr_x()
-// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call [2 x [3 x %struct.S1]]* @llvm.threadlocal.address.p0a2a3s_struct.S1s([2 x [3 x %struct.S1]]* @arr_x)
+// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call align 16 [2 x [3 x %struct.S1]]* @llvm.threadlocal.address.p0a2a3s_struct.S1s([2 x [3 x %struct.S1]]* align 16 @arr_x)
 // CHECK-TLS4-NEXT:    ret [2 x [3 x %struct.S1]]* [[TMP1]]
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZTWN2STIiE2stE
 // CHECK-TLS4-SAME: () #[[ATTR2]] comdat {
-// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN2STIiE2stE)
+// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN2STIiE2stE)
 // CHECK-TLS4-NEXT:    ret i32* [[TMP1]]
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZTWN2STIfE2stE
 // CHECK-TLS4-SAME: () #[[ATTR2]] comdat {
-// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call float* @llvm.threadlocal.address.p0f32(float* @_ZN2STIfE2stE)
+// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call align 4 float* @llvm.threadlocal.address.p0f32(float* align 4 @_ZN2STIfE2stE)
 // CHECK-TLS4-NEXT:    ret float* [[TMP1]]
 //
 //
 // CHECK-TLS4-LABEL: define {{[^@]+}}@_ZTWN2STI2S4E2stE
 // CHECK-TLS4-SAME: () #[[ATTR2]] comdat {
 // CHECK-TLS4-NEXT:    call void @_ZTHN2STI2S4E2stE()
-// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call %struct.S4* @llvm.threadlocal.address.p0s_struct.S4s(%struct.S4* @_ZN2STI2S4E2stE)
+// CHECK-TLS4-NEXT:    [[TMP1:%.*]] = call align 4 %struct.S4* @llvm.threadlocal.address.p0s_struct.S4s(%struct.S4* align 4 @_ZN2STI2S4E2stE)
 // CHECK-TLS4-NEXT:    ret %struct.S4* [[TMP1]]
 //
 //

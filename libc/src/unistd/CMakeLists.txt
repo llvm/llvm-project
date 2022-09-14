@@ -17,6 +17,27 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  dup
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.dup
+)
+
+add_entrypoint_object(
+  dup2
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.dup2
+)
+
+add_entrypoint_object(
+  dup3
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.dup3
+)
+
+add_entrypoint_object(
   fchdir
   ALIAS
   DEPENDS

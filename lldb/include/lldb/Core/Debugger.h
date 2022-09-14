@@ -405,7 +405,7 @@ public:
   ///   If a pointer is passed to a std::once_flag, then it will be used to
   ///   ensure the given warning is only broadcast once.
   static void
-  ReportWarning(std::string messsage,
+  ReportWarning(std::string message,
                 llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
                 std::once_flag *once = nullptr);
 
@@ -427,7 +427,7 @@ public:
   ///   If a pointer is passed to a std::once_flag, then it will be used to
   ///   ensure the given error is only broadcast once.
   static void
-  ReportError(std::string messsage,
+  ReportError(std::string message,
               llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
               std::once_flag *once = nullptr);
 

@@ -280,6 +280,8 @@ enum NodeType : unsigned {
   VWSUB_W_VL,
   VWSUBU_W_VL,
 
+  VNSRL_VL,
+
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.
   SETCC_VL,
@@ -373,6 +375,7 @@ public:
   bool signExtendConstant(const ConstantInt *CI) const override;
   bool isCheapToSpeculateCttz(Type *Ty) const override;
   bool isCheapToSpeculateCtlz(Type *Ty) const override;
+  bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
   bool hasAndNotCompare(SDValue Y) const override;
   bool hasBitTest(SDValue X, SDValue Y) const override;
   bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
@@ -385,6 +388,8 @@ public:
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
+  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                               unsigned Index) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 

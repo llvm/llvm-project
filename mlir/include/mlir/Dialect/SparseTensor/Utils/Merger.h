@@ -261,8 +261,8 @@ public:
     return getDimLevelFormat(t, i).levelType == tp;
   }
 
-  /// Returns true if any set bit corresponds to given dimension level type.
-  bool hasAnyDimLevelTypeOf(const BitVector &bits, DimLvlType tp) const;
+  /// Returns true if any set bit corresponds to sparse dimension level type.
+  bool hasAnySparse(const BitVector &bits) const;
 
   /// Dimension level format getter.
   DimLevelFormat getDimLevelFormat(unsigned t, unsigned i) const {

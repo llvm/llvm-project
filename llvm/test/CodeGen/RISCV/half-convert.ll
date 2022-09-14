@@ -690,14 +690,25 @@ define i32 @fcvt_wu_h_multiple_use(half %x, i32* %y) nounwind {
 }
 
 define i32 @fcvt_wu_h_sat(half %a) nounwind {
-; CHECKIZFH-LABEL: fcvt_wu_h_sat:
-; CHECKIZFH:       # %bb.0: # %start
-; CHECKIZFH-NEXT:    feq.h a0, fa0, fa0
-; CHECKIZFH-NEXT:    beqz a0, .LBB8_2
-; CHECKIZFH-NEXT:  # %bb.1:
-; CHECKIZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
-; CHECKIZFH-NEXT:  .LBB8_2: # %start
-; CHECKIZFH-NEXT:    ret
+; RV32IZFH-LABEL: fcvt_wu_h_sat:
+; RV32IZFH:       # %bb.0: # %start
+; RV32IZFH-NEXT:    feq.h a0, fa0, fa0
+; RV32IZFH-NEXT:    beqz a0, .LBB8_2
+; RV32IZFH-NEXT:  # %bb.1:
+; RV32IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV32IZFH-NEXT:  .LBB8_2: # %start
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fcvt_wu_h_sat:
+; RV64IZFH:       # %bb.0: # %start
+; RV64IZFH-NEXT:    feq.h a0, fa0, fa0
+; RV64IZFH-NEXT:    beqz a0, .LBB8_2
+; RV64IZFH-NEXT:  # %bb.1:
+; RV64IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV64IZFH-NEXT:    slli a0, a0, 32
+; RV64IZFH-NEXT:    srli a0, a0, 32
+; RV64IZFH-NEXT:  .LBB8_2: # %start
+; RV64IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_wu_h_sat:
 ; RV32IDZFH:       # %bb.0: # %start
@@ -714,6 +725,8 @@ define i32 @fcvt_wu_h_sat(half %a) nounwind {
 ; RV64IDZFH-NEXT:    beqz a0, .LBB8_2
 ; RV64IDZFH-NEXT:  # %bb.1:
 ; RV64IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV64IDZFH-NEXT:    slli a0, a0, 32
+; RV64IDZFH-NEXT:    srli a0, a0, 32
 ; RV64IDZFH-NEXT:  .LBB8_2: # %start
 ; RV64IDZFH-NEXT:    ret
 ;
@@ -3019,14 +3032,25 @@ start:
 declare i8 @llvm.fptoui.sat.i8.f16(half)
 
 define zeroext i32 @fcvt_wu_h_sat_zext(half %a) nounwind {
-; CHECKIZFH-LABEL: fcvt_wu_h_sat_zext:
-; CHECKIZFH:       # %bb.0: # %start
-; CHECKIZFH-NEXT:    feq.h a0, fa0, fa0
-; CHECKIZFH-NEXT:    beqz a0, .LBB39_2
-; CHECKIZFH-NEXT:  # %bb.1:
-; CHECKIZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
-; CHECKIZFH-NEXT:  .LBB39_2: # %start
-; CHECKIZFH-NEXT:    ret
+; RV32IZFH-LABEL: fcvt_wu_h_sat_zext:
+; RV32IZFH:       # %bb.0: # %start
+; RV32IZFH-NEXT:    feq.h a0, fa0, fa0
+; RV32IZFH-NEXT:    beqz a0, .LBB39_2
+; RV32IZFH-NEXT:  # %bb.1:
+; RV32IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV32IZFH-NEXT:  .LBB39_2: # %start
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: fcvt_wu_h_sat_zext:
+; RV64IZFH:       # %bb.0: # %start
+; RV64IZFH-NEXT:    feq.h a0, fa0, fa0
+; RV64IZFH-NEXT:    beqz a0, .LBB39_2
+; RV64IZFH-NEXT:  # %bb.1:
+; RV64IZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV64IZFH-NEXT:    slli a0, a0, 32
+; RV64IZFH-NEXT:    srli a0, a0, 32
+; RV64IZFH-NEXT:  .LBB39_2: # %start
+; RV64IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_wu_h_sat_zext:
 ; RV32IDZFH:       # %bb.0: # %start
@@ -3043,6 +3067,8 @@ define zeroext i32 @fcvt_wu_h_sat_zext(half %a) nounwind {
 ; RV64IDZFH-NEXT:    beqz a0, .LBB39_2
 ; RV64IDZFH-NEXT:  # %bb.1:
 ; RV64IDZFH-NEXT:    fcvt.wu.h a0, fa0, rtz
+; RV64IDZFH-NEXT:    slli a0, a0, 32
+; RV64IDZFH-NEXT:    srli a0, a0, 32
 ; RV64IDZFH-NEXT:  .LBB39_2: # %start
 ; RV64IDZFH-NEXT:    ret
 ;

@@ -22,8 +22,10 @@ using namespace llvm;
 void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
   for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
-      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg))
+      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
         Units.reset(U);
+        break;
+      }
     }
   }
 }
@@ -31,8 +33,10 @@ void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
 void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
   for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
-      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg))
+      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
         Units.set(U);
+        break;
+      }
     }
   }
 }
@@ -40,13 +44,16 @@ void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
   for (const MachineOperand &MOP : MI.operands()) {
+    if (MOP.isReg()) {
+      if (MOP.isDef() && MOP.getReg().isPhysical())
+        removeReg(MOP.getReg());
+      continue;
+    }
+
     if (MOP.isRegMask()) {
       removeRegsNotPreserved(MOP.getRegMask());
       continue;
     }
-
-    if (MOP.isReg() && MOP.isDef() && MOP.getReg().isPhysical())
-      removeReg(MOP.getReg());
   }
 
   // Add uses to the set.
@@ -54,7 +61,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
     if (!MOP.isReg() || !MOP.readsReg())
       continue;
 
-    if (MOP.getReg() && MOP.getReg().isPhysical())
+    if (MOP.getReg().isPhysical())
       addReg(MOP.getReg());
   }
 }

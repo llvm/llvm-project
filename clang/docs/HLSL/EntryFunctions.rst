@@ -46,7 +46,9 @@ constructors, then instantiations of the user-defined entry parameters with
 their semantic values populated, and a call to the user-defined function.
 After the call instruction the return value (if any) is saved using a
 target-appropriate intrinsic for storing outputs (for DirectX, the
-``llvm.dx.store.output``). Global destructors are not supported in HLSL.
+``llvm.dx.store.output``). Lastly, any present global destructors will be called
+immediately before the return. HLSL does not support C++ ``atexit``
+registrations, instead calls to global destructors are compile-time generated.
 
 .. note::
 
