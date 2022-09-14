@@ -129,14 +129,3 @@
     entry "value"
   }
 #-}
-
-// -----
-
-// expected-warning@+3 {{ignoring unknown external resources for 'foobar'}}
-{-#
-  external_resources: {
-    foobar: {
-      entry: "foo"
-    }
-  }
-#-}

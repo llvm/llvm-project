@@ -516,8 +516,9 @@ private:
 
   /// The mapping from invalidated handles to the error-reporting functions that
   /// describe when the handles were invalidated. Calling such a function emits
-  /// a user-visible diagnostic.
-  DenseMap<Value, std::function<void()>> invalidatedHandles;
+  /// a user-visible diagnostic with an additional note pointing to the given
+  /// location.
+  DenseMap<Value, std::function<void(Location)>> invalidatedHandles;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// A stack of nested regions that are being processed in the transform IR.

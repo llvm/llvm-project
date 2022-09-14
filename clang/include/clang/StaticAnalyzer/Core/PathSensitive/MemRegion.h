@@ -788,6 +788,18 @@ public:
   /// It might return null.
   SymbolRef getSymbol() const { return sym; }
 
+  /// Gets the type of the wrapped symbol.
+  /// This type might not be accurate at all times - it's just our best guess.
+  /// Consider these cases:
+  ///   void foo(void *data, char *str, base *obj) {...}
+  /// The type of the pointee of `data` is of course not `void`, yet that's our
+  /// best guess. `str` might point to any object and `obj` might point to some
+  /// derived instance. `TypedRegions` other hand are representing the cases
+  /// when we actually know their types.
+  QualType getPointeeStaticType() const {
+    return sym->getType()->getPointeeType();
+  }
+
   bool isBoundable() const override { return true; }
 
   void Profile(llvm::FoldingSetNodeID& ID) const override;

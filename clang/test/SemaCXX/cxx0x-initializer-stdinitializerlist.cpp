@@ -374,7 +374,7 @@ namespace weird_initlist {
   // We don't check the struct layout in Sema.
   auto x = {weird{}, weird{}, weird{}, weird{}, weird{}};
   // ... but we do in constant evaluation.
-  constexpr auto y = {weird{}, weird{}, weird{}, weird{}, weird{}}; // expected-error {{constant}} expected-note {{type 'const std::initializer_list<weird>' has unexpected layout}}
+  constexpr auto y = {weird{}, weird{}, weird{}, weird{}, weird{}}; // expected-error {{constant}} expected-note {{type 'const std::initializer_list<weird_initlist::weird>' has unexpected layout}}
 }
 
 auto v = std::initializer_list<int>{1,2,3}; // expected-warning {{array backing local initializer list 'v' will be destroyed at the end of the full-expression}}

@@ -12,11 +12,11 @@ int g() {
 //
 // CHECK: @_Z1gv()
 // CHECK-NEXT: entry
-// CHECK-NEXT: %[[IA:.+]] = call ptr @llvm.threadlocal.address.p0(ptr @i)
+// CHECK-NEXT: %[[IA:.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @i)
 // CHECK-NEXT: %[[VA:.+]] = load i32, ptr %[[IA]]
 // CHECK-NEXT: %[[INC:.+]] = add nsw i32 %[[VA]], 1
 // CHECK-NEXT: store i32 %[[INC]], ptr %[[IA]], align 4
-// CHECK-NEXT: %[[IA2:.+]] = call ptr @llvm.threadlocal.address.p0(ptr @i)
+// CHECK-NEXT: %[[IA2:.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @i)
 // CHECK-NEXT: %[[RET:.+]] = load i32, ptr %[[IA2]], align 4
 // CHECK-NEXT: ret i32 %[[RET]]
 //
@@ -24,7 +24,7 @@ int g() {
 //
 // CHECK-O1-LABEL: @_Z1gv
 // CHECK-O1-NEXT: entry:
-// CHECK-O1-NEXT:   %[[I_ADDR:.+]] = {{.*}}call ptr @llvm.threadlocal.address.p0(ptr @i)
+// CHECK-O1-NEXT:   %[[I_ADDR:.+]] = {{.*}}call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @i)
 // CHECK-O1-NEXT:   %[[VAL:.+]] = load i32, ptr %[[I_ADDR]]
 // CHECK-O1-NEXT:   %[[INC:.+]] = add nsw i32 %[[VAL]], 1
 // CHECK-O1-NEXT:   store i32 %[[INC]], ptr %[[I_ADDR]]
@@ -32,11 +32,11 @@ int g() {
 //
 // CHECK-NOOPAQUE-LABEL: @_Z1gv
 // CHECK-NOOPAQUE-NEXT: entry:
-// CHECK-NOOPAQUE-NEXT:   %[[I_ADDR:.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @i)
+// CHECK-NOOPAQUE-NEXT:   %[[I_ADDR:.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @i)
 // CHECK-NOOPAQUE-NEXT:   %[[VAL:.+]] = load i32, i32* %[[I_ADDR]]
 // CHECK-NOOPAQUE-NEXT:   %[[INC:.+]] = add nsw i32 %[[VAL]], 1
 // CHECK-NOOPAQUE-NEXT:   store i32 %[[INC]], i32* %[[I_ADDR]]
-// CHECK-NOOPAQUE-NEXT:   %[[IA2:.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @i)
+// CHECK-NOOPAQUE-NEXT:   %[[IA2:.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @i)
 // CHECK-NOOPAQUE-NEXT:   %[[RET:.+]] = load i32, i32* %[[IA2]], align 4
 // CHECK-NOOPAQUE-NEXT:   ret i32 %[[RET]]
 int f() {
@@ -46,17 +46,17 @@ int f() {
 }
 // CHECK: @_Z1fv()
 // CHECK-NEXT: entry
-// CHECK-NEXT: %[[JA:.+]] = call ptr @llvm.threadlocal.address.p0(ptr @_ZZ1fvE1j)
+// CHECK-NEXT: %[[JA:.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZZ1fvE1j)
 // CHECK-NEXT: %[[VA:.+]] = load i32, ptr %[[JA]]
 // CHECK-NEXT: %[[INC:.+]] = add nsw i32 %[[VA]], 1
 // CHECK-NEXT: store i32 %[[INC]], ptr %[[JA]], align 4
-// CHECK-NEXT: %[[JA2:.+]] = call ptr @llvm.threadlocal.address.p0(ptr @_ZZ1fvE1j)
+// CHECK-NEXT: %[[JA2:.+]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZZ1fvE1j)
 // CHECK-NEXT: %[[RET:.+]] = load i32, ptr %[[JA2]], align 4
 // CHECK-NEXT: ret i32 %[[RET]]
 //
 // CHECK-O1-LABEL: @_Z1fv
 // CHECK-O1-NEXT: entry:
-// CHECK-O1-NEXT:   %[[J_ADDR:.+]] = {{.*}}call ptr @llvm.threadlocal.address.p0(ptr @_ZZ1fvE1j)
+// CHECK-O1-NEXT:   %[[J_ADDR:.+]] = {{.*}}call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @_ZZ1fvE1j)
 // CHECK-O1-NEXT:   %[[VAL:.+]] = load i32, ptr %[[J_ADDR]]
 // CHECK-O1-NEXT:   %[[INC:.+]] = add nsw i32 %[[VAL]], 1
 // CHECK-O1-NEXT:   store i32 %[[INC]], ptr %[[J_ADDR]]
@@ -64,11 +64,11 @@ int f() {
 //
 // CHECK-NOOPAQUE: @_Z1fv()
 // CHECK-NOOPAQUE-NEXT: entry
-// CHECK-NOOPAQUE-NEXT: %[[JA:.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ1fvE1j)
+// CHECK-NOOPAQUE-NEXT: %[[JA:.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ1fvE1j)
 // CHECK-NOOPAQUE-NEXT: %[[VA:.+]] = load i32, i32* %[[JA]]
 // CHECK-NOOPAQUE-NEXT: %[[INC:.+]] = add nsw i32 %[[VA]], 1
 // CHECK-NOOPAQUE-NEXT: store i32 %[[INC]], i32* %[[JA]], align 4
-// CHECK-NOOPAQUE-NEXT: %[[JA2:.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ1fvE1j)
+// CHECK-NOOPAQUE-NEXT: %[[JA2:.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ1fvE1j)
 // CHECK-NOOPAQUE-NEXT: %[[RET:.+]] = load i32, i32* %[[JA2]], align 4
 // CHECK-NOOPAQUE-NEXT: ret i32 %[[RET]]
 //

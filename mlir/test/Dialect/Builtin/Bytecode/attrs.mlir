@@ -1,4 +1,4 @@
-// RUN: mlir-opt -emit-bytecode %s | mlir-opt -mlir-print-local-scope | FileCheck %s
+// RUN: mlir-opt -emit-bytecode -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect -mlir-print-local-scope | FileCheck %s
 
 // Bytecode currently does not support big-endian platforms
 // UNSUPPORTED: s390x-
@@ -11,6 +11,44 @@
 module @TestArray attributes {
   // CHECK: bytecode.array = [unit]
   bytecode.array = [unit]
+} {}
+
+//===----------------------------------------------------------------------===//
+// DenseArrayAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestDenseArray
+module @TestDenseArray attributes {
+  // CHECK: bytecode.test1 = array<i1: true, false, true, false, false>
+  // CHECK: bytecode.test2 = array<i8: 10, 32, -1>
+  // CHECK: bytecode.test3 = array<f64: 1.{{.*}}e+01, 3.2{{.*}}e+01, 1.809{{.*}}e+03
+  bytecode.test1 = array<i1: true, false, true, false, false>,
+  bytecode.test2 = array<i8: 10, 32, 255>,
+  bytecode.test3 = array<f64: 10.0, 32.0, 1809.0>
+} {}
+
+//===----------------------------------------------------------------------===//
+// DenseIntOfFPElementsAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestDenseIntOrFPElements
+// CHECK: bytecode.test1 = dense<true> : tensor<256xi1>
+// CHECK: bytecode.test2 = dense<[10, 32, -1]> : tensor<3xi8>
+// CHECK: bytecode.test3 = dense<[1.{{.*}}e+01, 3.2{{.*}}e+01, 1.809{{.*}}e+03]> : tensor<3xf64>
+module @TestDenseIntOrFPElements attributes {
+  bytecode.test1 = dense<true> : tensor<256xi1>,
+  bytecode.test2 = dense<[10, 32, 255]> : tensor<3xi8>,
+  bytecode.test3 = dense<[10.0, 32.0, 1809.0]> : tensor<3xf64>
+} {}
+
+//===----------------------------------------------------------------------===//
+// DenseStringElementsAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestDenseStringElementsAttr
+module @TestDenseStringElementsAttr attributes {
+  bytecode.test1 = dense<"splat"> : tensor<256x!bytecode.string>,
+  bytecode.test2 = dense<["foo", "bar", "baz"]> : tensor<3x!bytecode.string>
 } {}
 
 //===----------------------------------------------------------------------===//
@@ -44,6 +82,17 @@ module @TestInt attributes {
   bytecode.int2 = 800 : ui64,
   bytecode.int3 = 90000000000000000300000000000000000001 : i128
 } {}
+
+//===----------------------------------------------------------------------===//
+// SparseElementsAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestSparseElements
+module @TestSparseElements attributes {
+  // CHECK-LITERAL: bytecode.sparse = sparse<[[0, 0], [1, 2]], [1, 5]> : tensor<3x4xi32>
+  bytecode.sparse = sparse<[[0, 0], [1, 2]], [1, 5]> : tensor<3x4xi32>
+} {}
+
 
 //===----------------------------------------------------------------------===//
 // StringAttr

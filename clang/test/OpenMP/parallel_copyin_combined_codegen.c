@@ -57,9 +57,9 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[A_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:   store i32* [[A]], i32** [[A_ADDR]], align 8
-// CHECK-NEXT:   [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   store i32 1, i32* [[TMP0]], align 4
-// CHECK-NEXT:   [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32**, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32** [[A_ADDR]], i32* [[TMP1]])
 // CHECK-NEXT:   ret void
 //
@@ -83,7 +83,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   store i32* [[X]], i32** [[X_ADDR]], align 8
 // CHECK-NEXT:   [[TMP0:%.*]] = load i32**, i32*** [[A_ADDR]], align 8
 // CHECK-NEXT:   [[TMP1:%.*]] = load i32*, i32** [[X_ADDR]], align 8
-// CHECK-NEXT:   [[TMP2:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP2:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
 // CHECK-NEXT:   [[TMP4:%.*]] = ptrtoint i32* [[TMP2]] to i64
 // CHECK-NEXT:   [[TMP5:%.*]] = icmp ne i64 [[TMP3]], [[TMP4]]
@@ -128,7 +128,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK-NEXT:   store i32 [[ADD]], i32* [[I]], align 4
 // CHECK-NEXT:   [[TMP17:%.*]] = load i32, i32* [[I]], align 4
-// CHECK-NEXT:   [[TMP18:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP18:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP19:%.*]] = load i32, i32* [[TMP18]], align 4
 // CHECK-NEXT:   [[ADD2:%.*]] = add nsw i32 [[TMP17]], [[TMP19]]
 // CHECK-NEXT:   [[TMP20:%.*]] = load i32*, i32** [[TMP0]], align 8
@@ -160,9 +160,9 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[A_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:   store i32* [[A]], i32** [[A_ADDR]], align 8
-// CHECK-NEXT:   [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   store i32 2, i32* [[TMP0]], align 4
-// CHECK-NEXT:   [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32**, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*), i32** [[A_ADDR]], i32* [[TMP1]])
 // CHECK-NEXT:   ret void
 //
@@ -186,7 +186,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   store i32* [[X]], i32** [[X_ADDR]], align 8
 // CHECK-NEXT:   [[TMP0:%.*]] = load i32**, i32*** [[A_ADDR]], align 8
 // CHECK-NEXT:   [[TMP1:%.*]] = load i32*, i32** [[X_ADDR]], align 8
-// CHECK-NEXT:   [[TMP2:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP2:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
 // CHECK-NEXT:   [[TMP4:%.*]] = ptrtoint i32* [[TMP2]] to i64
 // CHECK-NEXT:   [[TMP5:%.*]] = icmp ne i64 [[TMP3]], [[TMP4]]
@@ -231,7 +231,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK-NEXT:   store i32 [[ADD]], i32* [[I]], align 4
 // CHECK-NEXT:   [[TMP17:%.*]] = load i32, i32* [[I]], align 4
-// CHECK-NEXT:   [[TMP18:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP18:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP19:%.*]] = load i32, i32* [[TMP18]], align 4
 // CHECK-NEXT:   [[ADD2:%.*]] = add nsw i32 [[TMP17]], [[TMP19]]
 // CHECK-NEXT:   [[TMP20:%.*]] = load i32*, i32** [[TMP0]], align 8
@@ -260,9 +260,9 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[A_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:   store i32* [[A]], i32** [[A_ADDR]], align 8
-// CHECK-NEXT:   [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   store i32 3, i32* [[TMP0]], align 4
-// CHECK-NEXT:   [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32**, i32*)* @.omp_outlined..2 to void (i32*, i32*, ...)*), i32** [[A_ADDR]], i32* [[TMP1]])
 // CHECK-NEXT:   ret void
 //
@@ -286,7 +286,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   store i32* [[X]], i32** [[X_ADDR]], align 8
 // CHECK-NEXT:   [[TMP0:%.*]] = load i32**, i32*** [[A_ADDR]], align 8
 // CHECK-NEXT:   [[TMP1:%.*]] = load i32*, i32** [[X_ADDR]], align 8
-// CHECK-NEXT:   [[TMP2:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP2:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
 // CHECK-NEXT:   [[TMP4:%.*]] = ptrtoint i32* [[TMP2]] to i64
 // CHECK-NEXT:   [[TMP5:%.*]] = icmp ne i64 [[TMP3]], [[TMP4]]
@@ -331,7 +331,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK-NEXT:   store i32 [[ADD]], i32* [[I]], align 4, !llvm.access.group
 // CHECK-NEXT:   [[TMP17:%.*]] = load i32, i32* [[I]], align 4, !llvm.access.group
-// CHECK-NEXT:   [[TMP18:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP18:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP19:%.*]] = load i32, i32* [[TMP18]], align 4, !llvm.access.group
 // CHECK-NEXT:   [[ADD2:%.*]] = add nsw i32 [[TMP17]], [[TMP19]]
 // CHECK-NEXT:   [[TMP20:%.*]] = load i32*, i32** [[TMP0]], align 8, !llvm.access.group
@@ -369,9 +369,9 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[B_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:   store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:   store i32* [[B]], i32** [[B_ADDR]], align 8
-// CHECK-NEXT:   [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   store i32 4, i32* [[TMP0]], align 4
-// CHECK-NEXT:   [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32**, i32**, i32*)* @.omp_outlined..3 to void (i32*, i32*, ...)*), i32** [[A_ADDR]], i32** [[B_ADDR]], i32* [[TMP1]])
 // CHECK-NEXT:   ret void
 //
@@ -396,7 +396,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[TMP0:%.*]] = load i32**, i32*** [[A_ADDR]], align 8
 // CHECK-NEXT:   [[TMP1:%.*]] = load i32**, i32*** [[B_ADDR]], align 8
 // CHECK-NEXT:   [[TMP2:%.*]] = load i32*, i32** [[X_ADDR]], align 8
-// CHECK-NEXT:   [[TMP3:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP3:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP4:%.*]] = ptrtoint i32* [[TMP2]] to i64
 // CHECK-NEXT:   [[TMP5:%.*]] = ptrtoint i32* [[TMP3]] to i64
 // CHECK-NEXT:   [[TMP6:%.*]] = icmp ne i64 [[TMP4]], [[TMP5]]
@@ -435,13 +435,13 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:     i32 1, label [[DOTOMP_SECTIONS_CASE1:%.*]]
 // CHECK-NEXT:   ]
 // CHECK:      .omp.sections.case:
-// CHECK-NEXT:   [[TMP19:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP19:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP20:%.*]] = load i32, i32* [[TMP19]], align 4
 // CHECK-NEXT:   [[TMP21:%.*]] = load i32*, i32** [[TMP0]], align 8
 // CHECK-NEXT:   store i32 [[TMP20]], i32* [[TMP21]], align 4
 // CHECK-NEXT:   br label [[DOTOMP_SECTIONS_EXIT]]
 // CHECK:      .omp.sections.case1:
-// CHECK-NEXT:   [[TMP22:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP22:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP23:%.*]] = load i32, i32* [[TMP22]], align 4
 // CHECK-NEXT:   [[TMP24:%.*]] = load i32*, i32** [[TMP1]], align 8
 // CHECK-NEXT:   store i32 [[TMP23]], i32* [[TMP24]], align 4
@@ -464,9 +464,9 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[A_ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:   store i32* [[A]], i32** [[A_ADDR]], align 8
-// CHECK-NEXT:   [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP0:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   store i32 5, i32* [[TMP0]], align 4
-// CHECK-NEXT:   [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP1:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32**, i32*)* @.omp_outlined..4 to void (i32*, i32*, ...)*), i32** [[A_ADDR]], i32* [[TMP1]])
 // CHECK-NEXT:   ret void
 //
@@ -484,7 +484,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   store i32* [[X]], i32** [[X_ADDR]], align 8
 // CHECK-NEXT:   [[TMP0:%.*]] = load i32**, i32*** [[A_ADDR]], align 8
 // CHECK-NEXT:   [[TMP1:%.*]] = load i32*, i32** [[X_ADDR]], align 8
-// CHECK-NEXT:   [[TMP2:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP2:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
 // CHECK-NEXT:   [[TMP4:%.*]] = ptrtoint i32* [[TMP2]] to i64
 // CHECK-NEXT:   [[TMP5:%.*]] = icmp ne i64 [[TMP3]], [[TMP4]]
@@ -511,7 +511,7 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 // CHECK:      for.body:
 // CHECK-NEXT:   [[TMP14:%.*]] = load i32, i32* [[I]], align 4
-// CHECK-NEXT:   [[TMP15:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @x)
+// CHECK-NEXT:   [[TMP15:%.*]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @x)
 // CHECK-NEXT:   [[TMP16:%.*]] = load i32, i32* [[TMP15]], align 4
 // CHECK-NEXT:   [[ADD:%.*]] = add nsw i32 [[TMP14]], [[TMP16]]
 // CHECK-NEXT:   [[TMP17:%.*]] = load i32*, i32** [[TMP0]], align 8

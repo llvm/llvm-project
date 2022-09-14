@@ -1,37 +1,39 @@
-==================
-LD64 vs LLD-MACHO
-==================
+=================
+ld64 vs LLD-MachO
+=================
 
-This doc lists all significant deliberate differences in behavior between LD64 and LLD-MachO.
+This doc lists all significant deliberate differences in behavior between ld64
+and LLD-MachO.
 
 String Literal Deduplication
 ****************************
-LD64 always deduplicates string literals. LLD only does it when the ``--icf=``
+ld64 always deduplicates string literals. LLD only does it when the ``--icf=``
 or the ``--deduplicate-literals`` flag is passed. Omitting deduplication by
 default ensures that our link is as fast as possible. However, it may also break
 some programs which have (incorrectly) relied on string deduplication always
 occurring. In particular, programs which compare string literals via pointer
 equality must be fixed to use value equality instead.
 
-String Alignment
-****************
-LLD is slightly less conservative about aligning cstrings, allowing it to pack
-them more compactly. This should not result in any meaningful semantic
-difference.
-
 ``-no_deduplicate`` Flag
 ************************
-- LD64:
-   * This turns off ICF (deduplication pass) in the linker.
-- LLD
-   * This turns off ICF and string merging in the linker.
+- ld64: This turns off ICF (deduplication pass) in the linker.
+- LLD: This turns off ICF and string merging in the linker.
+
+String Alignment
+****************
+LLD is `slightly less conservative about aligning cstrings
+<https://reviews.llvm.org/D121342>`_, allowing it to pack them more compactly.
+This should not result in any meaningful semantic difference.
 
 ObjC Symbols Treatment
 **********************
-There are differences in how LLD and LD64 handle ObjC symbols loaded from archives.
+There are differences in how LLD and ld64 handle ObjC symbols loaded from
+archives.
 
-- LD64:
-   * Duplicate ObjC symbols from the same archives will not raise an error. LD64 will pick the first one.
-   * Duplicate ObjC symbols from different archives will raise a "duplicate symbol" error.
-- LLD:
-   * Duplicate symbols, regardless of which archives they are from, will raise errors.
+- ld64:
+   1. Duplicate ObjC symbols from the same archives will not raise an error.
+      ld64 will pick the first one.
+   2. Duplicate ObjC symbols from different archives will raise a "duplicate
+      symbol" error.
+- LLD: Duplicate symbols, regardless of which archives they are from, will
+  raise errors.

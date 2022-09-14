@@ -15,7 +15,7 @@ int &g() { return r; }
 
 // CHECK: define {{.*}} @[[R_INIT:.*]]()
 // CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z1fv()
-// CHECK: %[[R_ADDR:.+]] = call i32** @llvm.threadlocal.address.p0p0i32(i32** @r)
+// CHECK: %[[R_ADDR:.+]] = call align 8 i32** @llvm.threadlocal.address.p0p0i32(i32** align 8 @r)
 // CHECK: store i32* %{{.*}}, i32** %[[R_ADDR]], align 8
 
 // CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z1gv()
@@ -27,7 +27,7 @@ int &g() { return r; }
 // DARWIN: define cxx_fast_tlscc noundef i32* @_ZTW1r() [[ATTR1:#[0-9]+]] {
 // LINUX_AIX: call void @_ZTH1r()
 // DARWIN: call cxx_fast_tlscc void @_ZTH1r()
-// CHECK: %[[R_ADDR2:.+]] = call i32** @llvm.threadlocal.address.p0p0i32(i32** @r)
+// CHECK: %[[R_ADDR2:.+]] = call align 8 i32** @llvm.threadlocal.address.p0p0i32(i32** align 8 @r)
 // CHECK: load i32*, i32** %[[R_ADDR2]], align 8
 // CHECK: ret i32* %{{.*}}
 

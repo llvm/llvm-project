@@ -1940,7 +1940,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "std::initializer_list<int>";
+            HI.Definition = "class std::initializer_list<int>";
           }},
       {
           R"cpp(// User defined conversion to auto
@@ -3301,7 +3301,14 @@ TEST(Hover, HideBigInitializers) {
   EXPECT_EQ(H->Definition, "int arr[]");
 }
 
-TEST(Hover, GlobalVarEnumeralCastNoCrash) {
+#if defined(__aarch64__)
+// FIXME: AARCH64 sanitizer buildbots are broken after 72142fbac4.
+#define PREDEFINEMACROS_TEST(x) DISABLED_##x
+#else
+#define PREDEFINEMACROS_TEST(x) x
+#endif
+
+TEST(Hover, PREDEFINEMACROS_TEST(GlobalVarEnumeralCastNoCrash)) {
   Annotations T(R"cpp(
     using uintptr_t = __UINTPTR_TYPE__;
     enum Test : uintptr_t {};
@@ -3319,7 +3326,7 @@ TEST(Hover, GlobalVarEnumeralCastNoCrash) {
   EXPECT_EQ(*HI->Value, "&global_var");
 }
 
-TEST(Hover, GlobalVarIntCastNoCrash) {
+TEST(Hover, PREDEFINEMACROS_TEST(GlobalVarIntCastNoCrash)) {
   Annotations T(R"cpp(
     using uintptr_t = __UINTPTR_TYPE__;
     unsigned global_var;

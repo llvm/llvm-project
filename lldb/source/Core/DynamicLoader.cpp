@@ -62,7 +62,7 @@ DynamicLoader *DynamicLoader::FindPlugin(Process *process,
 
 DynamicLoader::DynamicLoader(Process *process) : m_process(process) {}
 
-// Accessosors to the global setting as to whether to stop at image (shared
+// Accessors to the global setting as to whether to stop at image (shared
 // library) loading/unloading.
 
 bool DynamicLoader::GetStopWhenImagesChange() const {
@@ -175,17 +175,19 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
   return nullptr;
 }
 
-static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr) {
+static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
+                                        llvm::StringRef name) {
   char namebuf[80];
-  snprintf(namebuf, sizeof(namebuf), "memory-image-0x%" PRIx64, addr);
-  return process->ReadModuleFromMemory(FileSpec(namebuf), addr);
+  if (name.empty()) {
+    snprintf(namebuf, sizeof(namebuf), "memory-image-0x%" PRIx64, addr);
+    name = namebuf;
+  }
+  return process->ReadModuleFromMemory(FileSpec(name), addr);
 }
 
-ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(Process *process,
-                                                     UUID uuid, addr_t value,
-                                                     bool value_is_offset,
-                                                     bool force_symbol_search,
-                                                     bool notify) {
+ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
+    Process *process, llvm::StringRef name, UUID uuid, addr_t value,
+    bool value_is_offset, bool force_symbol_search, bool notify) {
   ModuleSP memory_module_sp;
   ModuleSP module_sp;
   PlatformSP platform_sp = process->GetTarget().GetPlatform();
@@ -195,7 +197,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(Process *process,
   module_spec.GetUUID() = uuid;
 
   if (!uuid.IsValid() && !value_is_offset) {
-    memory_module_sp = ReadUnnamedMemoryModule(process, value);
+    memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
 
     if (memory_module_sp)
       uuid = memory_module_sp->GetUUID();
@@ -223,7 +225,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(Process *process,
   // read it out of memory.
   if (!module_sp.get() && value != LLDB_INVALID_ADDRESS && !value_is_offset) {
     if (!memory_module_sp)
-      memory_module_sp = ReadUnnamedMemoryModule(process, value);
+      memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
     if (memory_module_sp)
       module_sp = memory_module_sp;
   }

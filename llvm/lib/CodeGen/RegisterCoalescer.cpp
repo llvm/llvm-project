@@ -1641,18 +1641,20 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   SlotIndex RegIndex = Idx.getRegSlot();
   LiveRange::Segment *Seg = DstLI.getSegmentContaining(RegIndex);
   assert(Seg != nullptr && "No segment for defining instruction");
-  if (VNInfo *V = DstLI.getVNInfoAt(Seg->end)) {
-    if (V->isPHIDef()) {
-      CopyMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
-      for (unsigned i = CopyMI->getNumOperands(); i != 0; --i) {
-        MachineOperand &MO = CopyMI->getOperand(i-1);
-        if (MO.isReg() && MO.isUse())
-          CopyMI->removeOperand(i-1);
-      }
-      LLVM_DEBUG(dbgs() << "\tReplaced copy of <undef> value with an "
-                           "implicit def\n");
-      return CopyMI;
+  VNInfo *V = DstLI.getVNInfoAt(Seg->end);
+
+  // The source interval may also have been on an undef use, in which case the
+  // copy introduced a live value.
+  if (((V && V->isPHIDef()) || (!V && !DstLI.liveAt(Idx)))) {
+    CopyMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
+    for (unsigned i = CopyMI->getNumOperands(); i != 0; --i) {
+      MachineOperand &MO = CopyMI->getOperand(i-1);
+      if (MO.isReg() && MO.isUse())
+        CopyMI->removeOperand(i-1);
     }
+    LLVM_DEBUG(dbgs() << "\tReplaced copy of <undef> value with an "
+               "implicit def\n");
+    return CopyMI;
   }
 
   // Remove any DstReg segments starting at the instruction.

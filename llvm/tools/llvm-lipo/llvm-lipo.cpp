@@ -28,6 +28,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TextAPI/Architecture.h"
 
@@ -425,7 +426,7 @@ static void printBinaryArchs(LLVMContext &LLVMCtx, const Binary *Binary,
   Expected<Slice> SliceOrErr = createSliceFromIR(*IR, 0);
   if (!SliceOrErr)
     reportError(IR->getFileName(), SliceOrErr.takeError());
-  
+
   OS << SliceOrErr->getArchString() << " \n";
 }
 
@@ -720,6 +721,10 @@ replaceSlices(LLVMContext &LLVMCtx,
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+
   Config C = parseLipoOptions(makeArrayRef(argv + 1, argc - 1));
   LLVMContext LLVMCtx;
   SmallVector<OwningBinary<Binary>, 1> InputBinaries =

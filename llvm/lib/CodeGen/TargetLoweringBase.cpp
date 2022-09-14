@@ -724,6 +724,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   // with the Target-specific changes necessary.
   MaxAtomicSizeInBitsSupported = 1024;
 
+  MaxDivRemBitWidthSupported = llvm::IntegerType::MAX_INT_BITS;
+
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
 

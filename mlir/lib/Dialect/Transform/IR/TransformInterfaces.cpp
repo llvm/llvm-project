@@ -13,6 +13,7 @@
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "transform-dialect"
+#define DEBUG_PRINT_AFTER_ALL "transform-dialect-print-top-level-after-all"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 
 using namespace mlir;
@@ -147,15 +148,18 @@ void transform::TransformState::recordHandleInvalidation(OpOperand &handle) {
         Operation *owner = handle.getOwner();
         unsigned operandNo = handle.getOperandNumber();
         invalidatedHandles[otherHandle] = [ancestorLoc, opLoc, owner, operandNo,
-                                           otherHandle]() {
-          InFlightDiagnostic diag =
-              owner->emitOpError()
-              << "invalidated the handle to payload operations nested in the "
-                 "payload operation associated with its operand #"
-              << operandNo;
-          diag.attachNote(ancestorLoc) << "ancestor op";
-          diag.attachNote(opLoc) << "nested op";
-          diag.attachNote(otherHandle.getLoc()) << "other handle";
+                                           otherHandle](Location currentLoc) {
+          InFlightDiagnostic diag = emitError(currentLoc)
+                                    << "op uses a handle invalidated by a "
+                                       "previously executed transform op";
+          diag.attachNote(otherHandle.getLoc()) << "handle to invalidated ops";
+          diag.attachNote(owner->getLoc())
+              << "invalidated by this transform op that consumes its operand #"
+              << operandNo
+              << " and invalidates handles to payload ops nested in payload "
+                 "ops associated with the consumed handle";
+          diag.attachNote(ancestorLoc) << "ancestor payload op";
+          diag.attachNote(opLoc) << "nested payload op";
         };
       }
     }
@@ -174,7 +178,7 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
     // If the operand uses an invalidated handle, report it.
     auto it = invalidatedHandles.find(target.get());
     if (it != invalidatedHandles.end())
-      return it->getSecond()(), failure();
+      return it->getSecond()(transform->getLoc()), failure();
 
     // Invalidate handles pointing to the operations nested in the operation
     // associated with the handle consumed by this operation.
@@ -191,6 +195,13 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
   LLVM_DEBUG(DBGS() << "applying: " << transform << "\n");
+  auto printOnFailureRAII = llvm::make_scope_exit([this] {
+    DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
+      DBGS() << "Top-level payload:\n";
+      getTopLevel()->print(llvm::dbgs(),
+                           mlir::OpPrintingFlags().printGenericOpForm());
+    });
+  });
   if (options.getExpensiveChecksEnabled()) {
     if (failed(checkAndRecordHandleInvalidation(transform)))
       return DiagnosedSilenceableFailure::definiteFailure();
@@ -244,6 +255,11 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
       return DiagnosedSilenceableFailure::definiteFailure();
   }
 
+  printOnFailureRAII.release();
+  DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
+    DBGS() << "Top-level payload:\n";
+    getTopLevel()->print(llvm::dbgs());
+  });
   return DiagnosedSilenceableFailure::success();
 }
 

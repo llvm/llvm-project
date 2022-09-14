@@ -2,6 +2,8 @@
 ; REQUIRES: asserts
 
 ; CHECK: 'foo'
+; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %shift = ashr i32 %val, %k
+; CHECK: LV: Found an estimated cost of 1 for VF 2 For instruction:   %shift = ashr i32 %val, %k
 ; CHECK: LV: Found an estimated cost of 1 for VF 4 For instruction:   %shift = ashr i32 %val, %k
 define void @foo(i32* nocapture %p, i32 %k) local_unnamed_addr #0 {
 entry:

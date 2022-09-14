@@ -305,16 +305,24 @@ OpFoldResult arith::SubIOp::fold(ArrayRef<Attribute> operands) {
   if (matchPattern(getRhs(), m_Zero()))
     return getLhs();
 
+  if (auto add = getLhs().getDefiningOp<AddIOp>()) {
+    // subi(addi(a, b), b) -> a
+    if (getRhs() == add.getRhs())
+      return add.getLhs();
+    // subi(addi(a, b), a) -> b
+    if (getRhs() == add.getLhs())
+      return add.getRhs();
+  }
+
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) - b; });
 }
 
 void arith::SubIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns
-      .add<SubIRHSAddConstant, SubILHSAddConstant, SubIRHSSubConstantRHS,
-           SubIRHSSubConstantLHS, SubILHSSubConstantRHS, SubILHSSubConstantLHS>(
-          context);
+  patterns.add<SubIRHSAddConstant, SubILHSAddConstant, SubIRHSSubConstantRHS,
+               SubIRHSSubConstantLHS, SubILHSSubConstantRHS,
+               SubILHSSubConstantLHS, SubISubILHSRHSLHS>(context);
 }
 
 //===----------------------------------------------------------------------===//

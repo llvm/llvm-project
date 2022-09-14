@@ -35,12 +35,12 @@ struct PfmCountersInfo;
 // measurements.
 class LLVMState {
 public:
-  // Uses the host triple. If CpuName is empty, uses the host CPU.
-  LLVMState(const std::string &CpuName);
-
-  LLVMState(const std::string &Triple,
-            const std::string &CpuName,
-            const std::string &Features = ""); // For tests.
+  // Factory function.
+  // If `Triple` is empty, uses the host triple.
+  // If `CpuName` is empty, uses the host CPU.
+  // `Features` is intended for tests.
+  static Expected<LLVMState> Create(std::string Triple, std::string CpuName,
+                                    StringRef Features = "");
 
   const TargetMachine &getTargetMachine() const { return *TheTargetMachine; }
   std::unique_ptr<LLVMTargetMachine> createTargetMachine() const;
@@ -66,6 +66,9 @@ public:
   const PfmCountersInfo &getPfmCounters() const { return *PfmCounters; }
 
 private:
+  LLVMState(std::unique_ptr<const TargetMachine> TM, const ExegesisTarget *ET,
+            StringRef CpuName);
+
   const ExegesisTarget *TheExegesisTarget;
   std::unique_ptr<const TargetMachine> TheTargetMachine;
   std::unique_ptr<const RegisterAliasingTrackerCache> RATC;

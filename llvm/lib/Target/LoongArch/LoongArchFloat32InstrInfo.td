@@ -237,6 +237,25 @@ def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
 
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR32:$src), (FRECIP_S $src)>;
+
+// fmadd.s: fj * fk + fa
+def : Pat<(fma FPR32:$fj, FPR32:$fk, FPR32:$fa), (FMADD_S $fj, $fk, $fa)>;
+
+// fmsub.s: fj * fk - fa
+def : Pat<(fma FPR32:$fj, FPR32:$fk, (fneg FPR32:$fa)),
+          (FMSUB_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
+
+// fnmadd.s: -(fj * fk + fa)
+def : Pat<(fneg (fma FPR32:$fj, FPR32:$fk, FPR32:$fa)),
+          (FNMADD_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
+
+// fnmadd.s: -fj * fk - fa (the nsz flag on the FMA)
+def : Pat<(fma_nsz (fneg FPR32:$fj), FPR32:$fk, (fneg FPR32:$fa)),
+          (FNMADD_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
+
+// fnmsub.s: -fj * fk + fa
+def : Pat<(fma (fneg FPR32:$fj), FPR32:$fk, FPR32:$fa),
+          (FNMSUB_S FPR32:$fj, FPR32:$fk, FPR32:$fa)>;
 } // Predicates = [HasBasicF]
 
 let Predicates = [HasBasicF, IsLA64] in {

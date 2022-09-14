@@ -67,6 +67,13 @@ struct DistributedLoadStoreHelper {
                                          ArrayRef<Value>{laneId});
   }
 
+  /// Create a store during the process of distributing the
+  /// `vector.warp_execute_on_thread_0` op.
+  /// Vector distribution assumes the following convention regarding the
+  /// temporary buffers that are created to transition values. This **must**
+  /// be properly specified in the `options.warpAllocationFn`:
+  ///   1. scalars of type T transit through a memref<1xT>.
+  ///   2. vectors of type V<shapexT> transit through a memref<shapexT>
   Operation *buildStore(RewriterBase &b, Location loc, Value val,
                         Value buffer) {
     assert((val == distributedVal || val == sequentialVal) &&
@@ -75,7 +82,12 @@ struct DistributedLoadStoreHelper {
     // Vector case must use vector::TransferWriteOp which will later lower to
     //   vector.store of memref.store depending on further lowerings.
     if (val.getType().isa<VectorType>()) {
-      SmallVector<Value> indices(sequentialVectorType.getRank(), zero);
+      int64_t rank = sequentialVectorType.getRank();
+      if (rank == 0) {
+        return b.create<vector::TransferWriteOp>(loc, val, buffer, ValueRange{},
+                                                 ArrayRef<bool>{});
+      }
+      SmallVector<Value> indices(rank, zero);
       auto maybeDistributedDim = getDistributedVectorDim(distributedVectorType);
       assert(maybeDistributedDim && "must be able to deduce distributed dim");
       if (val == distributedVal)
@@ -90,17 +102,41 @@ struct DistributedLoadStoreHelper {
     return b.create<memref::StoreOp>(loc, val, buffer, zero);
   }
 
+  /// Create a load during the process of distributing the
+  /// `vector.warp_execute_on_thread_0` op.
+  /// Vector distribution assumes the following convention regarding the
+  /// temporary buffers that are created to transition values. This **must**
+  /// be properly specified in the `options.warpAllocationFn`:
+  ///   1. scalars of type T transit through a memref<1xT>.
+  ///   2. vectors of type V<shapexT> transit through a memref<shapexT>
+  ///
+  /// When broadcastMode is true, the load is not distributed to account for
+  /// the broadcast semantics of the `vector.warp_execute_on_lane_0` op.
+  ///
+  /// Example:
+  ///
+  /// ```
+  ///   %r = vector.warp_execute_on_lane_0(...) -> (f32) {
+  ///     vector.yield %cst : f32
+  ///   }
+  ///   // Both types are f32. The constant %cst is broadcasted to all lanes.
+  /// ```
+  /// This behavior described in more detail in the documentation of the op.
   Value buildLoad(RewriterBase &b, Location loc, Type type, Value buffer,
                   bool broadcastMode = false) {
-    // When broadcastMode is true, this is a broadcast.
-    // E.g.:
-    // %r = vector.warp_execute_on_lane_0(...) -> (f32) {
-    //   vector.yield %cst : f32
-    // }
-    // Both types are f32. The constant %cst is broadcasted to all lanes.
-    // This is described in more detail in the documentation of the op.
-    if (broadcastMode)
+    if (broadcastMode) {
+      // Broadcast mode may occur for either scalar or vector operands.
+      auto vectorType = type.dyn_cast<VectorType>();
+      auto shape = buffer.getType().cast<MemRefType>();
+      if (vectorType) {
+        SmallVector<bool> inBounds(shape.getRank(), true);
+        return b.create<vector::TransferReadOp>(
+            loc, vectorType, buffer,
+            /*indices=*/SmallVector<Value>(shape.getRank(), zero),
+            ArrayRef<bool>(inBounds.begin(), inBounds.end()));
+      }
       return b.create<memref::LoadOp>(loc, buffer, zero);
+    }
 
     // Other cases must be vector atm.
     // Vector case must use vector::TransferReadOp which will later lower to
@@ -328,8 +364,10 @@ struct WarpOpToScfForPattern : public OpRewritePattern<WarpExecuteOnLane0Op> {
       helper.buildStore(rewriter, loc, distributedVal, buffer);
       // Load sequential vector from buffer, inside the ifOp.
       rewriter.setInsertionPointToStart(ifOp.thenBlock());
-      bbArgReplacements.push_back(
-          helper.buildLoad(rewriter, loc, sequentialVal.getType(), buffer));
+      bool broadcastMode =
+          (sequentialVal.getType() == distributedVal.getType());
+      bbArgReplacements.push_back(helper.buildLoad(
+          rewriter, loc, sequentialVal.getType(), buffer, broadcastMode));
     }
 
     // Step 3. Insert sync after all the stores and before all the loads.

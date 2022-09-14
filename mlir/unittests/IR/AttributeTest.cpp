@@ -58,6 +58,20 @@ TEST(DenseSplatTest, BoolSplat) {
   detectedSplat = DenseElementsAttr::get(shape, {false, false, false, false});
   EXPECT_EQ(detectedSplat, falseSplat);
 }
+TEST(DenseSplatTest, BoolSplatRawRoundtrip) {
+  MLIRContext context;
+  IntegerType boolTy = IntegerType::get(&context, 1);
+  RankedTensorType shape = RankedTensorType::get({2, 2}, boolTy);
+
+  // Check that splat booleans properly round trip via the raw API.
+  DenseElementsAttr trueSplat = DenseElementsAttr::get(shape, true);
+  EXPECT_TRUE(trueSplat.isSplat());
+  DenseElementsAttr trueSplatFromRaw =
+      DenseElementsAttr::getFromRawBuffer(shape, trueSplat.getRawData());
+  EXPECT_TRUE(trueSplatFromRaw.isSplat());
+
+  EXPECT_EQ(trueSplat, trueSplatFromRaw);
+}
 
 TEST(DenseSplatTest, LargeBoolSplat) {
   constexpr int64_t boolCount = 56;

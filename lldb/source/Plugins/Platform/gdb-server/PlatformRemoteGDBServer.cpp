@@ -803,7 +803,7 @@ size_t PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger &debugger,
   for (size_t i = 0; i < connection_urls.size(); ++i) {
     ConnectProcess(connection_urls[i].c_str(), "gdb-remote", debugger, nullptr, error);
     if (error.Fail())
-      return i; // We already connected to i process succsessfully
+      return i; // We already connected to i process successfully
   }
   return connection_urls.size();
 }

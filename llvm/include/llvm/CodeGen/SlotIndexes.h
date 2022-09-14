@@ -215,8 +215,12 @@ class raw_ostream;
     }
 
     /// Return the scaled distance from this index to the given one, where all
-    /// slots on the same instruction have zero distance.
-    int getInstrDistance(SlotIndex other) const {
+    /// slots on the same instruction have zero distance, assuming that the slot
+    /// indices are packed as densely as possible. There are normally gaps
+    /// between instructions, so this assumption often doesn't hold. This
+    /// results in this function often returning a value greater than the actual
+    /// instruction distance.
+    int getApproxInstrDistance(SlotIndex other) const {
       return (other.listEntry()->getIndex() - listEntry()->getIndex())
         / Slot_Count;
     }

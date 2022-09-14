@@ -1915,7 +1915,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
       // We failed to copy the type we found
       LLDB_LOG(log,
                "  Failed to import the function type '{0}' ({1:x})"
-               " into the expression parser AST contenxt",
+               " into the expression parser AST context",
                function_type->GetName(), function_type->GetID());
 
       return;

@@ -545,7 +545,8 @@ class DataFlowSanitizer {
 public:
   DataFlowSanitizer(const std::vector<std::string> &ABIListFiles);
 
-  bool runImpl(Module &M, ModuleAnalysisManager *AM = nullptr);
+  bool runImpl(Module &M,
+               llvm::function_ref<TargetLibraryInfo &(Function &)> GetTLI);
 };
 
 struct DFSanFunction {
@@ -554,7 +555,7 @@ struct DFSanFunction {
   DominatorTree DT;
   bool IsNativeABI;
   bool IsForceZeroLabels;
-  TargetLibraryInfo *TLI = nullptr;
+  TargetLibraryInfo &TLI;
   AllocaInst *LabelReturnAlloca = nullptr;
   AllocaInst *OriginReturnAlloca = nullptr;
   DenseMap<Value *, Value *> ValShadowMap;
@@ -586,7 +587,7 @@ struct DFSanFunction {
   DenseMap<Value *, std::set<Value *>> ShadowElements;
 
   DFSanFunction(DataFlowSanitizer &DFS, Function *F, bool IsNativeABI,
-                bool IsForceZeroLabels, TargetLibraryInfo *TLI)
+                bool IsForceZeroLabels, TargetLibraryInfo &TLI)
       : DFS(DFS), F(F), IsNativeABI(IsNativeABI),
         IsForceZeroLabels(IsForceZeroLabels), TLI(TLI) {
     DT.recalculate(*F);
@@ -1376,7 +1377,8 @@ void DataFlowSanitizer::injectMetadataGlobals(Module &M) {
   });
 }
 
-bool DataFlowSanitizer::runImpl(Module &M, ModuleAnalysisManager *AM) {
+bool DataFlowSanitizer::runImpl(
+    Module &M, llvm::function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   initializeModule(M);
 
   if (ABIList.isIn(M, "skip"))
@@ -1578,18 +1580,8 @@ bool DataFlowSanitizer::runImpl(Module &M, ModuleAnalysisManager *AM) {
 
     removeUnreachableBlocks(*F);
 
-    // TODO: Use reference instead of pointer, TLI should not be optional.
-    // Using a pointer here is a hack so that DFSan run from legacy
-    // pass manager can skip getting the TargetLibraryAnalysis.
-    TargetLibraryInfo *TLI = nullptr;
-    if (AM) {
-      auto &FAM =
-          AM->getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-      TLI = &FAM.getResult<TargetLibraryAnalysis>(*F);
-    }
-
     DFSanFunction DFSF(*this, F, FnsWithNativeABI.count(F),
-                       FnsWithForceZeroLabel.count(F), TLI);
+                       FnsWithForceZeroLabel.count(F), GetTLI(*F));
 
     // DFSanVisitor may create new basic blocks, which confuses df_iterator.
     // Build a copy of the list before iterating over it.
@@ -3200,7 +3192,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     return;
 
   LibFunc LF;
-  if (DFSF.TLI->getLibFunc(CB, LF)) {
+  if (DFSF.TLI.getLibFunc(CB, LF)) {
     // libatomic.a functions need to have special handling because there isn't
     // a good way to intercept them or compile the library with
     // instrumentation.
@@ -3349,16 +3341,28 @@ public:
       const std::vector<std::string> &ABIListFiles = std::vector<std::string>())
       : ModulePass(ID), ABIListFiles(ABIListFiles) {}
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+  }
+
   bool runOnModule(Module &M) override {
-    return DataFlowSanitizer(ABIListFiles).runImpl(M);
+    return DataFlowSanitizer(ABIListFiles)
+        .runImpl(M, [&](Function &F) -> TargetLibraryInfo & {
+          return getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+        });
   }
 };
 } // namespace
 
 char DataFlowSanitizerLegacyPass::ID;
 
-INITIALIZE_PASS(DataFlowSanitizerLegacyPass, "dfsan",
-                "DataFlowSanitizer: dynamic data flow analysis.", false, false)
+INITIALIZE_PASS_BEGIN(DataFlowSanitizerLegacyPass, "dfsan",
+                      "DataFlowSanitizer: dynamic data flow analysis.", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(DataFlowSanitizerLegacyPass, "dfsan",
+                    "DataFlowSanitizer: dynamic data flow analysis.", false,
+                    false)
 
 ModulePass *llvm::createDataFlowSanitizerLegacyPassPass(
     const std::vector<std::string> &ABIListFiles) {
@@ -3367,7 +3371,12 @@ ModulePass *llvm::createDataFlowSanitizerLegacyPassPass(
 
 PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
-  if (!DataFlowSanitizer(ABIListFiles).runImpl(M, &AM))
+  auto GetTLI = [&](Function &F) -> TargetLibraryInfo & {
+    auto &FAM =
+        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+  if (!DataFlowSanitizer(ABIListFiles).runImpl(M, GetTLI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = PreservedAnalyses::none();

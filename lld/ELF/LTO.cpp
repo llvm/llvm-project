@@ -290,8 +290,14 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // This is needed because this is what GNU gold plugin does and we have a
 // distributed build system that depends on that behavior.
 static void thinLTOCreateEmptyIndexFiles() {
+  DenseSet<StringRef> linkedBitCodeFiles;
+  for (BitcodeFile *f : ctx->bitcodeFiles)
+    linkedBitCodeFiles.insert(f->getName());
+
   for (BitcodeFile *f : ctx->lazyBitcodeFiles) {
     if (!f->lazy)
+      continue;
+    if (linkedBitCodeFiles.contains(f->getName()))
       continue;
     std::string path = replaceThinLTOSuffix(getThinLTOOutputFile(f->getName()));
     std::unique_ptr<raw_fd_ostream> os = openFile(path + ".thinlto.bc");

@@ -26,6 +26,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Threading.h"
 
 namespace lld::elf {
@@ -115,7 +116,7 @@ public:
 
   // Flag to force GOT to be in output if we have relocations
   // that relies on its address.
-  bool hasGotOffRel = false;
+  std::atomic<bool> hasGotOffRel = false;
 
 protected:
   size_t numEntries = 0;
@@ -357,7 +358,7 @@ public:
 
   // Flag to force GotPlt to be in output if we have relocations
   // that relies on its address.
-  bool hasGotPltOffRel = false;
+  std::atomic<bool> hasGotPltOffRel = false;
 
 private:
   SmallVector<const Symbol *, 0> entries;
@@ -486,32 +487,55 @@ private:
 class RelocationBaseSection : public SyntheticSection {
 public:
   RelocationBaseSection(StringRef name, uint32_t type, int32_t dynamicTag,
-                        int32_t sizeDynamicTag, bool combreloc);
+                        int32_t sizeDynamicTag, bool combreloc,
+                        unsigned concurrency);
   /// Add a dynamic relocation without writing an addend to the output section.
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
-  void addReloc(const DynamicReloc &reloc) { relocs.push_back(reloc); }
+  template <bool shard = false> void addReloc(const DynamicReloc &reloc) {
+    relocs.push_back(reloc);
+  }
   /// Add a dynamic relocation against \p sym with an optional addend.
   void addSymbolReloc(RelType dynType, InputSectionBase &isec,
                       uint64_t offsetInSec, Symbol &sym, int64_t addend = 0,
                       llvm::Optional<RelType> addendRelType = llvm::None);
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
+  /// This function should only be called for non-preemptible symbols or
+  /// RelExpr values that refer to an address inside the output file (e.g. the
+  /// address of the GOT entry for a potentially preemptible symbol).
+  template <bool shard = false>
   void addRelativeReloc(RelType dynType, InputSectionBase &isec,
                         uint64_t offsetInSec, Symbol &sym, int64_t addend,
-                        RelType addendRelType, RelExpr expr);
+                        RelType addendRelType, RelExpr expr) {
+    assert(expr != R_ADDEND && "expected non-addend relocation expression");
+    addReloc<shard>(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec,
+                    offsetInSec, sym, addend, expr, addendRelType);
+  }
   /// Add a dynamic relocation using the target address of \p sym as the addend
   /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
   void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
                                           InputSectionBase &isec,
                                           uint64_t offsetInSec, Symbol &sym,
                                           RelType addendRelType);
-  void addReloc(DynamicReloc::Kind kind, RelType dynType,
-                InputSectionBase &inputSec, uint64_t offsetInSec, Symbol &sym,
-                int64_t addend, RelExpr expr, RelType addendRelType);
-  bool isNeeded() const override { return !relocs.empty(); }
+  template <bool shard = false>
+  void addReloc(DynamicReloc::Kind kind, RelType dynType, InputSectionBase &sec,
+                uint64_t offsetInSec, Symbol &sym, int64_t addend, RelExpr expr,
+                RelType addendRelType) {
+    // Write the addends to the relocated address if required. We skip
+    // it if the written value would be zero.
+    if (config->writeAddends && (expr != R_ADDEND || addend != 0))
+      sec.relocations.push_back(
+          {expr, addendRelType, offsetInSec, addend, &sym});
+    addReloc<shard>({dynType, &sec, offsetInSec, kind, sym, addend, expr});
+  }
+  bool isNeeded() const override {
+    return !relocs.empty() ||
+           llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
+  }
   size_t getSize() const override { return relocs.size() * this->entsize; }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
+  void mergeRels();
   void partitionRels();
   void finalizeContents() override;
   static bool classof(const SectionBase *d) {
@@ -524,9 +548,17 @@ public:
 
 protected:
   void computeRels();
+  // Used when parallel relocation scanning adds relocations. The elements
+  // will be moved into relocs by mergeRel().
+  SmallVector<SmallVector<DynamicReloc, 0>, 0> relocsVec;
   size_t numRelativeRelocs = 0; // used by -z combreloc
   bool combreloc;
 };
+
+template <>
+inline void RelocationBaseSection::addReloc<true>(const DynamicReloc &reloc) {
+  relocsVec[llvm::parallel::threadIndex].push_back(reloc);
+}
 
 template <class ELFT>
 class RelocationSection final : public RelocationBaseSection {
@@ -534,7 +566,7 @@ class RelocationSection final : public RelocationBaseSection {
   using Elf_Rela = typename ELFT::Rela;
 
 public:
-  RelocationSection(StringRef name, bool combreloc);
+  RelocationSection(StringRef name, bool combreloc, unsigned concurrency);
   void writeTo(uint8_t *buf) override;
 };
 
@@ -544,7 +576,7 @@ class AndroidPackedRelocationSection final : public RelocationBaseSection {
   using Elf_Rela = typename ELFT::Rela;
 
 public:
-  AndroidPackedRelocationSection(StringRef name);
+  AndroidPackedRelocationSection(StringRef name, unsigned concurrency);
 
   bool updateAllocSize() override;
   size_t getSize() const override { return relocData.size(); }
@@ -565,9 +597,14 @@ struct RelativeReloc {
 
 class RelrBaseSection : public SyntheticSection {
 public:
-  RelrBaseSection();
-  bool isNeeded() const override { return !relocs.empty(); }
+  RelrBaseSection(unsigned concurrency);
+  void mergeRels();
+  bool isNeeded() const override {
+    return !relocs.empty() ||
+           llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
+  }
   SmallVector<RelativeReloc, 0> relocs;
+  SmallVector<SmallVector<RelativeReloc, 0>, 0> relocsVec;
 };
 
 // RelrSection is used to encode offsets for relative relocations.
@@ -578,7 +615,7 @@ template <class ELFT> class RelrSection final : public RelrBaseSection {
   using Elf_Relr = typename ELFT::Relr;
 
 public:
-  RelrSection();
+  RelrSection(unsigned concurrency);
 
   bool updateAllocSize() override;
   size_t getSize() const override { return relrRelocs.size() * this->entsize; }
