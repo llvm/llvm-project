@@ -21,3 +21,11 @@ add_header(
   DEPENDS
     .linux.sys_stat_macros
 )
+
+add_header(
+  unistd_macros
+  HDR
+    unistd-macros.h
+  DEPENDS
+    .linux.unistd_macros
+)

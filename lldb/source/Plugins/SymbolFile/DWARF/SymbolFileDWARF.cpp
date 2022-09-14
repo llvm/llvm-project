@@ -1194,7 +1194,8 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
 }
 
 lldb_private::DebugMacrosSP
-SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
+SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset,
+                                  const DWARFStrOffsetsInfo *str_offsets_info) {
   auto iter = m_debug_macros_map.find(*offset);
   if (iter != m_debug_macros_map.end())
     return iter->second;
@@ -1210,8 +1211,8 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   const DWARFDebugMacroHeader &header =
       DWARFDebugMacroHeader::ParseHeader(debug_macro_data, offset);
   DWARFDebugMacroEntry::ReadMacroEntries(
-      debug_macro_data, m_context.getOrLoadStrData(), header.OffsetIs64Bit(),
-      offset, this, debug_macros_sp);
+      debug_macro_data, m_context.getOrLoadStrData(), str_offsets_info,
+      header.OffsetIs64Bit(), offset, this, debug_macros_sp);
 
   return debug_macros_sp;
 }
@@ -1219,7 +1220,7 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
 bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
+  DWARFUnit *dwarf_cu = &GetDWARFCompileUnit(&comp_unit)->GetNonSkeletonUnit();
   if (dwarf_cu == nullptr)
     return false;
 
@@ -1235,8 +1236,15 @@ bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
   if (sect_offset == DW_INVALID_OFFSET)
     return false;
 
-  comp_unit.SetDebugMacros(ParseDebugMacros(&sect_offset));
+  std::unique_ptr<DWARFStrOffsetsInfo> str_offsets_info;
+  lldb::offset_t cu_str_offset = dwarf_cu->GetStrOffsetsBase();
+  SymbolFileDWARF &symfile = dwarf_cu->GetSymbolFileDWARF();
+  if (cu_str_offset && cu_str_offset != DW_INVALID_OFFSET)
+    str_offsets_info = std::make_unique<DWARFStrOffsetsInfo>(
+        cu_str_offset, symfile.GetDWARFContext().getOrLoadStrOffsetsData());
 
+  comp_unit.SetDebugMacros(
+      symfile.ParseDebugMacros(&sect_offset, str_offsets_info.get()));
   return true;
 }
 
