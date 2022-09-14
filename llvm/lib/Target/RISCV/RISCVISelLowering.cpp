@@ -7714,17 +7714,10 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG) {
   if (!isOneConstant(ScalarV.getOperand(2)))
     return SDValue();
 
-  // TODO: Deal with value other than neutral element.
-  auto IsRVVNeutralElement = [Opc, &DAG](SDNode *N, SDValue V) {
-    if (Opc == ISD::FADD && N->getFlags().hasNoSignedZeros() &&
-        isNullFPConstant(V))
-      return true;
-    return DAG.getNeutralElement(Opc, SDLoc(V), V.getSimpleValueType(),
-                                 N->getFlags()) == V;
-  };
-
   // Check the scalar of ScalarV is neutral element
-  if (!IsRVVNeutralElement(N, ScalarV.getOperand(1)))
+  // TODO: Deal with value other than neutral element.
+  if (!isNeutralConstant(N->getOpcode(), N->getFlags(), ScalarV.getOperand(1),
+                         0))
     return SDValue();
 
   if (!ScalarV.hasOneUse())
