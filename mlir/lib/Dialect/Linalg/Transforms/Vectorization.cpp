@@ -1433,8 +1433,6 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
       rhsShape = {fSize, cSize, kwSize};
       resShape = {nSize, fSize, wSize};
       break;
-    default:
-      return failure();
     }
 
     vector::TransferWriteOp write;
@@ -1482,8 +1480,6 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
       res = builder.create<vector::TransposeOp>(loc, res, permRes);
       break;
     }
-    default:
-      return failure();
     }
 
     //===------------------------------------------------------------------===//
@@ -1552,8 +1548,6 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
       res = builder.create<vector::TransposeOp>(loc, res, perm);
       break;
     }
-    default:
-      return failure();
     }
 
     // Write back res slice of size {n, w, f} @ [0, 0, 0].
