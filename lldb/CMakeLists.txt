@@ -42,6 +42,12 @@ elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
         "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake"
         "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake/modules")
 endif()
+
+# When we have the early SwiftSyntax build, we can include its parser.
+if(SWIFT_PATH_TO_EARLYSWIFTSYNTAX_BUILD_DIR)
+  set(SWIFT_SWIFT_PARSER TRUE)
+  include(${SWIFT_PATH_TO_EARLYSWIFTSYNTAX_BUILD_DIR}/cmake/SwiftSyntaxTargets.cmake)
+endif()
 # END - Swift Mods
 
 # Define the LLDB_CONFIGURATION_xxx matching the build type.

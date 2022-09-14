@@ -155,18 +155,26 @@ endfunction(add_lldb_library)
 
 # BEGIN Swift Mods
 function(add_properties_for_swift_modules target)
-  if (BOOTSTRAPPING_MODE)
+  if (NOT BOOTSTRAPPING_MODE)
+    if (SWIFT_SWIFT_PARSER)
+      set(APSM_BOOTSTRAPPING_MODE "HOSTTOOLS")
+    endif()
+  else()
+    set(APSM_BOOTSTRAPPING_MODE "${BOOTSTRAPPING_MODE}")
+  endif()
+
+  if (APSM_BOOTSTRAPPING_MODE)
     if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-      if(BOOTSTRAPPING_MODE MATCHES "HOSTTOOLS|.*HOSTLIBS")
+      if(APSM_BOOTSTRAPPING_MODE MATCHES "HOSTTOOLS|.*HOSTLIBS")
         target_link_directories(${target} PRIVATE
             "${CMAKE_OSX_SYSROOT}/usr/lib/swift"
             "${LLDB_SWIFT_LIBS}/macosx")
 	set(SWIFT_RPATH "/usr/lib/swift")
-      elseif(BOOTSTRAPPING_MODE STREQUAL "BOOTSTRAPPING")
+      elseif(APSM_BOOTSTRAPPING_MODE STREQUAL "BOOTSTRAPPING")
         target_link_directories(${target} PRIVATE "${LLDB_SWIFT_LIBS}/macosx")
 	set(SWIFT_RPATH "${LLDB_SWIFT_LIBS}/macosx")
       else()
-        message(FATAL_ERROR "Unknown BOOTSTRAPPING_MODE '${BOOTSTRAPPING_MODE}'")
+        message(FATAL_ERROR "Unknown APSM_BOOTSTRAPPING_MODE '${APSM_BOOTSTRAPPING_MODE}'")
       endif()
 
       # Workaround for a linker crash related to autolinking: rdar://77839981
