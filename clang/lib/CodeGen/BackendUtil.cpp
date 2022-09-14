@@ -641,7 +641,6 @@ static OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
 static void addSanitizers(const Triple &TargetTriple,
                           const CodeGenOptions &CodeGenOpts,
                           const LangOptions &LangOpts, PassBuilder &PB) {
-
   auto SanitizersCallback = [&](ModulePassManager &MPM,
                                 OptimizationLevel Level) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
