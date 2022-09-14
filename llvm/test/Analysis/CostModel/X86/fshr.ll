@@ -752,9 +752,9 @@ define void @constant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; SLM-LABEL: 'constant_funnel_i32'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; GLM-LABEL: 'constant_funnel_i32'
@@ -830,9 +830,9 @@ define void @constant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ;
 ; SLM-LABEL: 'constant_funnel_i16'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; GLM-LABEL: 'constant_funnel_i16'
@@ -1916,9 +1916,9 @@ define void @constant_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; SLM-LABEL: 'constant_rotate_i32'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 7)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; GLM-LABEL: 'constant_rotate_i32'
@@ -1994,9 +1994,9 @@ define void @constant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ;
 ; SLM-LABEL: 'constant_rotate_i16'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; GLM-LABEL: 'constant_rotate_i16'
