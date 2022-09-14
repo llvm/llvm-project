@@ -84,3 +84,11 @@ define <4 x i32> @test65(<4 x i32> %vec, i65 %idx, i32 %x) sanitize_memory {
 ; CHECK:         icmp ne i65 %{{.*}}, 0
 ; CHECK-NOT:     call void @__msan_maybe_warning_
 ; CHECK:         ret <4 x i32>
+
+define <4 x i32> @testUndef(<4 x i32> %vec, i32 %x) sanitize_memory {
+  %vec1 = insertelement <4 x i32> %vec, i32 undef, i32 undef
+  ret <4 x i32> %vec1
+}
+; CHECK-LABEL: @testUndef(
+; CHECK-NOT:     call void @__msan_maybe_warning_
+; CHECK:         ret <4 x i32>
