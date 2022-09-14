@@ -108,7 +108,7 @@ void *e2 = V<char>::m + W<char>::m + &X<char>::m;
 
 // CHECK: define {{.*}} @[[A_INIT:.*]]()
 // CHECK: call{{.*}} i32 @_Z1fv()
-// CHECK: [[A_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @a)
+// CHECK: [[A_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @a)
 // CHECK-NEXT: store i32 {{.*}}, i32* [[A_ADDR]], align 4
 
 // CHECK-LABEL: define{{.*}} i32 @_Z1fv()
@@ -118,13 +118,13 @@ int f() {
   // CHECK: br i1 %[[NEED_INIT]]{{.*}}
 
   // CHECK: %[[CALL:.*]] = call{{.*}} i32 @_Z1gv()
-  // CHECK: [[N_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ1fvE1n)
+  // CHECK: [[N_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ1fvE1n)
   // CHECK: store i32 %[[CALL]], i32* [[N_ADDR]], align 4
   // CHECK: store i8 1, i8* @_ZGVZ1fvE1n
   // CHECK: br label
   static thread_local int n = g();
-  
-  // CHECK: [[N_ADDR2:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZZ1fvE1n)
+
+  // CHECK: [[N_ADDR2:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZZ1fvE1n)
   // CHECK: load i32, i32* [[N_ADDR2]], align 4
   return n;
 }
@@ -143,19 +143,19 @@ int f() {
 // LINUX: br label
 // AIX-NOT: br label
 // finally:
-// LINUX_AIX: [[B_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @b)
+// LINUX_AIX: [[B_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @b)
 // LINUX_AIX: ret i32* [[B_ADDR]]
 // DARWIN-LABEL: declare cxx_fast_tlscc noundef i32* @_ZTW1b()
 // There is no definition of the thread wrapper on Darwin for external TLV.
 
 // CHECK: define {{.*}} @[[D_INIT:.*]]()
 // CHECK: call{{.*}} i32 @_Z1gv()
-// CHECK-NEXT: [[D_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZL1d)
+// CHECK-NEXT: [[D_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZL1d)
 // CHECK-NEXT: store i32 %{{.*}}, i32* [[D_ADDR]], align 4
 
 // CHECK: define {{.*}} @[[U_M_INIT:.*]]()
 // CHECK: call{{.*}} i32 @_Z1fv()
-// CHECK-NEXT: [[UM_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN1U1mE)
+// CHECK-NEXT: [[UM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1U1mE)
 // CHECK-NEXT: store i32 %{{.*}}, i32* [[UM_ADDR]], align 4
 
 // CHECK: define {{.*}} @[[E_INIT:.*]]()
@@ -170,20 +170,20 @@ int f() {
 // DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc noundef i32* @_ZTWN1VIiE1mE()
 // LINUX_AIX: call void @_ZTHN1VIiE1mE()
 // DARWIN: call cxx_fast_tlscc void @_ZTHN1VIiE1mE()
-// CHECK: [[VM_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN1VIiE1mE)
+// CHECK: [[VM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1VIiE1mE)
 // CHECK: ret i32* [[VM_ADDR]]
 
 // LINUX_AIX-LABEL: define weak_odr hidden noundef i32* @_ZTWN1WIiE1mE()
 // DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc noundef i32* @_ZTWN1WIiE1mE()
 // CHECK-NOT: call
-// CHECK: [[WM_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN1WIiE1mE)
+// CHECK: [[WM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1WIiE1mE)
 // CHECK: ret i32* [[WM_ADDR]]
 
 // LINUX_AIX-LABEL: define weak_odr hidden {{.*}}* @_ZTWN1XIiE1mE()
 // DARWIN-LABEL: define weak_odr hidden cxx_fast_tlscc {{.*}}* @_ZTWN1XIiE1mE()
 // LINUX_AIX: call void @_ZTHN1XIiE1mE()
 // DARWIN: call cxx_fast_tlscc void @_ZTHN1XIiE1mE()
-// CHECK: [[XM_ADDR:%.+]] = call %struct.Dtor* @llvm.threadlocal.address.p0s_struct.Dtors(%struct.Dtor* @_ZN1XIiE1mE)
+// CHECK: [[XM_ADDR:%.+]] = call align 1 %struct.Dtor* @llvm.threadlocal.address.p0s_struct.Dtors(%struct.Dtor* align 1 @_ZN1XIiE1mE)
 // CHECK: ret {{.*}}* [[XM_ADDR]]
 
 // LINUX_AIX: define internal void @[[VF_M_INIT]]()
@@ -194,7 +194,7 @@ int f() {
 // CHECK: br i1 %[[VF_M_INITIALIZED]],
 // need init:
 // CHECK: call{{.*}} i32 @_Z1gv()
-// CHECK: [[VFM_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN1VIfE1mE)
+// CHECK: [[VFM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1VIfE1mE)
 // CHECK: store i32 %{{.*}}, i32* [[VFM_ADDR]], align 4
 // CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1VIfE1mE to i8*)
 // CHECK: br label
@@ -222,7 +222,7 @@ int f() {
 // LINUX: br i1 icmp ne (void ()* @_ZTHN1VIcE1mE,
 // AIX-NOT: br i1 icmp ne (void ()* @_ZTHN1VIcE1mE
 // LINUX_AIX: call void @_ZTHN1VIcE1mE()
-// LINUX_AIX: [[VEM_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN1VIcE1mE)
+// LINUX_AIX: [[VEM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1VIcE1mE)
 // LINUX_AIX: ret i32* [[VEM_ADDR]]
 
 // DARWIN: declare cxx_fast_tlscc noundef i32* @_ZTWN1WIcE1mE()
@@ -230,7 +230,7 @@ int f() {
 // LINUX: br i1 icmp ne (void ()* @_ZTHN1WIcE1mE,
 // AIX-NOT: br i1 icmp ne (void ()* @_ZTHN1WIcE1mE,
 // LINUX_AIX: call void @_ZTHN1WIcE1mE()
-// LINUX_AIX: [[WEM_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN1WIcE1mE)
+// LINUX_AIX: [[WEM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1WIcE1mE)
 // LINUX_AIX: ret i32* [[WEM_ADDR]]
 
 // DARWIN: declare cxx_fast_tlscc {{.*}}* @_ZTWN1XIcE1mE()
@@ -238,7 +238,7 @@ int f() {
 // LINUX: br i1 icmp ne (void ()* @_ZTHN1XIcE1mE,
 // AIX-NOT: br i1 icmp ne (void ()* @_ZTHN1XIcE1mE,
 // LINUX_AIX: call void @_ZTHN1XIcE1mE()
-// LINUX_AIX: [[XEM_ADDR:%.+]] = call %struct.Dtor* @llvm.threadlocal.address.p0s_struct.Dtors(%struct.Dtor* @_ZN1XIcE1mE)
+// LINUX_AIX: [[XEM_ADDR:%.+]] = call align 1 %struct.Dtor* @llvm.threadlocal.address.p0s_struct.Dtors(%struct.Dtor* align 1 @_ZN1XIcE1mE)
 // LINUX_AIX: ret {{.*}}* [[XEM_ADDR]]
 
 struct S { S(); ~S(); };
@@ -330,7 +330,7 @@ void set_anon_i() {
 // CHECK: br i1 %[[V_M_INITIALIZED]],
 // need init:
 // CHECK: call{{.*}} i32 @_Z1gv()
-// CHECK: [[VEM_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN1VIiE1mE)
+// CHECK: [[VEM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1VIiE1mE)
 // CHECK: store i32 %{{.*}}, i32* [[VEM_ADDR]], align 4
 // CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
 // CHECK: br label
@@ -373,7 +373,7 @@ void set_anon_i() {
 // DARWIN: define cxx_fast_tlscc noundef i32* @_ZTW1a()
 // LINUX_AIX:   call void @_ZTH1a()
 // DARWIN: call cxx_fast_tlscc void @_ZTH1a()
-// CHECK:   [[A_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @a)
+// CHECK:   [[A_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @a)
 // CHECK:   ret i32* [[A_ADDR]]
 // CHECK: }
 
@@ -387,7 +387,7 @@ void set_anon_i() {
 // DARWIN-LABEL: define cxx_fast_tlscc noundef i32* @_ZTWN1U1mE()
 // LINUX_AIX: call void @_ZTHN1U1mE()
 // DARWIN: call cxx_fast_tlscc void @_ZTHN1U1mE()
-// CHECK: [[UM_ADDR:%.+]] = call i32* @llvm.threadlocal.address.p0i32(i32* @_ZN1U1mE)
+// CHECK: [[UM_ADDR:%.+]] = call align 4 i32* @llvm.threadlocal.address.p0i32(i32* align 4 @_ZN1U1mE)
 // CHECK: ret i32* [[UM_ADDR]]
 
 // LINUX_AIX: declare extern_weak void @_ZTH1b() [[ATTR:#[0-9]+]]
