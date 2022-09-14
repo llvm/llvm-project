@@ -780,8 +780,8 @@ TEST(SetTest, coalesceDivOtherContained) {
 
 static void
 expectComputedVolumeIsValidOverapprox(const PresburgerSet &set,
-                                      Optional<uint64_t> trueVolume,
-                                      Optional<uint64_t> resultBound) {
+                                      Optional<int64_t> trueVolume,
+                                      Optional<int64_t> resultBound) {
   expectComputedVolumeIsValidOverapprox(set.computeVolume(), trueVolume,
                                         resultBound);
 }

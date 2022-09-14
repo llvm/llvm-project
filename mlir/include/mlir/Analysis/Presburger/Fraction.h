@@ -14,6 +14,7 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_FRACTION_H
 #define MLIR_ANALYSIS_PRESBURGER_FRACTION_H
 
+#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Support/MathExtras.h"
 
 namespace mlir {
@@ -29,30 +30,34 @@ struct Fraction {
   Fraction() = default;
 
   /// Construct a Fraction from a numerator and denominator.
-  Fraction(int64_t oNum, int64_t oDen) : num(oNum), den(oDen) {
+  Fraction(const MPInt &oNum, const MPInt &oDen) : num(oNum), den(oDen) {
     if (den < 0) {
       num = -num;
       den = -den;
     }
   }
+  /// Overloads for passing literals.
+  Fraction(const MPInt &num, int64_t den) : Fraction(num, MPInt(den)) {}
+  Fraction(int64_t num, const MPInt &den) : Fraction(MPInt(num), den) {}
+  Fraction(int64_t num, int64_t den) : Fraction(MPInt(num), MPInt(den)) {}
 
   // Return the value of the fraction as an integer. This should only be called
   // when the fraction's value is really an integer.
-  int64_t getAsInteger() const {
+  MPInt getAsInteger() const {
     assert(num % den == 0 && "Get as integer called on non-integral fraction!");
     return num / den;
   }
 
   /// The numerator and denominator, respectively. The denominator is always
   /// positive.
-  int64_t num{0}, den{1};
+  MPInt num{0}, den{1};
 };
 
 /// Three-way comparison between two fractions.
 /// Returns +1, 0, and -1 if the first fraction is greater than, equal to, or
 /// less than the second fraction, respectively.
-inline int compare(Fraction x, Fraction y) {
-  int64_t diff = x.num * y.den - y.num * x.den;
+inline int compare(const Fraction &x, const Fraction &y) {
+  MPInt diff = x.num * y.den - y.num * x.den;
   if (diff > 0)
     return +1;
   if (diff < 0)
@@ -60,25 +65,37 @@ inline int compare(Fraction x, Fraction y) {
   return 0;
 }
 
-inline int64_t floor(Fraction f) { return floorDiv(f.num, f.den); }
+inline MPInt floor(const Fraction &f) { return floorDiv(f.num, f.den); }
 
-inline int64_t ceil(Fraction f) { return ceilDiv(f.num, f.den); }
+inline MPInt ceil(const Fraction &f) { return ceilDiv(f.num, f.den); }
 
-inline Fraction operator-(Fraction x) { return Fraction(-x.num, x.den); }
+inline Fraction operator-(const Fraction &x) { return Fraction(-x.num, x.den); }
 
-inline bool operator<(Fraction x, Fraction y) { return compare(x, y) < 0; }
+inline bool operator<(const Fraction &x, const Fraction &y) {
+  return compare(x, y) < 0;
+}
 
-inline bool operator<=(Fraction x, Fraction y) { return compare(x, y) <= 0; }
+inline bool operator<=(const Fraction &x, const Fraction &y) {
+  return compare(x, y) <= 0;
+}
 
-inline bool operator==(Fraction x, Fraction y) { return compare(x, y) == 0; }
+inline bool operator==(const Fraction &x, const Fraction &y) {
+  return compare(x, y) == 0;
+}
 
-inline bool operator!=(Fraction x, Fraction y) { return compare(x, y) != 0; }
+inline bool operator!=(const Fraction &x, const Fraction &y) {
+  return compare(x, y) != 0;
+}
 
-inline bool operator>(Fraction x, Fraction y) { return compare(x, y) > 0; }
+inline bool operator>(const Fraction &x, const Fraction &y) {
+  return compare(x, y) > 0;
+}
 
-inline bool operator>=(Fraction x, Fraction y) { return compare(x, y) >= 0; }
+inline bool operator>=(const Fraction &x, const Fraction &y) {
+  return compare(x, y) >= 0;
+}
 
-inline Fraction operator*(Fraction x, Fraction y) {
+inline Fraction operator*(const Fraction &x, const Fraction &y) {
   return Fraction(x.num * y.num, x.den * y.den);
 }
 

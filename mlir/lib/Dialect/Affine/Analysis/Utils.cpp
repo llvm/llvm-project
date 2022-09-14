@@ -371,7 +371,7 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
   for (unsigned d = 0; d < rank; d++) {
     SmallVector<int64_t, 4> lb;
     Optional<int64_t> diff =
-        cstWithShapeBounds.getConstantBoundOnDimSize(d, &lb, &lbDivisor);
+        cstWithShapeBounds.getConstantBoundOnDimSize64(d, &lb, &lbDivisor);
     if (diff.has_value()) {
       diffConstant = diff.value();
       assert(diffConstant >= 0 && "Dim size bound can't be negative");
