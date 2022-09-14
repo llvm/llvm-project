@@ -18,9 +18,15 @@ $_f2 = comdat any
 
 ; CHECK-LABEL: @test
 ; CHECK: store i8 3, i8 addrspace(3)* %0, align 4, !alias.scope !0, !noalias !3
-; CHECK: tail call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noundef align 1 dereferenceable(3) %2, i8 addrspace(3)* noundef align 1 dereferenceable(3) %1, i64 3, i1 false), !alias.scope !5, !noalias !6
+; CHECK: %1 = getelementptr
+; CHECK: %2 = getelementptr
+; CHECK: tail call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noundef align 1 dereferenceable(3) %1, i8 addrspace(3)* noundef align 1 dereferenceable(3) %2, i64 3, i1 false), !alias.scope !5, !noalias !6
 ; CHECK: %4 = load i8, i8 addrspace(3)* %3, align 4, !alias.scope !3, !noalias !0
-; CHECK: tail call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noundef align 1 dereferenceable(3) %7, i8 addrspace(3)* noundef align 1 dereferenceable(3) %6, i64 3, i1 false), !alias.scope !5, !noalias !6
+; CHECK: %5 = getelementptr
+; CHECK: %6 = getelementptr
+; CHECK: %7 = getelementptr
+; CHECK: tail call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* noundef align 1 dereferenceable(3) %6, i8 addrspace(3)* noundef align 1 dereferenceable(3) %7, i64 3, i1 false), !alias.scope !5, !noalias !6
+; CHECK: %8 = getelementptr
 ; CHECK: %9 = load i8, i8 addrspace(3)* %8, align 4, !alias.scope !3, !noalias !0
 
 define protected amdgpu_kernel void @test(i8 addrspace(1)* nocapture %ptr.coerce) local_unnamed_addr #0 {

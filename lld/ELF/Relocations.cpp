@@ -887,7 +887,7 @@ static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
   if (part.relrDyn && isec.alignment >= 2 && offsetInSec % 2 == 0) {
     isec.relocations.push_back({expr, type, offsetInSec, addend, &sym});
     if (shard)
-      part.relrDyn->relocsVec[parallel::threadIndex].push_back(
+      part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
           {&isec, offsetInSec});
     else
       part.relrDyn->relocs.push_back({&isec, offsetInSec});
@@ -1562,7 +1562,7 @@ template <class ELFT> void elf::scanRelocations() {
       tg.execute(fn);
   }
 
-  // Both the main thread and thread pool index 0 use threadIndex==0. Be
+  // Both the main thread and thread pool index 0 use getThreadIndex()==0. Be
   // careful that they don't concurrently run scanSections. When serial is
   // true, fn() has finished at this point, so running execute is safe.
   tg.execute([] {
