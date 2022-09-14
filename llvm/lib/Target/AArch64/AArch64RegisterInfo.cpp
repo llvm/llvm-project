@@ -91,6 +91,18 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_AArch64_AAVPCS_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_SVE_VectorCall)
     return CSR_AArch64_SVE_AAPCS_SaveList;
+  if (MF->getFunction().getCallingConv() ==
+          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
+    report_fatal_error(
+        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
+        "only supported to improve calls to SME ACLE save/restore/disable-za "
+        "functions, and is not intended to be used beyond that scope.");
+  if (MF->getFunction().getCallingConv() ==
+          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
+    report_fatal_error(
+        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
+        "only supported to improve calls to SME ACLE __arm_sme_state "
+        "and is not intended to be used beyond that scope.");
   if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
           ->supportSwiftError() &&
       MF->getFunction().getAttributes().hasAttrSomewhere(
@@ -123,6 +135,18 @@ AArch64RegisterInfo::getDarwinCalleeSavedRegs(const MachineFunction *MF) const {
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_SVE_VectorCall)
     report_fatal_error(
         "Calling convention SVE_VectorCall is unsupported on Darwin.");
+  if (MF->getFunction().getCallingConv() ==
+          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
+    report_fatal_error(
+        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
+        "only supported to improve calls to SME ACLE save/restore/disable-za "
+        "functions, and is not intended to be used beyond that scope.");
+  if (MF->getFunction().getCallingConv() ==
+          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
+    report_fatal_error(
+        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
+        "only supported to improve calls to SME ACLE __arm_sme_state "
+        "and is not intended to be used beyond that scope.");
   if (MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS)
     return MF->getInfo<AArch64FunctionInfo>()->isSplitCSR()
                ? CSR_Darwin_AArch64_CXX_TLS_PE_SaveList
@@ -193,6 +217,14 @@ AArch64RegisterInfo::getDarwinCallPreservedMask(const MachineFunction &MF,
   if (CC == CallingConv::AArch64_SVE_VectorCall)
     report_fatal_error(
         "Calling convention SVE_VectorCall is unsupported on Darwin.");
+  if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
+    report_fatal_error(
+        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 is "
+        "unsupported on Darwin.");
+  if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
+    report_fatal_error(
+        "Calling convention AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 is "
+        "unsupported on Darwin.");
   if (CC == CallingConv::CFGuard_Check)
     report_fatal_error(
         "Calling convention CFGuard_Check is unsupported on Darwin.");
@@ -230,6 +262,10 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   if (CC == CallingConv::AArch64_SVE_VectorCall)
     return SCS ? CSR_AArch64_SVE_AAPCS_SCS_RegMask
                : CSR_AArch64_SVE_AAPCS_RegMask;
+  if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0)
+    return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0_RegMask;
+  if (CC == CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2)
+    return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2_RegMask;
   if (CC == CallingConv::CFGuard_Check)
     return CSR_Win_AArch64_CFGuard_Check_RegMask;
   if (MF.getSubtarget<AArch64Subtarget>().getTargetLowering()
@@ -539,6 +575,8 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
     return HasReg(CC_AArch64_Win64_CFGuard_Check_ArgRegs, Reg);
   case CallingConv::AArch64_VectorCall:
   case CallingConv::AArch64_SVE_VectorCall:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
     return HasReg(CC_AArch64_AAPCS_ArgRegs, Reg);
   }
 }
