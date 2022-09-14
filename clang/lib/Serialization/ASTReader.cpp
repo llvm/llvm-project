@@ -5394,7 +5394,8 @@ bool ASTReader::readASTFileControlBlock(
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
         std::string CacheKey = ReadString(Record, Idx);
-        Listener.readModuleCacheKey(ModuleName, Filename, CacheKey);
+        if (!CacheKey.empty())
+          Listener.readModuleCacheKey(ModuleName, Filename, CacheKey);
         Listener.visitImport(ModuleName, Filename);
       }
       break;

@@ -69,11 +69,13 @@ using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
 /// files.
 class PrebuiltModuleListener : public ASTReaderListener {
 public:
-  PrebuiltModuleListener(PrebuiltModuleFilesT &PrebuiltModuleFiles,
+  PrebuiltModuleListener(CompilerInstance &CI,
+                         PrebuiltModuleFilesT &PrebuiltModuleFiles,
                          llvm::StringSet<> &InputFiles, bool VisitInputFiles,
                          llvm::SmallVector<std::string> &NewModuleFiles)
-      : PrebuiltModuleFiles(PrebuiltModuleFiles), InputFiles(InputFiles),
-        VisitInputFiles(VisitInputFiles), NewModuleFiles(NewModuleFiles) {}
+      : CI(CI), PrebuiltModuleFiles(PrebuiltModuleFiles),
+        InputFiles(InputFiles), VisitInputFiles(VisitInputFiles),
+        NewModuleFiles(NewModuleFiles) {}
 
   bool needsImportVisitation() const override { return true; }
   bool needsInputFileVisitation() override { return VisitInputFiles; }
@@ -90,7 +92,16 @@ public:
     return true;
   }
 
+  bool readModuleCacheKey(StringRef ModuleName, StringRef Filename,
+                          StringRef CacheKey) override {
+    CI.getFrontendOpts().ModuleCacheKeys.emplace_back(std::string(Filename),
+                                                      std::string(CacheKey));
+    // FIXME: add name/path of the importing module?
+    return CI.addCachedModuleFile(Filename, CacheKey, "imported module");
+  }
+
 private:
+  CompilerInstance &CI;
   PrebuiltModuleFilesT &PrebuiltModuleFiles;
   llvm::StringSet<> &InputFiles;
   bool VisitInputFiles;
@@ -106,7 +117,7 @@ static void visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 bool VisitInputFiles) {
   // List of module files to be processed.
   llvm::SmallVector<std::string> Worklist{PrebuiltModuleFilename.str()};
-  PrebuiltModuleListener Listener(ModuleFiles, InputFiles, VisitInputFiles,
+  PrebuiltModuleListener Listener(CI, ModuleFiles, InputFiles, VisitInputFiles,
                                   Worklist);
 
   while (!Worklist.empty())
