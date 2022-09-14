@@ -54,6 +54,7 @@ class DWARFTypeUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
+class DWARFStrOffsetsInfo;
 
 namespace lldb_private {
   class ClangASTImporter;
@@ -261,7 +262,9 @@ public:
 
   bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
 
-  lldb_private::DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
+  lldb_private::DebugMacrosSP
+  ParseDebugMacros(lldb::offset_t *offset,
+                   const DWARFStrOffsetsInfo *str_offsets_info);
 
   static DWARFDIE GetParentSymbolContextDIE(const DWARFDIE &die);
 
