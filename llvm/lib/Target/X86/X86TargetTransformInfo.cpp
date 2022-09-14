@@ -328,47 +328,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                   Op1Info.getNoProps(), Op2Info.getNoProps());
   }
 
-  static const CostKindTblEntry GLMCostTable[] = {
-    { ISD::FDIV,  MVT::f32,   { 18, 19, 1, 1 } }, // divss
-    { ISD::FDIV,  MVT::v4f32, { 35, 36, 1, 1 } }, // divps
-    { ISD::FDIV,  MVT::f64,   { 33, 34, 1, 1 } }, // divsd
-    { ISD::FDIV,  MVT::v2f64, { 65, 66, 1, 1 } }, // divpd
-  };
-
-  if (ST->useGLMDivSqrtCosts())
-    if (const auto *Entry = CostTableLookup(GLMCostTable, ISD, LT.second))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
-
-  static const CostKindTblEntry SLMCostTable[] = {
-    { ISD::MUL,   MVT::v4i32, { 11, 11, 1, 7 } }, // pmulld
-    { ISD::MUL,   MVT::v8i16, {  2,  5, 1, 1 } }, // pmullw
-    { ISD::FMUL,  MVT::f64,   {  2,  5, 1, 1 } }, // mulsd
-    { ISD::FMUL,  MVT::f32,   {  1,  4, 1, 1 } }, // mulss
-    { ISD::FMUL,  MVT::v2f64, {  4,  7, 1, 1 } }, // mulpd
-    { ISD::FMUL,  MVT::v4f32, {  2,  5, 1, 1 } }, // mulps
-    { ISD::FDIV,  MVT::f32,   { 17, 19, 1, 1 } }, // divss
-    { ISD::FDIV,  MVT::v4f32, { 39, 39, 1, 6 } }, // divps
-    { ISD::FDIV,  MVT::f64,   { 32, 34, 1, 1 } }, // divsd
-    { ISD::FDIV,  MVT::v2f64, { 69, 69, 1, 6 } }, // divpd
-    { ISD::FADD,  MVT::v2f64, {  2,  4, 1, 1 } }, // addpd
-    { ISD::FSUB,  MVT::v2f64, {  2,  4, 1, 1 } }, // subpd
-    // v2i64/v4i64 mul is custom lowered as a series of long:
-    // multiplies(3), shifts(3) and adds(2)
-    // slm muldq version throughput is 2 and addq throughput 4
-    // thus: 3X2 (muldq throughput) + 3X1 (shift throughput) +
-    //       3X4 (addq throughput) = 17
-    { ISD::MUL,   MVT::v2i64, { 17, 22, 9, 9 } },
-    // slm addq\subq throughput is 4
-    { ISD::ADD,   MVT::v2i64, {  4,  2, 1, 2 } },
-    { ISD::SUB,   MVT::v2i64, {  4,  2, 1, 2 } },
-  };
-
-  if (ST->useSLMArithCosts())
-    if (const auto *Entry = CostTableLookup(SLMCostTable, ISD, LT.second))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * KindCost.value();
-
   static const CostKindTblEntry AVX512BWUniformConstCostTable[] = {
     { ISD::SHL,  MVT::v64i8,  { 2 } }, // psllw + pand.
     { ISD::SRL,  MVT::v64i8,  { 2 } }, // psrlw + pand.
@@ -873,6 +832,47 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         ((VT == MVT::v16i16 || VT == MVT::v8i32) && ST->hasAVX()))
       ISD = ISD::MUL;
   }
+
+  static const CostKindTblEntry GLMCostTable[] = {
+    { ISD::FDIV,  MVT::f32,   { 18, 19, 1, 1 } }, // divss
+    { ISD::FDIV,  MVT::v4f32, { 35, 36, 1, 1 } }, // divps
+    { ISD::FDIV,  MVT::f64,   { 33, 34, 1, 1 } }, // divsd
+    { ISD::FDIV,  MVT::v2f64, { 65, 66, 1, 1 } }, // divpd
+  };
+
+  if (ST->useGLMDivSqrtCosts())
+    if (const auto *Entry = CostTableLookup(GLMCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
+
+  static const CostKindTblEntry SLMCostTable[] = {
+    { ISD::MUL,   MVT::v4i32, { 11, 11, 1, 7 } }, // pmulld
+    { ISD::MUL,   MVT::v8i16, {  2,  5, 1, 1 } }, // pmullw
+    { ISD::FMUL,  MVT::f64,   {  2,  5, 1, 1 } }, // mulsd
+    { ISD::FMUL,  MVT::f32,   {  1,  4, 1, 1 } }, // mulss
+    { ISD::FMUL,  MVT::v2f64, {  4,  7, 1, 1 } }, // mulpd
+    { ISD::FMUL,  MVT::v4f32, {  2,  5, 1, 1 } }, // mulps
+    { ISD::FDIV,  MVT::f32,   { 17, 19, 1, 1 } }, // divss
+    { ISD::FDIV,  MVT::v4f32, { 39, 39, 1, 6 } }, // divps
+    { ISD::FDIV,  MVT::f64,   { 32, 34, 1, 1 } }, // divsd
+    { ISD::FDIV,  MVT::v2f64, { 69, 69, 1, 6 } }, // divpd
+    { ISD::FADD,  MVT::v2f64, {  2,  4, 1, 1 } }, // addpd
+    { ISD::FSUB,  MVT::v2f64, {  2,  4, 1, 1 } }, // subpd
+    // v2i64/v4i64 mul is custom lowered as a series of long:
+    // multiplies(3), shifts(3) and adds(2)
+    // slm muldq version throughput is 2 and addq throughput 4
+    // thus: 3X2 (muldq throughput) + 3X1 (shift throughput) +
+    //       3X4 (addq throughput) = 17
+    { ISD::MUL,   MVT::v2i64, { 17, 22, 9, 9 } },
+    // slm addq\subq throughput is 4
+    { ISD::ADD,   MVT::v2i64, {  4,  2, 1, 2 } },
+    { ISD::SUB,   MVT::v2i64, {  4,  2, 1, 2 } },
+  };
+
+  if (ST->useSLMArithCosts())
+    if (const auto *Entry = CostTableLookup(SLMCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVX2CostTable[] = {
     { ISD::SHL,  MVT::v16i8,   {  6 } }, // vpblendvb sequence.
