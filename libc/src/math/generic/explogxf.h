@@ -98,27 +98,6 @@ inline static exe_eval_result_t exp_eval(double x) {
   return {mult_e1, r};
 }
 
-inline static double exp2_eval(double x) {
-  double kf = fputil::nearest_integer(x * mlp);
-  double dx = fputil::multiply_add(mmld, kf, x);
-  double mult_f, ml;
-  {
-    uint32_t ps = static_cast<int>(kf) + (1 << (EXP_bits_p - 1)) +
-                  (fputil::FPBits<double>::EXPONENT_BIAS << EXP_bits_p);
-    fputil::FPBits<double> bs;
-    bs.set_unbiased_exponent(ps >> EXP_bits_p);
-    ml = 1.0 + EXP_2_POW[ps & (EXP_num_p - 1)];
-    mult_f = bs.get_val();
-  }
-
-  // Taylor series coefficients for 2^x
-  double pe = fputil::polyeval(
-      dx, 1.0, 0x1.62e42fefa39efp-1, 0x1.ebfbdff82c58fp-3, 0x1.c6b08d704a0c0p-5,
-      0x1.3b2ab6fba4e77p-7, 0x1.5d87fe78a6731p-10, 0x1.430912f86c787p-13);
-
-  return mult_f * ml * pe;
-}
-
 // x should be positive, normal finite value
 inline static double log2_eval(double x) {
   using FPB = fputil::FPBits<double>;
