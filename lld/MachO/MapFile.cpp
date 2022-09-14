@@ -88,10 +88,7 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
           sym->value == piece.inSecOff &&
           "We expect symbols to always point to the start of a StringPiece.");
       StringRef str = isec->getStringRef(&piece - &(*isec->pieces.begin()));
-      assert(str.back() == '\000');
-      (os << "literal string: ")
-          // Remove null sequence at the end
-          .write_escaped(str.substr(0, str.size() - 1));
+      (os << "literal string: ").write_escaped(str);
       break;
     }
     case InputSection::ConcatKind:
