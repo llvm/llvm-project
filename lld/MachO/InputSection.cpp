@@ -242,9 +242,9 @@ void CStringInputSection::splitIntoPieces() {
     size_t end = s.find(0);
     if (end == StringRef::npos)
       fatal(getLocation(off) + ": string is not null terminated");
-    size_t size = end + 1;
-    uint32_t hash = deduplicateLiterals ? xxHash64(s.substr(0, size)) : 0;
+    uint32_t hash = deduplicateLiterals ? xxHash64(s.take_front(end)) : 0;
     pieces.emplace_back(off, hash);
+    size_t size = end + 1; // include null terminator
     s = s.substr(size);
     off += size;
   }

@@ -32,7 +32,8 @@ body:             |
     ; CHECK-LABEL: name: undef_subreg_use_after_full_copy_coalesce_composed
     ; CHECK: undef %0.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: dead %0.sub1:vreg_128 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit undef %2.sub1:vreg_64
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[DEF]].sub1
     undef %0.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
     %0.sub1:vreg_128 = V_MOV_B32_e32 0, implicit $exec
     %1:vreg_128 = COPY killed %0

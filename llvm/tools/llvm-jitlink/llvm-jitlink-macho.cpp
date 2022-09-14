@@ -84,13 +84,12 @@ Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
   for (auto &Sec : G.sections()) {
     LLVM_DEBUG({
       dbgs() << "  Section \"" << Sec.getName() << "\": "
-             << (llvm::empty(Sec.symbols()) ? "empty. skipping."
-                                            : "processing...")
+             << (Sec.symbols().empty() ? "empty. skipping." : "processing...")
              << "\n";
     });
 
     // Skip empty sections.
-    if (llvm::empty(Sec.symbols()))
+    if (Sec.symbols().empty())
       continue;
 
     if (FileInfo.SectionInfos.count(Sec.getName()))

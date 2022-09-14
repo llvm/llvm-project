@@ -742,6 +742,14 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
 
   // Lex '#'.
   const dependency_directives_scan::Token &HashTok = lexToken(First, End);
+  if (HashTok.is(tok::hashhash)) {
+    // A \p tok::hashhash at this location is passed by the preprocessor to the
+    // parser to interpret, like any other token. So for dependency scanning
+    // skip it like a normal token not affecting the preprocessor.
+    skipLine(First, End);
+    assert(First <= End);
+    return false;
+  }
   assert(HashTok.is(tok::hash));
   (void)HashTok;
 

@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/StableHashing.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -45,6 +46,7 @@ static const MachineFunction *getMFIfAvailable(const MachineOperand &MO) {
         return MF;
   return nullptr;
 }
+
 static MachineFunction *getMFIfAvailable(MachineOperand &MO) {
   return const_cast<MachineFunction *>(
       getMFIfAvailable(const_cast<const MachineOperand &>(MO)));
@@ -323,10 +325,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
       return true;
 
     if (const MachineFunction *MF = getMFIfAvailable(*this)) {
-      // Calculate the size of the RegMask
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-      unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
-
+      unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
       // Deep compare of the two RegMasks
       return std::equal(RegMask, RegMask + RegMaskSize, OtherRegMask);
     }
@@ -382,8 +382,20 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getBlockAddress(),
                         MO.getOffset());
   case MachineOperand::MO_RegisterMask:
-  case MachineOperand::MO_RegisterLiveOut:
-    return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getRegMask());
+  case MachineOperand::MO_RegisterLiveOut: {
+    if (const MachineFunction *MF = getMFIfAvailable(MO)) {
+      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+      unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
+      const uint32_t *RegMask = MO.getRegMask();
+      std::vector<stable_hash> RegMaskHashes(RegMask, RegMask + RegMaskSize);
+      return hash_combine(MO.getType(), MO.getTargetFlags(),
+                          stable_hash_combine_array(RegMaskHashes.data(),
+                                                    RegMaskHashes.size()));
+    }
+
+    assert(0 && "MachineOperand not associated with any MachineFunction");
+    return hash_combine(MO.getType(), MO.getTargetFlags());
+  }
   case MachineOperand::MO_Metadata:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getMetadata());
   case MachineOperand::MO_MCSymbol:

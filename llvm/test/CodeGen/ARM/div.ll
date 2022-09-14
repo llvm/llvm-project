@@ -104,3 +104,33 @@ entry:
         %tmp1 = urem i64 %a, %b         ; <i64> [#uses=1]
         ret i64 %tmp1
 }
+
+; Make sure we avoid a libcall for some constants.
+define i64 @f7(i64 %a) {
+; CHECK-SWDIV-LABEL: f7
+; CHECK-SWDIV: adc
+; CHECK-SWDIV: umull
+; CHECK-HWDIV-LABEL: f7
+; CHECK-HWDIV: adc
+; CHECK-HWDIV: umull
+; CHECK-EABI-LABEL: f7
+; CHECK-EABI: adc
+; CHECK-EABI: umull
+  %tmp1 = urem i64 %a, 3
+  ret i64 %tmp1
+}
+
+; Make sure we avoid a libcall for some constants.
+define i64 @f8(i64 %a) {
+; CHECK-SWDIV-LABEL: f8
+; CHECK-SWDIV: adc
+; CHECK-SWDIV: umull
+; CHECK-HWDIV-LABEL: f8
+; CHECK-HWDIV: adc
+; CHECK-HWDIV: umull
+; CHECK-EABI-LABEL: f8
+; CHECK-EABI: adc
+; CHECK-EABI: umull
+  %tmp1 = udiv i64 %a, 3
+  ret i64 %tmp1
+}

@@ -2344,6 +2344,14 @@ public:
 
   InFlightDiagnostic emitError() const final { return p.emitError(keyLoc); }
 
+  AsmResourceEntryKind getKind() const final {
+    if (value.isAny(Token::kw_true, Token::kw_false))
+      return AsmResourceEntryKind::Bool;
+    return value.getSpelling().startswith("\"0x")
+               ? AsmResourceEntryKind::Blob
+               : AsmResourceEntryKind::String;
+  }
+
   FailureOr<bool> parseAsBool() const final {
     if (value.is(Token::kw_true))
       return true;

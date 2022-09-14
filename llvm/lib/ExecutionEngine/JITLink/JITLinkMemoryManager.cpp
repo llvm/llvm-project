@@ -25,7 +25,7 @@ BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
 
   for (auto &Sec : G.sections()) {
     // Skip empty sections.
-    if (empty(Sec.blocks()))
+    if (Sec.blocks().empty())
       continue;
 
     auto &Seg = Segments[{Sec.getMemProt(), Sec.getMemDeallocPolicy()}];

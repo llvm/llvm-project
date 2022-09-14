@@ -526,6 +526,14 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
   return CreateCall(TheFn, Ops);
 }
 
+static MaybeAlign getAlign(Value *Ptr) {
+  if (auto *O = dyn_cast<GlobalObject>(Ptr))
+    return O->getAlign();
+  if (auto *A = dyn_cast<GlobalAlias>(Ptr))
+    return A->getAliaseeObject()->getAlign();
+  return {};
+}
+
 CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
 #ifndef NDEBUG
   // Handle specially for constexpr cast. This is possible when
@@ -540,8 +548,13 @@ CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
   assert(isa<GlobalValue>(V) && cast<GlobalValue>(V)->isThreadLocal() &&
          "threadlocal_address only applies to thread local variables.");
 #endif
-  return CreateIntrinsic(llvm::Intrinsic::threadlocal_address, {Ptr->getType()},
-                         {Ptr});
+  CallInst *CI = CreateIntrinsic(llvm::Intrinsic::threadlocal_address,
+                                 {Ptr->getType()}, {Ptr});
+  if (MaybeAlign A = getAlign(Ptr)) {
+    CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), *A));
+    CI->addRetAttr(Attribute::getWithAlignment(CI->getContext(), *A));
+  }
+  return CI;
 }
 
 CallInst *

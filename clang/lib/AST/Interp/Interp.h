@@ -788,18 +788,24 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
     return false;
   };
 
-  // If the new offset would be negative, bail out.
-  if (Add && Offset.isNegative() && (Offset.isMin() || -Offset > Index))
-    return InvalidOffset();
-  if (!Add && Offset.isPositive() && Index < Offset)
-    return InvalidOffset();
-
-  // If the new offset would be out of bounds, bail out.
   unsigned MaxOffset = MaxIndex - Ptr.getIndex();
-  if (Add && Offset.isPositive() && Offset > MaxOffset)
-    return InvalidOffset();
-  if (!Add && Offset.isNegative() && (Offset.isMin() || -Offset > MaxOffset))
-    return InvalidOffset();
+  if constexpr (Add) {
+    // If the new offset would be negative, bail out.
+    if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
+      return InvalidOffset();
+
+    // If the new offset would be out of bounds, bail out.
+    if (Offset.isPositive() && Offset > MaxOffset)
+      return InvalidOffset();
+  } else {
+    // If the new offset would be negative, bail out.
+    if (Offset.isPositive() && Index < Offset)
+      return InvalidOffset();
+
+    // If the new offset would be out of bounds, bail out.
+    if (Offset.isNegative() && (Offset.isMin() || -Offset > MaxOffset))
+      return InvalidOffset();
+  }
 
   // Offset is valid - compute it on unsigned.
   int64_t WideIndex = static_cast<int64_t>(Index);

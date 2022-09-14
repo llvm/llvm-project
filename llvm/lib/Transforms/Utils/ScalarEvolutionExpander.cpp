@@ -1024,7 +1024,8 @@ void SCEVExpander::fixupInsertPoints(Instruction *I) {
 /// hoistStep - Attempt to hoist a simple IV increment above InsertPos to make
 /// it available to other uses in this loop. Recursively hoist any operands,
 /// until we reach a value that dominates InsertPos.
-bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos) {
+bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
+                              bool RecomputePoisonFlags) {
   if (SE.DT.dominates(IncV, InsertPos))
       return true;
 
@@ -1052,6 +1053,19 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos) {
   for (Instruction *I : llvm::reverse(IVIncs)) {
     fixupInsertPoints(I);
     I->moveBefore(InsertPos);
+    if (!RecomputePoisonFlags)
+      continue;
+    // Drop flags that are potentially inferred from old context and infer flags
+    // in new context.
+    I->dropPoisonGeneratingFlags();
+    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
+      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+        auto *BO = cast<BinaryOperator>(I);
+        BO->setHasNoUnsignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+        BO->setHasNoSignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+      }
   }
   return true;
 }
@@ -2006,12 +2020,14 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
         // with the original phi. It's worth eagerly cleaning up the
         // common case of a single IV increment so that DeleteDeadPHIs
         // can remove cycles that had postinc uses.
+        // Because we may potentially introduce a new use of OrigIV that didn't
+        // exist before at this point, its poison flags need readjustment.
         const SCEV *TruncExpr =
             SE.getTruncateOrNoop(SE.getSCEV(OrigInc), IsomorphicInc->getType());
         if (OrigInc != IsomorphicInc &&
             TruncExpr == SE.getSCEV(IsomorphicInc) &&
             SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
-            hoistIVInc(OrigInc, IsomorphicInc)) {
+            hoistIVInc(OrigInc, IsomorphicInc, /*RecomputePoisonFlags*/ true)) {
           SCEV_DEBUG_WITH_TYPE(
               DebugType, dbgs() << "INDVARS: Eliminated congruent iv.inc: "
                                 << *IsomorphicInc << '\n');

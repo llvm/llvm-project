@@ -138,6 +138,9 @@ Improvements to Clang's diagnostics
   incorrectly saying no_sanitize only applies to functions and methods.
 - No longer mention ``reinterpet_cast`` in the invalid constant expression
   diagnostic note when in C mode.
+- Clang will now give a more suitale diagnostic for declaration of block
+  scope identifiers that have external/internal linkage that has an initializer.
+  Fixes `Issue 57478: <https://github.com/llvm/llvm-project/issues/57478>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -180,6 +183,16 @@ Attribute Changes in Clang
 - Introduced a new function attribute ``__attribute__((nouwtable))`` to suppress
   LLVM IR ``uwtable`` function attribute.
 
+- Updated the value returned by ``__has_c_attribute(nodiscard)`` to ``202003L``
+  based on the final date specified by the C2x committee draft. We already
+  supported the ability to specify a message in the attribute, so there were no
+  changes to the attribute behavior.
+
+- Updated the value returned by ``__has_c_attribute(fallthrough)`` to ``201910L``
+  based on the final date specified by the C2x committee draft. We previously
+  used ``201904L`` (the date the proposal was seen by the committee) by mistake.
+  There were no other changes to the attribute behavior.
+
 Windows Support
 ---------------
 - For the MinGW driver, added the options ``-mguard=none``, ``-mguard=cf`` and
@@ -202,6 +215,9 @@ C Language Changes in Clang
 
 C2x Feature Support
 -------------------
+- Implemented `WG14 N2662 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2662.pdf>`_,
+  so the [[maybe_unused]] attribute may be applied to a label to silence an
+  ``-Wunused-label`` warning.
 
 C++ Language Changes in Clang
 -----------------------------

@@ -13,7 +13,8 @@ Features
   same command line arguments.
 
 - LLD is very fast. When you link a large program on a multicore
-  machine, you can expect that LLD runs more than twice as fast as the ld64 linker.
+  machine, you can expect that LLD runs more than twice as fast as the ld64
+  linker.
 
 Download
 --------
@@ -29,7 +30,7 @@ Build
 
 The easiest way to build LLD is to
 check out the entire LLVM projects/sub-projects from a git mirror and
-build that tree. You need `cmake` and of course a C++ compiler.
+build that tree. You need ``cmake`` and of course a C++ compiler.
 
 .. code-block:: console
 
@@ -49,13 +50,16 @@ Using LLD
 LLD can be used by adding ``-fuse-ld=/path/to/ld64.lld`` to the linker flags.
 For Xcode, this can be done by adding it to "Other linker flags" in the build
 settings. For Bazel, this can be done with ``--linkopt`` or with
-[rules_apple_linker](https://github.com/keith/rules_apple_linker).
+`rules_apple_linker <https://github.com/keith/rules_apple_linker>`_.
 The user may also need to add ``-Wl,--deduplicate-literals`` in order
 to match Apple's linker behavior more closely (otherwise problems
-can occur, for instance, in unit tests). For more info on
-the differences between the two, see "LD64 vs LLD-MACHO", mentioned below.
+can occur, for instance, in unit tests).
+
+.. seealso::
+
+  :doc:`ld64-vs-lld` has more info on the differences between the two linkers.
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
 
    ld64-vs-lld

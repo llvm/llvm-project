@@ -2468,7 +2468,7 @@ LogicalResult
 OpFormatParser::verifyAttributeColonType(SMLoc loc,
                                          ArrayRef<FormatElement *> elements) {
   auto isBase = [](FormatElement *el) {
-    auto attr = dyn_cast<AttributeVariable>(el);
+    auto *attr = dyn_cast<AttributeVariable>(el);
     if (!attr)
       return false;
     // Check only attributes without type builders or that are known to call

@@ -5901,7 +5901,7 @@ def err_loader_uninitialized_extern_decl
     : Error<"variable %0 cannot be declared both 'extern' and with the "
             "'loader_uninitialized' attribute">;
 def err_block_extern_cant_init : Error<
-  "'extern' variable cannot have an initializer">;
+  "declaration of block scope identifier with linkage cannot have an initializer">;
 def warn_extern_init : Warning<"'extern' variable has an initializer">,
   InGroup<DiagGroup<"extern-initializer">>;
 def err_variable_object_no_init : Error<

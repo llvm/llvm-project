@@ -55,7 +55,7 @@ void CGHLSLRuntime::finishCodeGen() {
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 
-  generateGlobalCtorCalls();
+  generateGlobalCtorDtorCalls();
 }
 
 void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
@@ -146,12 +146,13 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   B.CreateRetVoid();
 }
 
-void CGHLSLRuntime::generateGlobalCtorCalls() {
-  llvm::Module &M = CGM.getModule();
-  const auto *GlobalCtors = M.getNamedGlobal("llvm.global_ctors");
-  if (!GlobalCtors)
+static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,
+                            bool CtorOrDtor) {
+  const auto *GV =
+      M.getNamedGlobal(CtorOrDtor ? "llvm.global_ctors" : "llvm.global_dtors");
+  if (!GV)
     return;
-  const auto *CA = dyn_cast<ConstantArray>(GlobalCtors->getInitializer());
+  const auto *CA = dyn_cast<ConstantArray>(GV->getInitializer());
   if (!CA)
     return;
   // The global_ctor array elements are a struct [Priority, Fn *, COMDat].
@@ -168,8 +169,16 @@ void CGHLSLRuntime::generateGlobalCtorCalls() {
            "HLSL doesn't support setting priority for global ctors.");
     assert(isa<ConstantPointerNull>(CS->getOperand(2)) &&
            "HLSL doesn't support COMDat for global ctors.");
-    CtorFns.push_back(cast<Function>(CS->getOperand(1)));
+    Fns.push_back(cast<Function>(CS->getOperand(1)));
   }
+}
+
+void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
+  llvm::Module &M = CGM.getModule();
+  SmallVector<Function *> CtorFns;
+  SmallVector<Function *> DtorFns;
+  gatherFunctions(CtorFns, M, true);
+  gatherFunctions(DtorFns, M, false);
 
   // Insert a call to the global constructor at the beginning of the entry block
   // to externally exported functions. This is a bit of a hack, but HLSL allows
@@ -179,6 +188,11 @@ void CGHLSLRuntime::generateGlobalCtorCalls() {
       continue;
     IRBuilder<> B(&F.getEntryBlock(), F.getEntryBlock().begin());
     for (auto *Fn : CtorFns)
+      B.CreateCall(FunctionCallee(Fn));
+
+    // Insert global dtors before the terminator of the last instruction
+    B.SetInsertPoint(F.back().getTerminator());
+    for (auto *Fn : DtorFns)
       B.CreateCall(FunctionCallee(Fn));
   }
 }
