@@ -20606,8 +20606,10 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::LOAD: {
     MemSDNode *LoadNode = cast<MemSDNode>(N);
     EVT MemVT = LoadNode->getMemoryVT();
-    // Handle lowering 256 bit non temporal loads into LDNP.
-    if (LoadNode->isNonTemporal() && MemVT.getSizeInBits() == 256u &&
+    // Handle lowering 256 bit non temporal loads into LDNP for little-endian
+    // targets.
+    if (LoadNode->isNonTemporal() && Subtarget->isLittleEndian() &&
+        MemVT.getSizeInBits() == 256u &&
         (MemVT.getScalarSizeInBits() == 8u ||
          MemVT.getScalarSizeInBits() == 16u ||
          MemVT.getScalarSizeInBits() == 32u ||

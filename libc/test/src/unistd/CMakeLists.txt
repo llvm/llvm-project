@@ -3,6 +3,21 @@ add_libc_testsuite(libc_unistd_unittests)
 add_subdirectory(testdata)
 
 add_libc_unittest(
+  access_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    access_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.unistd.access
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+)
+
+add_libc_unittest(
   chdir_test
   SUITE
     libc_unistd_unittests

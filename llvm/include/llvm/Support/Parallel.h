@@ -28,7 +28,21 @@ namespace parallel {
 // this file. It defaults to using all hardware threads and should be
 // initialized before the first use of parallel routines.
 extern ThreadPoolStrategy strategy;
+
+#if LLVM_ENABLE_THREADS
+#ifdef _WIN32
+// Direct access to thread_local variables from a different DLL isn't
+// possible with Windows Native TLS.
+unsigned getThreadIndex();
+#else
+// Don't access this directly, use the getThreadIndex wrapper.
 extern thread_local unsigned threadIndex;
+
+inline unsigned getThreadIndex() { return threadIndex; }
+#endif
+#else
+inline unsigned getThreadIndex() { return 0; }
+#endif
 
 namespace detail {
 class Latch {
