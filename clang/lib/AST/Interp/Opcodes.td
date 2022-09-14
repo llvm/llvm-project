@@ -427,11 +427,11 @@ def Neg: Opcode {
 // TODO: Expand this to handle casts between more types.
 
 def FromCastTypeClass : TypeClass {
-  let Types = [Uint32, Sint32, Bool];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
 }
 
 def ToCastTypeClass : TypeClass {
-  let Types = [Uint32, Sint32, Bool];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
 }
 
 def Cast: Opcode {
