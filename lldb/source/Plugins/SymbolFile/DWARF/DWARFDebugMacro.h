@@ -24,17 +24,6 @@ class DWARFDataExtractor;
 
 class SymbolFileDWARF;
 
-class DWARFStrOffsetsInfo {
-  lldb::offset_t cu_str_offset;
-  const lldb_private::DWARFDataExtractor &data;
-
-public:
-  DWARFStrOffsetsInfo(lldb::offset_t cu_str_offset,
-                      const lldb_private::DWARFDataExtractor &data)
-      : cu_str_offset(cu_str_offset), data(data) {}
-  uint64_t GetOffset(uint64_t index) const;
-};
-
 class DWARFDebugMacroHeader {
 public:
   enum HeaderFlagMask {
@@ -64,7 +53,6 @@ public:
   static void
   ReadMacroEntries(const lldb_private::DWARFDataExtractor &debug_macro_data,
                    const lldb_private::DWARFDataExtractor &debug_str_data,
-                   const DWARFStrOffsetsInfo *str_offsets_info,
                    const bool offset_is_64_bit, lldb::offset_t *sect_offset,
                    SymbolFileDWARF *sym_file_dwarf,
                    lldb_private::DebugMacrosSP &debug_macros_sp);
