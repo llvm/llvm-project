@@ -10,9 +10,7 @@ define <4 x double> @test_ldnp_v4f64(<4 x double>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v4f64:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
   %lv = load <4 x double>, <4 x double>* %A, align 8, !nontemporal !0
   ret <4 x double> %lv
@@ -26,9 +24,7 @@ define <4 x i64> @test_ldnp_v4i64(<4 x i64>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v4i64:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
   %lv = load <4 x i64>, <4 x i64>* %A, align 8, !nontemporal !0
   ret <4 x i64> %lv
@@ -42,11 +38,7 @@ define <8 x i32> @test_ldnp_v8i32(<8 x i32>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v8i32:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
   %lv = load <8 x i32>, <8 x i32>* %A, align 8, !nontemporal !0
   ret <8 x i32> %lv
@@ -60,11 +52,7 @@ define <8 x float> @test_ldnp_v8f32(<8 x float>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v8f32:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
   %lv = load <8 x float>, <8 x float>* %A, align 8, !nontemporal !0
   ret <8 x float> %lv
@@ -78,11 +66,7 @@ define <16 x i16> @test_ldnp_v16i16(<16 x i16>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v16i16:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
   %lv = load <16 x i16>, <16 x i16>* %A, align 8, !nontemporal !0
   ret <16 x i16> %lv
@@ -96,11 +80,7 @@ define <16 x half> @test_ldnp_v16f16(<16 x half>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v16f16:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
   %lv = load <16 x half>, <16 x half>* %A, align 8, !nontemporal !0
   ret <16 x half> %lv
@@ -114,11 +94,7 @@ define <32 x i8> @test_ldnp_v32i8(<32 x i8>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v32i8:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
   %lv = load <32 x i8>, <32 x i8>* %A, align 8, !nontemporal !0
   ret <32 x i8> %lv
@@ -286,16 +262,8 @@ define <32 x i16> @test_ldnp_v32i16(<32 x i16>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v32i16:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    ldnp q2, q3, [x0, #32]
-; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v2.8h, v2.8h
-; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
-; CHECK-BE-NEXT:    rev64 v3.8h, v3.8h
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
+; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-BE-NEXT:    ret
   %lv = load <32 x i16>, <32 x i16>* %A, align 8, !nontemporal !0
   ret <32 x i16> %lv
@@ -310,16 +278,8 @@ define <32 x half> @test_ldnp_v32f16(<32 x half>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v32f16:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    ldnp q2, q3, [x0, #32]
-; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-BE-NEXT:    rev64 v2.8h, v2.8h
-; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
-; CHECK-BE-NEXT:    rev64 v3.8h, v3.8h
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
+; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-BE-NEXT:    ret
   %lv = load <32 x half>, <32 x half>* %A, align 8, !nontemporal !0
   ret <32 x half> %lv
@@ -334,16 +294,8 @@ define <16 x i32> @test_ldnp_v16i32(<16 x i32>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v16i32:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    ldnp q2, q3, [x0, #32]
-; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
-; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
-; CHECK-BE-NEXT:    rev64 v3.4s, v3.4s
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
+; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-BE-NEXT:    ret
   %lv = load <16 x i32>, <16 x i32>* %A, align 8, !nontemporal !0
   ret <16 x i32> %lv
@@ -358,16 +310,8 @@ define <16 x float> @test_ldnp_v16f32(<16 x float>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v16f32:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q0, q1, [x0]
-; CHECK-BE-NEXT:    ldnp q2, q3, [x0, #32]
-; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
-; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
-; CHECK-BE-NEXT:    rev64 v3.4s, v3.4s
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
+; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-BE-NEXT:    ret
   %lv = load <16 x float>, <16 x float>* %A, align 8, !nontemporal !0
   ret <16 x float> %lv
@@ -652,18 +596,10 @@ define <16 x i64> @test_ldnp_v16i64(<16 x i64>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v16i64:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q1, q5, [x0, #64]
-; CHECK-BE-NEXT:    ldnp q0, q3, [x0]
-; CHECK-BE-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    ldnp q2, q7, [x0, #32]
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ldnp q6, q16, [x0, #96]
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
-; CHECK-BE-NEXT:    ext v6.16b, v6.16b, v6.16b, #8
-; CHECK-BE-NEXT:    ext v3.16b, v7.16b, v7.16b, #8
-; CHECK-BE-NEXT:    ext v5.16b, v5.16b, v5.16b, #8
-; CHECK-BE-NEXT:    ext v7.16b, v16.16b, v16.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
+; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-BE-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-BE-NEXT:    ldp q6, q7, [x0, #96]
 ; CHECK-BE-NEXT:    ret
   %lv = load <16 x i64>, <16 x i64>* %A, align 8, !nontemporal !0
   ret <16 x i64> %lv
@@ -680,18 +616,10 @@ define <16 x double> @test_ldnp_v16f64(<16 x double>* %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v16f64:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldnp q1, q5, [x0, #64]
-; CHECK-BE-NEXT:    ldnp q0, q3, [x0]
-; CHECK-BE-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    ldnp q2, q7, [x0, #32]
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ldnp q6, q16, [x0, #96]
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    ext v1.16b, v3.16b, v3.16b, #8
-; CHECK-BE-NEXT:    ext v6.16b, v6.16b, v6.16b, #8
-; CHECK-BE-NEXT:    ext v3.16b, v7.16b, v7.16b, #8
-; CHECK-BE-NEXT:    ext v5.16b, v5.16b, v5.16b, #8
-; CHECK-BE-NEXT:    ext v7.16b, v16.16b, v16.16b, #8
+; CHECK-BE-NEXT:    ldp q0, q1, [x0]
+; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-BE-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-BE-NEXT:    ldp q6, q7, [x0, #96]
 ; CHECK-BE-NEXT:    ret
   %lv = load <16 x double>, <16 x double>* %A, align 8, !nontemporal !0
   ret <16 x double> %lv
