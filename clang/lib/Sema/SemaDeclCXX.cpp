@@ -11851,30 +11851,30 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S, AccessSpecifier AS,
 Decl *Sema::ActOnUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                       SourceLocation UsingLoc,
                                       SourceLocation EnumLoc,
-                                      const DeclSpec &DS) {
-  switch (DS.getTypeSpecType()) {
-  case DeclSpec::TST_error:
-    // This will already have been diagnosed
+                                      SourceLocation IdentLoc,
+                                      IdentifierInfo &II, CXXScopeSpec *SS) {
+  assert(!SS->isInvalid() && "ScopeSpec is invalid");
+  ParsedType TypeRep = getTypeName(II, IdentLoc, S, SS);
+  if (!TypeRep) {
+    Diag(IdentLoc, SS && isDependentScopeSpecifier(*SS)
+                       ? diag::err_using_enum_is_dependent
+                       : diag::err_unknown_typename)
+        << II.getName()
+        << SourceRange(SS ? SS->getBeginLoc() : IdentLoc, IdentLoc);
     return nullptr;
-
-  case DeclSpec::TST_enum:
-    break;
-
-  case DeclSpec::TST_typename:
-    Diag(DS.getTypeSpecTypeLoc(), diag::err_using_enum_is_dependent);
-    return nullptr;
-
-  default:
-    llvm_unreachable("unexpected DeclSpec type");
   }
 
-  // As with enum-decls, we ignore attributes for now.
-  auto *Enum = cast<EnumDecl>(DS.getRepAsDecl());
+  auto *Enum = dyn_cast_if_present<EnumDecl>(TypeRep.get()->getAsTagDecl());
+  if (!Enum) {
+    Diag(IdentLoc, diag::err_using_enum_not_enum) << TypeRep.get();
+    return nullptr;
+  }
+
   if (auto *Def = Enum->getDefinition())
     Enum = Def;
 
-  auto *UD = BuildUsingEnumDeclaration(S, AS, UsingLoc, EnumLoc,
-                                       DS.getTypeSpecTypeNameLoc(), Enum);
+  auto *UD =
+      BuildUsingEnumDeclaration(S, AS, UsingLoc, EnumLoc, IdentLoc, Enum);
   if (UD)
     PushOnScopeChains(UD, S, /*AddToContext*/ false);
 

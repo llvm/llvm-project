@@ -356,6 +356,8 @@ C++20 Feature Support
   the time of checking, which should now allow the libstdc++ ranges implementation
   to work for at least trivial examples.  This fixes
   `Issue 44178 <https://github.com/llvm/llvm-project/issues/44178>`_.
+- Clang implements DR2621, correcting a defect in ``using enum`` handling.  The
+  name is found via ordinary lookup so typedefs are found.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
