@@ -727,7 +727,7 @@ bool CommandObjectParsed::Execute(const char *args_string,
   }
   if (!handled) {
     for (auto entry : llvm::enumerate(cmd_args.entries())) {
-      if (!entry.value().ref().empty() && entry.value().ref().front() == '`') {
+      if (!entry.value().ref().empty() && entry.value().GetQuoteChar() == '`') {
         cmd_args.ReplaceArgumentAtIndex(
             entry.index(),
             m_interpreter.ProcessEmbeddedScriptCommands(entry.value().c_str()));
