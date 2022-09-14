@@ -16,11 +16,6 @@
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 
-uint64_t DWARFStrOffsetsInfo::GetOffset(uint64_t index) const {
-  uint64_t offset = cu_str_offset + data.GetDWARFSizeOfOffset() * index;
-  return data.GetU32(&offset);
-}
-
 DWARFDebugMacroHeader
 DWARFDebugMacroHeader::ParseHeader(const DWARFDataExtractor &debug_macro_data,
                                    lldb::offset_t *offset) {
@@ -64,8 +59,7 @@ void DWARFDebugMacroHeader::SkipOperandTable(
 
 void DWARFDebugMacroEntry::ReadMacroEntries(
     const DWARFDataExtractor &debug_macro_data,
-    const DWARFDataExtractor &debug_str_data,
-    const DWARFStrOffsetsInfo *str_offsets_info, const bool offset_is_64_bit,
+    const DWARFDataExtractor &debug_str_data, const bool offset_is_64_bit,
     lldb::offset_t *offset, SymbolFileDWARF *sym_file_dwarf,
     DebugMacrosSP &debug_macros_sp) {
   llvm::dwarf::MacroEntryType type =
@@ -103,22 +97,6 @@ void DWARFDebugMacroEntry::ReadMacroEntries(
         debug_macros_sp->AddMacroEntry(
             DebugMacroEntry::CreateUndefEntry(line, macro_str));
       break;
-    case DW_MACRO_define_strx:
-    case DW_MACRO_undef_strx:
-      line = debug_macro_data.GetULEB128(offset);
-      str_offset = debug_macro_data.GetULEB128(offset);
-      if (!str_offsets_info)
-        // Can't do much in this case, skip all such entries
-        continue;
-      str_offset = str_offsets_info->GetOffset(str_offset);
-      macro_str = debug_str_data.GetCStr(&str_offset);
-      if (type == DW_MACRO_define_strx)
-        debug_macros_sp->AddMacroEntry(
-            DebugMacroEntry::CreateDefineEntry(line, macro_str));
-      else
-        debug_macros_sp->AddMacroEntry(
-            DebugMacroEntry::CreateUndefEntry(line, macro_str));
-      break;
     case DW_MACRO_start_file:
       line = debug_macro_data.GetULEB128(offset);
       debug_line_file_idx = debug_macro_data.GetULEB128(offset);
@@ -135,7 +113,7 @@ void DWARFDebugMacroEntry::ReadMacroEntries(
       else
         new_offset = debug_macro_data.GetU32(offset);
       debug_macros_sp->AddMacroEntry(DebugMacroEntry::CreateIndirectEntry(
-          sym_file_dwarf->ParseDebugMacros(&new_offset, str_offsets_info)));
+          sym_file_dwarf->ParseDebugMacros(&new_offset)));
       break;
     default:
       // TODO: Add support for other standard operations.
