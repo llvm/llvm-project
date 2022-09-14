@@ -269,6 +269,9 @@ C2x Feature Support
   so the [[maybe_unused]] attribute may be applied to a label to silence an
   ``-Wunused-label`` warning.
 
+- Implemented `WG14 N508 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2508.pdf>`_,
+  so labels can placed everywhere inside a compound statement.
+
 C++ Language Changes in Clang
 -----------------------------
 - Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=15`` option
@@ -312,6 +315,8 @@ C++20 Feature Support
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+
+- Support label at end of compound statement (`P2324 <https://wg21.link/p2324r2>`_).
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
