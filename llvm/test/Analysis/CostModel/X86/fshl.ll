@@ -1092,7 +1092,7 @@ define void @splatconstant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a25
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = call i16 @llvm.fshl.i16(i16 %a16, i16 %b16, i16 3)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I16 = call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = call <16 x i16> @llvm.fshl.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = call <32 x i16> @llvm.fshl.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call <32 x i16> @llvm.fshl.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512DQ-LABEL: 'splatconstant_funnel_i16'
