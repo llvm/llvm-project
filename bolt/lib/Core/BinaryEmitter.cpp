@@ -897,7 +897,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
 
   Streamer.switchSection(BC.MOFI->getLSDASection());
 
-  const unsigned TTypeEncoding = BC.TTypeEncoding;
+  const unsigned TTypeEncoding = BF.getLSDATypeEncoding();
   const unsigned TTypeEncodingSize = BC.getDWARFEncodingSize(TTypeEncoding);
   const uint16_t TTypeAlignment = 4;
 
@@ -971,10 +971,11 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
                        TTypeBaseOffset;      // TType base offset
   unsigned SizeAlign = (4 - TotalSize) & 3;
 
-  // Account for any extra padding that will be added to the call site table
-  // length.
-  Streamer.emitULEB128IntValue(TTypeBaseOffset,
-                               /*PadTo=*/TTypeBaseOffsetSize + SizeAlign);
+  if (TTypeEncoding != dwarf::DW_EH_PE_omit)
+    // Account for any extra padding that will be added to the call site table
+    // length.
+    Streamer.emitULEB128IntValue(TTypeBaseOffset,
+                                 /*PadTo=*/TTypeBaseOffsetSize + SizeAlign);
 
   // Emit the landing pad call site table. We use signed data4 since we can emit
   // a landing pad in a different part of the split function that could appear
