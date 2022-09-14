@@ -151,17 +151,17 @@ define i32 @mul_constpow2() {
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4i64 = mul <4 x i64> undef, <i64 2, i64 4, i64 8, i64 16>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8i64 = mul <8 x i64> undef, <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, 16
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i32 = mul <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = mul <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16i32 = mul <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V4i32 = mul <4 x i32> undef, <i32 2, i32 4, i32 8, i32 16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V8i32 = mul <8 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V16i32 = mul <16 x i32> undef, <i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64, i32 128, i32 256>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = mul i16 undef, 16
-; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = mul <8 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16i16 = mul <16 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32i16 = mul <32 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i16 = mul <8 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i16 = mul <16 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32i16 = mul <32 x i16> undef, <i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128, i16 256>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = mul i8 undef, 16
-; SLM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V16i8 = mul <16 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32i8 = mul <32 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
-; SLM-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V64i8 = mul <64 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16i8 = mul <16 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32i8 = mul <32 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
+; SLM-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V64i8 = mul <64 x i8> undef, <i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16, i8 2, i8 4, i8 8, i8 16>
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = mul i64 undef, 16
