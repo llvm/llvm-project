@@ -93,7 +93,7 @@ inline PWMAFunction parsePWMAF(
 
 /// lhs and rhs represent non-negative integers or positive infinity. The
 /// infinity case corresponds to when the Optional is empty.
-inline bool infinityOrUInt64LE(Optional<uint64_t> lhs, Optional<uint64_t> rhs) {
+inline bool infinityOrUInt64LE(Optional<MPInt> lhs, Optional<MPInt> rhs) {
   // No constraint.
   if (!rhs)
     return true;
@@ -107,13 +107,22 @@ inline bool infinityOrUInt64LE(Optional<uint64_t> lhs, Optional<uint64_t> rhs) {
 /// the true volume `trueVolume`, while also being at least as good an
 /// approximation as `resultBound`.
 inline void
-expectComputedVolumeIsValidOverapprox(Optional<uint64_t> computedVolume,
-                                      Optional<uint64_t> trueVolume,
-                                      Optional<uint64_t> resultBound) {
+expectComputedVolumeIsValidOverapprox(const Optional<MPInt> &computedVolume,
+                                      const Optional<MPInt> &trueVolume,
+                                      const Optional<MPInt> &resultBound) {
   assert(infinityOrUInt64LE(trueVolume, resultBound) &&
          "can't expect result to be less than the true volume");
   EXPECT_TRUE(infinityOrUInt64LE(trueVolume, computedVolume));
   EXPECT_TRUE(infinityOrUInt64LE(computedVolume, resultBound));
+}
+
+inline void
+expectComputedVolumeIsValidOverapprox(const Optional<MPInt> &computedVolume,
+                                      Optional<int64_t> trueVolume,
+                                      Optional<int64_t> resultBound) {
+  expectComputedVolumeIsValidOverapprox(computedVolume,
+                                        trueVolume.transform(mpintFromInt64),
+                                        resultBound.transform(mpintFromInt64));
 }
 
 } // namespace presburger

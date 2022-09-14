@@ -236,17 +236,15 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   // Try to refine the mod-ref info further using other API entry points to the
   // aggregate set of AA results.
   auto MRB = getModRefBehavior(Call);
-  if (onlyAccessesInaccessibleMem(MRB))
+  if (MRB.onlyAccessesInaccessibleMem())
     return ModRefInfo::NoModRef;
 
-  if (onlyReadsMemory(MRB))
-    Result &= ModRefInfo::Ref;
-  else if (onlyWritesMemory(MRB))
-    Result &= ModRefInfo::Mod;
+  // TODO: Exclude inaccessible memory location here.
+  Result &= MRB.getModRef();
 
-  if (onlyAccessesArgPointees(MRB) || onlyAccessesInaccessibleOrArgMem(MRB)) {
+  if (MRB.onlyAccessesArgPointees() || MRB.onlyAccessesInaccessibleOrArgMem()) {
     ModRefInfo AllArgsMask = ModRefInfo::NoModRef;
-    if (doesAccessArgPointees(MRB)) {
+    if (MRB.doesAccessArgPointees()) {
       for (const auto &I : llvm::enumerate(Call->args())) {
         const Value *Arg = I.value();
         if (!Arg->getType()->isPointerTy())
@@ -297,29 +295,29 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
 
   // If Call1 or Call2 are readnone, they don't interact.
   auto Call1B = getModRefBehavior(Call1);
-  if (Call1B == FMRB_DoesNotAccessMemory)
+  if (Call1B.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
   auto Call2B = getModRefBehavior(Call2);
-  if (Call2B == FMRB_DoesNotAccessMemory)
+  if (Call2B.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
   // If they both only read from memory, there is no dependence.
-  if (onlyReadsMemory(Call1B) && onlyReadsMemory(Call2B))
+  if (Call1B.onlyReadsMemory() && Call2B.onlyReadsMemory())
     return ModRefInfo::NoModRef;
 
   // If Call1 only reads memory, the only dependence on Call2 can be
   // from Call1 reading memory written by Call2.
-  if (onlyReadsMemory(Call1B))
+  if (Call1B.onlyReadsMemory())
     Result &= ModRefInfo::Ref;
-  else if (onlyWritesMemory(Call1B))
+  else if (Call1B.onlyWritesMemory())
     Result &= ModRefInfo::Mod;
 
   // If Call2 only access memory through arguments, accumulate the mod/ref
   // information from Call1's references to the memory referenced by
   // Call2's arguments.
-  if (onlyAccessesArgPointees(Call2B)) {
-    if (!doesAccessArgPointees(Call2B))
+  if (Call2B.onlyAccessesArgPointees()) {
+    if (!Call2B.doesAccessArgPointees())
       return ModRefInfo::NoModRef;
     ModRefInfo R = ModRefInfo::NoModRef;
     for (auto I = Call2->arg_begin(), E = Call2->arg_end(); I != E; ++I) {
@@ -356,8 +354,8 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
 
   // If Call1 only accesses memory through arguments, check if Call2 references
   // any of the memory referenced by Call1's arguments. If not, return NoModRef.
-  if (onlyAccessesArgPointees(Call1B)) {
-    if (!doesAccessArgPointees(Call1B))
+  if (Call1B.onlyAccessesArgPointees()) {
+    if (!Call1B.doesAccessArgPointees())
       return ModRefInfo::NoModRef;
     ModRefInfo R = ModRefInfo::NoModRef;
     for (auto I = Call1->arg_begin(), E = Call1->arg_end(); I != E; ++I) {
@@ -388,13 +386,13 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
 }
 
 FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
-  FunctionModRefBehavior Result = FMRB_UnknownModRefBehavior;
+  FunctionModRefBehavior Result = FunctionModRefBehavior::unknown();
 
   for (const auto &AA : AAs) {
-    Result = FunctionModRefBehavior(Result & AA->getModRefBehavior(Call));
+    Result &= AA->getModRefBehavior(Call);
 
     // Early-exit the moment we reach the bottom of the lattice.
-    if (Result == FMRB_DoesNotAccessMemory)
+    if (Result.doesNotAccessMemory())
       return Result;
   }
 
@@ -402,13 +400,13 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
 }
 
 FunctionModRefBehavior AAResults::getModRefBehavior(const Function *F) {
-  FunctionModRefBehavior Result = FMRB_UnknownModRefBehavior;
+  FunctionModRefBehavior Result = FunctionModRefBehavior::unknown();
 
   for (const auto &AA : AAs) {
-    Result = FunctionModRefBehavior(Result & AA->getModRefBehavior(F));
+    Result &= AA->getModRefBehavior(F);
 
     // Early-exit the moment we reach the bottom of the lattice.
-    if (Result == FMRB_DoesNotAccessMemory)
+    if (Result.doesNotAccessMemory())
       return Result;
   }
 
@@ -431,6 +429,43 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
     if (AR.hasOffset())
       OS << " (off " << AR.getOffset() << ")";
     break;
+  }
+  return OS;
+}
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
+  switch (MR) {
+  case ModRefInfo::NoModRef:
+    OS << "NoModRef";
+    break;
+  case ModRefInfo::Ref:
+    OS << "Ref";
+    break;
+  case ModRefInfo::Mod:
+    OS << "Mod";
+    break;
+  case ModRefInfo::ModRef:
+    OS << "ModRef";
+    break;
+  }
+  return OS;
+}
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, FunctionModRefBehavior FMRB) {
+  for (FunctionModRefBehavior::Location Loc :
+       FunctionModRefBehavior::locations()) {
+    switch (Loc) {
+    case FunctionModRefBehavior::ArgMem:
+      OS << "ArgMem: ";
+      break;
+    case FunctionModRefBehavior::InaccessibleMem:
+      OS << "InaccessibleMem: ";
+      break;
+    case FunctionModRefBehavior::Other:
+      OS << "Other: ";
+      break;
+    }
+    OS << FMRB.getModRef(Loc) << ", ";
   }
   return OS;
 }
@@ -624,9 +659,8 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
                                     const Optional<MemoryLocation> &OptLoc,
                                     AAQueryInfo &AAQIP) {
   if (OptLoc == None) {
-    if (const auto *Call = dyn_cast<CallBase>(I)) {
-      return createModRefInfo(getModRefBehavior(Call));
-    }
+    if (const auto *Call = dyn_cast<CallBase>(I))
+      return getModRefBehavior(Call).getModRef();
   }
 
   const MemoryLocation &Loc = OptLoc.value_or(MemoryLocation());

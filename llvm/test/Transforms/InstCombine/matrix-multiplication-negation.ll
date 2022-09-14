@@ -114,9 +114,7 @@ define <15 x double> @test_negation_on_result(<3 x double> %a, <5 x double> %b) 
 ; both negations can be deleted
 define <2 x double> @test_with_two_operands_negated1(<6 x double> %a, <3 x double> %b){
 ; CHECK-LABEL: @test_with_two_operands_negated1(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <6 x double> [[A:%.*]]
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <3 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A_NEG]], <3 x double> [[B_NEG]], i32 2, i32 3, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %a.neg = fneg <6 x double> %a
@@ -128,9 +126,7 @@ define <2 x double> @test_with_two_operands_negated1(<6 x double> %a, <3 x doubl
 ; both negations will be removed
 define <9 x double> @test_with_two_operands_negated2(<27 x double> %a, <3 x double> %b){
 ; CHECK-LABEL: @test_with_two_operands_negated2(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <27 x double> [[A:%.*]]
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <3 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A_NEG]], <3 x double> [[B_NEG]], i32 9, i32 3, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 9, i32 3, i32 1)
 ; CHECK-NEXT:    ret <9 x double> [[RES]]
 ;
   %a.neg = fneg <27 x double> %a
@@ -142,9 +138,7 @@ define <9 x double> @test_with_two_operands_negated2(<27 x double> %a, <3 x doub
 ; both negations will be removed
 define <9 x double> @test_with_two_operands_negated_with_fastflags(<27 x double> %a, <3 x double> %b){
 ; CHECK-LABEL: @test_with_two_operands_negated_with_fastflags(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <27 x double> [[A:%.*]]
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <3 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call fast <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A_NEG]], <3 x double> [[B_NEG]], i32 9, i32 3, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 9, i32 3, i32 1)
 ; CHECK-NEXT:    ret <9 x double> [[RES]]
 ;
   %a.neg = fneg <27 x double> %a
@@ -156,9 +150,7 @@ define <9 x double> @test_with_two_operands_negated_with_fastflags(<27 x double>
 ; both negations should be removed
 define <9 x double> @test_with_two_operands_negated2_commute(<3 x double> %a, <27 x double> %b){
 ; CHECK-LABEL: @test_with_two_operands_negated2_commute(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <3 x double> [[A:%.*]]
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <27 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v3f64.v27f64(<3 x double> [[A_NEG]], <27 x double> [[B_NEG]], i32 1, i32 3, i32 9)
+; CHECK-NEXT:    [[RES:%.*]] = call <9 x double> @llvm.matrix.multiply.v9f64.v3f64.v27f64(<3 x double> [[A:%.*]], <27 x double> [[B:%.*]], i32 1, i32 3, i32 9)
 ; CHECK-NEXT:    ret <9 x double> [[RES]]
 ;
   %a.neg = fneg <3 x double> %a
@@ -169,9 +161,7 @@ define <9 x double> @test_with_two_operands_negated2_commute(<3 x double> %a, <2
 
 define <4 x double> @matrix_multiply_two_operands_negated_with_same_size(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @matrix_multiply_two_operands_negated_with_same_size(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <2 x double> [[A:%.*]]
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <2 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.matrix.multiply.v4f64.v2f64.v2f64(<2 x double> [[A_NEG]], <2 x double> [[B_NEG]], i32 2, i32 1, i32 2)
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.matrix.multiply.v4f64.v2f64.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], i32 2, i32 1, i32 2)
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %a.neg = fneg <2 x double> %a
@@ -182,11 +172,9 @@ define <4 x double> @matrix_multiply_two_operands_negated_with_same_size(<2 x do
 
 define <2 x double> @matrix_multiply_two_operands_with_multiple_uses(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @matrix_multiply_two_operands_with_multiple_uses(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <6 x double> [[A:%.*]]
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <3 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A_NEG]], <3 x double> [[B_NEG]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    [[RES_2:%.*]] = shufflevector <6 x double> [[A_NEG]], <6 x double> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[RES_3:%.*]] = fadd <2 x double> [[RES_2]], [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x double> [[A]], <6 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[RES_3:%.*]] = fsub <2 x double> [[RES]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x double> [[RES_3]]
 ;
   %a.neg = fneg <6 x double> %a
@@ -202,7 +190,7 @@ define <9 x double> @matrix_multiply_two_operands_with_multiple_uses2(<27 x doub
 ; CHECK-LABEL: @matrix_multiply_two_operands_with_multiple_uses2(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <27 x double> [[A:%.*]]
 ; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <3 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A_NEG]], <3 x double> [[B_NEG]], i32 9, i32 3, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A]], <3 x double> [[B]], i32 9, i32 3, i32 1)
 ; CHECK-NEXT:    store <27 x double> [[A_NEG]], ptr [[A_LOC:%.*]], align 256
 ; CHECK-NEXT:    store <3 x double> [[B_NEG]], ptr [[B_LOC:%.*]], align 32
 ; CHECK-NEXT:    ret <9 x double> [[RES]]

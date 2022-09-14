@@ -29,11 +29,11 @@ void MultiAffineFunction::assertIsConsistent() const {
 // Return the result of subtracting the two given vectors pointwise.
 // The vectors must be of the same size.
 // e.g., [3, 4, 6] - [2, 5, 1] = [1, -1, 5].
-static SmallVector<int64_t, 8> subtractExprs(ArrayRef<int64_t> vecA,
-                                             ArrayRef<int64_t> vecB) {
+static SmallVector<MPInt, 8> subtractExprs(ArrayRef<MPInt> vecA,
+                                           ArrayRef<MPInt> vecB) {
   assert(vecA.size() == vecB.size() &&
          "Cannot subtract vectors of differing lengths!");
-  SmallVector<int64_t, 8> result;
+  SmallVector<MPInt, 8> result;
   result.reserve(vecA.size());
   for (unsigned i = 0, e = vecA.size(); i < e; ++i)
     result.push_back(vecA[i] - vecB[i]);
@@ -55,27 +55,26 @@ void MultiAffineFunction::print(raw_ostream &os) const {
   output.print(os);
 }
 
-SmallVector<int64_t, 8>
-MultiAffineFunction::valueAt(ArrayRef<int64_t> point) const {
+SmallVector<MPInt, 8>
+MultiAffineFunction::valueAt(ArrayRef<MPInt> point) const {
   assert(point.size() == getNumDomainVars() + getNumSymbolVars() &&
          "Point has incorrect dimensionality!");
 
-  SmallVector<int64_t, 8> pointHomogenous{llvm::to_vector(point)};
+  SmallVector<MPInt, 8> pointHomogenous{llvm::to_vector(point)};
   // Get the division values at this point.
-  SmallVector<Optional<int64_t>, 8> divValues = divs.divValuesAt(point);
+  SmallVector<Optional<MPInt>, 8> divValues = divs.divValuesAt(point);
   // The given point didn't include the values of the divs which the output is a
   // function of; we have computed one possible set of values and use them here.
   pointHomogenous.reserve(pointHomogenous.size() + divValues.size());
-  for (const Optional<int64_t> &divVal : divValues)
+  for (const Optional<MPInt> &divVal : divValues)
     pointHomogenous.push_back(*divVal);
   // The matrix `output` has an affine expression in the ith row, corresponding
   // to the expression for the ith value in the output vector. The last column
   // of the matrix contains the constant term. Let v be the input point with
   // a 1 appended at the end. We can see that output * v gives the desired
   // output vector.
-  pointHomogenous.push_back(1);
-  SmallVector<int64_t, 8> result =
-      output.postMultiplyWithColumn(pointHomogenous);
+  pointHomogenous.emplace_back(1);
+  SmallVector<MPInt, 8> result = output.postMultiplyWithColumn(pointHomogenous);
   assert(result.size() == getNumOutputs());
   return result;
 }
@@ -127,7 +126,7 @@ void MultiAffineFunction::mergeDivs(MultiAffineFunction &other) {
 
   other.divs.insertDiv(0, nDivs);
 
-  SmallVector<int64_t, 8> div(other.divs.getNumVars() + 1);
+  SmallVector<MPInt, 8> div(other.divs.getNumVars() + 1);
   for (unsigned i = 0; i < nDivs; ++i) {
     // Zero fill.
     std::fill(div.begin(), div.end(), 0);
@@ -304,7 +303,7 @@ static PresburgerSet tiebreakLex(const PWMAFunction::Piece &pieceA,
   for (unsigned level = 0; level < pieceA.output.getNumOutputs(); ++level) {
 
     // Create the expression `outA - outB` for this level.
-    SmallVector<int64_t, 8> subExpr = subtractExprs(
+    SmallVector<MPInt, 8> subExpr = subtractExprs(
         pieceA.output.getOutputExpr(level), pieceB.output.getOutputExpr(level));
 
     if (lexMin) {
@@ -312,13 +311,13 @@ static PresburgerSet tiebreakLex(const PWMAFunction::Piece &pieceA,
       //        outA - outB <= -1
       //        outA <= outB - 1
       //        outA < outB
-      levelSet.addBound(IntegerPolyhedron::BoundType::UB, subExpr, -1);
+      levelSet.addBound(IntegerPolyhedron::BoundType::UB, subExpr, MPInt(-1));
     } else {
       // For lexMax, we add a lower bound of 1:
       //        outA - outB >= 1
       //        outA > outB + 1
       //        outA > outB
-      levelSet.addBound(IntegerPolyhedron::BoundType::LB, subExpr, 1);
+      levelSet.addBound(IntegerPolyhedron::BoundType::LB, subExpr, MPInt(1));
     }
 
     // Union the set with the result.
@@ -351,7 +350,7 @@ void MultiAffineFunction::subtract(const MultiAffineFunction &other) {
   MultiAffineFunction copyOther = other;
   mergeDivs(copyOther);
   for (unsigned i = 0, e = getNumOutputs(); i < e; ++i)
-    output.addToRow(i, copyOther.getOutputExpr(i), -1);
+    output.addToRow(i, copyOther.getOutputExpr(i), MPInt(-1));
 
   // Check consistency.
   assertIsConsistent();
@@ -391,14 +390,14 @@ IntegerRelation MultiAffineFunction::getAsRelation() const {
 
   // Add equalities such that the i^th range variable is equal to the i^th
   // output expression.
-  SmallVector<int64_t, 8> eq(result.getNumCols());
+  SmallVector<MPInt, 8> eq(result.getNumCols());
   for (unsigned i = 0, e = getNumOutputs(); i < e; ++i) {
     // TODO: Add functions to get VarKind offsets in output in MAF and use them
     // here.
     // The output expression does not contain range variables, while the
     // equality does. So, we need to copy all variables and mark all range
     // variables as 0 in the equality.
-    ArrayRef<int64_t> expr = getOutputExpr(i);
+    ArrayRef<MPInt> expr = getOutputExpr(i);
     // Copy domain variables in `expr` to domain variables in `eq`.
     std::copy(expr.begin(), expr.begin() + getNumDomainVars(), eq.begin());
     // Fill the range variables in `eq` as zero.
@@ -424,8 +423,8 @@ void PWMAFunction::removeOutputs(unsigned start, unsigned end) {
     piece.output.removeOutputs(start, end);
 }
 
-Optional<SmallVector<int64_t, 8>>
-PWMAFunction::valueAt(ArrayRef<int64_t> point) const {
+Optional<SmallVector<MPInt, 8>>
+PWMAFunction::valueAt(ArrayRef<MPInt> point) const {
   assert(point.size() == getNumDomainVars() + getNumSymbolVars());
 
   for (const Piece &piece : pieces)

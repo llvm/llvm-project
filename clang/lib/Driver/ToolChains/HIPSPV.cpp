@@ -154,7 +154,7 @@ void HIPSPVToolChain::addClangTargetOptions(
     CC1Args.append(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
-  llvm::for_each(getHIPDeviceLibs(DriverArgs),
+  llvm::for_each(getDeviceLibs(DriverArgs),
                  [&](const BitCodeLibraryInfo &BCFile) {
                    CC1Args.append({"-mlink-builtin-bitcode",
                                    DriverArgs.MakeArgString(BCFile.Path)});
@@ -206,7 +206,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 }
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-HIPSPVToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
+HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return {};
