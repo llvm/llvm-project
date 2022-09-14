@@ -92,8 +92,8 @@ const DWARFDataExtractor &DWARFContext::getOrLoadLocListsData() {
 }
 
 const DWARFDataExtractor &DWARFContext::getOrLoadMacroData() {
-  return LoadOrGetSection(eSectionTypeDWARFDebugMacro,
-                          eSectionTypeDWARFDebugMacro, m_data_debug_macro);
+  return LoadOrGetSection(eSectionTypeDWARFDebugMacro, llvm::None,
+                          m_data_debug_macro);
 }
 
 const DWARFDataExtractor &DWARFContext::getOrLoadRangesData() {
