@@ -34,11 +34,13 @@ struct PrebuiltModuleDep {
   std::string ModuleName;
   std::string PCMFile;
   std::string ModuleMapFile;
+  Optional<std::string> ModuleCacheKey;
 
   explicit PrebuiltModuleDep(const Module *M)
       : ModuleName(M->getTopLevelModuleName()),
         PCMFile(M->getASTFile()->getName()),
-        ModuleMapFile(M->PresumedModuleMapFile) {}
+        ModuleMapFile(M->PresumedModuleMapFile),
+        ModuleCacheKey(M->getModuleCacheKey()) {}
 };
 
 /// This is used to identify a specific module.

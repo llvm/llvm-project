@@ -161,8 +161,12 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   }
 
   // Report the prebuilt modules this module uses.
-  for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
+  for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps) {
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
+    if (PrebuiltModule.ModuleCacheKey)
+      CI.getFrontendOpts().ModuleCacheKeys.emplace_back(
+          PrebuiltModule.PCMFile, *PrebuiltModule.ModuleCacheKey);
+  }
 
   // Remove any macro definitions that are explicitly ignored.
   if (!CI.getHeaderSearchOpts().ModulesIgnoreMacros.empty()) {
