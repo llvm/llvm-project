@@ -90,18 +90,6 @@ struct ConstraintTy {
 
   unsigned empty() const { return Coefficients.empty(); }
 
-  /// Returns true if any constraint has a non-zero coefficient for any of the
-  /// newly added indices. Zero coefficients for new indices are removed. If it
-  /// returns true, no new variable need to be added to the system.
-  bool needsNewIndices(const DenseMap<Value *, unsigned> &NewIndices) {
-    for (unsigned I = 0; I < NewIndices.size(); ++I) {
-      int64_t Last = Coefficients.pop_back_val();
-      if (Last != 0)
-        return true;
-    }
-    return false;
-  }
-
   /// Returns true if all preconditions for this list of constraints are
   /// satisfied given \p CS and the corresponding \p Value2Index mapping.
   bool isValid(const ConstraintInfo &Info) const;
@@ -384,6 +372,23 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
       return {};
   R[0] = OffsetSum;
   Res.Preconditions = std::move(Preconditions);
+
+  // Remove any (Coefficient, Variable) entry where the Coefficient is 0 for the
+  // new variables that need to be added to the system. Set NewIndexNeeded to
+  // true if any of the new variables has a non-zero coefficient.
+  bool NewIndexNeeded = false;
+  for (unsigned I = 0; I < NewIndices.size(); ++I) {
+    int64_t Last = R.back();
+    if (Last != 0) {
+      NewIndexNeeded = true;
+      break;
+    }
+    R.pop_back();
+  }
+  // All new variables had Coefficients of 0, so no new variables are needed.
+  if (!NewIndexNeeded)
+    NewIndices.clear();
+
   return Res;
 }
 
@@ -645,7 +650,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                               ConstraintInfo &Info) {
     DenseMap<Value *, unsigned> NewIndices;
     auto R = Info.getConstraint(Pred, A, B, NewIndices);
-    if (R.size() < 2 || R.needsNewIndices(NewIndices) || !R.isValid(Info))
+    if (R.size() < 2 || !NewIndices.empty() || !R.isValid(Info))
       return false;
 
     auto &CSToUse = Info.getCS(CmpInst::isSigned(Pred));
@@ -763,8 +768,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
         DenseMap<Value *, unsigned> NewIndices;
         auto R = Info.getConstraint(Cmp, NewIndices);
-        if (R.IsEq || R.empty() || R.needsNewIndices(NewIndices) ||
-            !R.isValid(Info))
+        if (R.IsEq || R.empty() || !NewIndices.empty() || !R.isValid(Info))
           continue;
 
         auto &CSToUse = Info.getCS(R.IsSigned);
