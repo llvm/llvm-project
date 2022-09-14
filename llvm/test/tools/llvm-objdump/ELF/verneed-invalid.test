@@ -2,8 +2,8 @@
 # RUN: llvm-objdump -p %t 2>&1 | FileCheck %s --check-prefix=BROKEN-AUX -DFILE=%t
 
 # BROKEN-AUX:      Version References:
-# BROKEN-AUX-NEXT:   required from :
-# BROKEN-AUX-NEXT:     0x00000000 0x00 00
+# BROKEN-AUX-NEXT: warning: '[[FILE]]': invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
+# BROKEN-AUX-NOT:  {{.}}
 
 --- !ELF
 FileHeader:
