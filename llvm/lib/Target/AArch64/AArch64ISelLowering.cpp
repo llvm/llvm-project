@@ -4490,6 +4490,32 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::AND, DL, VT, Reinterpret, Mask);
 }
 
+SDValue AArch64TargetLowering::getPStateSM(SelectionDAG &DAG, SDValue Chain,
+                                           SMEAttrs Attrs, SDLoc DL,
+                                           EVT VT) const {
+  if (Attrs.hasStreamingInterfaceOrBody())
+    return DAG.getConstant(1, DL, VT);
+
+  if (Attrs.hasNonStreamingInterfaceAndBody())
+    return DAG.getConstant(0, DL, VT);
+
+  assert(Attrs.hasStreamingCompatibleInterface() && "Unexpected interface");
+
+  SDValue Callee = DAG.getExternalSymbol("__arm_sme_state",
+                                         getPointerTy(DAG.getDataLayout()));
+  Type *Int64Ty = Type::getInt64Ty(*DAG.getContext());
+  Type *RetTy = StructType::get(Int64Ty, Int64Ty);
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  ArgListTy Args;
+  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2,
+      RetTy, Callee, std::move(Args));
+  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+  SDValue Mask = DAG.getConstant(/*PSTATE.SM*/ 1, DL, MVT::i64);
+  return DAG.getNode(ISD::AND, DL, MVT::i64, CallResult.first.getOperand(0),
+                     Mask);
+}
+
 SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                       SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(1);
@@ -4521,13 +4547,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getMergeValues({MS.getValue(0), MS.getValue(2)}, DL);
   }
   case Intrinsic::aarch64_sme_get_pstatesm: {
-    SDValue Chain = Op.getOperand(0);
-    SDValue MRS = DAG.getNode(
-        AArch64ISD::MRS, DL, DAG.getVTList(MVT::i64, MVT::Glue, MVT::Other),
-        Chain, DAG.getConstant(AArch64SysReg::SVCR, DL, MVT::i64));
-    SDValue Mask = DAG.getConstant(/* PSTATE.SM */ 1, DL, MVT::i64);
-    SDValue And = DAG.getNode(ISD::AND, DL, MVT::i64, MRS, Mask);
-    return DAG.getMergeValues({And, Chain}, DL);
+    SDValue Chain = Op->getOperand(0);
+    SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+    SDValue PStateSM = getPStateSM(DAG, Chain, Attrs, DL, Op.getValueType());
+    return DAG.getMergeValues({PStateSM, Chain}, DL);
   }
   }
 }
@@ -5834,6 +5857,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
      return CC_AArch64_Win64_CFGuard_Check;
    case CallingConv::AArch64_VectorCall:
    case CallingConv::AArch64_SVE_VectorCall:
+   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
+   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
      return CC_AArch64_AAPCS;
   }
 }

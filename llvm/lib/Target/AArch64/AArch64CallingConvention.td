@@ -435,6 +435,22 @@ def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
                                                  X19, X20, X21, X22, X23, X24,
                                                  X25, X26, X27, X28, LR, FP)>;
 
+// SME ABI support routines such as __arm_tpidr2_save/restore preserve most registers.
+def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0
+                          : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
+                                                 (sequence "P%u", 0, 15),
+                                                 (sequence "X%u", 0, 13),
+                                                 (sequence "X%u",19, 28),
+                                                 LR, FP)>;
+
+// SME ABI support routines __arm_sme_state preserves most registers.
+def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2
+                          : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
+                                                 (sequence "P%u", 0, 15),
+                                                 (sequence "X%u", 2, 15),
+                                                 (sequence "X%u",19, 28),
+                                                 LR, FP)>;
+
 def CSR_AArch64_AAPCS_SwiftTail
     : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X20, X22)>;
 
