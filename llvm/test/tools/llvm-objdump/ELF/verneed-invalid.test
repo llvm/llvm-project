@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -p %t 2>&1 | FileCheck %s --check-prefix=BROKEN-AUX -DFILE=%t
+
+# BROKEN-AUX:      Version References:
+# BROKEN-AUX-NEXT:   required from :
+# BROKEN-AUX-NEXT:     0x00000000 0x00 00
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Flags:   [ SHF_ALLOC ]
+    Entries: [ 2 ]
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
+    Info:         1
+    AddressAlign: 4
+## The byte offset to the auxiliary entry is 0x11, i.e. it is not correctly aligned in memory.
+    Content: "0100010001000000110000000000000000000000"
+DynamicSymbols: []
