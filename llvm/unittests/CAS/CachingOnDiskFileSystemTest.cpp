@@ -374,6 +374,75 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
   }
 }
 
+TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
+      cantFail(cas::createCachingOnDiskFileSystem(cas::createInMemoryCAS()));
+  ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
+
+  TreePathPrefixMapper Remapper(FS);
+  ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
+                    Succeeded());
+
+  TempFile Extra(TestDirectory.path("Extra"), "", "content");
+  SmallVector<TempFile> Temps;
+  for (size_t I = 0, E = 4; I != E; ++I)
+    Temps.emplace_back(TestDirectory.path(Twine(I).str()), "", "content");
+
+  SmallString<256> Path;
+  // Access an unrelated path before tracking.
+  EXPECT_FALSE(FS->getRealPath(Extra.path(), Path));
+
+  // Track accesses (outer).
+  FS->trackNewAccesses();
+  EXPECT_FALSE(FS->getRealPath(Temps[0].path(), Path));
+  EXPECT_FALSE(FS->getRealPath(Temps[1].path(), Path));
+  // Track accesses (inner).
+  FS->trackNewAccesses();
+  EXPECT_FALSE(FS->getRealPath(Temps[2].path(), Path));
+  EXPECT_FALSE(FS->getRealPath(Temps[3].path(), Path));
+
+  // Pop inner accesses.
+  {
+    Optional<cas::ObjectProxy> Tree;
+    ASSERT_THAT_ERROR(FS->createTreeFromNewAccesses(
+                            [&](const vfs::CachedDirectoryEntry &Entry) {
+                              return Remapper.map(Entry);
+                            })
+                          .moveInto(Tree),
+                      Succeeded());
+    llvm::cas::TreeSchema Schema(FS->getCAS());
+    Optional<llvm::cas::TreeProxy> TreeNode;
+    ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
+                      Succeeded());
+    ASSERT_EQ(TreeNode->size(), 2);
+    EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[2].path())));
+    EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[3].path())));
+    EXPECT_FALSE(TreeNode->lookup(sys::path::filename(Temps[0].path())));
+    EXPECT_FALSE(TreeNode->lookup(sys::path::filename(Temps[1].path())));
+  }
+
+  // Pop outer accesses.
+  {
+    Optional<cas::ObjectProxy> Tree;
+    ASSERT_THAT_ERROR(FS->createTreeFromNewAccesses(
+                            [&](const vfs::CachedDirectoryEntry &Entry) {
+                              return Remapper.map(Entry);
+                            })
+                          .moveInto(Tree),
+                      Succeeded());
+    llvm::cas::TreeSchema Schema(FS->getCAS());
+    Optional<llvm::cas::TreeProxy> TreeNode;
+    ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
+                      Succeeded());
+    ASSERT_EQ(TreeNode->size(), 2);
+    EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[0].path())));
+    EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[1].path())));
+    EXPECT_FALSE(TreeNode->lookup(sys::path::filename(Temps[2].path())));
+    EXPECT_FALSE(TreeNode->lookup(sys::path::filename(Temps[3].path())));
+  }
+}
+
 TEST(CachingOnDiskFileSystemTest, getRealPath) {
   TempDir D("caching-on-disk-file-system-test", /*Unique=*/true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =

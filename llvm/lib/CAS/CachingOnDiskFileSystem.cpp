@@ -138,20 +138,20 @@ public:
 
   bool isTrackingAccess() const {
     std::lock_guard<std::mutex> Lock(TrackedAccessesMutex);
-    return TrackedAccesses ? true : false;
+    return !TrackedAccesses.empty();
   }
 
   void trackAccess(const DirectoryEntry &Entry) {
     std::lock_guard<std::mutex> Lock(TrackedAccessesMutex);
-    if (TrackedAccesses)
-      TrackedAccesses->insert(&Entry);
+    if (!TrackedAccesses.empty())
+      TrackedAccesses.back().insert(&Entry);
   }
 
 private:
   void initializeWorkingDirectory();
 
   // Cached stats. Useful for tracking everything that has been stat'ed.
-  Optional<DenseSet<const DirectoryEntry *>> TrackedAccesses;
+  SmallVector<DenseSet<const DirectoryEntry *>> TrackedAccesses;
   mutable std::mutex TrackedAccessesMutex;
 
   IntrusiveRefCntPtr<FileSystemCache> Cache;
@@ -629,28 +629,27 @@ static void pushEntryToBuilder(const ObjectStore &DB,
 
 void CachingOnDiskFileSystemImpl::trackNewAccesses() {
   std::lock_guard<std::mutex> Lock(TrackedAccessesMutex);
-  if (TrackedAccesses)
-    return;
-  TrackedAccesses.emplace();
-  TrackedAccesses->reserve(128); // Seed with a bit of runway.
+  TrackedAccesses.emplace_back();
+  TrackedAccesses.back().reserve(128); // Seed with a bit of runway.
 }
 
 Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
     llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
         RemapPath) {
-  Optional<DenseSet<const DirectoryEntry *>> MaybeTrackedAccesses;
+  DenseSet<const DirectoryEntry *> TrackedAccesses;
   {
     std::lock_guard<std::mutex> Lock(TrackedAccessesMutex);
-    MaybeTrackedAccesses = std::move(TrackedAccesses);
-    TrackedAccesses = None;
+    assert(!this->TrackedAccesses.empty() &&
+           "createTreeFromNewAccesses must be paired with trackNewAccesses");
+    TrackedAccesses = this->TrackedAccesses.pop_back_val();
   }
 
   TreeSchema Schema(DB);
-  if (!MaybeTrackedAccesses || MaybeTrackedAccesses->empty())
+  if (TrackedAccesses.empty())
     return Schema.create();
 
   HierarchicalTreeBuilder Builder;
-  for (const DirectoryEntry *Entry : *MaybeTrackedAccesses) {
+  for (const DirectoryEntry *Entry : TrackedAccesses) {
     StringRef Path = RemapPath ? RemapPath(*Entry) : Entry->getTreePath();
 
     // FIXME: If Entry is a symbol link, the spelling of its target should be

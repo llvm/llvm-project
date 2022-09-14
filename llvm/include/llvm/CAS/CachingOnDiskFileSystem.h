@@ -38,10 +38,15 @@ public:
 
   /// Start tracking all stats (and other accesses). Only affects this
   /// filesystem instance, not current (or future) proxies.
+  ///
+  /// Calls to \c trackNewAccesses implicitly push a new tracking scope. They
+  /// should be paired with a call to \c createTreeFromNewAccesses, which pops
+  /// the current tracking scope. If there are multiple tracking scopes active,
+  /// accesses are only recorded in the currently active scope.
   virtual void trackNewAccesses() = 0;
 
   /// Create a tree that represents all stats tracked since the call to \a
-  /// trackNewAccesses(). Stops tracking new accesses.
+  /// trackNewAccesses(). Removes the current tracking scope.
   ///
   /// If provided, \p RemapPath is used to adjust paths in the created CAS
   /// tree.
