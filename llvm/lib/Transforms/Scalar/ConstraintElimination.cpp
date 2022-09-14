@@ -78,6 +78,8 @@ struct ConstraintTy {
   SmallVector<int64_t, 8> Coefficients;
   SmallVector<PreconditionTy, 2> Preconditions;
 
+  SmallVector<SmallVector<int64_t, 8>> ExtraInfo;
+
   bool IsSigned = false;
   bool IsEq = false;
 
@@ -160,9 +162,13 @@ public:
 struct DecompEntry {
   int64_t Coefficient;
   Value *Variable;
+  /// True if the variable is known positive in the current constraint.
+  bool IsKnownPositive;
 
-  DecompEntry(int64_t Coefficient, Value *Variable)
-      : Coefficient(Coefficient), Variable(Variable) {}
+  DecompEntry(int64_t Coefficient, Value *Variable,
+              bool IsKnownPositive = false)
+      : Coefficient(Coefficient), Variable(Variable),
+        IsKnownPositive(IsKnownPositive) {}
 };
 
 } // namespace
@@ -212,7 +218,7 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
         return {{CI->getSExtValue(), nullptr},
                 {1, GEP->getPointerOperand()},
                 {1, Op1}};
-      return {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0}};
+      return {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0, true}};
     }
 
     if (match(GEP->getOperand(GEP->getNumOperands() - 1), m_ConstantInt(CI)) &&
@@ -244,8 +250,11 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   }
 
   Value *Op0;
-  if (match(V, m_ZExt(m_Value(Op0))))
+  bool IsKnownPositive = false;
+  if (match(V, m_ZExt(m_Value(Op0)))) {
+    IsKnownPositive = true;
     V = Op0;
+  }
 
   Value *Op1;
   ConstantInt *CI;
@@ -277,7 +286,7 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1))))
     return {{0, nullptr}, {1, Op0}, {-1, Op1}};
 
-  return {{0, nullptr}, {1, V}};
+  return {{0, nullptr}, {1, V, IsKnownPositive}};
 }
 
 ConstraintTy
@@ -356,13 +365,22 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   ConstraintTy Res(
       SmallVector<int64_t, 8>(Value2Index.size() + NewIndices.size() + 1, 0),
       IsSigned);
+  // Collect variables that are known to be positive in all uses in the
+  // constraint.
+  DenseMap<Value *, bool> KnownPositiveVariables;
   Res.IsEq = IsEq;
   auto &R = Res.Coefficients;
-  for (const auto &KV : VariablesA)
+  for (const auto &KV : VariablesA) {
     R[GetOrAddIndex(KV.Variable)] += KV.Coefficient;
+    auto I = KnownPositiveVariables.insert({KV.Variable, KV.IsKnownPositive});
+    I.first->second &= KV.IsKnownPositive;
+  }
 
-  for (const auto &KV : VariablesB)
+  for (const auto &KV : VariablesB) {
     R[GetOrAddIndex(KV.Variable)] -= KV.Coefficient;
+    auto I = KnownPositiveVariables.insert({KV.Variable, KV.IsKnownPositive});
+    I.first->second &= KV.IsKnownPositive;
+  }
 
   int64_t OffsetSum;
   if (AddOverflow(Offset1, Offset2, OffsetSum))
@@ -389,6 +407,14 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (!NewIndexNeeded)
     NewIndices.clear();
 
+  // Add extra constraints for variables that are known positive.
+  for (auto &KV : KnownPositiveVariables) {
+    if (!KV.second)
+      continue;
+    SmallVector<int64_t, 8> C(Value2Index.size() + NewIndices.size() + 1, 0);
+    C[GetOrAddIndex(KV.first)] = -1;
+    Res.ExtraInfo.push_back(C);
+  }
   return Res;
 }
 
@@ -772,6 +798,17 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           continue;
 
         auto &CSToUse = Info.getCS(R.IsSigned);
+
+        // If there was extra information collected during decomposition, apply
+        // it now and remove it immediately once we are done with reasoning
+        // about the constraint.
+        for (auto &Row : R.ExtraInfo)
+          CSToUse.addVariableRow(Row);
+        auto InfoRestorer = make_scope_exit([&]() {
+          for (unsigned I = 0; I < R.ExtraInfo.size(); ++I)
+            CSToUse.popLastConstraint();
+        });
+
         if (CSToUse.isConditionImplied(R.Coefficients)) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))
             continue;
