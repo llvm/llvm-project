@@ -751,6 +751,7 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpTypeDeviceEvent:
   case SPIRV::OpTypeQueue:
+  case SPIRV::OpBuildNDRange:
     Reqs.addCapability(SPIRV::Capability::DeviceEnqueue);
     break;
   case SPIRV::OpDecorate:
