@@ -61,32 +61,32 @@ int bar(int n){
 }
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+l32}}(
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 false)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+l37}}(
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 false)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+l42}}(
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 false)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+l47}}(
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
 // CHECK-NOT: call void @__kmpc_for_static_init
 // CHECK-NOT: call void @__kmpc_for_static_fini
 // CHECK-NOT: call void @__kmpc_nvptx_end_reduce_nowait(
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 false)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 // CHECK: ret void
 
 #endif
