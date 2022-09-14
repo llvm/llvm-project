@@ -212,6 +212,8 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator = omp_null_allocator);
 #ifdef __AMDGCN__
 void *malloc(uint64_t Size);
 void free(void *Ptr);
+size_t external_get_local_size(uint32_t dim);
+size_t external_get_num_groups(uint32_t dim);
 #endif
 }
 

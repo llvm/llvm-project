@@ -69,6 +69,17 @@ public:
     HiddenMultiGridSyncArg,
     HiddenHostcallBuffer,
     HiddenHeapV1,
+    HiddenBlockCountX,
+    HiddenBlockCountY,
+    HiddenBlockCountZ,
+    HiddenGroupSizeX,
+    HiddenGroupSizeY,
+    HiddenGroupSizeZ,
+    HiddenRemainderX,
+    HiddenRemainderY,
+    HiddenRemainderZ,
+    HiddenGridDims,
+    HiddenQueuePtr,
     Unknown
   };
 
@@ -104,7 +115,19 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
     {"hidden_multigrid_sync_arg",
      KernelArgMD::ValueKind::HiddenMultiGridSyncArg},
     {"hidden_hostcall_buffer", KernelArgMD::ValueKind::HiddenHostcallBuffer},
-    {"hidden_heap_v1", KernelArgMD::ValueKind::HiddenHeapV1}};
+    {"hidden_heap_v1", KernelArgMD::ValueKind::HiddenHeapV1},
+    {"hidden_block_count_x", KernelArgMD::ValueKind::HiddenBlockCountX},
+    {"hidden_block_count_y", KernelArgMD::ValueKind::HiddenBlockCountY},
+    {"hidden_block_count_z", KernelArgMD::ValueKind::HiddenBlockCountZ},
+    {"hidden_group_size_x", KernelArgMD::ValueKind::HiddenGroupSizeX},
+    {"hidden_group_size_y", KernelArgMD::ValueKind::HiddenGroupSizeY},
+    {"hidden_group_size_z", KernelArgMD::ValueKind::HiddenGroupSizeZ},
+    {"hidden_remainder_x", KernelArgMD::ValueKind::HiddenRemainderX},
+    {"hidden_remainder_y", KernelArgMD::ValueKind::HiddenRemainderY},
+    {"hidden_remainder_z", KernelArgMD::ValueKind::HiddenRemainderZ},
+    {"hidden_grid_dims", KernelArgMD::ValueKind::HiddenGridDims},
+    {"hidden_queue_ptr", KernelArgMD::ValueKind::HiddenQueuePtr},
+};
 
 namespace core {
 
@@ -166,6 +189,17 @@ static bool isImplicit(KernelArgMD::ValueKind value_kind) {
   case KernelArgMD::ValueKind::HiddenMultiGridSyncArg:
   case KernelArgMD::ValueKind::HiddenHostcallBuffer:
   case KernelArgMD::ValueKind::HiddenHeapV1:
+  case KernelArgMD::ValueKind::HiddenBlockCountX:
+  case KernelArgMD::ValueKind::HiddenBlockCountY:
+  case KernelArgMD::ValueKind::HiddenBlockCountZ:
+  case KernelArgMD::ValueKind::HiddenGroupSizeX:
+  case KernelArgMD::ValueKind::HiddenGroupSizeY:
+  case KernelArgMD::ValueKind::HiddenGroupSizeZ:
+  case KernelArgMD::ValueKind::HiddenRemainderX:
+  case KernelArgMD::ValueKind::HiddenRemainderY:
+  case KernelArgMD::ValueKind::HiddenRemainderZ:
+  case KernelArgMD::ValueKind::HiddenGridDims:
+  case KernelArgMD::ValueKind::HiddenQueuePtr:
     return true;
   default:
     return false;
@@ -489,8 +523,7 @@ static hsa_status_t get_code_object_custom_metadata(
         size_t new_offset = lcArg.offset_;
         size_t padding = new_offset - offset;
         offset = new_offset;
-        DP("Arg[%lu] \"%s\" (%u, %u)\n", i, lcArg.name_.c_str(), lcArg.size_,
-           lcArg.offset_);
+
         offset += lcArg.size_;
 
         // check if the arg is a hidden/implicit arg
@@ -498,9 +531,13 @@ static hsa_status_t get_code_object_custom_metadata(
         if (!isImplicit(lcArg.valueKind_)) {
           info.explicit_argument_count++;
           kernel_explicit_args_size += lcArg.size_;
+          DP("Explicit Kernel Arg[%lu] \"%s\" (%u, %u)\n", i,
+             lcArg.name_.c_str(), lcArg.size_, lcArg.offset_);
         } else {
           info.implicit_argument_count++;
           hasHiddenArgs = true;
+          DP("Implicit Kernel Arg[%lu] \"%s\" (%u, %u)\n", i,
+             lcArg.name_.c_str(), lcArg.size_, lcArg.offset_);
         }
         kernel_explicit_args_size += padding;
       }
@@ -508,7 +545,7 @@ static hsa_status_t get_code_object_custom_metadata(
 
     // TODO: Probably don't want this arithmetic
     info.kernel_segment_size =
-        (hasHiddenArgs ? kernel_explicit_args_size : kernel_segment_size);
+        (!hasHiddenArgs ? kernel_explicit_args_size : kernel_segment_size);
     DP("[%s: kernarg seg size] (%lu --> %u)\n", kernelName.c_str(),
        kernel_segment_size, info.kernel_segment_size);
 

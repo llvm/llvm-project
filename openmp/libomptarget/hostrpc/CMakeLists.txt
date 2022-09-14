@@ -23,6 +23,7 @@ endif()
 
 if( DEVICELIBS_ROOT )
   set(ROCDL_INC_OCKL ${DEVICELIBS_ROOT}/ockl/inc)
+  set(ROCDL_INC_OCLC ${DEVICELIBS_ROOT}/oclc/inc)
   set(ROCDL_INC_OCML ${DEVICELIBS_ROOT}/ocml/inc)
   set(ROCDL_INC_IRIF ${DEVICELIBS_ROOT}/irif/inc)
 else()
@@ -63,6 +64,7 @@ foreach(mcpu ${amdgpu_mcpus})
     -x cl -Xclang -cl-std=CL2.0 -Xclang -finclude-default-header
     -target amdgcn-amd-amdhsa
     -I${ROCDL_INC_OCKL}
+    -I${ROCDL_INC_OCLC}
     -I${ROCDL_INC_OCML}
     -I${ROCDL_INC_IRIF}
     -I${CMAKE_CURRENT_SOURCE_DIR}/src)

@@ -49,6 +49,8 @@ namespace {
 // global_allocate uses ockl_dm_alloc to manage a global memory heap
 extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
 extern "C" void __ockl_dm_dealloc(uint64_t ptr);
+extern "C" size_t __ockl_get_local_size(uint32_t dim);
+extern "C" size_t __ockl_get_num_groups(uint32_t dim);
 
 extern "C" {
 void *internal_malloc(uint64_t Size) {
@@ -64,8 +66,9 @@ void internal_free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
 extern "C" {
 #ifdef __AMDGCN__
 void *malloc(uint64_t Size) { return internal_malloc(Size); }
-
 void free(void *Ptr) { internal_free(Ptr); }
+size_t external_get_local_size(uint32_t dim) { return __ockl_get_local_size(dim);}
+size_t external_get_num_groups(uint32_t dim) { return __ockl_get_num_groups(dim);}
 #else
 __attribute__((leaf)) void *malloc(uint64_t Size);
 __attribute__((leaf)) void free(void *Ptr);

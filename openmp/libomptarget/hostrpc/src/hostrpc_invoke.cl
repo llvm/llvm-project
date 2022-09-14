@@ -1,4 +1,5 @@
 #include "ockl_hsa.h"
+#include "oclc.h"
 
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
@@ -39,6 +40,7 @@ typedef struct {
     ulong free_stack;
     ulong ready_stack;
     uint index_size;
+    uint device_id;
 } buffer_t;
 
 static void
@@ -280,6 +282,14 @@ get_return_value(__global header_t *header, __global payload_t *payload)
     return retval;
 }
 
+uint get_hostcall_buffer_index(void) {
+    if (__oclc_ABI_version < 500) {
+        return 3;
+    } else {
+        return 10;
+  }
+}
+
 /** \brief The implementation that should be hidden behind an ABI
  *
  *  The transaction is a wave-wide operation, where the service_id
@@ -308,7 +318,8 @@ __asm__("; hostcall_invoke: record need for hostcall support\n\t"
         ".comm needs_hostcall_buffer,4":::);
 
   __constant size_t* argptr = (__constant size_t *)__builtin_amdgcn_implicitarg_ptr();
-  __global buffer_t * buffer = (__global buffer_t *)argptr[3];
+  const uint hostcall_buffer_index = get_hostcall_buffer_index();
+  __global buffer_t * buffer = (__global buffer_t *)argptr[hostcall_buffer_index];
   ulong packet_ptr = pop_free_stack(buffer);
   __global header_t *header = get_header(buffer, packet_ptr);
   __global payload_t *payload = get_payload(buffer, packet_ptr);
