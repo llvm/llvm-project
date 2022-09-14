@@ -14,7 +14,7 @@ set(flang_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/fla
 set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
   "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+set(llvm_cmake_builddir "${LLVM_LIBRARY_DIR}/cmake/llvm")
 
 get_property(FLANG_EXPORTS GLOBAL PROPERTY FLANG_EXPORTS)
 export(TARGETS ${FLANG_EXPORTS} FILE ${flang_cmake_builddir}/FlangTargets.cmake)
