@@ -281,9 +281,9 @@ define i1 @wrapping_add_known_1_add_nuw(i8 %a) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[SUB_1]], 10
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD]], 10
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[ADD]], 10
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[ADD]], 10
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[F_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
 entry:
@@ -308,9 +308,9 @@ define i1 @add_nuw_wrapping_add_known_1(i8 %a) {
 ; CHECK-NEXT:    [[SUB_1:%.*]] = add i8 [[ADD]], -1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[SUB_1]], 10
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[SUB_1]], 10
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[SUB_1]], 10
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[F_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
 entry:
