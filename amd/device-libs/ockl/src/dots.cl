@@ -65,7 +65,7 @@ __attribute__((target("dot8-insts"), const)) static uint amdgcn_sudot8(bool as, 
 }
 
 #define SWDOT __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100
-#define SWIDOT2 __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100 || __oclc_ISA_version == 11000
+#define SWIDOT2 __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100 || __oclc_ISA_version >= 11000
 #define SUDOT __oclc_ISA_version >= 11000
 
 #define AS_INT(X) __builtin_astype(X, int)
