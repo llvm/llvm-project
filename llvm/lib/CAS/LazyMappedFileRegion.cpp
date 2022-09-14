@@ -14,7 +14,11 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
+
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#include "llvm/Support/WindowsError.h"
+#endif
 
 #if LLVM_ENABLE_ONDISK_CAS
 
@@ -51,44 +55,220 @@ using namespace llvm::cas;
 /// 3. Call CreateFileMapping to with 1MB, or existing size.
 /// 4. Call MapViewOfFileN to place it in the reserved memory.
 /// 5. Repeat step (3) with the new size and step (4).
+#ifdef _WIN32
+// FIXME: VirtualAlloc2 declaration for older SDKs and building for older
+// windows verions. Currently only support windows 10+.
+PVOID WINAPI VirtualAlloc2(HANDLE Process, PVOID BaseAddress, SIZE_T Size,
+                           ULONG AllocationType, ULONG PageProtection,
+                           MEM_EXTENDED_PARAMETER *ExtendedParameters,
+                           ULONG ParameterCount);
+
 Expected<LazyMappedFileRegion> LazyMappedFileRegion::create(
     const Twine &Path, uint64_t Capacity,
     function_ref<Error(LazyMappedFileRegion &)> NewFileConstructor,
     uint64_t MaxSizeIncrement) {
   LazyMappedFileRegion LMFR;
   LMFR.Path = Path.str();
-  LMFR.MaxSizeIncrement = MaxSizeIncrement;
+  LMFR.MaxSizeIncrement = std::min(Capacity, MaxSizeIncrement);
 
-  if (Error E = sys::fs::openNativeFileForReadWrite(
-          LMFR.Path, sys::fs::CD_OpenAlways, sys::fs::OF_None).moveInto(LMFR.FD))
-    return std::move(E);
-  assert(LMFR.FD && "Expected valid file descriptor");
-
-  {
-    std::error_code EC;
-    sys::fs::mapped_file_region
-        Map(*LMFR.FD, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
-    if (EC)
-      return createFileError(LMFR.Path, EC);
-    LMFR.Map = std::move(Map);
-  }
+  int FD;
+  if (std::error_code EC = sys::fs::openFileForReadWrite(
+          LMFR.Path, FD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
+    return errorCodeToError(EC);
+  LMFR.FD = FD;
 
   // Lock the file so we can initialize it.
   if (std::error_code EC = sys::fs::lockFile(*LMFR.FD))
     return createFileError(Path, EC);
   auto Unlock = make_scope_exit([FD = *LMFR.FD]() { sys::fs::unlockFile(FD); });
 
+  sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
+  // Status the file so we can decide if we need to run init.
   sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(*LMFR.FD, Status))
+  if (std::error_code EC = sys::fs::status(File, Status))
     return errorCodeToError(EC);
-  if (Status.getSize() > 0) {
+
+  // Reserve VM using VirtualAlloc2. This will error out on Windows 10 or
+  // before.
+  auto pVirtualAlloc2 = (decltype(&::VirtualAlloc2))GetProcAddress(
+      GetModuleHandle(L"kernelbase"), "VirtualAlloc2");
+  // FIXME: return error if the new alloc function is not found.
+  if (!pVirtualAlloc2)
+    return errorCodeToError(std::make_error_code(std::errc::not_supported));
+
+  LMFR.VM = (char *)pVirtualAlloc2(0, 0, Capacity,
+                                   MEM_RESERVE | MEM_RESERVE_PLACEHOLDER,
+                                   PAGE_NOACCESS, 0, 0);
+  if (!LMFR.VM)
+    return errorCodeToError(mapWindowsError(::GetLastError()));
+  LMFR.MaxSize = Capacity;
+
+  if (Status.getSize() > 0)
     // The file was already constructed.
     LMFR.CachedSize = Status.getSize();
-    return std::move(LMFR);
+  else
+    LMFR.IsConstructingNewFile = true;
+
+  // Create a memory mapped region. The larger of the current size or the max
+  // file increment.
+  uint64_t AllocSize = std::max(LMFR.MaxSizeIncrement, Status.getSize());
+  sys::fs::file_t FileMap = ::CreateFileMappingA(
+      File, 0, PAGE_READWRITE, Hi_32(AllocSize), Lo_32(AllocSize), 0);
+  if (!FileMap)
+    return errorCodeToError(mapWindowsError(::GetLastError()));
+
+  // If there is still space in reserved area after allocation, split the
+  // placeholder.
+  if (AllocSize < LMFR.MaxSize) {
+    if (!VirtualFree(LMFR.VM, AllocSize,
+                     MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER))
+      return errorCodeToError(mapWindowsError(::GetLastError()));
   }
 
+  // Free up AllocSize from VM then mapped the file in.
+  if (!VirtualFree(LMFR.VM, 0, MEM_RELEASE))
+    return errorCodeToError(mapWindowsError(::GetLastError()));
+
+  void *Mapped =
+      ::MapViewOfFileEx(FileMap, FILE_MAP_ALL_ACCESS, 0, 0, AllocSize, LMFR.VM);
+  if (!Mapped)
+    return errorCodeToError(mapWindowsError(::GetLastError()));
+
+  LMFR.MappedRegions.push_back(Mapped);
+
+  CloseHandle(FileMap);
+  if (!LMFR.IsConstructingNewFile)
+    return std::move(LMFR);
+
   // This is a new file. Resize to NewFileSize and run the constructor.
-  LMFR.IsConstructingNewFile = true;
+  if (Error E = NewFileConstructor(LMFR))
+    return std::move(E);
+
+  assert(LMFR.size() > 0 && "Constructor must set a non-zero size");
+  LMFR.IsConstructingNewFile = false;
+  return std::move(LMFR);
+}
+
+Error LazyMappedFileRegion::extendSizeImpl(uint64_t MinSize) {
+  assert(VM && "Expected a valid map");
+  assert(FD && "Expected a valid file descriptor");
+
+  // Synchronize with other threads. Skip if constructing a new file since
+  // exclusive access is already guaranteed.
+  std::optional<std::lock_guard<std::mutex>> Lock;
+  if (!IsConstructingNewFile)
+    Lock.emplace(Mutex);
+
+  uint64_t OldSize = CachedSize;
+  if (MinSize <= OldSize)
+    return Error::success();
+
+  // Increase sizes by doubling up to 8MB, and then limit the over-allocation
+  // to 4MB.
+  uint64_t NewSize;
+  if (MinSize < MaxSizeIncrement)
+    NewSize = NextPowerOf2(MinSize);
+  else
+    NewSize = alignTo(MinSize, MaxSizeIncrement);
+
+  if (NewSize > MaxSize)
+    NewSize = MaxSize;
+  if (NewSize < MinSize)
+    return errorCodeToError(std::make_error_code(std::errc::not_enough_memory));
+
+  // Synchronize with other processes. Skip if constructing a new file since
+  // file locks are already in place.
+  if (!IsConstructingNewFile)
+    if (std::error_code EC = sys::fs::lockFile(*FD))
+      return errorCodeToError(EC);
+  auto Unlock = make_scope_exit([&]() {
+    if (!IsConstructingNewFile)
+      sys::fs::unlockFile(*FD);
+  });
+
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status(*FD, Status))
+    return errorCodeToError(EC);
+  if (Status.getSize() >= MinSize) {
+    // Another process already resized the file. Be careful not to let size()
+    // increase beyond capacity(), in case that process used a bigger map size.
+    CachedSize = std::min(Status.getSize(), MaxSize);
+    return Error::success();
+  }
+
+  // Resize.
+  uint64_t AllocSize = NewSize - OldSize;
+  sys::fs::file_t File = sys::fs::convertFDToNativeFile(*FD);
+  sys::fs::file_t FileMap = ::CreateFileMappingA(
+      File, 0, PAGE_READWRITE, Hi_32(NewSize), Lo_32(NewSize), 0);
+  if (!FileMap)
+    return errorCodeToError(mapWindowsError(::GetLastError()));
+
+  if (NewSize < MaxSize) {
+    if (!VirtualFree(VM + OldSize, AllocSize,
+                     MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER))
+      return errorCodeToError(mapWindowsError(::GetLastError()));
+  }
+
+  if (!VirtualFree(VM + OldSize, 0, MEM_RELEASE))
+    return errorCodeToError(mapWindowsError(::GetLastError()));
+
+  void *Mapped =
+      ::MapViewOfFileEx(FileMap, FILE_MAP_ALL_ACCESS, Hi_32(OldSize),
+                        Lo_32(OldSize), AllocSize, VM + OldSize);
+  if (!Mapped)
+    return errorCodeToError(mapWindowsError(::GetLastError()));
+
+  MappedRegions.push_back(Mapped);
+  CloseHandle(FileMap);
+  CachedSize = NewSize;
+  return Error::success();
+}
+
+#else
+Expected<LazyMappedFileRegion> LazyMappedFileRegion::create(
+    const Twine &Path, uint64_t Capacity,
+    function_ref<Error(LazyMappedFileRegion &)> NewFileConstructor,
+    uint64_t MaxSizeIncrement) {
+  LazyMappedFileRegion LMFR;
+  LMFR.Path = Path.str();
+  LMFR.MaxSizeIncrement = std::min(Capacity, MaxSizeIncrement);
+
+  int FD;
+  if (std::error_code EC = sys::fs::openFileForReadWrite(
+          LMFR.Path, FD, sys::fs::CD_OpenAlways, sys::fs::OF_None))
+    return errorCodeToError(EC);
+  LMFR.FD = FD;
+
+  sys::fs::file_t File = sys::fs::convertFDToNativeFile(FD);
+
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status(File, Status))
+    return errorCodeToError(EC);
+  if (Status.getSize() > 0)
+    // The file was already constructed.
+    LMFR.CachedSize = Status.getSize();
+  else
+    LMFR.IsConstructingNewFile = true;
+
+  {
+    std::error_code EC;
+    sys::fs::mapped_file_region Map(
+        File, sys::fs::mapped_file_region::readwrite, Capacity, 0, EC);
+    if (EC)
+      return createFileError(LMFR.Path, EC);
+    LMFR.Map = std::move(Map);
+  }
+
+  if (!LMFR.IsConstructingNewFile)
+    return std::move(LMFR);
+
+  // Lock the file so we can initialize it.
+  if (std::error_code EC = sys::fs::lockFile(*LMFR.FD))
+    return createFileError(Path, EC);
+  auto Unlock = make_scope_exit([FD = *LMFR.FD]() { sys::fs::unlockFile(FD); });
+
+  // This is a new file. Resize to NewFileSize and run the constructor.
   if (Error E = NewFileConstructor(LMFR))
     return std::move(E);
   assert(LMFR.size() > 0 && "Constructor must set a non-zero size");
@@ -149,6 +329,7 @@ Error LazyMappedFileRegion::extendSizeImpl(uint64_t MinSize) {
   CachedSize = NewSize;
   return Error::success();
 }
+#endif
 
 Expected<std::shared_ptr<LazyMappedFileRegion>>
 LazyMappedFileRegion::createShared(
@@ -200,4 +381,17 @@ LazyMappedFileRegion::createShared(
   Node->LMFR = SharedLMFR;
   return std::move(SharedLMFR);
 }
+
+void LazyMappedFileRegion::destroyImpl() {
+  if (FD) {
+    sys::fs::file_t File = sys::fs::convertFDToNativeFile(*FD);
+    sys::fs::closeFile(File);
+    FD = std::nullopt;
+  }
+#ifdef _WIN32
+  for (auto *Region : MappedRegions)
+    CloseHandle(Region);
+#endif
+}
+
 #endif // LLVM_ENABLE_ONDISK_CAS
