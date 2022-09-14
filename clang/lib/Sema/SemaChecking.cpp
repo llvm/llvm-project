@@ -4681,13 +4681,20 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     if (llvm::none_of(ReqOpFeatures,
                       [&TI](StringRef OF) { return TI.hasFeature(OF); })) {
       std::string FeatureStrs;
+      bool IsExtension = true;
       for (StringRef OF : ReqOpFeatures) {
         // If the feature is 64bit, alter the string so it will print better in
         // the diagnostic.
-        if (OF == "64bit")
+        if (OF == "64bit") {
+          assert(ReqOpFeatures.size() == 1 && "Expected '64bit' to be alone");
           OF = "RV64";
-        if (OF == "32bit")
+          IsExtension = false;
+        }
+        if (OF == "32bit") {
+          assert(ReqOpFeatures.size() == 1 && "Expected '32bit' to be alone");
           OF = "RV32";
+          IsExtension = false;
+        }
 
         // Convert features like "zbr" and "experimental-zbr" to "Zbr".
         OF.consume_front("experimental-");
@@ -4702,6 +4709,7 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
       // Error message
       FeatureMissing = true;
       Diag(TheCall->getBeginLoc(), diag::err_riscv_builtin_requires_extension)
+          << IsExtension
           << TheCall->getSourceRange() << StringRef(FeatureStrs);
     }
   }
