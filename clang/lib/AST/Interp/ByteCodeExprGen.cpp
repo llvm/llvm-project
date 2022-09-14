@@ -513,18 +513,22 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
   QualType Ty;
 
   const ValueDecl *Key = nullptr;
+  const Expr *Init = nullptr;
   bool IsTemporary = false;
-  if (auto *VD = dyn_cast_or_null<ValueDecl>(Src.dyn_cast<const Decl *>())) {
+  if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     Key = VD;
     Ty = VD->getType();
+
+    if (const auto *VarD = dyn_cast<VarDecl>(VD))
+      Init = VarD->getInit();
   }
   if (auto *E = Src.dyn_cast<const Expr *>()) {
     IsTemporary = true;
     Ty = E->getType();
   }
 
-  Descriptor *D = P.createDescriptor(Src, Ty.getTypePtr(),
-                                     Ty.isConstQualified(), IsTemporary);
+  Descriptor *D = P.createDescriptor(
+      Src, Ty.getTypePtr(), Ty.isConstQualified(), IsTemporary, false, Init);
   if (!D)
     return {};
 
@@ -657,7 +661,7 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   const Expr *Init = VD->getInit();
 
-  if (Optional<unsigned> I = P.createGlobal(VD)) {
+  if (Optional<unsigned> I = P.createGlobal(VD, Init)) {
     if (Optional<PrimType> T = classify(VD->getType())) {
       {
         // Primitive declarations - compute the value and set it.
