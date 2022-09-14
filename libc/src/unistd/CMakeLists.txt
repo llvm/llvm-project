@@ -87,6 +87,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pread
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pread
+)
+
+add_entrypoint_object(
+  pwrite
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pwrite
+)
+
+add_entrypoint_object(
   read
   ALIAS
   DEPENDS

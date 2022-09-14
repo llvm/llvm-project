@@ -322,6 +322,16 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>, ArgSpec<OffTType>, ArgSpec<IntType>]
         >,
         FunctionSpec<
+          "pread",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>, ArgSpec<OffTType>]
+        >,
+        FunctionSpec<
+          "pwrite",
+          RetValSpec<SSizeTType>,
+          [ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>, ArgSpec<OffTType>]
+        >,
+        FunctionSpec<
           "read",
           RetValSpec<SSizeTType>,
           [ArgSpec<IntType>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]

@@ -123,6 +123,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.pread
+    libc.src.unistd.pwrite
     libc.src.unistd.read
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat

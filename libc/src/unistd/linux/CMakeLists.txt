@@ -158,6 +158,32 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pread
+  SRCS
+    pread.cpp
+  HDRS
+    ../pread.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pwrite
+  SRCS
+    pwrite.cpp
+  HDRS
+    ../pwrite.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   read
   SRCS
     read.cpp
