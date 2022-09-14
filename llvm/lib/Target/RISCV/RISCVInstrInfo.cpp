@@ -235,13 +235,14 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
           if (RISCVII::isRVVWideningReduction(TSFlags))
             return false;
 
+          // If the producing instruction does not depend on vsetvli, do not
+          // convert COPY to vmv.v.v. For example, VL1R_V or PseudoVRELOAD.
+          if (!RISCVII::hasSEWOp(TSFlags) || !RISCVII::hasVLOp(TSFlags))
+            return false;
+
           // Found the definition.
           FoundDef = true;
           DefMBBI = MBBI;
-          // If the producing instruction does not depend on vsetvli, do not
-          // convert COPY to vmv.v.v. For example, VL1R_V or PseudoVRELOAD.
-          if (!RISCVII::hasSEWOp(TSFlags))
-            return false;
           break;
         }
       }
@@ -361,11 +362,9 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (IsScalableVector) {
     bool UseVMV_V_V = false;
     MachineBasicBlock::const_iterator DefMBBI;
-    unsigned DefExplicitOpNum;
     unsigned VIOpc;
     if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
       UseVMV_V_V = true;
-      DefExplicitOpNum = DefMBBI->getNumExplicitOperands();
       // We only need to handle LMUL = 1/2/4/8 here because we only define
       // vector register classes for LMUL = 1/2/4/8.
       switch (LMul) {
@@ -403,10 +402,9 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       else
         MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
       if (UseVMV_V_V) {
-        // The last two arguments of vector instructions are
-        // AVL, SEW. We also need to append the implicit-use vl and vtype.
-        MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 2)); // AVL
-        MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 1)); // SEW
+        const MCInstrDesc &Desc = DefMBBI->getDesc();
+        MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
+        MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
         MIB.addReg(RISCV::VL, RegState::Implicit);
         MIB.addReg(RISCV::VTYPE, RegState::Implicit);
       }
@@ -435,8 +433,9 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           MIB = MIB.addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
                            getKillRegState(KillSrc));
         if (UseVMV_V_V) {
-          MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 2)); // AVL
-          MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 1)); // SEW
+          const MCInstrDesc &Desc = DefMBBI->getDesc();
+          MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
+          MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
           MIB.addReg(RISCV::VL, RegState::Implicit);
           MIB.addReg(RISCV::VTYPE, RegState::Implicit);
         }
