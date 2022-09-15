@@ -388,6 +388,8 @@ public:
   }
 
   unsigned getDWARFEncodingSize(unsigned Encoding) {
+    if (Encoding == dwarf::DW_EH_PE_omit)
+      return 0;
     switch (Encoding & 0x0f) {
     default:
       llvm_unreachable("unknown encoding");
@@ -671,7 +673,6 @@ public:
 
   /// DWARF encoding. Available encoding types defined in BinaryFormat/Dwarf.h
   /// enum Constants, e.g. DW_EH_PE_omit.
-  unsigned TTypeEncoding = dwarf::DW_EH_PE_omit;
   unsigned LSDAEncoding = dwarf::DW_EH_PE_omit;
 
   BinaryContext(std::unique_ptr<MCContext> Ctx,

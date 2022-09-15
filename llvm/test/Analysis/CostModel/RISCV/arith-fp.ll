@@ -329,9 +329,9 @@ define i32 @frem() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = frem float undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = frem double undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F16 = frem <1 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F16 = frem <2 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F16 = frem <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F16 = frem <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2F16 = frem <2 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F16 = frem <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V8F16 = frem <8 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F16 = frem <16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V32F16 = frem <32 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F16 = frem <vscale x 1 x half> undef, undef
@@ -341,8 +341,8 @@ define i32 @frem() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV16F16 = frem <vscale x 16 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV32F16 = frem <vscale x 32 x half> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F32 = frem <1 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F32 = frem <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F32 = frem <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2F32 = frem <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V4F32 = frem <4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F32 = frem <8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16F32 = frem <16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F32 = frem <vscale x 1 x float> undef, undef
@@ -351,7 +351,7 @@ define i32 @frem() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV8F32 = frem <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV16F32 = frem <vscale x 16 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V1F64 = frem <1 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2F64 = frem <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2F64 = frem <2 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4F64 = frem <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8F64 = frem <8 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %NXV1F64 = frem <vscale x 1 x double> undef, undef

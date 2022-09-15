@@ -90,18 +90,6 @@ struct ConstraintTy {
 
   unsigned empty() const { return Coefficients.empty(); }
 
-  /// Returns true if any constraint has a non-zero coefficient for any of the
-  /// newly added indices. Zero coefficients for new indices are removed. If it
-  /// returns true, no new variable need to be added to the system.
-  bool needsNewIndices(const DenseMap<Value *, unsigned> &NewIndices) {
-    for (unsigned I = 0; I < NewIndices.size(); ++I) {
-      int64_t Last = Coefficients.pop_back_val();
-      if (Last != 0)
-        return true;
-    }
-    return false;
-  }
-
   /// Returns true if all preconditions for this list of constraints are
   /// satisfied given \p CS and the corresponding \p Value2Index mapping.
   bool isValid(const ConstraintInfo &Info) const;
@@ -262,17 +250,27 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   Value *Op1;
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
-      !CI->uge(MaxConstraintValue))
-    return {{int(CI->getZExtValue()), nullptr}, {1, Op0}};
+      !CI->uge(MaxConstraintValue)) {
+    auto Res = decompose(Op0, Preconditions, IsSigned);
+    Res[0].Coefficient += int(CI->getZExtValue());
+    return Res;
+  }
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
       CanUseSExt(CI)) {
     Preconditions.emplace_back(
         CmpInst::ICMP_UGE, Op0,
         ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
-    return {{CI->getSExtValue(), nullptr}, {1, Op0}};
+    auto Res = decompose(Op0, Preconditions, IsSigned);
+    Res[0].Coefficient += int(CI->getSExtValue());
+    return Res;
   }
-  if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1))))
-    return {{0, nullptr}, {1, Op0}, {1, Op1}};
+  if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
+    auto Res = decompose(Op0, Preconditions, IsSigned);
+    auto D1 = decompose(Op1, Preconditions, IsSigned);
+    Res[0].Coefficient += D1[0].Coefficient;
+    append_range(Res, drop_begin(D1));
+    return Res;
+  }
 
   if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))) && CanUseSExt(CI))
     return {{-1 * CI->getSExtValue(), nullptr}, {1, Op0}};
@@ -374,6 +372,23 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
       return {};
   R[0] = OffsetSum;
   Res.Preconditions = std::move(Preconditions);
+
+  // Remove any (Coefficient, Variable) entry where the Coefficient is 0 for the
+  // new variables that need to be added to the system. Set NewIndexNeeded to
+  // true if any of the new variables has a non-zero coefficient.
+  bool NewIndexNeeded = false;
+  for (unsigned I = 0; I < NewIndices.size(); ++I) {
+    int64_t Last = R.back();
+    if (Last != 0) {
+      NewIndexNeeded = true;
+      break;
+    }
+    R.pop_back();
+  }
+  // All new variables had Coefficients of 0, so no new variables are needed.
+  if (!NewIndexNeeded)
+    NewIndices.clear();
+
   return Res;
 }
 
@@ -635,7 +650,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                               ConstraintInfo &Info) {
     DenseMap<Value *, unsigned> NewIndices;
     auto R = Info.getConstraint(Pred, A, B, NewIndices);
-    if (R.size() < 2 || R.needsNewIndices(NewIndices) || !R.isValid(Info))
+    if (R.size() < 2 || !NewIndices.empty() || !R.isValid(Info))
       return false;
 
     auto &CSToUse = Info.getCS(CmpInst::isSigned(Pred));
@@ -753,8 +768,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
         DenseMap<Value *, unsigned> NewIndices;
         auto R = Info.getConstraint(Cmp, NewIndices);
-        if (R.IsEq || R.empty() || R.needsNewIndices(NewIndices) ||
-            !R.isValid(Info))
+        if (R.IsEq || R.empty() || !NewIndices.empty() || !R.isValid(Info))
           continue;
 
         auto &CSToUse = Info.getCS(R.IsSigned);

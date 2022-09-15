@@ -239,16 +239,10 @@ void GlobalsAAResult::DeletionCallbackHandle::deleted() {
 }
 
 FunctionModRefBehavior GlobalsAAResult::getModRefBehavior(const Function *F) {
-  FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
+  if (FunctionInfo *FI = getFunctionInfo(F))
+    return FunctionModRefBehavior(FI->getModRefInfo());
 
-  if (FunctionInfo *FI = getFunctionInfo(F)) {
-    if (!isModOrRefSet(FI->getModRefInfo()))
-      Min = FMRB_DoesNotAccessMemory;
-    else if (!isModSet(FI->getModRefInfo()))
-      Min = FMRB_OnlyReadsMemory;
-  }
-
-  return FunctionModRefBehavior(AAResultBase::getModRefBehavior(F) & Min);
+  return AAResultBase::getModRefBehavior(F);
 }
 
 /// Returns the function info for the function, or null if we don't have
@@ -585,7 +579,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
               FunctionModRefBehavior Behaviour =
                   AAResultBase::getModRefBehavior(Callee);
-              FI.addModRefInfo(createModRefInfo(Behaviour));
+              FI.addModRefInfo(Behaviour.getModRef());
             }
           }
           continue;

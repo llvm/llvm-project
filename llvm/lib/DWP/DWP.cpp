@@ -586,8 +586,12 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
 
   for (const auto &Input : Inputs) {
     auto ErrOrObj = object::ObjectFile::createObjectFile(Input);
-    if (!ErrOrObj)
-      return ErrOrObj.takeError();
+    if (!ErrOrObj) {
+      return handleErrors(ErrOrObj.takeError(),
+                          [&](std::unique_ptr<ECError> EC) -> Error {
+                            return createFileError(Input, Error(std::move(EC)));
+                          });
+    }
 
     auto &Obj = *ErrOrObj->getBinary();
     Objects.push_back(std::move(*ErrOrObj));

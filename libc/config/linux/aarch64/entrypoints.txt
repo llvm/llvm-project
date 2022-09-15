@@ -111,6 +111,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdirat
 
     # unistd.h entrypoints
+    libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.close
     libc.src.unistd.dup

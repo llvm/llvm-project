@@ -2183,7 +2183,7 @@ define i5 @demand_low_bits_uses(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -32
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[A]] to i5
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[Y]] to i5
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %m = mul i8 %x, -32 ; 0xE0
@@ -2192,6 +2192,8 @@ define i5 @demand_low_bits_uses(i8 %x, i8 %y) {
   %r = trunc i8 %a to i5
   ret i5 %r
 }
+
+; negative test - demands one more bit
 
 define i6 @demand_low_bits_uses_extra_bit(i8 %x, i8 %y) {
 ; CHECK-LABEL: @demand_low_bits_uses_extra_bit(
@@ -2214,7 +2216,7 @@ define i8 @demand_low_bits_uses_commute(i8 %x, i8 %p, i8 %z) {
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -64
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y]], [[M]]
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[S:%.*]] = sub i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shl i8 [[S]], 2
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -2227,8 +2229,10 @@ define i8 @demand_low_bits_uses_commute(i8 %x, i8 %p, i8 %z) {
   ret i8 %r
 }
 
-define i8 @demand_low_bits_uses_commutei_extra_bit(i8 %x, i8 %p, i8 %z) {
-; CHECK-LABEL: @demand_low_bits_uses_commutei_extra_bit(
+; negative test - demands one more bit
+
+define i8 @demand_low_bits_uses_commute_extra_bit(i8 %x, i8 %p, i8 %z) {
+; CHECK-LABEL: @demand_low_bits_uses_commute_extra_bit(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -64
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y]], [[M]]
@@ -2257,7 +2261,7 @@ define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64
 ; CHECK-NEXT:    [[XY:%.*]] = or i128 [[SHY]], [[ZX]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i128 [[XY]], [[ZZ]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i128 [[SUB]], [[MW]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[ADD]] to i64
+; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[SUB]] to i64
 ; CHECK-NEXT:    [[H:%.*]] = lshr i128 [[ADD]], 64
 ; CHECK-NEXT:    [[T2:%.*]] = trunc i128 [[H]] to i64
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } poison, i64 [[T]], 0

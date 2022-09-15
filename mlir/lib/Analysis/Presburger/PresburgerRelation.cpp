@@ -68,7 +68,7 @@ PresburgerRelation::unionSet(const PresburgerRelation &set) const {
 }
 
 /// A point is contained in the union iff any of the parts contain the point.
-bool PresburgerRelation::containsPoint(ArrayRef<int64_t> point) const {
+bool PresburgerRelation::containsPoint(ArrayRef<MPInt> point) const {
   return llvm::any_of(disjuncts, [&](const IntegerRelation &disjunct) {
     return (disjunct.containsPointNoLocal(point));
   });
@@ -121,15 +121,15 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
 ///
 /// For every eq `coeffs == 0` there are two possible ineqs to index into.
 /// The first is coeffs >= 0 and the second is coeffs <= 0.
-static SmallVector<int64_t, 8> getIneqCoeffsFromIdx(const IntegerRelation &rel,
-                                                    unsigned idx) {
+static SmallVector<MPInt, 8> getIneqCoeffsFromIdx(const IntegerRelation &rel,
+                                                  unsigned idx) {
   assert(idx < rel.getNumInequalities() + 2 * rel.getNumEqualities() &&
          "idx out of bounds!");
   if (idx < rel.getNumInequalities())
     return llvm::to_vector<8>(rel.getInequality(idx));
 
   idx -= rel.getNumInequalities();
-  ArrayRef<int64_t> eqCoeffs = rel.getEquality(idx / 2);
+  ArrayRef<MPInt> eqCoeffs = rel.getEquality(idx / 2);
 
   if (idx % 2 == 0)
     return llvm::to_vector<8>(eqCoeffs);
@@ -389,7 +389,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
         // state before adding this complement constraint, and add s_ij to b.
         simplex.rollback(frame.simplexSnapshot);
         b.truncate(frame.bCounts);
-        SmallVector<int64_t, 8> ineq =
+        SmallVector<MPInt, 8> ineq =
             getIneqCoeffsFromIdx(frame.sI, *frame.lastIneqProcessed);
         b.addInequality(ineq);
         simplex.addInequality(ineq);
@@ -407,7 +407,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       frame.simplexSnapshot = simplex.getSnapshot();
 
       unsigned idx = frame.ineqsToProcess.back();
-      SmallVector<int64_t, 8> ineq =
+      SmallVector<MPInt, 8> ineq =
           getComplementIneq(getIneqCoeffsFromIdx(frame.sI, idx));
       b.addInequality(ineq);
       simplex.addInequality(ineq);
@@ -459,10 +459,10 @@ bool PresburgerRelation::isIntegerEmpty() const {
   return llvm::all_of(disjuncts, std::mem_fn(&IntegerRelation::isIntegerEmpty));
 }
 
-bool PresburgerRelation::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
+bool PresburgerRelation::findIntegerSample(SmallVectorImpl<MPInt> &sample) {
   // A sample exists iff any of the disjuncts contains a sample.
   for (const IntegerRelation &disjunct : disjuncts) {
-    if (Optional<SmallVector<int64_t, 8>> opt = disjunct.findIntegerSample()) {
+    if (Optional<SmallVector<MPInt, 8>> opt = disjunct.findIntegerSample()) {
       sample = std::move(*opt);
       return true;
     }
@@ -470,13 +470,13 @@ bool PresburgerRelation::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
   return false;
 }
 
-Optional<uint64_t> PresburgerRelation::computeVolume() const {
+Optional<MPInt> PresburgerRelation::computeVolume() const {
   assert(getNumSymbolVars() == 0 && "Symbols are not yet supported!");
   // The sum of the volumes of the disjuncts is a valid overapproximation of the
   // volume of their union, even if they overlap.
-  uint64_t result = 0;
+  MPInt result(0);
   for (const IntegerRelation &disjunct : disjuncts) {
-    Optional<uint64_t> volume = disjunct.computeVolume();
+    Optional<MPInt> volume = disjunct.computeVolume();
     if (!volume)
       return {};
     result += *volume;
@@ -511,20 +511,20 @@ private:
 
   /// The list of all inversed equalities during typing. This ensures that
   /// the constraints exist even after the typing function has concluded.
-  SmallVector<SmallVector<int64_t, 2>, 2> negEqs;
+  SmallVector<SmallVector<MPInt, 2>, 2> negEqs;
 
   /// `redundantIneqsA` is the inequalities of `a` that are redundant for `b`
   /// (similarly for `cuttingIneqsA`, `redundantIneqsB`, and `cuttingIneqsB`).
-  SmallVector<ArrayRef<int64_t>, 2> redundantIneqsA;
-  SmallVector<ArrayRef<int64_t>, 2> cuttingIneqsA;
+  SmallVector<ArrayRef<MPInt>, 2> redundantIneqsA;
+  SmallVector<ArrayRef<MPInt>, 2> cuttingIneqsA;
 
-  SmallVector<ArrayRef<int64_t>, 2> redundantIneqsB;
-  SmallVector<ArrayRef<int64_t>, 2> cuttingIneqsB;
+  SmallVector<ArrayRef<MPInt>, 2> redundantIneqsB;
+  SmallVector<ArrayRef<MPInt>, 2> cuttingIneqsB;
 
   /// Given a Simplex `simp` and one of its inequalities `ineq`, check
   /// that the facet of `simp` where `ineq` holds as an equality is contained
   /// within `a`.
-  bool isFacetContained(ArrayRef<int64_t> ineq, Simplex &simp);
+  bool isFacetContained(ArrayRef<MPInt> ineq, Simplex &simp);
 
   /// Removes redundant constraints from `disjunct`, adds it to `disjuncts` and
   /// removes the disjuncts at position `i` and `j`. Updates `simplices` to
@@ -548,13 +548,13 @@ private:
   /// Types the inequality `ineq` according to its `IneqType` for `simp` into
   /// `redundantIneqsB` and `cuttingIneqsB`. Returns success, if no separate
   /// inequalities were encountered. Otherwise, returns failure.
-  LogicalResult typeInequality(ArrayRef<int64_t> ineq, Simplex &simp);
+  LogicalResult typeInequality(ArrayRef<MPInt> ineq, Simplex &simp);
 
   /// Types the equality `eq`, i.e. for `eq` == 0, types both `eq` >= 0 and
   /// -`eq` >= 0 according to their `IneqType` for `simp` into
   /// `redundantIneqsB` and `cuttingIneqsB`. Returns success, if no separate
   /// inequalities were encountered. Otherwise, returns failure.
-  LogicalResult typeEquality(ArrayRef<int64_t> eq, Simplex &simp);
+  LogicalResult typeEquality(ArrayRef<MPInt> eq, Simplex &simp);
 
   /// Replaces the element at position `i` with the last element and erases
   /// the last element for both `disjuncts` and `simplices`.
@@ -631,10 +631,10 @@ PresburgerRelation SetCoalescer::coalesce() {
 /// Given a Simplex `simp` and one of its inequalities `ineq`, check
 /// that all inequalities of `cuttingIneqsB` are redundant for the facet of
 /// `simp` where `ineq` holds as an equality is contained within `a`.
-bool SetCoalescer::isFacetContained(ArrayRef<int64_t> ineq, Simplex &simp) {
+bool SetCoalescer::isFacetContained(ArrayRef<MPInt> ineq, Simplex &simp) {
   SimplexRollbackScopeExit scopeExit(simp);
   simp.addEquality(ineq);
-  return llvm::all_of(cuttingIneqsB, [&simp](ArrayRef<int64_t> curr) {
+  return llvm::all_of(cuttingIneqsB, [&simp](ArrayRef<MPInt> curr) {
     return simp.isRedundantInequality(curr);
   });
 }
@@ -696,23 +696,23 @@ LogicalResult SetCoalescer::coalescePairCutCase(unsigned i, unsigned j) {
   /// redundant ones are, so only the cutting ones remain to be checked.
   Simplex &simp = simplices[i];
   IntegerRelation &disjunct = disjuncts[i];
-  if (llvm::any_of(cuttingIneqsA, [this, &simp](ArrayRef<int64_t> curr) {
+  if (llvm::any_of(cuttingIneqsA, [this, &simp](ArrayRef<MPInt> curr) {
         return !isFacetContained(curr, simp);
       }))
     return failure();
   IntegerRelation newSet(disjunct.getSpace());
 
-  for (ArrayRef<int64_t> curr : redundantIneqsA)
+  for (ArrayRef<MPInt> curr : redundantIneqsA)
     newSet.addInequality(curr);
 
-  for (ArrayRef<int64_t> curr : redundantIneqsB)
+  for (ArrayRef<MPInt> curr : redundantIneqsB)
     newSet.addInequality(curr);
 
   addCoalescedDisjunct(i, j, newSet);
   return success();
 }
 
-LogicalResult SetCoalescer::typeInequality(ArrayRef<int64_t> ineq,
+LogicalResult SetCoalescer::typeInequality(ArrayRef<MPInt> ineq,
                                            Simplex &simp) {
   Simplex::IneqType type = simp.findIneqType(ineq);
   if (type == Simplex::IneqType::Redundant)
@@ -724,11 +724,11 @@ LogicalResult SetCoalescer::typeInequality(ArrayRef<int64_t> ineq,
   return success();
 }
 
-LogicalResult SetCoalescer::typeEquality(ArrayRef<int64_t> eq, Simplex &simp) {
+LogicalResult SetCoalescer::typeEquality(ArrayRef<MPInt> eq, Simplex &simp) {
   if (typeInequality(eq, simp).failed())
     return failure();
   negEqs.push_back(getNegatedCoeffs(eq));
-  ArrayRef<int64_t> inv(negEqs.back());
+  ArrayRef<MPInt> inv(negEqs.back());
   if (typeInequality(inv, simp).failed())
     return failure();
   return success();
