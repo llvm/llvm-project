@@ -236,6 +236,19 @@ void MachineOperand::ChangeToTargetIndex(unsigned Idx, int64_t Offset,
   setTargetFlags(TargetFlags);
 }
 
+void MachineOperand::ChangeToDbgInstrRef(unsigned InstrIdx, unsigned OpIdx,
+                                         unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a DbgInstrRef");
+
+  removeRegFromUses();
+
+  OpKind = MO_DbgInstrRef;
+  setInstrRefInstrIndex(InstrIdx);
+  setInstrRefOpIndex(OpIdx);
+  setTargetFlags(TargetFlags);
+}
+
 /// ChangeToRegister - Replace this operand with a new register operand of
 /// the specified value.  If an operand is known to be an register already,
 /// the setReg method should be used.
@@ -337,6 +350,9 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
   }
   case MachineOperand::MO_MCSymbol:
     return getMCSymbol() == Other.getMCSymbol();
+  case MachineOperand::MO_DbgInstrRef:
+    return getInstrRefInstrIndex() == Other.getInstrRefInstrIndex() &&
+           getInstrRefOpIndex() == Other.getInstrRefOpIndex();
   case MachineOperand::MO_CFIIndex:
     return getCFIIndex() == Other.getCFIIndex();
   case MachineOperand::MO_Metadata:
@@ -401,6 +417,9 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getMetadata());
   case MachineOperand::MO_MCSymbol:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getMCSymbol());
+  case MachineOperand::MO_DbgInstrRef:
+    return hash_combine(MO.getType(), MO.getTargetFlags(),
+                        MO.getInstrRefInstrIndex(), MO.getInstrRefOpIndex());
   case MachineOperand::MO_CFIIndex:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getCFIIndex());
   case MachineOperand::MO_IntrinsicID:
@@ -942,6 +961,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   case MachineOperand::MO_MCSymbol:
     printSymbol(OS, *getMCSymbol());
     break;
+  case MachineOperand::MO_DbgInstrRef: {
+    OS << "dbg-instr-ref(" << getInstrRefInstrIndex() << ", "
+       << getInstrRefOpIndex() << ')';
+    break;
+  }
   case MachineOperand::MO_CFIIndex: {
     if (const MachineFunction *MF = getMFIfAvailable(*this))
       printCFI(OS, MF->getFrameInstructions()[getCFIIndex()], TRI);

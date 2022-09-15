@@ -30,7 +30,7 @@ block:
 ; CHECK-NEXT: [[LOADR:%[0-9]+]]:gr16 = MOV16rm %0,
 ; INSTRREF-SAME: debug-instr-number 1
 ; DBGVALUE-NEXT: DBG_VALUE [[LOADR]], $noreg, ![[DBGVAR]]
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[DBGVAR]]
+; INSTRREF-NEXT: DBG_INSTR_REF ![[DBGVAR]], {{.+}}, dbg-instr-ref(1, 0)
 ; CHECK-NEXT: %{{[0-9]+}}:gr32 = IMPLICIT_DEF
   %foo = phi ptr[%bees, %trueb], [%more, %falseb]
   %ret = load i32, ptr %foo, !dbg !6
