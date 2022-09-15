@@ -716,6 +716,7 @@ CallInst *IRBuilderBase::CreateMaskedExpandLoad(Type *Ty, Value *Ptr,
   assert(PtrTy->isOpaqueOrPointeeTypeMatches(
              cast<FixedVectorType>(Ty)->getElementType()) &&
          "Wrong element type");
+  (void)PtrTy;
   assert(Mask && "Mask should not be all-ones (null)");
   if (!PassThru)
     PassThru = UndefValue::get(Ty);
@@ -738,6 +739,7 @@ CallInst *IRBuilderBase::CreateMaskedCompressStore(Value *Val, Value *Ptr,
   assert(PtrTy->isOpaqueOrPointeeTypeMatches(
              cast<FixedVectorType>(DataTy)->getElementType()) &&
          "Wrong element type");
+  (void)PtrTy;
   assert(Mask && "Mask should not be all-ones (null)");
   Type *OverloadedTypes[] = {DataTy};
   Value *Ops[] = {Val, Ptr, Mask};
