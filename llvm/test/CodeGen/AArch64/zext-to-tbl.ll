@@ -2,31 +2,199 @@
 ; RUN: llc -mtriple=arm64-apple-ios -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64_be-unknown-linux -o - %s | FileCheck --check-prefix=CHECK-BE %s
 
+; CHECK-LABEL: lCPI0_0:
+; CHECK-NEXT:    .byte   0                               ; 0x0
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   1                               ; 0x1
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   2                               ; 0x2
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   3                               ; 0x3
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:lCPI0_1:
+; CHECK-NEXT:    .byte   4                               ; 0x4
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   5                               ; 0x5
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   6                               ; 0x6
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   7                               ; 0x7
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:lCPI0_2:
+; CHECK-NEXT:    .byte   8                               ; 0x8
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   9                               ; 0x9
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   10                              ; 0xa
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   11                              ; 0xb
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:lCPI0_3:
+; CHECK-NEXT:    .byte   12                              ; 0xc
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   13                              ; 0xd
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   14                              ; 0xe
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   15                              ; 0xf
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+; CHECK-NEXT:    .byte   255                             ; 0xff
+
+; CHECK-BE: .LCPI0_0:
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	0                               // 0x0
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	1                               // 0x1
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	2                               // 0x2
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	3                               // 0x3
+; CHECK-BE-NEXT: .LCPI0_1:
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	4                               // 0x4
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	5                               // 0x5
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	6                               // 0x6
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	7                               // 0x7
+; CHECK-BE-NEXT: .LCPI0_2:
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	8                               // 0x8
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	9                               // 0x9
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	10                              // 0xa
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	11                              // 0xb
+; CHECK-BE-NEXT: .LCPI0_3:
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	12                              // 0xc
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	13                              // 0xd
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	14                              // 0xe
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	15                              // 0xf
+
 ; It's profitable to convert the zext to a shuffle, which in turn will be
 ; lowered to 4 tbl instructions. The masks are materialized outside the loop.
 define void @zext_v16i8_to_v16i32_in_loop(i8* %src, i32* %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x9, lCPI0_0@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    adrp x10, lCPI0_1@PAGE
+; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:    adrp x11, lCPI0_2@PAGE
+; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:    adrp x12, lCPI0_3@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh4:
+; CHECK-NEXT:    ldr q0, [x9, lCPI0_0@PAGEOFF]
+; CHECK-NEXT:  Lloh5:
+; CHECK-NEXT:    ldr q1, [x10, lCPI0_1@PAGEOFF]
+; CHECK-NEXT:  Lloh6:
+; CHECK-NEXT:    ldr q2, [x11, lCPI0_2@PAGEOFF]
+; CHECK-NEXT:  Lloh7:
+; CHECK-NEXT:    ldr q3, [x12, lCPI0_3@PAGEOFF]
 ; CHECK-NEXT:  LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q0, [x0, x8]
+; CHECK-NEXT:    ldr q4, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    ushll2.8h v1, v0, #0
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v2, v1, #0
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    ushll2.4s v3, v0, #0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    stp q1, q2, [x1, #32]
-; CHECK-NEXT:    stp q0, q3, [x1], #64
+; CHECK-NEXT:    tbl.16b v5, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v6, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v0
+; CHECK-NEXT:    stp q6, q5, [x1, #32]
+; CHECK-NEXT:    stp q4, q7, [x1], #64
 ; CHECK-NEXT:    b.ne LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh3, Lloh7
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh6
+; CHECK-NEXT:    .loh AdrpLdr Lloh1, Lloh5
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh4
 ;
 ; CHECK-BE-LABEL: zext_v16i8_to_v16i32_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    adrp x8, .LCPI0_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI0_0
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI0_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI0_1
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI0_2
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI0_2
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI0_3
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI0_3
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x8]
 ; CHECK-BE-NEXT:    mov x8, xzr
 ; CHECK-BE-NEXT:  .LBB0_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -34,20 +202,18 @@ define void @zext_v16i8_to_v16i32_in_loop(i8* %src, i32* %dst) {
 ; CHECK-BE-NEXT:    add x10, x1, #32
 ; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    cmp x8, #128
-; CHECK-BE-NEXT:    ld1 { v0.16b }, [x9]
+; CHECK-BE-NEXT:    ld1 { v4.16b }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, #48
-; CHECK-BE-NEXT:    ushll2 v1.8h, v0.16b, #0
-; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-BE-NEXT:    ushll2 v2.4s, v1.8h, #0
-; CHECK-BE-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-BE-NEXT:    st1 { v2.4s }, [x9]
+; CHECK-BE-NEXT:    tbl v5.16b, { v4.16b }, v3.16b
+; CHECK-BE-NEXT:    tbl v6.16b, { v4.16b }, v0.16b
+; CHECK-BE-NEXT:    tbl v7.16b, { v4.16b }, v2.16b
+; CHECK-BE-NEXT:    tbl v4.16b, { v4.16b }, v1.16b
+; CHECK-BE-NEXT:    st1 { v5.16b }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, #16
-; CHECK-BE-NEXT:    ushll v2.4s, v0.4h, #0
-; CHECK-BE-NEXT:    st1 { v1.4s }, [x10]
-; CHECK-BE-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-BE-NEXT:    st1 { v2.4s }, [x1]
+; CHECK-BE-NEXT:    st1 { v6.16b }, [x1]
 ; CHECK-BE-NEXT:    add x1, x1, #64
-; CHECK-BE-NEXT:    st1 { v0.4s }, [x9]
+; CHECK-BE-NEXT:    st1 { v7.16b }, [x10]
+; CHECK-BE-NEXT:    st1 { v4.16b }, [x9]
 ; CHECK-BE-NEXT:    b.ne .LBB0_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
@@ -393,39 +559,123 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: lCPI6_0:
+; CHECK-NEXT:     .byte   0                               ; 0x0
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   1                               ; 0x1
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   2                               ; 0x2
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   3                               ; 0x3
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT: lCPI6_1:
+; CHECK-NEXT:     .byte   4                               ; 0x4
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   5                               ; 0x5
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   6                               ; 0x6
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   7                               ; 0x7
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+
+; CHECK-BE:       .LCPI6_0:
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	0                               // 0x0
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	1                               // 0x1
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	2                               // 0x2
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	3                               // 0x3
+; CHECK-BE-NEXT: .LCPI6_1:
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	4                               // 0x4
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	5                               // 0x5
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	6                               // 0x6
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	255                             // 0xff
+; CHECK-BE-NEXT: 	.byte	7                               // 0x7
+
 define void @zext_v8i8_to_v8i32_in_loop(i8* %src, i32* %dst) {
 ; CHECK-LABEL: zext_v8i8_to_v8i32_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh8:
+; CHECK-NEXT:    adrp x9, lCPI6_0@PAGE
+; CHECK-NEXT:  Lloh9:
+; CHECK-NEXT:    adrp x10, lCPI6_1@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh10:
+; CHECK-NEXT:    ldr q0, [x9, lCPI6_0@PAGEOFF]
+; CHECK-NEXT:  Lloh11:
+; CHECK-NEXT:    ldr q1, [x10, lCPI6_1@PAGEOFF]
 ; CHECK-NEXT:  LBB6_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d0, [x0, x8]
+; CHECK-NEXT:    ldr d2, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    ushll2.4s v1, v0, #0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    stp q0, q1, [x1], #64
+; CHECK-NEXT:    tbl.16b v3, { v2 }, v1
+; CHECK-NEXT:    tbl.16b v2, { v2 }, v0
+; CHECK-NEXT:    stp q2, q3, [x1], #64
 ; CHECK-NEXT:    b.ne LBB6_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh9, Lloh11
+; CHECK-NEXT:    .loh AdrpLdr Lloh8, Lloh10
 ;
 ; CHECK-BE-LABEL: zext_v8i8_to_v8i32_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    adrp x8, .LCPI6_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI6_0
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI6_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI6_1
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
 ; CHECK-BE-NEXT:    mov x8, xzr
 ; CHECK-BE-NEXT:  .LBB6_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-BE-NEXT:    add x9, x0, x8
 ; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    cmp x8, #128
-; CHECK-BE-NEXT:    ld1 { v0.8b }, [x9]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, #16
-; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-BE-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-BE-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-BE-NEXT:    st1 { v1.4s }, [x1]
+; CHECK-BE-NEXT:    tbl v3.16b, { v2.16b }, v0.16b
+; CHECK-BE-NEXT:    tbl v2.16b, { v2.16b }, v1.16b
+; CHECK-BE-NEXT:    st1 { v3.16b }, [x1]
 ; CHECK-BE-NEXT:    add x1, x1, #64
-; CHECK-BE-NEXT:    st1 { v0.4s }, [x9]
+; CHECK-BE-NEXT:    st1 { v2.16b }, [x9]
 ; CHECK-BE-NEXT:    b.ne .LBB6_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
