@@ -1379,7 +1379,9 @@ def SVCROperand : AsmOperandClass {
   let DiagnosticType = "Invalid" # Name;
 }
 
-def svcr_op : Operand<i32> {
+def svcr_op : Operand<i32>, TImmLeaf<i32, [{
+    return AArch64SVCR::lookupSVCRByEncoding(Imm) != nullptr;
+  }]> {
   let ParserMatchClass = SVCROperand;
   let PrintMethod = "printSVCROp";
   let DecoderMethod = "DecodeSVCROp";
