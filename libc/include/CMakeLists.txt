@@ -204,6 +204,17 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_resource
+  DEF_FILE sys/resource.h.def
+  GEN_HDR sys/resource.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_resource_macros
+    .llvm-libc-types.rlim_t
+    .llvm-libc-types.struct_rlimit_t
+)
+
+add_gen_header(
   sys_stat
   DEF_FILE sys/stat.h.def
   GEN_HDR sys/stat.h
