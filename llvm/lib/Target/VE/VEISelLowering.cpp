@@ -768,8 +768,7 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   InGlue = Chain.getValue(1);
 
   // Revert the stack pointer immediately after the call.
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(ArgsSize, DL, true),
-                             DAG.getIntPtrConstant(0, DL, true), InGlue, DL);
+  Chain = DAG.getCALLSEQ_END(Chain, ArgsSize, 0, InGlue, DL);
   InGlue = Chain.getValue(1);
 
   // Now extract the return values. This is more or less the same as
@@ -1274,9 +1273,7 @@ VETargetLowering::lowerToTLSGeneralDynamicModel(SDValue Op,
   Chain = DAG.getCALLSEQ_START(Chain, 64, 0, DL);
   SDValue Args[] = {Chain, Label, DAG.getRegisterMask(Mask), Chain.getValue(1)};
   Chain = DAG.getNode(VEISD::GETTLSADDR, DL, NodeTys, Args);
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(64, DL, true),
-                             DAG.getIntPtrConstant(0, DL, true),
-                             Chain.getValue(1), DL);
+  Chain = DAG.getCALLSEQ_END(Chain, 64, 0, Chain.getValue(1), DL);
   Chain = DAG.getCopyFromReg(Chain, DL, VE::SX0, PtrVT, Chain.getValue(1));
 
   // GETTLSADDR will be codegen'ed as call. Inform MFI that function has calls.
@@ -1680,8 +1677,7 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
                          DAG.getConstant(~(Alignment->value() - 1ULL), DL, VT));
   }
   //  Chain = Result.getValue(1);
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, DL, true),
-                             DAG.getIntPtrConstant(0, DL, true), SDValue(), DL);
+  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), DL);
 
   SDValue Ops[2] = {Result, Chain};
   return DAG.getMergeValues(Ops, DL);

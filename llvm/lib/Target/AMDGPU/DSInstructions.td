@@ -277,6 +277,19 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
   }
 }
 
+class DS_BVH_STACK<string opName>
+: DS_Pseudo<opName,
+  (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst, VGPR_32:$addr),
+  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0, VReg_128:$data1, offset:$offset),
+  " $vdst, $addr, $data0, $data1$offset"> {
+  let Constraints = "$addr = $addr_in";
+  let DisableEncoding = "$addr_in";
+  let has_gds = 0;
+  let gdsValue = 0;
+  // TODO: Use MMOs in the LDS address space instead of hasSideEffects = 1.
+  let hasSideEffects = 1;
+  let SchedRW = [WriteLDS, WriteLDS];
+}
 
 class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = offset,
                 RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
@@ -713,6 +726,7 @@ let SubtargetPredicate = isGFX11Plus in {
 
 def DS_ADD_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_add_gs_reg_rtn", VReg_64, VGPR_32>;
 def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
+def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 
 } // let SubtargetPredicate = isGFX11Plus
 
@@ -1250,6 +1264,7 @@ defm DS_CMPSTORE_RTN_F64                 : DS_Real_gfx11<0x071>;
 defm DS_ADD_RTN_F32                      : DS_Real_gfx11<0x079>;
 defm DS_ADD_GS_REG_RTN                   : DS_Real_gfx11<0x07a>;
 defm DS_SUB_GS_REG_RTN                   : DS_Real_gfx11<0x07b>;
+defm DS_BVH_STACK_RTN_B32                : DS_Real_gfx11<0x0ad>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

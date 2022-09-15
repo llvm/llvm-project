@@ -302,6 +302,16 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
   assert(fields.size() == lastField);
 }
 
+/// Creates a straightforward counting for-loop.
+static scf::ForOp createFor(OpBuilder &builder, Location loc, Value count) {
+  Type indexType = builder.getIndexType();
+  Value zero = constantZero(builder, loc, indexType);
+  Value one = constantOne(builder, loc, indexType);
+  scf::ForOp forOp = builder.create<scf::ForOp>(loc, zero, count, one);
+  builder.setInsertionPointToStart(forOp.getBody());
+  return forOp;
+}
+
 //===----------------------------------------------------------------------===//
 // Codegen rules.
 //===----------------------------------------------------------------------===//
@@ -518,12 +528,12 @@ public:
       auto memTp = MemRefType::get({ShapedType::kDynamicSize}, t);
       return rewriter.create<memref::AllocOp>(loc, memTp, ValueRange{*sz});
     };
-    // Allocate temporary buffers for values, filled-switch, and indices.
+    // Allocate temporary buffers for values/filled-switch and added.
     // We do not use stack buffers for this, since the expanded size may
     // be rather large (as it envelops a single expanded dense dimension).
     Value values = genAlloc(eltType);
     Value filled = genAlloc(boolType);
-    Value indices = genAlloc(idxType);
+    Value added = genAlloc(idxType);
     Value zero = constantZero(rewriter, loc, idxType);
     // Reset the values/filled-switch to all-zero/false. Note that this
     // introduces an O(N) operation into the computation, but this reset
@@ -538,7 +548,67 @@ public:
         ValueRange{filled});
     // Replace expansion op with these buffers and initial index.
     assert(op.getNumResults() == 4);
-    rewriter.replaceOp(op, {values, filled, indices, zero});
+    rewriter.replaceOp(op, {values, filled, added, zero});
+    return success();
+  }
+};
+
+/// Sparse codegen rule for the compress operator.
+class SparseCompressConverter : public OpConversionPattern<CompressOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(CompressOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    ShapedType srcType = op.getTensor().getType().cast<ShapedType>();
+    Type eltType = srcType.getElementType();
+    Value values = adaptor.getValues();
+    Value filled = adaptor.getFilled();
+    Value added = adaptor.getAdded();
+    Value count = adaptor.getCount();
+
+    //
+    // TODO: need to implement "std::sort(added, added + count);" for ordered
+    //
+
+    // While performing the insertions, we also need to reset the elements
+    // of the values/filled-switch by only iterating over the set elements,
+    // to ensure that the runtime complexity remains proportional to the
+    // sparsity of the expanded access pattern.
+    //
+    // Generate
+    //    for (i = 0; i < count; i++) {
+    //      index = added[i];
+    //      value = values[index];
+    //
+    //      TODO: insert prev_indices, index, value
+    //
+    //      values[index] = 0;
+    //      filled[index] = false;
+    //    }
+    Value i = createFor(rewriter, loc, count).getInductionVar();
+    Value index = rewriter.create<memref::LoadOp>(loc, added, i);
+    rewriter.create<memref::LoadOp>(loc, values, index);
+    // TODO: insert
+    rewriter.create<memref::StoreOp>(loc, constantZero(rewriter, loc, eltType),
+                                     values, index);
+    rewriter.create<memref::StoreOp>(loc, constantI1(rewriter, loc, false),
+                                     filled, index);
+
+    // Deallocate the buffers on exit of the full loop nest.
+    Operation *parent = op;
+    for (; isa<scf::ForOp>(parent->getParentOp()) ||
+           isa<scf::WhileOp>(parent->getParentOp()) ||
+           isa<scf::ParallelOp>(parent->getParentOp()) ||
+           isa<scf::IfOp>(parent->getParentOp());
+         parent = parent->getParentOp())
+      ;
+    rewriter.setInsertionPointAfter(parent);
+    rewriter.create<memref::DeallocOp>(loc, values);
+    rewriter.create<memref::DeallocOp>(loc, filled);
+    rewriter.create<memref::DeallocOp>(loc, added);
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -626,7 +696,7 @@ void mlir::populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
   patterns.add<SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
                SparseCastConverter, SparseTensorAllocConverter,
                SparseTensorDeallocConverter, SparseTensorLoadConverter,
-               SparseExpandConverter, SparseToPointersConverter,
-               SparseToIndicesConverter, SparseToValuesConverter>(
-      typeConverter, patterns.getContext());
+               SparseExpandConverter, SparseCompressConverter,
+               SparseToPointersConverter, SparseToIndicesConverter,
+               SparseToValuesConverter>(typeConverter, patterns.getContext());
 }

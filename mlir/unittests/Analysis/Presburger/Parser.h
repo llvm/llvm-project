@@ -61,26 +61,6 @@ inline MultiAffineFunction parseMultiAffineFunction(StringRef str) {
 }
 
 inline PWMAFunction
-parsePWMAF(ArrayRef<std::pair<ArrayRef<StringRef>, StringRef>> pieces) {
-  assert(!pieces.empty() && "At least one piece should be present.");
-
-  MLIRContext context(MLIRContext::Threading::DISABLED);
-
-  PresburgerSet initDomain = parsePresburgerSet(pieces[0].first);
-  MultiAffineFunction initMultiAff = parseMultiAffineFunction(pieces[0].second);
-
-  PWMAFunction func(PresburgerSpace::getRelationSpace(
-      initMultiAff.getNumDomainVars(), initMultiAff.getNumOutputs(),
-      initMultiAff.getNumSymbolVars()));
-
-  func.addPiece({initDomain, initMultiAff});
-  for (unsigned i = 1, e = pieces.size(); i < e; ++i)
-    func.addPiece({parsePresburgerSet(pieces[i].first),
-                   parseMultiAffineFunction(pieces[i].second)});
-  return func;
-}
-
-inline PWMAFunction
 parsePWMAF(ArrayRef<std::pair<StringRef, StringRef>> pieces) {
   assert(!pieces.empty() && "At least one piece should be present.");
 

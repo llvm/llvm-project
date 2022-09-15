@@ -42,8 +42,7 @@ public:
                       bool isReferencedDynamically, bool noDeadStrip,
                       bool isWeakDefCanBeHidden);
 
-  Defined *aliasDefined(Defined *src, StringRef target, InputFile *newFile,
-                        bool makePrivateExtern = false);
+  Defined *aliasDefined(Defined *src, StringRef target);
 
   Symbol *addUndefined(StringRef name, InputFile *, bool isWeakRef);
 
