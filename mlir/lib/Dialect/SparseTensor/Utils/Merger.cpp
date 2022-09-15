@@ -262,13 +262,8 @@ BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
     }
   }
   // Now apply the two basic rules.
-  //
-  // TODO: improve for singleton and properties
-  //
   BitVector simple = latPoints[p0].bits;
-  bool reset = isSingleton &&
-      (hasAnyDimLevelTypeOf(simple, DimLvlType::kCompressed) ||
-       hasAnyDimLevelTypeOf(simple, DimLvlType::kSingleton));
+  bool reset = isSingleton && hasAnySparse(simple);
   for (unsigned b = 0, be = simple.size(); b < be; b++) {
     if (simple[b] &&
         (!isDimLevelType(b, DimLvlType::kCompressed) &&
@@ -297,8 +292,7 @@ bool Merger::latGT(unsigned i, unsigned j) const {
 bool Merger::onlyDenseDiff(unsigned i, unsigned j) {
   BitVector tmp = latPoints[j].bits;
   tmp ^= latPoints[i].bits;
-  return !hasAnyDimLevelTypeOf(tmp, DimLvlType::kCompressed) &&
-         !hasAnyDimLevelTypeOf(tmp, DimLvlType::kSingleton);
+  return !hasAnySparse(tmp);
 }
 
 bool Merger::isSingleCondition(unsigned t, unsigned e) const {
@@ -384,9 +378,10 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   llvm_unreachable("unexpected kind");
 }
 
-bool Merger::hasAnyDimLevelTypeOf(const BitVector &bits, DimLvlType tp) const {
+bool Merger::hasAnySparse(const BitVector &bits) const {
   for (unsigned b = 0, be = bits.size(); b < be; b++)
-    if (bits[b] && isDimLevelType(b, tp))
+    if (bits[b] && (isDimLevelType(b, DimLvlType::kCompressed) ||
+                    isDimLevelType(b, DimLvlType::kSingleton)))
       return true;
   return false;
 }

@@ -608,7 +608,7 @@ look like:
 
       # Finally, dispose of the debugger you just made.
       lldb.SBDebugger.Destroy(debugger)
-      # Terminate the debug sesssion
+      # Terminate the debug session
       lldb.SBDebugger.Terminate()
 
 

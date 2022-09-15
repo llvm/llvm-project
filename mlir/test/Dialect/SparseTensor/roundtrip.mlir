@@ -291,6 +291,30 @@ func.func @sparse_reduce_2d_to_1d(%arg0: f64, %arg1: f64) -> f64 {
 
 #SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
 
+// CHECK-LABEL: func @sparse_select(
+//  CHECK-SAME:   %[[A:.*]]: f64) -> f64 {
+//       CHECK:   %[[Z:.*]] = arith.constant 0.000000e+00 : f64
+//       CHECK:   %[[C1:.*]] = sparse_tensor.select %[[A]] : f64 {
+//       CHECK:       ^bb0(%[[A1:.*]]: f64):
+//       CHECK:         %[[B1:.*]] = arith.cmpf ogt, %[[A1]], %[[Z]] : f64
+//       CHECK:         sparse_tensor.yield %[[B1]] : i1
+//       CHECK:     }
+//       CHECK:   return %[[C1]] : f64
+//       CHECK: }
+func.func @sparse_select(%arg0: f64) -> f64 {
+  %cf0 = arith.constant 0.0 : f64
+  %r = sparse_tensor.select %arg0 : f64 {
+      ^bb0(%x: f64):
+        %cmp = arith.cmpf "ogt", %x, %cf0 : f64
+        sparse_tensor.yield %cmp : i1
+    }
+  return %r : f64
+}
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
 // CHECK-LABEL: func @concat_sparse_sparse(
 //  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64
 //  CHECK-SAME:   %[[A1:.*]]: tensor<3x4xf64

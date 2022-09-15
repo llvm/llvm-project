@@ -41,9 +41,11 @@ public:
 class TypeMatcher {
   RegularExpression m_type_name_regex;
   ConstString m_type_name;
-  /// False if m_type_name_regex should be used for matching. False if this is
-  /// just matching by comparing with m_type_name string.
-  bool m_is_regex;
+  /// Indicates what kind of matching strategy should be used:
+  /// - eFormatterMatchExact: match the exact type name in m_type_name.
+  /// - eFormatterMatchRegex: match using the RegularExpression object
+  ///   `m_type_name_regex` instead.
+  lldb::FormatterMatchType m_match_type;
 
   // if the user tries to add formatters for, say, "struct Foo" those will not
   // match any type because of the way we strip qualifiers from typenames this
@@ -71,22 +73,25 @@ public:
   TypeMatcher() = delete;
   /// Creates a matcher that accepts any type with exactly the given type name.
   TypeMatcher(ConstString type_name)
-      : m_type_name(type_name), m_is_regex(false) {}
+      : m_type_name(type_name), m_match_type(lldb::eFormatterMatchExact) {}
   /// Creates a matcher that accepts any type matching the given regex.
   TypeMatcher(RegularExpression regex)
-      : m_type_name_regex(std::move(regex)), m_is_regex(true) {}
+      : m_type_name_regex(std::move(regex)),
+        m_match_type(lldb::eFormatterMatchRegex) {}
 
   /// True iff this matches the given type name.
   bool Matches(ConstString type_name) const {
-    if (m_is_regex)
+    if (m_match_type == lldb::eFormatterMatchRegex)
       return m_type_name_regex.Execute(type_name.GetStringRef());
     return m_type_name == type_name ||
            StripTypeName(m_type_name) == StripTypeName(type_name);
   }
 
+  lldb::FormatterMatchType GetMatchType() const { return m_match_type; }
+
   /// Returns the underlying match string for this TypeMatcher.
   ConstString GetMatchString() const {
-    if (m_is_regex)
+    if (m_match_type == lldb::eFormatterMatchRegex)
       return ConstString(m_type_name_regex.GetText());
     return StripTypeName(m_type_name);
   }
@@ -176,7 +181,8 @@ public:
       return lldb::TypeNameSpecifierImplSP();
     TypeMatcher type_matcher = m_map[index].first;
     return std::make_shared<TypeNameSpecifierImpl>(
-        type_matcher.GetMatchString().GetStringRef(), true);
+        type_matcher.GetMatchString().GetStringRef(),
+        type_matcher.GetMatchType());
   }
 
   void Clear() {

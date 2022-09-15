@@ -2322,8 +2322,10 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // Expand mask indices to byte indices and materialize them as operands
   for (int M : Mask) {
     for (size_t J = 0; J < LaneBytes; ++J) {
-      // Lower undefs (represented by -1 in mask) to zero
-      uint64_t ByteIndex = M == -1 ? 0 : (uint64_t)M * LaneBytes + J;
+      // Lower undefs (represented by -1 in mask) to {0..J}, which use a
+      // whole lane of vector input, to allow further reduction at VM. E.g.
+      // match an 8x16 byte shuffle to an equivalent cheaper 32x4 shuffle.
+      uint64_t ByteIndex = M == -1 ? J : (uint64_t)M * LaneBytes + J;
       Ops[OpIdx++] = DAG.getConstant(ByteIndex, DL, MVT::i32);
     }
   }

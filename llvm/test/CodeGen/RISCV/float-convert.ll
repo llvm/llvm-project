@@ -216,14 +216,25 @@ define i32 @fcvt_wu_s_multiple_use(float %x, i32* %y) nounwind {
 }
 
 define i32 @fcvt_wu_s_sat(float %a) nounwind {
-; CHECKIF-LABEL: fcvt_wu_s_sat:
-; CHECKIF:       # %bb.0: # %start
-; CHECKIF-NEXT:    feq.s a0, fa0, fa0
-; CHECKIF-NEXT:    beqz a0, .LBB4_2
-; CHECKIF-NEXT:  # %bb.1:
-; CHECKIF-NEXT:    fcvt.wu.s a0, fa0, rtz
-; CHECKIF-NEXT:  .LBB4_2: # %start
-; CHECKIF-NEXT:    ret
+; RV32IF-LABEL: fcvt_wu_s_sat:
+; RV32IF:       # %bb.0: # %start
+; RV32IF-NEXT:    feq.s a0, fa0, fa0
+; RV32IF-NEXT:    beqz a0, .LBB4_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32IF-NEXT:  .LBB4_2: # %start
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fcvt_wu_s_sat:
+; RV64IF:       # %bb.0: # %start
+; RV64IF-NEXT:    feq.s a0, fa0, fa0
+; RV64IF-NEXT:    beqz a0, .LBB4_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV64IF-NEXT:    slli a0, a0, 32
+; RV64IF-NEXT:    srli a0, a0, 32
+; RV64IF-NEXT:  .LBB4_2: # %start
+; RV64IF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s_sat:
 ; RV32I:       # %bb.0: # %start
@@ -1768,14 +1779,25 @@ start:
 declare i8 @llvm.fptoui.sat.i8.f32(float)
 
 define zeroext i32 @fcvt_wu_s_sat_zext(float %a) nounwind {
-; CHECKIF-LABEL: fcvt_wu_s_sat_zext:
-; CHECKIF:       # %bb.0: # %start
-; CHECKIF-NEXT:    feq.s a0, fa0, fa0
-; CHECKIF-NEXT:    beqz a0, .LBB31_2
-; CHECKIF-NEXT:  # %bb.1:
-; CHECKIF-NEXT:    fcvt.wu.s a0, fa0, rtz
-; CHECKIF-NEXT:  .LBB31_2: # %start
-; CHECKIF-NEXT:    ret
+; RV32IF-LABEL: fcvt_wu_s_sat_zext:
+; RV32IF:       # %bb.0: # %start
+; RV32IF-NEXT:    feq.s a0, fa0, fa0
+; RV32IF-NEXT:    beqz a0, .LBB31_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32IF-NEXT:  .LBB31_2: # %start
+; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fcvt_wu_s_sat_zext:
+; RV64IF:       # %bb.0: # %start
+; RV64IF-NEXT:    feq.s a0, fa0, fa0
+; RV64IF-NEXT:    beqz a0, .LBB31_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV64IF-NEXT:    slli a0, a0, 32
+; RV64IF-NEXT:    srli a0, a0, 32
+; RV64IF-NEXT:  .LBB31_2: # %start
+; RV64IF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s_sat_zext:
 ; RV32I:       # %bb.0: # %start

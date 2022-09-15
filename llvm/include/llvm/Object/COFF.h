@@ -379,8 +379,8 @@ public:
   }
 
   bool isCommon() const {
-    return isExternal() && getSectionNumber() == COFF::IMAGE_SYM_UNDEFINED &&
-           getValue() != 0;
+    return (isExternal() || isSection()) &&
+           getSectionNumber() == COFF::IMAGE_SYM_UNDEFINED && getValue() != 0;
   }
 
   bool isUndefined() const {

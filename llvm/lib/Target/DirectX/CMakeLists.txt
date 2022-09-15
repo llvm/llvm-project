@@ -24,7 +24,9 @@ add_llvm_target(DirectXCodeGen
   PointerTypeAnalysis.cpp
 
   LINK_COMPONENTS
+  AsmPrinter
   Core
+  SelectionDAG
   Support
   DirectXInfo
   DXILBitWriter

@@ -120,17 +120,23 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
 
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut: {
-    const uint32_t *RegMask = MO.getRegMask();
-    const unsigned RegMaskSize = MO.getRegMaskSize();
-
-    if (RegMaskSize != 0) {
-      std::vector<llvm::stable_hash> RegMaskHashes(RegMask,
-                                                   RegMask + RegMaskSize);
-      return hash_combine(MO.getType(), MO.getTargetFlags(),
-                          stable_hash_combine_array(RegMaskHashes.data(),
-                                                    RegMaskHashes.size()));
+    if (const MachineInstr *MI = MO.getParent()) {
+      if (const MachineBasicBlock *MBB = MI->getParent()) {
+        if (const MachineFunction *MF = MBB->getParent()) {
+          const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+          unsigned RegMaskSize =
+              MachineOperand::getRegMaskSize(TRI->getNumRegs());
+          const uint32_t *RegMask = MO.getRegMask();
+          std::vector<llvm::stable_hash> RegMaskHashes(RegMask,
+                                                       RegMask + RegMaskSize);
+          return hash_combine(MO.getType(), MO.getTargetFlags(),
+                              stable_hash_combine_array(RegMaskHashes.data(),
+                                                        RegMaskHashes.size()));
+        }
+      }
     }
 
+    assert(0 && "MachineOperand not associated with any MachineFunction");
     return hash_combine(MO.getType(), MO.getTargetFlags());
   }
 

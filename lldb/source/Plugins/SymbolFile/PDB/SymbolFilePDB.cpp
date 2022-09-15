@@ -1943,7 +1943,7 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
   if (!func_decorated_name.empty()) {
     mangled.SetMangledName(ConstString(func_decorated_name));
 
-    // For MSVC, format of C funciton's decorated name depends on calling
+    // For MSVC, format of C function's decorated name depends on calling
     // convention. Unfortunately none of the format is recognized by current
     // LLDB. For example, `_purecall` is a __cdecl C function. From PDB,
     // `__purecall` is retrieved as both its decorated and undecorated name

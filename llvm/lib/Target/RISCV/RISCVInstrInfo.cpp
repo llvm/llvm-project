@@ -1504,19 +1504,19 @@ std::string RISCVInstrInfo::createMIROperandComment(
       OpIdx == 2) {
     unsigned Imm = MI.getOperand(OpIdx).getImm();
     RISCVVType::printVType(Imm, OS);
-  } else if (RISCVII::hasSEWOp(TSFlags)) {
-    unsigned NumOperands = MI.getNumExplicitOperands();
-    bool HasPolicy = RISCVII::hasVecPolicyOp(TSFlags);
-
-    // The SEW operand is before any policy operand.
-    if (OpIdx != NumOperands - HasPolicy - 1)
-      return std::string();
-
+  } else if (RISCVII::hasSEWOp(TSFlags) &&
+             OpIdx == RISCVII::getSEWOpNum(MI.getDesc())) {
     unsigned Log2SEW = MI.getOperand(OpIdx).getImm();
     unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
     assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
-
     OS << "e" << SEW;
+  } else if (RISCVII::hasVecPolicyOp(TSFlags) &&
+             OpIdx == RISCVII::getVecPolicyOpNum(MI.getDesc())) {
+    unsigned Policy = MI.getOperand(OpIdx).getImm();
+    assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
+           "Invalid Policy Value");
+    OS << (Policy & RISCVII::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
+       << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
   }
 
   OS.flush();

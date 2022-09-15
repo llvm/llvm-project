@@ -25,6 +25,9 @@ namespace bytecode {
 enum {
   /// The current bytecode version.
   kVersion = 0,
+
+  /// An arbitrary value used to fill alignment padding.
+  kAlignmentByte = 0xCB,
 };
 
 //===----------------------------------------------------------------------===//
@@ -51,8 +54,15 @@ enum ID : uint8_t {
   /// and their nested regions/operations.
   kIR = 4,
 
+  /// This section contains the resources of the bytecode.
+  kResource = 5,
+
+  /// This section contains the offsets of resources within the Resource
+  /// section.
+  kResourceOffset = 6,
+
   /// The total number of section types.
-  kNumSections = 5,
+  kNumSections = 7,
 };
 } // namespace Section
 

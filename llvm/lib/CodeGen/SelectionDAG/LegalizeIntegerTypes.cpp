@@ -2988,23 +2988,17 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
   if (N->getOpcode() == ISD::ADD) {
     Lo = DAG.getNode(ISD::ADD, dl, NVT, LoOps);
     Hi = DAG.getNode(ISD::ADD, dl, NVT, makeArrayRef(HiOps, 2));
-    SDValue Cmp1 = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo, LoOps[0],
-                                ISD::SETULT);
+    SDValue Cmp = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo, LoOps[0],
+                               ISD::SETULT);
 
-    if (BoolType == TargetLoweringBase::ZeroOrOneBooleanContent) {
-      SDValue Carry = DAG.getZExtOrTrunc(Cmp1, dl, NVT);
-      Hi = DAG.getNode(ISD::ADD, dl, NVT, Hi, Carry);
-      return;
-    }
+    SDValue Carry;
+    if (BoolType == TargetLoweringBase::ZeroOrOneBooleanContent)
+      Carry = DAG.getZExtOrTrunc(Cmp, dl, NVT);
+    else
+      Carry = DAG.getSelect(dl, NVT, Cmp, DAG.getConstant(1, dl, NVT),
+                             DAG.getConstant(0, dl, NVT));
 
-    SDValue Carry1 = DAG.getSelect(dl, NVT, Cmp1,
-                                   DAG.getConstant(1, dl, NVT),
-                                   DAG.getConstant(0, dl, NVT));
-    SDValue Cmp2 = DAG.getSetCC(dl, getSetCCResultType(NVT), Lo, LoOps[1],
-                                ISD::SETULT);
-    SDValue Carry2 = DAG.getSelect(dl, NVT, Cmp2,
-                                   DAG.getConstant(1, dl, NVT), Carry1);
-    Hi = DAG.getNode(ISD::ADD, dl, NVT, Hi, Carry2);
+    Hi = DAG.getNode(ISD::ADD, dl, NVT, Hi, Carry);
   } else {
     Lo = DAG.getNode(ISD::SUB, dl, NVT, LoOps);
     Hi = DAG.getNode(ISD::SUB, dl, NVT, makeArrayRef(HiOps, 2));

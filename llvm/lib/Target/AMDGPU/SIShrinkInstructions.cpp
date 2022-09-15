@@ -26,6 +26,7 @@ using namespace llvm;
 namespace {
 
 class SIShrinkInstructions : public MachineFunctionPass {
+  MachineFunction *MF;
   MachineRegisterInfo *MRI;
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
@@ -346,7 +347,14 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) const {
 
 // Shrink MAD to MADAK/MADMK and FMA to FMAAK/FMAMK.
 void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
+  // Pre-GFX10 VOP3 instructions like MAD/FMA cannot take a literal operand so
+  // there is no reason to try to shrink them.
   if (!ST->hasVOP3Literal())
+    return;
+
+  // There is no advantage to doing this pre-RA.
+  if (!MF->getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoVRegs))
     return;
 
   if (TII->hasAnyModifiersSet(MI))
@@ -730,6 +738,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  this->MF = &MF;
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
@@ -945,6 +954,15 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         if (Next)
           continue;
       }
+
+      // Pre-GFX10, shrinking VOP3 instructions pre-RA gave us the chance to
+      // fold an immediate into the shrunk instruction as a literal operand. In
+      // GFX10 VOP3 instructions can take a literal operand anyway, so there is
+      // no advantage to doing this.
+      if (ST->hasVOP3Literal() &&
+          !MF.getProperties().hasProperty(
+              MachineFunctionProperties::Property::NoVRegs))
+        continue;
 
       // We can shrink this instruction
       LLVM_DEBUG(dbgs() << "Shrinking " << MI);
