@@ -72,13 +72,13 @@ int test(void) {
   {
     vxv(v1, v2, v3, N);
   }
-// CK1: call void ({{.+}}) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void ({{.+}})* bitcast (void (i32*, i32*, %struct.anon{{[\.0-9]*}}*)* [[PARALLEL_REGION:@.+]] to void
+// CK1: call void ({{.+}}) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 3, void ({{.+}})* bitcast (void (i32*, i32*, [100 x i32]*, [100 x i32]*, [100 x i32]*)* [[PARALLEL_REGION:@.+]] to void
 
   return 0;
 }
 
 // CK1: define internal void @__omp_offloading_[[OFFLOAD]]({{.+}})
-// CK1: call void ({{.+}}) @__kmpc_fork_teams(%struct.ident_t* {{.+}}, i32 1, void ({{.+}})* bitcast (void (i32*, i32*, %struct.anon{{[\.0-9]*}}*)* [[TARGET_REGION:@.+]] to void
+// CK1: call void ({{.+}}) @__kmpc_fork_teams(%struct.ident_t* {{.+}}, i32 3, void ({{.+}})* bitcast (void (i32*, i32*, [100 x i32]*, [100 x i32]*, [100 x i32]*)* [[TARGET_REGION:@.+]] to void
 // CK1: define internal void [[TARGET_REGION]](
 // CK1: call void @t_vxv
 
@@ -167,11 +167,11 @@ void test(int ***v1, int ***v2, int ***v3, int n) {
   {
     test_base(v1, v2, v3, 0);
   }
-// CK2: call void ({{.+}}) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon{{[\.0-9]*}}*)* [[PARALLEL_REGION:@.+]] to void
+// CK2: call void ({{.+}}) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32****, i32****, i32****)* [[PARALLEL_REGION:@.+]] to void
 }
 
 // CK2: define internal void @__omp_offloading_[[OFFLOAD_1]]({{.+}})
-// CK2: call void ({{.+}}) @__kmpc_fork_teams(%struct.ident_t* {{.+}}, i32 1, void ({{.+}})* bitcast (void (i32*, i32*, %struct.anon{{[\.0-9]*}}*)* [[TARGET_REGION_1:@.+]] to void
+// CK2: call void ({{.+}}) @__kmpc_fork_teams(%struct.ident_t* {{.+}}, i32 3, void ({{.+}})* bitcast (void (i32*, i32*, i32****, i32****, i32****)* [[TARGET_REGION_1:@.+]] to void
 // CK2: define internal void [[TARGET_REGION_1]](
 // CK2: call void @test_teams
 

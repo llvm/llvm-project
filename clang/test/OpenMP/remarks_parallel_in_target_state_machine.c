@@ -6,11 +6,8 @@
 void baz(void) __attribute__((assume("omp_no_openmp")));
 
 void bar(void) {
-#pragma omp parallel // #1
+#pragma omp parallel // #1                                                                                                                                                                                                                                                                                                                                           \
                      // expected-remark@#1 {{Parallel region is used in unknown ways. Will not attempt to rewrite the state machine. [OMP101]}}
-                     // expected-remark@#1 {{Value has potential side effects preventing SPMD-mode execution. [OMP121]}}
-                     // expected-remark@#1 {{Replaced globalized variable with 1 byte of shared memory. [OMP111]}}
-  
   {
   }
 }
@@ -20,17 +17,11 @@ void foo(void) {
                          // expected-remark@#2 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
   {
     baz();               // expected-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
-#pragma omp parallel // #3
-                     // expected-remark@#3 {{Value has potential side effects preventing SPMD-mode execution. [OMP121]}}
-                     // expected-remark@#3 {{Replaced globalized variable with 1 byte of shared memory. [OMP111]}}
-    
+#pragma omp parallel
     {
     }
     bar();
-#pragma omp parallel // #4
-                     // expected-remark@#4 {{Value has potential side effects preventing SPMD-mode execution. [OMP121]}}
-                     // expected-remark@#4 {{Replaced globalized variable with 1 byte of shared memory. [OMP111]}}
-    
+#pragma omp parallel
     {
     }
   }

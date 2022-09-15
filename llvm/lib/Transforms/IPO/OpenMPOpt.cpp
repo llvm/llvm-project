@@ -4313,7 +4313,6 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2:
     case OMPRTL___kmpc_nvptx_teams_reduce_nowait_v2:
     case OMPRTL___kmpc_nvptx_end_reduce_nowait:
-    case OMPRTL___kmpc_alloc_aggregate_arg:
       break;
     case OMPRTL___kmpc_distribute_static_init_4:
     case OMPRTL___kmpc_distribute_static_init_4u:
