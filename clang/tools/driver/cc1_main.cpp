@@ -376,22 +376,12 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   CompilerInvocation &Invocation = Clang.getInvocation();
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
-
-  // Extract whether caching is on (and canonicalize setting).
   CacheCompileJob = FrontendOpts.CacheCompileJob;
-  FrontendOpts.CacheCompileJob = false;
 
   // Nothing else to do if we're not caching.
   if (!CacheCompileJob)
     return None;
 
-  // Hide the CAS configuration, canonicalizing it to keep the path to the
-  // CAS from leaking to the compile job, where it might affecting its
-  // output (e.g., in a diagnostic).
-  //
-  // TODO: Extract CASOptions.Path first if we need it later since it'll
-  // disappear here.
-  Invocation.getCASOpts().freezeConfig(Diags);
   CAS = Invocation.getCASOpts().getOrCreateObjectStore(Diags);
   if (!CAS)
     return 1; // Exit with error!
@@ -399,14 +389,11 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   if (!Cache)
     return 1; // Exit with error!
 
-  // Canonicalize Invocation and save things in a side channel.
-  //
-  // TODO: Canonicalize DiagnosticOptions here to be "serialized" only. Pass in
-  // a hook to mirror diagnostics to stderr (when writing there), and handle
-  // other outputs during replay.
-  DisableCachedCompileJobReplay = FrontendOpts.DisableCachedCompileJobReplay;
-  FrontendOpts.DisableCachedCompileJobReplay = false;
-  FrontendOpts.IncludeTimestamps = false;
+  CompileJobCachingOptions CacheOpts;
+  ResultCacheKey =
+      canonicalizeAndCreateCacheKey(*CAS, Diags, Invocation, CacheOpts);
+
+  DisableCachedCompileJobReplay = CacheOpts.DisableCachedCompileJobReplay;
 
   CacheBackend = std::make_unique<ObjectStoreCachingOutputs>(Clang, CAS, Cache);
   return None;

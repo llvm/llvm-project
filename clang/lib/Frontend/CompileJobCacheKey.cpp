@@ -59,14 +59,13 @@ createCompileJobCacheKeyForArgs(ObjectStore &CAS,
   return llvm::cantFail(Builder.create(CAS)).getID();
 }
 
-Optional<llvm::cas::CASID>
-clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
-                                const CompilerInvocation &OriginalInvocation) {
-  CompilerInvocation InvocationForCacheKey(OriginalInvocation);
-  FrontendOptions &FrontendOpts = InvocationForCacheKey.getFrontendOpts();
-  DiagnosticOptions &DiagOpts = InvocationForCacheKey.getDiagnosticOpts();
-  DependencyOutputOptions &DepOpts =
-      InvocationForCacheKey.getDependencyOutputOpts();
+static Optional<llvm::cas::CASID>
+createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
+                             CompilerInvocation CI) {
+  FrontendOptions &FrontendOpts = CI.getFrontendOpts();
+  DiagnosticOptions &DiagOpts = CI.getDiagnosticOpts();
+  DependencyOutputOptions &DepOpts = CI.getDependencyOutputOpts();
+
   // Keep the key independent of the paths of these outputs.
   if (!FrontendOpts.OutputFile.empty())
     FrontendOpts.OutputFile = "-";
@@ -88,18 +87,16 @@ clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
   llvm::StringSaver Saver(Alloc);
   llvm::SmallVector<const char *> Argv;
   Argv.push_back("-cc1");
-  InvocationForCacheKey.generateCC1CommandLine(
+  CI.generateCC1CommandLine(
       Argv, [&Saver](const llvm::Twine &T) { return Saver.save(T).data(); });
 
-  bool IsIncludeTree =
-      !InvocationForCacheKey.getFrontendOpts().CASIncludeTreeID.empty();
+  bool IsIncludeTree = !CI.getFrontendOpts().CASIncludeTreeID.empty();
 
   // FIXME: currently correct since the main executable is always in the root
   // from scanning, but we should probably make it explicit here...
-  StringRef RootIDString =
-      IsIncludeTree
-          ? InvocationForCacheKey.getFrontendOpts().CASIncludeTreeID
-          : InvocationForCacheKey.getFileSystemOpts().CASFileSystemRootID;
+  StringRef RootIDString = IsIncludeTree
+                               ? CI.getFrontendOpts().CASIncludeTreeID
+                               : CI.getFileSystemOpts().CASFileSystemRootID;
   Expected<llvm::cas::CASID> RootID = CAS.parseID(RootIDString);
   if (!RootID) {
     llvm::consumeError(RootID.takeError());
@@ -108,6 +105,52 @@ clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
   }
 
   return createCompileJobCacheKeyForArgs(CAS, Argv, *RootID, IsIncludeTree);
+}
+
+static CompileJobCachingOptions
+canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
+                       CompilerInvocation &Invocation) {
+  CompileJobCachingOptions Opts;
+  FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
+
+  // Canonicalize settings for caching, extracting settings that affect the
+  // compilation even if will clear them during the main compilation.
+  FrontendOpts.CacheCompileJob = false;
+  Opts.DisableCachedCompileJobReplay =
+      FrontendOpts.DisableCachedCompileJobReplay;
+  FrontendOpts.DisableCachedCompileJobReplay = false;
+  FrontendOpts.IncludeTimestamps = false;
+
+  // Hide the CAS configuration, canonicalizing it to keep the path to the
+  // CAS from leaking to the compile job, where it might affecting its
+  // output (e.g., in a diagnostic).
+  //
+  // TODO: Extract CASOptions.Path first if we need it later since it'll
+  // disappear here.
+  Invocation.getCASOpts().freezeConfig(Diags);
+
+  // TODO: Canonicalize DiagnosticOptions here to be "serialized" only. Pass in
+  // a hook to mirror diagnostics to stderr (when writing there), and handle
+  // other outputs during replay.
+
+  // TODO: migrate the output path changes from createCompileJobCacheKey here.
+  return Opts;
+}
+
+llvm::Optional<llvm::cas::CASID> clang::canonicalizeAndCreateCacheKey(
+    llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
+    CompilerInvocation &Invocation, CompileJobCachingOptions &Opts) {
+  Opts = canonicalizeForCaching(CAS, Diags, Invocation);
+  return createCompileJobCacheKeyImpl(CAS, Diags, Invocation);
+}
+
+Optional<llvm::cas::CASID>
+clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
+                                const CompilerInvocation &OriginalInvocation) {
+
+  CompilerInvocation CI(OriginalInvocation);
+  (void)canonicalizeForCaching(CAS, Diags, CI);
+  return createCompileJobCacheKeyImpl(CAS, Diags, std::move(CI));
 }
 
 static Error printFileSystem(ObjectStore &CAS, ObjectRef Ref, raw_ostream &OS) {

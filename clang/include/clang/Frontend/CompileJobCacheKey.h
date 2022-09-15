@@ -29,10 +29,26 @@ namespace clang {
 class CompilerInvocation;
 class DiagnosticsEngine;
 
-/// Create a cache key for the given \c CompilerInvocation as a \c CASID.
+/// Caching-related options for a given \c CompilerInvocation that are
+/// canonicalized away by the cache key.  See \c canonicalizeAndCreateCacheKey.
+struct CompileJobCachingOptions {
+  /// See \c FrontendOptions::DisableCachedCompileJobReplay.
+  bool DisableCachedCompileJobReplay;
+};
+
+/// Create a cache key for the given \c CompilerInvocation as a \c CASID. If \p
+/// Invocation will later be used to compile code, use \c
+/// canonicalizeAndCreateCacheKey instead.
 llvm::Optional<llvm::cas::CASID>
 createCompileJobCacheKey(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
                          const CompilerInvocation &Invocation);
+
+/// Perform any destructive changes needed to canonicalize \p Invocation for
+/// caching, extracting the settings that affect compilation even if they do not
+/// affect caching, and return the resulting cache key as a \c CASID.
+llvm::Optional<llvm::cas::CASID> canonicalizeAndCreateCacheKey(
+    llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
+    CompilerInvocation &Invocation, CompileJobCachingOptions &Opts);
 
 /// Print the structure of the cache key given by \p Key to \p OS. Returns an
 /// error if the key object does not exist in \p CAS, or is malformed.
