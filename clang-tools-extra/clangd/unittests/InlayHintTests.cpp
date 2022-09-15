@@ -820,6 +820,15 @@ TEST(ParameterHints, Macros) {
     }
   )cpp",
                        ExpectedHint{"param: ", "param"});
+
+  // If the macro expands to multiple arguments, don't hint it.
+  assertParameterHints(R"cpp(
+    void foo(double x, double y);
+    #define CONSTANTS 3.14, 2.72
+    void bar() {
+      foo(CONSTANTS);
+    }
+  )cpp");
 }
 
 TEST(ParameterHints, ConstructorParens) {
