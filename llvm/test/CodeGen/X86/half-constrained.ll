@@ -166,7 +166,8 @@ define void @float_to_half(float %0) strictfp {
 ; X32-F16C:       ## %bb.0:
 ; X32-F16C-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X32-F16C-NEXT:    vpextrw $0, %xmm0, _a
+; X32-F16C-NEXT:    vmovd %xmm0, %eax
+; X32-F16C-NEXT:    movw %ax, _a
 ; X32-F16C-NEXT:    retl
 ;
 ; X64-NOF16C-LABEL: float_to_half:
@@ -183,7 +184,8 @@ define void @float_to_half(float %0) strictfp {
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X64-F16C-NEXT:    vpextrw $0, %xmm0, _a(%rip)
+; X64-F16C-NEXT:    vmovd %xmm0, %eax
+; X64-F16C-NEXT:    movw %ax, _a(%rip)
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f32(float %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   store half %2, ptr @a, align 2
@@ -257,7 +259,7 @@ define void @fp80_to_half(x86_fp80 %0) strictfp {
 ; X32-F16C-NEXT:    fstpt (%esp)
 ; X32-F16C-NEXT:    wait
 ; X32-F16C-NEXT:    calll ___truncxfhf2
-; X32-F16C-NEXT:    movw %ax, _a
+; X32-F16C-NEXT:    vpextrw $0, %xmm0, _a
 ; X32-F16C-NEXT:    addl $28, %esp
 ; X32-F16C-NEXT:    retl
 ;
@@ -269,6 +271,7 @@ define void @fp80_to_half(x86_fp80 %0) strictfp {
 ; X64-NOF16C-NEXT:    fstpt (%rsp)
 ; X64-NOF16C-NEXT:    wait
 ; X64-NOF16C-NEXT:    callq ___truncxfhf2
+; X64-NOF16C-NEXT:    pextrw $0, %xmm0, %eax
 ; X64-NOF16C-NEXT:    movw %ax, _a(%rip)
 ; X64-NOF16C-NEXT:    addq $24, %rsp
 ; X64-NOF16C-NEXT:    retq
@@ -281,7 +284,7 @@ define void @fp80_to_half(x86_fp80 %0) strictfp {
 ; X64-F16C-NEXT:    fstpt (%rsp)
 ; X64-F16C-NEXT:    wait
 ; X64-F16C-NEXT:    callq ___truncxfhf2
-; X64-F16C-NEXT:    movw %ax, _a(%rip)
+; X64-F16C-NEXT:    vpextrw $0, %xmm0, _a(%rip)
 ; X64-F16C-NEXT:    addq $24, %rsp
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f80(x86_fp80 %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -323,7 +326,8 @@ define void @add() strictfp {
 ; X32-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X32-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X32-F16C-NEXT:    vpextrw $0, %xmm0, _c
+; X32-F16C-NEXT:    vmovd %xmm0, %eax
+; X32-F16C-NEXT:    movw %ax, _c
 ; X32-F16C-NEXT:    retl
 ;
 ; X64-NOF16C-LABEL: add:
@@ -353,7 +357,8 @@ define void @add() strictfp {
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X64-F16C-NEXT:    vpextrw $0, %xmm0, _c(%rip)
+; X64-F16C-NEXT:    vmovd %xmm0, %eax
+; X64-F16C-NEXT:    movw %ax, _c(%rip)
 ; X64-F16C-NEXT:    retq
   %1 = load half, ptr @a, align 2
   %2 = tail call float @llvm.experimental.constrained.fpext.f32.f16(half %1, metadata !"fpexcept.strict") #0

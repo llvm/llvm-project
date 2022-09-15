@@ -46,6 +46,7 @@ define void @truncxfhf(ptr %outptr, ptr %inptr) nounwind {
 ; CHECK-SOFT-NEXT:    fldt (%rsi)
 ; CHECK-SOFT-NEXT:    fstpt (%rsp)
 ; CHECK-SOFT-NEXT:    callq ___truncxfhf2
+; CHECK-SOFT-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-SOFT-NEXT:    movw %ax, (%rbx)
 ; CHECK-SOFT-NEXT:    addq $16, %rsp
 ; CHECK-SOFT-NEXT:    popq %rbx
@@ -59,7 +60,7 @@ define void @truncxfhf(ptr %outptr, ptr %inptr) nounwind {
 ; CHECK-F16C-NEXT:    fldt (%rsi)
 ; CHECK-F16C-NEXT:    fstpt (%rsp)
 ; CHECK-F16C-NEXT:    callq ___truncxfhf2
-; CHECK-F16C-NEXT:    movw %ax, (%rbx)
+; CHECK-F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; CHECK-F16C-NEXT:    addq $16, %rsp
 ; CHECK-F16C-NEXT:    popq %rbx
 ; CHECK-F16C-NEXT:    retq

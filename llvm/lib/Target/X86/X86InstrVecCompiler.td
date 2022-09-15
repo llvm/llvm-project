@@ -17,6 +17,8 @@
 
 let Predicates = [NoAVX512] in {
   // A vector extract of the first f32/f64 position is a subregister copy
+  def : Pat<(f16 (extractelt (v8f16 VR128:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v8f16 VR128:$src), FR16)>;
   def : Pat<(f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
             (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32)>;
   def : Pat<(f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),
@@ -34,8 +36,8 @@ let Predicates = [HasAVX512] in {
 }
 
 let Predicates = [NoVLX] in {
-  def : Pat<(v8f16 (scalar_to_vector FR16X:$src)),
-            (COPY_TO_REGCLASS FR16X:$src, VR128)>;
+  def : Pat<(v8f16 (scalar_to_vector FR16:$src)),
+            (COPY_TO_REGCLASS FR16:$src, VR128)>;
   // Implicitly promote a 32-bit scalar to a vector.
   def : Pat<(v4f32 (scalar_to_vector FR32:$src)),
             (COPY_TO_REGCLASS FR32:$src, VR128)>;

@@ -62,8 +62,8 @@ define <4 x float> @prefer_f16_v4f32(ptr %p) nounwind {
 ; SSE-LABEL: prefer_f16_v4f32:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    movzwl (%rdi), %edi
-; SSE-NEXT:    callq __gnu_h2f_ieee@PLT
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    retq
@@ -71,29 +71,25 @@ define <4 x float> @prefer_f16_v4f32(ptr %p) nounwind {
 ; AVX1-LABEL: prefer_f16_v4f32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    pushq %rax
-; AVX1-NEXT:    movzwl (%rdi), %edi
-; AVX1-NEXT:    callq __gnu_h2f_ieee@PLT
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    callq __extendhfsf2@PLT
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: prefer_f16_v4f32:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    pushq %rax
-; AVX2-NEXT:    movzwl (%rdi), %edi
-; AVX2-NEXT:    callq __gnu_h2f_ieee@PLT
-; AVX2-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    popq %rax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: prefer_f16_v4f32:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    movzwl (%rdi), %eax
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vcvtph2ps -{{[0-9]+}}(%rsp), %xmm0
+; AVX512F-NEXT:    vpbroadcastw (%rdi), %xmm0
+; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: prefer_f16_v4f32:
@@ -112,8 +108,8 @@ define <8 x float> @prefer_f16_v8f32(ptr %p) nounwind {
 ; SSE-LABEL: prefer_f16_v8f32:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    movzwl (%rdi), %edi
-; SSE-NEXT:    callq __gnu_h2f_ieee@PLT
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    popq %rax
@@ -122,9 +118,9 @@ define <8 x float> @prefer_f16_v8f32(ptr %p) nounwind {
 ; AVX1-LABEL: prefer_f16_v8f32:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    pushq %rax
-; AVX1-NEXT:    movzwl (%rdi), %edi
-; AVX1-NEXT:    callq __gnu_h2f_ieee@PLT
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    callq __extendhfsf2@PLT
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
@@ -132,22 +128,15 @@ define <8 x float> @prefer_f16_v8f32(ptr %p) nounwind {
 ; AVX2-LABEL: prefer_f16_v8f32:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    pushq %rax
-; AVX2-NEXT:    movzwl (%rdi), %edi
-; AVX2-NEXT:    callq __gnu_h2f_ieee@PLT
-; AVX2-NEXT:    vbroadcastss %xmm0, %ymm0
+; AVX2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    callq __extendhfsf2@PLT
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; AVX2-NEXT:    popq %rax
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: prefer_f16_v8f32:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    movzwl (%rdi), %eax
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shll $16, %ecx
-; AVX512F-NEXT:    orl %eax, %ecx
-; AVX512F-NEXT:    movq %rcx, %rax
-; AVX512F-NEXT:    shlq $32, %rax
-; AVX512F-NEXT:    orq %rcx, %rax
-; AVX512F-NEXT:    vpbroadcastq %rax, %xmm0
+; AVX512F-NEXT:    vpbroadcastw (%rdi), %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
@@ -167,8 +156,8 @@ define <2 x double> @prefer_f16_v2f64(ptr %p) nounwind {
 ; SSE-LABEL: prefer_f16_v2f64:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    movzwl (%rdi), %edi
-; SSE-NEXT:    callq __gnu_h2f_ieee@PLT
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    cvtss2sd %xmm0, %xmm0
 ; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
 ; SSE-NEXT:    popq %rax
@@ -177,8 +166,8 @@ define <2 x double> @prefer_f16_v2f64(ptr %p) nounwind {
 ; AVX-LABEL: prefer_f16_v2f64:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    movzwl (%rdi), %edi
-; AVX-NEXT:    callq __gnu_h2f_ieee@PLT
+; AVX-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX-NEXT:    popq %rax
@@ -186,10 +175,9 @@ define <2 x double> @prefer_f16_v2f64(ptr %p) nounwind {
 ;
 ; AVX512F-LABEL: prefer_f16_v2f64:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    movzwl (%rdi), %eax
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; AVX512F-NEXT:    vpbroadcastw (%rdi), %xmm0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2pd %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
@@ -210,8 +198,8 @@ define <4 x double> @prefer_f16_v4f64(ptr %p) nounwind {
 ; SSE-LABEL: prefer_f16_v4f64:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    movzwl (%rdi), %edi
-; SSE-NEXT:    callq __gnu_h2f_ieee@PLT
+; SSE-NEXT:    pinsrw $0, (%rdi), %xmm0
+; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    cvtss2sd %xmm0, %xmm0
 ; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
 ; SSE-NEXT:    movaps %xmm0, %xmm1
@@ -221,8 +209,8 @@ define <4 x double> @prefer_f16_v4f64(ptr %p) nounwind {
 ; AVX1-LABEL: prefer_f16_v4f64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    pushq %rax
-; AVX1-NEXT:    movzwl (%rdi), %edi
-; AVX1-NEXT:    callq __gnu_h2f_ieee@PLT
+; AVX1-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    callq __extendhfsf2@PLT
 ; AVX1-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
@@ -232,8 +220,8 @@ define <4 x double> @prefer_f16_v4f64(ptr %p) nounwind {
 ; AVX2-LABEL: prefer_f16_v4f64:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    pushq %rax
-; AVX2-NEXT:    movzwl (%rdi), %edi
-; AVX2-NEXT:    callq __gnu_h2f_ieee@PLT
+; AVX2-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
+; AVX2-NEXT:    callq __extendhfsf2@PLT
 ; AVX2-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; AVX2-NEXT:    popq %rax
@@ -241,12 +229,8 @@ define <4 x double> @prefer_f16_v4f64(ptr %p) nounwind {
 ;
 ; AVX512F-LABEL: prefer_f16_v4f64:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    movzwl (%rdi), %eax
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    vcvtph2ps -{{[0-9]+}}(%rsp), %xmm0
+; AVX512F-NEXT:    vpbroadcastw (%rdi), %xmm0
+; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2pd %xmm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;

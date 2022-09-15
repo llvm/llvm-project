@@ -16,7 +16,8 @@ define void @truncsfhf(float %in, ptr %ptr) nounwind {
 ; CHECK-F16C-LABEL: truncsfhf:
 ; CHECK-F16C:       ## %bb.0:
 ; CHECK-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; CHECK-F16C-NEXT:    vmovd %xmm0, %eax
+; CHECK-F16C-NEXT:    movw %ax, (%rdi)
 ; CHECK-F16C-NEXT:    retq
 ;
 ; CHECK-FP16-LABEL: truncsfhf:
@@ -67,8 +68,11 @@ define void @truncdfhf(double %in, ptr %ptr) nounwind {
 define float @extendhfsf(ptr %ptr) nounwind {
 ; CHECK-SOFT-LABEL: extendhfsf:
 ; CHECK-SOFT:       ## %bb.0:
+; CHECK-SOFT-NEXT:    pushq %rax
 ; CHECK-SOFT-NEXT:    movzwl (%rdi), %edi
-; CHECK-SOFT-NEXT:    jmp ___extendhfsf2 ## TAILCALL
+; CHECK-SOFT-NEXT:    callq ___extendhfsf2
+; CHECK-SOFT-NEXT:    popq %rax
+; CHECK-SOFT-NEXT:    retq
 ;
 ; CHECK-F16C-LABEL: extendhfsf:
 ; CHECK-F16C:       ## %bb.0:
@@ -105,7 +109,8 @@ define void @strict_truncsfhf(float %in, ptr %ptr) nounwind strictfp {
 ; CHECK-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; CHECK-F16C-NEXT:    vmovd %xmm0, %eax
+; CHECK-F16C-NEXT:    movw %ax, (%rdi)
 ; CHECK-F16C-NEXT:    retq
 ;
 ; CHECK-FP16-LABEL: strict_truncsfhf:

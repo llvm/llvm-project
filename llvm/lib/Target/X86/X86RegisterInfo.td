@@ -546,6 +546,8 @@ def FR32 : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 15)>;
 
 def FR64 : RegisterClass<"X86", [f64], 64, (add FR32)>;
 
+def FR16 : RegisterClass<"X86", [f16], 16, (add FR32)> {let Size = 32;}
+
 
 // FIXME: This sets up the floating point register files as though they are f64
 // values, though they really are f80 values.  This will cause us to spill
@@ -576,9 +578,9 @@ def RSTi : RegisterOperand<RST, "printSTiRegOperand">;
 // Generic vector registers: VR64 and VR128.
 // Ensure that float types are declared first - only float is legal on SSE1.
 def VR64: RegisterClass<"X86", [x86mmx], 64, (sequence "MM%u", 0, 7)>;
-def VR128 : RegisterClass<"X86", [v4f32, v2f64, v8f16, v16i8, v8i16, v4i32, v2i64, f128],
+def VR128 : RegisterClass<"X86", [v4f32, v2f64, v8f16, v8bf16, v16i8, v8i16, v4i32, v2i64, f128],
                           128, (add FR32)>;
-def VR256 : RegisterClass<"X86", [v8f32, v4f64, v16f16, v32i8, v16i16, v8i32, v4i64],
+def VR256 : RegisterClass<"X86", [v8f32, v4f64, v16f16, v16bf16, v32i8, v16i16, v8i32, v4i64],
                           256, (sequence "YMM%u", 0, 15)>;
 
 // Status flags registers.
@@ -596,7 +598,7 @@ def DFCCR : RegisterClass<"X86", [i32], 32, (add DF)> {
 }
 
 // AVX-512 vector/mask registers.
-def VR512 : RegisterClass<"X86", [v16f32, v8f64, v32f16, v64i8, v32i16, v16i32, v8i64],
+def VR512 : RegisterClass<"X86", [v16f32, v8f64, v32f16, v32bf16, v64i8, v32i16, v16i32, v8i64],
                           512, (sequence "ZMM%u", 0, 31)>;
 
 // Represents the lower 16 registers that have VEX/legacy encodable subregs.
@@ -608,12 +610,12 @@ def FR32X : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 31)>;
 
 def FR64X : RegisterClass<"X86", [f64], 64, (add FR32X)>;
 
-def FR16X : RegisterClass<"X86", [f16], 16, (add FR32X)>;
+def FR16X : RegisterClass<"X86", [f16], 16, (add FR32X)> {let Size = 32;}
 
 // Extended VR128 and VR256 for AVX-512 instructions
-def VR128X : RegisterClass<"X86", [v4f32, v2f64, v8f16, v16i8, v8i16, v4i32, v2i64, f128],
+def VR128X : RegisterClass<"X86", [v4f32, v2f64, v8f16, v8bf16, v16i8, v8i16, v4i32, v2i64, f128],
                            128, (add FR32X)>;
-def VR256X : RegisterClass<"X86", [v8f32, v4f64, v16f16, v32i8, v16i16, v8i32, v4i64],
+def VR256X : RegisterClass<"X86", [v8f32, v4f64, v16f16, v16bf16, v32i8, v16i16, v8i32, v4i64],
                            256, (sequence "YMM%u", 0, 31)>;
 
 // Mask registers

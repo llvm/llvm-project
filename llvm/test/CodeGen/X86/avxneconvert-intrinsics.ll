@@ -5,25 +5,13 @@
 define <4 x float> @test_int_x86_vbcstnebf162ps128(ptr %A) {
 ; X64-LABEL: test_int_x86_vbcstnebf162ps128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vbcstnebf162ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vbcstnebf162ps128@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vbcstnebf162ps (%rdi), %xmm0 # encoding: [0xc4,0xe2,0x7a,0xb1,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vbcstnebf162ps128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vbcstnebf162ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vbcstnebf162ps128@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vbcstnebf162ps (%eax), %xmm0 # encoding: [0xc4,0xe2,0x7a,0xb1,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <4 x float> @llvm.x86.vbcstnebf162ps128(ptr %A)
   ret <4 x float> %ret
@@ -33,25 +21,13 @@ declare <4 x float> @llvm.x86.vbcstnebf162ps128(ptr %A)
 define <8 x float> @test_int_x86_vbcstnebf162ps256(ptr %A) {
 ; X64-LABEL: test_int_x86_vbcstnebf162ps256:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vbcstnebf162ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vbcstnebf162ps256@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vbcstnebf162ps (%rdi), %ymm0 # encoding: [0xc4,0xe2,0x7e,0xb1,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vbcstnebf162ps256:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vbcstnebf162ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vbcstnebf162ps256@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vbcstnebf162ps (%eax), %ymm0 # encoding: [0xc4,0xe2,0x7e,0xb1,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <8 x float> @llvm.x86.vbcstnebf162ps256(ptr %A)
   ret <8 x float> %ret
@@ -61,25 +37,13 @@ declare <8 x float> @llvm.x86.vbcstnebf162ps256(ptr %A)
 define <4 x float> @test_int_x86_vbcstnesh2ps128(ptr %A) {
 ; X64-LABEL: test_int_x86_vbcstnesh2ps128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vbcstnesh2ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vbcstnesh2ps128@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vbcstnesh2ps (%rdi), %xmm0 # encoding: [0xc4,0xe2,0x79,0xb1,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vbcstnesh2ps128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vbcstnesh2ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vbcstnesh2ps128@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vbcstnesh2ps (%eax), %xmm0 # encoding: [0xc4,0xe2,0x79,0xb1,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <4 x float> @llvm.x86.vbcstnesh2ps128(ptr %A)
   ret <4 x float> %ret
@@ -89,25 +53,13 @@ declare <4 x float> @llvm.x86.vbcstnesh2ps128(ptr %A)
 define <8 x float> @test_int_x86_vbcstnesh2ps256(ptr %A) {
 ; X64-LABEL: test_int_x86_vbcstnesh2ps256:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vbcstnesh2ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vbcstnesh2ps256@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vbcstnesh2ps (%rdi), %ymm0 # encoding: [0xc4,0xe2,0x7d,0xb1,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vbcstnesh2ps256:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vbcstnesh2ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vbcstnesh2ps256@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vbcstnesh2ps (%eax), %ymm0 # encoding: [0xc4,0xe2,0x7d,0xb1,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <8 x float> @llvm.x86.vbcstnesh2ps256(ptr %A)
   ret <8 x float> %ret
@@ -117,25 +69,13 @@ declare <8 x float> @llvm.x86.vbcstnesh2ps256(ptr %A)
 define <4 x float> @test_int_x86_vcvtneebf162ps128(ptr %A) {
 ; X64-LABEL: test_int_x86_vcvtneebf162ps128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vcvtneebf162ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneebf162ps128@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvtneebf162ps (%rdi), %xmm0 # encoding: [0xc4,0xe2,0x7a,0xb0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vcvtneebf162ps128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneebf162ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneebf162ps128@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcvtneebf162ps (%eax), %xmm0 # encoding: [0xc4,0xe2,0x7a,0xb0,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <4 x float> @llvm.x86.vcvtneebf162ps128(ptr %A)
   ret <4 x float> %ret
@@ -145,25 +85,13 @@ declare <4 x float> @llvm.x86.vcvtneebf162ps128(ptr %A)
 define <8 x float> @test_int_x86_vcvtneebf162ps256(ptr %A) {
 ; X64-LABEL: test_int_x86_vcvtneebf162ps256:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vcvtneebf162ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneebf162ps256@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvtneebf162ps (%rdi), %ymm0 # encoding: [0xc4,0xe2,0x7e,0xb0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vcvtneebf162ps256:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneebf162ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneebf162ps256@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcvtneebf162ps (%eax), %ymm0 # encoding: [0xc4,0xe2,0x7e,0xb0,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <8 x float> @llvm.x86.vcvtneebf162ps256(ptr %A)
   ret <8 x float> %ret
@@ -173,25 +101,13 @@ declare <8 x float> @llvm.x86.vcvtneebf162ps256(ptr %A)
 define <4 x float> @test_int_x86_vcvtneeph2ps128(ptr %A) {
 ; X64-LABEL: test_int_x86_vcvtneeph2ps128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vcvtneeph2ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneeph2ps128@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvtneeph2ps (%rdi), %xmm0 # encoding: [0xc4,0xe2,0x79,0xb0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vcvtneeph2ps128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneeph2ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneeph2ps128@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcvtneeph2ps (%eax), %xmm0 # encoding: [0xc4,0xe2,0x79,0xb0,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <4 x float> @llvm.x86.vcvtneeph2ps128(ptr %A)
   ret <4 x float> %ret
@@ -201,25 +117,13 @@ declare <4 x float> @llvm.x86.vcvtneeph2ps128(ptr %A)
 define <8 x float> @test_int_x86_vcvtneeph2ps256(ptr %A) {
 ; X64-LABEL: test_int_x86_vcvtneeph2ps256:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vcvtneeph2ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneeph2ps256@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvtneeph2ps (%rdi), %ymm0 # encoding: [0xc4,0xe2,0x7d,0xb0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vcvtneeph2ps256:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneeph2ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneeph2ps256@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcvtneeph2ps (%eax), %ymm0 # encoding: [0xc4,0xe2,0x7d,0xb0,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <8 x float> @llvm.x86.vcvtneeph2ps256(ptr %A)
   ret <8 x float> %ret
@@ -229,25 +133,13 @@ declare <8 x float> @llvm.x86.vcvtneeph2ps256(ptr %A)
 define <4 x float> @test_int_x86_vcvtneobf162ps128(ptr %A) {
 ; X64-LABEL: test_int_x86_vcvtneobf162ps128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vcvtneobf162ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneobf162ps128@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvtneobf162ps (%rdi), %xmm0 # encoding: [0xc4,0xe2,0x7b,0xb0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vcvtneobf162ps128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneobf162ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneobf162ps128@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcvtneobf162ps (%eax), %xmm0 # encoding: [0xc4,0xe2,0x7b,0xb0,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <4 x float> @llvm.x86.vcvtneobf162ps128(ptr %A)
   ret <4 x float> %ret
@@ -257,25 +149,13 @@ declare <4 x float> @llvm.x86.vcvtneobf162ps128(ptr %A)
 define <8 x float> @test_int_x86_vcvtneobf162ps256(ptr %A) {
 ; X64-LABEL: test_int_x86_vcvtneobf162ps256:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vcvtneobf162ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneobf162ps256@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvtneobf162ps (%rdi), %ymm0 # encoding: [0xc4,0xe2,0x7f,0xb0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vcvtneobf162ps256:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneobf162ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneobf162ps256@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcvtneobf162ps (%eax), %ymm0 # encoding: [0xc4,0xe2,0x7f,0xb0,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <8 x float> @llvm.x86.vcvtneobf162ps256(ptr %A)
   ret <8 x float> %ret
@@ -285,25 +165,13 @@ declare <8 x float> @llvm.x86.vcvtneobf162ps256(ptr %A)
 define <4 x float> @test_int_x86_vcvtneoph2ps128(ptr %A) {
 ; X64-LABEL: test_int_x86_vcvtneoph2ps128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vcvtneoph2ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneoph2ps128@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvtneoph2ps (%rdi), %xmm0 # encoding: [0xc4,0xe2,0x78,0xb0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vcvtneoph2ps128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneoph2ps128@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneoph2ps128@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcvtneoph2ps (%eax), %xmm0 # encoding: [0xc4,0xe2,0x78,0xb0,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <4 x float> @llvm.x86.vcvtneoph2ps128(ptr %A)
   ret <4 x float> %ret
@@ -313,25 +181,13 @@ declare <4 x float> @llvm.x86.vcvtneoph2ps128(ptr %A)
 define <8 x float> @test_int_x86_vcvtneoph2ps256(ptr %A) {
 ; X64-LABEL: test_int_x86_vcvtneoph2ps256:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax # encoding: [0x50]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq llvm.x86.vcvtneoph2ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneoph2ps256@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    popq %rax # encoding: [0x58]
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvtneoph2ps (%rdi), %ymm0 # encoding: [0xc4,0xe2,0x7c,0xb0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_vcvtneoph2ps256:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax # encoding: [0x50]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneoph2ps256@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneoph2ps256@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    popl %eax # encoding: [0x58]
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vcvtneoph2ps (%eax), %ymm0 # encoding: [0xc4,0xe2,0x7c,0xb0,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <8 x float> @llvm.x86.vcvtneoph2ps256(ptr %A)
   ret <8 x float> %ret
@@ -339,230 +195,23 @@ define <8 x float> @test_int_x86_vcvtneoph2ps256(ptr %A) {
 declare <8 x float> @llvm.x86.vcvtneoph2ps256(ptr %A)
 
 define <8 x bfloat> @test_int_x86_vcvtneps2bf16128(<4 x float> %A) {
-; X64-LABEL: test_int_x86_vcvtneps2bf16128:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx # encoding: [0x53]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    subq $32, %rsp # encoding: [0x48,0x83,0xec,0x20]
-; X64-NEXT:    .cfi_def_cfa_offset 48
-; X64-NEXT:    .cfi_offset %rbx, -16
-; X64-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
-; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; X64-NEXT:    # encoding: [0x48,0x89,0x44,0x24,0x08]
-; X64-NEXT:    movq %rdi, (%rsp) # 8-byte Spill
-; X64-NEXT:    # encoding: [0x48,0x89,0x3c,0x24]
-; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi # encoding: [0x48,0x8d,0x7c,0x24,0x10]
-; X64-NEXT:    callq llvm.x86.vcvtneps2bf16128@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneps2bf16128@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    movq (%rsp), %rdi # 8-byte Reload
-; X64-NEXT:    # encoding: [0x48,0x8b,0x3c,0x24]
-; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; X64-NEXT:    # encoding: [0x48,0x8b,0x44,0x24,0x08]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %cx # encoding: [0x66,0x8b,0x4c,0x24,0x10]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %dx # encoding: [0x66,0x8b,0x54,0x24,0x12]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %si # encoding: [0x66,0x8b,0x74,0x24,0x14]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %r8w # encoding: [0x66,0x44,0x8b,0x44,0x24,0x16]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %r9w # encoding: [0x66,0x44,0x8b,0x4c,0x24,0x18]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %r10w # encoding: [0x66,0x44,0x8b,0x54,0x24,0x1a]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %r11w # encoding: [0x66,0x44,0x8b,0x5c,0x24,0x1c]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %bx # encoding: [0x66,0x8b,0x5c,0x24,0x1e]
-; X64-NEXT:    movw %bx, 14(%rdi) # encoding: [0x66,0x89,0x5f,0x0e]
-; X64-NEXT:    movw %r11w, 12(%rdi) # encoding: [0x66,0x44,0x89,0x5f,0x0c]
-; X64-NEXT:    movw %r10w, 10(%rdi) # encoding: [0x66,0x44,0x89,0x57,0x0a]
-; X64-NEXT:    movw %r9w, 8(%rdi) # encoding: [0x66,0x44,0x89,0x4f,0x08]
-; X64-NEXT:    movw %r8w, 6(%rdi) # encoding: [0x66,0x44,0x89,0x47,0x06]
-; X64-NEXT:    movw %si, 4(%rdi) # encoding: [0x66,0x89,0x77,0x04]
-; X64-NEXT:    movw %dx, 2(%rdi) # encoding: [0x66,0x89,0x57,0x02]
-; X64-NEXT:    movw %cx, (%rdi) # encoding: [0x66,0x89,0x0f]
-; X64-NEXT:    addq $32, %rsp # encoding: [0x48,0x83,0xc4,0x20]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    popq %rbx # encoding: [0x5b]
-; X64-NEXT:    .cfi_def_cfa_offset 8
-; X64-NEXT:    retq # encoding: [0xc3]
-;
-; X86-LABEL: test_int_x86_vcvtneps2bf16128:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp # encoding: [0x55]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
-; X86-NEXT:    .cfi_def_cfa_register %ebp
-; X86-NEXT:    pushl %ebx # encoding: [0x53]
-; X86-NEXT:    pushl %edi # encoding: [0x57]
-; X86-NEXT:    pushl %esi # encoding: [0x56]
-; X86-NEXT:    andl $-16, %esp # encoding: [0x83,0xe4,0xf0]
-; X86-NEXT:    subl $64, %esp # encoding: [0x83,0xec,0x40]
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    movl 8(%ebp), %eax # encoding: [0x8b,0x45,0x08]
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    # encoding: [0x89,0x44,0x24,0x10]
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    # encoding: [0x89,0x44,0x24,0x1c]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx # encoding: [0x8d,0x4c,0x24,0x20]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneps2bf16128@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneps2bf16128@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NEXT:    # encoding: [0x8b,0x4c,0x24,0x10]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %dx # encoding: [0x66,0x8b,0x54,0x24,0x20]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %si # encoding: [0x66,0x8b,0x74,0x24,0x22]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %di # encoding: [0x66,0x8b,0x7c,0x24,0x24]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %bx # encoding: [0x66,0x8b,0x5c,0x24,0x26]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax # encoding: [0x66,0x8b,0x44,0x24,0x28]
-; X86-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    # encoding: [0x66,0x89,0x44,0x24,0x1a]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax # encoding: [0x66,0x8b,0x44,0x24,0x2a]
-; X86-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    # encoding: [0x66,0x89,0x44,0x24,0x18]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax # encoding: [0x66,0x8b,0x44,0x24,0x2c]
-; X86-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    # encoding: [0x66,0x89,0x44,0x24,0x16]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax # encoding: [0x66,0x8b,0x44,0x24,0x2e]
-; X86-NEXT:    movw %ax, 14(%ecx) # encoding: [0x66,0x89,0x41,0x0e]
-; X86-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
-; X86-NEXT:    # encoding: [0x66,0x8b,0x44,0x24,0x16]
-; X86-NEXT:    movw %ax, 12(%ecx) # encoding: [0x66,0x89,0x41,0x0c]
-; X86-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
-; X86-NEXT:    # encoding: [0x66,0x8b,0x44,0x24,0x18]
-; X86-NEXT:    movw %ax, 10(%ecx) # encoding: [0x66,0x89,0x41,0x0a]
-; X86-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
-; X86-NEXT:    # encoding: [0x66,0x8b,0x44,0x24,0x1a]
-; X86-NEXT:    movw %ax, 8(%ecx) # encoding: [0x66,0x89,0x41,0x08]
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    # encoding: [0x8b,0x44,0x24,0x1c]
-; X86-NEXT:    movw %bx, 6(%ecx) # encoding: [0x66,0x89,0x59,0x06]
-; X86-NEXT:    movw %di, 4(%ecx) # encoding: [0x66,0x89,0x79,0x04]
-; X86-NEXT:    movw %si, 2(%ecx) # encoding: [0x66,0x89,0x71,0x02]
-; X86-NEXT:    movw %dx, (%ecx) # encoding: [0x66,0x89,0x11]
-; X86-NEXT:    leal -12(%ebp), %esp # encoding: [0x8d,0x65,0xf4]
-; X86-NEXT:    popl %esi # encoding: [0x5e]
-; X86-NEXT:    popl %edi # encoding: [0x5f]
-; X86-NEXT:    popl %ebx # encoding: [0x5b]
-; X86-NEXT:    popl %ebp # encoding: [0x5d]
-; X86-NEXT:    .cfi_def_cfa %esp, 4
-; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+; CHECK-LABEL: test_int_x86_vcvtneps2bf16128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x7a,0x72,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ret = call <8 x bfloat> @llvm.x86.vcvtneps2bf16128(<4 x float> %A)
   ret <8 x bfloat> %ret
 }
 declare <8 x bfloat> @llvm.x86.vcvtneps2bf16128(<4 x float> %A)
 
 define <8 x bfloat> @test_int_x86_vcvtneps2bf16256(<8 x float> %A) {
-; X64-LABEL: test_int_x86_vcvtneps2bf16256:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx # encoding: [0x53]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    subq $32, %rsp # encoding: [0x48,0x83,0xec,0x20]
-; X64-NEXT:    .cfi_def_cfa_offset 48
-; X64-NEXT:    .cfi_offset %rbx, -16
-; X64-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
-; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; X64-NEXT:    # encoding: [0x48,0x89,0x44,0x24,0x08]
-; X64-NEXT:    movq %rdi, (%rsp) # 8-byte Spill
-; X64-NEXT:    # encoding: [0x48,0x89,0x3c,0x24]
-; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi # encoding: [0x48,0x8d,0x7c,0x24,0x10]
-; X64-NEXT:    callq llvm.x86.vcvtneps2bf16256@PLT # encoding: [0xe8,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneps2bf16256@PLT-4, kind: FK_PCRel_4
-; X64-NEXT:    movq (%rsp), %rdi # 8-byte Reload
-; X64-NEXT:    # encoding: [0x48,0x8b,0x3c,0x24]
-; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; X64-NEXT:    # encoding: [0x48,0x8b,0x44,0x24,0x08]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %cx # encoding: [0x66,0x8b,0x4c,0x24,0x10]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %dx # encoding: [0x66,0x8b,0x54,0x24,0x12]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %si # encoding: [0x66,0x8b,0x74,0x24,0x14]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %r8w # encoding: [0x66,0x44,0x8b,0x44,0x24,0x16]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %r9w # encoding: [0x66,0x44,0x8b,0x4c,0x24,0x18]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %r10w # encoding: [0x66,0x44,0x8b,0x54,0x24,0x1a]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %r11w # encoding: [0x66,0x44,0x8b,0x5c,0x24,0x1c]
-; X64-NEXT:    movw {{[0-9]+}}(%rsp), %bx # encoding: [0x66,0x8b,0x5c,0x24,0x1e]
-; X64-NEXT:    movw %bx, 14(%rdi) # encoding: [0x66,0x89,0x5f,0x0e]
-; X64-NEXT:    movw %r11w, 12(%rdi) # encoding: [0x66,0x44,0x89,0x5f,0x0c]
-; X64-NEXT:    movw %r10w, 10(%rdi) # encoding: [0x66,0x44,0x89,0x57,0x0a]
-; X64-NEXT:    movw %r9w, 8(%rdi) # encoding: [0x66,0x44,0x89,0x4f,0x08]
-; X64-NEXT:    movw %r8w, 6(%rdi) # encoding: [0x66,0x44,0x89,0x47,0x06]
-; X64-NEXT:    movw %si, 4(%rdi) # encoding: [0x66,0x89,0x77,0x04]
-; X64-NEXT:    movw %dx, 2(%rdi) # encoding: [0x66,0x89,0x57,0x02]
-; X64-NEXT:    movw %cx, (%rdi) # encoding: [0x66,0x89,0x0f]
-; X64-NEXT:    addq $32, %rsp # encoding: [0x48,0x83,0xc4,0x20]
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    popq %rbx # encoding: [0x5b]
-; X64-NEXT:    .cfi_def_cfa_offset 8
-; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
-; X64-NEXT:    retq # encoding: [0xc3]
-;
-; X86-LABEL: test_int_x86_vcvtneps2bf16256:
-; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp # encoding: [0x55]
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
-; X86-NEXT:    .cfi_def_cfa_register %ebp
-; X86-NEXT:    pushl %ebx # encoding: [0x53]
-; X86-NEXT:    pushl %edi # encoding: [0x57]
-; X86-NEXT:    pushl %esi # encoding: [0x56]
-; X86-NEXT:    andl $-16, %esp # encoding: [0x83,0xe4,0xf0]
-; X86-NEXT:    subl $64, %esp # encoding: [0x83,0xec,0x40]
-; X86-NEXT:    .cfi_offset %esi, -20
-; X86-NEXT:    .cfi_offset %edi, -16
-; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    movl 8(%ebp), %eax # encoding: [0x8b,0x45,0x08]
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    # encoding: [0x89,0x44,0x24,0x10]
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    # encoding: [0x89,0x44,0x24,0x1c]
-; X86-NEXT:    movl %esp, %eax # encoding: [0x89,0xe0]
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx # encoding: [0x8d,0x4c,0x24,0x20]
-; X86-NEXT:    movl %ecx, (%eax) # encoding: [0x89,0x08]
-; X86-NEXT:    calll llvm.x86.vcvtneps2bf16256@PLT # encoding: [0xe8,A,A,A,A]
-; X86-NEXT:    # fixup A - offset: 1, value: llvm.x86.vcvtneps2bf16256@PLT-4, kind: FK_PCRel_4
-; X86-NEXT:    subl $4, %esp # encoding: [0x83,0xec,0x04]
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NEXT:    # encoding: [0x8b,0x4c,0x24,0x10]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %dx # encoding: [0x66,0x8b,0x54,0x24,0x20]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %si # encoding: [0x66,0x8b,0x74,0x24,0x22]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %di # encoding: [0x66,0x8b,0x7c,0x24,0x24]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %bx # encoding: [0x66,0x8b,0x5c,0x24,0x26]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax # encoding: [0x66,0x8b,0x44,0x24,0x28]
-; X86-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    # encoding: [0x66,0x89,0x44,0x24,0x1a]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax # encoding: [0x66,0x8b,0x44,0x24,0x2a]
-; X86-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    # encoding: [0x66,0x89,0x44,0x24,0x18]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax # encoding: [0x66,0x8b,0x44,0x24,0x2c]
-; X86-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; X86-NEXT:    # encoding: [0x66,0x89,0x44,0x24,0x16]
-; X86-NEXT:    movw {{[0-9]+}}(%esp), %ax # encoding: [0x66,0x8b,0x44,0x24,0x2e]
-; X86-NEXT:    movw %ax, 14(%ecx) # encoding: [0x66,0x89,0x41,0x0e]
-; X86-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
-; X86-NEXT:    # encoding: [0x66,0x8b,0x44,0x24,0x16]
-; X86-NEXT:    movw %ax, 12(%ecx) # encoding: [0x66,0x89,0x41,0x0c]
-; X86-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
-; X86-NEXT:    # encoding: [0x66,0x8b,0x44,0x24,0x18]
-; X86-NEXT:    movw %ax, 10(%ecx) # encoding: [0x66,0x89,0x41,0x0a]
-; X86-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
-; X86-NEXT:    # encoding: [0x66,0x8b,0x44,0x24,0x1a]
-; X86-NEXT:    movw %ax, 8(%ecx) # encoding: [0x66,0x89,0x41,0x08]
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    # encoding: [0x8b,0x44,0x24,0x1c]
-; X86-NEXT:    movw %bx, 6(%ecx) # encoding: [0x66,0x89,0x59,0x06]
-; X86-NEXT:    movw %di, 4(%ecx) # encoding: [0x66,0x89,0x79,0x04]
-; X86-NEXT:    movw %si, 2(%ecx) # encoding: [0x66,0x89,0x71,0x02]
-; X86-NEXT:    movw %dx, (%ecx) # encoding: [0x66,0x89,0x11]
-; X86-NEXT:    leal -12(%ebp), %esp # encoding: [0x8d,0x65,0xf4]
-; X86-NEXT:    popl %esi # encoding: [0x5e]
-; X86-NEXT:    popl %edi # encoding: [0x5f]
-; X86-NEXT:    popl %ebx # encoding: [0x5b]
-; X86-NEXT:    popl %ebp # encoding: [0x5d]
-; X86-NEXT:    .cfi_def_cfa %esp, 4
-; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
-; X86-NEXT:    retl $4 # encoding: [0xc2,0x04,0x00]
+; CHECK-LABEL: test_int_x86_vcvtneps2bf16256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    {vex} vcvtneps2bf16 %ymm0, %xmm0 # encoding: [0xc4,0xe2,0x7e,0x72,0xc0]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ret = call <8 x bfloat> @llvm.x86.vcvtneps2bf16256(<8 x float> %A)
   ret <8 x bfloat> %ret
 }
 declare <8 x bfloat> @llvm.x86.vcvtneps2bf16256(<8 x float> %A)
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}

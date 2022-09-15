@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bf16 | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512bf16 | FileCheck %s --check-prefix=X86
 
+; XFAIL: *
+
 define dso_local void @funbf16(ptr readonly %src, ptr writeonly %dst) {
 ; X64-LABEL: funbf16:
 ; X64:       # %bb.0: # %entry

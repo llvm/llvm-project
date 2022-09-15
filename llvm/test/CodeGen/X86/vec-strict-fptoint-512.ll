@@ -798,7 +798,7 @@ define <16 x i16> @strict_vector_fptosi_v16f32_to_v16i16(<16 x float> %a) #0 {
 define <16 x i16> @strict_vector_fptoui_v16f32_to_v16i16(<16 x float> %a) #0 {
 ; CHECK-LABEL: strict_vector_fptoui_v16f32_to_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvttps2dq %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <16 x i16> @llvm.experimental.constrained.fptoui.v16i16.v16f32(<16 x float> %a,

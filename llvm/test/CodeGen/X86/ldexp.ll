@@ -816,12 +816,11 @@ define half @ldexp_f16(half %arg0, i32 %arg1) {
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    .cfi_offset %rbx, -16
-; X64-NEXT:    movl %esi, %ebx
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    movl %edi, %ebx
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    movl %ebx, %edi
 ; X64-NEXT:    callq ldexpf@PLT
-; X64-NEXT:    callq __gnu_f2h_ieee@PLT
+; X64-NEXT:    callq __truncsfhf2@PLT
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq

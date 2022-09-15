@@ -2052,6 +2052,7 @@ declare  i64 @llvm.fptosi.sat.i64.f16 (half)
 declare i100 @llvm.fptosi.sat.i100.f16(half)
 declare i128 @llvm.fptosi.sat.i128.f16(half)
 
+; FIXME: Can be optimizated with maxss + minss
 define i1 @test_signed_i1_f16(half %f) nounwind {
 ; X86-X87-LABEL: test_signed_i1_f16:
 ; X86-X87:       # %bb.0:
@@ -2109,15 +2110,22 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; X86-SSE-LABEL: test_signed_i1_f16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    cvttss2si %xmm0, %ecx
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $255, %eax
+; X86-SSE-NEXT:    cmovael %ecx, %eax
+; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE-NEXT:    minss %xmm0, %xmm1
-; X86-SSE-NEXT:    cvttss2si %xmm1, %eax
+; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
+; X86-SSE-NEXT:    cmoval %ecx, %eax
+; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
+; X86-SSE-NEXT:    cmovpl %ecx, %eax
 ; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-SSE-NEXT:    addl $12, %esp
 ; X86-SSE-NEXT:    retl
@@ -2125,13 +2133,17 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; X64-LABEL: test_signed_i1_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    maxss %xmm0, %xmm1
-; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    minss %xmm1, %xmm0
-; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    cvttss2si %xmm0, %ecx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $255, %eax
+; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    ucomiss %xmm1, %xmm0
+; X64-NEXT:    cmoval %ecx, %eax
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    cmovpl %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
@@ -2139,6 +2151,7 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
     ret i1 %x
 }
 
+; FIXME: Can be optimizated with maxss + minss
 define i8 @test_signed_i8_f16(half %f) nounwind {
 ; X86-X87-LABEL: test_signed_i8_f16:
 ; X86-X87:       # %bb.0:
@@ -2192,15 +2205,22 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ; X86-SSE-LABEL: test_signed_i8_f16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    minss %xmm0, %xmm1
-; X86-SSE-NEXT:    cvttss2si %xmm1, %eax
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $128, %ecx
+; X86-SSE-NEXT:    cmovael %eax, %ecx
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $127, %edx
+; X86-SSE-NEXT:    cmovbel %ecx, %edx
+; X86-SSE-NEXT:    xorl %eax, %eax
+; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
+; X86-SSE-NEXT:    cmovnpl %edx, %eax
 ; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-SSE-NEXT:    addl $12, %esp
 ; X86-SSE-NEXT:    retl
@@ -2208,13 +2228,17 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ; X64-LABEL: test_signed_i8_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    maxss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    minss %xmm1, %xmm0
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $128, %ecx
+; X64-NEXT:    cmovael %eax, %ecx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $127, %edx
+; X64-NEXT:    cmovbel %ecx, %edx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    cmovnpl %edx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
@@ -2222,6 +2246,7 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
     ret i8 %x
 }
 
+; FIXME: Can be optimizated with maxss + minss
 define i13 @test_signed_i13_f16(half %f) nounwind {
 ; X86-X87-LABEL: test_signed_i13_f16:
 ; X86-X87:       # %bb.0:
@@ -2276,15 +2301,22 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ; X86-SSE-LABEL: test_signed_i13_f16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    minss %xmm0, %xmm1
-; X86-SSE-NEXT:    cvttss2si %xmm1, %eax
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $61440, %ecx # imm = 0xF000
+; X86-SSE-NEXT:    cmovael %eax, %ecx
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $4095, %edx # imm = 0xFFF
+; X86-SSE-NEXT:    cmovbel %ecx, %edx
+; X86-SSE-NEXT:    xorl %eax, %eax
+; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
+; X86-SSE-NEXT:    cmovnpl %edx, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-SSE-NEXT:    addl $12, %esp
 ; X86-SSE-NEXT:    retl
@@ -2292,13 +2324,17 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ; X64-LABEL: test_signed_i13_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    maxss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    minss %xmm1, %xmm0
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $61440, %ecx # imm = 0xF000
+; X64-NEXT:    cmovael %eax, %ecx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $4095, %edx # imm = 0xFFF
+; X64-NEXT:    cmovbel %ecx, %edx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    cmovnpl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
@@ -2306,6 +2342,7 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
     ret i13 %x
 }
 
+; FIXME: Can be optimizated with maxss + minss
 define i16 @test_signed_i16_f16(half %f) nounwind {
 ; X86-X87-LABEL: test_signed_i16_f16:
 ; X86-X87:       # %bb.0:
@@ -2360,15 +2397,22 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; X86-SSE-LABEL: test_signed_i16_f16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    minss %xmm0, %xmm1
-; X86-SSE-NEXT:    cvttss2si %xmm1, %eax
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $32768, %ecx # imm = 0x8000
+; X86-SSE-NEXT:    cmovael %eax, %ecx
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $32767, %edx # imm = 0x7FFF
+; X86-SSE-NEXT:    cmovbel %ecx, %edx
+; X86-SSE-NEXT:    xorl %eax, %eax
+; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
+; X86-SSE-NEXT:    cmovnpl %edx, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-SSE-NEXT:    addl $12, %esp
 ; X86-SSE-NEXT:    retl
@@ -2376,13 +2420,17 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; X64-LABEL: test_signed_i16_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
-; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-NEXT:    maxss %xmm0, %xmm1
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    minss %xmm1, %xmm0
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $32768, %ecx # imm = 0x8000
+; X64-NEXT:    cmovael %eax, %ecx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $32767, %edx # imm = 0x7FFF
+; X64-NEXT:    cmovbel %ecx, %edx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    cmovnpl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
@@ -2390,6 +2438,7 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
     ret i16 %x
 }
 
+; FIXME: Can be optimizated with maxss + minss
 define i19 @test_signed_i19_f16(half %f) nounwind {
 ; X86-X87-LABEL: test_signed_i19_f16:
 ; X86-X87:       # %bb.0:
@@ -2444,31 +2493,39 @@ define i19 @test_signed_i19_f16(half %f) nounwind {
 ; X86-SSE-LABEL: test_signed_i19_f16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $-262144, %ecx # imm = 0xFFFC0000
+; X86-SSE-NEXT:    cmovael %eax, %ecx
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $262143, %edx # imm = 0x3FFFF
+; X86-SSE-NEXT:    cmovbel %ecx, %edx
 ; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
-; X86-SSE-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    cvttss2si %xmm0, %ecx
-; X86-SSE-NEXT:    cmovnpl %ecx, %eax
+; X86-SSE-NEXT:    cmovnpl %edx, %eax
 ; X86-SSE-NEXT:    addl $12, %esp
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: test_signed_i19_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $-262144, %ecx # imm = 0xFFFC0000
+; X64-NEXT:    cmovael %eax, %ecx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $262143, %edx # imm = 0x3FFFF
+; X64-NEXT:    cmovbel %ecx, %edx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    cvttss2si %xmm0, %ecx
-; X64-NEXT:    cmovnpl %ecx, %eax
+; X64-NEXT:    cmovnpl %edx, %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
     %x = call i19 @llvm.fptosi.sat.i19.f16(half %f)
@@ -2529,33 +2586,39 @@ define i32 @test_signed_i32_f16(half %f) nounwind {
 ; X86-SSE-LABEL: test_signed_i32_f16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X86-SSE-NEXT:    cmovbel %eax, %ecx
+; X86-SSE-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; X86-SSE-NEXT:    cmovael %eax, %ecx
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-SSE-NEXT:    cmovbel %ecx, %edx
 ; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
-; X86-SSE-NEXT:    cmovnpl %ecx, %eax
+; X86-SSE-NEXT:    cmovnpl %edx, %eax
 ; X86-SSE-NEXT:    addl $12, %esp
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: test_signed_i32_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-NEXT:    cmovbel %eax, %ecx
+; X64-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; X64-NEXT:    cmovael %eax, %ecx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
+; X64-NEXT:    cmovbel %ecx, %edx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    cmovnpl %ecx, %eax
+; X64-NEXT:    cmovnpl %edx, %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
     %x = call i32 @llvm.fptosi.sat.i32.f16(half %f)
@@ -2634,9 +2697,10 @@ define i50 @test_signed_i50_f16(half %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $24, %esp
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
@@ -2669,8 +2733,7 @@ define i50 @test_signed_i50_f16(half %f) nounwind {
 ; X64-LABEL: test_signed_i50_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %rax
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movabsq $-562949953421312, %rcx # imm = 0xFFFE000000000000
@@ -2759,9 +2822,10 @@ define i64 @test_signed_i64_f16(half %f) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $24, %esp
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
@@ -2794,15 +2858,17 @@ define i64 @test_signed_i64_f16(half %f) nounwind {
 ; X64-LABEL: test_signed_i64_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    cvttss2si %xmm0, %rax
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; X64-NEXT:    cmovbeq %rax, %rcx
+; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; X64-NEXT:    cmovaeq %rax, %rcx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-NEXT:    cmovbeq %rcx, %rdx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    cmovnpq %rcx, %rax
+; X64-NEXT:    cmovnpq %rdx, %rax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
     %x = call i64 @llvm.fptosi.sat.i64.f16(half %f)
@@ -2908,10 +2974,11 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $44, %esp
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -2963,8 +3030,7 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; X64-LABEL: test_signed_i100_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    callq __fixsfti@PLT
 ; X64-NEXT:    xorl %ecx, %ecx
@@ -3093,10 +3159,11 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $44, %esp
+; X86-SSE-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl %eax, (%esp)
-; X86-SSE-NEXT:    calll __gnu_h2f_ieee
+; X86-SSE-NEXT:    pextrw $0, %xmm0, %eax
+; X86-SSE-NEXT:    movw %ax, (%esp)
+; X86-SSE-NEXT:    calll __extendhfsf2
 ; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -3144,8 +3211,7 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; X64-LABEL: test_signed_i128_f16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    callq __fixsfti@PLT
 ; X64-NEXT:    xorl %ecx, %ecx

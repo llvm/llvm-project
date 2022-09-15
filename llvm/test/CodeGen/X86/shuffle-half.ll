@@ -4,363 +4,305 @@
 define <32 x half> @dump_vec() {
 ; CHECK-LABEL: dump_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testb %dl, %dl
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cond.load
-; CHECK-NEXT:    movzwl (%rax), %edx
+; CHECK-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,0,0,0]
+; CHECK-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0
 ; CHECK-NEXT:  .LBB0_2: # %else
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    pushq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    pushq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 56
-; CHECK-NEXT:    .cfi_offset %rbx, -56
-; CHECK-NEXT:    .cfi_offset %r12, -48
-; CHECK-NEXT:    .cfi_offset %r13, -40
-; CHECK-NEXT:    .cfi_offset %r14, -32
-; CHECK-NEXT:    .cfi_offset %r15, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    jne .LBB0_3
-; CHECK-NEXT:  # %bb.4: # %cond.load1
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movl %esi, %ebp
-; CHECK-NEXT:    movl %esi, %r14d
-; CHECK-NEXT:    movl %esi, %r15d
-; CHECK-NEXT:    movl %esi, %r12d
-; CHECK-NEXT:    movl %esi, %r13d
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    movl %esi, %r8d
-; CHECK-NEXT:    movl %esi, %r9d
-; CHECK-NEXT:    movl %esi, %r10d
-; CHECK-NEXT:    movl %esi, %r11d
-; CHECK-NEXT:    movzwl (%rax), %esi
-; CHECK-NEXT:    # kill: def $si killed $si def $esi
-; CHECK-NEXT:    jmp .LBB0_5
-; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw %si, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movl %esi, %ebp
-; CHECK-NEXT:    movl %esi, %r14d
-; CHECK-NEXT:    movl %esi, %r15d
-; CHECK-NEXT:    movl %esi, %r12d
-; CHECK-NEXT:    movl %esi, %r13d
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    movl %esi, %r8d
-; CHECK-NEXT:    movl %esi, %r9d
-; CHECK-NEXT:    movl %esi, %r10d
-; CHECK-NEXT:    movl %esi, %r11d
-; CHECK-NEXT:  .LBB0_5: # %else2
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  # %bb.6: # %cond.load4
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_7: # %else5
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_9
-; CHECK-NEXT:  # %bb.8: # %cond.load7
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_9: # %else8
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_11
-; CHECK-NEXT:  # %bb.10: # %cond.load10
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_11: # %else11
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_13
-; CHECK-NEXT:  # %bb.12: # %cond.load13
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_13: # %else14
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_15
-; CHECK-NEXT:  # %bb.14: # %cond.load16
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_15: # %else17
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_17
-; CHECK-NEXT:  # %bb.16: # %cond.load19
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_17: # %else20
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_19
-; CHECK-NEXT:  # %bb.18: # %cond.load22
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_19: # %else23
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_21
-; CHECK-NEXT:  # %bb.20: # %cond.load25
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_21: # %else26
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_23
-; CHECK-NEXT:  # %bb.22: # %cond.load28
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_23: # %else29
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_25
-; CHECK-NEXT:  # %bb.24: # %cond.load31
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_25: # %else32
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_27
-; CHECK-NEXT:  # %bb.26: # %cond.load34
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_27: # %else35
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_29
-; CHECK-NEXT:  # %bb.28: # %cond.load37
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_29: # %else38
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_31
-; CHECK-NEXT:  # %bb.30: # %cond.load40
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_31: # %else41
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_33
-; CHECK-NEXT:  # %bb.32: # %cond.load43
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_33: # %else44
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_35
-; CHECK-NEXT:  # %bb.34: # %cond.load46
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_35: # %else47
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_37
-; CHECK-NEXT:  # %bb.36: # %cond.load49
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_37: # %else50
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_39
-; CHECK-NEXT:  # %bb.38: # %cond.load52
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_39: # %else53
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_41
-; CHECK-NEXT:  # %bb.40: # %cond.load55
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    movw %bx, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:  .LBB0_41: # %else56
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_43
-; CHECK-NEXT:  # %bb.42: # %cond.load58
-; CHECK-NEXT:    movzwl (%rax), %ebp
-; CHECK-NEXT:  .LBB0_43: # %else59
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_45
-; CHECK-NEXT:  # %bb.44: # %cond.load61
-; CHECK-NEXT:    movzwl (%rax), %r14d
-; CHECK-NEXT:  .LBB0_45: # %else62
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_47
-; CHECK-NEXT:  # %bb.46: # %cond.load64
-; CHECK-NEXT:    movzwl (%rax), %r15d
-; CHECK-NEXT:  .LBB0_47: # %else65
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_49
-; CHECK-NEXT:  # %bb.48: # %cond.load67
-; CHECK-NEXT:    movzwl (%rax), %r12d
-; CHECK-NEXT:  .LBB0_49: # %else68
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_51
-; CHECK-NEXT:  # %bb.50: # %cond.load70
-; CHECK-NEXT:    movzwl (%rax), %r13d
-; CHECK-NEXT:  .LBB0_51: # %else71
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_53
-; CHECK-NEXT:  # %bb.52: # %cond.load73
-; CHECK-NEXT:    movzwl (%rax), %ecx
-; CHECK-NEXT:  .LBB0_53: # %else74
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_55
-; CHECK-NEXT:  # %bb.54: # %cond.load76
-; CHECK-NEXT:    movzwl (%rax), %edi
-; CHECK-NEXT:  .LBB0_55: # %else77
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_57
-; CHECK-NEXT:  # %bb.56: # %cond.load79
-; CHECK-NEXT:    movzwl (%rax), %r8d
-; CHECK-NEXT:  .LBB0_57: # %else80
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_59
-; CHECK-NEXT:  # %bb.58: # %cond.load82
-; CHECK-NEXT:    movzwl (%rax), %r9d
-; CHECK-NEXT:  .LBB0_59: # %else83
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_61
-; CHECK-NEXT:  # %bb.60: # %cond.load85
-; CHECK-NEXT:    movzwl (%rax), %r10d
-; CHECK-NEXT:  .LBB0_61: # %else86
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_63
-; CHECK-NEXT:  # %bb.62: # %cond.load88
-; CHECK-NEXT:    movzwl (%rax), %r11d
-; CHECK-NEXT:  .LBB0_63: # %else89
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_4
+; CHECK-NEXT:  # %bb.3: # %cond.load1
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_4: # %else2
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_6
+; CHECK-NEXT:  # %bb.5: # %cond.load4
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2],xmm0[3,4,5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_6: # %else5
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_8
+; CHECK-NEXT:  # %bb.7: # %cond.load7
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2],xmm1[3],xmm0[4,5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_8: # %else8
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_10
+; CHECK-NEXT:  # %bb.9: # %cond.load10
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4],xmm0[5,6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_10: # %else11
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_12
+; CHECK-NEXT:  # %bb.11: # %cond.load13
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4],xmm1[5],xmm0[6,7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_12: # %else14
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_14
+; CHECK-NEXT:  # %bb.13: # %cond.load16
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5],xmm1[6],xmm0[7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_14: # %else17
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_16
+; CHECK-NEXT:  # %bb.15: # %cond.load19
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3,4,5,6],xmm1[7]
+; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_16: # %else20
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_18
+; CHECK-NEXT:  # %bb.17: # %cond.load22
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:  .LBB0_18: # %else23
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_20
+; CHECK-NEXT:  # %bb.19: # %cond.load25
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7,8],ymm1[9],ymm0[10,11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:  .LBB0_20: # %else26
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_22
+; CHECK-NEXT:  # %bb.21: # %cond.load28
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1],ymm1[2],ymm0[3,4,5,6,7,8,9],ymm1[10],ymm0[11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:  .LBB0_22: # %else29
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_24
+; CHECK-NEXT:  # %bb.23: # %cond.load31
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2],ymm1[3],ymm0[4,5,6,7,8,9,10],ymm1[11],ymm0[12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:  .LBB0_24: # %else32
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_26
+; CHECK-NEXT:  # %bb.25: # %cond.load34
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4],ymm0[5,6,7,8,9,10,11],ymm1[12],ymm0[13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:  .LBB0_26: # %else35
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_28
+; CHECK-NEXT:  # %bb.27: # %cond.load37
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4],ymm1[5],ymm0[6,7,8,9,10,11,12],ymm1[13],ymm0[14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:  .LBB0_28: # %else38
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_30
+; CHECK-NEXT:  # %bb.29: # %cond.load40
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5],ymm1[6],ymm0[7,8,9,10,11,12,13],ymm1[14],ymm0[15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:  .LBB0_30: # %else41
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_32
+; CHECK-NEXT:  # %bb.31: # %cond.load43
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3],zmm0[4,5,6,7]
+; CHECK-NEXT:  .LBB0_32: # %else44
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_34
+; CHECK-NEXT:  # %bb.33: # %cond.load46
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_34: # %else47
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_36
+; CHECK-NEXT:  # %bb.35: # %cond.load49
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2,3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_36: # %else50
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_38
+; CHECK-NEXT:  # %bb.37: # %cond.load52
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2],xmm2[3,4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_38: # %else53
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_40
+; CHECK-NEXT:  # %bb.39: # %cond.load55
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[3],xmm2[4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_40: # %else56
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_42
+; CHECK-NEXT:  # %bb.41: # %cond.load58
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4],xmm2[5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_42: # %else59
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_44
+; CHECK-NEXT:  # %bb.43: # %cond.load61
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4],xmm1[5],xmm2[6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_44: # %else62
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_46
+; CHECK-NEXT:  # %bb.45: # %cond.load64
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4,5],xmm1[6],xmm2[7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_46: # %else65
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_48
+; CHECK-NEXT:  # %bb.47: # %cond.load67
+; CHECK-NEXT:    vpbroadcastw (%rax), %xmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1,2,3,4,5,6],xmm1[7]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm2[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_48: # %else68
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_50
+; CHECK-NEXT:  # %bb.49: # %cond.load70
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3,4,5,6,7],ymm1[8],ymm2[9,10,11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_50: # %else71
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_52
+; CHECK-NEXT:  # %bb.51: # %cond.load73
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0],ymm1[1],ymm2[2,3,4,5,6,7,8],ymm1[9],ymm2[10,11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_52: # %else74
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_54
+; CHECK-NEXT:  # %bb.53: # %cond.load76
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7,8,9],ymm1[10],ymm2[11,12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_54: # %else77
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_56
+; CHECK-NEXT:  # %bb.55: # %cond.load79
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2],ymm1[3],ymm2[4,5,6,7,8,9,10],ymm1[11],ymm2[12,13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_56: # %else80
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_58
+; CHECK-NEXT:  # %bb.57: # %cond.load82
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4],ymm2[5,6,7,8,9,10,11],ymm1[12],ymm2[13,14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_58: # %else83
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_60
+; CHECK-NEXT:  # %bb.59: # %cond.load85
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2,3,4],ymm1[5],ymm2[6,7,8,9,10,11,12],ymm1[13],ymm2[14,15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_60: # %else86
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_62
+; CHECK-NEXT:  # %bb.61: # %cond.load88
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5],ymm1[6],ymm2[7,8,9,10,11,12,13],ymm1[14],ymm2[15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_62: # %else89
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_64
-; CHECK-NEXT:  # %bb.65: # %cond.load91
-; CHECK-NEXT:    movzwl (%rax), %ebx
-; CHECK-NEXT:    jmp .LBB0_66
-; CHECK-NEXT:  .LBB0_64:
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
-; CHECK-NEXT:  .LBB0_66: # %else92
-; CHECK-NEXT:    movw %dx, (%rax)
-; CHECK-NEXT:    movw %si, 2(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 4(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 6(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 8(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 10(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 12(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 14(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 16(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 18(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 20(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 22(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 24(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 26(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 28(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 30(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 32(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 34(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 36(%rax)
-; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 2-byte Folded Reload
-; CHECK-NEXT:    movw %dx, 38(%rax)
-; CHECK-NEXT:    movw %bp, 40(%rax)
-; CHECK-NEXT:    movw %r14w, 42(%rax)
-; CHECK-NEXT:    movw %r15w, 44(%rax)
-; CHECK-NEXT:    movw %r12w, 46(%rax)
-; CHECK-NEXT:    movw %r13w, 48(%rax)
-; CHECK-NEXT:    movw %cx, 50(%rax)
-; CHECK-NEXT:    movw %di, 52(%rax)
-; CHECK-NEXT:    movw %r8w, 54(%rax)
-; CHECK-NEXT:    movw %r9w, 56(%rax)
-; CHECK-NEXT:    movw %r10w, 58(%rax)
-; CHECK-NEXT:    movw %r11w, 60(%rax)
-; CHECK-NEXT:    movw %bx, 62(%rax)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    popq %r13
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    popq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  # %bb.63: # %cond.load91
+; CHECK-NEXT:    vpbroadcastw (%rax), %ymm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm2
+; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5,6],ymm1[7],ymm2[8,9,10,11,12,13,14],ymm1[15]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:  .LBB0_64: # %else92
 ; CHECK-NEXT:    retq
   %1 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr poison, i32 2, <32 x i1> poison, <32 x half> <half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0>)
   ret <32 x half> %1

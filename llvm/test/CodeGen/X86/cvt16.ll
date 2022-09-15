@@ -26,15 +26,16 @@ define void @test1(float %src, ptr %dest) nounwind {
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rbx
 ; LIBCALL-NEXT:    movq %rdi, %rbx
-; LIBCALL-NEXT:    callq __gnu_f2h_ieee@PLT
-; LIBCALL-NEXT:    movw %ax, (%rbx)
+; LIBCALL-NEXT:    callq __truncsfhf2@PLT
+; LIBCALL-NEXT:    pextrw $0, %xmm0, (%rbx)
 ; LIBCALL-NEXT:    popq %rbx
 ; LIBCALL-NEXT:    retq
 ;
 ; F16C-LABEL: test1:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; F16C-NEXT:    vmovd %xmm0, %eax
+; F16C-NEXT:    movw %ax, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; SOFTFLOAT-LABEL: test1:
@@ -53,8 +54,8 @@ define void @test1(float %src, ptr %dest) nounwind {
 define float @test2(ptr nocapture %src) nounwind {
 ; LIBCALL-LABEL: test2:
 ; LIBCALL:       # %bb.0:
-; LIBCALL-NEXT:    movzwl (%rdi), %edi
-; LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
+; LIBCALL-NEXT:    pinsrw $0, (%rdi), %xmm0
+; LIBCALL-NEXT:    jmp __extendhfsf2@PLT # TAILCALL
 ;
 ; F16C-LABEL: test2:
 ; F16C:       # %bb.0:
@@ -80,15 +81,15 @@ define float @test3(float %src) nounwind uwtable readnone {
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
-; LIBCALL-NEXT:    callq __gnu_f2h_ieee@PLT
-; LIBCALL-NEXT:    movzwl %ax, %edi
+; LIBCALL-NEXT:    callq __truncsfhf2@PLT
 ; LIBCALL-NEXT:    popq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
-; LIBCALL-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
+; LIBCALL-NEXT:    jmp __extendhfsf2@PLT # TAILCALL
 ;
 ; F16C-LABEL: test3:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
@@ -111,8 +112,8 @@ define double @test4(ptr nocapture %src) nounwind {
 ; LIBCALL-LABEL: test4:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rax
-; LIBCALL-NEXT:    movzwl (%rdi), %edi
-; LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
+; LIBCALL-NEXT:    pinsrw $0, (%rdi), %xmm0
+; LIBCALL-NEXT:    callq __extendhfsf2@PLT
 ; LIBCALL-NEXT:    cvtss2sd %xmm0, %xmm0
 ; LIBCALL-NEXT:    popq %rax
 ; LIBCALL-NEXT:    retq
@@ -142,11 +143,21 @@ define double @test4(ptr nocapture %src) nounwind {
 define i16 @test5(double %src) nounwind {
 ; LIBCALL-LABEL: test5:
 ; LIBCALL:       # %bb.0:
-; LIBCALL-NEXT:    jmp __truncdfhf2@PLT # TAILCALL
+; LIBCALL-NEXT:    pushq %rax
+; LIBCALL-NEXT:    callq __truncdfhf2@PLT
+; LIBCALL-NEXT:    pextrw $0, %xmm0, %eax
+; LIBCALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; LIBCALL-NEXT:    popq %rcx
+; LIBCALL-NEXT:    retq
 ;
 ; F16C-LABEL: test5:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    jmp __truncdfhf2@PLT # TAILCALL
+; F16C-NEXT:    pushq %rax
+; F16C-NEXT:    callq __truncdfhf2@PLT
+; F16C-NEXT:    vpextrw $0, %xmm0, %eax
+; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
+; F16C-NEXT:    popq %rcx
+; F16C-NEXT:    retq
 ;
 ; SOFTFLOAT-LABEL: test5:
 ; SOFTFLOAT:       # %bb.0:
