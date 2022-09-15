@@ -4,7 +4,7 @@
 define i8 @ashr_and(i8 %x) {
 ; CHECK-LABEL: @ashr_and(
 ; CHECK-NEXT:    [[PX:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[PX]], 1
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[PX]], 1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %px = and i8 %x, 127
@@ -14,7 +14,7 @@ define i8 @ashr_and(i8 %x) {
 
 define i8 @ashr_const(i8 %x) {
 ; CHECK-LABEL: @ashr_const(
-; CHECK-NEXT:    [[R:%.*]] = ashr i8 42, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 42, [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %r = ashr i8 42, %x
@@ -24,13 +24,15 @@ define i8 @ashr_const(i8 %x) {
 define i8 @ashr_zext(i7 %x, i8 %y) {
 ; CHECK-LABEL: @ashr_zext(
 ; CHECK-NEXT:    [[PX:%.*]] = zext i7 [[X:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[PX]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[PX]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %px = zext i7 %x to i8
   %r = ashr i8 %px, %y
   ret i8 %r
 }
+
+; negative test
 
 define i8 @ashr_not_nonneg(i7 %x, i8 %y) {
 ; CHECK-LABEL: @ashr_not_nonneg(
@@ -51,7 +53,7 @@ define i32 @dominating_condition(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X]], 16
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X]], 16
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -85,7 +87,7 @@ define i32 @dominating_condition_alt(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[A:%.*]] = ashr i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ -42, [[T]] ], [ [[A]], [[F]] ]
