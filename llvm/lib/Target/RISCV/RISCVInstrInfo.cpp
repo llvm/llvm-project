@@ -1216,6 +1216,21 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   const uint64_t TSFlags = Desc.TSFlags;
+  if (RISCVII::hasVLOp(TSFlags)) {
+    const MachineOperand &Op = MI.getOperand(RISCVII::getVLOpNum(Desc));
+    if (!Op.isImm() && !Op.isReg())  {
+      ErrInfo = "Invalid operand type for VL operand";
+      return false;
+    }
+    if (Op.isReg() && Op.getReg() != RISCV::NoRegister) {
+      const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+      auto *RC = MRI.getRegClass(Op.getReg());
+      if (!RISCV::GPRRegClass.hasSubClassEq(RC)) {
+        ErrInfo = "Invalid register class for VL operand";
+        return false;
+      }
+    }
+  }
   if (RISCVII::hasSEWOp(TSFlags)) {
     unsigned OpIdx = RISCVII::getSEWOpNum(Desc);
     uint64_t Log2SEW = MI.getOperand(OpIdx).getImm();
