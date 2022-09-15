@@ -39,16 +39,13 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
 
     return x + FPBits::inf().get_val();
   }
-  auto ep_p = exp_eval<-1>(x);
-  auto ep_m = exp_eval<-1>(-x);
-  // 0.5 * exp(x)  = ep_p.mult_exp * (ep_p.r + 1)
-  //               = ep_p.mult_exp * ep_p.r + ep_p.mult_exp
-  // 0.5 * exp(-x) = ep_m.mult_exp * (ep_m.r + 1)
-  //               = ep_m.mult_exp * ep_m.r + ep_m.mult_exp
-  // cos(x) = 0.5 * exp(x) + 0.5 * expm1(-x)
-  double ep = fputil::multiply_add(ep_p.mult_exp, ep_p.r, ep_p.mult_exp) +
-              fputil::multiply_add(ep_m.mult_exp, ep_m.r, ep_m.mult_exp);
-  return ep;
+
+  // TODO: We should be able to reduce the latency and reciprocal throughput
+  // further by using a low degree (maybe 3-7 ?) minimax polynomial for small
+  // but not too small inputs, such as |x| < 2^-2, or |x| < 2^-3.
+
+  // cosh(x) = (e^x + e^(-x)) / 2.
+  return exp_pm_eval</*is_sinh*/ false>(x);
 }
 
 } // namespace __llvm_libc
