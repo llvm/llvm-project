@@ -40,6 +40,7 @@ public:
   }
   bool unlock_shared() {
     std::lock_guard<std::mutex> lock(m_reader_mutex);
+    assert(m_readers > 0);
     --m_readers;
     return m_impl.unlock_shared();
   }
@@ -57,7 +58,12 @@ struct ScopedSharedMutexReader {
     if (m_mutex)
       m_mutex->lock_shared();
   }
-  ScopedSharedMutexReader(const ScopedSharedMutexReader&) = default;
+
+  ScopedSharedMutexReader(const ScopedSharedMutexReader &copy)
+      : m_mutex(copy.m_mutex) {
+    if (m_mutex)
+      m_mutex->lock_shared();
+  }
 
   ~ScopedSharedMutexReader() {
     if (m_mutex)
@@ -100,9 +106,6 @@ public:
       : ScopedSharedMutexReader(&mutex), m_ptr(&ctx) {
     assert(m_ptr && "invalid context");
   }
-
-  SwiftScratchContextReader(const SwiftScratchContextReader &copy)
-      : ScopedSharedMutexReader(copy.m_mutex), m_ptr(copy.m_ptr) {}
 
   TypeSystemSwiftTypeRefForExpressions *get() {
     assert(m_ptr && "invalid context");
