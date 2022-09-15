@@ -84,8 +84,8 @@ body:             |
     MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)
 
     ;; This should resolve to the loaded register.
-    DBG_INSTR_REF 1, 0, !12, !DIExpression(), debug-location !13
-    ; CHECK:      DBG_INSTR_REF 1, 0,
+    DBG_INSTR_REF !12, !DIExpression(), dbg-instr-ref(1, 0), debug-location !13
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
     ; CHECK-NEXT: DBG_VALUE $rcx
 
     ;; And if we say it's a smaller size, we should be able to pick out smaller
@@ -96,8 +96,8 @@ body:             |
     MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)
 
     ;; This should pick out the 32 bit value.
-    DBG_INSTR_REF 2, 0, !12, !DIExpression(), debug-location !13
-    ; CHECK:      DBG_INSTR_REF 2, 0,
+    DBG_INSTR_REF !12, !DIExpression(), dbg-instr-ref(2, 0), debug-location !13
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
     ; CHECK-NEXT: DBG_VALUE $ecx
 
     ;; Try all the other subregs.
@@ -106,8 +106,8 @@ body:             |
     $rcx = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.0)
     MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)
 
-    DBG_INSTR_REF 3, 0, !12, !DIExpression(), debug-location !13
-    ; CHECK:      DBG_INSTR_REF 3, 0,
+    DBG_INSTR_REF !12, !DIExpression(), dbg-instr-ref(3, 0), debug-location !13
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
     ; CHECK-NEXT: DBG_VALUE $cx
 
     DBG_PHI %stack.0, 4, 8
@@ -115,8 +115,8 @@ body:             |
     $rcx = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.0)
     MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)
 
-    DBG_INSTR_REF 4, 0, !12, !DIExpression(), debug-location !13
-    ; CHECK:      DBG_INSTR_REF 4, 0,
+    DBG_INSTR_REF !12, !DIExpression(), dbg-instr-ref(4, 0), debug-location !13
+    ; CHECK:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
     ; CHECK-NEXT: DBG_VALUE $cl
 
     ;; We can't, at this time, describe subregister fields with nonzero offset.

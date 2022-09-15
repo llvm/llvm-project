@@ -1429,8 +1429,8 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   if (!VTracker && !TTracker)
     return false;
 
-  unsigned InstNo = MI.getOperand(0).getImm();
-  unsigned OpNo = MI.getOperand(1).getImm();
+  unsigned InstNo = MI.getDebugOperand(0).getInstrRefInstrIndex();
+  unsigned OpNo = MI.getDebugOperand(0).getInstrRefOpIndex();
 
   const DILocalVariable *Var = MI.getDebugVariable();
   const DIExpression *Expr = MI.getDebugExpression();
@@ -2119,7 +2119,7 @@ bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
 /// \param MI A previously unprocessed debug instruction to analyze for
 ///           fragment usage.
 void InstrRefBasedLDV::accumulateFragmentMap(MachineInstr &MI) {
-  assert(MI.isDebugValue() || MI.isDebugRef());
+  assert(MI.isDebugValueLike());
   DebugVariable MIVar(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
   FragmentInfo ThisFragment = MIVar.getFragmentOrDefault();
@@ -2224,7 +2224,7 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
       process(MI, nullptr, nullptr);
 
       // Also accumulate fragment map.
-      if (MI.isDebugValue() || MI.isDebugRef())
+      if (MI.isDebugValueLike())
         accumulateFragmentMap(MI);
 
       // Create a map from the instruction number (if present) to the

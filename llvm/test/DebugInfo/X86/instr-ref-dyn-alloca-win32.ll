@@ -13,7 +13,7 @@
 ;; The alloca instruction should be labelled, and we should refer to operand 2,
 ;; which happens to be a def of $esp
 ; DYN_LABEL: DYN_ALLOCA_32 {{.*}} debug-instr-number 1,
-; DYN_LABEL: DBG_INSTR_REF 1, 2
+; DYN_LABEL: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 2)
 
 ;; Once lowered, on win32 _chkstk alters the stack pointer. We should label the
 ;; call and it's SP operand, plus check for a value substitution.

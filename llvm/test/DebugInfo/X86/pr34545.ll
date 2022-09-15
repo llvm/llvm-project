@@ -9,17 +9,17 @@
 
 ; CHECK:         $eax = MOV32rm
 ; INSTRREF-SAME:      debug-instr-number 1
-; INSTRREF:      DBG_INSTR_REF 1, 0
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
 ; CHECK:         DBG_VALUE $eax
 ; CHECK:         $eax = SHL32rCL killed renamable $eax,
 ; INSTRREF-SAME:      debug-instr-number 2
-; INSTRREF:      DBG_INSTR_REF 2, 0
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
 ; CHECK:         DBG_VALUE $eax
 ; CHECK:         DBG_VALUE $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
 ; VARLOCS:       DBG_VALUE $eax
 ; CHECK:         $eax = SHL32rCL killed renamable $eax,
 ; INSTRREF-SAME:      debug-instr-number 3
-; INSTRREF:      DBG_INSTR_REF 3, 0
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
 ; CHECK:         DBG_VALUE $eax
 ; CHECK:         RET64 $eax
 

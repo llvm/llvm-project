@@ -1196,19 +1196,18 @@ void MachineFunction::finalizeDebugInstrRefs() {
   auto *TII = getSubtarget().getInstrInfo();
 
   auto MakeUndefDbgValue = [&](MachineInstr &MI) {
-    const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE);
+    const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE_LIST);
     MI.setDesc(RefII);
-    MI.getOperand(0).setReg(0);
-    MI.getOperand(1).ChangeToRegister(0, false);
+    MI.getDebugOperand(0).setReg(0);
   };
 
   DenseMap<Register, DebugInstrOperandPair> ArgDbgPHIs;
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
-      if (!MI.isDebugRef() || !MI.getOperand(0).isReg())
+      if (!MI.isDebugRef() || !MI.getDebugOperand(0).isReg())
         continue;
 
-      Register Reg = MI.getOperand(0).getReg();
+      Register Reg = MI.getDebugOperand(0).getReg();
 
       // Some vregs can be deleted as redundant in the meantime. Mark those
       // as DBG_VALUE $noreg. Additionally, some normal instructions are
@@ -1226,8 +1225,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
       // for why this is important.
       if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
         auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
-        MI.getOperand(0).ChangeToImmediate(Result.first);
-        MI.getOperand(1).setImm(Result.second);
+        MI.getDebugOperand(0).ChangeToDbgInstrRef(Result.first, Result.second);
       } else {
         // Otherwise, identify the operand number that the VReg refers to.
         unsigned OperandIdx = 0;
@@ -1240,8 +1238,7 @@ void MachineFunction::finalizeDebugInstrRefs() {
 
         // Morph this instr ref to point at the given instruction and operand.
         unsigned ID = DefMI.getDebugInstrNum();
-        MI.getOperand(0).ChangeToImmediate(ID);
-        MI.getOperand(1).setImm(OperandIdx);
+        MI.getDebugOperand(0).ChangeToDbgInstrRef(ID, OperandIdx);
       }
     }
   }

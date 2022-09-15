@@ -876,12 +876,16 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
 
 MachineBasicBlock::iterator LDVImpl::handleDebugInstr(MachineInstr &MI,
                                                       SlotIndex Idx) {
-  assert(MI.isDebugValue() || MI.isDebugRef() || MI.isDebugPHI());
+  assert(MI.isDebugValueLike() || MI.isDebugPHI());
 
   // In instruction referencing mode, there should be no DBG_VALUE instructions
   // that refer to virtual registers. They might still refer to constants.
-  if (MI.isDebugValue())
-    assert(!MI.getOperand(0).isReg() || !MI.getOperand(0).getReg().isVirtual());
+  if (MI.isDebugValueLike())
+    assert(none_of(MI.debug_operands(),
+                   [](const MachineOperand &MO) {
+                     return MO.isReg() && MO.getReg().isVirtual();
+                   }) &&
+           "MIs should not refer to Virtual Registers in InstrRef mode.");
 
   // Unlink the instruction, store it in the debug instructions collection.
   auto NextInst = std::next(MI.getIterator());
