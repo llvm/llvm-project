@@ -549,6 +549,7 @@ add_entrypoint_object(
   HDRS
     ../exp2f.h
   DEPENDS
+    .explogxf
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
