@@ -767,9 +767,17 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     Note that this transformation is invalidating the handles to any payload IR
     operation that is contained inside the vectorization target.
 
-    `disable_multi_reduction_to_contract_patterns` and 
-    `disable_transfer_permutation_map_lowering_patterns` limits the power of 
-    vectorization. They are currently intended for testing purposes.
+    This transformation supports the following attributes:
+      - `vectorize_padding`: a UnitAttr to activate the vectorization of 
+      `tensor.pad` ops. Different pipelines may prefer to lower such ops to 
+      loops.
+      - `disable_multi_reduction_to_contract_patterns`: a UnitAttr to deactivate
+      the rewrite of `vector.multi_reduction` to `vector.contract`. This is 
+      intended to be used in tests only.
+      - `disable_transfer_permutation_map_lowering_patterns`: a UnitAttr to
+      deactivate the rewrite of `vector.transfer` with permutation maps into
+      explicit `vector.transpose` operations. This is intended to be used in
+      tests only but may be promotoed to a first class attribute in the future.
 
     #### Return modes:
     
@@ -780,13 +788,12 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<BoolAttr, "false">:$vectorize_padding,                   
-                   DefaultValuedAttr<BoolAttr, "false">:$disable_multi_reduction_to_contract_patterns,                   
-                   DefaultValuedAttr<BoolAttr, "false">:$disable_transfer_permutation_map_lowering_patterns);
+                   UnitAttr:$vectorize_padding,                   
+                   UnitAttr:$disable_multi_reduction_to_contract_patterns,                   
+                   UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
   let results = (outs PDL_Operation:$transformed);
 
   let assemblyFormat = "$target attr-dict";
-
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target, 
