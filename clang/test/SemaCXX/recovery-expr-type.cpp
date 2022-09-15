@@ -162,3 +162,12 @@ extern "C" void *memset(void *, int b, unsigned long) {
   b = __builtin_object_size(c, 0); // crash2
 }
 }
+
+namespace test15 {
+void f() {
+  struct {
+    void m(int (&)[undefined()]) {} // expected-error {{undeclared identifier}}
+  } S;
+  S.m(1); // no crash
+}
+}
