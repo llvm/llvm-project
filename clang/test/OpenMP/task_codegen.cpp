@@ -1291,87 +1291,92 @@ void test_omp_all_memory()
 // CHECK1-SAME: () #[[ATTR8]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A:%.*]] = alloca float, align 4
-// CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float*)* @.omp_outlined..24 to void (i32*, i32*, ...)*), float* [[A]])
+// CHECK1-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON_23:%.*]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON_23]], %struct.anon.23* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
+// CHECK1-NEXT:    store float* [[A]], float** [[TMP0]], align 8
+// CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.23*)* @.omp_outlined..24 to void (i32*, i32*, ...)*), %struct.anon.23* [[OMP_OUTLINED_ARG_AGG_]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..24
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float* noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.anon.23* noalias noundef [[__CONTEXT:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
+// CHECK1-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.23*, align 8
 // CHECK1-NEXT:    [[B:%.*]] = alloca double, align 8
-// CHECK1-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_23:%.*]], align 8
+// CHECK1-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_24:%.*]], align 8
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK1-NEXT:    store float* [[A]], float** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load float*, float** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-// CHECK1-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
-// CHECK1-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-// CHECK1-NEXT:    br i1 [[TMP4]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
+// CHECK1-NEXT:    store %struct.anon.23* [[__CONTEXT]], %struct.anon.23** [[__CONTEXT_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load %struct.anon.23*, %struct.anon.23** [[__CONTEXT_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_23:%.*]], %struct.anon.23* [[TMP0]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP2:%.*]] = load float*, float** [[TMP1]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP3]], align 4
+// CHECK1-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]])
+// CHECK1-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
+// CHECK1-NEXT:    br i1 [[TMP6]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK1:       omp_if.then:
-// CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_23]], %struct.anon.23* [[AGG_CAPTURED]], i32 0, i32 0
-// CHECK1-NEXT:    store float* [[TMP0]], float** [[TMP5]], align 8
-// CHECK1-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i64 48, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.24*)* @.omp_task_entry..27 to i32 (i32, i8*)*))
-// CHECK1-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to %struct.kmp_task_t_with_privates.24*
-// CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_24:%.*]], %struct.kmp_task_t_with_privates.24* [[TMP7]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP8]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP10:%.*]] = load i8*, i8** [[TMP9]], align 8
-// CHECK1-NEXT:    [[TMP11:%.*]] = bitcast %struct.anon.23* [[AGG_CAPTURED]] to i8*
-// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP10]], i8* align 8 [[TMP11]], i64 8, i1 false)
-// CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_24]], %struct.kmp_task_t_with_privates.24* [[TMP7]], i32 0, i32 1
-// CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_25:%.*]], %struct..kmp_privates.t.25* [[TMP12]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP14:%.*]] = load double, double* [[B]], align 8
-// CHECK1-NEXT:    store double [[TMP14]], double* [[TMP13]], align 8
-// CHECK1-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_omp_task(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i8* [[TMP6]])
-// CHECK1-NEXT:    call void @__kmpc_end_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
+// CHECK1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_ANON_24]], %struct.anon.24* [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK1-NEXT:    store float* [[TMP2]], float** [[TMP7]], align 8
+// CHECK1-NEXT:    [[TMP8:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], i32 1, i64 48, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.25*)* @.omp_task_entry..27 to i32 (i32, i8*)*))
+// CHECK1-NEXT:    [[TMP9:%.*]] = bitcast i8* [[TMP8]] to %struct.kmp_task_t_with_privates.25*
+// CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_25:%.*]], %struct.kmp_task_t_with_privates.25* [[TMP9]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP10]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP12:%.*]] = load i8*, i8** [[TMP11]], align 8
+// CHECK1-NEXT:    [[TMP13:%.*]] = bitcast %struct.anon.24* [[AGG_CAPTURED]] to i8*
+// CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP12]], i8* align 8 [[TMP13]], i64 8, i1 false)
+// CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_25]], %struct.kmp_task_t_with_privates.25* [[TMP9]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_26:%.*]], %struct..kmp_privates.t.26* [[TMP14]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP16:%.*]] = load double, double* [[B]], align 8
+// CHECK1-NEXT:    store double [[TMP16]], double* [[TMP15]], align 8
+// CHECK1-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_omp_task(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], i8* [[TMP8]])
+// CHECK1-NEXT:    call void @__kmpc_end_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]])
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
 // CHECK1:       omp_if.end:
-// CHECK1-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK1-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP4]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_privates_map..26
-// CHECK1-SAME: (%struct..kmp_privates.t.25* noalias noundef [[TMP0:%.*]], double** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
+// CHECK1-SAME: (%struct..kmp_privates.t.26* noalias noundef [[TMP0:%.*]], double** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.25*, align 8
+// CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.26*, align 8
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca double**, align 8
-// CHECK1-NEXT:    store %struct..kmp_privates.t.25* [[TMP0]], %struct..kmp_privates.t.25** [[DOTADDR]], align 8
+// CHECK1-NEXT:    store %struct..kmp_privates.t.26* [[TMP0]], %struct..kmp_privates.t.26** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store double** [[TMP1]], double*** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.25*, %struct..kmp_privates.t.25** [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_25:%.*]], %struct..kmp_privates.t.25* [[TMP2]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.26*, %struct..kmp_privates.t.26** [[DOTADDR]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_26:%.*]], %struct..kmp_privates.t.26* [[TMP2]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = load double**, double*** [[DOTADDR1]], align 8
 // CHECK1-NEXT:    store double* [[TMP3]], double** [[TMP4]], align 8
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_task_entry..27
-// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.24* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.25* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTPRIVATES__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    [[DOTCOPY_FN__ADDR_I:%.*]] = alloca void (i8*, ...)*, align 8
 // CHECK1-NEXT:    [[DOTTASK_T__ADDR_I:%.*]] = alloca i8*, align 8
-// CHECK1-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.23*, align 8
+// CHECK1-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.24*, align 8
 // CHECK1-NEXT:    [[DOTFIRSTPRIV_PTR_ADDR_I:%.*]] = alloca double*, align 8
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.24*, align 8
+// CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.25*, align 8
 // CHECK1-NEXT:    store i32 [[TMP0]], i32* [[DOTADDR]], align 4
-// CHECK1-NEXT:    store %struct.kmp_task_t_with_privates.24* [[TMP1]], %struct.kmp_task_t_with_privates.24** [[DOTADDR1]], align 8
+// CHECK1-NEXT:    store %struct.kmp_task_t_with_privates.25* [[TMP1]], %struct.kmp_task_t_with_privates.25** [[DOTADDR1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTADDR]], align 4
-// CHECK1-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.24*, %struct.kmp_task_t_with_privates.24** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_24:%.*]], %struct.kmp_task_t_with_privates.24* [[TMP3]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.25*, %struct.kmp_task_t_with_privates.25** [[DOTADDR1]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_25:%.*]], %struct.kmp_task_t_with_privates.25* [[TMP3]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[TMP6]], align 8
-// CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.23*
-// CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_24]], %struct.kmp_task_t_with_privates.24* [[TMP3]], i32 0, i32 1
-// CHECK1-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.25* [[TMP9]] to i8*
-// CHECK1-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.24* [[TMP3]] to i8*
+// CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.24*
+// CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_25]], %struct.kmp_task_t_with_privates.25* [[TMP3]], i32 0, i32 1
+// CHECK1-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.26* [[TMP9]] to i8*
+// CHECK1-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.25* [[TMP3]] to i8*
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META123:![0-9]+]])
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META126:![0-9]+]])
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META128:![0-9]+]])
@@ -1379,17 +1384,17 @@ void test_omp_all_memory()
 // CHECK1-NEXT:    store i32 [[TMP2]], i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !132
 // CHECK1-NEXT:    store i32* [[TMP5]], i32** [[DOTPART_ID__ADDR_I]], align 8, !noalias !132
 // CHECK1-NEXT:    store i8* [[TMP10]], i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !132
-// CHECK1-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.25*, double**)* @.omp_task_privates_map..26 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !132
+// CHECK1-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.26*, double**)* @.omp_task_privates_map..26 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !132
 // CHECK1-NEXT:    store i8* [[TMP11]], i8** [[DOTTASK_T__ADDR_I]], align 8, !noalias !132
-// CHECK1-NEXT:    store %struct.anon.23* [[TMP8]], %struct.anon.23** [[__CONTEXT_ADDR_I]], align 8, !noalias !132
-// CHECK1-NEXT:    [[TMP12:%.*]] = load %struct.anon.23*, %struct.anon.23** [[__CONTEXT_ADDR_I]], align 8, !noalias !132
+// CHECK1-NEXT:    store %struct.anon.24* [[TMP8]], %struct.anon.24** [[__CONTEXT_ADDR_I]], align 8, !noalias !132
+// CHECK1-NEXT:    [[TMP12:%.*]] = load %struct.anon.24*, %struct.anon.24** [[__CONTEXT_ADDR_I]], align 8, !noalias !132
 // CHECK1-NEXT:    [[TMP13:%.*]] = load void (i8*, ...)*, void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !132
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !132
 // CHECK1-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, double**)*
 // CHECK1-NEXT:    call void [[TMP15]](i8* [[TMP14]], double** [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = load double*, double** [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias !132
 // CHECK1-NEXT:    [[TMP17:%.*]] = load double, double* [[TMP16]], align 8
-// CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON_23:%.*]], %struct.anon.23* [[TMP12]], i32 0, i32 0
+// CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON_24:%.*]], %struct.anon.24* [[TMP12]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP19:%.*]] = load float*, float** [[TMP18]], align 8
 // CHECK1-NEXT:    [[TMP20:%.*]] = load float, float* [[TMP19]], align 4
 // CHECK1-NEXT:    [[CONV_I:%.*]] = fpext float [[TMP20]] to double
@@ -2483,87 +2488,92 @@ void test_omp_all_memory()
 // CHECK2-SAME: () #[[ATTR8]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A:%.*]] = alloca float, align 4
-// CHECK2-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float*)* @.omp_outlined..24 to void (i32*, i32*, ...)*), float* [[A]])
+// CHECK2-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON_23:%.*]], align 8
+// CHECK2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON_23]], %struct.anon.23* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
+// CHECK2-NEXT:    store float* [[A]], float** [[TMP0]], align 8
+// CHECK2-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.23*)* @.omp_outlined..24 to void (i32*, i32*, ...)*), %struct.anon.23* [[OMP_OUTLINED_ARG_AGG_]])
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..24
-// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float* noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK2-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.anon.23* noalias noundef [[__CONTEXT:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
+// CHECK2-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.23*, align 8
 // CHECK2-NEXT:    [[B:%.*]] = alloca double, align 8
-// CHECK2-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_23:%.*]], align 8
+// CHECK2-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_24:%.*]], align 8
 // CHECK2-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK2-NEXT:    store float* [[A]], float** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP0:%.*]] = load float*, float** [[A_ADDR]], align 8
-// CHECK2-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
-// CHECK2-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-// CHECK2-NEXT:    br i1 [[TMP4]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
+// CHECK2-NEXT:    store %struct.anon.23* [[__CONTEXT]], %struct.anon.23** [[__CONTEXT_ADDR]], align 8
+// CHECK2-NEXT:    [[TMP0:%.*]] = load %struct.anon.23*, %struct.anon.23** [[__CONTEXT_ADDR]], align 8
+// CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_23:%.*]], %struct.anon.23* [[TMP0]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP2:%.*]] = load float*, float** [[TMP1]], align 8
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP3]], align 4
+// CHECK2-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]])
+// CHECK2-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
+// CHECK2-NEXT:    br i1 [[TMP6]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK2:       omp_if.then:
-// CHECK2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_23]], %struct.anon.23* [[AGG_CAPTURED]], i32 0, i32 0
-// CHECK2-NEXT:    store float* [[TMP0]], float** [[TMP5]], align 8
-// CHECK2-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i64 48, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.24*)* @.omp_task_entry..27 to i32 (i32, i8*)*))
-// CHECK2-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to %struct.kmp_task_t_with_privates.24*
-// CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_24:%.*]], %struct.kmp_task_t_with_privates.24* [[TMP7]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP8]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP10:%.*]] = load i8*, i8** [[TMP9]], align 8
-// CHECK2-NEXT:    [[TMP11:%.*]] = bitcast %struct.anon.23* [[AGG_CAPTURED]] to i8*
-// CHECK2-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP10]], i8* align 8 [[TMP11]], i64 8, i1 false)
-// CHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_24]], %struct.kmp_task_t_with_privates.24* [[TMP7]], i32 0, i32 1
-// CHECK2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_25:%.*]], %struct..kmp_privates.t.25* [[TMP12]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP14:%.*]] = load double, double* [[B]], align 8
-// CHECK2-NEXT:    store double [[TMP14]], double* [[TMP13]], align 8
-// CHECK2-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_omp_task(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i8* [[TMP6]])
-// CHECK2-NEXT:    call void @__kmpc_end_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
+// CHECK2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_ANON_24]], %struct.anon.24* [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK2-NEXT:    store float* [[TMP2]], float** [[TMP7]], align 8
+// CHECK2-NEXT:    [[TMP8:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], i32 1, i64 48, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.25*)* @.omp_task_entry..27 to i32 (i32, i8*)*))
+// CHECK2-NEXT:    [[TMP9:%.*]] = bitcast i8* [[TMP8]] to %struct.kmp_task_t_with_privates.25*
+// CHECK2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_25:%.*]], %struct.kmp_task_t_with_privates.25* [[TMP9]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP10]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP12:%.*]] = load i8*, i8** [[TMP11]], align 8
+// CHECK2-NEXT:    [[TMP13:%.*]] = bitcast %struct.anon.24* [[AGG_CAPTURED]] to i8*
+// CHECK2-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP12]], i8* align 8 [[TMP13]], i64 8, i1 false)
+// CHECK2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_25]], %struct.kmp_task_t_with_privates.25* [[TMP9]], i32 0, i32 1
+// CHECK2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_26:%.*]], %struct..kmp_privates.t.26* [[TMP14]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP16:%.*]] = load double, double* [[B]], align 8
+// CHECK2-NEXT:    store double [[TMP16]], double* [[TMP15]], align 8
+// CHECK2-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_omp_task(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], i8* [[TMP8]])
+// CHECK2-NEXT:    call void @__kmpc_end_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]])
 // CHECK2-NEXT:    br label [[OMP_IF_END]]
 // CHECK2:       omp_if.end:
-// CHECK2-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK2-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP4]])
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_privates_map..26
-// CHECK2-SAME: (%struct..kmp_privates.t.25* noalias noundef [[TMP0:%.*]], double** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
+// CHECK2-SAME: (%struct..kmp_privates.t.26* noalias noundef [[TMP0:%.*]], double** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.25*, align 8
+// CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.26*, align 8
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca double**, align 8
-// CHECK2-NEXT:    store %struct..kmp_privates.t.25* [[TMP0]], %struct..kmp_privates.t.25** [[DOTADDR]], align 8
+// CHECK2-NEXT:    store %struct..kmp_privates.t.26* [[TMP0]], %struct..kmp_privates.t.26** [[DOTADDR]], align 8
 // CHECK2-NEXT:    store double** [[TMP1]], double*** [[DOTADDR1]], align 8
-// CHECK2-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.25*, %struct..kmp_privates.t.25** [[DOTADDR]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_25:%.*]], %struct..kmp_privates.t.25* [[TMP2]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.26*, %struct..kmp_privates.t.26** [[DOTADDR]], align 8
+// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_26:%.*]], %struct..kmp_privates.t.26* [[TMP2]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP4:%.*]] = load double**, double*** [[DOTADDR1]], align 8
 // CHECK2-NEXT:    store double* [[TMP3]], double** [[TMP4]], align 8
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_task_entry..27
-// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.24* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.25* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-NEXT:    [[DOTPRIVATES__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    [[DOTCOPY_FN__ADDR_I:%.*]] = alloca void (i8*, ...)*, align 8
 // CHECK2-NEXT:    [[DOTTASK_T__ADDR_I:%.*]] = alloca i8*, align 8
-// CHECK2-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.23*, align 8
+// CHECK2-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.24*, align 8
 // CHECK2-NEXT:    [[DOTFIRSTPRIV_PTR_ADDR_I:%.*]] = alloca double*, align 8
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.24*, align 8
+// CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.25*, align 8
 // CHECK2-NEXT:    store i32 [[TMP0]], i32* [[DOTADDR]], align 4
-// CHECK2-NEXT:    store %struct.kmp_task_t_with_privates.24* [[TMP1]], %struct.kmp_task_t_with_privates.24** [[DOTADDR1]], align 8
+// CHECK2-NEXT:    store %struct.kmp_task_t_with_privates.25* [[TMP1]], %struct.kmp_task_t_with_privates.25** [[DOTADDR1]], align 8
 // CHECK2-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTADDR]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.24*, %struct.kmp_task_t_with_privates.24** [[DOTADDR1]], align 8
-// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_24:%.*]], %struct.kmp_task_t_with_privates.24* [[TMP3]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.25*, %struct.kmp_task_t_with_privates.25** [[DOTADDR1]], align 8
+// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_25:%.*]], %struct.kmp_task_t_with_privates.25* [[TMP3]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 2
 // CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[TMP6]], align 8
-// CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.23*
-// CHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_24]], %struct.kmp_task_t_with_privates.24* [[TMP3]], i32 0, i32 1
-// CHECK2-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.25* [[TMP9]] to i8*
-// CHECK2-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.24* [[TMP3]] to i8*
+// CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.24*
+// CHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_25]], %struct.kmp_task_t_with_privates.25* [[TMP3]], i32 0, i32 1
+// CHECK2-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.26* [[TMP9]] to i8*
+// CHECK2-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.25* [[TMP3]] to i8*
 // CHECK2-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META123:![0-9]+]])
 // CHECK2-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META126:![0-9]+]])
 // CHECK2-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META128:![0-9]+]])
@@ -2571,17 +2581,17 @@ void test_omp_all_memory()
 // CHECK2-NEXT:    store i32 [[TMP2]], i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !132
 // CHECK2-NEXT:    store i32* [[TMP5]], i32** [[DOTPART_ID__ADDR_I]], align 8, !noalias !132
 // CHECK2-NEXT:    store i8* [[TMP10]], i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !132
-// CHECK2-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.25*, double**)* @.omp_task_privates_map..26 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !132
+// CHECK2-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.26*, double**)* @.omp_task_privates_map..26 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !132
 // CHECK2-NEXT:    store i8* [[TMP11]], i8** [[DOTTASK_T__ADDR_I]], align 8, !noalias !132
-// CHECK2-NEXT:    store %struct.anon.23* [[TMP8]], %struct.anon.23** [[__CONTEXT_ADDR_I]], align 8, !noalias !132
-// CHECK2-NEXT:    [[TMP12:%.*]] = load %struct.anon.23*, %struct.anon.23** [[__CONTEXT_ADDR_I]], align 8, !noalias !132
+// CHECK2-NEXT:    store %struct.anon.24* [[TMP8]], %struct.anon.24** [[__CONTEXT_ADDR_I]], align 8, !noalias !132
+// CHECK2-NEXT:    [[TMP12:%.*]] = load %struct.anon.24*, %struct.anon.24** [[__CONTEXT_ADDR_I]], align 8, !noalias !132
 // CHECK2-NEXT:    [[TMP13:%.*]] = load void (i8*, ...)*, void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !132
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !132
 // CHECK2-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, double**)*
 // CHECK2-NEXT:    call void [[TMP15]](i8* [[TMP14]], double** [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4]]
 // CHECK2-NEXT:    [[TMP16:%.*]] = load double*, double** [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias !132
 // CHECK2-NEXT:    [[TMP17:%.*]] = load double, double* [[TMP16]], align 8
-// CHECK2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON_23:%.*]], %struct.anon.23* [[TMP12]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON_24:%.*]], %struct.anon.24* [[TMP12]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP19:%.*]] = load float*, float** [[TMP18]], align 8
 // CHECK2-NEXT:    [[TMP20:%.*]] = load float, float* [[TMP19]], align 4
 // CHECK2-NEXT:    [[CONV_I:%.*]] = fpext float [[TMP20]] to double
@@ -3761,87 +3771,92 @@ void test_omp_all_memory()
 // CHECK2-51-SAME: () #[[ATTR8]] {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    [[A:%.*]] = alloca float, align 4
-// CHECK2-51-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, float*)* @.omp_outlined..26 to void (i32*, i32*, ...)*), float* [[A]])
+// CHECK2-51-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON_25:%.*]], align 8
+// CHECK2-51-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON_25]], %struct.anon.25* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
+// CHECK2-51-NEXT:    store float* [[A]], float** [[TMP0]], align 8
+// CHECK2-51-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.25*)* @.omp_outlined..26 to void (i32*, i32*, ...)*), %struct.anon.25* [[OMP_OUTLINED_ARG_AGG_]])
 // CHECK2-51-NEXT:    ret void
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_outlined..26
-// CHECK2-51-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], float* noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK2-51-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.anon.25* noalias noundef [[__CONTEXT:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// CHECK2-51-NEXT:    [[A_ADDR:%.*]] = alloca float*, align 8
+// CHECK2-51-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.25*, align 8
 // CHECK2-51-NEXT:    [[B:%.*]] = alloca double, align 8
-// CHECK2-51-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_25:%.*]], align 8
+// CHECK2-51-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_26:%.*]], align 8
 // CHECK2-51-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-51-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK2-51-NEXT:    store float* [[A]], float** [[A_ADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP0:%.*]] = load float*, float** [[A_ADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
-// CHECK2-51-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
-// CHECK2-51-NEXT:    br i1 [[TMP4]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
+// CHECK2-51-NEXT:    store %struct.anon.25* [[__CONTEXT]], %struct.anon.25** [[__CONTEXT_ADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP0:%.*]] = load %struct.anon.25*, %struct.anon.25** [[__CONTEXT_ADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_25:%.*]], %struct.anon.25* [[TMP0]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP2:%.*]] = load float*, float** [[TMP1]], align 8
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP3]], align 4
+// CHECK2-51-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]])
+// CHECK2-51-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
+// CHECK2-51-NEXT:    br i1 [[TMP6]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK2-51:       omp_if.then:
-// CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_25]], %struct.anon.25* [[AGG_CAPTURED]], i32 0, i32 0
-// CHECK2-51-NEXT:    store float* [[TMP0]], float** [[TMP5]], align 8
-// CHECK2-51-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i64 48, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.26*)* @.omp_task_entry..29 to i32 (i32, i8*)*))
-// CHECK2-51-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to %struct.kmp_task_t_with_privates.26*
-// CHECK2-51-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_26:%.*]], %struct.kmp_task_t_with_privates.26* [[TMP7]], i32 0, i32 0
-// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP8]], i32 0, i32 0
-// CHECK2-51-NEXT:    [[TMP10:%.*]] = load i8*, i8** [[TMP9]], align 8
-// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.anon.25* [[AGG_CAPTURED]] to i8*
-// CHECK2-51-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP10]], i8* align 8 [[TMP11]], i64 8, i1 false)
-// CHECK2-51-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_26]], %struct.kmp_task_t_with_privates.26* [[TMP7]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_27:%.*]], %struct..kmp_privates.t.27* [[TMP12]], i32 0, i32 0
-// CHECK2-51-NEXT:    [[TMP14:%.*]] = load double, double* [[B]], align 8
-// CHECK2-51-NEXT:    store double [[TMP14]], double* [[TMP13]], align 8
-// CHECK2-51-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_omp_task(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i8* [[TMP6]])
-// CHECK2-51-NEXT:    call void @__kmpc_end_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
+// CHECK2-51-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_ANON_26]], %struct.anon.26* [[AGG_CAPTURED]], i32 0, i32 0
+// CHECK2-51-NEXT:    store float* [[TMP2]], float** [[TMP7]], align 8
+// CHECK2-51-NEXT:    [[TMP8:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], i32 1, i64 48, i64 8, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.27*)* @.omp_task_entry..29 to i32 (i32, i8*)*))
+// CHECK2-51-NEXT:    [[TMP9:%.*]] = bitcast i8* [[TMP8]] to %struct.kmp_task_t_with_privates.27*
+// CHECK2-51-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_27:%.*]], %struct.kmp_task_t_with_privates.27* [[TMP9]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP10]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP12:%.*]] = load i8*, i8** [[TMP11]], align 8
+// CHECK2-51-NEXT:    [[TMP13:%.*]] = bitcast %struct.anon.26* [[AGG_CAPTURED]] to i8*
+// CHECK2-51-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP12]], i8* align 8 [[TMP13]], i64 8, i1 false)
+// CHECK2-51-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_27]], %struct.kmp_task_t_with_privates.27* [[TMP9]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_28:%.*]], %struct..kmp_privates.t.28* [[TMP14]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP16:%.*]] = load double, double* [[B]], align 8
+// CHECK2-51-NEXT:    store double [[TMP16]], double* [[TMP15]], align 8
+// CHECK2-51-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_omp_task(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]], i8* [[TMP8]])
+// CHECK2-51-NEXT:    call void @__kmpc_end_single(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]])
 // CHECK2-51-NEXT:    br label [[OMP_IF_END]]
 // CHECK2-51:       omp_if.end:
-// CHECK2-51-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK2-51-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP4]])
 // CHECK2-51-NEXT:    ret void
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_privates_map..28
-// CHECK2-51-SAME: (%struct..kmp_privates.t.27* noalias noundef [[TMP0:%.*]], double** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
+// CHECK2-51-SAME: (%struct..kmp_privates.t.28* noalias noundef [[TMP0:%.*]], double** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-51-NEXT:  entry:
-// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.27*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.28*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca double**, align 8
-// CHECK2-51-NEXT:    store %struct..kmp_privates.t.27* [[TMP0]], %struct..kmp_privates.t.27** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    store %struct..kmp_privates.t.28* [[TMP0]], %struct..kmp_privates.t.28** [[DOTADDR]], align 8
 // CHECK2-51-NEXT:    store double** [[TMP1]], double*** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.27*, %struct..kmp_privates.t.27** [[DOTADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_27:%.*]], %struct..kmp_privates.t.27* [[TMP2]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.28*, %struct..kmp_privates.t.28** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_28:%.*]], %struct..kmp_privates.t.28* [[TMP2]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP4:%.*]] = load double**, double*** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    store double* [[TMP3]], double** [[TMP4]], align 8
 // CHECK2-51-NEXT:    ret void
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_entry..29
-// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.26* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.27* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-51-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTPRIVATES__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK2-51-NEXT:    [[DOTCOPY_FN__ADDR_I:%.*]] = alloca void (i8*, ...)*, align 8
 // CHECK2-51-NEXT:    [[DOTTASK_T__ADDR_I:%.*]] = alloca i8*, align 8
-// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.25*, align 8
+// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.26*, align 8
 // CHECK2-51-NEXT:    [[DOTFIRSTPRIV_PTR_ADDR_I:%.*]] = alloca double*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.26*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.27*, align 8
 // CHECK2-51-NEXT:    store i32 [[TMP0]], i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.26* [[TMP1]], %struct.kmp_task_t_with_privates.26** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.27* [[TMP1]], %struct.kmp_task_t_with_privates.27** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.26*, %struct.kmp_task_t_with_privates.26** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_26:%.*]], %struct.kmp_task_t_with_privates.26* [[TMP3]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.27*, %struct.kmp_task_t_with_privates.27** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_27:%.*]], %struct.kmp_task_t_with_privates.27* [[TMP3]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 2
 // CHECK2-51-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[TMP6]], align 8
-// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.25*
-// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_26]], %struct.kmp_task_t_with_privates.26* [[TMP3]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.27* [[TMP9]] to i8*
-// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.26* [[TMP3]] to i8*
+// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.26*
+// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_27]], %struct.kmp_task_t_with_privates.27* [[TMP3]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.28* [[TMP9]] to i8*
+// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.27* [[TMP3]] to i8*
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META133:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META136:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META138:![0-9]+]])
@@ -3849,17 +3864,17 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i32 [[TMP2]], i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !142
 // CHECK2-51-NEXT:    store i32* [[TMP5]], i32** [[DOTPART_ID__ADDR_I]], align 8, !noalias !142
 // CHECK2-51-NEXT:    store i8* [[TMP10]], i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !142
-// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.27*, double**)* @.omp_task_privates_map..28 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !142
+// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.28*, double**)* @.omp_task_privates_map..28 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !142
 // CHECK2-51-NEXT:    store i8* [[TMP11]], i8** [[DOTTASK_T__ADDR_I]], align 8, !noalias !142
-// CHECK2-51-NEXT:    store %struct.anon.25* [[TMP8]], %struct.anon.25** [[__CONTEXT_ADDR_I]], align 8, !noalias !142
-// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.25*, %struct.anon.25** [[__CONTEXT_ADDR_I]], align 8, !noalias !142
+// CHECK2-51-NEXT:    store %struct.anon.26* [[TMP8]], %struct.anon.26** [[__CONTEXT_ADDR_I]], align 8, !noalias !142
+// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.26*, %struct.anon.26** [[__CONTEXT_ADDR_I]], align 8, !noalias !142
 // CHECK2-51-NEXT:    [[TMP13:%.*]] = load void (i8*, ...)*, void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !142
 // CHECK2-51-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !142
 // CHECK2-51-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, double**)*
 // CHECK2-51-NEXT:    call void [[TMP15]](i8* [[TMP14]], double** [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4]]
 // CHECK2-51-NEXT:    [[TMP16:%.*]] = load double*, double** [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias !142
 // CHECK2-51-NEXT:    [[TMP17:%.*]] = load double, double* [[TMP16]], align 8
-// CHECK2-51-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON_25:%.*]], %struct.anon.25* [[TMP12]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON_26:%.*]], %struct.anon.26* [[TMP12]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP19:%.*]] = load float*, float** [[TMP18]], align 8
 // CHECK2-51-NEXT:    [[TMP20:%.*]] = load float, float* [[TMP19]], align 4
 // CHECK2-51-NEXT:    [[CONV_I:%.*]] = fpext float [[TMP20]] to double
@@ -3877,27 +3892,27 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    [[C:%.*]] = alloca i32, align 4
 // CHECK2-51-NEXT:    [[D:%.*]] = alloca i32, align 4
 // CHECK2-51-NEXT:    [[E:%.*]] = alloca i32, align 4
-// CHECK2-51-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_28:%.*]], align 1
+// CHECK2-51-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_29:%.*]], align 1
 // CHECK2-51-NEXT:    [[DOTDEP_ARR_ADDR:%.*]] = alloca [2 x %struct.kmp_depend_info], align 8
 // CHECK2-51-NEXT:    [[DEP_COUNTER_ADDR:%.*]] = alloca i64, align 8
-// CHECK2-51-NEXT:    [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_31:%.*]], align 1
+// CHECK2-51-NEXT:    [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_32:%.*]], align 1
 // CHECK2-51-NEXT:    [[DOTDEP_ARR_ADDR2:%.*]] = alloca [2 x %struct.kmp_depend_info], align 8
 // CHECK2-51-NEXT:    [[DEP_COUNTER_ADDR3:%.*]] = alloca i64, align 8
-// CHECK2-51-NEXT:    [[AGG_CAPTURED4:%.*]] = alloca [[STRUCT_ANON_34:%.*]], align 1
+// CHECK2-51-NEXT:    [[AGG_CAPTURED4:%.*]] = alloca [[STRUCT_ANON_35:%.*]], align 1
 // CHECK2-51-NEXT:    [[DOTDEP_ARR_ADDR5:%.*]] = alloca [2 x %struct.kmp_depend_info], align 8
 // CHECK2-51-NEXT:    [[DEP_COUNTER_ADDR6:%.*]] = alloca i64, align 8
-// CHECK2-51-NEXT:    [[AGG_CAPTURED7:%.*]] = alloca [[STRUCT_ANON_37:%.*]], align 1
+// CHECK2-51-NEXT:    [[AGG_CAPTURED7:%.*]] = alloca [[STRUCT_ANON_38:%.*]], align 1
 // CHECK2-51-NEXT:    [[DOTDEP_ARR_ADDR8:%.*]] = alloca [2 x %struct.kmp_depend_info], align 8
 // CHECK2-51-NEXT:    [[DEP_COUNTER_ADDR9:%.*]] = alloca i64, align 8
-// CHECK2-51-NEXT:    [[AGG_CAPTURED10:%.*]] = alloca [[STRUCT_ANON_40:%.*]], align 1
+// CHECK2-51-NEXT:    [[AGG_CAPTURED10:%.*]] = alloca [[STRUCT_ANON_41:%.*]], align 1
 // CHECK2-51-NEXT:    [[DOTDEP_ARR_ADDR11:%.*]] = alloca [1 x %struct.kmp_depend_info], align 8
 // CHECK2-51-NEXT:    [[DEP_COUNTER_ADDR12:%.*]] = alloca i64, align 8
 // CHECK2-51-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK2-51-NEXT:    [[TMP1:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.29*)* @.omp_task_entry..32 to i32 (i32, i8*)*))
-// CHECK2-51-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to %struct.kmp_task_t_with_privates.29*
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_29:%.*]], %struct.kmp_task_t_with_privates.29* [[TMP2]], i32 0, i32 0
-// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_29]], %struct.kmp_task_t_with_privates.29* [[TMP2]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_30:%.*]], %struct..kmp_privates.t.30* [[TMP4]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP1:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.30*)* @.omp_task_entry..32 to i32 (i32, i8*)*))
+// CHECK2-51-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to %struct.kmp_task_t_with_privates.30*
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_30:%.*]], %struct.kmp_task_t_with_privates.30* [[TMP2]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_30]], %struct.kmp_task_t_with_privates.30* [[TMP2]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_31:%.*]], %struct..kmp_privates.t.31* [[TMP4]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A]], align 4
 // CHECK2-51-NEXT:    store i32 [[TMP6]], i32* [[TMP5]], align 8
 // CHECK2-51-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x %struct.kmp_depend_info], [2 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR]], i64 0, i64 0
@@ -3919,11 +3934,11 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i64 2, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK2-51-NEXT:    [[TMP17:%.*]] = bitcast %struct.kmp_depend_info* [[TMP7]] to i8*
 // CHECK2-51-NEXT:    [[TMP18:%.*]] = call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i8* [[TMP1]], i32 2, i8* [[TMP17]], i32 0, i8* null)
-// CHECK2-51-NEXT:    [[TMP19:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.32*)* @.omp_task_entry..35 to i32 (i32, i8*)*))
-// CHECK2-51-NEXT:    [[TMP20:%.*]] = bitcast i8* [[TMP19]] to %struct.kmp_task_t_with_privates.32*
-// CHECK2-51-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_32:%.*]], %struct.kmp_task_t_with_privates.32* [[TMP20]], i32 0, i32 0
-// CHECK2-51-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_32]], %struct.kmp_task_t_with_privates.32* [[TMP20]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_33:%.*]], %struct..kmp_privates.t.33* [[TMP22]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP19:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.33*)* @.omp_task_entry..35 to i32 (i32, i8*)*))
+// CHECK2-51-NEXT:    [[TMP20:%.*]] = bitcast i8* [[TMP19]] to %struct.kmp_task_t_with_privates.33*
+// CHECK2-51-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_33:%.*]], %struct.kmp_task_t_with_privates.33* [[TMP20]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_33]], %struct.kmp_task_t_with_privates.33* [[TMP20]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_34:%.*]], %struct..kmp_privates.t.34* [[TMP22]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP24:%.*]] = load i32, i32* [[A]], align 4
 // CHECK2-51-NEXT:    store i32 [[TMP24]], i32* [[TMP23]], align 8
 // CHECK2-51-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [2 x %struct.kmp_depend_info], [2 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR2]], i64 0, i64 0
@@ -3945,11 +3960,11 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i64 2, i64* [[DEP_COUNTER_ADDR3]], align 8
 // CHECK2-51-NEXT:    [[TMP35:%.*]] = bitcast %struct.kmp_depend_info* [[TMP25]] to i8*
 // CHECK2-51-NEXT:    [[TMP36:%.*]] = call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i8* [[TMP19]], i32 2, i8* [[TMP35]], i32 0, i8* null)
-// CHECK2-51-NEXT:    [[TMP37:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.35*)* @.omp_task_entry..38 to i32 (i32, i8*)*))
-// CHECK2-51-NEXT:    [[TMP38:%.*]] = bitcast i8* [[TMP37]] to %struct.kmp_task_t_with_privates.35*
-// CHECK2-51-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_35:%.*]], %struct.kmp_task_t_with_privates.35* [[TMP38]], i32 0, i32 0
-// CHECK2-51-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_35]], %struct.kmp_task_t_with_privates.35* [[TMP38]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_36:%.*]], %struct..kmp_privates.t.36* [[TMP40]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP37:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.36*)* @.omp_task_entry..38 to i32 (i32, i8*)*))
+// CHECK2-51-NEXT:    [[TMP38:%.*]] = bitcast i8* [[TMP37]] to %struct.kmp_task_t_with_privates.36*
+// CHECK2-51-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_36:%.*]], %struct.kmp_task_t_with_privates.36* [[TMP38]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_36]], %struct.kmp_task_t_with_privates.36* [[TMP38]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_37:%.*]], %struct..kmp_privates.t.37* [[TMP40]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP42:%.*]] = load i32, i32* [[A]], align 4
 // CHECK2-51-NEXT:    store i32 [[TMP42]], i32* [[TMP41]], align 8
 // CHECK2-51-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [2 x %struct.kmp_depend_info], [2 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR5]], i64 0, i64 0
@@ -3971,11 +3986,11 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i64 2, i64* [[DEP_COUNTER_ADDR6]], align 8
 // CHECK2-51-NEXT:    [[TMP53:%.*]] = bitcast %struct.kmp_depend_info* [[TMP43]] to i8*
 // CHECK2-51-NEXT:    [[TMP54:%.*]] = call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i8* [[TMP37]], i32 2, i8* [[TMP53]], i32 0, i8* null)
-// CHECK2-51-NEXT:    [[TMP55:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.38*)* @.omp_task_entry..41 to i32 (i32, i8*)*))
-// CHECK2-51-NEXT:    [[TMP56:%.*]] = bitcast i8* [[TMP55]] to %struct.kmp_task_t_with_privates.38*
-// CHECK2-51-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_38:%.*]], %struct.kmp_task_t_with_privates.38* [[TMP56]], i32 0, i32 0
-// CHECK2-51-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_38]], %struct.kmp_task_t_with_privates.38* [[TMP56]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_39:%.*]], %struct..kmp_privates.t.39* [[TMP58]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP55:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.39*)* @.omp_task_entry..41 to i32 (i32, i8*)*))
+// CHECK2-51-NEXT:    [[TMP56:%.*]] = bitcast i8* [[TMP55]] to %struct.kmp_task_t_with_privates.39*
+// CHECK2-51-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_39:%.*]], %struct.kmp_task_t_with_privates.39* [[TMP56]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_39]], %struct.kmp_task_t_with_privates.39* [[TMP56]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_40:%.*]], %struct..kmp_privates.t.40* [[TMP58]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP60:%.*]] = load i32, i32* [[A]], align 4
 // CHECK2-51-NEXT:    store i32 [[TMP60]], i32* [[TMP59]], align 8
 // CHECK2-51-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [2 x %struct.kmp_depend_info], [2 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR8]], i64 0, i64 0
@@ -3997,11 +4012,11 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i64 2, i64* [[DEP_COUNTER_ADDR9]], align 8
 // CHECK2-51-NEXT:    [[TMP71:%.*]] = bitcast %struct.kmp_depend_info* [[TMP61]] to i8*
 // CHECK2-51-NEXT:    [[TMP72:%.*]] = call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i8* [[TMP55]], i32 2, i8* [[TMP71]], i32 0, i8* null)
-// CHECK2-51-NEXT:    [[TMP73:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.41*)* @.omp_task_entry..44 to i32 (i32, i8*)*))
-// CHECK2-51-NEXT:    [[TMP74:%.*]] = bitcast i8* [[TMP73]] to %struct.kmp_task_t_with_privates.41*
-// CHECK2-51-NEXT:    [[TMP75:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_41:%.*]], %struct.kmp_task_t_with_privates.41* [[TMP74]], i32 0, i32 0
-// CHECK2-51-NEXT:    [[TMP76:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_41]], %struct.kmp_task_t_with_privates.41* [[TMP74]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP77:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_42:%.*]], %struct..kmp_privates.t.42* [[TMP76]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP73:%.*]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]], i32 1, i64 48, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates.42*)* @.omp_task_entry..44 to i32 (i32, i8*)*))
+// CHECK2-51-NEXT:    [[TMP74:%.*]] = bitcast i8* [[TMP73]] to %struct.kmp_task_t_with_privates.42*
+// CHECK2-51-NEXT:    [[TMP75:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_42:%.*]], %struct.kmp_task_t_with_privates.42* [[TMP74]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP76:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_42]], %struct.kmp_task_t_with_privates.42* [[TMP74]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP77:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_43:%.*]], %struct..kmp_privates.t.43* [[TMP76]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP78:%.*]] = load i32, i32* [[A]], align 4
 // CHECK2-51-NEXT:    store i32 [[TMP78]], i32* [[TMP77]], align 8
 // CHECK2-51-NEXT:    [[TMP79:%.*]] = getelementptr inbounds [1 x %struct.kmp_depend_info], [1 x %struct.kmp_depend_info]* [[DOTDEP_ARR_ADDR11]], i64 0, i64 0
@@ -4019,43 +4034,43 @@ void test_omp_all_memory()
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_privates_map..31
-// CHECK2-51-SAME: (%struct..kmp_privates.t.30* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
+// CHECK2-51-SAME: (%struct..kmp_privates.t.31* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-51-NEXT:  entry:
-// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.30*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.31*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
-// CHECK2-51-NEXT:    store %struct..kmp_privates.t.30* [[TMP0]], %struct..kmp_privates.t.30** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    store %struct..kmp_privates.t.31* [[TMP0]], %struct..kmp_privates.t.31** [[DOTADDR]], align 8
 // CHECK2-51-NEXT:    store i32** [[TMP1]], i32*** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.30*, %struct..kmp_privates.t.30** [[DOTADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_30:%.*]], %struct..kmp_privates.t.30* [[TMP2]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.31*, %struct..kmp_privates.t.31** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_31:%.*]], %struct..kmp_privates.t.31* [[TMP2]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP4:%.*]] = load i32**, i32*** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    store i32* [[TMP3]], i32** [[TMP4]], align 8
 // CHECK2-51-NEXT:    ret void
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_entry..32
-// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.29* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.30* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-51-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTPRIVATES__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK2-51-NEXT:    [[DOTCOPY_FN__ADDR_I:%.*]] = alloca void (i8*, ...)*, align 8
 // CHECK2-51-NEXT:    [[DOTTASK_T__ADDR_I:%.*]] = alloca i8*, align 8
-// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.28*, align 8
+// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.29*, align 8
 // CHECK2-51-NEXT:    [[DOTFIRSTPRIV_PTR_ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.29*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.30*, align 8
 // CHECK2-51-NEXT:    store i32 [[TMP0]], i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.29* [[TMP1]], %struct.kmp_task_t_with_privates.29** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.30* [[TMP1]], %struct.kmp_task_t_with_privates.30** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.29*, %struct.kmp_task_t_with_privates.29** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_29:%.*]], %struct.kmp_task_t_with_privates.29* [[TMP3]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.30*, %struct.kmp_task_t_with_privates.30** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_30:%.*]], %struct.kmp_task_t_with_privates.30* [[TMP3]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 2
 // CHECK2-51-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[TMP6]], align 8
-// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.28*
-// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_29]], %struct.kmp_task_t_with_privates.29* [[TMP3]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.30* [[TMP9]] to i8*
-// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.29* [[TMP3]] to i8*
+// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.29*
+// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_30]], %struct.kmp_task_t_with_privates.30* [[TMP3]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.31* [[TMP9]] to i8*
+// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.30* [[TMP3]] to i8*
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META145:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META148:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META150:![0-9]+]])
@@ -4063,10 +4078,10 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i32 [[TMP2]], i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !154
 // CHECK2-51-NEXT:    store i32* [[TMP5]], i32** [[DOTPART_ID__ADDR_I]], align 8, !noalias !154
 // CHECK2-51-NEXT:    store i8* [[TMP10]], i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !154
-// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.30*, i32**)* @.omp_task_privates_map..31 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !154
+// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.31*, i32**)* @.omp_task_privates_map..31 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !154
 // CHECK2-51-NEXT:    store i8* [[TMP11]], i8** [[DOTTASK_T__ADDR_I]], align 8, !noalias !154
-// CHECK2-51-NEXT:    store %struct.anon.28* [[TMP8]], %struct.anon.28** [[__CONTEXT_ADDR_I]], align 8, !noalias !154
-// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.28*, %struct.anon.28** [[__CONTEXT_ADDR_I]], align 8, !noalias !154
+// CHECK2-51-NEXT:    store %struct.anon.29* [[TMP8]], %struct.anon.29** [[__CONTEXT_ADDR_I]], align 8, !noalias !154
+// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.29*, %struct.anon.29** [[__CONTEXT_ADDR_I]], align 8, !noalias !154
 // CHECK2-51-NEXT:    [[TMP13:%.*]] = load void (i8*, ...)*, void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !154
 // CHECK2-51-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !154
 // CHECK2-51-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, i32**)*
@@ -4077,43 +4092,43 @@ void test_omp_all_memory()
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_privates_map..34
-// CHECK2-51-SAME: (%struct..kmp_privates.t.33* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
+// CHECK2-51-SAME: (%struct..kmp_privates.t.34* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-51-NEXT:  entry:
-// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.33*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.34*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
-// CHECK2-51-NEXT:    store %struct..kmp_privates.t.33* [[TMP0]], %struct..kmp_privates.t.33** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    store %struct..kmp_privates.t.34* [[TMP0]], %struct..kmp_privates.t.34** [[DOTADDR]], align 8
 // CHECK2-51-NEXT:    store i32** [[TMP1]], i32*** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.33*, %struct..kmp_privates.t.33** [[DOTADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_33:%.*]], %struct..kmp_privates.t.33* [[TMP2]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.34*, %struct..kmp_privates.t.34** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_34:%.*]], %struct..kmp_privates.t.34* [[TMP2]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP4:%.*]] = load i32**, i32*** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    store i32* [[TMP3]], i32** [[TMP4]], align 8
 // CHECK2-51-NEXT:    ret void
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_entry..35
-// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.32* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.33* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-51-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTPRIVATES__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK2-51-NEXT:    [[DOTCOPY_FN__ADDR_I:%.*]] = alloca void (i8*, ...)*, align 8
 // CHECK2-51-NEXT:    [[DOTTASK_T__ADDR_I:%.*]] = alloca i8*, align 8
-// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.31*, align 8
+// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.32*, align 8
 // CHECK2-51-NEXT:    [[DOTFIRSTPRIV_PTR_ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.32*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.33*, align 8
 // CHECK2-51-NEXT:    store i32 [[TMP0]], i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.32* [[TMP1]], %struct.kmp_task_t_with_privates.32** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.33* [[TMP1]], %struct.kmp_task_t_with_privates.33** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.32*, %struct.kmp_task_t_with_privates.32** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_32:%.*]], %struct.kmp_task_t_with_privates.32* [[TMP3]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.33*, %struct.kmp_task_t_with_privates.33** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_33:%.*]], %struct.kmp_task_t_with_privates.33* [[TMP3]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 2
 // CHECK2-51-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[TMP6]], align 8
-// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.31*
-// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_32]], %struct.kmp_task_t_with_privates.32* [[TMP3]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.33* [[TMP9]] to i8*
-// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.32* [[TMP3]] to i8*
+// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.32*
+// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_33]], %struct.kmp_task_t_with_privates.33* [[TMP3]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.34* [[TMP9]] to i8*
+// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.33* [[TMP3]] to i8*
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META155:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META158:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META160:![0-9]+]])
@@ -4121,10 +4136,10 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i32 [[TMP2]], i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !164
 // CHECK2-51-NEXT:    store i32* [[TMP5]], i32** [[DOTPART_ID__ADDR_I]], align 8, !noalias !164
 // CHECK2-51-NEXT:    store i8* [[TMP10]], i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !164
-// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.33*, i32**)* @.omp_task_privates_map..34 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !164
+// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.34*, i32**)* @.omp_task_privates_map..34 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !164
 // CHECK2-51-NEXT:    store i8* [[TMP11]], i8** [[DOTTASK_T__ADDR_I]], align 8, !noalias !164
-// CHECK2-51-NEXT:    store %struct.anon.31* [[TMP8]], %struct.anon.31** [[__CONTEXT_ADDR_I]], align 8, !noalias !164
-// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.31*, %struct.anon.31** [[__CONTEXT_ADDR_I]], align 8, !noalias !164
+// CHECK2-51-NEXT:    store %struct.anon.32* [[TMP8]], %struct.anon.32** [[__CONTEXT_ADDR_I]], align 8, !noalias !164
+// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.32*, %struct.anon.32** [[__CONTEXT_ADDR_I]], align 8, !noalias !164
 // CHECK2-51-NEXT:    [[TMP13:%.*]] = load void (i8*, ...)*, void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !164
 // CHECK2-51-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !164
 // CHECK2-51-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, i32**)*
@@ -4135,43 +4150,43 @@ void test_omp_all_memory()
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_privates_map..37
-// CHECK2-51-SAME: (%struct..kmp_privates.t.36* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
+// CHECK2-51-SAME: (%struct..kmp_privates.t.37* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-51-NEXT:  entry:
-// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.36*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.37*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
-// CHECK2-51-NEXT:    store %struct..kmp_privates.t.36* [[TMP0]], %struct..kmp_privates.t.36** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    store %struct..kmp_privates.t.37* [[TMP0]], %struct..kmp_privates.t.37** [[DOTADDR]], align 8
 // CHECK2-51-NEXT:    store i32** [[TMP1]], i32*** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.36*, %struct..kmp_privates.t.36** [[DOTADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_36:%.*]], %struct..kmp_privates.t.36* [[TMP2]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.37*, %struct..kmp_privates.t.37** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_37:%.*]], %struct..kmp_privates.t.37* [[TMP2]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP4:%.*]] = load i32**, i32*** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    store i32* [[TMP3]], i32** [[TMP4]], align 8
 // CHECK2-51-NEXT:    ret void
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_entry..38
-// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.35* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.36* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-51-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTPRIVATES__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK2-51-NEXT:    [[DOTCOPY_FN__ADDR_I:%.*]] = alloca void (i8*, ...)*, align 8
 // CHECK2-51-NEXT:    [[DOTTASK_T__ADDR_I:%.*]] = alloca i8*, align 8
-// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.34*, align 8
+// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.35*, align 8
 // CHECK2-51-NEXT:    [[DOTFIRSTPRIV_PTR_ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.35*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.36*, align 8
 // CHECK2-51-NEXT:    store i32 [[TMP0]], i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.35* [[TMP1]], %struct.kmp_task_t_with_privates.35** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.36* [[TMP1]], %struct.kmp_task_t_with_privates.36** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.35*, %struct.kmp_task_t_with_privates.35** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_35:%.*]], %struct.kmp_task_t_with_privates.35* [[TMP3]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.36*, %struct.kmp_task_t_with_privates.36** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_36:%.*]], %struct.kmp_task_t_with_privates.36* [[TMP3]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 2
 // CHECK2-51-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[TMP6]], align 8
-// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.34*
-// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_35]], %struct.kmp_task_t_with_privates.35* [[TMP3]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.36* [[TMP9]] to i8*
-// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.35* [[TMP3]] to i8*
+// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.35*
+// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_36]], %struct.kmp_task_t_with_privates.36* [[TMP3]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.37* [[TMP9]] to i8*
+// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.36* [[TMP3]] to i8*
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META165:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META168:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META170:![0-9]+]])
@@ -4179,10 +4194,10 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i32 [[TMP2]], i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !174
 // CHECK2-51-NEXT:    store i32* [[TMP5]], i32** [[DOTPART_ID__ADDR_I]], align 8, !noalias !174
 // CHECK2-51-NEXT:    store i8* [[TMP10]], i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !174
-// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.36*, i32**)* @.omp_task_privates_map..37 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !174
+// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.37*, i32**)* @.omp_task_privates_map..37 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !174
 // CHECK2-51-NEXT:    store i8* [[TMP11]], i8** [[DOTTASK_T__ADDR_I]], align 8, !noalias !174
-// CHECK2-51-NEXT:    store %struct.anon.34* [[TMP8]], %struct.anon.34** [[__CONTEXT_ADDR_I]], align 8, !noalias !174
-// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.34*, %struct.anon.34** [[__CONTEXT_ADDR_I]], align 8, !noalias !174
+// CHECK2-51-NEXT:    store %struct.anon.35* [[TMP8]], %struct.anon.35** [[__CONTEXT_ADDR_I]], align 8, !noalias !174
+// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.35*, %struct.anon.35** [[__CONTEXT_ADDR_I]], align 8, !noalias !174
 // CHECK2-51-NEXT:    [[TMP13:%.*]] = load void (i8*, ...)*, void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !174
 // CHECK2-51-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !174
 // CHECK2-51-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, i32**)*
@@ -4193,43 +4208,43 @@ void test_omp_all_memory()
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_privates_map..40
-// CHECK2-51-SAME: (%struct..kmp_privates.t.39* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
+// CHECK2-51-SAME: (%struct..kmp_privates.t.40* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-51-NEXT:  entry:
-// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.39*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.40*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
-// CHECK2-51-NEXT:    store %struct..kmp_privates.t.39* [[TMP0]], %struct..kmp_privates.t.39** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    store %struct..kmp_privates.t.40* [[TMP0]], %struct..kmp_privates.t.40** [[DOTADDR]], align 8
 // CHECK2-51-NEXT:    store i32** [[TMP1]], i32*** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.39*, %struct..kmp_privates.t.39** [[DOTADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_39:%.*]], %struct..kmp_privates.t.39* [[TMP2]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.40*, %struct..kmp_privates.t.40** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_40:%.*]], %struct..kmp_privates.t.40* [[TMP2]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP4:%.*]] = load i32**, i32*** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    store i32* [[TMP3]], i32** [[TMP4]], align 8
 // CHECK2-51-NEXT:    ret void
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_entry..41
-// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.38* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.39* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-51-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTPRIVATES__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK2-51-NEXT:    [[DOTCOPY_FN__ADDR_I:%.*]] = alloca void (i8*, ...)*, align 8
 // CHECK2-51-NEXT:    [[DOTTASK_T__ADDR_I:%.*]] = alloca i8*, align 8
-// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.37*, align 8
+// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.38*, align 8
 // CHECK2-51-NEXT:    [[DOTFIRSTPRIV_PTR_ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.38*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.39*, align 8
 // CHECK2-51-NEXT:    store i32 [[TMP0]], i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.38* [[TMP1]], %struct.kmp_task_t_with_privates.38** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.39* [[TMP1]], %struct.kmp_task_t_with_privates.39** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.38*, %struct.kmp_task_t_with_privates.38** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_38:%.*]], %struct.kmp_task_t_with_privates.38* [[TMP3]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.39*, %struct.kmp_task_t_with_privates.39** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_39:%.*]], %struct.kmp_task_t_with_privates.39* [[TMP3]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 2
 // CHECK2-51-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[TMP6]], align 8
-// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.37*
-// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_38]], %struct.kmp_task_t_with_privates.38* [[TMP3]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.39* [[TMP9]] to i8*
-// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.38* [[TMP3]] to i8*
+// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.38*
+// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_39]], %struct.kmp_task_t_with_privates.39* [[TMP3]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.40* [[TMP9]] to i8*
+// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.39* [[TMP3]] to i8*
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META175:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META178:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META180:![0-9]+]])
@@ -4237,10 +4252,10 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i32 [[TMP2]], i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !184
 // CHECK2-51-NEXT:    store i32* [[TMP5]], i32** [[DOTPART_ID__ADDR_I]], align 8, !noalias !184
 // CHECK2-51-NEXT:    store i8* [[TMP10]], i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !184
-// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.39*, i32**)* @.omp_task_privates_map..40 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !184
+// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.40*, i32**)* @.omp_task_privates_map..40 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !184
 // CHECK2-51-NEXT:    store i8* [[TMP11]], i8** [[DOTTASK_T__ADDR_I]], align 8, !noalias !184
-// CHECK2-51-NEXT:    store %struct.anon.37* [[TMP8]], %struct.anon.37** [[__CONTEXT_ADDR_I]], align 8, !noalias !184
-// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.37*, %struct.anon.37** [[__CONTEXT_ADDR_I]], align 8, !noalias !184
+// CHECK2-51-NEXT:    store %struct.anon.38* [[TMP8]], %struct.anon.38** [[__CONTEXT_ADDR_I]], align 8, !noalias !184
+// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.38*, %struct.anon.38** [[__CONTEXT_ADDR_I]], align 8, !noalias !184
 // CHECK2-51-NEXT:    [[TMP13:%.*]] = load void (i8*, ...)*, void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !184
 // CHECK2-51-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !184
 // CHECK2-51-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, i32**)*
@@ -4251,43 +4266,43 @@ void test_omp_all_memory()
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_privates_map..43
-// CHECK2-51-SAME: (%struct..kmp_privates.t.42* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
+// CHECK2-51-SAME: (%struct..kmp_privates.t.43* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR7]] {
 // CHECK2-51-NEXT:  entry:
-// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.42*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t.43*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
-// CHECK2-51-NEXT:    store %struct..kmp_privates.t.42* [[TMP0]], %struct..kmp_privates.t.42** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    store %struct..kmp_privates.t.43* [[TMP0]], %struct..kmp_privates.t.43** [[DOTADDR]], align 8
 // CHECK2-51-NEXT:    store i32** [[TMP1]], i32*** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.42*, %struct..kmp_privates.t.42** [[DOTADDR]], align 8
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_42:%.*]], %struct..kmp_privates.t.42* [[TMP2]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP2:%.*]] = load %struct..kmp_privates.t.43*, %struct..kmp_privates.t.43** [[DOTADDR]], align 8
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T_43:%.*]], %struct..kmp_privates.t.43* [[TMP2]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP4:%.*]] = load i32**, i32*** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    store i32* [[TMP3]], i32** [[TMP4]], align 8
 // CHECK2-51-NEXT:    ret void
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@.omp_task_entry..44
-// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.41* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK2-51-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates.42* noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK2-51-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTPRIVATES__ADDR_I:%.*]] = alloca i8*, align 8
 // CHECK2-51-NEXT:    [[DOTCOPY_FN__ADDR_I:%.*]] = alloca void (i8*, ...)*, align 8
 // CHECK2-51-NEXT:    [[DOTTASK_T__ADDR_I:%.*]] = alloca i8*, align 8
-// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.40*, align 8
+// CHECK2-51-NEXT:    [[__CONTEXT_ADDR_I:%.*]] = alloca %struct.anon.41*, align 8
 // CHECK2-51-NEXT:    [[DOTFIRSTPRIV_PTR_ADDR_I:%.*]] = alloca i32*, align 8
 // CHECK2-51-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.41*, align 8
+// CHECK2-51-NEXT:    [[DOTADDR1:%.*]] = alloca %struct.kmp_task_t_with_privates.42*, align 8
 // CHECK2-51-NEXT:    store i32 [[TMP0]], i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.41* [[TMP1]], %struct.kmp_task_t_with_privates.41** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    store %struct.kmp_task_t_with_privates.42* [[TMP1]], %struct.kmp_task_t_with_privates.42** [[DOTADDR1]], align 8
 // CHECK2-51-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTADDR]], align 4
-// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.41*, %struct.kmp_task_t_with_privates.41** [[DOTADDR1]], align 8
-// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_41:%.*]], %struct.kmp_task_t_with_privates.41* [[TMP3]], i32 0, i32 0
+// CHECK2-51-NEXT:    [[TMP3:%.*]] = load %struct.kmp_task_t_with_privates.42*, %struct.kmp_task_t_with_privates.42** [[DOTADDR1]], align 8
+// CHECK2-51-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_42:%.*]], %struct.kmp_task_t_with_privates.42* [[TMP3]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 2
 // CHECK2-51-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP4]], i32 0, i32 0
 // CHECK2-51-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[TMP6]], align 8
-// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.40*
-// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_41]], %struct.kmp_task_t_with_privates.41* [[TMP3]], i32 0, i32 1
-// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.42* [[TMP9]] to i8*
-// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.41* [[TMP3]] to i8*
+// CHECK2-51-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to %struct.anon.41*
+// CHECK2-51-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES_42]], %struct.kmp_task_t_with_privates.42* [[TMP3]], i32 0, i32 1
+// CHECK2-51-NEXT:    [[TMP10:%.*]] = bitcast %struct..kmp_privates.t.43* [[TMP9]] to i8*
+// CHECK2-51-NEXT:    [[TMP11:%.*]] = bitcast %struct.kmp_task_t_with_privates.42* [[TMP3]] to i8*
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META185:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META188:![0-9]+]])
 // CHECK2-51-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META190:![0-9]+]])
@@ -4295,10 +4310,10 @@ void test_omp_all_memory()
 // CHECK2-51-NEXT:    store i32 [[TMP2]], i32* [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !194
 // CHECK2-51-NEXT:    store i32* [[TMP5]], i32** [[DOTPART_ID__ADDR_I]], align 8, !noalias !194
 // CHECK2-51-NEXT:    store i8* [[TMP10]], i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !194
-// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.42*, i32**)* @.omp_task_privates_map..43 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !194
+// CHECK2-51-NEXT:    store void (i8*, ...)* bitcast (void (%struct..kmp_privates.t.43*, i32**)* @.omp_task_privates_map..43 to void (i8*, ...)*), void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !194
 // CHECK2-51-NEXT:    store i8* [[TMP11]], i8** [[DOTTASK_T__ADDR_I]], align 8, !noalias !194
-// CHECK2-51-NEXT:    store %struct.anon.40* [[TMP8]], %struct.anon.40** [[__CONTEXT_ADDR_I]], align 8, !noalias !194
-// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.40*, %struct.anon.40** [[__CONTEXT_ADDR_I]], align 8, !noalias !194
+// CHECK2-51-NEXT:    store %struct.anon.41* [[TMP8]], %struct.anon.41** [[__CONTEXT_ADDR_I]], align 8, !noalias !194
+// CHECK2-51-NEXT:    [[TMP12:%.*]] = load %struct.anon.41*, %struct.anon.41** [[__CONTEXT_ADDR_I]], align 8, !noalias !194
 // CHECK2-51-NEXT:    [[TMP13:%.*]] = load void (i8*, ...)*, void (i8*, ...)** [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !194
 // CHECK2-51-NEXT:    [[TMP14:%.*]] = load i8*, i8** [[DOTPRIVATES__ADDR_I]], align 8, !noalias !194
 // CHECK2-51-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, i32**)*

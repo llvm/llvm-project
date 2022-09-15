@@ -18,7 +18,6 @@
 //RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-unknown-linux-gnu -fopenmp-simd -DNORM -DCOMP \
 //RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix SIMD-ONLY
 
-// SIMD-ONLY-NOT: {{__kmpc|__tgt}}
 
 struct Point {
   int x = 0;
@@ -85,17 +84,73 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point*, align 8
 // NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
+// NORM-NEXT:    [[OMP_OUTLINED_ARG_AGG_1:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 8
+// NORM-NEXT:    [[OMP_OUTLINED_ARG_AGG_2:%.*]] = alloca [[STRUCT_ANON_1:%.*]], align 8
+// NORM-NEXT:    [[OMP_OUTLINED_ARG_AGG_3:%.*]] = alloca [[STRUCT_ANON_2:%.*]], align 8
+// NORM-NEXT:    [[OMP_OUTLINED_ARG_AGG_4:%.*]] = alloca [[STRUCT_ANON_3:%.*]], align 8
+// NORM-NEXT:    [[OMP_OUTLINED_ARG_AGG_5:%.*]] = alloca [[STRUCT_ANON_4:%.*]], align 8
+// NORM-NEXT:    [[OMP_OUTLINED_ARG_AGG_6:%.*]] = alloca [[STRUCT_ANON_5:%.*]], align 8
+// NORM-NEXT:    [[OMP_OUTLINED_ARG_AGG_7:%.*]] = alloca [[STRUCT_ANON_6:%.*]], align 8
 // NORM-NEXT:    store i32 [[N]], i32* [[N_ADDR]], align 4
 // NORM-NEXT:    store %struct.Point* [[POINTS]], %struct.Point** [[POINTS_ADDR]], align 8
 // NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4:[0-9]+]]
-// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..1 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..3 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..5 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..7 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..9 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..11 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..13 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
+// NORM-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
+// NORM-NEXT:    store i32* [[N_ADDR]], i32** [[TMP0]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 1
+// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 2
+// NORM-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP2]], align 8
+// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon*)* @.omp_outlined. to void (i32*, i32*, ...)*), %struct.anon* [[OMP_OUTLINED_ARG_AGG_]])
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], i32 0, i32 0
+// NORM-NEXT:    store i32* [[N_ADDR]], i32** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], i32 0, i32 1
+// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP4]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], i32 0, i32 2
+// NORM-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.0*)* @.omp_outlined..1 to void (i32*, i32*, ...)*), %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]])
+// NORM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[OMP_OUTLINED_ARG_AGG_2]], i32 0, i32 0
+// NORM-NEXT:    store i32* [[N_ADDR]], i32** [[TMP6]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[OMP_OUTLINED_ARG_AGG_2]], i32 0, i32 1
+// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP7]], align 8
+// NORM-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[OMP_OUTLINED_ARG_AGG_2]], i32 0, i32 2
+// NORM-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP8]], align 8
+// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.1*)* @.omp_outlined..3 to void (i32*, i32*, ...)*), %struct.anon.1* [[OMP_OUTLINED_ARG_AGG_2]])
+// NORM-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[OMP_OUTLINED_ARG_AGG_3]], i32 0, i32 0
+// NORM-NEXT:    store i32* [[N_ADDR]], i32** [[TMP9]], align 8
+// NORM-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[OMP_OUTLINED_ARG_AGG_3]], i32 0, i32 1
+// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP10]], align 8
+// NORM-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[OMP_OUTLINED_ARG_AGG_3]], i32 0, i32 2
+// NORM-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP11]], align 8
+// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.2*)* @.omp_outlined..5 to void (i32*, i32*, ...)*), %struct.anon.2* [[OMP_OUTLINED_ARG_AGG_3]])
+// NORM-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[OMP_OUTLINED_ARG_AGG_4]], i32 0, i32 0
+// NORM-NEXT:    store i32* [[N_ADDR]], i32** [[TMP12]], align 8
+// NORM-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[OMP_OUTLINED_ARG_AGG_4]], i32 0, i32 1
+// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP13]], align 8
+// NORM-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[OMP_OUTLINED_ARG_AGG_4]], i32 0, i32 2
+// NORM-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP14]], align 8
+// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.3*)* @.omp_outlined..7 to void (i32*, i32*, ...)*), %struct.anon.3* [[OMP_OUTLINED_ARG_AGG_4]])
+// NORM-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[OMP_OUTLINED_ARG_AGG_5]], i32 0, i32 0
+// NORM-NEXT:    store i32* [[N_ADDR]], i32** [[TMP15]], align 8
+// NORM-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[OMP_OUTLINED_ARG_AGG_5]], i32 0, i32 1
+// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP16]], align 8
+// NORM-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[OMP_OUTLINED_ARG_AGG_5]], i32 0, i32 2
+// NORM-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP17]], align 8
+// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.4*)* @.omp_outlined..9 to void (i32*, i32*, ...)*), %struct.anon.4* [[OMP_OUTLINED_ARG_AGG_5]])
+// NORM-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[OMP_OUTLINED_ARG_AGG_6]], i32 0, i32 0
+// NORM-NEXT:    store i32* [[N_ADDR]], i32** [[TMP18]], align 8
+// NORM-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[OMP_OUTLINED_ARG_AGG_6]], i32 0, i32 1
+// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP19]], align 8
+// NORM-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[OMP_OUTLINED_ARG_AGG_6]], i32 0, i32 2
+// NORM-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP20]], align 8
+// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.5*)* @.omp_outlined..11 to void (i32*, i32*, ...)*), %struct.anon.5* [[OMP_OUTLINED_ARG_AGG_6]])
+// NORM-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[OMP_OUTLINED_ARG_AGG_7]], i32 0, i32 0
+// NORM-NEXT:    store i32* [[N_ADDR]], i32** [[TMP21]], align 8
+// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[OMP_OUTLINED_ARG_AGG_7]], i32 0, i32 1
+// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP22]], align 8
+// NORM-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[OMP_OUTLINED_ARG_AGG_7]], i32 0, i32 2
+// NORM-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP23]], align 8
+// NORM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.6*)* @.omp_outlined..13 to void (i32*, i32*, ...)*), %struct.anon.6* [[OMP_OUTLINED_ARG_AGG_7]])
 // NORM-NEXT:    ret void
 //
 //
@@ -110,13 +165,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@.omp_outlined.
-// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2:[0-9]+]] {
+// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon* noalias [[__CONTEXT:%.*]]) #[[ATTR2:[0-9]+]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// NORM-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 8
 // NORM-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -126,111 +179,113 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// NORM-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // NORM-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// NORM-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// NORM-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // NORM-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// NORM-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// NORM-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// NORM-NEXT:    store %struct.anon* [[__CONTEXT]], %struct.anon** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load %struct.anon*, %struct.anon** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP0]], i32 0, i32 0
+// NORM-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP0]], i32 0, i32 1
+// NORM-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP0]], i32 0, i32 2
+// NORM-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// NORM-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    store i32 0, i32* [[I]], align 4
-// NORM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // NORM:       omp.precond.then:
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// NORM-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// NORM-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// NORM-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// NORM-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // NORM:       cond.true:
-// NORM-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    br label [[COND_END:%.*]]
 // NORM:       cond.false:
-// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    br label [[COND_END]]
 // NORM:       cond.end:
-// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // NORM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// NORM-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // NORM:       omp.inner.for.cond:
-// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// NORM-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// NORM-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// NORM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// NORM-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// NORM-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // NORM:       omp.inner.for.body:
-// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// NORM-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// NORM-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// NORM-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// NORM-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// NORM-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // NORM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // NORM:       omp.body.continue:
 // NORM-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // NORM:       omp.inner.for.inc:
-// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// NORM-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// NORM-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // NORM:       omp.inner.for.end:
 // NORM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // NORM:       omp.loop.exit:
-// NORM-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// NORM-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// NORM-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // NORM-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// NORM-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// NORM-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// NORM-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// NORM-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// NORM-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// NORM-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// NORM-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// NORM-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// NORM-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // NORM-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // NORM-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// NORM-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
-// NORM-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointplERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// NORM-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointplERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// NORM-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// NORM-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
 // NORM-NEXT:    br label [[OMP_PRECOND_END]]
@@ -264,13 +319,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@.omp_outlined..1
-// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.0* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// NORM-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.0*, align 8
 // NORM-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -280,111 +333,113 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// NORM-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // NORM-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// NORM-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// NORM-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // NORM-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// NORM-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// NORM-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// NORM-NEXT:    store %struct.anon.0* [[__CONTEXT]], %struct.anon.0** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load %struct.anon.0*, %struct.anon.0** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], %struct.anon.0* [[TMP0]], i32 0, i32 0
+// NORM-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[TMP0]], i32 0, i32 1
+// NORM-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[TMP0]], i32 0, i32 2
+// NORM-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// NORM-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    store i32 0, i32* [[I]], align 4
-// NORM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // NORM:       omp.precond.then:
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// NORM-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// NORM-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// NORM-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// NORM-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // NORM:       cond.true:
-// NORM-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    br label [[COND_END:%.*]]
 // NORM:       cond.false:
-// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    br label [[COND_END]]
 // NORM:       cond.end:
-// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // NORM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// NORM-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // NORM:       omp.inner.for.cond:
-// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// NORM-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// NORM-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// NORM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// NORM-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// NORM-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // NORM:       omp.inner.for.body:
-// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// NORM-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// NORM-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// NORM-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// NORM-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// NORM-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // NORM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // NORM:       omp.body.continue:
 // NORM-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // NORM:       omp.inner.for.inc:
-// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// NORM-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// NORM-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // NORM:       omp.inner.for.end:
 // NORM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // NORM:       omp.loop.exit:
-// NORM-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// NORM-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// NORM-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // NORM-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// NORM-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// NORM-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.2, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// NORM-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// NORM-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// NORM-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// NORM-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// NORM-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// NORM-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// NORM-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.2, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // NORM-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // NORM-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointplERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// NORM-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
-// NORM-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointplERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// NORM-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointplERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// NORM-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// NORM-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
 // NORM-NEXT:    br label [[OMP_PRECOND_END]]
@@ -418,13 +473,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@.omp_outlined..3
-// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.1* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// NORM-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.1*, align 8
 // NORM-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -434,111 +487,113 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// NORM-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // NORM-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// NORM-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// NORM-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // NORM-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// NORM-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// NORM-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// NORM-NEXT:    store %struct.anon.1* [[__CONTEXT]], %struct.anon.1** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load %struct.anon.1*, %struct.anon.1** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_1:%.*]], %struct.anon.1* [[TMP0]], i32 0, i32 0
+// NORM-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[TMP0]], i32 0, i32 1
+// NORM-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[TMP0]], i32 0, i32 2
+// NORM-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// NORM-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    store i32 0, i32* [[I]], align 4
-// NORM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // NORM:       omp.precond.then:
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// NORM-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// NORM-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// NORM-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// NORM-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // NORM:       cond.true:
-// NORM-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    br label [[COND_END:%.*]]
 // NORM:       cond.false:
-// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    br label [[COND_END]]
 // NORM:       cond.end:
-// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // NORM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// NORM-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // NORM:       omp.inner.for.cond:
-// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// NORM-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// NORM-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// NORM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// NORM-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// NORM-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // NORM:       omp.inner.for.body:
-// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// NORM-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// NORM-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// NORM-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// NORM-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// NORM-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // NORM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // NORM:       omp.body.continue:
 // NORM-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // NORM:       omp.inner.for.inc:
-// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// NORM-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// NORM-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // NORM:       omp.inner.for.end:
 // NORM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // NORM:       omp.loop.exit:
-// NORM-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// NORM-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// NORM-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // NORM-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// NORM-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// NORM-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.4, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// NORM-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// NORM-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// NORM-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// NORM-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// NORM-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// NORM-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// NORM-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.4, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // NORM-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // NORM-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointmlERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointmlERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// NORM-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
-// NORM-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointmlERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// NORM-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointmlERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// NORM-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// NORM-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
 // NORM-NEXT:    br label [[OMP_PRECOND_END]]
@@ -572,13 +627,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@.omp_outlined..5
-// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.2* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// NORM-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.2*, align 8
 // NORM-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -588,111 +641,113 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// NORM-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // NORM-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// NORM-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// NORM-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // NORM-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// NORM-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// NORM-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// NORM-NEXT:    store %struct.anon.2* [[__CONTEXT]], %struct.anon.2** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load %struct.anon.2*, %struct.anon.2** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_2:%.*]], %struct.anon.2* [[TMP0]], i32 0, i32 0
+// NORM-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[TMP0]], i32 0, i32 1
+// NORM-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[TMP0]], i32 0, i32 2
+// NORM-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// NORM-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    store i32 0, i32* [[I]], align 4
-// NORM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // NORM:       omp.precond.then:
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// NORM-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// NORM-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// NORM-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// NORM-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // NORM:       cond.true:
-// NORM-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    br label [[COND_END:%.*]]
 // NORM:       cond.false:
-// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    br label [[COND_END]]
 // NORM:       cond.end:
-// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // NORM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// NORM-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // NORM:       omp.inner.for.cond:
-// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// NORM-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// NORM-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// NORM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// NORM-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// NORM-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // NORM:       omp.inner.for.body:
-// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// NORM-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// NORM-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// NORM-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// NORM-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// NORM-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // NORM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // NORM:       omp.body.continue:
 // NORM-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // NORM:       omp.inner.for.inc:
-// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// NORM-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// NORM-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // NORM:       omp.inner.for.end:
 // NORM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // NORM:       omp.loop.exit:
-// NORM-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// NORM-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// NORM-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // NORM-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// NORM-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// NORM-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.6, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// NORM-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// NORM-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// NORM-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// NORM-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// NORM-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// NORM-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// NORM-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.6, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // NORM-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // NORM-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointanERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointanERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// NORM-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
-// NORM-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointanERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// NORM-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointanERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// NORM-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// NORM-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
 // NORM-NEXT:    br label [[OMP_PRECOND_END]]
@@ -726,13 +781,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@.omp_outlined..7
-// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.3* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// NORM-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.3*, align 8
 // NORM-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -742,111 +795,113 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// NORM-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // NORM-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// NORM-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// NORM-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // NORM-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// NORM-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// NORM-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// NORM-NEXT:    store %struct.anon.3* [[__CONTEXT]], %struct.anon.3** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load %struct.anon.3*, %struct.anon.3** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_3:%.*]], %struct.anon.3* [[TMP0]], i32 0, i32 0
+// NORM-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[TMP0]], i32 0, i32 1
+// NORM-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[TMP0]], i32 0, i32 2
+// NORM-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// NORM-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    store i32 0, i32* [[I]], align 4
-// NORM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // NORM:       omp.precond.then:
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// NORM-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// NORM-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// NORM-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// NORM-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // NORM:       cond.true:
-// NORM-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    br label [[COND_END:%.*]]
 // NORM:       cond.false:
-// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    br label [[COND_END]]
 // NORM:       cond.end:
-// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // NORM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// NORM-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // NORM:       omp.inner.for.cond:
-// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// NORM-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// NORM-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// NORM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// NORM-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// NORM-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // NORM:       omp.inner.for.body:
-// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// NORM-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// NORM-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// NORM-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// NORM-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// NORM-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // NORM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // NORM:       omp.body.continue:
 // NORM-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // NORM:       omp.inner.for.inc:
-// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// NORM-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// NORM-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // NORM:       omp.inner.for.end:
 // NORM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // NORM:       omp.loop.exit:
-// NORM-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// NORM-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// NORM-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // NORM-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// NORM-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// NORM-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.8, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// NORM-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// NORM-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// NORM-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// NORM-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// NORM-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// NORM-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// NORM-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.8, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // NORM-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // NORM-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointorERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointorERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// NORM-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
-// NORM-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointorERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// NORM-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointorERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// NORM-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// NORM-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
 // NORM-NEXT:    br label [[OMP_PRECOND_END]]
@@ -880,13 +935,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@.omp_outlined..9
-// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.4* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// NORM-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.4*, align 8
 // NORM-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -896,111 +949,113 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// NORM-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // NORM-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// NORM-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// NORM-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // NORM-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// NORM-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// NORM-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// NORM-NEXT:    store %struct.anon.4* [[__CONTEXT]], %struct.anon.4** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load %struct.anon.4*, %struct.anon.4** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_4:%.*]], %struct.anon.4* [[TMP0]], i32 0, i32 0
+// NORM-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[TMP0]], i32 0, i32 1
+// NORM-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[TMP0]], i32 0, i32 2
+// NORM-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// NORM-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    store i32 0, i32* [[I]], align 4
-// NORM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // NORM:       omp.precond.then:
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// NORM-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// NORM-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// NORM-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// NORM-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // NORM:       cond.true:
-// NORM-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    br label [[COND_END:%.*]]
 // NORM:       cond.false:
-// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    br label [[COND_END]]
 // NORM:       cond.end:
-// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // NORM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// NORM-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // NORM:       omp.inner.for.cond:
-// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// NORM-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// NORM-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// NORM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// NORM-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// NORM-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // NORM:       omp.inner.for.body:
-// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// NORM-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// NORM-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// NORM-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// NORM-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// NORM-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // NORM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // NORM:       omp.body.continue:
 // NORM-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // NORM:       omp.inner.for.inc:
-// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// NORM-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// NORM-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // NORM:       omp.inner.for.end:
 // NORM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // NORM:       omp.loop.exit:
-// NORM-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// NORM-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// NORM-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // NORM-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// NORM-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// NORM-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.10, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// NORM-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// NORM-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// NORM-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// NORM-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// NORM-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// NORM-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// NORM-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.10, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // NORM-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // NORM-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointeoERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointeoERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// NORM-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
-// NORM-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointeoERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// NORM-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointeoERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// NORM-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// NORM-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
 // NORM-NEXT:    br label [[OMP_PRECOND_END]]
@@ -1034,13 +1089,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@.omp_outlined..11
-// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.5* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// NORM-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.5*, align 8
 // NORM-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1050,111 +1103,113 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// NORM-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // NORM-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// NORM-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// NORM-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // NORM-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// NORM-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// NORM-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// NORM-NEXT:    store %struct.anon.5* [[__CONTEXT]], %struct.anon.5** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load %struct.anon.5*, %struct.anon.5** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_5:%.*]], %struct.anon.5* [[TMP0]], i32 0, i32 0
+// NORM-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[TMP0]], i32 0, i32 1
+// NORM-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[TMP0]], i32 0, i32 2
+// NORM-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// NORM-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    store i32 0, i32* [[I]], align 4
-// NORM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // NORM:       omp.precond.then:
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// NORM-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// NORM-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// NORM-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// NORM-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // NORM:       cond.true:
-// NORM-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    br label [[COND_END:%.*]]
 // NORM:       cond.false:
-// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    br label [[COND_END]]
 // NORM:       cond.end:
-// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // NORM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// NORM-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // NORM:       omp.inner.for.cond:
-// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// NORM-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// NORM-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// NORM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// NORM-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// NORM-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // NORM:       omp.inner.for.body:
-// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// NORM-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// NORM-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// NORM-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// NORM-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// NORM-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // NORM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // NORM:       omp.body.continue:
 // NORM-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // NORM:       omp.inner.for.inc:
-// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// NORM-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// NORM-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // NORM:       omp.inner.for.end:
 // NORM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // NORM:       omp.loop.exit:
-// NORM-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// NORM-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// NORM-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // NORM-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// NORM-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// NORM-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.12, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// NORM-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// NORM-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// NORM-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// NORM-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// NORM-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// NORM-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// NORM-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.12, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // NORM-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // NORM-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// NORM-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
-// NORM-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointaaERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// NORM-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointaaERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// NORM-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// NORM-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
 // NORM-NEXT:    br label [[OMP_PRECOND_END]]
@@ -1188,13 +1243,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // NORM-LABEL: define {{[^@]+}}@.omp_outlined..13
-// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// NORM-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.6* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // NORM-NEXT:  entry:
 // NORM-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // NORM-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// NORM-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// NORM-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// NORM-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.6*, align 8
 // NORM-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1204,111 +1257,113 @@ void foo(int N, Point const *Points) {
 // NORM-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// NORM-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// NORM-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// NORM-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// NORM-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // NORM-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // NORM-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// NORM-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// NORM-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // NORM-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// NORM-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// NORM-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// NORM-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// NORM-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// NORM-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// NORM-NEXT:    store %struct.anon.6* [[__CONTEXT]], %struct.anon.6** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP0:%.*]] = load %struct.anon.6*, %struct.anon.6** [[__CONTEXT_ADDR]], align 8
+// NORM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_6:%.*]], %struct.anon.6* [[TMP0]], i32 0, i32 0
+// NORM-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// NORM-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[TMP0]], i32 0, i32 1
+// NORM-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// NORM-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[TMP0]], i32 0, i32 2
+// NORM-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// NORM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// NORM-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // NORM-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // NORM-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // NORM-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    store i32 0, i32* [[I]], align 4
-// NORM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// NORM-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // NORM-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // NORM:       omp.precond.then:
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // NORM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// NORM-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// NORM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// NORM-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// NORM-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// NORM-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// NORM-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// NORM-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// NORM-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // NORM:       cond.true:
-// NORM-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // NORM-NEXT:    br label [[COND_END:%.*]]
 // NORM:       cond.false:
-// NORM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // NORM-NEXT:    br label [[COND_END]]
 // NORM:       cond.end:
-// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// NORM-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // NORM-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// NORM-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// NORM-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // NORM:       omp.inner.for.cond:
-// NORM-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// NORM-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// NORM-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// NORM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// NORM-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// NORM-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// NORM-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // NORM:       omp.inner.for.body:
-// NORM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// NORM-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// NORM-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// NORM-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// NORM-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// NORM-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// NORM-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// NORM-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// NORM-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // NORM-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // NORM:       omp.body.continue:
 // NORM-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // NORM:       omp.inner.for.inc:
-// NORM-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// NORM-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// NORM-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// NORM-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// NORM-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // NORM-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // NORM:       omp.inner.for.end:
 // NORM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // NORM:       omp.loop.exit:
-// NORM-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// NORM-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// NORM-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// NORM-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // NORM-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // NORM-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// NORM-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// NORM-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.14, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// NORM-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// NORM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// NORM-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// NORM-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// NORM-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// NORM-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// NORM-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// NORM-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.14, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // NORM-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // NORM-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // NORM-NEXT:    ]
 // NORM:       .omp.reduction.case1:
-// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// NORM-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// NORM-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// NORM-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// NORM-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// NORM-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.case2:
-// NORM-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// NORM-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// NORM-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointooERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// NORM-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// NORM-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// NORM-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// NORM-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// NORM-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// NORM-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointooERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// NORM-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// NORM-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// NORM-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// NORM-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // NORM-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // NORM:       .omp.reduction.default:
 // NORM-NEXT:    br label [[OMP_PRECOND_END]]
@@ -1360,17 +1415,73 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point*, align 8
 // COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
+// COMP-NEXT:    [[OMP_OUTLINED_ARG_AGG_1:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 8
+// COMP-NEXT:    [[OMP_OUTLINED_ARG_AGG_2:%.*]] = alloca [[STRUCT_ANON_1:%.*]], align 8
+// COMP-NEXT:    [[OMP_OUTLINED_ARG_AGG_3:%.*]] = alloca [[STRUCT_ANON_2:%.*]], align 8
+// COMP-NEXT:    [[OMP_OUTLINED_ARG_AGG_4:%.*]] = alloca [[STRUCT_ANON_3:%.*]], align 8
+// COMP-NEXT:    [[OMP_OUTLINED_ARG_AGG_5:%.*]] = alloca [[STRUCT_ANON_4:%.*]], align 8
+// COMP-NEXT:    [[OMP_OUTLINED_ARG_AGG_6:%.*]] = alloca [[STRUCT_ANON_5:%.*]], align 8
+// COMP-NEXT:    [[OMP_OUTLINED_ARG_AGG_7:%.*]] = alloca [[STRUCT_ANON_6:%.*]], align 8
 // COMP-NEXT:    store i32 [[N]], i32* [[N_ADDR]], align 4
 // COMP-NEXT:    store %struct.Point* [[POINTS]], %struct.Point** [[POINTS_ADDR]], align 8
 // COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4:[0-9]+]]
-// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..1 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..3 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..5 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..7 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..9 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..11 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
-// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, %struct.Point*, %struct.Point**)* @.omp_outlined..13 to void (i32*, i32*, ...)*), i32* [[N_ADDR]], %struct.Point* [[RED]], %struct.Point** [[POINTS_ADDR]])
+// COMP-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
+// COMP-NEXT:    store i32* [[N_ADDR]], i32** [[TMP0]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 1
+// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 2
+// COMP-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP2]], align 8
+// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon*)* @.omp_outlined. to void (i32*, i32*, ...)*), %struct.anon* [[OMP_OUTLINED_ARG_AGG_]])
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], i32 0, i32 0
+// COMP-NEXT:    store i32* [[N_ADDR]], i32** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], i32 0, i32 1
+// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP4]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]], i32 0, i32 2
+// COMP-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.0*)* @.omp_outlined..1 to void (i32*, i32*, ...)*), %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_1]])
+// COMP-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[OMP_OUTLINED_ARG_AGG_2]], i32 0, i32 0
+// COMP-NEXT:    store i32* [[N_ADDR]], i32** [[TMP6]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[OMP_OUTLINED_ARG_AGG_2]], i32 0, i32 1
+// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP7]], align 8
+// COMP-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[OMP_OUTLINED_ARG_AGG_2]], i32 0, i32 2
+// COMP-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP8]], align 8
+// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.1*)* @.omp_outlined..3 to void (i32*, i32*, ...)*), %struct.anon.1* [[OMP_OUTLINED_ARG_AGG_2]])
+// COMP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[OMP_OUTLINED_ARG_AGG_3]], i32 0, i32 0
+// COMP-NEXT:    store i32* [[N_ADDR]], i32** [[TMP9]], align 8
+// COMP-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[OMP_OUTLINED_ARG_AGG_3]], i32 0, i32 1
+// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP10]], align 8
+// COMP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[OMP_OUTLINED_ARG_AGG_3]], i32 0, i32 2
+// COMP-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP11]], align 8
+// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.2*)* @.omp_outlined..5 to void (i32*, i32*, ...)*), %struct.anon.2* [[OMP_OUTLINED_ARG_AGG_3]])
+// COMP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[OMP_OUTLINED_ARG_AGG_4]], i32 0, i32 0
+// COMP-NEXT:    store i32* [[N_ADDR]], i32** [[TMP12]], align 8
+// COMP-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[OMP_OUTLINED_ARG_AGG_4]], i32 0, i32 1
+// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP13]], align 8
+// COMP-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[OMP_OUTLINED_ARG_AGG_4]], i32 0, i32 2
+// COMP-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP14]], align 8
+// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.3*)* @.omp_outlined..7 to void (i32*, i32*, ...)*), %struct.anon.3* [[OMP_OUTLINED_ARG_AGG_4]])
+// COMP-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[OMP_OUTLINED_ARG_AGG_5]], i32 0, i32 0
+// COMP-NEXT:    store i32* [[N_ADDR]], i32** [[TMP15]], align 8
+// COMP-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[OMP_OUTLINED_ARG_AGG_5]], i32 0, i32 1
+// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP16]], align 8
+// COMP-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[OMP_OUTLINED_ARG_AGG_5]], i32 0, i32 2
+// COMP-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP17]], align 8
+// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.4*)* @.omp_outlined..9 to void (i32*, i32*, ...)*), %struct.anon.4* [[OMP_OUTLINED_ARG_AGG_5]])
+// COMP-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[OMP_OUTLINED_ARG_AGG_6]], i32 0, i32 0
+// COMP-NEXT:    store i32* [[N_ADDR]], i32** [[TMP18]], align 8
+// COMP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[OMP_OUTLINED_ARG_AGG_6]], i32 0, i32 1
+// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP19]], align 8
+// COMP-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[OMP_OUTLINED_ARG_AGG_6]], i32 0, i32 2
+// COMP-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP20]], align 8
+// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.5*)* @.omp_outlined..11 to void (i32*, i32*, ...)*), %struct.anon.5* [[OMP_OUTLINED_ARG_AGG_6]])
+// COMP-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[OMP_OUTLINED_ARG_AGG_7]], i32 0, i32 0
+// COMP-NEXT:    store i32* [[N_ADDR]], i32** [[TMP21]], align 8
+// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[OMP_OUTLINED_ARG_AGG_7]], i32 0, i32 1
+// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[TMP22]], align 8
+// COMP-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[OMP_OUTLINED_ARG_AGG_7]], i32 0, i32 2
+// COMP-NEXT:    store %struct.Point** [[POINTS_ADDR]], %struct.Point*** [[TMP23]], align 8
+// COMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB3]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon.6*)* @.omp_outlined..13 to void (i32*, i32*, ...)*), %struct.anon.6* [[OMP_OUTLINED_ARG_AGG_7]])
 // COMP-NEXT:    ret void
 //
 //
@@ -1385,13 +1496,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@.omp_outlined.
-// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2:[0-9]+]] {
+// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon* noalias [[__CONTEXT:%.*]]) #[[ATTR2:[0-9]+]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// COMP-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 8
 // COMP-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1401,103 +1510,105 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// COMP-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // COMP-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// COMP-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// COMP-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// COMP-NEXT:    store %struct.anon* [[__CONTEXT]], %struct.anon** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load %struct.anon*, %struct.anon** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP0]], i32 0, i32 0
+// COMP-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP0]], i32 0, i32 1
+// COMP-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP0]], i32 0, i32 2
+// COMP-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// COMP-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    store i32 0, i32* [[I]], align 4
-// COMP-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // COMP:       omp.precond.then:
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// COMP-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// COMP-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// COMP-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// COMP-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // COMP:       cond.true:
-// COMP-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    br label [[COND_END:%.*]]
 // COMP:       cond.false:
-// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    br label [[COND_END]]
 // COMP:       cond.end:
-// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // COMP-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// COMP-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // COMP:       omp.inner.for.cond:
-// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// COMP-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// COMP-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// COMP-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// COMP-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// COMP-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // COMP:       omp.inner.for.body:
-// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// COMP-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// COMP-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// COMP-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// COMP-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// COMP-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // COMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // COMP:       omp.body.continue:
 // COMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // COMP:       omp.inner.for.inc:
-// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// COMP-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// COMP-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // COMP:       omp.inner.for.end:
 // COMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // COMP:       omp.loop.exit:
-// COMP-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// COMP-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// COMP-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // COMP-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// COMP-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// COMP-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// COMP-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// COMP-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// COMP-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// COMP-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// COMP-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// COMP-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // COMP-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // COMP-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointpLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointpLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
-// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
-// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointpLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[TMP32:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP33:%.*]] = load i32, i32* [[TMP32]], align 4
+// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointpLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
 // COMP-NEXT:    br label [[OMP_PRECOND_END]]
@@ -1527,13 +1638,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@.omp_outlined..1
-// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.0* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// COMP-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.0*, align 8
 // COMP-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1543,103 +1652,105 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// COMP-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // COMP-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// COMP-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// COMP-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// COMP-NEXT:    store %struct.anon.0* [[__CONTEXT]], %struct.anon.0** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load %struct.anon.0*, %struct.anon.0** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], %struct.anon.0* [[TMP0]], i32 0, i32 0
+// COMP-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[TMP0]], i32 0, i32 1
+// COMP-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[TMP0]], i32 0, i32 2
+// COMP-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// COMP-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    store i32 0, i32* [[I]], align 4
-// COMP-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // COMP:       omp.precond.then:
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// COMP-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// COMP-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// COMP-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// COMP-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // COMP:       cond.true:
-// COMP-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    br label [[COND_END:%.*]]
 // COMP:       cond.false:
-// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    br label [[COND_END]]
 // COMP:       cond.end:
-// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // COMP-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// COMP-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // COMP:       omp.inner.for.cond:
-// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// COMP-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// COMP-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// COMP-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// COMP-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// COMP-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // COMP:       omp.inner.for.body:
-// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// COMP-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// COMP-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// COMP-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// COMP-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// COMP-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // COMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // COMP:       omp.body.continue:
 // COMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // COMP:       omp.inner.for.inc:
-// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// COMP-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// COMP-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // COMP:       omp.inner.for.end:
 // COMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // COMP:       omp.loop.exit:
-// COMP-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// COMP-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// COMP-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // COMP-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// COMP-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// COMP-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.2, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// COMP-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// COMP-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// COMP-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// COMP-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// COMP-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// COMP-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.2, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // COMP-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // COMP-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointpLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointpLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
-// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
-// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointpLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[TMP32:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP33:%.*]] = load i32, i32* [[TMP32]], align 4
+// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointpLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
 // COMP-NEXT:    br label [[OMP_PRECOND_END]]
@@ -1669,13 +1780,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@.omp_outlined..3
-// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.1* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// COMP-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.1*, align 8
 // COMP-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1685,103 +1794,105 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// COMP-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // COMP-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// COMP-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// COMP-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// COMP-NEXT:    store %struct.anon.1* [[__CONTEXT]], %struct.anon.1** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load %struct.anon.1*, %struct.anon.1** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_1:%.*]], %struct.anon.1* [[TMP0]], i32 0, i32 0
+// COMP-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[TMP0]], i32 0, i32 1
+// COMP-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_1]], %struct.anon.1* [[TMP0]], i32 0, i32 2
+// COMP-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// COMP-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    store i32 0, i32* [[I]], align 4
-// COMP-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // COMP:       omp.precond.then:
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// COMP-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// COMP-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// COMP-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// COMP-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // COMP:       cond.true:
-// COMP-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    br label [[COND_END:%.*]]
 // COMP:       cond.false:
-// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    br label [[COND_END]]
 // COMP:       cond.end:
-// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // COMP-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// COMP-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // COMP:       omp.inner.for.cond:
-// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// COMP-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// COMP-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// COMP-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// COMP-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// COMP-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // COMP:       omp.inner.for.body:
-// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// COMP-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// COMP-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// COMP-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// COMP-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// COMP-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // COMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // COMP:       omp.body.continue:
 // COMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // COMP:       omp.inner.for.inc:
-// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// COMP-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// COMP-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // COMP:       omp.inner.for.end:
 // COMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // COMP:       omp.loop.exit:
-// COMP-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// COMP-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// COMP-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // COMP-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// COMP-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// COMP-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.4, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// COMP-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// COMP-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// COMP-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// COMP-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// COMP-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// COMP-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.4, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // COMP-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // COMP-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointmLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointmLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
-// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
-// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointmLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[TMP32:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP33:%.*]] = load i32, i32* [[TMP32]], align 4
+// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointmLERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
 // COMP-NEXT:    br label [[OMP_PRECOND_END]]
@@ -1811,13 +1922,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@.omp_outlined..5
-// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.2* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// COMP-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.2*, align 8
 // COMP-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1827,103 +1936,105 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// COMP-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // COMP-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// COMP-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// COMP-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// COMP-NEXT:    store %struct.anon.2* [[__CONTEXT]], %struct.anon.2** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load %struct.anon.2*, %struct.anon.2** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_2:%.*]], %struct.anon.2* [[TMP0]], i32 0, i32 0
+// COMP-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[TMP0]], i32 0, i32 1
+// COMP-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_2]], %struct.anon.2* [[TMP0]], i32 0, i32 2
+// COMP-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// COMP-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    store i32 0, i32* [[I]], align 4
-// COMP-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // COMP:       omp.precond.then:
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// COMP-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// COMP-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// COMP-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// COMP-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // COMP:       cond.true:
-// COMP-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    br label [[COND_END:%.*]]
 // COMP:       cond.false:
-// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    br label [[COND_END]]
 // COMP:       cond.end:
-// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // COMP-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// COMP-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // COMP:       omp.inner.for.cond:
-// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// COMP-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// COMP-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// COMP-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// COMP-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// COMP-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // COMP:       omp.inner.for.body:
-// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// COMP-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// COMP-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// COMP-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// COMP-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// COMP-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // COMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // COMP:       omp.body.continue:
 // COMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // COMP:       omp.inner.for.inc:
-// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// COMP-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// COMP-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // COMP:       omp.inner.for.end:
 // COMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // COMP:       omp.loop.exit:
-// COMP-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// COMP-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// COMP-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // COMP-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// COMP-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// COMP-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.6, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// COMP-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// COMP-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// COMP-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// COMP-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// COMP-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// COMP-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.6, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // COMP-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // COMP-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaNERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaNERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
-// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
-// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaNERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[TMP32:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP33:%.*]] = load i32, i32* [[TMP32]], align 4
+// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaNERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
 // COMP-NEXT:    br label [[OMP_PRECOND_END]]
@@ -1953,13 +2064,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@.omp_outlined..7
-// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.3* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// COMP-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.3*, align 8
 // COMP-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -1969,103 +2078,105 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// COMP-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // COMP-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// COMP-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// COMP-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// COMP-NEXT:    store %struct.anon.3* [[__CONTEXT]], %struct.anon.3** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load %struct.anon.3*, %struct.anon.3** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_3:%.*]], %struct.anon.3* [[TMP0]], i32 0, i32 0
+// COMP-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[TMP0]], i32 0, i32 1
+// COMP-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_3]], %struct.anon.3* [[TMP0]], i32 0, i32 2
+// COMP-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// COMP-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    store i32 0, i32* [[I]], align 4
-// COMP-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // COMP:       omp.precond.then:
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// COMP-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// COMP-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// COMP-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// COMP-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // COMP:       cond.true:
-// COMP-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    br label [[COND_END:%.*]]
 // COMP:       cond.false:
-// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    br label [[COND_END]]
 // COMP:       cond.end:
-// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // COMP-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// COMP-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // COMP:       omp.inner.for.cond:
-// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// COMP-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// COMP-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// COMP-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// COMP-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// COMP-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // COMP:       omp.inner.for.body:
-// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// COMP-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// COMP-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// COMP-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// COMP-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// COMP-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // COMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // COMP:       omp.body.continue:
 // COMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // COMP:       omp.inner.for.inc:
-// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// COMP-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// COMP-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // COMP:       omp.inner.for.end:
 // COMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // COMP:       omp.loop.exit:
-// COMP-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// COMP-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// COMP-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // COMP-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// COMP-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// COMP-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.8, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// COMP-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// COMP-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// COMP-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// COMP-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// COMP-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// COMP-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.8, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // COMP-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // COMP-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointoRERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointoRERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
-// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
-// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointoRERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[TMP32:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP33:%.*]] = load i32, i32* [[TMP32]], align 4
+// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointoRERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
 // COMP-NEXT:    br label [[OMP_PRECOND_END]]
@@ -2095,13 +2206,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@.omp_outlined..9
-// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.4* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// COMP-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.4*, align 8
 // COMP-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -2111,103 +2220,105 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// COMP-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // COMP-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// COMP-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// COMP-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// COMP-NEXT:    store %struct.anon.4* [[__CONTEXT]], %struct.anon.4** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load %struct.anon.4*, %struct.anon.4** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_4:%.*]], %struct.anon.4* [[TMP0]], i32 0, i32 0
+// COMP-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[TMP0]], i32 0, i32 1
+// COMP-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_4]], %struct.anon.4* [[TMP0]], i32 0, i32 2
+// COMP-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// COMP-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    store i32 0, i32* [[I]], align 4
-// COMP-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // COMP:       omp.precond.then:
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// COMP-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// COMP-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// COMP-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// COMP-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // COMP:       cond.true:
-// COMP-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    br label [[COND_END:%.*]]
 // COMP:       cond.false:
-// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    br label [[COND_END]]
 // COMP:       cond.end:
-// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // COMP-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// COMP-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // COMP:       omp.inner.for.cond:
-// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// COMP-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// COMP-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// COMP-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// COMP-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// COMP-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // COMP:       omp.inner.for.body:
-// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// COMP-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// COMP-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// COMP-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// COMP-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// COMP-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // COMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // COMP:       omp.body.continue:
 // COMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // COMP:       omp.inner.for.inc:
-// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// COMP-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// COMP-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // COMP:       omp.inner.for.end:
 // COMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // COMP:       omp.loop.exit:
-// COMP-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// COMP-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// COMP-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // COMP-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// COMP-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// COMP-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.10, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// COMP-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// COMP-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// COMP-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// COMP-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// COMP-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// COMP-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.10, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // COMP-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // COMP-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointeOERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    [[CALL:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointeOERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
-// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
-// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointeOERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[TMP32:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP33:%.*]] = load i32, i32* [[TMP32]], align 4
+// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointeOERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP33]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
 // COMP-NEXT:    br label [[OMP_PRECOND_END]]
@@ -2237,13 +2348,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@.omp_outlined..11
-// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.5* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// COMP-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.5*, align 8
 // COMP-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -2253,111 +2362,113 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// COMP-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // COMP-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// COMP-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// COMP-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // COMP-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// COMP-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// COMP-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// COMP-NEXT:    store %struct.anon.5* [[__CONTEXT]], %struct.anon.5** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load %struct.anon.5*, %struct.anon.5** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_5:%.*]], %struct.anon.5* [[TMP0]], i32 0, i32 0
+// COMP-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[TMP0]], i32 0, i32 1
+// COMP-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_5]], %struct.anon.5* [[TMP0]], i32 0, i32 2
+// COMP-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// COMP-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    store i32 0, i32* [[I]], align 4
-// COMP-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // COMP:       omp.precond.then:
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// COMP-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// COMP-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// COMP-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// COMP-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // COMP:       cond.true:
-// COMP-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    br label [[COND_END:%.*]]
 // COMP:       cond.false:
-// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    br label [[COND_END]]
 // COMP:       cond.end:
-// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // COMP-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// COMP-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // COMP:       omp.inner.for.cond:
-// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// COMP-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// COMP-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// COMP-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// COMP-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// COMP-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // COMP:       omp.inner.for.body:
-// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// COMP-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// COMP-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// COMP-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// COMP-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// COMP-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // COMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // COMP:       omp.body.continue:
 // COMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // COMP:       omp.inner.for.inc:
-// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// COMP-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// COMP-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // COMP:       omp.inner.for.end:
 // COMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // COMP:       omp.loop.exit:
-// COMP-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// COMP-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// COMP-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // COMP-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// COMP-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// COMP-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.12, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// COMP-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// COMP-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// COMP-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// COMP-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// COMP-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// COMP-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.12, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // COMP-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // COMP-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// COMP-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointaaERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// COMP-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// COMP-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
-// COMP-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointaaERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// COMP-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// COMP-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointaaERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// COMP-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// COMP-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
 // COMP-NEXT:    br label [[OMP_PRECOND_END]]
@@ -2391,13 +2502,11 @@ void foo(int N, Point const *Points) {
 //
 //
 // COMP-LABEL: define {{[^@]+}}@.omp_outlined..13
-// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[N:%.*]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED:%.*]], %struct.Point** nonnull align 8 dereferenceable(8) [[POINTS:%.*]]) #[[ATTR2]] {
+// COMP-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.6* noalias [[__CONTEXT:%.*]]) #[[ATTR2]] {
 // COMP-NEXT:  entry:
 // COMP-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // COMP-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[N_ADDR:%.*]] = alloca i32*, align 8
-// COMP-NEXT:    [[RED_ADDR:%.*]] = alloca %struct.Point*, align 8
-// COMP-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point**, align 8
+// COMP-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.6*, align 8
 // COMP-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4
@@ -2407,111 +2516,113 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// COMP-NEXT:    [[RED3:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
-// COMP-NEXT:    [[I4:%.*]] = alloca i32, align 4
+// COMP-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// COMP-NEXT:    [[I3:%.*]] = alloca i32, align 4
 // COMP-NEXT:    [[DOTOMP_REDUCTION_RED_LIST:%.*]] = alloca [1 x i8*], align 8
 // COMP-NEXT:    [[REF_TMP:%.*]] = alloca [[STRUCT_POINT]], align 4
-// COMP-NEXT:    [[REF_TMP10:%.*]] = alloca [[STRUCT_POINT]], align 4
+// COMP-NEXT:    [[REF_TMP9:%.*]] = alloca [[STRUCT_POINT]], align 4
 // COMP-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// COMP-NEXT:    store i32* [[N]], i32** [[N_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point* [[RED]], %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    store %struct.Point** [[POINTS]], %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[N_ADDR]], align 8
-// COMP-NEXT:    [[TMP1:%.*]] = load %struct.Point*, %struct.Point** [[RED_ADDR]], align 8
-// COMP-NEXT:    [[TMP2:%.*]] = load %struct.Point**, %struct.Point*** [[POINTS_ADDR]], align 8
-// COMP-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// COMP-NEXT:    store i32 [[TMP3]], i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[TMP4:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP4]], 0
+// COMP-NEXT:    store %struct.anon.6* [[__CONTEXT]], %struct.anon.6** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP0:%.*]] = load %struct.anon.6*, %struct.anon.6** [[__CONTEXT_ADDR]], align 8
+// COMP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_6:%.*]], %struct.anon.6* [[TMP0]], i32 0, i32 0
+// COMP-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// COMP-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[TMP0]], i32 0, i32 1
+// COMP-NEXT:    [[TMP4:%.*]] = load %struct.Point*, %struct.Point** [[TMP3]], align 8
+// COMP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_ANON_6]], %struct.anon.6* [[TMP0]], i32 0, i32 2
+// COMP-NEXT:    [[TMP6:%.*]] = load %struct.Point**, %struct.Point*** [[TMP5]], align 8
+// COMP-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP2]], align 4
+// COMP-NEXT:    store i32 [[TMP7]], i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], 0
 // COMP-NEXT:    [[DIV:%.*]] = udiv i32 [[SUB]], 1
 // COMP-NEXT:    [[SUB2:%.*]] = sub i32 [[DIV]], 1
 // COMP-NEXT:    store i32 [[SUB2]], i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    store i32 0, i32* [[I]], align 4
-// COMP-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
-// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP5]]
+// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_]], align 4
+// COMP-NEXT:    [[CMP:%.*]] = icmp ult i32 0, [[TMP9]]
 // COMP-NEXT:    br i1 [[CMP]], label [[OMP_PRECOND_THEN:%.*]], label [[OMP_PRECOND_END:%.*]]
 // COMP:       omp.precond.then:
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    store i32 [[TMP6]], i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    store i32 [[TMP10]], i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 // COMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
-// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]]) #[[ATTR4]]
-// COMP-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
-// COMP-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP10:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
-// COMP-NEXT:    [[CMP5:%.*]] = icmp ugt i32 [[TMP9]], [[TMP10]]
-// COMP-NEXT:    br i1 [[CMP5]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+// COMP-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR4]]
+// COMP-NEXT:    [[TMP11:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 4
+// COMP-NEXT:    call void @__kmpc_for_static_init_4u(%struct.ident_t* @[[GLOB1]], i32 [[TMP12]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[TMP13]], [[TMP14]]
+// COMP-NEXT:    br i1 [[CMP4]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // COMP:       cond.true:
-// COMP-NEXT:    [[TMP11:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
+// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_1]], align 4
 // COMP-NEXT:    br label [[COND_END:%.*]]
 // COMP:       cond.false:
-// COMP-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // COMP-NEXT:    br label [[COND_END]]
 // COMP:       cond.end:
-// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP11]], [[COND_TRUE]] ], [ [[TMP12]], [[COND_FALSE]] ]
+// COMP-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP15]], [[COND_TRUE]] ], [ [[TMP16]], [[COND_FALSE]] ]
 // COMP-NEXT:    store i32 [[COND]], i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
-// COMP-NEXT:    store i32 [[TMP13]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_LB]], align 4
+// COMP-NEXT:    store i32 [[TMP17]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // COMP:       omp.inner.for.cond:
-// COMP-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
-// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP15]], 1
-// COMP-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP14]], [[ADD]]
-// COMP-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
+// COMP-NEXT:    [[TMP18:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
+// COMP-NEXT:    [[ADD:%.*]] = add i32 [[TMP19]], 1
+// COMP-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[TMP18]], [[ADD]]
+// COMP-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // COMP:       omp.inner.for.body:
-// COMP-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP16]], 1
-// COMP-NEXT:    [[ADD7:%.*]] = add i32 0, [[MUL]]
-// COMP-NEXT:    store i32 [[ADD7]], i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I4]], align 4
-// COMP-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[TMP2]], align 8
-// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED3]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// COMP-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[MUL:%.*]] = mul i32 [[TMP20]], 1
+// COMP-NEXT:    [[ADD6:%.*]] = add i32 0, [[MUL]]
+// COMP-NEXT:    store i32 [[ADD6]], i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[I3]], align 4
+// COMP-NEXT:    [[TMP22:%.*]] = load %struct.Point*, %struct.Point** [[TMP6]], align 8
+// COMP-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP21]], %struct.Point* [[TMP22]])
 // COMP-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // COMP:       omp.body.continue:
 // COMP-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // COMP:       omp.inner.for.inc:
-// COMP-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
-// COMP-NEXT:    [[ADD8:%.*]] = add i32 [[TMP19]], 1
-// COMP-NEXT:    store i32 [[ADD8]], i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[TMP23:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
+// COMP-NEXT:    [[ADD7:%.*]] = add i32 [[TMP23]], 1
+// COMP-NEXT:    store i32 [[ADD7]], i32* [[DOTOMP_IV]], align 4
 // COMP-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // COMP:       omp.inner.for.end:
 // COMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // COMP:       omp.loop.exit:
-// COMP-NEXT:    [[TMP20:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP20]], align 4
-// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP21]])
-// COMP-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// COMP-NEXT:    [[TMP23:%.*]] = bitcast %struct.Point* [[RED3]] to i8*
-// COMP-NEXT:    store i8* [[TMP23]], i8** [[TMP22]], align 8
 // COMP-NEXT:    [[TMP24:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // COMP-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP24]], align 4
-// COMP-NEXT:    [[TMP26:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// COMP-NEXT:    [[TMP27:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], i32 1, i64 8, i8* [[TMP26]], void (i8*, i8*)* @.omp.reduction.reduction_func.14, [8 x i32]* @.gomp_critical_user_.reduction.var)
-// COMP-NEXT:    switch i32 [[TMP27]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
+// COMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP25]])
+// COMP-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// COMP-NEXT:    [[TMP27:%.*]] = bitcast %struct.Point* [[RED]] to i8*
+// COMP-NEXT:    store i8* [[TMP27]], i8** [[TMP26]], align 8
+// COMP-NEXT:    [[TMP28:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP29:%.*]] = load i32, i32* [[TMP28]], align 4
+// COMP-NEXT:    [[TMP30:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
+// COMP-NEXT:    [[TMP31:%.*]] = call i32 @__kmpc_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], i32 1, i64 8, i8* [[TMP30]], void (i8*, i8*)* @.omp.reduction.reduction_func.14, [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    switch i32 [[TMP31]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
 // COMP-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
 // COMP-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // COMP-NEXT:    ]
 // COMP:       .omp.reduction.case1:
-// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    [[TMP28:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
-// COMP-NEXT:    store i64 [[CALL]], i64* [[TMP28]], align 4
-// COMP-NEXT:    [[CALL9:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
-// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP25]], [8 x i32]* @.gomp_critical_user_.reduction.var)
+// COMP-NEXT:    [[CALL:%.*]] = call i64 @_ZNK5PointooERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    [[TMP32:%.*]] = bitcast %struct.Point* [[REF_TMP]] to i64*
+// COMP-NEXT:    store i64 [[CALL]], i64* [[TMP32]], align 4
+// COMP-NEXT:    [[CALL8:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP]])
+// COMP-NEXT:    call void @__kmpc_end_reduce_nowait(%struct.ident_t* @[[GLOB2]], i32 [[TMP29]], [8 x i32]* @.gomp_critical_user_.reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.case2:
-// COMP-NEXT:    [[TMP29:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// COMP-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
-// COMP-NEXT:    [[CALL11:%.*]] = call i64 @_ZNK5PointooERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED3]])
-// COMP-NEXT:    [[TMP31:%.*]] = bitcast %struct.Point* [[REF_TMP10]] to i64*
-// COMP-NEXT:    store i64 [[CALL11]], i64* [[TMP31]], align 4
-// COMP-NEXT:    [[CALL12:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP1]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP10]])
-// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP30]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[TMP33:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// COMP-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
+// COMP-NEXT:    call void @__kmpc_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
+// COMP-NEXT:    [[CALL10:%.*]] = call i64 @_ZNK5PointooERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[RED]])
+// COMP-NEXT:    [[TMP35:%.*]] = bitcast %struct.Point* [[REF_TMP9]] to i64*
+// COMP-NEXT:    store i64 [[CALL10]], i64* [[TMP35]], align 4
+// COMP-NEXT:    [[CALL11:%.*]] = call nonnull align 4 dereferenceable(8) %struct.Point* @_ZN5PointaSERKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[TMP4]], %struct.Point* nonnull align 4 dereferenceable(8) [[REF_TMP9]])
+// COMP-NEXT:    call void @__kmpc_end_critical(%struct.ident_t* @[[GLOB3]], i32 [[TMP34]], [8 x i32]* @.gomp_critical_user_.atomic_reduction.var)
 // COMP-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // COMP:       .omp.reduction.default:
 // COMP-NEXT:    br label [[OMP_PRECOND_END]]
@@ -2555,4 +2666,191 @@ void foo(int N, Point const *Points) {
 // COMP-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_POINT]], %struct.Point* [[THIS1]], i32 0, i32 1
 // COMP-NEXT:    store i32 0, i32* [[Y]], align 4
 // COMP-NEXT:    ret void
+//
+//
+// SIMD-ONLY-LABEL: define {{[^@]+}}@_Z3fooiPK5Point
+// SIMD-ONLY-SAME: (i32 [[N:%.*]], %struct.Point* [[POINTS:%.*]]) #[[ATTR0:[0-9]+]] {
+// SIMD-ONLY-NEXT:  entry:
+// SIMD-ONLY-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    [[POINTS_ADDR:%.*]] = alloca %struct.Point*, align 8
+// SIMD-ONLY-NEXT:    [[RED:%.*]] = alloca [[STRUCT_POINT:%.*]], align 4
+// SIMD-ONLY-NEXT:    [[I:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    [[I1:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    [[I8:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    [[I15:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    [[I22:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    [[I29:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    [[I36:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    [[I43:%.*]] = alloca i32, align 4
+// SIMD-ONLY-NEXT:    store i32 [[N]], i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    store %struct.Point* [[POINTS]], %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_ZN5PointC1Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]]) #[[ATTR3:[0-9]+]]
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[I]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND:%.*]]
+// SIMD-ONLY:       for.cond:
+// SIMD-ONLY-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I]], align 4
+// SIMD-ONLY-NEXT:    [[TMP1:%.*]] = load i32, i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP0]], [[TMP1]]
+// SIMD-ONLY-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+// SIMD-ONLY:       for.body:
+// SIMD-ONLY-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
+// SIMD-ONLY-NEXT:    [[TMP3:%.*]] = load %struct.Point*, %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP2]], %struct.Point* [[TMP3]])
+// SIMD-ONLY-NEXT:    br label [[FOR_INC:%.*]]
+// SIMD-ONLY:       for.inc:
+// SIMD-ONLY-NEXT:    [[TMP4:%.*]] = load i32, i32* [[I]], align 4
+// SIMD-ONLY-NEXT:    [[INC:%.*]] = add i32 [[TMP4]], 1
+// SIMD-ONLY-NEXT:    store i32 [[INC]], i32* [[I]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
+// SIMD-ONLY:       for.end:
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[I1]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND2:%.*]]
+// SIMD-ONLY:       for.cond2:
+// SIMD-ONLY-NEXT:    [[TMP5:%.*]] = load i32, i32* [[I1]], align 4
+// SIMD-ONLY-NEXT:    [[TMP6:%.*]] = load i32, i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[TMP5]], [[TMP6]]
+// SIMD-ONLY-NEXT:    br i1 [[CMP3]], label [[FOR_BODY4:%.*]], label [[FOR_END7:%.*]]
+// SIMD-ONLY:       for.body4:
+// SIMD-ONLY-NEXT:    [[TMP7:%.*]] = load i32, i32* [[I1]], align 4
+// SIMD-ONLY-NEXT:    [[TMP8:%.*]] = load %struct.Point*, %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP7]], %struct.Point* [[TMP8]])
+// SIMD-ONLY-NEXT:    br label [[FOR_INC5:%.*]]
+// SIMD-ONLY:       for.inc5:
+// SIMD-ONLY-NEXT:    [[TMP9:%.*]] = load i32, i32* [[I1]], align 4
+// SIMD-ONLY-NEXT:    [[INC6:%.*]] = add i32 [[TMP9]], 1
+// SIMD-ONLY-NEXT:    store i32 [[INC6]], i32* [[I1]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND2]], !llvm.loop [[LOOP4:![0-9]+]]
+// SIMD-ONLY:       for.end7:
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[I8]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND9:%.*]]
+// SIMD-ONLY:       for.cond9:
+// SIMD-ONLY-NEXT:    [[TMP10:%.*]] = load i32, i32* [[I8]], align 4
+// SIMD-ONLY-NEXT:    [[TMP11:%.*]] = load i32, i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    [[CMP10:%.*]] = icmp ult i32 [[TMP10]], [[TMP11]]
+// SIMD-ONLY-NEXT:    br i1 [[CMP10]], label [[FOR_BODY11:%.*]], label [[FOR_END14:%.*]]
+// SIMD-ONLY:       for.body11:
+// SIMD-ONLY-NEXT:    [[TMP12:%.*]] = load i32, i32* [[I8]], align 4
+// SIMD-ONLY-NEXT:    [[TMP13:%.*]] = load %struct.Point*, %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP12]], %struct.Point* [[TMP13]])
+// SIMD-ONLY-NEXT:    br label [[FOR_INC12:%.*]]
+// SIMD-ONLY:       for.inc12:
+// SIMD-ONLY-NEXT:    [[TMP14:%.*]] = load i32, i32* [[I8]], align 4
+// SIMD-ONLY-NEXT:    [[INC13:%.*]] = add i32 [[TMP14]], 1
+// SIMD-ONLY-NEXT:    store i32 [[INC13]], i32* [[I8]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND9]], !llvm.loop [[LOOP5:![0-9]+]]
+// SIMD-ONLY:       for.end14:
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[I15]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND16:%.*]]
+// SIMD-ONLY:       for.cond16:
+// SIMD-ONLY-NEXT:    [[TMP15:%.*]] = load i32, i32* [[I15]], align 4
+// SIMD-ONLY-NEXT:    [[TMP16:%.*]] = load i32, i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    [[CMP17:%.*]] = icmp ult i32 [[TMP15]], [[TMP16]]
+// SIMD-ONLY-NEXT:    br i1 [[CMP17]], label [[FOR_BODY18:%.*]], label [[FOR_END21:%.*]]
+// SIMD-ONLY:       for.body18:
+// SIMD-ONLY-NEXT:    [[TMP17:%.*]] = load i32, i32* [[I15]], align 4
+// SIMD-ONLY-NEXT:    [[TMP18:%.*]] = load %struct.Point*, %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP17]], %struct.Point* [[TMP18]])
+// SIMD-ONLY-NEXT:    br label [[FOR_INC19:%.*]]
+// SIMD-ONLY:       for.inc19:
+// SIMD-ONLY-NEXT:    [[TMP19:%.*]] = load i32, i32* [[I15]], align 4
+// SIMD-ONLY-NEXT:    [[INC20:%.*]] = add i32 [[TMP19]], 1
+// SIMD-ONLY-NEXT:    store i32 [[INC20]], i32* [[I15]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND16]], !llvm.loop [[LOOP6:![0-9]+]]
+// SIMD-ONLY:       for.end21:
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[I22]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND23:%.*]]
+// SIMD-ONLY:       for.cond23:
+// SIMD-ONLY-NEXT:    [[TMP20:%.*]] = load i32, i32* [[I22]], align 4
+// SIMD-ONLY-NEXT:    [[TMP21:%.*]] = load i32, i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    [[CMP24:%.*]] = icmp ult i32 [[TMP20]], [[TMP21]]
+// SIMD-ONLY-NEXT:    br i1 [[CMP24]], label [[FOR_BODY25:%.*]], label [[FOR_END28:%.*]]
+// SIMD-ONLY:       for.body25:
+// SIMD-ONLY-NEXT:    [[TMP22:%.*]] = load i32, i32* [[I22]], align 4
+// SIMD-ONLY-NEXT:    [[TMP23:%.*]] = load %struct.Point*, %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP22]], %struct.Point* [[TMP23]])
+// SIMD-ONLY-NEXT:    br label [[FOR_INC26:%.*]]
+// SIMD-ONLY:       for.inc26:
+// SIMD-ONLY-NEXT:    [[TMP24:%.*]] = load i32, i32* [[I22]], align 4
+// SIMD-ONLY-NEXT:    [[INC27:%.*]] = add i32 [[TMP24]], 1
+// SIMD-ONLY-NEXT:    store i32 [[INC27]], i32* [[I22]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND23]], !llvm.loop [[LOOP7:![0-9]+]]
+// SIMD-ONLY:       for.end28:
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[I29]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND30:%.*]]
+// SIMD-ONLY:       for.cond30:
+// SIMD-ONLY-NEXT:    [[TMP25:%.*]] = load i32, i32* [[I29]], align 4
+// SIMD-ONLY-NEXT:    [[TMP26:%.*]] = load i32, i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    [[CMP31:%.*]] = icmp ult i32 [[TMP25]], [[TMP26]]
+// SIMD-ONLY-NEXT:    br i1 [[CMP31]], label [[FOR_BODY32:%.*]], label [[FOR_END35:%.*]]
+// SIMD-ONLY:       for.body32:
+// SIMD-ONLY-NEXT:    [[TMP27:%.*]] = load i32, i32* [[I29]], align 4
+// SIMD-ONLY-NEXT:    [[TMP28:%.*]] = load %struct.Point*, %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP27]], %struct.Point* [[TMP28]])
+// SIMD-ONLY-NEXT:    br label [[FOR_INC33:%.*]]
+// SIMD-ONLY:       for.inc33:
+// SIMD-ONLY-NEXT:    [[TMP29:%.*]] = load i32, i32* [[I29]], align 4
+// SIMD-ONLY-NEXT:    [[INC34:%.*]] = add i32 [[TMP29]], 1
+// SIMD-ONLY-NEXT:    store i32 [[INC34]], i32* [[I29]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND30]], !llvm.loop [[LOOP8:![0-9]+]]
+// SIMD-ONLY:       for.end35:
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[I36]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND37:%.*]]
+// SIMD-ONLY:       for.cond37:
+// SIMD-ONLY-NEXT:    [[TMP30:%.*]] = load i32, i32* [[I36]], align 4
+// SIMD-ONLY-NEXT:    [[TMP31:%.*]] = load i32, i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    [[CMP38:%.*]] = icmp ult i32 [[TMP30]], [[TMP31]]
+// SIMD-ONLY-NEXT:    br i1 [[CMP38]], label [[FOR_BODY39:%.*]], label [[FOR_END42:%.*]]
+// SIMD-ONLY:       for.body39:
+// SIMD-ONLY-NEXT:    [[TMP32:%.*]] = load i32, i32* [[I36]], align 4
+// SIMD-ONLY-NEXT:    [[TMP33:%.*]] = load %struct.Point*, %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP32]], %struct.Point* [[TMP33]])
+// SIMD-ONLY-NEXT:    br label [[FOR_INC40:%.*]]
+// SIMD-ONLY:       for.inc40:
+// SIMD-ONLY-NEXT:    [[TMP34:%.*]] = load i32, i32* [[I36]], align 4
+// SIMD-ONLY-NEXT:    [[INC41:%.*]] = add i32 [[TMP34]], 1
+// SIMD-ONLY-NEXT:    store i32 [[INC41]], i32* [[I36]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND37]], !llvm.loop [[LOOP9:![0-9]+]]
+// SIMD-ONLY:       for.end42:
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[I43]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND44:%.*]]
+// SIMD-ONLY:       for.cond44:
+// SIMD-ONLY-NEXT:    [[TMP35:%.*]] = load i32, i32* [[I43]], align 4
+// SIMD-ONLY-NEXT:    [[TMP36:%.*]] = load i32, i32* [[N_ADDR]], align 4
+// SIMD-ONLY-NEXT:    [[CMP45:%.*]] = icmp ult i32 [[TMP35]], [[TMP36]]
+// SIMD-ONLY-NEXT:    br i1 [[CMP45]], label [[FOR_BODY46:%.*]], label [[FOR_END49:%.*]]
+// SIMD-ONLY:       for.body46:
+// SIMD-ONLY-NEXT:    [[TMP37:%.*]] = load i32, i32* [[I43]], align 4
+// SIMD-ONLY-NEXT:    [[TMP38:%.*]] = load %struct.Point*, %struct.Point** [[POINTS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_Z4workR5PointiPKS_(%struct.Point* nonnull align 4 dereferenceable(8) [[RED]], i32 [[TMP37]], %struct.Point* [[TMP38]])
+// SIMD-ONLY-NEXT:    br label [[FOR_INC47:%.*]]
+// SIMD-ONLY:       for.inc47:
+// SIMD-ONLY-NEXT:    [[TMP39:%.*]] = load i32, i32* [[I43]], align 4
+// SIMD-ONLY-NEXT:    [[INC48:%.*]] = add i32 [[TMP39]], 1
+// SIMD-ONLY-NEXT:    store i32 [[INC48]], i32* [[I43]], align 4
+// SIMD-ONLY-NEXT:    br label [[FOR_COND44]], !llvm.loop [[LOOP10:![0-9]+]]
+// SIMD-ONLY:       for.end49:
+// SIMD-ONLY-NEXT:    ret void
+//
+//
+// SIMD-ONLY-LABEL: define {{[^@]+}}@_ZN5PointC1Ev
+// SIMD-ONLY-SAME: (%struct.Point* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
+// SIMD-ONLY-NEXT:  entry:
+// SIMD-ONLY-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Point*, align 8
+// SIMD-ONLY-NEXT:    store %struct.Point* [[THIS]], %struct.Point** [[THIS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    [[THIS1:%.*]] = load %struct.Point*, %struct.Point** [[THIS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    call void @_ZN5PointC2Ev(%struct.Point* nonnull align 4 dereferenceable(8) [[THIS1]]) #[[ATTR3]]
+// SIMD-ONLY-NEXT:    ret void
+//
+//
+// SIMD-ONLY-LABEL: define {{[^@]+}}@_ZN5PointC2Ev
+// SIMD-ONLY-SAME: (%struct.Point* nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// SIMD-ONLY-NEXT:  entry:
+// SIMD-ONLY-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.Point*, align 8
+// SIMD-ONLY-NEXT:    store %struct.Point* [[THIS]], %struct.Point** [[THIS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    [[THIS1:%.*]] = load %struct.Point*, %struct.Point** [[THIS_ADDR]], align 8
+// SIMD-ONLY-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_POINT:%.*]], %struct.Point* [[THIS1]], i32 0, i32 0
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[X]], align 4
+// SIMD-ONLY-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_POINT]], %struct.Point* [[THIS1]], i32 0, i32 1
+// SIMD-ONLY-NEXT:    store i32 0, i32* [[Y]], align 4
+// SIMD-ONLY-NEXT:    ret void
 //
