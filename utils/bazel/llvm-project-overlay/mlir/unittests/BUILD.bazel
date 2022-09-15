@@ -293,6 +293,7 @@ cc_test(
         "Analysis/*.h",
         "Analysis/*/*.cpp",
         "Analysis/*/*.h",
+        "Dialect/Affine/Analysis/AffineStructuresParser.*",
     ]),
     deps = [
         "//llvm:TestingSupport",
