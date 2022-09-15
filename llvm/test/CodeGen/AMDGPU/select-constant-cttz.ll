@@ -9,23 +9,24 @@ define amdgpu_kernel void @select_constant_cttz(i32 addrspace(1)* noalias %out, 
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
-; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, -1
-; GCN-NEXT:    s_mov_b32 s4, s0
-; GCN-NEXT:    s_mov_b32 s5, s1
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshr_b32 s0, 1, s2
-; GCN-NEXT:    s_ff1_i32_b32 s0, s0
+; GCN-NEXT:    s_lshr_b32 s4, 1, s2
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 0
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -1, s[2:3]
-; GCN-NEXT:    v_ffbh_i32_e32 v1, v0
-; GCN-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0
-; GCN-NEXT:    v_sub_i32_e32 v0, vcc, 31, v1
-; GCN-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -1, s[0:1]
-; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; GCN-NEXT:    s_ff1_i32_b32 s2, s4
+; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GCN-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_cselect_b32 s2, -1, s2
+; GCN-NEXT:    s_flbit_i32 s6, s2
+; GCN-NEXT:    s_sub_i32 s8, 31, s6
+; GCN-NEXT:    s_cmp_eq_u32 s2, 0
+; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
+; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GCN-NEXT:    s_cselect_b32 s4, -1, s8
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %v    = load i32, i32 addrspace(1)* %arrayidx, align 4
   %sr   = lshr i32 1, %v
