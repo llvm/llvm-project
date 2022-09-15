@@ -57,18 +57,9 @@ SwiftUserExpression::SwiftUserExpression(
       m_type_system_helper(*m_target_wp.lock().get()),
       m_result_delegate(exe_scope.CalculateTarget(), *this, false),
       m_error_delegate(exe_scope.CalculateTarget(), *this, true),
-      m_persistent_variable_delegate(*this),
-      m_swift_scratch_ctx(
-          exe_scope.CalculateTarget()
-              ? exe_scope.CalculateTarget()->GetSwiftScratchContext(m_err,
-                                                                    exe_scope)
-              : llvm::None) {
+      m_persistent_variable_delegate(*this) {
   m_runs_in_playground_or_repl =
       options.GetREPLEnabled() || options.GetPlaygroundTransformEnabled();
-  if (m_swift_scratch_ctx)
-    if (m_swift_scratch_ctx->get())
-      m_swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-          m_swift_scratch_ctx->get()->GetSwiftASTContext());
 }
 
 SwiftUserExpression::~SwiftUserExpression() {}
@@ -305,6 +296,23 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return false;
   }
 
+  auto exe_scope = exe_ctx.GetBestExecutionContextScope();
+  if (!exe_scope) {
+    LLDB_LOG(log, "no execution context scope");
+    return false;
+  }
+
+  ExecutionContext target_scope(*target);
+  m_swift_scratch_ctx = target->GetSwiftScratchContext(
+      m_err, /* FIXME: should be exe_scope */ *target_scope
+                 .GetBestExecutionContextScope());
+  if (!m_swift_scratch_ctx) {
+    LLDB_LOG(log, "no scratch context", m_err.AsCString());
+    return false;
+  }
+  m_swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+      m_swift_scratch_ctx->get()->GetSwiftASTContext());
+
   if (!m_swift_ast_ctx) {
     LLDB_LOG(log, "no Swift AST Context");
     return false;
@@ -397,22 +405,6 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     Callback m_callback;
   };
 
-  ExecutionContextScope *exe_scope = NULL;
-
-  Process *process = exe_ctx.GetProcessPtr();
-
-  do {
-    exe_scope = exe_ctx.GetFramePtr();
-    if (exe_scope)
-      break;
-
-    exe_scope = process;
-    if (exe_scope)
-      break;
-
-    exe_scope = exe_ctx.GetTargetPtr();
-  } while (0);
-
   auto *swift_parser =
       new SwiftExpressionParser(exe_scope, *m_swift_ast_ctx, *this, m_options);
   unsigned error_code = swift_parser->Parse(
@@ -482,6 +474,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   auto module =
       m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().data());
 
+  Process *process = exe_ctx.GetProcessPtr();
   auto *swift_runtime = SwiftLanguageRuntime::Get(process);
   if (module && swift_runtime) {
     ModuleList modules;
