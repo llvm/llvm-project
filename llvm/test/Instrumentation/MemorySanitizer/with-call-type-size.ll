@@ -89,3 +89,14 @@ define <4 x i32> @testUndef(<4 x i32> %vec, i32 %x) sanitize_memory {
 ; CHECK-LABEL: @testUndef(
 ; CHECK:         call void @__msan_warning_noreturn
 ; CHECK:         ret <4 x i32>
+
+declare <256 x i16> @llvm.masked.load.v256i16.p0v256i16(<256 x i16>*, i32, <256 x i1>, <256 x i16>)
+define <256 x i16> @testCombine(<256 x i16>* %vec, <256 x i1> %mask) sanitize_memory {
+  %vec1 = call <256 x i16> @llvm.masked.load.v256i16.p0v256i16(<256 x i16>* %vec, i32 16, <256 x i1> %mask, <256 x i16> zeroinitializer)
+  ret <256 x i16> %vec1
+}
+; CHECK-LABEL: @testCombine(
+; CHECK:         %[[A:.*]] = or i1 %{{.*}}, %{{.*}}
+; CHECK:         %[[B:.*]] = zext i1 %[[A]] to i8
+; CHECK:         call void @__msan_maybe_warning_1(i8 zeroext %[[B]], i32 zeroext 0)
+; CHECK:         ret <256 x i16>
