@@ -6543,7 +6543,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (IsMSVCCompat)
     CmdArgs.push_back("-fms-compatibility");
 
-  if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode())
+  if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
+      Args.hasArg(options::OPT_fms_runtime_lib_EQ))
     ProcessVSRuntimeLibrary(Args, CmdArgs);
 
   // Handle -fgcc-version, if present.
