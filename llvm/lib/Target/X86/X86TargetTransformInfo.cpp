@@ -329,16 +329,22 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostKindTblEntry AVX512BWUniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v64i8,  { 2 } }, // psllw + pand.
-    { ISD::SRL,  MVT::v64i8,  { 2 } }, // psrlw + pand.
-    { ISD::SRA,  MVT::v64i8,  { 4 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v16i8,  { 1, 7, 2, 3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8,  { 1, 7, 2, 3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8,  { 1, 8, 4, 5 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8,  { 1, 8, 2, 3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8,  { 1, 8, 2, 3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8,  { 1, 9, 4, 5 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v64i8,  { 1, 8, 2, 3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8,  { 1, 8, 2, 3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8,  { 1, 9, 4, 6 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v16i16, { 1 } }, // psllw
-    { ISD::SRL,  MVT::v16i16, { 1 } }, // psrlw
-    { ISD::SRA,  MVT::v16i16, { 1 } }, // psrlw
-    { ISD::SHL,  MVT::v32i16, { 1 } }, // psllw
-    { ISD::SRL,  MVT::v32i16, { 1 } }, // psrlw
-    { ISD::SRA,  MVT::v32i16, { 1 } }, // psrlw
+    { ISD::SHL,  MVT::v16i16, { 1, 1, 1, 1 } }, // psllw
+    { ISD::SRL,  MVT::v16i16, { 1, 1, 1, 1 } }, // psrlw
+    { ISD::SRA,  MVT::v16i16, { 1, 1, 1, 1 } }, // psrlw
+    { ISD::SHL,  MVT::v32i16, { 1, 1, 1, 1 } }, // psllw
+    { ISD::SRL,  MVT::v32i16, { 1, 1, 1, 1 } }, // psrlw
+    { ISD::SRA,  MVT::v32i16, { 1, 1, 1, 1 } }, // psrlw
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasBWI())
@@ -348,18 +354,33 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVX512UniformConstCostTable[] = {
-    { ISD::SRA,  MVT::v2i64,  { 1 } },
-    { ISD::SRA,  MVT::v4i64,  { 1 } },
-    { ISD::SRA,  MVT::v8i64,  { 1 } },
+    { ISD::SHL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8,  {  3, 10, 12, 12 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v64i8,  { 4 } }, // psllw + pand.
-    { ISD::SRL,  MVT::v64i8,  { 4 } }, // psrlw + pand.
-    { ISD::SRA,  MVT::v64i8,  { 8 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v16i16, {  2,  7,  4,  4 } }, // psllw + split.
+    { ISD::SRL,  MVT::v16i16, {  2,  7,  4,  4 } }, // psrlw + split.
+    { ISD::SRA,  MVT::v16i16, {  2,  7,  4,  4 } }, // psraw + split.
 
-    { ISD::SDIV, MVT::v16i32, { 6 } }, // pmuludq sequence
-    { ISD::SREM, MVT::v16i32, { 8 } }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v16i32, { 5 } }, // pmuludq sequence
-    { ISD::UREM, MVT::v16i32, { 7 } }, // pmuludq+mul+sub sequence
+    { ISD::SHL,  MVT::v8i32,  {  1,  1,  1,  1 } }, // pslld
+    { ISD::SRL,  MVT::v8i32,  {  1,  1,  1,  1 } }, // psrld
+    { ISD::SRA,  MVT::v8i32,  {  1,  1,  1,  1 } }, // psrad
+    { ISD::SHL,  MVT::v16i32, {  1,  1,  1,  1 } }, // pslld
+    { ISD::SRL,  MVT::v16i32, {  1,  1,  1,  1 } }, // psrld
+    { ISD::SRA,  MVT::v16i32, {  1,  1,  1,  1 } }, // psrad
+
+    { ISD::SRA,  MVT::v2i64,  {  1,  1,  1,  1 } }, // psraq
+    { ISD::SHL,  MVT::v4i64,  {  1,  1,  1,  1 } }, // psllq
+    { ISD::SRL,  MVT::v4i64,  {  1,  1,  1,  1 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64,  {  1,  1,  1,  1 } }, // psraq
+    { ISD::SHL,  MVT::v8i64,  {  1,  1,  1,  1 } }, // psllq
+    { ISD::SRL,  MVT::v8i64,  {  1,  1,  1,  1 } }, // psrlq
+    { ISD::SRA,  MVT::v8i64,  {  1,  1,  1,  1 } }, // psraq
+
+    { ISD::SDIV, MVT::v16i32, {  6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v16i32, {  8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v16i32, {  5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v16i32, {  7 } }, // pmuludq+mul+sub sequence
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX512())
@@ -369,11 +390,33 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVX2UniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v32i8, { 2 } }, // psllw + pand.
-    { ISD::SRL,  MVT::v32i8, { 2 } }, // psrlw + pand.
-    { ISD::SRA,  MVT::v32i8, { 4 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v16i8, { 1,  8, 2, 3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, { 1,  8, 2, 3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, { 2, 10, 5, 6 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8, { 2,  8, 2, 4 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8, { 2,  8, 2, 4 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8, { 3, 10, 5, 9 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SRA,  MVT::v4i64, { 4 } }, // 2 x psrad + shuffle.
+    { ISD::SHL,  MVT::v8i16, { 1,  1, 1, 1 } }, // psllw
+    { ISD::SRL,  MVT::v8i16, { 1,  1, 1, 1 } }, // psrlw
+    { ISD::SRA,  MVT::v8i16, { 1,  1, 1, 1 } }, // psraw
+    { ISD::SHL,  MVT::v16i16,{ 2,  2, 1, 2 } }, // psllw
+    { ISD::SRL,  MVT::v16i16,{ 2,  2, 1, 2 } }, // psrlw
+    { ISD::SRA,  MVT::v16i16,{ 2,  2, 1, 2 } }, // psraw
+
+    { ISD::SHL,  MVT::v4i32, { 1,  1, 1, 1 } }, // pslld
+    { ISD::SRL,  MVT::v4i32, { 1,  1, 1, 1 } }, // psrld
+    { ISD::SRA,  MVT::v4i32, { 1,  1, 1, 1 } }, // psrad
+    { ISD::SHL,  MVT::v8i32, { 2,  2, 1, 2 } }, // pslld
+    { ISD::SRL,  MVT::v8i32, { 2,  2, 1, 2 } }, // psrld
+    { ISD::SRA,  MVT::v8i32, { 2,  2, 1, 2 } }, // psrad
+
+    { ISD::SHL,  MVT::v2i64, { 1,  1, 1, 1 } }, // psllq
+    { ISD::SRL,  MVT::v2i64, { 1,  1, 1, 1 } }, // psrlq
+    { ISD::SRA,  MVT::v2i64, { 2,  3, 3, 3 } }, // psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64, { 2,  2, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v4i64, { 2,  2, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64, { 4,  4, 3, 6 } }, // psrad + shuffle + split.
 
     { ISD::SDIV, MVT::v8i32, { 6 } }, // pmuludq sequence
     { ISD::SREM, MVT::v8i32, { 8 } }, // pmuludq+mul+sub sequence
@@ -387,28 +430,75 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
 
+  static const CostKindTblEntry AVXUniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v16i8, {  2,  7,  2,  3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {  2,  7,  2,  3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, {  3,  9,  5,  6 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8, {  4,  7,  7,  8 } }, // 2*(psllw + pand) + split.
+    { ISD::SRL,  MVT::v32i8, {  4,  7,  7,  8 } }, // 2*(psrlw + pand) + split.
+    { ISD::SRA,  MVT::v32i8, {  7,  7, 12, 13 } }, // 2*(psrlw, pand, pxor, psubb) + split.
+
+    { ISD::SHL,  MVT::v8i16, {  1,  2,  1,  1 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16, {  1,  2,  1,  1 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16, {  1,  2,  1,  1 } }, // psraw.
+    { ISD::SHL,  MVT::v16i16,{  3,  6,  4,  5 } }, // psllw + split.
+    { ISD::SRL,  MVT::v16i16,{  3,  6,  4,  5 } }, // psrlw + split.
+    { ISD::SRA,  MVT::v16i16,{  3,  6,  4,  5 } }, // psraw + split.
+
+    { ISD::SHL,  MVT::v4i32, {  1,  2,  1,  1 } }, // pslld.
+    { ISD::SRL,  MVT::v4i32, {  1,  2,  1,  1 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32, {  1,  2,  1,  1 } }, // psrad.
+    { ISD::SHL,  MVT::v8i32, {  3,  6,  4,  5 } }, // pslld + split.
+    { ISD::SRL,  MVT::v8i32, {  3,  6,  4,  5 } }, // psrld + split.
+    { ISD::SRA,  MVT::v8i32, {  3,  6,  4,  5 } }, // psrad + split.
+
+    { ISD::SHL,  MVT::v2i64, {  1,  2,  1,  1 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64, {  1,  2,  1,  1 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64, {  2,  3,  3,  3 } }, // psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64, {  3,  6,  4,  5 } }, // 2 x psllq + split.
+    { ISD::SRL,  MVT::v4i64, {  3,  6,  4,  5 } }, // 2 x psllq + split.
+    { ISD::SRA,  MVT::v4i64, {  5,  7,  8,  9 } }, // 2 x psrad + shuffle + split.
+
+    { ISD::SDIV, MVT::v8i32, { 14 } }, // 2*pmuludq sequence + split.
+    { ISD::SREM, MVT::v8i32, { 18 } }, // 2*pmuludq+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v8i32, { 12 } }, // 2*pmuludq sequence + split.
+    { ISD::UREM, MVT::v8i32, { 16 } }, // 2*pmuludq+mul+sub sequence + split.
+  };
+
+  // XOP has faster vXi8 shifts.
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX() &&
+      (!ST->hasXOP() || LT.second.getScalarSizeInBits() != 8))
+    if (const auto *Entry =
+            CostTableLookup(AVXUniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
+
   static const CostKindTblEntry SSE2UniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v16i8, {    2 } }, // psllw + pand.
-    { ISD::SRL,  MVT::v16i8, {    2 } }, // psrlw + pand.
-    { ISD::SRA,  MVT::v16i8, {    4 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v16i8, { 1, 7, 2, 3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, { 1, 7, 2, 3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, { 3, 9, 5, 6 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v32i8, {  4+2 } }, // 2*(psllw + pand) + split.
-    { ISD::SRL,  MVT::v32i8, {  4+2 } }, // 2*(psrlw + pand) + split.
-    { ISD::SRA,  MVT::v32i8, {  8+2 } }, // 2*(psrlw, pand, pxor, psubb) + split.
+    { ISD::SHL,  MVT::v8i16, { 1, 1, 1, 1 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16, { 1, 1, 1, 1 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16, { 1, 1, 1, 1 } }, // psraw.
 
-    { ISD::SDIV, MVT::v8i32, { 12+2 } }, // 2*pmuludq sequence + split.
-    { ISD::SREM, MVT::v8i32, { 16+2 } }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v4i32, {    6 } }, // pmuludq sequence
-    { ISD::SREM, MVT::v4i32, {    8 } }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32, { 10+2 } }, // 2*pmuludq sequence + split.
-    { ISD::UREM, MVT::v8i32, { 14+2 } }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v4i32, {    5 } }, // pmuludq sequence
-    { ISD::UREM, MVT::v4i32, {    7 } }, // pmuludq+mul+sub sequence
+    { ISD::SHL,  MVT::v4i32, { 1, 1, 1, 1 } }, // pslld
+    { ISD::SRL,  MVT::v4i32, { 1, 1, 1, 1 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32, { 1, 1, 1, 1 } }, // psrad.
+
+    { ISD::SHL,  MVT::v2i64, { 1, 1, 1, 1 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64, { 1, 1, 1, 1 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64, { 3, 5, 6, 6 } }, // 2 x psrad + shuffle.
+
+    { ISD::SDIV, MVT::v4i32, { 6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32, { 8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v4i32, { 5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32, { 7 } }, // pmuludq+mul+sub sequence
   };
 
   // XOP has faster vXi8 shifts.
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasSSE2() &&
-      !ST->hasXOP())
+      (!ST->hasXOP() || LT.second.getScalarSizeInBits() != 8))
     if (const auto *Entry =
             CostTableLookup(SSE2UniformConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
@@ -525,10 +615,44 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
 
+  static const CostKindTblEntry AVX512BWUniformCostTable[] = {
+    { ISD::SHL,  MVT::v16i8,  { 3, 5, 5, 7 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8,  { 3,10, 5, 8 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8,  { 4,12, 8,12 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8,  { 4, 7, 6, 8 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8,  { 4, 8, 7, 9 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8,  { 5,10,10,13 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v64i8,  { 4, 7, 6, 8 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8,  { 4, 8, 7,10 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8,  { 5,10,10,15 } }, // psrlw, pand, pxor, psubb.
+
+    { ISD::SHL,  MVT::v32i16, { 2, 4, 2, 3 } }, // psllw
+    { ISD::SRL,  MVT::v32i16, { 2, 4, 2, 3 } }, // psrlw
+    { ISD::SRA,  MVT::v32i16, { 2, 4, 2, 3 } }, // psrqw
+  };
+
+  if (ST->hasBWI() && Op2Info.isUniform())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWUniformCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
+
   static const CostKindTblEntry AVX512UniformCostTable[] = {
-    { ISD::SRA,  MVT::v2i64,  { 1 } },
-    { ISD::SRA,  MVT::v4i64,  { 1 } },
-    { ISD::SRA,  MVT::v8i64,  { 1 } },
+    { ISD::SHL,  MVT::v32i16, { 5,10, 5, 7 } }, // psllw + split.
+    { ISD::SRL,  MVT::v32i16, { 5,10, 5, 7 } }, // psrlw + split.
+    { ISD::SRA,  MVT::v32i16, { 5,10, 5, 7 } }, // psraw + split.
+
+    { ISD::SHL,  MVT::v16i32, { 2, 4, 2, 3 } }, // pslld
+    { ISD::SRL,  MVT::v16i32, { 2, 4, 2, 3 } }, // psrld
+    { ISD::SRA,  MVT::v16i32, { 2, 4, 2, 3 } }, // psrad
+
+    { ISD::SRA,  MVT::v2i64,  { 1, 2, 1, 2 } }, // psraq
+    { ISD::SHL,  MVT::v4i64,  { 1, 4, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v4i64,  { 1, 4, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64,  { 1, 4, 1, 2 } }, // psraq
+    { ISD::SHL,  MVT::v8i64,  { 1, 4, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v8i64,  { 1, 4, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v8i64,  { 1, 4, 1, 2 } }, // psraq
   };
 
   if (ST->hasAVX512() && Op2Info.isUniform())
@@ -539,18 +663,33 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   static const CostKindTblEntry AVX2UniformCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
-    { ISD::SHL,  MVT::v16i16, { 1 } }, // psllw.
-    { ISD::SRL,  MVT::v16i16, { 1 } }, // psrlw.
-    { ISD::SRA,  MVT::v16i16, { 1 } }, // psraw.
-    { ISD::SHL,  MVT::v32i16, { 2 } }, // 2*psllw.
-    { ISD::SRL,  MVT::v32i16, { 2 } }, // 2*psrlw.
-    { ISD::SRA,  MVT::v32i16, { 2 } }, // 2*psraw.
+    { ISD::SHL,  MVT::v16i8,  { 3, 5, 5, 7 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8,  { 3, 9, 5, 8 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8,  { 4, 5, 9,13 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8,  { 4, 7, 6, 8 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8,  { 4, 8, 7, 9 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8,  { 6, 9,11,16 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v8i32,  { 1 } }, // pslld
-    { ISD::SRL,  MVT::v8i32,  { 1 } }, // psrld
-    { ISD::SRA,  MVT::v8i32,  { 1 } }, // psrad
-    { ISD::SHL,  MVT::v4i64,  { 1 } }, // psllq
-    { ISD::SRL,  MVT::v4i64,  { 1 } }, // psrlq
+    { ISD::SHL,  MVT::v8i16,  { 1, 2, 1, 2 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16,  { 1, 2, 1, 2 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16,  { 1, 2, 1, 2 } }, // psraw.
+    { ISD::SHL,  MVT::v16i16, { 2, 4, 2, 3 } }, // psllw.
+    { ISD::SRL,  MVT::v16i16, { 2, 4, 2, 3 } }, // psrlw.
+    { ISD::SRA,  MVT::v16i16, { 2, 4, 2, 3 } }, // psraw.
+
+    { ISD::SHL,  MVT::v4i32,  { 1, 2, 1, 2 } }, // pslld
+    { ISD::SRL,  MVT::v4i32,  { 1, 2, 1, 2 } }, // psrld
+    { ISD::SRA,  MVT::v4i32,  { 1, 2, 1, 2 } }, // psrad
+    { ISD::SHL,  MVT::v8i32,  { 2, 4, 2, 3 } }, // pslld
+    { ISD::SRL,  MVT::v8i32,  { 2, 4, 2, 3 } }, // psrld
+    { ISD::SRA,  MVT::v8i32,  { 2, 4, 2, 3 } }, // psrad
+
+    { ISD::SHL,  MVT::v2i64,  { 1, 2, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v2i64,  { 1, 2, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v2i64,  { 2, 4, 5, 7 } }, // 2 x psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64,  { 2, 4, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v4i64,  { 2, 4, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64,  { 4, 6, 5, 9 } }, // 2 x psrad + shuffle.
     { ISD::SRA,  MVT::v4i64,  { 4 } }, // 2*psrad + shuffle.
   };
 
@@ -560,21 +699,65 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
 
-  static const CostKindTblEntry SSE2UniformCostTable[] = {
-    // Uniform splats are cheaper for the following instructions.
-    { ISD::SHL,  MVT::v8i16,  { 1 } }, // psllw.
-    { ISD::SHL,  MVT::v4i32,  { 1 } }, // pslld
-    { ISD::SHL,  MVT::v2i64,  { 1 } }, // psllq.
+  static const CostKindTblEntry AVXUniformCostTable[] = {
+    { ISD::SHL,  MVT::v16i8,  {  4, 4, 6, 8 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8,  {  4, 8, 5, 8 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8,  {  6, 6, 9,13 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8,  {  7, 8,11,14 } }, // psllw + pand + split.
+    { ISD::SRL,  MVT::v32i8,  {  7, 9,10,14 } }, // psrlw + pand + split.
+    { ISD::SRA,  MVT::v32i8,  { 10,11,16,21 } }, // psrlw, pand, pxor, psubb + split.
 
-    { ISD::SRL,  MVT::v8i16,  { 1 } }, // psrlw.
-    { ISD::SRL,  MVT::v4i32,  { 1 } }, // psrld.
-    { ISD::SRL,  MVT::v2i64,  { 1 } }, // psrlq.
+    { ISD::SHL,  MVT::v8i16,  {  1, 3, 1, 2 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16,  {  1, 3, 1, 2 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16,  {  1, 3, 1, 2 } }, // psraw.
+    { ISD::SHL,  MVT::v16i16, {  3, 7, 5, 7 } }, // psllw + split.
+    { ISD::SRL,  MVT::v16i16, {  3, 7, 5, 7 } }, // psrlw + split.
+    { ISD::SRA,  MVT::v16i16, {  3, 7, 5, 7 } }, // psraw + split.
 
-    { ISD::SRA,  MVT::v8i16,  { 1 } }, // psraw.
-    { ISD::SRA,  MVT::v4i32,  { 1 } }, // psrad.
+    { ISD::SHL,  MVT::v4i32,  {  1, 3, 1, 2 } }, // pslld.
+    { ISD::SRL,  MVT::v4i32,  {  1, 3, 1, 2 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32,  {  1, 3, 1, 2 } }, // psrad.
+    { ISD::SHL,  MVT::v8i32,  {  3, 7, 5, 7 } }, // pslld + split.
+    { ISD::SRL,  MVT::v8i32,  {  3, 7, 5, 7 } }, // psrld + split.
+    { ISD::SRA,  MVT::v8i32,  {  3, 7, 5, 7 } }, // psrad + split.
+
+    { ISD::SHL,  MVT::v2i64,  {  1, 3, 1, 2 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64,  {  1, 3, 1, 2 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64,  {  3, 4, 5, 7 } }, // 2 x psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64,  {  3, 7, 4, 6 } }, // psllq + split.
+    { ISD::SRL,  MVT::v4i64,  {  3, 7, 4, 6 } }, // psrlq + split.
+    { ISD::SRA,  MVT::v4i64,  {  6, 7,10,13 } }, // 2 x (2 x psrad + shuffle) + split.
   };
 
-  if (ST->hasSSE2() && Op2Info.isUniform())
+  // XOP has faster vXi8 shifts.
+  if (ST->hasAVX() && Op2Info.isUniform() &&
+      (!ST->hasXOP() || LT.second.getScalarSizeInBits() != 8))
+    if (const auto *Entry =
+            CostTableLookup(AVXUniformCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
+
+  static const CostKindTblEntry SSE2UniformCostTable[] = {
+    // Uniform splats are cheaper for the following instructions.
+    { ISD::SHL,  MVT::v16i8, {  9, 10, 6, 9 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {  9, 13, 5, 9 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, { 11, 15, 9,13 } }, // pcmpgtb sequence.
+
+    { ISD::SHL,  MVT::v8i16, {  2, 2, 1, 2 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16, {  2, 2, 1, 2 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16, {  2, 2, 1, 2 } }, // psraw.
+
+    { ISD::SHL,  MVT::v4i32, {  2, 2, 1, 2 } }, // pslld
+    { ISD::SRL,  MVT::v4i32, {  2, 2, 1, 2 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32, {  2, 2, 1, 2 } }, // psrad.
+
+    { ISD::SHL,  MVT::v2i64, {  2, 2, 1, 2 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64, {  2, 2, 1, 2 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64, {  5, 9, 5, 7 } }, // 2*psrlq + xor + sub.
+  };
+
+  if (ST->hasSSE2() && Op2Info.isUniform() &&
+      (!ST->hasXOP() || LT.second.getScalarSizeInBits() != 8))
     if (const auto *Entry =
             CostTableLookup(SSE2UniformCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
