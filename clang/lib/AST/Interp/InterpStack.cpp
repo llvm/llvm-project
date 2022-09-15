@@ -46,7 +46,7 @@ void *InterpStack::grow(size_t Size) {
   return Object;
 }
 
-void *InterpStack::peek(size_t Size) {
+void *InterpStack::peek(size_t Size) const {
   assert(Chunk && "Stack is empty!");
 
   StackChunk *Ptr = Chunk;
