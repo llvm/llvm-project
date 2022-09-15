@@ -884,56 +884,84 @@ class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
 }
 
 //===----------------------------------------------------------------------===//
-// GFX11.
+// GFX11, GFX12
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX11Plus,
-    DecoderNamespace = "GFX11" in {
+multiclass VOP3P_Real_Base<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+                      string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
+  def Gen.Suffix :
+    VOP3P_Real_Gen<!cast<VOP3P_Pseudo>(backing_ps_name), Gen, asmName>,
+    VOP3Pe_gfx11_gfx12<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>;
+}
 
-  multiclass VOP3P_Real_gfx11<bits<7> op, string backing_ps_name = NAME,
-                       string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
-    def _gfx11 : VOP3P_Real<!cast<VOP3P_Pseudo>(backing_ps_name),
-                            SIEncodingFamily.GFX11, asmName>,
-                 VOP3Pe_gfx11<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>;
+multiclass VOP3P_Real_with_name<GFXGen Gen, bits<7> op,
+                          string backing_ps_name = NAME,
+                          string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
+  defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
+  let AsmString = asmName # ps.AsmOperands in
+    def Gen.Suffix :
+      VOP3P_Real_Gen<!cast<VOP3P_Pseudo>(backing_ps_name), Gen, asmName>,
+      VOP3Pe_gfx11_gfx12<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>,
+      MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>;
+}
+
+multiclass VOP3P_Real_dpp<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+                          string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
+  defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
+  def _dpp#Gen.Suffix
+      : VOP3P_DPP16<op, !cast<VOP_DPP_Pseudo>(backing_ps_name #"_dpp"),
+                    Gen.Subtarget> {
+    let AsmString = asmName #ps.Pfl.AsmVOP3DPP16;
+    let DecoderNamespace = "DPP"#Gen.DecoderNamespace;
+    let AssemblerPredicate = Gen.AssemblerPredicate;
   }
+}
 
-  multiclass VOP3P_Real_dpp_gfx11<bits<7> op, string backing_ps_name = NAME,
-                       string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
-    defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
-    def _dpp_gfx11
-        : VOP3P_DPP16<op, !cast<VOP_DPP_Pseudo>(backing_ps_name #"_dpp"),
-                      SIEncodingFamily.GFX11> {
-      let AsmString = asmName #ps.Pfl.AsmVOP3DPP16;
-      let DecoderNamespace = "DPPGFX11";
-    }
+multiclass VOP3P_Real_dpp8<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
+  defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
+  def _dpp8#Gen.Suffix : VOP3P_DPP8_Base<op, ps> {
+    let AsmString = asmName #ps.Pfl.AsmVOP3DPP8;
+    let DecoderNamespace = "DPP8"#Gen.DecoderNamespace;
+    let AssemblerPredicate = Gen.AssemblerPredicate;
   }
+}
 
-  multiclass VOP3P_Real_dpp8_gfx11<bits<7> op, string backing_ps_name = NAME,
-                       string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
-    defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
-    def _dpp8_gfx11 : VOP3P_DPP8_Base<op, ps> {
-      let AsmString = asmName #ps.Pfl.AsmVOP3DPP8;
-      let DecoderNamespace = "DPP8GFX11";
-    }
-  }
+multiclass VOP3P_Realtriple<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
+                            string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic>
+    : VOP3P_Real_Base<Gen, op, backing_ps_name, asmName>,
+      VOP3P_Real_dpp<Gen, op, backing_ps_name, asmName>,
+      VOP3P_Real_dpp8<Gen, op, backing_ps_name, asmName>;
 
-  multiclass VOP3P_Realtriple_gfx11<bits<7> op, string backing_ps_name = NAME,
-                        string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic>
-      : VOP3P_Real_gfx11<op, backing_ps_name, asmName>,
-        VOP3P_Real_dpp_gfx11<op, backing_ps_name, asmName>,
-        VOP3P_Real_dpp8_gfx11<op, backing_ps_name, asmName>;
-} // End AssemblerPredicate = isGFX11Plus, DecoderNamespace = "GFX11"
+//===----------------------------------------------------------------------===//
+// GFX12
+//===----------------------------------------------------------------------===//
 
-defm V_DOT4_I32_IU8              : VOP3P_Real_gfx11 <0x16>;
-defm V_DOT8_I32_IU4              : VOP3P_Real_gfx11 <0x18>;
-defm V_DOT2_F32_BF16             : VOP3P_Real_gfx11 <0x1a>;
+multiclass VOP3P_Real_with_name_gfx12<bits<7> op,
+                          string backing_ps_name = NAME,
+                          string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
+  VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>;
+
+defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
+defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
+
+//===----------------------------------------------------------------------===//
+// GFX11
+//===----------------------------------------------------------------------===//
+
+multiclass VOP3P_Real_gfx11_gfx12<bits<7> op> :
+   VOP3P_Real_Base<GFX11Gen, op>, VOP3P_Real_Base<GFX12Gen, op>;
+
+defm V_DOT4_I32_IU8  : VOP3P_Real_gfx11_gfx12<0x16>;
+defm V_DOT8_I32_IU4  : VOP3P_Real_gfx11_gfx12<0x18>;
+defm V_DOT2_F32_BF16 : VOP3P_Real_gfx11_gfx12<0x1a>;
 
 multiclass VOP3P_Real_WMMA <bits<7> op> {
   let WaveSizePredicate = isWave32, DecoderNamespace = "GFX11" in {
-    defm _twoaddr_w32 : VOP3P_Real_gfx11 <op>;
+    defm _twoaddr_w32 : VOP3P_Real_Base <GFX11Gen, op>;
   }
   let WaveSizePredicate = isWave64, DecoderNamespace = "WMMAGFX11" in {
-    defm _twoaddr_w64 : VOP3P_Real_gfx11 <op>;
+    defm _twoaddr_w64 : VOP3P_Real_Base <GFX11Gen, op>;
   }
 }
 
@@ -1194,34 +1222,38 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1 in {
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1
 
-multiclass VOP3P_Real_gfx10_gfx11<bits<7> op>
-  : VOP3P_Real_gfx10<op>, VOP3P_Real_gfx11<op>;
+multiclass VOP3P_Real_gfx10_gfx11<bits<7> op> :
+  VOP3P_Real_gfx10<op>, VOP3P_Real_Base<GFX11Gen, op>;
 
-multiclass VOP3P_Real_gfx10_gfx11_Triple<bits<7> op>
-  : VOP3P_Real_gfx10<op>, VOP3P_Realtriple_gfx11<op>;
+multiclass VOP3P_Real_gfx10_gfx11_gfx12<bits<7> op> :
+  VOP3P_Real_gfx10_gfx11<op>, VOP3P_Real_Base<GFX12Gen, op>;
 
-defm V_PK_MAD_I16     : VOP3P_Real_gfx10_gfx11<0x00>;
-defm V_PK_MUL_LO_U16  : VOP3P_Real_gfx10_gfx11<0x01>;
-defm V_PK_ADD_I16     : VOP3P_Real_gfx10_gfx11<0x02>;
-defm V_PK_SUB_I16     : VOP3P_Real_gfx10_gfx11<0x03>;
-defm V_PK_LSHLREV_B16 : VOP3P_Real_gfx10_gfx11<0x04>;
-defm V_PK_LSHRREV_B16 : VOP3P_Real_gfx10_gfx11<0x05>;
-defm V_PK_ASHRREV_I16 : VOP3P_Real_gfx10_gfx11<0x06>;
-defm V_PK_MAX_I16     : VOP3P_Real_gfx10_gfx11<0x07>;
-defm V_PK_MIN_I16     : VOP3P_Real_gfx10_gfx11<0x08>;
-defm V_PK_MAD_U16     : VOP3P_Real_gfx10_gfx11<0x09>;
-defm V_PK_ADD_U16     : VOP3P_Real_gfx10_gfx11<0x0a>;
-defm V_PK_SUB_U16     : VOP3P_Real_gfx10_gfx11<0x0b>;
-defm V_PK_MAX_U16     : VOP3P_Real_gfx10_gfx11<0x0c>;
-defm V_PK_MIN_U16     : VOP3P_Real_gfx10_gfx11<0x0d>;
-defm V_PK_FMA_F16     : VOP3P_Real_gfx10_gfx11<0x0e>;
-defm V_PK_ADD_F16     : VOP3P_Real_gfx10_gfx11<0x0f>;
-defm V_PK_MUL_F16     : VOP3P_Real_gfx10_gfx11<0x10>;
+multiclass VOP3P_Real_gfx10_gfx11_gfx12_Triple<bits<7> op> :
+  VOP3P_Real_gfx10<op>, VOP3P_Realtriple<GFX11Gen, op>,
+  VOP3P_Realtriple<GFX12Gen, op>;
+
+defm V_PK_MAD_I16     : VOP3P_Real_gfx10_gfx11_gfx12<0x00>;
+defm V_PK_MUL_LO_U16  : VOP3P_Real_gfx10_gfx11_gfx12<0x01>;
+defm V_PK_ADD_I16     : VOP3P_Real_gfx10_gfx11_gfx12<0x02>;
+defm V_PK_SUB_I16     : VOP3P_Real_gfx10_gfx11_gfx12<0x03>;
+defm V_PK_LSHLREV_B16 : VOP3P_Real_gfx10_gfx11_gfx12<0x04>;
+defm V_PK_LSHRREV_B16 : VOP3P_Real_gfx10_gfx11_gfx12<0x05>;
+defm V_PK_ASHRREV_I16 : VOP3P_Real_gfx10_gfx11_gfx12<0x06>;
+defm V_PK_MAX_I16     : VOP3P_Real_gfx10_gfx11_gfx12<0x07>;
+defm V_PK_MIN_I16     : VOP3P_Real_gfx10_gfx11_gfx12<0x08>;
+defm V_PK_MAD_U16     : VOP3P_Real_gfx10_gfx11_gfx12<0x09>;
+defm V_PK_ADD_U16     : VOP3P_Real_gfx10_gfx11_gfx12<0x0a>;
+defm V_PK_SUB_U16     : VOP3P_Real_gfx10_gfx11_gfx12<0x0b>;
+defm V_PK_MAX_U16     : VOP3P_Real_gfx10_gfx11_gfx12<0x0c>;
+defm V_PK_MIN_U16     : VOP3P_Real_gfx10_gfx11_gfx12<0x0d>;
+defm V_PK_FMA_F16     : VOP3P_Real_gfx10_gfx11_gfx12<0x0e>;
+defm V_PK_ADD_F16     : VOP3P_Real_gfx10_gfx11_gfx12<0x0f>;
+defm V_PK_MUL_F16     : VOP3P_Real_gfx10_gfx11_gfx12<0x10>;
 defm V_PK_MIN_F16     : VOP3P_Real_gfx10_gfx11<0x11>;
 defm V_PK_MAX_F16     : VOP3P_Real_gfx10_gfx11<0x12>;
-defm V_FMA_MIX_F32    : VOP3P_Real_gfx10_gfx11_Triple <0x20>;
-defm V_FMA_MIXLO_F16  : VOP3P_Real_gfx10_gfx11_Triple <0x21>;
-defm V_FMA_MIXHI_F16  : VOP3P_Real_gfx10_gfx11_Triple <0x22>;
+defm V_FMA_MIX_F32    : VOP3P_Real_gfx10_gfx11_gfx12_Triple<0x20>;
+defm V_FMA_MIXLO_F16  : VOP3P_Real_gfx10_gfx11_gfx12_Triple<0x21>;
+defm V_FMA_MIXHI_F16  : VOP3P_Real_gfx10_gfx11_gfx12_Triple<0x22>;
 
 let SubtargetPredicate = HasDot2Insts in {
 
@@ -1232,9 +1264,9 @@ defm V_DOT2_U32_U16 : VOP3P_Real_gfx10 <0x15>;
 
 let SubtargetPredicate = HasDot7Insts in {
 
-defm V_DOT2_F32_F16 : VOP3P_Real_gfx10_gfx11_Triple <0x13>;
-defm V_DOT4_U32_U8  : VOP3P_Real_gfx10_gfx11 <0x17>;
-defm V_DOT8_U32_U4  : VOP3P_Real_gfx10_gfx11 <0x19>;
+defm V_DOT2_F32_F16 : VOP3P_Real_gfx10_gfx11_gfx12_Triple<0x13>;
+defm V_DOT4_U32_U8  : VOP3P_Real_gfx10_gfx11_gfx12<0x17>;
+defm V_DOT8_U32_U4  : VOP3P_Real_gfx10_gfx11_gfx12<0x19>;
 
 } // End SubtargetPredicate = HasDot7Insts
 
