@@ -10,10 +10,8 @@
 
 // TODO: Some test cases from this file should be moved to other dialects.
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @fill_inplace(
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
 // CHECK-NO-LAYOUT-MAP-LABEL: func @fill_inplace(%{{.*}}: memref<?xf32>) {
 func.func @fill_inplace(
     %A : tensor<?xf32> {bufferization.writable = true})
@@ -24,7 +22,7 @@ func.func @fill_inplace(
 
   /// Inplaceable, no alloc
   // CHECK-NOT: alloc
-  //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[A]] : memref<?xf32, #[[$map_1d_dyn]]>)
+  //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[A]] : memref<?xf32, strided<[?], offset: ?>>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: return
@@ -34,11 +32,9 @@ func.func @fill_inplace(
 
 // -----
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 /// No bufferization.writable flag, must allocate.
 // CHECK-LABEL: func @not_inplace(
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>) -> memref<?xf32> {
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>) -> memref<?xf32> {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?xf32>) -> memref<?xf32>
 func.func @not_inplace(
     %A : tensor<?xf32> {bufferization.writable = false})
@@ -47,7 +43,7 @@ func.func @not_inplace(
   //     CHECK: %[[F0:.*]] = arith.constant 0.000000e+00 : f32
   %f0 = arith.constant 0.0 : f32
 
-  //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, #[[$map_1d_dyn]]>
+  //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, strided<[?], offset: ?>>
   //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 128 : i64} : memref<?xf32>
   //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[ALLOC]] : memref<?xf32>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
@@ -59,10 +55,9 @@ func.func @not_inplace(
 
 // -----
 
-// CHECK-DAG: #[[$map_2d_dyn:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
 // CHECK-LABEL: func @not_inplace
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, #[[$map_2d_dyn]]>) {
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>) {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?x?xf32>) {
 func.func @not_inplace(
     %A : tensor<?x?xf32> {bufferization.writable = true})
@@ -120,10 +115,8 @@ func.func @vec_inplace(
 
 // -----
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @vec_not_inplace
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
 func.func @vec_not_inplace(
     %A : tensor<?xf32> {bufferization.writable = true}, %vec : vector<4xf32>)
   -> (tensor<?xf32>, tensor<?xf32>)
@@ -280,7 +273,7 @@ func.func @gather_like(
 // -----
 
 // CHECK-LABEL: func @linalg_op_bufferizes_inplace_with_input
-//  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>, %[[t3:.*]]: memref<?x?xf32, #{{.*}}>
+//  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, strided{{.*}}>, %[[t2:.*]]: memref<?xf32, strided{{.*}}>, %[[t3:.*]]: memref<?x?xf32, strided{{.*}}>
 func.func @linalg_op_bufferizes_inplace_with_input(
     %t1: tensor<?x?xf32> {bufferization.writable = true},
     %t2: tensor<?xf32> {bufferization.writable = true},
