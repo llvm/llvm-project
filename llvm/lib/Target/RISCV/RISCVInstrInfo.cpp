@@ -1216,6 +1216,13 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   const uint64_t TSFlags = Desc.TSFlags;
+  if (RISCVII::hasMergeOp(TSFlags)) {
+    unsigned OpIdx = RISCVII::getMergeOpNum(Desc);
+    if (MI.findTiedOperandIdx(0) != OpIdx) {
+      ErrInfo = "Merge op improperly tied";
+      return false;
+    }
+  }
   if (RISCVII::hasVLOp(TSFlags)) {
     const MachineOperand &Op = MI.getOperand(RISCVII::getVLOpNum(Desc));
     if (!Op.isImm() && !Op.isReg())  {
