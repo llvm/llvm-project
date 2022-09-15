@@ -984,6 +984,12 @@ def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1
                                       FeatureLSLFast,
                                       FeaturePostRAScheduler]>;
 
+def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2",
+                                      "Neoverse V2 ARM processors", [
+                                      FeatureFuseAES,
+                                      FeatureLSLFast,
+                                      FeaturePostRAScheduler]>;
+
 def TuneSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
                                    FeatureCustomCheapAsMoveHandling,
@@ -1155,6 +1161,10 @@ def ProcessorFeatures {
                                        FeatureFullFP16, FeatureMatMulInt8, FeatureNEON,
                                        FeaturePerfMon, FeatureRandGen, FeatureSPE,
                                        FeatureSSBS, FeatureSVE];
+  list<SubtargetFeature> NeoverseV2 = [HasV9_0aOps, FeatureBF16, FeatureSPE,
+                                       FeaturePerfMon, FeatureETE, FeatureMatMulInt8,
+                                       FeatureNEON, FeatureSVE2BitPerm, FeatureFP16FML,
+                                       FeatureMTE, FeatureRandGen];
   list<SubtargetFeature> Saphira    = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                        FeatureNEON, FeatureSPE, FeaturePerfMon];
   list<SubtargetFeature> ThunderX   = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
@@ -1233,6 +1243,8 @@ def : ProcessorModel<"neoverse-512tvb", NeoverseN2Model,
                      ProcessorFeatures.Neoverse512TVB, [TuneNeoverse512TVB]>;
 def : ProcessorModel<"neoverse-v1", NeoverseN2Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
+def : ProcessorModel<"neoverse-v2", NeoverseN2Model,
+                     ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
                      [TuneExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, ProcessorFeatures.ExynosM4,

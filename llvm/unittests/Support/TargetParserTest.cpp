@@ -1026,6 +1026,17 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_PROFILE | AArch64::AEK_RAND |
                 AArch64::AEK_FP16FML | AArch64::AEK_I8MM,
             "8.4-A"),
+        ARMCPUTestParams(
+            "neoverse-v2", "armv9-a", "neon-fp-armv8",
+            AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
+                AArch64::AEK_RCPC | AArch64::AEK_CRC | AArch64::AEK_FP |
+                AArch64::AEK_SIMD | AArch64::AEK_MTE | AArch64::AEK_LSE |
+                AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                AArch64::AEK_FP16 | AArch64::AEK_BF16 | AArch64::AEK_SVE2 |
+                AArch64::AEK_PROFILE | AArch64::AEK_FP16FML |
+                AArch64::AEK_I8MM | AArch64::AEK_SVE2BITPERM |
+                AArch64::AEK_RAND,
+            "9-A"),
         ARMCPUTestParams("cortex-r82", "armv8-r", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_RDM |
                              AArch64::AEK_SSBS | AArch64::AEK_DOTPROD |
@@ -1284,7 +1295,7 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_LSE | AArch64::AEK_RDM,
                          "8.2-A")));
 
-static constexpr unsigned NumAArch64CPUArchs = 57;
+static constexpr unsigned NumAArch64CPUArchs = 58;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
