@@ -4745,6 +4745,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
+    case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
+      OpdsMapping[0] =
+          getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI); // %vdst
+      OpdsMapping[1] =
+          getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI); // %addr
+      OpdsMapping[3] =
+          getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI); // %addr
+      OpdsMapping[4] =
+          getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI); // %data0
+      OpdsMapping[5] =
+          getVGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI); // %data1
+      break;
+    }
+
     default:
       return getInvalidInstructionMapping();
     }

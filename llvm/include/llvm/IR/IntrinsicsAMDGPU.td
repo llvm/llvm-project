@@ -2004,6 +2004,18 @@ def int_amdgcn_ds_sub_gs_reg_rtn :
   Intrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn]>;
 
+def int_amdgcn_ds_bvh_stack_rtn :
+  Intrinsic<
+    [llvm_i32_ty, llvm_i32_ty], // %vdst, %addr
+    [
+      llvm_i32_ty,   // %addr
+      llvm_i32_ty,   // %data0
+      llvm_v4i32_ty, // %data1
+      llvm_i32_ty,   // %offset
+    ],
+    [ImmArg<ArgIndex<3>>, IntrWillReturn]
+  >;
+
 // WMMA (Wave Matrix Multiply-Accumulate) intrinsics
 //
 // These operations perform a matrix multiplication and accumulation of
