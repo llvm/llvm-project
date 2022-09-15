@@ -1801,31 +1801,3 @@ LogicalResult mlir::getRelationFromMap(const AffineValueMap &map,
 
   return success();
 }
-
-LogicalResult
-mlir::getMultiAffineFunctionFromMap(AffineMap map,
-                                    MultiAffineFunction &multiAff) {
-  FlatAffineValueConstraints cst;
-  std::vector<SmallVector<int64_t, 8>> flattenedExprs;
-  LogicalResult result = getFlattenedAffineExprs(map, &flattenedExprs, &cst);
-
-  if (result.failed())
-    return failure();
-
-  DivisionRepr divs = cst.getLocalReprs();
-  assert(divs.hasAllReprs() &&
-         "AffineMap cannot produce divs without local representation");
-
-  // TODO: We shouldn't have to do this conversion.
-  Matrix mat(map.getNumResults(), map.getNumInputs() + divs.getNumDivs() + 1);
-  for (unsigned i = 0, e = flattenedExprs.size(); i < e; ++i)
-    for (unsigned j = 0, f = flattenedExprs[i].size(); j < f; ++j)
-      mat(i, j) = flattenedExprs[i][j];
-
-  multiAff = MultiAffineFunction(
-      PresburgerSpace::getRelationSpace(map.getNumDims(), map.getNumResults(),
-                                        map.getNumSymbols(), divs.getNumDivs()),
-      mat, divs);
-
-  return success();
-}

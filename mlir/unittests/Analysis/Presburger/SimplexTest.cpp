@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Parser.h"
-#include "Utils.h"
+#include "./Utils.h"
 
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/IR/MLIRContext.h"
@@ -528,12 +527,10 @@ TEST(SimplexTest, isRedundantEquality) {
 }
 
 TEST(SimplexTest, IsRationalSubsetOf) {
-  IntegerPolyhedron univ = parseIntegerPolyhedron("(x) : ()");
-  IntegerPolyhedron empty =
-      parseIntegerPolyhedron("(x) : (x + 0 >= 0, -x - 1 >= 0)");
-  IntegerPolyhedron s1 = parseIntegerPolyhedron("(x) : ( x >= 0, -x + 4 >= 0)");
-  IntegerPolyhedron s2 =
-      parseIntegerPolyhedron("(x) : (x - 1 >= 0, -x + 3 >= 0)");
+  IntegerPolyhedron univ = parsePoly("(x) : ()");
+  IntegerPolyhedron empty = parsePoly("(x) : (x + 0 >= 0, -x - 1 >= 0)");
+  IntegerPolyhedron s1 = parsePoly("(x) : ( x >= 0, -x + 4 >= 0)");
+  IntegerPolyhedron s2 = parsePoly("(x) : (x - 1 >= 0, -x + 3 >= 0)");
 
   Simplex simUniv(univ);
   Simplex simEmpty(empty);

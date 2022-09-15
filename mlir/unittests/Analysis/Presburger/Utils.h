@@ -13,6 +13,7 @@
 #ifndef MLIR_UNITTESTS_ANALYSIS_PRESBURGER_UTILS_H
 #define MLIR_UNITTESTS_ANALYSIS_PRESBURGER_UTILS_H
 
+#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
@@ -25,6 +26,30 @@
 namespace mlir {
 namespace presburger {
 
+/// Parses a IntegerPolyhedron from a StringRef. It is expected that the
+/// string represents a valid IntegerSet, otherwise it will violate a gtest
+/// assertion.
+inline IntegerPolyhedron parsePoly(StringRef str) {
+  MLIRContext context(MLIRContext::Threading::DISABLED);
+  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, &context);
+  EXPECT_TRUE(succeeded(poly));
+  return *poly;
+}
+
+/// Parse a list of StringRefs to IntegerRelation and combine them into a
+/// PresburgerSet be using the union operation. It is expected that the strings
+/// are all valid IntegerSet representation and that all of them have the same
+/// number of dimensions as is specified by the numDims argument.
+inline PresburgerSet
+parsePresburgerSetFromPolyStrings(unsigned numDims, ArrayRef<StringRef> strs,
+                                  unsigned numSymbols = 0) {
+  PresburgerSet set = PresburgerSet::getEmpty(
+      PresburgerSpace::getSetSpace(numDims, numSymbols));
+  for (StringRef str : strs)
+    set.unionInPlace(parsePoly(str));
+  return set;
+}
+
 inline Matrix makeMatrix(unsigned numRow, unsigned numColumns,
                          ArrayRef<SmallVector<int64_t, 8>> matrix) {
   Matrix results(numRow, numColumns);
@@ -36,6 +61,34 @@ inline Matrix makeMatrix(unsigned numRow, unsigned numColumns,
       results(i, j) = matrix[i][j];
   }
   return results;
+}
+
+/// Construct a PWMAFunction given the dimensionalities and an array describing
+/// the list of pieces. Each piece is given by a string describing the domain
+/// and a 2D array that represents the output.
+inline PWMAFunction parsePWMAF(
+    unsigned numInputs, unsigned numOutputs,
+    ArrayRef<std::pair<StringRef, SmallVector<SmallVector<int64_t, 8>, 8>>>
+        data,
+    unsigned numSymbols = 0) {
+  static MLIRContext context;
+
+  PWMAFunction result(
+      PresburgerSpace::getRelationSpace(numInputs, numOutputs, numSymbols));
+  for (const auto &pair : data) {
+    IntegerPolyhedron domain = parsePoly(pair.first);
+
+    PresburgerSpace funcSpace = result.getSpace();
+    funcSpace.insertVar(VarKind::Local, 0, domain.getNumLocalVars());
+
+    result.addPiece(
+        {PresburgerSet(domain),
+         MultiAffineFunction(
+             funcSpace,
+             makeMatrix(numOutputs, domain.getNumVars() + 1, pair.second),
+             domain.getLocalReprs())});
+  }
+  return result;
 }
 
 /// lhs and rhs represent non-negative integers or positive infinity. The
