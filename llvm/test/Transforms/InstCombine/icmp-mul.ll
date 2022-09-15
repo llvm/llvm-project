@@ -3,6 +3,85 @@
 
 declare void @use(i8)
 
+define i1 @squared_nsw_eq0(i5 %x) {
+; CHECK-LABEL: @squared_nsw_eq0(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[M]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw i5 %x, %x
+  %r = icmp eq i5 %m, 0
+  ret i1 %r
+}
+
+define <2 x i1> @squared_nuw_eq0(<2 x i8> %x) {
+; CHECK-LABEL: @squared_nuw_eq0(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[M]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %m = mul nuw <2 x i8> %x, %x
+  %r = icmp eq <2 x i8> %m, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define i1 @squared_nsw_nuw_ne0(i8 %x) {
+; CHECK-LABEL: @squared_nsw_nuw_ne0(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw nuw i8 %x, %x
+  call void @use(i8 %m)
+  %r = icmp ne i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @squared_eq0(i8 %x) {
+; CHECK-LABEL: @squared_eq0(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul i8 %x, %x
+  %r = icmp eq i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @mul_nsw_eq0(i5 %x, i5 %y) {
+; CHECK-LABEL: @mul_nsw_eq0(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[M]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw i5 %x, %y
+  %r = icmp eq i5 %m, 0
+  ret i1 %r
+}
+
+define i1 @squared_nsw_eq1(i5 %x) {
+; CHECK-LABEL: @squared_nsw_eq1(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[M]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw i5 %x, %x
+  %r = icmp eq i5 %m, 1
+  ret i1 %r
+}
+
+define i1 @squared_nsw_sgt0(i5 %x) {
+; CHECK-LABEL: @squared_nsw_sgt0(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i5 [[M]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw i5 %x, %x
+  %r = icmp sgt i5 %m, 0
+  ret i1 %r
+}
+
 ; Tests for slt/ult
 
 define i1 @slt_positive_multip_rem_zero(i8 %x) {
