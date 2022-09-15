@@ -214,6 +214,9 @@ private:
 };
 pthread_mutex_t KernelArgPool::Mutex = PTHREAD_MUTEX_INITIALIZER;
 
+std::unordered_map<std::string /*kernel*/, std::unique_ptr<KernelArgPool>>
+    KernelArgPoolMap;
+
 /// Use a single entity to encode a kernel and a set of flags
 struct KernelTy {
   llvm::omp::OMPTgtExecModeFlags ExecutionMode;
@@ -225,9 +228,7 @@ struct KernelTy {
   KernelTy(llvm::omp::OMPTgtExecModeFlags ExecutionMode, int16_t ConstWgSize,
            int32_t DeviceId, void *CallStackAddr, const char *Name,
            uint32_t KernargSegmentSize,
-           hsa_amd_memory_pool_t &KernArgMemoryPool,
-           std::unordered_map<std::string, std::unique_ptr<KernelArgPool>>
-               &KernelArgPoolMap)
+           hsa_amd_memory_pool_t &KernArgMemoryPool)
       : ExecutionMode(ExecutionMode), ConstWGSize(ConstWgSize),
         DeviceId(DeviceId), CallStackAddr(CallStackAddr), Name(Name) {
     DP("Construct kernelinfo: ExecMode %d\n", ExecutionMode);
@@ -240,6 +241,10 @@ struct KernelTy {
     }
   }
 };
+
+/// List that contains all the kernels.
+/// FIXME: we may need this to be per device and per library.
+std::list<KernelTy> KernelsList;
 
 template <typename Callback> static hsa_status_t findAgents(Callback CB) {
 
@@ -454,12 +459,6 @@ public:
   std::shared_timed_mutex LoadRunLock;
 
   int NumberOfDevices = 0;
-
-  /// List that contains all the kernels.
-  /// FIXME: we may need this to be per device and per library.
-  std::list<KernelTy> KernelsList;
-  std::unordered_map<std::string /*kernel*/, std::unique_ptr<KernelArgPool>>
-      KernelArgPoolMap;
 
   // GPU devices
   std::vector<hsa_agent_t> HSAAgents;
@@ -862,6 +861,7 @@ public:
            "Unexpected device id!");
     FuncGblEntries[DeviceId].emplace_back();
     FuncOrGblEntryTy &E = FuncGblEntries[DeviceId].back();
+    // KernelArgPoolMap.clear();
     E.Entries.clear();
     E.Table.EntriesBegin = E.Table.EntriesEnd = 0;
   }
@@ -1117,8 +1117,10 @@ public:
 
 pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static RTLDeviceInfoTy *DeviceInfoState = nullptr;
-static RTLDeviceInfoTy &DeviceInfo() { return *DeviceInfoState; }
+// Putting accesses to DeviceInfo global behind a function call prior
+// to changing to use init_plugin/deinit_plugin calls
+static RTLDeviceInfoTy DeviceInfoState;
+static RTLDeviceInfoTy &DeviceInfo() { return DeviceInfoState; }
 
 namespace {
 
@@ -1459,9 +1461,8 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
     KernelArgPool *ArgPool = nullptr;
     void *KernArg = nullptr;
     {
-      auto It =
-          DeviceInfo().KernelArgPoolMap.find(std::string(KernelInfo->Name));
-      if (It != DeviceInfo().KernelArgPoolMap.end()) {
+      auto It = KernelArgPoolMap.find(std::string(KernelInfo->Name));
+      if (It != KernelArgPoolMap.end()) {
         ArgPool = (It->second).get();
       }
     }
@@ -1940,20 +1941,6 @@ bool IsImageCompatibleWithEnv(const char *ImgInfo, std::string EnvInfo) {
 }
 
 extern "C" {
-
-int32_t __tgt_rtl_init_plugin() {
-  DeviceInfoState = new RTLDeviceInfoTy;
-  return (DeviceInfoState && DeviceInfoState->ConstructionSucceeded)
-             ? OFFLOAD_SUCCESS
-             : OFFLOAD_FAIL;
-}
-
-int32_t __tgt_rtl_deinit_plugin() {
-  if (DeviceInfoState)
-    delete DeviceInfoState;
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   return elfMachineIdIsAmdgcn(Image);
 }
@@ -1984,6 +1971,9 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
      info->Arch);
   return true;
 }
+
+int32_t __tgt_rtl_init_plugin() { return OFFLOAD_SUCCESS; }
+int32_t __tgt_rtl_deinit_plugin() { return OFFLOAD_SUCCESS; }
 
 int __tgt_rtl_number_of_devices() {
   // If the construction failed, no methods are safe to call
@@ -2524,12 +2514,11 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
     }
     check("Loading computation property", Err);
 
-    DeviceInfo().KernelsList.push_back(
-        KernelTy(ExecModeVal, WGSizeVal, DeviceId, CallStackAddr, E->name,
-                 KernargSegmentSize, DeviceInfo().KernArgPool,
-                 DeviceInfo().KernelArgPoolMap));
+    KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, DeviceId,
+                                   CallStackAddr, E->name, KernargSegmentSize,
+                                   DeviceInfo().KernArgPool));
     __tgt_offload_entry Entry = *E;
-    Entry.addr = (void *)&DeviceInfo().KernelsList.back();
+    Entry.addr = (void *)&KernelsList.back();
     DeviceInfo().addOffloadEntry(DeviceId, Entry);
     DP("Entry point %ld maps to %s\n", E - HostBegin, E->name);
   }
