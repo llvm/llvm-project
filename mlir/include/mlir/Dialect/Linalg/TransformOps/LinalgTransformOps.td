@@ -767,6 +767,10 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     Note that this transformation is invalidating the handles to any payload IR
     operation that is contained inside the vectorization target.
 
+    `disable_multi_reduction_to_contract_patterns` and 
+    `disable_transfer_permutation_map_lowering_patterns` limits the power of 
+    vectorization. They are currently intended for testing purposes.
+
     #### Return modes:
     
     This operation produces `definiteFailure` if vectorization fails for any
@@ -776,7 +780,9 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<BoolAttr, "false">:$vectorize_padding);
+                   DefaultValuedAttr<BoolAttr, "false">:$vectorize_padding,                   
+                   DefaultValuedAttr<BoolAttr, "false">:$disable_multi_reduction_to_contract_patterns,                   
+                   DefaultValuedAttr<BoolAttr, "false">:$disable_transfer_permutation_map_lowering_patterns);
   let results = (outs PDL_Operation:$transformed);
 
   let assemblyFormat = "$target attr-dict";
