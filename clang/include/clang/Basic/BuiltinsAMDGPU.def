@@ -281,6 +281,8 @@ TARGET_BUILTIN(__builtin_amdgcn_wmma_i32_16x16x16_iu4_w64, "V4iIbV2iIbV2iV4iIb",
 TARGET_BUILTIN(__builtin_amdgcn_s_sendmsg_rtn, "UiUIi", "n", "gfx11-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_sendmsg_rtnl, "UWiUIi", "n", "gfx11-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_ds_bvh_stack_rtn, "V2UiUiUiV4UiIi", "n", "gfx11-insts")
+
 //===----------------------------------------------------------------------===//
 // Special builtins.
 //===----------------------------------------------------------------------===//
