@@ -760,7 +760,6 @@ public:
   }
 
   void codeCompleteConstraintName(ast::Type currentType,
-                                  bool allowNonCoreConstraints,
                                   bool allowInlineTypeConstraints,
                                   const ast::DeclScope *scope) final {
     auto addCoreConstraint = [&](StringRef constraint, StringRef mlirType,
@@ -808,9 +807,6 @@ public:
     while (scope) {
       for (const ast::Decl *decl : scope->getDecls()) {
         if (const auto *cst = dyn_cast<ast::UserConstraintDecl>(decl)) {
-          if (!allowNonCoreConstraints)
-            continue;
-
           lsp::CompletionItem item;
           item.label = cst->getName().getName().str();
           item.kind = lsp::CompletionItemKind::Interface;
