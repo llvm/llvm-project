@@ -757,10 +757,18 @@ class StdFposPrinter(object):
         typename = _remove_generics(_prettify_typename(self.val.type))
         offset = self.val["__off_"]
         state = self.val["__st_"]
-        count = state["__count"]
-        value = state["__value"]["__wch"]
-        return "%s with stream offset:%s with state: {count:%s value:%s}" % (
-            typename, offset, count, value)
+
+        state_fields = []
+        if state.type.code == gdb.TYPE_CODE_STRUCT:
+            state_fields = [f.name for f in state.type.fields()]
+
+        state_string = ""
+        if "__count" in state_fields and "__value" in state_fields:
+            count = state["__count"]
+            value = state["__value"]["__wch"]
+            state_string = " with state: {count:%s value:%s}" % (count, value)
+
+        return "%s with stream offset:%s%s" % (typename, offset, state_string)
 
 
 class AbstractUnorderedCollectionPrinter(object):
