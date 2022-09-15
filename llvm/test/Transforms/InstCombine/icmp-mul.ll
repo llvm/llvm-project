@@ -5,8 +5,7 @@ declare void @use(i8)
 
 define i1 @squared_nsw_eq0(i5 %x) {
 ; CHECK-LABEL: @squared_nsw_eq0(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[M]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = mul nsw i5 %x, %x
@@ -16,8 +15,7 @@ define i1 @squared_nsw_eq0(i5 %x) {
 
 define <2 x i1> @squared_nuw_eq0(<2 x i8> %x) {
 ; CHECK-LABEL: @squared_nuw_eq0(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[M]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %m = mul nuw <2 x i8> %x, %x
@@ -25,11 +23,13 @@ define <2 x i1> @squared_nuw_eq0(<2 x i8> %x) {
   ret <2 x i1> %r
 }
 
+; extra use is ok
+
 define i1 @squared_nsw_nuw_ne0(i8 %x) {
 ; CHECK-LABEL: @squared_nsw_nuw_ne0(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i8 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[M]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = mul nsw nuw i8 %x, %x
@@ -37,6 +37,8 @@ define i1 @squared_nsw_nuw_ne0(i8 %x) {
   %r = icmp ne i8 %m, 0
   ret i1 %r
 }
+
+; negative test - must have no-overflow
 
 define i1 @squared_eq0(i8 %x) {
 ; CHECK-LABEL: @squared_eq0(
@@ -49,6 +51,9 @@ define i1 @squared_eq0(i8 %x) {
   ret i1 %r
 }
 
+; negative test - not squared
+; TODO: This could be or-of-icmps.
+
 define i1 @mul_nsw_eq0(i5 %x, i5 %y) {
 ; CHECK-LABEL: @mul_nsw_eq0(
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[Y:%.*]]
@@ -59,6 +64,8 @@ define i1 @mul_nsw_eq0(i5 %x, i5 %y) {
   %r = icmp eq i5 %m, 0
   ret i1 %r
 }
+
+; negative test - non-zero cmp
 
 define i1 @squared_nsw_eq1(i5 %x) {
 ; CHECK-LABEL: @squared_nsw_eq1(
@@ -73,8 +80,7 @@ define i1 @squared_nsw_eq1(i5 %x) {
 
 define i1 @squared_nsw_sgt0(i5 %x) {
 ; CHECK-LABEL: @squared_nsw_sgt0(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i5 [[M]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i5 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = mul nsw i5 %x, %x
