@@ -32,13 +32,24 @@ class BinaryContext;
 class DWARFRewriter {
 public:
   DWARFRewriter() = delete;
-  using DebugTypesSignaturesPerCUMap =
-      std::unordered_map<uint64_t, std::unordered_set<uint64_t>>;
+  /// Contains information about TU so we can write out correct entries in GDB
+  /// index.
+  struct GDBIndexTUEntry {
+    uint64_t UnitOffset;
+    uint64_t TypeHash;
+    uint64_t TypeDIERelativeOffset;
+  };
+  /// Contains information for CU or TU so we can output correct {cu, tu}-index.
+  struct UnitMeta {
+    uint64_t Offset;
+    uint64_t Length;
+    uint64_t TUHash;
+  };
 
 private:
   BinaryContext &BC;
 
-  std::mutex DebugInfoPatcherMutex;
+  std::mutex DWARFRewriterMutex;
 
   /// Stores and serializes information that will be put into the
   /// .debug_ranges DWARF section.
@@ -65,9 +76,6 @@ private:
   /// .debug_str_offsets DWARF section.
   std::unique_ptr<DebugStrOffsetsWriter> StrOffstsWriter;
 
-  /// .debug_abbrev section writer for the main binary.
-  std::unique_ptr<DebugAbbrevWriter> AbbrevWriter;
-
   using LocWriters = std::map<uint64_t, std::unique_ptr<DebugLocWriter>>;
   /// Use a separate location list writer for each compilation unit
   LocWriters LocListWritersByCU;
@@ -78,23 +86,10 @@ private:
   /// Store Rangelists writer for each DWO CU.
   RangeListsDWOWriers RangeListsWritersByCU;
 
-  using DebugAbbrevDWOWriters =
-      std::unordered_map<uint64_t, std::unique_ptr<DebugAbbrevWriter>>;
-  /// Abbrev section writers for DWOs.
-  DebugAbbrevDWOWriters BinaryDWOAbbrevWriters;
-
-  using DebugInfoDWOPatchers =
-      std::unordered_map<uint64_t, std::unique_ptr<SimpleBinaryPatcher>>;
-  /// Binary patchers for DWO debug_info sections.
-  DebugInfoDWOPatchers BinaryDWODebugInfoPatchers;
-
-  /// Stores all the Type Signatures for DWO CU.
-  DebugTypesSignaturesPerCUMap TypeSignaturesPerCU;
-
   std::mutex LocListDebugInfoPatchesMutex;
 
   /// Dwo id specific its .debug_info.dwo section content.
-  std::unordered_map<uint64_t, std::string> DwoDebufInfoMap;
+  std::unordered_map<uint64_t, std::string> DwoDebugInfoMap;
 
   /// Dwo id specific its .debug_abbrev.dwo section content.
   std::unordered_map<uint64_t, std::string> DwoDebugAbbrevMap;
@@ -107,6 +102,16 @@ private:
 
   std::unordered_map<DWARFUnit *, uint64_t> LineTablePatchMap;
   std::unordered_map<DWARFUnit *, uint64_t> TypeUnitRelocMap;
+
+  /// Entries for GDB Index Types CU List
+  using GDBIndexTUEntryType = std::vector<GDBIndexTUEntry>;
+  GDBIndexTUEntryType GDBIndexTUEntryVector;
+
+  using UnitMetaVectorType = std::vector<UnitMeta>;
+  using TUnitMetaDwoMapType = std::unordered_map<uint64_t, UnitMetaVectorType>;
+  using CUnitMetaDwoMapType = std::unordered_map<uint64_t, UnitMeta>;
+  CUnitMetaDwoMapType CUnitMetaDwoMap;
+  TUnitMetaDwoMapType TUnitMetaDwoMap;
 
   /// DWARFLegacy is all DWARF versions before DWARF 5.
   enum class DWARFVersion { DWARFLegacy, DWARF5 };
@@ -142,7 +147,7 @@ private:
   void updateDebugAddressRanges();
 
   /// Rewrite .gdb_index section if present.
-  void updateGdbIndexSection(CUOffsetMap &CUMap);
+  void updateGdbIndexSection(CUOffsetMap &CUMap, uint32_t NumCUs);
 
   /// Output .dwo files.
   void writeDWOFiles(std::unordered_map<uint64_t, std::string> &DWOIdToName);
@@ -167,21 +172,6 @@ private:
     operator DWARFDie() { return DWARFDie(Unit, &DIE); }
   };
 
-  /// DIEs with abbrevs that were not converted to DW_AT_ranges.
-  /// We only update those when all DIEs have been processed to guarantee that
-  /// the abbrev (which is shared) is intact.
-  using PendingRangesType = std::unordered_map<
-      const DWARFAbbreviationDeclaration *,
-      std::vector<std::pair<DWARFDieWrapper, DebugAddressRange>>>;
-
-  /// Convert \p Abbrev from using a simple DW_AT_(low|high)_pc range to
-  /// DW_AT_ranges with optional \p RangesBase.
-  void
-  convertToRangesPatchAbbrev(const DWARFUnit &Unit,
-                             const DWARFAbbreviationDeclaration *Abbrev,
-                             DebugAbbrevWriter &AbbrevWriter,
-                             std::optional<uint64_t> RangesBase = std::nullopt);
-
   /// Update \p DIE that was using DW_AT_(low|high)_pc with DW_AT_ranges offset.
   /// Updates to the DIE should be synced with abbreviation updates using the
   /// function above.
@@ -190,22 +180,6 @@ private:
       uint64_t RangesSectionOffset, DIEValue &LowPCAttrInfo,
       DIEValue &HighPCAttrInfo, uint64_t LowPCToUse,
       std::optional<uint64_t> RangesBase = std::nullopt);
-
-  /// Helper function for creating and returning per-DWO patchers/writers.
-  template <class T, class Patcher>
-  Patcher *getBinaryDWOPatcherHelper(T &BinaryPatchers, uint64_t DwoId) {
-    std::lock_guard<std::mutex> Lock(DebugInfoPatcherMutex);
-    auto Iter = BinaryPatchers.find(DwoId);
-    if (Iter == BinaryPatchers.end()) {
-      // Using make_pair instead of {} to work around bug in older version of
-      // the library. https://timsong-cpp.github.io/lwg-issues/2354
-      Iter = BinaryPatchers
-                 .insert(std::make_pair(DwoId, std::make_unique<Patcher>()))
-                 .first;
-    }
-
-    return static_cast<Patcher *>(Iter->second.get());
-  }
 
   /// Adds a \p Str to .debug_str section.
   /// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
@@ -223,30 +197,6 @@ public:
   /// Update stmt_list for CUs based on the new .debug_line \p Layout.
   void updateLineTableOffsets(const MCAsmLayout &Layout);
 
-  /// Returns a DWO Debug Info Patcher for DWO ID.
-  /// Creates a new instance if it does not already exist.
-  SimpleBinaryPatcher *getBinaryDWODebugInfoPatcher(uint64_t DwoId) {
-    return getBinaryDWOPatcherHelper<DebugInfoDWOPatchers,
-                                     DebugInfoBinaryPatcher>(
-        BinaryDWODebugInfoPatchers, DwoId);
-  }
-
-  /// Creates abbrev writer for DWO unit with \p DWOId.
-  DebugAbbrevWriter *createBinaryDWOAbbrevWriter(DWARFContext &Context,
-                                                 uint64_t DWOId) {
-    std::lock_guard<std::mutex> Lock(DebugInfoPatcherMutex);
-    auto &Entry = BinaryDWOAbbrevWriters[DWOId];
-    Entry = std::make_unique<DebugAbbrevWriter>(Context, DWOId);
-    return Entry.get();
-  }
-
-  /// Returns DWO abbrev writer for \p DWOId. The writer must exist.
-  DebugAbbrevWriter *getBinaryDWOAbbrevWriter(uint64_t DWOId) {
-    auto Iter = BinaryDWOAbbrevWriters.find(DWOId);
-    assert(Iter != BinaryDWOAbbrevWriters.end() && "writer does not exist");
-    return Iter->second.get();
-  }
-
   /// Given a \p DWOId, return its DebugLocWriter if it exists.
   DebugLocWriter *getDebugLocWriter(uint64_t DWOId) {
     auto Iter = LocListWritersByCU.find(DWOId);
@@ -255,7 +205,7 @@ public:
   }
 
   StringRef getDwoDebugInfoStr(uint64_t DWOId) {
-    return DwoDebufInfoMap[DWOId];
+    return DwoDebugInfoMap[DWOId];
   }
 
   StringRef getDwoDebugAbbrevStr(uint64_t DWOId) {
@@ -269,7 +219,7 @@ public:
   uint64_t getDwoRangesBase(uint64_t DWOId) { return DwoRangesBase[DWOId]; }
 
   void setDwoDebugInfoStr(uint64_t DWOId, StringRef Str) {
-    DwoDebufInfoMap[DWOId] = Str.str();
+    DwoDebugInfoMap[DWOId] = Str.str();
   }
 
   void setDwoDebugAbbrevStr(uint64_t DWOId, StringRef Str) {
@@ -282,6 +232,39 @@ public:
 
   void setDwoRangesBase(uint64_t DWOId, uint64_t RangesBase) {
     DwoRangesBase[DWOId] = RangesBase;
+  }
+
+  /// Adds an GDBIndexTUEntry if .gdb_index seciton exists.
+  void addGDBTypeUnitEntry(const GDBIndexTUEntry &&Entry);
+
+  /// Returns all entries needed for Types CU list
+  const GDBIndexTUEntryType &getGDBIndexTUEntryVector() const {
+    return GDBIndexTUEntryVector;
+  }
+
+  /// Stores meta data for each CU per DWO ID. It's used to create cu-index for
+  /// DWARF5.
+  void addCUnitMetaEntry(const uint64_t DWOId, const UnitMeta &Entry) {
+    auto RetVal = CUnitMetaDwoMap.insert({DWOId, Entry});
+    if (!RetVal.second)
+      errs() << "BOLT-WARNING: [internal-dwarf-error]: Trying to set CU meta "
+                "data twice for DWOID: "
+             << Twine::utohexstr(DWOId) << ".\n";
+  }
+
+  /// Stores meta data for each TU per DWO ID. It's used to create cu-index for
+  /// DWARF5.
+  void addTUnitMetaEntry(const uint64_t DWOId, const UnitMeta &Entry) {
+    TUnitMetaDwoMap[DWOId].emplace_back(Entry);
+  }
+
+  /// Returns Meta data for TUs in offset increasing order.
+  UnitMetaVectorType &getTUnitMetaEntries(const uint64_t DWOId) {
+    return TUnitMetaDwoMap[DWOId];
+  }
+  /// Returns Meta data for TUs in offset increasing order.
+  const UnitMeta &getCUnitMetaEntry(const uint64_t DWOId) {
+    return CUnitMetaDwoMap[DWOId];
   }
 };
 
