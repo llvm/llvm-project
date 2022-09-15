@@ -75,30 +75,34 @@ void parallel_taskgroup() {
 // CHECK1-LABEL: define {{[^@]+}}@_Z18parallel_taskgroupv
 // CHECK1-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
+// CHECK1-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON:%.*]], align 1
+// CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon*)* @.omp_outlined. to void (i32*, i32*, ...)*), %struct.anon* [[OMP_OUTLINED_ARG_AGG_]])
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.anon* noalias noundef [[__CONTEXT:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
+// CHECK1-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 8
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-// CHECK1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
+// CHECK1-NEXT:    store %struct.anon* [[__CONTEXT]], %struct.anon** [[__CONTEXT_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load %struct.anon*, %struct.anon** [[__CONTEXT_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
+// CHECK1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
 // CHECK1-NEXT:    invoke void @_Z3foov()
 // CHECK1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
 // CHECK1:       invoke.cont:
-// CHECK1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
+// CHECK1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
 // CHECK1-NEXT:    ret void
 // CHECK1:       terminate.lpad:
-// CHECK1-NEXT:    [[TMP2:%.*]] = landingpad { i8*, i32 }
+// CHECK1-NEXT:    [[TMP3:%.*]] = landingpad { i8*, i32 }
 // CHECK1-NEXT:    catch i8* null
-// CHECK1-NEXT:    [[TMP3:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(i8* [[TMP3]]) #[[ATTR8]]
+// CHECK1-NEXT:    [[TMP4:%.*]] = extractvalue { i8*, i32 } [[TMP3]], 0
+// CHECK1-NEXT:    call void @__clang_call_terminate(i8* [[TMP4]]) #[[ATTR8]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -145,31 +149,35 @@ void parallel_taskgroup() {
 // DEBUG1-LABEL: define {{[^@]+}}@_Z18parallel_taskgroupv
 // DEBUG1-SAME: () #[[ATTR6:[0-9]+]] !dbg [[DBG20:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
-// DEBUG1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB7:[0-9]+]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*)), !dbg [[DBG21:![0-9]+]]
+// DEBUG1-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON:%.*]], align 1
+// DEBUG1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB7:[0-9]+]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, %struct.anon*)* @.omp_outlined. to void (i32*, i32*, ...)*), %struct.anon* [[OMP_OUTLINED_ARG_AGG_]]), !dbg [[DBG21:![0-9]+]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG22:![0-9]+]]
 //
 //
 // DEBUG1-LABEL: define {{[^@]+}}@.omp_outlined.
-// DEBUG1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg [[DBG23:![0-9]+]] {
+// DEBUG1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], %struct.anon* noalias noundef [[__CONTEXT:%.*]]) #[[ATTR7:[0-9]+]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg [[DBG23:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // DEBUG1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
+// DEBUG1-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 8
 // DEBUG1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // DEBUG1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// DEBUG1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG24:![0-9]+]]
-// DEBUG1-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4, !dbg [[DBG24]]
-// DEBUG1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB5:[0-9]+]], i32 [[TMP1]]), !dbg [[DBG24]]
+// DEBUG1-NEXT:    store %struct.anon* [[__CONTEXT]], %struct.anon** [[__CONTEXT_ADDR]], align 8
+// DEBUG1-NEXT:    [[TMP0:%.*]] = load %struct.anon*, %struct.anon** [[__CONTEXT_ADDR]], align 8, !dbg [[DBG24:![0-9]+]]
+// DEBUG1-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG25:![0-9]+]]
+// DEBUG1-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4, !dbg [[DBG25]]
+// DEBUG1-NEXT:    call void @__kmpc_taskgroup(%struct.ident_t* @[[GLOB5:[0-9]+]], i32 [[TMP2]]), !dbg [[DBG25]]
 // DEBUG1-NEXT:    invoke void @_Z3foov()
-// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG25:![0-9]+]]
+// DEBUG1-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG26:![0-9]+]]
 // DEBUG1:       invoke.cont:
-// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB5]], i32 [[TMP1]]), !dbg [[DBG25]]
-// DEBUG1-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB5]], i32 [[TMP2]]), !dbg [[DBG26]]
+// DEBUG1-NEXT:    ret void, !dbg [[DBG27:![0-9]+]]
 // DEBUG1:       terminate.lpad:
-// DEBUG1-NEXT:    [[TMP2:%.*]] = landingpad { i8*, i32 }
-// DEBUG1-NEXT:    catch i8* null, !dbg [[DBG25]]
-// DEBUG1-NEXT:    [[TMP3:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 0, !dbg [[DBG25]]
-// DEBUG1-NEXT:    call void @__clang_call_terminate(i8* [[TMP3]]) #[[ATTR8]], !dbg [[DBG25]]
-// DEBUG1-NEXT:    unreachable, !dbg [[DBG25]]
+// DEBUG1-NEXT:    [[TMP3:%.*]] = landingpad { i8*, i32 }
+// DEBUG1-NEXT:    catch i8* null, !dbg [[DBG26]]
+// DEBUG1-NEXT:    [[TMP4:%.*]] = extractvalue { i8*, i32 } [[TMP3]], 0, !dbg [[DBG26]]
+// DEBUG1-NEXT:    call void @__clang_call_terminate(i8* [[TMP4]]) #[[ATTR8]], !dbg [[DBG26]]
+// DEBUG1-NEXT:    unreachable, !dbg [[DBG26]]
 //
 
 // CHECK2-LABEL: define dso_local void @_Z3foov() #{{.+}} {

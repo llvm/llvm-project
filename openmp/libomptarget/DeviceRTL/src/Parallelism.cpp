@@ -63,16 +63,11 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
   return NumThreads;
 }
 
-// Invoke an outlined parallel function unwrapping arguments (up to 32).
+// Invoke an outlined parallel function.
 void invokeMicrotask(int32_t global_tid, int32_t bound_tid, void *fn,
-                     void **args, int64_t nargs) {
+                     void *args) {
   DebugEntryRAII Entry(__FILE__, __LINE__, "<OpenMP Outlined Function>");
-  switch (nargs) {
-#include "generated_microtask_cases.gen"
-  default:
-    PRINT("Too many arguments in kmp_invoke_microtask, aborting execution.\n");
-    __builtin_trap();
-  }
+  ((void (*)(int32_t *, int32_t *, void *))fn)(&global_tid, &bound_tid, args);
 }
 
 } // namespace
@@ -81,7 +76,7 @@ extern "C" {
 
 void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                         int32_t num_threads, int proc_bind, void *fn,
-                        void *wrapper_fn, void **args, int64_t nargs) {
+                        void *wrapper_fn, void *args) {
   FunctionTracingRAII();
 
   uint32_t TId = mapping::getThreadIdInBlock();
@@ -98,7 +93,8 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                    (config::mayUseNestedParallelism() && icv::Level))) {
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
-    invokeMicrotask(TId, 0, fn, args, nargs);
+    invokeMicrotask(TId, 0, fn, args);
+    state::exitDataEnvironment();
     return;
   }
 
@@ -132,7 +128,7 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
       icv::Level.assert_eq(1u, ident, /* ForceTeamState */ true);
 
       if (TId < NumThreads)
-        invokeMicrotask(TId, 0, fn, args, nargs);
+        invokeMicrotask(TId, 0, fn, args);
 
       // Synchronize all threads at the end of a parallel region.
       synchronize::threadsAligned();
@@ -158,70 +154,11 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   bool IsActiveParallelRegion = NumThreads > 1;
   if (!IsActiveParallelRegion) {
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident);
-    invokeMicrotask(TId, 0, fn, args, nargs);
+    invokeMicrotask(TId, 0, fn, args);
     return;
   }
 
-  void **GlobalArgs = nullptr;
-  if (nargs) {
-    __kmpc_begin_sharing_variables(&GlobalArgs, nargs);
-    switch (nargs) {
-    default:
-      for (int I = 0; I < nargs; I++)
-        GlobalArgs[I] = args[I];
-      break;
-    case 16:
-      GlobalArgs[15] = args[15];
-      [[fallthrough]];
-    case 15:
-      GlobalArgs[14] = args[14];
-      [[fallthrough]];
-    case 14:
-      GlobalArgs[13] = args[13];
-      [[fallthrough]];
-    case 13:
-      GlobalArgs[12] = args[12];
-      [[fallthrough]];
-    case 12:
-      GlobalArgs[11] = args[11];
-      [[fallthrough]];
-    case 11:
-      GlobalArgs[10] = args[10];
-      [[fallthrough]];
-    case 10:
-      GlobalArgs[9] = args[9];
-      [[fallthrough]];
-    case 9:
-      GlobalArgs[8] = args[8];
-      [[fallthrough]];
-    case 8:
-      GlobalArgs[7] = args[7];
-      [[fallthrough]];
-    case 7:
-      GlobalArgs[6] = args[6];
-      [[fallthrough]];
-    case 6:
-      GlobalArgs[5] = args[5];
-      [[fallthrough]];
-    case 5:
-      GlobalArgs[4] = args[4];
-      [[fallthrough]];
-    case 4:
-      GlobalArgs[3] = args[3];
-      [[fallthrough]];
-    case 3:
-      GlobalArgs[2] = args[2];
-      [[fallthrough]];
-    case 2:
-      GlobalArgs[1] = args[1];
-      [[fallthrough]];
-    case 1:
-      GlobalArgs[0] = args[0];
-      [[fallthrough]];
-    case 0:
-      break;
-    }
-  }
+  __kmpc_set_shared_variables_aggregate(args);
 
   {
     // Note that the order here is important. `icv::Level` has to be updated
@@ -243,9 +180,6 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     // Master waits for workers to signal.
     synchronize::threads();
   }
-
-  if (nargs)
-    __kmpc_end_sharing_variables();
 }
 
 __attribute__((noinline)) bool
