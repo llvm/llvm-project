@@ -149,8 +149,7 @@ void unreachable_call() {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[PTR1_ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[PTR2_ADDR:%.*]] = alloca i32**, align 8
-// CHECK1-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
-// CHECK1-NEXT:    [[DOTTMP_OUTLINED_AGG_ARG:%.*]] = alloca [[STRUCT_ANON]], align 8
+// CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 8
 // CHECK1-NEXT:    store i32* [[PTR1]], i32** [[PTR1_ADDR]], align 8
 // CHECK1-NEXT:    store i32** [[PTR2]], i32*** [[PTR2_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[PTR2_ADDR]], align 8
@@ -159,18 +158,14 @@ void unreachable_call() {
 // CHECK1-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK1:       user_code.entry:
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
-// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
-// CHECK1-NEXT:    store i32** [[PTR1_ADDR]], i32*** [[TMP3]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 1
-// CHECK1-NEXT:    store i32** [[TMP0]], i32*** [[TMP4]], align 8
-// CHECK1-NEXT:    [[TMP5:%.*]] = bitcast %struct.anon* [[DOTTMP_OUTLINED_AGG_ARG]] to i8*
-// CHECK1-NEXT:    [[TMP6:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 16)
-// CHECK1-NEXT:    [[TMP7:%.*]] = call i8* @__kmpc_alloc_aggregate_arg(i8* [[TMP5]], i8* [[TMP6]])
-// CHECK1-NEXT:    [[TMP8:%.*]] = load [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], align 8
-// CHECK1-NEXT:    [[TMP9:%.*]] = bitcast i8* [[TMP7]] to %struct.anon*
-// CHECK1-NEXT:    store [[STRUCT_ANON]] [[TMP8]], %struct.anon* [[TMP9]], align 8
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, %struct.anon*)* @__omp_outlined__ to i8*), i8* null, i8* [[TMP7]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[TMP6]], i64 16)
+// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i32** [[PTR1_ADDR]] to i8*
+// CHECK1-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
+// CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i32** [[TMP0]] to i8*
+// CHECK1-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 8
+// CHECK1-NEXT:    [[TMP7:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32**, i32**)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP7]], i64 2)
 // CHECK1-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 true)
 // CHECK1-NEXT:    ret void
 // CHECK1:       worker.exit:
@@ -178,28 +173,27 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon* noalias [[__CONTEXT:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32** nonnull align 8 dereferenceable(8) [[PTR1:%.*]], i32** nonnull align 8 dereferenceable(8) [[PTR2:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// CHECK1-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 8
+// CHECK1-NEXT:    [[PTR1_ADDR:%.*]] = alloca i32**, align 8
+// CHECK1-NEXT:    [[PTR2_ADDR:%.*]] = alloca i32**, align 8
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK1-NEXT:    store %struct.anon* [[__CONTEXT]], %struct.anon** [[__CONTEXT_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load %struct.anon*, %struct.anon** [[__CONTEXT_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP0]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32**, i32*** [[TMP1]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP0]], i32 0, i32 1
-// CHECK1-NEXT:    [[TMP4:%.*]] = load i32**, i32*** [[TMP3]], align 8
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 8
-// CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
-// CHECK1-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[TMP2]], align 8
-// CHECK1-NEXT:    store i32 [[TMP6]], i32* [[TMP7]], align 4
+// CHECK1-NEXT:    store i32** [[PTR1]], i32*** [[PTR1_ADDR]], align 8
+// CHECK1-NEXT:    store i32** [[PTR2]], i32*** [[PTR2_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[PTR1_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32**, i32*** [[PTR2_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[TMP0]], align 8
+// CHECK1-NEXT:    store i32 [[TMP3]], i32* [[TMP4]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l39
-// CHECK1-SAME: () #[[ATTR6:[0-9]+]] {
+// CHECK1-SAME: () #[[ATTR4:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
@@ -212,7 +206,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l47
-// CHECK1-SAME: (i64 [[AA:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i64 [[AA:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    store i64 [[AA]], i64* [[AA_ADDR]], align 8
@@ -238,7 +232,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l53
-// CHECK1-SAME: (i64 [[A:%.*]], [10 x float]* nonnull align 4 dereferenceable(40) [[B:%.*]], i64 [[VLA:%.*]], float* nonnull align 4 dereferenceable(4) [[BN:%.*]], [5 x [10 x double]]* nonnull align 8 dereferenceable(400) [[C:%.*]], i64 [[VLA1:%.*]], i64 [[VLA3:%.*]], double* nonnull align 8 dereferenceable(8) [[CN:%.*]], %struct.TT* nonnull align 8 dereferenceable(16) [[D:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i64 [[A:%.*]], [10 x float]* nonnull align 4 dereferenceable(40) [[B:%.*]], i64 [[VLA:%.*]], float* nonnull align 4 dereferenceable(4) [[BN:%.*]], [5 x [10 x double]]* nonnull align 8 dereferenceable(400) [[C:%.*]], i64 [[VLA1:%.*]], i64 [[VLA3:%.*]], double* nonnull align 8 dereferenceable(8) [[CN:%.*]], %struct.TT* nonnull align 8 dereferenceable(16) [[D:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca [10 x float]*, align 8
@@ -318,7 +312,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK1-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR7:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.TT*, align 8
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -330,7 +324,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l90
-// CHECK1-SAME: (i64 [[A:%.*]], i64 [[AA:%.*]], i64 [[AAA:%.*]], [10 x i32]* nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i64 [[A:%.*]], i64 [[AA:%.*]], i64 [[AAA:%.*]], [10 x i32]* nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
@@ -372,7 +366,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l108
-// CHECK1-SAME: (%struct.S1* [[THIS:%.*]], i64 [[B:%.*]], i64 [[VLA:%.*]], i64 [[VLA1:%.*]], i16* nonnull align 2 dereferenceable(2) [[C:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (%struct.S1* [[THIS:%.*]], i64 [[B:%.*]], i64 [[VLA:%.*]], i64 [[VLA1:%.*]], i16* nonnull align 2 dereferenceable(2) [[C:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S1*, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8
@@ -419,36 +413,31 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z3baziRd
-// CHECK1-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR7]] {
+// CHECK1-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 8
-// CHECK1-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 8
-// CHECK1-NEXT:    [[DOTTMP_OUTLINED_AGG_ARG:%.*]] = alloca [[STRUCT_ANON_0]], align 8
+// CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
 // CHECK1-NEXT:    [[F:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 4)
 // CHECK1-NEXT:    [[F_ON_STACK:%.*]] = bitcast i8* [[F]] to i32*
 // CHECK1-NEXT:    store i32 [[F1]], i32* [[F_ON_STACK]], align 4
 // CHECK1-NEXT:    store double* [[A]], double** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
-// CHECK1-NEXT:    store i32* [[F_ON_STACK]], i32** [[TMP1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 1
-// CHECK1-NEXT:    [[TMP3:%.*]] = load double*, double** [[A_ADDR]], align 8
-// CHECK1-NEXT:    store double* [[TMP3]], double** [[TMP2]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = bitcast %struct.anon.0* [[DOTTMP_OUTLINED_AGG_ARG]] to i8*
-// CHECK1-NEXT:    [[TMP5:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 16)
-// CHECK1-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_alloc_aggregate_arg(i8* [[TMP4]], i8* [[TMP5]])
-// CHECK1-NEXT:    [[TMP7:%.*]] = load [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_]], align 8
-// CHECK1-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP6]] to %struct.anon.0*
-// CHECK1-NEXT:    store [[STRUCT_ANON_0]] [[TMP7]], %struct.anon.0* [[TMP8]], align 8
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, %struct.anon.0*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8* [[TMP6]])
-// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[TMP5]], i64 16)
-// CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
+// CHECK1-NEXT:    [[TMP1:%.*]] = load double*, double** [[A_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i32* [[F_ON_STACK]] to i8*
+// CHECK1-NEXT:    store i8* [[TMP3]], i8** [[TMP2]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
+// CHECK1-NEXT:    [[TMP5:%.*]] = bitcast double* [[TMP1]] to i8*
+// CHECK1-NEXT:    store i8* [[TMP5]], i8** [[TMP4]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP6]], i64 2)
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
 // CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[F]], i64 4)
-// CHECK1-NEXT:    ret i32 [[TMP9]]
+// CHECK1-NEXT:    ret i32 [[TMP7]]
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16unreachable_callv_l142
-// CHECK1-SAME: () #[[ATTR6]] {
+// CHECK1-SAME: () #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 // CHECK1-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
@@ -464,7 +453,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l74
-// CHECK1-SAME: (i64 [[A:%.*]], i64 [[AA:%.*]], [10 x i32]* nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR6]] {
+// CHECK1-SAME: (i64 [[A:%.*]], i64 [[AA:%.*]], [10 x i32]* nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // CHECK1-NEXT:    [[AA_ADDR:%.*]] = alloca i64, align 8
@@ -498,44 +487,47 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.0* noalias [[__CONTEXT:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[F:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR1]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
-// CHECK1-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.0*, align 8
+// CHECK1-NEXT:    [[F_ADDR:%.*]] = alloca i32*, align 8
+// CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 8
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca double*, align 8
 // CHECK1-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
-// CHECK1-NEXT:    store %struct.anon.0* [[__CONTEXT]], %struct.anon.0** [[__CONTEXT_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP0:%.*]] = load %struct.anon.0*, %struct.anon.0** [[__CONTEXT_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], %struct.anon.0* [[TMP0]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[TMP0]], i32 0, i32 1
-// CHECK1-NEXT:    [[TMP4:%.*]] = load double*, double** [[TMP3]], align 8
-// CHECK1-NEXT:    store double* [[TMP4]], double** [[TMP]], align 8
-// CHECK1-NEXT:    [[TMP5:%.*]] = load double*, double** [[TMP]], align 8
-// CHECK1-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP5]], align 8
-// CHECK1-NEXT:    [[ADD:%.*]] = fadd double 2.000000e+00, [[TMP6]]
+// CHECK1-NEXT:    store i32* [[F]], i32** [[F_ADDR]], align 8
+// CHECK1-NEXT:    store double* [[A]], double** [[A_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[F_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP1:%.*]] = load double*, double** [[A_ADDR]], align 8
+// CHECK1-NEXT:    store double* [[TMP1]], double** [[TMP]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = load double*, double** [[TMP]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = load double, double* [[TMP2]], align 8
+// CHECK1-NEXT:    [[ADD:%.*]] = fadd double 2.000000e+00, [[TMP3]]
 // CHECK1-NEXT:    [[CONV:%.*]] = fptosi double [[ADD]] to i32
-// CHECK1-NEXT:    store i32 [[CONV]], i32* [[TMP2]], align 4
+// CHECK1-NEXT:    store i32 [[CONV]], i32* [[TMP0]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK1-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8*, align 8
+// CHECK1-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
 // CHECK1-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK1-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 // CHECK1-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-// CHECK1-NEXT:    call void @__kmpc_get_shared_variables_aggregate(i8** [[GLOBAL_ARGS]])
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[GLOBAL_ARGS]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to %struct.anon.0**
-// CHECK1-NEXT:    [[TMP4:%.*]] = bitcast %struct.anon.0** [[TMP3]] to %struct.anon.0*
-// CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], %struct.anon.0* [[TMP4]]) #[[ATTR3:[0-9]+]]
+// CHECK1-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 8
+// CHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 0
+// CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32**
+// CHECK1-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 1
+// CHECK1-NEXT:    [[TMP7:%.*]] = bitcast i8** [[TMP6]] to double**
+// CHECK1-NEXT:    [[TMP8:%.*]] = load double*, double** [[TMP7]], align 8
+// CHECK1-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], double* [[TMP8]]) #[[ATTR2:[0-9]+]]
 // CHECK1-NEXT:    ret void
 //
 //
@@ -544,8 +536,7 @@ void unreachable_call() {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[PTR1_ADDR:%.*]] = alloca i32*, align 4
 // CHECK2-NEXT:    [[PTR2_ADDR:%.*]] = alloca i32**, align 4
-// CHECK2-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON:%.*]], align 4
-// CHECK2-NEXT:    [[DOTTMP_OUTLINED_AGG_ARG:%.*]] = alloca [[STRUCT_ANON]], align 8
+// CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 4
 // CHECK2-NEXT:    store i32* [[PTR1]], i32** [[PTR1_ADDR]], align 4
 // CHECK2-NEXT:    store i32** [[PTR2]], i32*** [[PTR2_ADDR]], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[PTR2_ADDR]], align 4
@@ -554,18 +545,14 @@ void unreachable_call() {
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
-// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
-// CHECK2-NEXT:    store i32** [[PTR1_ADDR]], i32*** [[TMP3]], align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 1
-// CHECK2-NEXT:    store i32** [[TMP0]], i32*** [[TMP4]], align 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = bitcast %struct.anon* [[DOTTMP_OUTLINED_AGG_ARG]] to i8*
-// CHECK2-NEXT:    [[TMP6:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 8)
-// CHECK2-NEXT:    [[TMP7:%.*]] = call i8* @__kmpc_alloc_aggregate_arg(i8* [[TMP5]], i8* [[TMP6]])
-// CHECK2-NEXT:    [[TMP8:%.*]] = load [[STRUCT_ANON]], %struct.anon* [[OMP_OUTLINED_ARG_AGG_]], align 4
-// CHECK2-NEXT:    [[TMP9:%.*]] = bitcast i8* [[TMP7]] to %struct.anon*
-// CHECK2-NEXT:    store [[STRUCT_ANON]] [[TMP8]], %struct.anon* [[TMP9]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, %struct.anon*)* @__omp_outlined__ to i8*), i8* null, i8* [[TMP7]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[TMP6]], i32 8)
+// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i32** [[PTR1_ADDR]] to i8*
+// CHECK2-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 4
+// CHECK2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
+// CHECK2-NEXT:    [[TMP6:%.*]] = bitcast i32** [[TMP0]] to i8*
+// CHECK2-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 4
+// CHECK2-NEXT:    [[TMP7:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]], i32 1, i32 2, i32 -1, i8* bitcast (void (i32*, i32*, i32**, i32**)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP7]], i32 2)
 // CHECK2-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2, i1 true)
 // CHECK2-NEXT:    ret void
 // CHECK2:       worker.exit:
@@ -573,28 +560,27 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon* noalias [[__CONTEXT:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32** nonnull align 4 dereferenceable(4) [[PTR1:%.*]], i32** nonnull align 4 dereferenceable(4) [[PTR2:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
-// CHECK2-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon*, align 4
+// CHECK2-NEXT:    [[PTR1_ADDR:%.*]] = alloca i32**, align 4
+// CHECK2-NEXT:    [[PTR2_ADDR:%.*]] = alloca i32**, align 4
 // CHECK2-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
-// CHECK2-NEXT:    store %struct.anon* [[__CONTEXT]], %struct.anon** [[__CONTEXT_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = load %struct.anon*, %struct.anon** [[__CONTEXT_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON:%.*]], %struct.anon* [[TMP0]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32**, i32*** [[TMP1]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP0]], i32 0, i32 1
-// CHECK2-NEXT:    [[TMP4:%.*]] = load i32**, i32*** [[TMP3]], align 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 4
-// CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
-// CHECK2-NEXT:    [[TMP7:%.*]] = load i32*, i32** [[TMP2]], align 4
-// CHECK2-NEXT:    store i32 [[TMP6]], i32* [[TMP7]], align 4
+// CHECK2-NEXT:    store i32** [[PTR1]], i32*** [[PTR1_ADDR]], align 4
+// CHECK2-NEXT:    store i32** [[PTR2]], i32*** [[PTR2_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[PTR1_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP1:%.*]] = load i32**, i32*** [[PTR2_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 4
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP2]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[TMP0]], align 4
+// CHECK2-NEXT:    store i32 [[TMP3]], i32* [[TMP4]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l39
-// CHECK2-SAME: () #[[ATTR6:[0-9]+]] {
+// CHECK2-SAME: () #[[ATTR4:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
@@ -607,7 +593,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l47
-// CHECK2-SAME: (i32 [[AA:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i32 [[AA:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store i32 [[AA]], i32* [[AA_ADDR]], align 4
@@ -633,7 +619,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l53
-// CHECK2-SAME: (i32 [[A:%.*]], [10 x float]* nonnull align 4 dereferenceable(40) [[B:%.*]], i32 [[VLA:%.*]], float* nonnull align 4 dereferenceable(4) [[BN:%.*]], [5 x [10 x double]]* nonnull align 8 dereferenceable(400) [[C:%.*]], i32 [[VLA1:%.*]], i32 [[VLA3:%.*]], double* nonnull align 8 dereferenceable(8) [[CN:%.*]], %struct.TT* nonnull align 8 dereferenceable(16) [[D:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i32 [[A:%.*]], [10 x float]* nonnull align 4 dereferenceable(40) [[B:%.*]], i32 [[VLA:%.*]], float* nonnull align 4 dereferenceable(4) [[BN:%.*]], [5 x [10 x double]]* nonnull align 8 dereferenceable(400) [[C:%.*]], i32 [[VLA1:%.*]], i32 [[VLA3:%.*]], double* nonnull align 8 dereferenceable(8) [[CN:%.*]], %struct.TT* nonnull align 8 dereferenceable(16) [[D:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca [10 x float]*, align 4
@@ -712,7 +698,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK2-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR7:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (%struct.TT* nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.TT*, align 4
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -724,7 +710,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZL7fstatici_l90
-// CHECK2-SAME: (i32 [[A:%.*]], i32 [[AA:%.*]], i32 [[AAA:%.*]], [10 x i32]* nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i32 [[A:%.*]], i32 [[AA:%.*]], i32 [[AAA:%.*]], [10 x i32]* nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
@@ -765,7 +751,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2S12r1Ei_l108
-// CHECK2-SAME: (%struct.S1* [[THIS:%.*]], i32 [[B:%.*]], i32 [[VLA:%.*]], i32 [[VLA1:%.*]], i16* nonnull align 2 dereferenceable(2) [[C:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (%struct.S1* [[THIS:%.*]], i32 [[B:%.*]], i32 [[VLA:%.*]], i32 [[VLA1:%.*]], i16* nonnull align 2 dereferenceable(2) [[C:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca %struct.S1*, align 4
 // CHECK2-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
@@ -811,36 +797,31 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z3baziRd
-// CHECK2-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR7]] {
+// CHECK2-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 4
-// CHECK2-NEXT:    [[OMP_OUTLINED_ARG_AGG_:%.*]] = alloca [[STRUCT_ANON_0:%.*]], align 4
-// CHECK2-NEXT:    [[DOTTMP_OUTLINED_AGG_ARG:%.*]] = alloca [[STRUCT_ANON_0]], align 8
+// CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
 // CHECK2-NEXT:    [[F:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 4)
 // CHECK2-NEXT:    [[F_ON_STACK:%.*]] = bitcast i8* [[F]] to i32*
 // CHECK2-NEXT:    store i32 [[F1]], i32* [[F_ON_STACK]], align 4
 // CHECK2-NEXT:    store double* [[A]], double** [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 0
-// CHECK2-NEXT:    store i32* [[F_ON_STACK]], i32** [[TMP1]], align 4
-// CHECK2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_]], i32 0, i32 1
-// CHECK2-NEXT:    [[TMP3:%.*]] = load double*, double** [[A_ADDR]], align 4
-// CHECK2-NEXT:    store double* [[TMP3]], double** [[TMP2]], align 4
-// CHECK2-NEXT:    [[TMP4:%.*]] = bitcast %struct.anon.0* [[DOTTMP_OUTLINED_AGG_ARG]] to i8*
-// CHECK2-NEXT:    [[TMP5:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 8)
-// CHECK2-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_alloc_aggregate_arg(i8* [[TMP4]], i8* [[TMP5]])
-// CHECK2-NEXT:    [[TMP7:%.*]] = load [[STRUCT_ANON_0]], %struct.anon.0* [[OMP_OUTLINED_ARG_AGG_]], align 4
-// CHECK2-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP6]] to %struct.anon.0*
-// CHECK2-NEXT:    store [[STRUCT_ANON_0]] [[TMP7]], %struct.anon.0* [[TMP8]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, %struct.anon.0*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8* [[TMP6]])
-// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[TMP5]], i32 8)
-// CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
+// CHECK2-NEXT:    [[TMP1:%.*]] = load double*, double** [[A_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[F_ON_STACK]] to i8*
+// CHECK2-NEXT:    store i8* [[TMP3]], i8** [[TMP2]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
+// CHECK2-NEXT:    [[TMP5:%.*]] = bitcast double* [[TMP1]] to i8*
+// CHECK2-NEXT:    store i8* [[TMP5]], i8** [[TMP4]], align 4
+// CHECK2-NEXT:    [[TMP6:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP6]], i32 2)
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
 // CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[F]], i32 4)
-// CHECK2-NEXT:    ret i32 [[TMP9]]
+// CHECK2-NEXT:    ret i32 [[TMP7]]
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16unreachable_callv_l142
-// CHECK2-SAME: () #[[ATTR6]] {
+// CHECK2-SAME: () #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* @[[GLOB1]], i8 1, i1 true, i1 true)
 // CHECK2-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
@@ -856,7 +837,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l74
-// CHECK2-SAME: (i32 [[A:%.*]], i32 [[AA:%.*]], [10 x i32]* nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR6]] {
+// CHECK2-SAME: (i32 [[A:%.*]], i32 [[AA:%.*]], [10 x i32]* nonnull align 4 dereferenceable(40) [[B:%.*]]) #[[ATTR4]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[AA_ADDR:%.*]] = alloca i32, align 4
@@ -889,43 +870,46 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__1
-// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], %struct.anon.0* noalias [[__CONTEXT:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[F:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR1]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 4
-// CHECK2-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca %struct.anon.0*, align 4
+// CHECK2-NEXT:    [[F_ADDR:%.*]] = alloca i32*, align 4
+// CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 4
 // CHECK2-NEXT:    [[TMP:%.*]] = alloca double*, align 4
 // CHECK2-NEXT:    store i32* [[DOTGLOBAL_TID_]], i32** [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK2-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 4
-// CHECK2-NEXT:    store %struct.anon.0* [[__CONTEXT]], %struct.anon.0** [[__CONTEXT_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP0:%.*]] = load %struct.anon.0*, %struct.anon.0** [[__CONTEXT_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ANON_0:%.*]], %struct.anon.0* [[TMP0]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i32*, i32** [[TMP1]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_ANON_0]], %struct.anon.0* [[TMP0]], i32 0, i32 1
-// CHECK2-NEXT:    [[TMP4:%.*]] = load double*, double** [[TMP3]], align 4
-// CHECK2-NEXT:    store double* [[TMP4]], double** [[TMP]], align 4
-// CHECK2-NEXT:    [[TMP5:%.*]] = load double*, double** [[TMP]], align 4
-// CHECK2-NEXT:    [[TMP6:%.*]] = load double, double* [[TMP5]], align 8
-// CHECK2-NEXT:    [[ADD:%.*]] = fadd double 2.000000e+00, [[TMP6]]
+// CHECK2-NEXT:    store i32* [[F]], i32** [[F_ADDR]], align 4
+// CHECK2-NEXT:    store double* [[A]], double** [[A_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[F_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP1:%.*]] = load double*, double** [[A_ADDR]], align 4
+// CHECK2-NEXT:    store double* [[TMP1]], double** [[TMP]], align 4
+// CHECK2-NEXT:    [[TMP2:%.*]] = load double*, double** [[TMP]], align 4
+// CHECK2-NEXT:    [[TMP3:%.*]] = load double, double* [[TMP2]], align 8
+// CHECK2-NEXT:    [[ADD:%.*]] = fadd double 2.000000e+00, [[TMP3]]
 // CHECK2-NEXT:    [[CONV:%.*]] = fptosi double [[ADD]] to i32
-// CHECK2-NEXT:    store i32 [[CONV]], i32* [[TMP2]], align 4
+// CHECK2-NEXT:    store i32 [[CONV]], i32* [[TMP0]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
-// CHECK2-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR9:[0-9]+]] {
+// CHECK2-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8*, align 4
+// CHECK2-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 4
 // CHECK2-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
 // CHECK2-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
 // CHECK2-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
-// CHECK2-NEXT:    call void @__kmpc_get_shared_variables_aggregate(i8** [[GLOBAL_ARGS]])
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[GLOBAL_ARGS]], align 4
-// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to %struct.anon.0**
-// CHECK2-NEXT:    [[TMP4:%.*]] = bitcast %struct.anon.0** [[TMP3]] to %struct.anon.0*
-// CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], %struct.anon.0* [[TMP4]]) #[[ATTR3:[0-9]+]]
+// CHECK2-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
+// CHECK2-NEXT:    [[TMP2:%.*]] = load i8**, i8*** [[GLOBAL_ARGS]], align 4
+// CHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 0
+// CHECK2-NEXT:    [[TMP4:%.*]] = bitcast i8** [[TMP3]] to i32**
+// CHECK2-NEXT:    [[TMP5:%.*]] = load i32*, i32** [[TMP4]], align 4
+// CHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 1
+// CHECK2-NEXT:    [[TMP7:%.*]] = bitcast i8** [[TMP6]] to double**
+// CHECK2-NEXT:    [[TMP8:%.*]] = load double*, double** [[TMP7]], align 4
+// CHECK2-NEXT:    call void @__omp_outlined__1(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32* [[TMP5]], double* [[TMP8]]) #[[ATTR2:[0-9]+]]
 // CHECK2-NEXT:    ret void
 //

@@ -1263,7 +1263,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-  return CGF.GenerateOpenMPCapturedStmtFunctionAggregate(*CS, D.getBeginLoc());
+  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D.getBeginLoc());
 }
 
 llvm::Function *CGOpenMPRuntime::emitParallelOutlinedFunction(
@@ -2036,11 +2036,11 @@ void CGOpenMPRuntime::emitIfClause(CodeGenFunction &CGF, const Expr *Cond,
   CGF.EmitBlock(ContBlock, /*IsFinished=*/true);
 }
 
-void CGOpenMPRuntime::emitParallelCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
-    ArrayRef<llvm::Value *> CapturedVars,
-    ArrayRef<llvm::Type *> CapturedVarsElemTypes, const Expr *IfCond,
-    llvm::Value *NumThreads) {
+void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                       llvm::Function *OutlinedFn,
+                                       ArrayRef<llvm::Value *> CapturedVars,
+                                       const Expr *IfCond,
+                                       llvm::Value *NumThreads) {
   if (!CGF.HaveInsertPoint())
     return;
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
@@ -12793,11 +12793,12 @@ llvm::Function *CGOpenMPSIMDRuntime::emitTaskOutlinedFunction(
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
-void CGOpenMPSIMDRuntime::emitParallelCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
-    ArrayRef<llvm::Value *> CapturedVars,
-    ArrayRef<llvm::Type *> CapturedVarsElemTypes, const Expr *IfCond,
-    llvm::Value *NumThreads) {
+void CGOpenMPSIMDRuntime::emitParallelCall(CodeGenFunction &CGF,
+                                           SourceLocation Loc,
+                                           llvm::Function *OutlinedFn,
+                                           ArrayRef<llvm::Value *> CapturedVars,
+                                           const Expr *IfCond,
+                                           llvm::Value *NumThreads) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
