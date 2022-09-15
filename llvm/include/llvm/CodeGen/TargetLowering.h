@@ -67,6 +67,7 @@ class Constant;
 class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
+class Loop;
 class GISelKnownBits;
 class IntrinsicInst;
 class IRBuilderBase;
@@ -2795,6 +2796,13 @@ public:
   /// come first).
   virtual bool shouldSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const {
+    return false;
+  }
+
+  /// Try to optimize extending or truncating conversion instructions (like
+  /// zext, trunc, fptoui, uitofp) for the target.
+  virtual bool optimizeExtendOrTruncateConversion(Instruction *I,
+                                                  Loop *L) const {
     return false;
   }
 

@@ -15,10 +15,11 @@ define void @zext_v16i8_to_v16i32_in_loop(i8* %src, i32* %dst) {
 ; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr i8, i8* [[SRC:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[SRC_GEP_CAST:%.*]] = bitcast i8* [[SRC_GEP]] to <16 x i8>*
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, <16 x i8>* [[SRC_GEP_CAST]], align 16
-; CHECK-NEXT:    [[EXT:%.*]] = zext <16 x i8> [[LOAD]] to <16 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[LOAD]], <16 x i8> <i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <64 x i32> <i32 0, i32 16, i32 16, i32 16, i32 1, i32 16, i32 16, i32 16, i32 2, i32 16, i32 16, i32 16, i32 3, i32 16, i32 16, i32 16, i32 4, i32 16, i32 16, i32 16, i32 5, i32 16, i32 16, i32 16, i32 6, i32 16, i32 16, i32 16, i32 7, i32 16, i32 16, i32 16, i32 8, i32 16, i32 16, i32 16, i32 9, i32 16, i32 16, i32 16, i32 10, i32 16, i32 16, i32 16, i32 11, i32 16, i32 16, i32 16, i32 12, i32 16, i32 16, i32 16, i32 13, i32 16, i32 16, i32 16, i32 14, i32 16, i32 16, i32 16, i32 15, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <64 x i8> [[TMP0]] to <16 x i32>
 ; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr i32, i32* [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[DST_GEP_CAST:%.*]] = bitcast i32* [[DST_GEP]] to <16 x i32>*
-; CHECK-NEXT:    store <16 x i32> [[EXT]], <16 x i32>* [[DST_GEP_CAST]], align 64
+; CHECK-NEXT:    store <16 x i32> [[TMP1]], <16 x i32>* [[DST_GEP_CAST]], align 64
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 16
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]

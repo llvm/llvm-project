@@ -612,6 +612,9 @@ public:
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 
+  bool optimizeExtendOrTruncateConversion(Instruction *I,
+                                          Loop *L) const override;
+
   bool hasPairedLoad(EVT LoadedType, Align &RequiredAligment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }

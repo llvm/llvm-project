@@ -8055,6 +8055,10 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
           TargetLowering::TypeExpandInteger) {
         return SinkCast(CI);
       } else {
+        if (TLI->optimizeExtendOrTruncateConversion(
+                I, LI->getLoopFor(I->getParent())))
+          return true;
+
         bool MadeChange = optimizeExt(I);
         return MadeChange | optimizeExtUses(I);
       }
