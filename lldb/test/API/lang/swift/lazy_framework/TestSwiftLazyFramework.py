@@ -21,7 +21,7 @@ class TestSwiftLazyFramework(lldbtest.TestBase):
         self.expect("settings set target.swift-auto-import-frameworks true")
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
-        
+
         # Verify that lazy is not linked in.
         self.runCmd("image list")
         output = self.res.GetOutput()

@@ -302,10 +302,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return false;
   }
 
-  ExecutionContext target_scope(*target);
-  m_swift_scratch_ctx = target->GetSwiftScratchContext(
-      m_err, /* FIXME: should be exe_scope */ *target_scope
-                 .GetBestExecutionContextScope());
+  m_swift_scratch_ctx = target->GetSwiftScratchContext(m_err, *exe_scope);
   if (!m_swift_scratch_ctx) {
     LLDB_LOG(log, "no scratch context", m_err.AsCString());
     return false;
@@ -314,7 +311,12 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       m_swift_scratch_ctx->get()->GetSwiftASTContext());
 
   if (!m_swift_ast_ctx) {
-    LLDB_LOG(log, "no Swift AST Context");
+    LLDB_LOG(log, "no Swift AST context");
+    return false;
+  }
+
+  if (m_swift_ast_ctx->HasFatalErrors()) {
+    LLDB_LOG(log, "Swift AST context is in a fatal error state");
     return false;
   }
   

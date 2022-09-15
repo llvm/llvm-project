@@ -2368,8 +2368,9 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
   }
 
   if (m_cant_make_scratch_type_system.count(language))
-    return llvm::make_error<llvm::StringError>("unable to construct scratch type system",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::make_error<llvm::StringError>(
+        "unable to construct scratch type system",
+        llvm::inconvertibleErrorCode());
 
   auto type_system_or_err = m_scratch_type_system_map.GetTypeSystemForLanguage(
       language, this, create_on_demand, compiler_options);
@@ -2603,7 +2604,7 @@ Target::CreateUtilityFunction(std::string expression, std::string name,
 #ifdef LLDB_ENABLE_SWIFT
 llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
-  Log *log = GetLog(LLDBLog::Target);
+  Log *log = GetLog(LLDBLog::Target | LLDBLog::Types | LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
   Module *lldb_module = nullptr;
@@ -2640,20 +2641,29 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
       return cached_ts;
     }
 
-    if (!create_on_demand || !GetSwiftScratchContextLock().try_lock())
+    if (!create_on_demand) {
+      if (log)
+        log->Printf("not allowed to create a new context\n");
       return nullptr;
+    }
+    if (!GetSwiftScratchContextLock().try_lock()) {
+      if (log)
+        log->Printf("couldn't acquire scratch context lock\n");
+      return nullptr;
+    }
 
     auto unlock = llvm::make_scope_exit(
         [this] { GetSwiftScratchContextLock().unlock(); });
 
-    auto type_system_or_err = GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
+    auto type_system_or_err =
+        GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
       return nullptr;
     }
 
     if (auto *global_scratch_ctx =
-            llvm::cast_or_null<SwiftASTContextForExpressions>(
+            llvm::cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
                 &*type_system_or_err))
       if (auto *swift_ast_ctx =
               llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
@@ -2692,7 +2702,8 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
 
   if (!swift_scratch_ctx)
     return llvm::None;
-  return SwiftScratchContextReader(GetSwiftScratchContextLock(), *swift_scratch_ctx);
+  return SwiftScratchContextReader(GetSwiftScratchContextLock(),
+                                   *swift_scratch_ctx);
 }
 
 static SharedMutex *

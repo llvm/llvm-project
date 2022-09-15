@@ -437,12 +437,13 @@ public:
 
   const SwiftModuleMap &GetModuleCache() { return m_swift_module_cache; }
 
+  void RaiseFatalError(std::string msg) { m_fatal_errors.SetErrorString(msg); }
   static bool HasFatalErrors(swift::ASTContext *ast_context);
-
   bool HasFatalErrors() const {
     return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
   }
 
+  Status GetAllErrors() const;
   Status GetFatalErrors() const;
   void DiagnoseWarnings(Process &process, Module &module) const override;
   void LogFatalErrors() const;

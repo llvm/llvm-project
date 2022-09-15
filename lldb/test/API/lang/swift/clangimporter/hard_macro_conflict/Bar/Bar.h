@@ -1,0 +1,3 @@
+MACRO Bar {
+  int i;
+};

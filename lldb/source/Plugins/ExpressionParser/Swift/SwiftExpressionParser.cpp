@@ -1206,15 +1206,12 @@ struct SwiftASTContextError : public llvm::ErrorInfo<SwiftASTContextError> {
 struct ModuleImportError : public llvm::ErrorInfo<ModuleImportError> {
   static char ID;
   std::string msg;
-  bool is_explicit;
+  bool is_new_dylib;
 
-  ModuleImportError(llvm::Twine message, bool is_explicit = false)
-      : msg(message.str()), is_explicit(is_explicit) {}
+  ModuleImportError(llvm::Twine message, bool is_new_dylib = false)
+      : msg(message.str()), is_new_dylib(is_new_dylib) {}
   void log(llvm::raw_ostream &OS) const override {
-    if (is_explicit)
-      OS << "error while processing import statement:";
-    else
-      OS << "error while importing implicit dependency:";
+    OS << "error while processing module import: ";
     OS << msg;
   }
   std::error_code convertToErrorCode() const override {
@@ -1406,7 +1403,9 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   swift::performImportResolution(*source_file);
 
   if (swift_ast_context.HasErrors())
-    return make_error<SwiftASTContextError>();
+    return make_error<ModuleImportError>(
+        swift_ast_context.GetAllErrors().AsCString(
+            "Explicit module import error"));
 
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
@@ -1471,9 +1470,14 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
                                            process_sp, *source_file,
                                            auto_import_error)) {
       const char *msg = auto_import_error.AsCString();
-      if (!msg)
-        msg = "error status positive, but import still failed";
-      return make_error<ModuleImportError>(msg, /*explicit=*/true);
+      if (!msg) {
+        // The import itself succeeded, but the AST context is in a
+        // fatal error state. One way this can happen is if the import
+        // triggered a dylib import, in which case the context is
+        // purposefully poisoned.
+        msg = "import may have triggered a dylib import";
+      }
+      return make_error<ModuleImportError>(msg, /*is_new_dylib=*/true);
     }
   }
 
@@ -1523,43 +1527,43 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       *this, m_stack_frame_wp, m_sc, *m_exe_scope, m_options, repl, playground);
 
   if (!parsed_expr) {
-    bool user_import = false;
     bool retry = false;
-    handleAllErrors(parsed_expr.takeError(),
-                    [&](const ModuleImportError &MIE) {
-                      if (MIE.is_explicit) {
-                        // A new dylib may have poisoned the context.
-                        retry = true;
-                        user_import = true;
-                      }
-                      if (m_swift_ast_ctx.GetClangImporter())
-                        // Already on backup power.
-                        diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                                     MIE.message());
-                      else
-                        // Discard the shared scratch context and retry.
-                        retry = true;
-                    },
-                    [&](const SwiftASTContextError &SACE) {
-                      DiagnoseSwiftASTContextError();
-                    },
-                    [&](const StringError &SE) {
-                      diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                                   SE.getMessage());
-                    },
-                    [](const PropagatedError &P) {});
-
-    // Unrecoverable error?
-    if (!retry)
-      return 1;
+    handleAllErrors(
+        parsed_expr.takeError(),
+        [&](const ModuleImportError &MIE) {
+          diagnostic_manager.PutString(eDiagnosticSeverityError, MIE.message());
+          // There are no fallback contexts in REPL and playgrounds.
+          if (repl || playground || MIE.is_new_dylib) {
+            retry = true;
+            return;
+          }
+          if (!m_sc.target_sp->UseScratchTypesystemPerModule()) {
+            // This, together with the fatal error forces
+            // a per-module scratch to be instantiated on
+            // retry.
+            m_sc.target_sp->SetUseScratchTypesystemPerModule(true);
+            m_swift_ast_ctx.RaiseFatalError(MIE.message());
+            retry = true;
+          }
+        },
+        [&](const SwiftASTContextError &SACE) {
+          DiagnoseSwiftASTContextError();
+        },
+        [&](const StringError &SE) {
+          diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                       SE.getMessage());
+        },
+        [](const PropagatedError &P) {});
 
     // Signal that we want to retry the expression exactly once with a
     // fresh SwiftASTContext initialized with the flags from the
     // current lldb::Module / Swift dylib to avoid header search
     // mismatches.
-    if (!user_import)
-      m_sc.target_sp->SetUseScratchTypesystemPerModule(true);
-    return 2;
+    if (retry)
+      return 2;
+
+    // Unrecoverable error.
+    return 1;
   }
 
   swift::bindExtensions(parsed_expr->module);

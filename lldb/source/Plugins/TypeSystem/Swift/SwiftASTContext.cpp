@@ -2154,17 +2154,22 @@ Status SwiftASTContext::IsCompatible() { return GetFatalErrors(); }
 
 Status SwiftASTContext::GetFatalErrors() const {
   Status error;
-  if (HasFatalErrors()) {
-    error = m_fatal_errors;
-    if (error.Success()) {
-      // Retrieve the error message from the DiagnosticConsumer.
-      DiagnosticManager diagnostic_manager;
-      PrintDiagnostics(diagnostic_manager);
-      error.SetErrorString(diagnostic_manager.GetString());
-    }
+  if (HasFatalErrors())
+    error = GetAllErrors();
+  return error;
+}
+
+Status SwiftASTContext::GetAllErrors() const {
+  Status error = m_fatal_errors;
+  if (error.Success()) {
+    // Retrieve the error message from the DiagnosticConsumer.
+    DiagnosticManager diagnostic_manager;
+    PrintDiagnostics(diagnostic_manager);
+    error.SetErrorString(diagnostic_manager.GetString());
   }
   return error;
 }
+
 
 void SwiftASTContext::LogFatalErrors() const {
   // Avoid spamming the health log with redundant copies of the fatal error.
