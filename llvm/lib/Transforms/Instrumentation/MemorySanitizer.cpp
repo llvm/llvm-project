@@ -1369,9 +1369,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(ShadowData.OrigIns == Instruction);
       IRBuilder<> IRB(Instruction);
 
-      LLVM_DEBUG(dbgs() << "  SHAD0 : " << *ShadowData.Shadow << "\n");
-      Value *ConvertedShadow = convertShadowToScalar(ShadowData.Shadow, IRB);
-      LLVM_DEBUG(dbgs() << "  SHAD1 : " << *ConvertedShadow << "\n");
+      Value *ConvertedShadow = ShadowData.Shadow;
 
       if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
         if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
@@ -1389,21 +1387,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         // Fallback to runtime check, which still can be optimized out later.
       }
 
-      // Work around to keep existing tests.
-      // FIXME: update tests and remove.
-      if (ClInstrumentationWithCallThreshold >= 0 &&
-          SplittableBlocksCount >= ClInstrumentationWithCallThreshold) {
-        materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin);
-        continue;
-      }
-
       if (!Combine) {
         materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin);
         continue;
       }
 
-      Value *BoolShadow = convertToBool(ConvertedShadow, IRB, "_mscmp");
-      Shadow = Shadow ? IRB.CreateOr(Shadow, BoolShadow, "_msor") : BoolShadow;
+      if (!Shadow) {
+        Shadow = ConvertedShadow;
+        continue;
+      }
+
+      Shadow = convertToBool(Shadow, IRB, "_mscmp");
+      ConvertedShadow = convertToBool(ConvertedShadow, IRB, "_mscmp");
+      Shadow = IRB.CreateOr(Shadow, ConvertedShadow, "_msor");
     }
 
     if (Shadow) {
@@ -1600,7 +1596,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Convert a scalar value to an i1 by comparing with 0
   Value *convertToBool(Value *V, IRBuilder<> &IRB, const Twine &name = "") {
     Type *VTy = V->getType();
-    assert(VTy->isIntegerTy());
+    if (!VTy->isIntegerTy())
+      return convertToBool(convertShadowToScalar(V, IRB), IRB, name);
     if (VTy->getIntegerBitWidth() == 1)
       // Just converting a bool to a bool, so do nothing.
       return V;
