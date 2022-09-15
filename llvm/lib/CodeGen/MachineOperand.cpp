@@ -1114,15 +1114,24 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "dereferenceable ";
   if (isInvariant())
     OS << "invariant ";
-  if (getFlags() & MachineMemOperand::MOTargetFlag1)
-    OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag1)
-       << "\" ";
-  if (getFlags() & MachineMemOperand::MOTargetFlag2)
-    OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag2)
-       << "\" ";
-  if (getFlags() & MachineMemOperand::MOTargetFlag3)
-    OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag3)
-       << "\" ";
+  if (TII) {
+    if (getFlags() & MachineMemOperand::MOTargetFlag1)
+      OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag1)
+         << "\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag2)
+      OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag2)
+         << "\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag3)
+      OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag3)
+         << "\" ";
+  } else {
+    if (getFlags() & MachineMemOperand::MOTargetFlag1)
+      OS << "\"MOTargetFlag1\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag2)
+      OS << "\"MOTargetFlag2\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag3)
+      OS << "\"MOTargetFlag3\" ";
+  }
 
   assert((isLoad() || isStore()) &&
          "machine memory operand must be a load or store (or both)");
