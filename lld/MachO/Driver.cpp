@@ -1200,40 +1200,13 @@ static void createAliases() {
   for (const auto &pair : config->aliasedSymbols) {
     if (const auto &sym = symtab->find(pair.first)) {
       if (const auto &defined = dyn_cast<Defined>(sym)) {
-        symtab->aliasDefined(defined, pair.second, defined->getFile());
-      } else {
-        error("TODO: support aliasing to symbols of kind " +
-              Twine(sym->kind()));
+        symtab->aliasDefined(defined, pair.second);
+        continue;
       }
-    } else {
-      warn("undefined base symbol '" + pair.first + "' for alias '" +
-           pair.second + "'\n");
     }
-  }
 
-  for (const InputFile *file : inputFiles) {
-    if (auto *objFile = dyn_cast<ObjFile>(file)) {
-      for (const AliasSymbol *alias : objFile->aliases) {
-        if (const auto &aliased = symtab->find(alias->getAliasedName())) {
-          if (const auto &defined = dyn_cast<Defined>(aliased)) {
-            symtab->aliasDefined(defined, alias->getName(), alias->getFile(),
-                                 alias->privateExtern);
-          } else {
-            // Common, dylib, and undefined symbols are all valid alias
-            // referents (undefineds can become valid Defined symbols later on
-            // in the link.)
-            error("TODO: support aliasing to symbols of kind " +
-                  Twine(aliased->kind()));
-          }
-        } else {
-          // This shouldn't happen since MC generates undefined symbols to
-          // represent the alias referents. Thus we fatal() instead of just
-          // warning here.
-          fatal("unable to find alias referent " + alias->getAliasedName() +
-                " for " + alias->getName());
-        }
-      }
-    }
+    warn("undefined base symbol '" + pair.first + "' for alias '" +
+         pair.second + "'\n");
   }
 }
 

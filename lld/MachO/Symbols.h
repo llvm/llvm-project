@@ -39,7 +39,6 @@ public:
     DylibKind,
     LazyArchiveKind,
     LazyObjectKind,
-    AliasKind,
   };
 
   virtual ~Symbol() {}
@@ -322,26 +321,6 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
 };
 
-// Represents N_INDR symbols. Note that if we are given valid, linkable inputs,
-// then all AliasSymbol instances will be converted into one of the other Symbol
-// types after `createAliases()` runs.
-class AliasSymbol final : public Symbol {
-public:
-  AliasSymbol(InputFile *file, StringRef name, StringRef aliasedName,
-              bool isPrivateExtern)
-      : Symbol(AliasKind, name, file), privateExtern(isPrivateExtern),
-        aliasedName(aliasedName) {}
-
-  StringRef getAliasedName() const { return aliasedName; }
-
-  static bool classof(const Symbol *s) { return s->kind() == AliasKind; }
-
-  const bool privateExtern;
-
-private:
-  StringRef aliasedName;
-};
-
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
@@ -349,7 +328,6 @@ union SymbolUnion {
   alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
   alignas(LazyArchive) char e[sizeof(LazyArchive)];
   alignas(LazyObject) char f[sizeof(LazyObject)];
-  alignas(AliasSymbol) char g[sizeof(AliasSymbol)];
 };
 
 template <typename T, typename... ArgT>

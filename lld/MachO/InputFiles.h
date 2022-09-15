@@ -44,7 +44,6 @@ struct PlatformInfo;
 class ConcatInputSection;
 class Symbol;
 class Defined;
-class AliasSymbol;
 struct Reloc;
 enum class RefState : uint8_t;
 
@@ -177,7 +176,6 @@ public:
   std::vector<CallGraphEntry> callGraph;
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
   std::vector<OptimizationHint> optimizationHints;
-  std::vector<AliasSymbol *> aliases;
 
 private:
   llvm::once_flag initDwarf;
@@ -188,7 +186,7 @@ private:
                     ArrayRef<typename LP::nlist> nList, const char *strtab,
                     bool subsectionsViaSymbols);
   template <class NList>
-  Symbol *parseNonSectionSymbol(const NList &sym, const char *strtab);
+  Symbol *parseNonSectionSymbol(const NList &sym, StringRef name);
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
