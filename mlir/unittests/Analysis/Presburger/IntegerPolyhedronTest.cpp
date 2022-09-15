@@ -1479,7 +1479,8 @@ TEST(IntegerPolyhedronTest, containsPointNoLocal) {
   IntegerPolyhedron poly3 =
       parseIntegerPolyhedron("(x, y) : (2*x - y >= 0, y - 3*x >= 0)");
 
-  // TODO: Using 0 instead of -0 makes this call ambiguous. Fix this.
+  // -0 instead of 0 to prevent unwanted conversion to pointer types,
+  // which would lead to ambiguity in overload resolution.
   EXPECT_TRUE(poly3.containsPointNoLocal({-0, 0}));
   EXPECT_FALSE(poly3.containsPointNoLocal({1, 0}));
 }
