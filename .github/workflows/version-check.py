@@ -12,7 +12,7 @@ def get_version_from_tag(tag):
             # We have an rc tag.
             return m.group(1,2,3)
         # We have a final release tag.
-        return (m.group(1), m.group(2), int(m.group(3)) + 1)
+        return (m.group(1), m.group(2), str(int(m.group(3)) + 1))
 
     m = re.match('llvmorg-([0-9]+)-init', tag)
     if m:
