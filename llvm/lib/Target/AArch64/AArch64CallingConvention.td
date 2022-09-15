@@ -451,6 +451,10 @@ def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2
                                                  (sequence "X%u",19, 28),
                                                  LR, FP)>;
 
+// The SMSTART/SMSTOP instructions preserve only GPR registers.
+def CSR_AArch64_SMStartStop : CalleeSavedRegs<(add (sequence "X%u", 0, 28),
+                                                   LR, FP)>;
+
 def CSR_AArch64_AAPCS_SwiftTail
     : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X20, X22)>;
 
