@@ -182,22 +182,25 @@ void __kmpc_free_shared(void *Ptr, uint64_t Bytes);
 /// memory configured at launch.
 void *__kmpc_get_dynamic_shared();
 
-/// Return a pointer in memory to store the aggregate argument of an outlined
-/// parallel region, either using a local memory allocation when in SPMD mode
-/// expected in \p LocalPtr, or from shared memory, expected in \p GlobalPtr.
-void *__kmpc_alloc_aggregate_arg(void *LocalPtr, void *GlobalPtr);
+/// Allocate sufficient space for \p NumArgs sequential `void*` and store the
+/// allocation address in \p GlobalArgs.
+///
+/// Called by the main thread prior to a parallel region.
+///
+/// We also remember it in GlobalArgsPtr to ensure the worker threads and
+/// deallocation function know the allocation address too.
+void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t NumArgs);
 
-/// Store the pointer of the struct aggregating shared variables in
+/// Deallocate the memory allocated by __kmpc_begin_sharing_variables.
+///
+/// Called by the main thread after a parallel region.
+void __kmpc_end_sharing_variables();
+
+/// Store the allocation address obtained via __kmpc_begin_sharing_variables in
 /// \p GlobalArgs.
 ///
 /// Called by the worker threads in the parallel region (function).
-void __kmpc_get_shared_variables_aggregate(void **GlobalArgs);
-
-/// Store the pointer of the struct aggregating shared variables in \p args
-/// to team-shared memory for worker threads to access.
-///
-/// Called by the main thread to initiate parallel region execution.
-void __kmpc_set_shared_variables_aggregate(void *args);
+void __kmpc_get_shared_variables(void ***GlobalArgs);
 
 /// External interface to get the thread ID.
 uint32_t __kmpc_get_hardware_thread_id_in_block();

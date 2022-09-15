@@ -447,7 +447,7 @@ __OMP_RTL(__kmpc_target_init, false, Int32, IdentPtr, Int8, Int1, Int1)
 __OMP_RTL(__kmpc_target_deinit, false, Void, IdentPtr, Int8, Int1)
 __OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
 __OMP_RTL(__kmpc_parallel_51, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
-          VoidPtr, VoidPtr, VoidPtr)
+          VoidPtr, VoidPtr, VoidPtrPtr, SizeTy)
 __OMP_RTL(__kmpc_kernel_parallel, false, Int1, VoidPtrPtr)
 __OMP_RTL(__kmpc_kernel_end_parallel, false, Void, )
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
@@ -464,8 +464,9 @@ __OMP_RTL(__kmpc_shuffle_int64, false, Int64, Int64, Int16, Int16)
 
 __OMP_RTL(__kmpc_alloc_shared, false, VoidPtr, SizeTy)
 __OMP_RTL(__kmpc_free_shared, false, Void, VoidPtr, SizeTy)
-__OMP_RTL(__kmpc_alloc_aggregate_arg, false, VoidPtr, VoidPtr, VoidPtr)
-__OMP_RTL(__kmpc_get_shared_variables_aggregate, false, Void, VoidPtrPtr)
+__OMP_RTL(__kmpc_begin_sharing_variables, false, Void, VoidPtrPtrPtr, SizeTy)
+__OMP_RTL(__kmpc_end_sharing_variables, false, Void, )
+__OMP_RTL(__kmpc_get_shared_variables, false, Void, VoidPtrPtrPtr)
 __OMP_RTL(__kmpc_parallel_level, false, Int8, )
 __OMP_RTL(__kmpc_is_spmd_exec_mode, false, Int8, )
 __OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
@@ -920,9 +921,6 @@ __OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
   AllocSizeAttr(0, None)), ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(EnumAttr(NoCapture), EnumAttr(AllocatedPointer))))
-
-__OMP_RTL_ATTRS(__kmpc_alloc_aggregate_arg, DefaultAttrs, ReturnPtrAttrs,
-                ParamAttrs())
 
 __OMP_RTL_ATTRS(__kmpc_alloc, DefaultAttrs, ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_aligned_alloc, DefaultAttrs, ReturnPtrAttrs,

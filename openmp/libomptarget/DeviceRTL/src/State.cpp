@@ -411,21 +411,41 @@ void *llvm_omp_target_dynamic_shared_alloc() {
 
 void *llvm_omp_get_dynamic_shared() { return __kmpc_get_dynamic_shared(); }
 
-void *__kmpc_alloc_aggregate_arg(void *LocalPtr, void *GlobalPtr) {
-  return (__kmpc_is_spmd_exec_mode() ? LocalPtr : GlobalPtr);
+/// Allocate storage in shared memory to communicate arguments from the main
+/// thread to the workers in generic mode. If we exceed
+/// NUM_SHARED_VARIABLES_IN_SHARED_MEM we will malloc space for communication.
+constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
+
+[[clang::loader_uninitialized]] static void
+    *SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
+#pragma omp allocate(SharedMemVariableSharingSpace)                            \
+    allocator(omp_pteam_mem_alloc)
+[[clang::loader_uninitialized]] static void **SharedMemVariableSharingSpacePtr;
+#pragma omp allocate(SharedMemVariableSharingSpacePtr)                         \
+    allocator(omp_pteam_mem_alloc)
+
+void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
+  FunctionTracingRAII();
+  if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {
+    SharedMemVariableSharingSpacePtr = &SharedMemVariableSharingSpace[0];
+  } else {
+    SharedMemVariableSharingSpacePtr = (void **)memory::allocGlobal(
+        nArgs * sizeof(void *), "new extended args");
+    ASSERT(SharedMemVariableSharingSpacePtr != nullptr &&
+           "Nullptr returned by malloc!");
+  }
+  *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 
-/// Allocate storage in shared memory to communicate the struct aggregating
-/// arguments from the main thread to the workers in generic mode.
-[[clang::loader_uninitialized]] static void *SharedMemAggregatePtr[1];
-#pragma omp allocate(SharedMemAggregatePtr) allocator(omp_pteam_mem_alloc)
-
-void __kmpc_get_shared_variables_aggregate(void **GlobalArgs) {
-  *GlobalArgs = SharedMemAggregatePtr[0];
+void __kmpc_end_sharing_variables() {
+  FunctionTracingRAII();
+  if (SharedMemVariableSharingSpacePtr != &SharedMemVariableSharingSpace[0])
+    memory::freeGlobal(SharedMemVariableSharingSpacePtr, "new extended args");
 }
 
-void __kmpc_set_shared_variables_aggregate(void *args) {
-  SharedMemAggregatePtr[0] = args;
+void __kmpc_get_shared_variables(void ***GlobalArgs) {
+  FunctionTracingRAII();
+  *GlobalArgs = SharedMemVariableSharingSpacePtr;
 }
 }
 #pragma omp end declare target
