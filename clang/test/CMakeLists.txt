@@ -62,7 +62,6 @@ endif ()
 list(APPEND CLANG_TEST_DEPS
   apinotes-test
   c-index-test
-  cir-tool
   clang
   clang-fuzzer-dictionary
   clang-resource-headers
@@ -82,7 +81,13 @@ list(APPEND CLANG_TEST_DEPS
   hmaptool
   mlir-translate
   )
-  
+
+if(CLANG_ENABLE_CIR)
+  list(APPEND CLANG_TEST_DEPS
+    cir-tool
+    )
+endif()
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
