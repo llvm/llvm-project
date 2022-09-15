@@ -2250,7 +2250,8 @@ void AsmPrinter::Impl::printType(Type type) {
           os << 'x';
         }
         printType(memrefTy.getElementType());
-        if (!memrefTy.getLayout().isIdentity()) {
+        MemRefLayoutAttrInterface layout = memrefTy.getLayout();
+        if (!layout.isa<AffineMapAttr>() || !layout.isIdentity()) {
           os << ", ";
           printAttribute(memrefTy.getLayout(), AttrTypeElision::May);
         }

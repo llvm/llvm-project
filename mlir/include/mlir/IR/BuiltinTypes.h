@@ -466,11 +466,6 @@ bool isStrided(MemRefType t);
 /// Return null if the layout is not compatible with a strided layout.
 AffineMap getStridedLinearLayoutMap(MemRefType t);
 
-/// Helper determining if a memref is static-shape and contiguous-row-major
-/// layout, while still allowing for an arbitrary offset (any static or
-/// dynamic value).
-bool isStaticShapeAndContiguousRowMajor(MemRefType memrefType);
-
 } // namespace mlir
 
 #endif // MLIR_IR_BUILTINTYPES_H
