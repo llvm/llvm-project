@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64ISELLOWERING_H
 
 #include "AArch64.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -1173,6 +1174,11 @@ private:
   // with BITCAST used otherwise.
   // This function does not handle predicate bitcasts.
   SDValue getSVESafeBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) const;
+
+  // Returns the runtime value for PSTATE.SM. When the function is streaming-
+  // compatible, this generates a call to __arm_sme_state.
+  SDValue getPStateSM(SelectionDAG &DAG, SDValue Chain, SMEAttrs Attrs,
+                      SDLoc DL, EVT VT) const;
 
   bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
                                               LLT Ty2) const override;
