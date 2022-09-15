@@ -74,12 +74,11 @@ func.func @main(%t: tensor<5xf32>) -> (f32, f32) {
 // -----
 
 // CHECK: #[[$map2a:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-// CHECK: #[[$map2b:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 20 + s0 + d1)>
 // CHECK-LABEL: func @callee(
 //  CHECK-SAME:     %{{.*}}: index,
 //  CHECK-SAME:     %[[r:.*]]: memref<2x5xf32, #[[$map2a]]>) {
 //       CHECK:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10x20xf32>
-//       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]{{.*}} : memref<10x20xf32> to memref<2x5xf32, #[[$map2b]]>
+//       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]{{.*}} : memref<10x20xf32> to memref<2x5xf32, strided<[20, 1], offset: ?>>
 //       CHECK:   %[[casted:.*]] = memref.cast %[[subview]]
 //       CHECK:   memref.copy %[[casted]], %[[r]]
 //       CHECK:   memref.dealloc %[[alloc]]
@@ -98,9 +97,8 @@ func.func @main(%t: tensor<5xf32>) -> (f32, f32) {
 //       CHECK-NO-LAYOUT:   memref.copy %[[alloc2]], %[[r]]
 //       CHECK-NO-LAYOUT:   memref.dealloc %[[alloc2]]
 
-// CHECK-BASELINE: #[[$map2:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 20 + s0 + d1)>
 // CHECK-BASELINE-LABEL: func @callee(
-//  CHECK-BASELINE-SAME:     %{{.*}}: index) -> memref<2x5xf32, #[[$map2]]> {
+//  CHECK-BASELINE-SAME:     %{{.*}}: index) -> memref<2x5xf32, strided<[20, 1], offset: ?>> {
 //       CHECK-BASELINE:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10x20xf32>
 //       CHECK-BASELINE:   %[[subview:.*]] = memref.subview %[[alloc]]
 //       CHECK-BASELINE:   return %[[subview]]

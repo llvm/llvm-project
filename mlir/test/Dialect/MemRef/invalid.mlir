@@ -684,7 +684,7 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>' or a rank-reduced version. (mismatch of result sizes)}}
+  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, strided<[64, 4, 1]>>' or a rank-reduced version. (mismatch of result sizes)}}
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to memref<16x4xf32>
   return
@@ -694,7 +694,7 @@ func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : i
 
 func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 8)>>' or a rank-reduced version. (mismatch of result sizes)}}
+  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, strided<[64, 4, 1], offset: 8>>' or a rank-reduced version. (mismatch of result sizes)}}
   %1 = memref.subview %0[0, 2, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to memref<16x4xf32>
   return
@@ -703,7 +703,7 @@ func.func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : i
 // -----
 
 func.func @invalid_rank_reducing_subview(%arg0 : memref<?x?xf32>, %arg1 : index, %arg2 : index) {
-  // expected-error@+1 {{expected result type to be 'memref<?x1xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' or a rank-reduced version. (mismatch of result layout)}}
+  // expected-error@+1 {{expected result type to be 'memref<?x1xf32, strided<[?, 1], offset: ?>>' or a rank-reduced version. (mismatch of result layout)}}
   %0 = memref.subview %arg0[0, %arg1][%arg2, 1][1, 1] : memref<?x?xf32> to memref<?xf32>
   return
 }
@@ -715,7 +715,7 @@ func.func @invalid_rank_reducing_subview(%arg0 : memref<?x?xf32>, %arg1 : index,
 func.func @subview_bad_offset_1(%arg0: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1], offset: ?>>' or a rank-reduced version}}
   %s2 = memref.subview %arg0[%c8, %c8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
   return
 }
@@ -727,20 +727,18 @@ func.func @subview_bad_offset_1(%arg0: memref<16x16xf32>) {
 func.func @subview_bad_offset_2(%arg0: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1], offset: ?>>' or a rank-reduced version}}
   %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
   return
 }
 
 // -----
 
-#map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1 + s0 * 437)>
-
 func.func @subview_bad_offset_3(%arg0: memref<16x16xf32>) {
   %c0 = arith.constant 0 : index
   %c8 = arith.constant 8 : index
-  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, affine_map<(d0, d1)[s0] -> (d0 * 16 + s0 + d1)>>' or a rank-reduced version}}
-  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, #map0>
+  // expected-error @+1 {{expected result type to be 'memref<8x8xf32, strided<[16, 1], offset: ?>>' or a rank-reduced version}}
+  %s2 = memref.subview %arg0[%c8, 8][8, 8][1, 1]  : memref<16x16xf32> to memref<8x8xf32, strided<[16, 1], offset: 437>>
   return
 }
 
