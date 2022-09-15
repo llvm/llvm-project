@@ -985,6 +985,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
         TII->get(Opcode), MI.getDebugLoc(), /*NoImplicit=*/true);
     MBB.insert(MBBI, NewMI);
     MachineInstrBuilder MIB1(MF, NewMI);
+    MIB1->setPCSections(MF, MI.getPCSections());
     MIB1.addReg(MI.getOperand(0).getReg(), RegState::Define)
         .add(MI.getOperand(1))
         .add(MI.getOperand(2))
