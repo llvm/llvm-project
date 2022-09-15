@@ -220,10 +220,13 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd,
   ArgList = OptTable.ParseArgs(
       llvm::makeArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
       /*FlagsToInclude=*/
-      IsCLMode ? (driver::options::CLOption | driver::options::CoreOption)
+      IsCLMode ? (driver::options::CLOption | driver::options::CoreOption |
+                  driver::options::CLDXCOption)
                : /*everything*/ 0,
       /*FlagsToExclude=*/driver::options::NoDriverOption |
-          (IsCLMode ? 0 : driver::options::CLOption));
+          (IsCLMode
+               ? 0
+               : (driver::options::CLOption | driver::options::CLDXCOption)));
 
   llvm::SmallVector<unsigned, 1> IndicesToDrop;
   // Having multiple architecture options (e.g. when building fat binaries)
