@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -13179,6 +13180,60 @@ bool AArch64TargetLowering::shouldSinkOperands(
   }
   default:
     return false;
+  }
+  return false;
+}
+
+static void createTblShuffleForZExt(ZExtInst *ZExt, bool IsLittleEndian) {
+  Value *Op = ZExt->getOperand(0);
+  auto *SrcTy = dyn_cast<FixedVectorType>(Op->getType());
+  auto *DstTy = dyn_cast<FixedVectorType>(ZExt->getType());
+  unsigned NumElts = SrcTy->getNumElements();
+  IRBuilder<> Builder(ZExt);
+  SmallVector<int> Mask(4 * NumElts, NumElts);
+  // Create a mask that selects <0,0,0,Op[i]> for each lane of vector of i32 to
+  // replace the original ZExt. This can later be lowered to a set of tbl
+  // instructions.
+  for (unsigned i = 0; i < NumElts; i++) {
+    if (IsLittleEndian)
+      Mask[i * 4] = i;
+    else
+      Mask[i * 4 + 3] = i;
+  }
+
+  auto *FirstEltZero = Builder.CreateInsertElement(
+      PoisonValue::get(SrcTy), Builder.getInt8(0), uint64_t(0));
+  Value *Result = Builder.CreateShuffleVector(Op, FirstEltZero, Mask);
+  Result = Builder.CreateBitCast(Result, DstTy);
+  ZExt->replaceAllUsesWith(Result);
+  ZExt->eraseFromParent();
+}
+
+bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
+                                                               Loop *L) const {
+  // Try to optimize conversions using tbl. This requires materializing constant
+  // index vectors, which can increase code size and add loads. Skip the
+  // transform unless the conversion is in a loop block guaranteed to execute
+  // and we are not optimizing for size.
+  Function *F = I->getParent()->getParent();
+  if (!L || L->getHeader() != I->getParent() || F->hasMinSize() ||
+      F->hasOptSize())
+    return false;
+
+  auto *SrcTy = dyn_cast<FixedVectorType>(I->getOperand(0)->getType());
+  auto *DstTy = dyn_cast<FixedVectorType>(I->getType());
+  if (!SrcTy || !DstTy)
+    return false;
+
+  // Convert 'zext <(8|16) x i8> %x to <(8|16) x i32>' to a shuffle that can be
+  // lowered to either 2 or 4 tbl instructions to insert the original i8
+  // elements into i32 lanes.
+  auto *ZExt = dyn_cast<ZExtInst>(I);
+  if (ZExt && (SrcTy->getNumElements() == 8 || SrcTy->getNumElements() == 16) &&
+      SrcTy->getElementType()->isIntegerTy(8) &&
+      DstTy->getElementType()->isIntegerTy(32)) {
+    createTblShuffleForZExt(ZExt, Subtarget->isLittleEndian());
+    return true;
   }
   return false;
 }
