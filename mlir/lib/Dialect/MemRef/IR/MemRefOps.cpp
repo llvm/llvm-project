@@ -1761,7 +1761,7 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
 
 /// Compute the layout map after expanding a given source MemRef type with the
 /// specified reassociation indices.
-static FailureOr<AffineMap>
+static FailureOr<StridedLayoutAttr>
 computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
                          ArrayRef<ReassociationIndices> reassociation) {
   int64_t srcOffset;
@@ -1798,8 +1798,7 @@ computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
   }
   auto resultStrides = llvm::to_vector<8>(llvm::reverse(reverseResultStrides));
   resultStrides.resize(resultShape.size(), 1);
-  return makeStridedLinearLayoutMap(resultStrides, srcOffset,
-                                    srcType.getContext());
+  return StridedLayoutAttr::get(srcType.getContext(), srcOffset, resultStrides);
 }
 
 static FailureOr<MemRefType>
@@ -1814,14 +1813,12 @@ computeExpandedType(MemRefType srcType, ArrayRef<int64_t> resultShape,
   }
 
   // Source may not be contiguous. Compute the layout map.
-  FailureOr<AffineMap> computedLayout =
+  FailureOr<StridedLayoutAttr> computedLayout =
       computeExpandedLayoutMap(srcType, resultShape, reassociation);
   if (failed(computedLayout))
     return failure();
-  auto computedType =
-      MemRefType::get(resultShape, srcType.getElementType(), *computedLayout,
-                      srcType.getMemorySpaceAsInt());
-  return canonicalizeStridedLayout(computedType);
+  return MemRefType::get(resultShape, srcType.getElementType(), *computedLayout,
+                         srcType.getMemorySpace());
 }
 
 void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
@@ -1855,10 +1852,9 @@ LogicalResult ExpandShapeOp::verify() {
     return emitOpError("invalid source layout map");
 
   // Check actual result type.
-  auto canonicalizedResultType = canonicalizeStridedLayout(resultType);
-  if (*expectedResultType != canonicalizedResultType)
+  if (*expectedResultType != resultType)
     return emitOpError("expected expanded type to be ")
-           << *expectedResultType << " but found " << canonicalizedResultType;
+           << *expectedResultType << " but found " << resultType;
 
   return success();
 }
@@ -1877,7 +1873,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// not possible to check this by inspecting a MemRefType in the general case.
 /// If non-contiguity cannot be checked statically, the collapse is assumed to
 /// be valid (and thus accepted by this function) unless `strict = true`.
-static FailureOr<AffineMap>
+static FailureOr<StridedLayoutAttr>
 computeCollapsedLayoutMap(MemRefType srcType,
                           ArrayRef<ReassociationIndices> reassociation,
                           bool strict = false) {
@@ -1940,13 +1936,12 @@ computeCollapsedLayoutMap(MemRefType srcType,
         return failure();
     }
   }
-  return makeStridedLinearLayoutMap(resultStrides, srcOffset,
-                                    srcType.getContext());
+  return StridedLayoutAttr::get(srcType.getContext(), srcOffset, resultStrides);
 }
 
 bool CollapseShapeOp::isGuaranteedCollapsible(
     MemRefType srcType, ArrayRef<ReassociationIndices> reassociation) {
-  // MemRefs with standard layout are always collapsible.
+  // MemRefs with identity layout are always collapsible.
   if (srcType.getLayout().isIdentity())
     return true;
 
@@ -1978,14 +1973,12 @@ computeCollapsedType(MemRefType srcType,
   // Source may not be fully contiguous. Compute the layout map.
   // Note: Dimensions that are collapsed into a single dim are assumed to be
   // contiguous.
-  FailureOr<AffineMap> computedLayout =
+  FailureOr<StridedLayoutAttr> computedLayout =
       computeCollapsedLayoutMap(srcType, reassociation);
   assert(succeeded(computedLayout) &&
          "invalid source layout map or collapsing non-contiguous dims");
-  auto computedType =
-      MemRefType::get(resultShape, srcType.getElementType(), *computedLayout,
-                      srcType.getMemorySpaceAsInt());
-  return canonicalizeStridedLayout(computedType);
+  return MemRefType::get(resultShape, srcType.getElementType(), *computedLayout,
+                         srcType.getMemorySpace());
 }
 
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
@@ -2021,21 +2014,19 @@ LogicalResult CollapseShapeOp::verify() {
     // Source may not be fully contiguous. Compute the layout map.
     // Note: Dimensions that are collapsed into a single dim are assumed to be
     // contiguous.
-    FailureOr<AffineMap> computedLayout =
+    FailureOr<StridedLayoutAttr> computedLayout =
         computeCollapsedLayoutMap(srcType, getReassociationIndices());
     if (failed(computedLayout))
       return emitOpError(
           "invalid source layout map or collapsing non-contiguous dims");
-    auto computedType =
+    expectedResultType =
         MemRefType::get(resultType.getShape(), srcType.getElementType(),
-                        *computedLayout, srcType.getMemorySpaceAsInt());
-    expectedResultType = canonicalizeStridedLayout(computedType);
+                        *computedLayout, srcType.getMemorySpace());
   }
 
-  auto canonicalizedResultType = canonicalizeStridedLayout(resultType);
-  if (expectedResultType != canonicalizedResultType)
+  if (expectedResultType != resultType)
     return emitOpError("expected collapsed type to be ")
-           << expectedResultType << " but found " << canonicalizedResultType;
+           << expectedResultType << " but found " << resultType;
 
   return success();
 }
@@ -2709,24 +2700,26 @@ static MemRefType inferTransposeResultType(MemRefType memRefType,
                                            AffineMap permutationMap) {
   auto rank = memRefType.getRank();
   auto originalSizes = memRefType.getShape();
-  // Compute permuted sizes.
-  SmallVector<int64_t, 4> sizes(rank, 0);
-  for (const auto &en : llvm::enumerate(permutationMap.getResults()))
-    sizes[en.index()] =
-        originalSizes[en.value().cast<AffineDimExpr>().getPosition()];
-
-  // Compute permuted strides.
   int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto res = getStridesAndOffset(memRefType, strides, offset);
-  assert(succeeded(res) && strides.size() == static_cast<unsigned>(rank));
+  SmallVector<int64_t, 4> originalStrides;
+  auto res = getStridesAndOffset(memRefType, originalStrides, offset);
+  assert(succeeded(res) &&
+         originalStrides.size() == static_cast<unsigned>(rank));
   (void)res;
-  auto map =
-      makeStridedLinearLayoutMap(strides, offset, memRefType.getContext());
-  map = permutationMap ? map.compose(permutationMap) : map;
+
+  // Compute permuted sizes and strides.
+  SmallVector<int64_t> sizes(rank, 0);
+  SmallVector<int64_t> strides(rank, 1);
+  for (const auto &en : llvm::enumerate(permutationMap.getResults())) {
+    unsigned position = en.value().cast<AffineDimExpr>().getPosition();
+    sizes[en.index()] = originalSizes[position];
+    strides[en.index()] = originalStrides[position];
+  }
+
   return MemRefType::Builder(memRefType)
       .setShape(sizes)
-      .setLayout(AffineMapAttr::get(map));
+      .setLayout(
+          StridedLayoutAttr::get(memRefType.getContext(), offset, strides));
 }
 
 void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
