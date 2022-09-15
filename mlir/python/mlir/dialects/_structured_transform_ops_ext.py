@@ -287,7 +287,7 @@ class VectorizeOp:
                ip=None):
     pdl_operation_type = pdl.OperationType.get()
     if isinstance(vectorize_padding, bool):
-      vectorize_padding = BoolAttr.get(vectorize_padding)
+      vectorize_padding = UnitAttr.get()
     super().__init__(
         pdl_operation_type,
         _get_op_result_or_value(target),

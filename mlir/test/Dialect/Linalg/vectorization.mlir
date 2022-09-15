@@ -18,7 +18,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.dot"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
   }
 }
 
@@ -40,7 +40,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
   }
 }
 
@@ -61,7 +61,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
   }
 }
 
@@ -83,7 +83,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.batch_matmul"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
   }
 }
 
@@ -126,7 +126,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true, disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -169,7 +169,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true, disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -199,7 +199,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true, disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -242,7 +242,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true, disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -265,7 +265,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns }
   }
 }
 
@@ -553,7 +553,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  {disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -647,7 +647,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1 { disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -694,7 +694,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  {disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -740,7 +740,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  {disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -775,7 +775,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true, disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -807,7 +807,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1 { vectorize_padding = true }
+    %2 = transform.structured.vectorize %1 { vectorize_padding }
   }
 }
 
@@ -839,7 +839,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { vectorize_padding = true }
+    %2 = transform.structured.vectorize %1  { vectorize_padding }
   }
 }
 
@@ -879,7 +879,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { vectorize_padding = true }
+    %2 = transform.structured.vectorize %1  { vectorize_padding }
   }
 }
 
@@ -913,7 +913,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1 { vectorize_padding = true }
+    %2 = transform.structured.vectorize %1 { vectorize_padding }
   }
 }
 
@@ -949,7 +949,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
     %4 = get_closest_isolated_parent %3
-    %5 = transform.structured.vectorize %4  { vectorize_padding = true }
+    %5 = transform.structured.vectorize %4  { vectorize_padding }
   }
 }
 
@@ -989,7 +989,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
     %4 = get_closest_isolated_parent %3
-    %5 = transform.structured.vectorize %4 { vectorize_padding = true }
+    %5 = transform.structured.vectorize %4 { vectorize_padding }
   }
 }
 
@@ -1026,7 +1026,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
     %4 = get_closest_isolated_parent %3
-    %5 = transform.structured.vectorize %4  { vectorize_padding = true }
+    %5 = transform.structured.vectorize %4  { vectorize_padding }
   }
 }
 
@@ -1097,7 +1097,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %3 = transform.structured.match ops{["tensor.pad"]} in %arg1
     %4 = get_closest_isolated_parent %3
-    %5 = transform.structured.vectorize %4  { vectorize_padding = true }
+    %5 = transform.structured.vectorize %4  { vectorize_padding }
   }
 }
 
@@ -1183,7 +1183,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %4 = get_closest_isolated_parent %3
-    %5 = transform.structured.vectorize %4  { disable_multi_reduction_to_contract_patterns = true, disable_transfer_permutation_map_lowering_patterns = true }
+    %5 = transform.structured.vectorize %4  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
   }
 }
 
@@ -1216,7 +1216,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %3 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %4 = get_closest_isolated_parent %3
-    %5 = transform.structured.vectorize %4 { vectorize_padding = true }
+    %5 = transform.structured.vectorize %4 { vectorize_padding }
   }
 }
 
@@ -1586,6 +1586,6 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns = true, disable_transfer_permutation_map_lowering_patterns = true }
+    %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns, disable_transfer_permutation_map_lowering_patterns }
   }
 }
