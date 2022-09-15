@@ -1018,6 +1018,7 @@ public:
   virtual void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                                 llvm::Function *OutlinedFn,
                                 ArrayRef<llvm::Value *> CapturedVars,
+                                ArrayRef<llvm::Type *> CapturedVarsElemTypes,
                                 const Expr *IfCond, llvm::Value *NumThreads);
 
   /// Emits a critical region.
@@ -1996,6 +1997,7 @@ public:
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
+                        ArrayRef<llvm::Type *> CapturedVarsElemTypes,
                         const Expr *IfCond, llvm::Value *NumThreads) override;
 
   /// Emits a critical region.

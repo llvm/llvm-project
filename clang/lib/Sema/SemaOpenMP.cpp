@@ -4386,12 +4386,22 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     Sema::CapturedParamNameType Params[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
         std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(".previous.lb.", Context.getSizeType().withConst()),
-        std::make_pair(".previous.ub.", Context.getSizeType().withConst()),
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
+
+    VarDecl *PrevLBDecl =
+        buildVarDecl(*this, SourceLocation(), Context.getSizeType().withConst(),
+                     ".captured.omp.previous.lb");
+    VarDecl *PrevUBDecl =
+        buildVarDecl(*this, SourceLocation(), Context.getSizeType().withConst(),
+                     ".captured.omp.previous.ub");
+
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
                              Params);
+
+    MarkVariableReferenced(SourceLocation(), PrevLBDecl);
+    MarkVariableReferenced(SourceLocation(), PrevUBDecl);
+
     break;
   }
   case OMPD_target_teams_distribute_parallel_for:
@@ -4442,14 +4452,24 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     Sema::CapturedParamNameType ParamsParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
         std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(".previous.lb.", Context.getSizeType().withConst()),
-        std::make_pair(".previous.ub.", Context.getSizeType().withConst()),
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
+
+    VarDecl *PrevLBDecl =
+        buildVarDecl(*this, SourceLocation(), Context.getSizeType().withConst(),
+                     ".captured.omp.previous.lb");
+    VarDecl *PrevUBDecl =
+        buildVarDecl(*this, SourceLocation(), Context.getSizeType().withConst(),
+                     ".captured.omp.previous.ub");
+
     // Start a captured region for 'teams' or 'parallel'.  Both regions have
     // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
                              ParamsParallel, /*OpenMPCaptureLevel=*/3);
+
+    MarkVariableReferenced(SourceLocation(), PrevLBDecl);
+    MarkVariableReferenced(SourceLocation(), PrevUBDecl);
+
     break;
   }
 
@@ -4487,14 +4507,24 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     Sema::CapturedParamNameType ParamsParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
         std::make_pair(".bound_tid.", KmpInt32PtrTy),
-        std::make_pair(".previous.lb.", Context.getSizeType().withConst()),
-        std::make_pair(".previous.ub.", Context.getSizeType().withConst()),
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
+
+    VarDecl *PrevLBDecl =
+        buildVarDecl(*this, SourceLocation(), Context.getSizeType().withConst(),
+                     ".captured.omp.previous.lb");
+    VarDecl *PrevUBDecl =
+        buildVarDecl(*this, SourceLocation(), Context.getSizeType().withConst(),
+                     ".captured.omp.previous.ub");
+
     // Start a captured region for 'teams' or 'parallel'.  Both regions have
     // the same implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
                              ParamsParallel, /*OpenMPCaptureLevel=*/1);
+
+    MarkVariableReferenced(SourceLocation(), PrevLBDecl);
+    MarkVariableReferenced(SourceLocation(), PrevUBDecl);
+
     break;
   }
   case OMPD_target_update:
@@ -9745,23 +9775,23 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       CombEUB =
           SemaRef.ActOnFinishFullExpr(CombEUB.get(), /*DiscardedValue*/ false);
 
-      const CapturedDecl *CD = cast<CapturedStmt>(AStmt)->getCapturedDecl();
-      // We expect to have at least 2 more parameters than the 'parallel'
-      // directive does - the lower and upper bounds of the previous schedule.
-      assert(CD->getNumParams() >= 4 &&
-             "Unexpected number of parameters in loop combined directive");
+      const CapturedStmt *CS = cast<CapturedStmt>(AStmt);
 
-      // Set the proper type for the bounds given what we learned from the
-      // enclosed loops.
-      ImplicitParamDecl *PrevLBDecl = CD->getParam(/*PrevLB=*/2);
-      ImplicitParamDecl *PrevUBDecl = CD->getParam(/*PrevUB=*/3);
+      // Refer to captured variables from the associated captured statement of
+      // the combined directive. First captured variable is the previous lower
+      // bound, second is the previous upper bound.
+      VarDecl *PrevLBCapDecl = CS->captures().begin()->getCapturedVar();
+      assert(PrevLBCapDecl &&
+             "Expected captured var for previous LB in combined directive");
+      VarDecl *PrevUBCapDecl =
+          std::next(CS->captures().begin())->getCapturedVar();
+      assert(PrevLBCapDecl &&
+             "Expected captured var for previous UB in combined directive");
 
-      // Previous lower and upper bounds are obtained from the region
-      // parameters.
-      PrevLB =
-          buildDeclRefExpr(SemaRef, PrevLBDecl, PrevLBDecl->getType(), InitLoc);
-      PrevUB =
-          buildDeclRefExpr(SemaRef, PrevUBDecl, PrevUBDecl->getType(), InitLoc);
+      PrevLB = buildDeclRefExpr(SemaRef, PrevLBCapDecl,
+                                PrevLBCapDecl->getType(), InitLoc);
+      PrevUB = buildDeclRefExpr(SemaRef, PrevUBCapDecl,
+                                PrevUBCapDecl->getType(), InitLoc);
     }
   }
 

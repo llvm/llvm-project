@@ -9,7 +9,7 @@ void ffcomplex (int a) {
 
   // CHECK: call noundef { double, double } @__muldc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
   dc *= dc;
-  // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME1:@.*]] to void (i32*, i32*, ...)*), { double, double }* %{{.+}})
+  // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME1:@.*]] to void (i32*, i32*, ...)*), %struct.anon* %{{.+}})
   #pragma omp parallel
   {
     dc *= dc;
@@ -32,7 +32,7 @@ void foo(int a, int b) {
 
   void (*fptr)(void) noexcept = fnoexcp;
 
-  // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME2:@.*]] to void (i32*, i32*, ...)*), void ()** %{{.+}})
+  // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME2:@.*]] to void (i32*, i32*, ...)*), %struct.anon.0* %{{.+}})
   #pragma omp parallel
   {
     fptr();

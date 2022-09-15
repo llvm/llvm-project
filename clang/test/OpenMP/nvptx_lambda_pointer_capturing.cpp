@@ -155,20 +155,20 @@ int main()
 // CHECK: define internal void @{{.+}}omp_loop_ref{{.+}}(
 // CHECK: [[BODY:%body.addr]] = alloca %class.anon*
 // CHECK: [[TMP:%tmp]] = alloca %class.anon*
-// CHECK: [[BODY_REF:%body_ref]] = alloca %class.anon.1*
-// CHECK: [[REF_TMP:%ref.tmp]] = alloca %class.anon.1
-// CHECK: [[TMP8:%tmp.+]] = alloca %class.anon.1*
+// CHECK: [[BODY_REF:%body_ref]] = alloca %class.anon.6*
+// CHECK: [[REF_TMP:%ref.tmp]] = alloca %class.anon.6
+// CHECK: [[TMP8:%tmp.+]] = alloca %class.anon.6*
 // CHECK: [[L0:%.+]] = load %class.anon*, %class.anon** [[BODY]]
 // CHECK: store %class.anon* [[L0]], %class.anon** [[TMP]]
 // CHECK: [[L5:%.+]] = load %class.anon*, %class.anon** [[TMP]]
 // CHECK-NOT [[L6:%.+]] = load %class.anon*, %class.anon** [[TMP]]
 // CHECK-NOT [[L7:%.+]] = load %class.anon*, %class.anon** [[TMP]]
-// CHECK: store %class.anon.1* [[REF_TMP]], %class.anon.1** [[BODY_REF]]
-// CHECK:[[L47:%.+]] =  load %class.anon.1*, %class.anon.1** [[BODY_REF]]
-// CHECK: store %class.anon.1* [[L47]], %class.anon.1** [[TMP8]]
-// CHECK: [[L48:%.+]] = load %class.anon.1*, %class.anon.1** [[TMP8]]
-// CHECK-NOT: [[L49:%.+]] = load %class.anon.1*, %class.anon.1** [[TMP8]]
-// CHECK-NOT: [[L50:%.+]] = load %class.anon.1*, %class.anon.1** [[TMP8]]
+// CHECK: store %class.anon.6* [[REF_TMP]], %class.anon.6** [[BODY_REF]]
+// CHECK:[[L47:%.+]] =  load %class.anon.6*, %class.anon.6** [[BODY_REF]]
+// CHECK: store %class.anon.6* [[L47]], %class.anon.6** [[TMP8]]
+// CHECK: [[L48:%.+]] = load %class.anon.6*, %class.anon.6** [[TMP8]]
+// CHECK-NOT: [[L49:%.+]] = load %class.anon.6*, %class.anon.6** [[TMP8]]
+// CHECK-NOT: [[L50:%.+]] = load %class.anon.6*, %class.anon.6** [[TMP8]]
 // CHECK: ret void
 
 // CHECK: define internal void @{{.+}}xoo{{.+}}(
