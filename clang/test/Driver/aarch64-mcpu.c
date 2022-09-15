@@ -49,6 +49,8 @@
 // NEOVERSE-E1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-e1"
 // RUN: %clang -target aarch64 -mcpu=neoverse-v1  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V1 %s
 // NEOVERSE-V1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v1"
+// RUN: %clang -target aarch64 -mcpu=neoverse-v2  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V2 %s
+// NEOVERSE-V2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v2"
 // RUN: %clang -target aarch64 -mcpu=neoverse-n1 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N1 %s
 // NEOVERSE-N1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n1"
 // RUN: %clang -target aarch64 -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N2 %s
