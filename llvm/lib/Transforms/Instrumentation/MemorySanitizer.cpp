@@ -3275,11 +3275,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Mask = I.getArgOperand(3);
     Value *Shadow = getShadow(V);
 
-    Value *ShadowPtr;
-    Value *OriginPtr;
-    std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
-        Addr, IRB, Shadow->getType(), Alignment, /*isStore*/ true);
-
     if (ClCheckAccessAddress) {
       insertShadowCheck(Addr, &I);
       // Uninitialized mask is kind of like uninitialized address, but not as
@@ -3287,14 +3282,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       insertShadowCheck(Mask, &I);
     }
 
+    Value *ShadowPtr;
+    Value *OriginPtr;
+    std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
+        Addr, IRB, Shadow->getType(), Alignment, /*isStore*/ true);
+
     IRB.CreateMaskedStore(Shadow, ShadowPtr, Alignment, Mask);
 
-    if (MS.TrackOrigins) {
-      auto &DL = F.getParent()->getDataLayout();
-      paintOrigin(IRB, getOrigin(V), OriginPtr,
-                  DL.getTypeStoreSize(Shadow->getType()),
-                  std::max(Alignment, kMinOriginAlignment));
-    }
+    if (!MS.TrackOrigins)
+      return;
+
+    auto &DL = F.getParent()->getDataLayout();
+    paintOrigin(IRB, getOrigin(V), OriginPtr,
+                DL.getTypeStoreSize(Shadow->getType()),
+                std::max(Alignment, kMinOriginAlignment));
   }
 
   void handleMaskedLoad(IntrinsicInst &I) {
@@ -3305,41 +3306,38 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Mask = I.getArgOperand(2);
     Value *PassThru = I.getArgOperand(3);
 
-    Type *ShadowTy = getShadowTy(&I);
-    Value *ShadowPtr, *OriginPtr;
-    if (PropagateShadow) {
-      std::tie(ShadowPtr, OriginPtr) =
-          getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
-      setShadow(&I, IRB.CreateMaskedLoad(ShadowTy, ShadowPtr, Alignment, Mask,
-                                         getShadow(PassThru), "_msmaskedld"));
-    } else {
-      setShadow(&I, getCleanShadow(&I));
-    }
-
     if (ClCheckAccessAddress) {
       insertShadowCheck(Addr, &I);
       insertShadowCheck(Mask, &I);
     }
 
-    if (MS.TrackOrigins) {
-      if (PropagateShadow) {
-        // Choose between PassThru's and the loaded value's origins.
-        Value *MaskedPassThruShadow = IRB.CreateAnd(
-            getShadow(PassThru), IRB.CreateSExt(IRB.CreateNeg(Mask), ShadowTy));
-
-        Value *ConvertedShadow =
-            convertShadowToScalar(MaskedPassThruShadow, IRB);
-        Value *NotNull = convertToBool(ConvertedShadow, IRB, "_mscmp");
-
-        Value *PtrOrigin = IRB.CreateLoad(MS.OriginTy, OriginPtr);
-        Value *Origin =
-            IRB.CreateSelect(NotNull, getOrigin(PassThru), PtrOrigin);
-
-        setOrigin(&I, Origin);
-      } else {
-        setOrigin(&I, getCleanOrigin());
-      }
+    if (!PropagateShadow) {
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
     }
+
+    Type *ShadowTy = getShadowTy(&I);
+    Value *ShadowPtr, *OriginPtr;
+    std::tie(ShadowPtr, OriginPtr) =
+        getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
+    setShadow(&I, IRB.CreateMaskedLoad(ShadowTy, ShadowPtr, Alignment, Mask,
+                                       getShadow(PassThru), "_msmaskedld"));
+
+    if (!MS.TrackOrigins)
+      return;
+
+    // Choose between PassThru's and the loaded value's origins.
+    Value *MaskedPassThruShadow = IRB.CreateAnd(
+        getShadow(PassThru), IRB.CreateSExt(IRB.CreateNeg(Mask), ShadowTy));
+
+    Value *ConvertedShadow = convertShadowToScalar(MaskedPassThruShadow, IRB);
+    Value *NotNull = convertToBool(ConvertedShadow, IRB, "_mscmp");
+
+    Value *PtrOrigin = IRB.CreateLoad(MS.OriginTy, OriginPtr);
+    Value *Origin = IRB.CreateSelect(NotNull, getOrigin(PassThru), PtrOrigin);
+
+    setOrigin(&I, Origin);
   }
 
   // Instrument BMI / BMI2 intrinsics.
