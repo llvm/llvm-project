@@ -3269,23 +3269,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleMaskedStore(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *V = I.getArgOperand(0);
-    Value *Addr = I.getArgOperand(1);
+    Value *Ptr = I.getArgOperand(1);
     const Align Alignment(
         cast<ConstantInt>(I.getArgOperand(2))->getZExtValue());
     Value *Mask = I.getArgOperand(3);
     Value *Shadow = getShadow(V);
 
     if (ClCheckAccessAddress) {
-      insertShadowCheck(Addr, &I);
-      // Uninitialized mask is kind of like uninitialized address, but not as
-      // scary.
+      insertShadowCheck(Ptr, &I);
       insertShadowCheck(Mask, &I);
     }
 
     Value *ShadowPtr;
     Value *OriginPtr;
     std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
-        Addr, IRB, Shadow->getType(), Alignment, /*isStore*/ true);
+        Ptr, IRB, Shadow->getType(), Alignment, /*isStore*/ true);
 
     IRB.CreateMaskedStore(Shadow, ShadowPtr, Alignment, Mask);
 
@@ -3300,14 +3298,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void handleMaskedLoad(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
-    Value *Addr = I.getArgOperand(0);
+    Value *Ptr = I.getArgOperand(0);
     const Align Alignment(
         cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
     Value *Mask = I.getArgOperand(2);
     Value *PassThru = I.getArgOperand(3);
 
     if (ClCheckAccessAddress) {
-      insertShadowCheck(Addr, &I);
+      insertShadowCheck(Ptr, &I);
       insertShadowCheck(Mask, &I);
     }
 
@@ -3320,7 +3318,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *ShadowTy = getShadowTy(&I);
     Value *ShadowPtr, *OriginPtr;
     std::tie(ShadowPtr, OriginPtr) =
-        getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
+        getShadowOriginPtr(Ptr, IRB, ShadowTy, Alignment, /*isStore*/ false);
     setShadow(&I, IRB.CreateMaskedLoad(ShadowTy, ShadowPtr, Alignment, Mask,
                                        getShadow(PassThru), "_msmaskedld"));
 
