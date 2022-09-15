@@ -1,0 +1,130 @@
+# Description:
+#   MLIR Tutorial
+
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+
+licenses(["notice"])
+
+package(default_visibility = ["//visibility:public"])
+
+td_library(
+    name = "ToyOpsTdFiles",
+    srcs = [
+        "include/toy/Ops.td",
+        "include/toy/ShapeInferenceInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        "//mlir:CallInterfacesTdFiles",
+        "//mlir:CastInterfacesTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ToyInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/toy/ShapeInferenceOpInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/toy/ShapeInferenceOpInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/toy/ShapeInferenceInterface.td",
+    deps = [":ToyOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ToyOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/toy/Ops.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/toy/Ops.cpp.inc",
+        ),
+        (
+            ["-gen-dialect-decls"],
+            "include/toy/Dialect.h.inc",
+        ),
+        (
+            ["-gen-dialect-defs"],
+            "include/toy/Dialect.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/toy/Ops.td",
+    deps = [":ToyOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ToyCombineIncGen",
+    strip_include_prefix = "mlir",
+    tbl_outs = [
+        (
+            ["-gen-rewriters"],
+            "mlir/ToyCombine.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/ToyCombine.td",
+    deps = [":ToyOpsTdFiles"],
+)
+
+cc_binary(
+    name = "toyc-ch7",
+    srcs = [
+        "toyc.cpp",
+        "parser/AST.cpp",
+        "mlir/MLIRGen.cpp",
+        "mlir/Dialect.cpp",
+        "mlir/LowerToAffineLoops.cpp",
+        "mlir/LowerToLLVM.cpp",
+        "mlir/ToyCombine.cpp",
+        "mlir/ShapeInferencePass.cpp",
+    ] + glob(["include/toy/*.h"]),
+    includes = ["include/"],
+    deps = [
+        ":ToyCombineIncGen",
+        ":ToyInterfacesIncGen",
+        ":ToyOpsIncGen",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//mlir:AffineDialect",
+        "//mlir:AffineToStandard",
+        "//mlir:AffineTransforms",
+        "//mlir:AllPassesAndDialects",
+        "//mlir:Analysis",
+        "//mlir:ArithmeticDialect",
+        "//mlir:ArithmeticToLLVM",
+        "//mlir:CastOpInterfaces",
+        "//mlir:ControlFlowToLLVM",
+        "//mlir:ExecutionEngine",
+        "//mlir:ExecutionEngineUtils",
+        "//mlir:FuncDialect",
+        "//mlir:FuncToLLVM",
+        "//mlir:IR",
+        "//mlir:LLVMCommonConversion",
+        "//mlir:LLVMDialect",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:MemRefDialect",
+        "//mlir:MemRefToLLVM",
+        "//mlir:Parser",
+        "//mlir:Pass",
+        "//mlir:SCFDialect",
+        "//mlir:SCFToControlFlow",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:Support",
+        "//mlir:ToLLVMIRTranslation",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+    ],
+)
