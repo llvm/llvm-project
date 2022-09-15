@@ -4096,6 +4096,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
                                                     swift::Decl *decl) {
   if (decl) {
     switch (decl->getKind()) {
+    case swift::DeclKind::BuiltinTuple:
     case swift::DeclKind::Import:
     case swift::DeclKind::Extension:
     case swift::DeclKind::PatternBinding:
@@ -5191,6 +5192,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
@@ -5335,6 +5337,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::ParameterizedProtocol:
@@ -5821,6 +5824,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
@@ -5920,6 +5924,7 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
@@ -6055,6 +6060,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
@@ -6282,6 +6288,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
@@ -6467,6 +6474,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
@@ -6652,6 +6660,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
@@ -6958,6 +6967,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::BuiltinDefaultActorStorage:
     case swift::TypeKind::BuiltinExecutor:
     case swift::TypeKind::BuiltinJob:
+    case swift::TypeKind::BuiltinTuple:
     case swift::TypeKind::BuiltinRawUnsafeContinuation:
     case swift::TypeKind::Error:
     case swift::TypeKind::InOut:
@@ -7338,6 +7348,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
   case swift::TypeKind::BuiltinJob:
+  case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
