@@ -564,7 +564,7 @@ define dso_local void @select_not_allowed(i32* noalias nocapture %A, i32* noalia
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x i32*> [[BROADCAST_SPLAT]], <4 x i32*> [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, <4 x i32*> [[TMP5]], <4 x i32> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP6]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP6]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <4 x i32>*
