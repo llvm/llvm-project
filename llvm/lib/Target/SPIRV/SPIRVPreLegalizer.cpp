@@ -369,11 +369,19 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
       if (MI.getOpcode() != SPIRV::ASSIGN_TYPE)
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
-      if (!isTypeFoldingSupported(MRI.getVRegDef(SrcReg)->getOpcode()))
+      unsigned Opcode = MRI.getVRegDef(SrcReg)->getOpcode();
+      if (!isTypeFoldingSupported(Opcode))
         continue;
       Register DstReg = MI.getOperand(0).getReg();
       if (MRI.getType(DstReg).isVector())
         MRI.setRegClass(DstReg, &SPIRV::IDRegClass);
+      // Don't need to reset type of register holding constant and used in
+      // G_ADDRSPACE_CAST, since it braaks legalizer.
+      if (Opcode == TargetOpcode::G_CONSTANT && MRI.hasOneUse(DstReg)) {
+        MachineInstr &UseMI = *MRI.use_instr_begin(DstReg);
+        if (UseMI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST)
+          continue;
+      }
       MRI.setType(DstReg, LLT::scalar(32));
     }
   }
