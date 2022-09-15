@@ -17624,9 +17624,13 @@ static void RemoveNestedImmediateInvocation(
     Transformer.AllowSkippingFirstCXXConstructExpr = false;
 
   ExprResult Res = Transformer.TransformExpr(It->getPointer()->getSubExpr());
-  assert(Res.isUsable());
-  Res = SemaRef.MaybeCreateExprWithCleanups(Res);
-  It->getPointer()->setSubExpr(Res.get());
+  // The result may not be usable in case of previous compilation errors.
+  // In this case evaluation of the expression may result in crash so just
+  // don't do anything further with the result.
+  if (Res.isUsable()) {
+    Res = SemaRef.MaybeCreateExprWithCleanups(Res);
+    It->getPointer()->setSubExpr(Res.get());
+  }
 }
 
 static void
