@@ -5,7 +5,7 @@
 
 struct Patatino {}
 let tinky = Patatino()
-CHECK: tinky: Patatino = {}
+// CHECK: tinky: Patatino = {}
 
 tinky
-CHECK: $R0: Patatino = {}
+// CHECK: $R0: Patatino = {}

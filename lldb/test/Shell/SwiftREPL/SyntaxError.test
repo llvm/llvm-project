@@ -1,0 +1,6 @@
+// REQUIRES: swift
+
+// RUN: %lldb --repl 2>&1 < %s | FileCheck %s
+
+THIS IS A SYNTAX ERROR
+// CHECK: error:{{.*}}must be separated
