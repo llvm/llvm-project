@@ -1,5 +1,4 @@
-; RUN: opt < %s -msan-instrumentation-with-call-threshold=0 -S -passes=msan    \
-; RUN: 2>&1 | FileCheck %s
+; RUN: opt < %s -msan-instrumentation-with-call-threshold=0 -S -passes=msan 2>&1 | FileCheck %s --implicit-check-not="call void @__msan_w" --implicit-check-not="call void @__msan_m"
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -80,9 +79,7 @@ define <4 x i32> @test65(<4 x i32> %vec, i65 %idx, i32 %x) sanitize_memory {
   ret <4 x i32> %vec1
 }
 ; CHECK-LABEL: @test65(
-; CHECK-NOT:     call void @__msan_maybe_warning_
-; CHECK:         icmp ne i65 %{{.*}}, 0
-; CHECK-NOT:     call void @__msan_maybe_warning_
+; CHECK:         call void @__msan_warning_noreturn
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @testUndef(<4 x i32> %vec, i32 %x) sanitize_memory {
@@ -90,5 +87,5 @@ define <4 x i32> @testUndef(<4 x i32> %vec, i32 %x) sanitize_memory {
   ret <4 x i32> %vec1
 }
 ; CHECK-LABEL: @testUndef(
-; CHECK-NOT:     call void @__msan_maybe_warning_
+; CHECK:         call void @__msan_warning_noreturn
 ; CHECK:         ret <4 x i32>
