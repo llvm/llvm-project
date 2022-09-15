@@ -13,6 +13,7 @@
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fmodule-name=B -fno-implicit-modules \
+// RUN:   -fmodule-related-to-pch \
 // RUN:   -emit-module %t/module.modulemap -o %t/B.pcm \
 // RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
 // RUN:   -fcache-compile-job -Rcompile-job-cache &> %t/B.out.txt
@@ -26,6 +27,7 @@
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fmodule-name=A -fno-implicit-modules \
+// RUN:   -fmodule-related-to-pch \
 // RUN:   @%t/B.import.rsp -fmodule-file=%t/B.pcm \
 // RUN:   -emit-module %t/module.modulemap -o %t/A.pcm \
 // RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
@@ -37,6 +39,7 @@
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fmodules -fmodule-name=C -fno-implicit-modules \
+// RUN:   -fmodule-related-to-pch \
 // RUN:   @%t/B.import.rsp -fmodule-file=%t/B.pcm \
 // RUN:   -emit-module %t/module.modulemap -o %t/C.pcm \
 // RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid \
