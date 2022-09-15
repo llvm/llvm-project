@@ -134,12 +134,12 @@ func.func @copy_deallocated() -> tensor<10xf32> {
 // CHECK-LABEL: func @select_different_tensors(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 func.func @select_different_tensors(%t: tensor<?xf32>, %sz: index, %c: i1) -> tensor<?xf32> {
-  // CHECK-DAG: %[[m:.*]] = bufferization.to_memref %[[t]] : memref<?xf32, #{{.*}}>
+  // CHECK-DAG: %[[m:.*]] = bufferization.to_memref %[[t]] : memref<?xf32, strided{{.*}}>
   // CHECK-DAG: %[[alloc:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<?xf32>
   %0 = bufferization.alloc_tensor(%sz) : tensor<?xf32>
 
   // A cast must be inserted because %t and %0 have different memref types.
-  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]] : memref<?xf32> to memref<?xf32, #{{.*}}>
+  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]] : memref<?xf32> to memref<?xf32, strided{{.*}}>
   // CHECK: arith.select %{{.*}}, %[[casted]], %[[m]]
   %1 = arith.select %c, %0, %t : tensor<?xf32>
   return %1 : tensor<?xf32>
