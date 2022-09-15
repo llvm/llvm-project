@@ -1166,6 +1166,22 @@ LogicalResult TileToForeachThreadOp::verify() {
 // VectorizeOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+/// This is an helper only to call vectorize via a pattern inside of
+/// VectorizeOp::applyToOne.
+struct VectorizationPattern : public RewritePattern {
+  explicit VectorizationPattern(MLIRContext *context)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
+    if (!linalgOp)
+      return failure();
+    return vectorize(rewriter, linalgOp);
+  }
+};
+} // namespace
+
 DiagnosedSilenceableFailure
 transform::VectorizeOp::applyToOne(Operation *target,
                                    SmallVectorImpl<Operation *> &results,
@@ -1178,15 +1194,22 @@ transform::VectorizeOp::applyToOne(Operation *target,
 
   MLIRContext *ctx = getContext();
   RewritePatternSet patterns(ctx);
-  patterns.add<LinalgVectorizationPattern>(ctx);
+  patterns.add<VectorizationPattern>(ctx);
 
-  vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
-  vector::populateVectorReductionToContractPatterns(patterns);
+  if (!getDisableTransferPermutationMapLoweringPatterns())
+    vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+
+  if (!getDisableMultiReductionToContractPatterns())
+    vector::populateVectorReductionToContractPatterns(patterns);
+
   patterns.add<linalg::LinalgCopyVTRForwardingPattern,
                linalg::LinalgCopyVTWForwardingPattern>(ctx,
                                                        /*benefit=*/2);
   vector::TransferReadOp::getCanonicalizationPatterns(patterns, ctx);
   vector::TransferWriteOp::getCanonicalizationPatterns(patterns, ctx);
+
+  patterns.add<CopyVectorizationPattern>(ctx);
+
   if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
 
@@ -1212,7 +1235,7 @@ public:
 
   void init() {
     declareDependentDialect<pdl::PDLDialect>();
-
+    declareDependentDialect<LinalgDialect>();
     declareGeneratedDialect<AffineDialect>();
     declareGeneratedDialect<arith::ArithmeticDialect>();
     declareGeneratedDialect<scf::SCFDialect>();
