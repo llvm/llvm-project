@@ -1,6 +1,10 @@
 ; Test optimization experiments.
 ; -asan-force-experiment flag turns all memory accesses into experiments.
 ; RUN: opt < %s -passes=asan -asan-force-experiment=42 -S | FileCheck %s
+; RUN: opt < %s -passes=asan -asan-force-experiment=42 -S -mtriple=s390x-unknown-linux | FileCheck %s --check-prefix=EXT
+; RUN: opt < %s -passes=asan -asan-force-experiment=42 -S -mtriple=mips-linux-gnu | FileCheck %s --check-prefix=MIPS_EXT
+; REQUIRES: x86-registered-target, systemz-registered-target, mips-registered-target
+
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -111,3 +115,19 @@ entry:
 ; CHECK: __asan_report_exp_store_n{{.*}} i32 42
 ; CHECK: ret void
 }
+
+; CHECK:    declare void @__asan_report_exp_load_n(i64, i64, i32)
+; EXT:      declare void @__asan_report_exp_load_n(i64, i64, i32 zeroext)
+; MIPS_EXT: declare void @__asan_report_exp_load_n(i64, i64, i32 signext)
+
+; CHECK:    declare void @__asan_exp_loadN(i64, i64, i32)
+; EXT:      declare void @__asan_exp_loadN(i64, i64, i32 zeroext)
+; MIPS_EXT: declare void @__asan_exp_loadN(i64, i64, i32 signext)
+
+; CHECK:    declare void @__asan_report_exp_load1(i64, i32)
+; EXT:      declare void @__asan_report_exp_load1(i64, i32 zeroext)
+; MIPS_EXT: declare void @__asan_report_exp_load1(i64, i32 signext)
+
+; CHECK:    declare void @__asan_exp_load1(i64, i32)
+; EXT:      declare void @__asan_exp_load1(i64, i32 zeroext)
+; MIPS_EXT: declare void @__asan_exp_load1(i64, i32 signext)
