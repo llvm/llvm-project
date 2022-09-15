@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown -mcpu=pwr9 | FileCheck  %s --check-prefixes=CHECK,CHECK64
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-ibm-aix-xcoff -mcpu=pwr9 -mattr=-altivec | FileCheck  %s --check-prefixes=CHECK,CHECK32
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix-xcoff -mcpu=pwr9 -mattr=-altivec | FileCheck  %s --check-prefixes=CHECK,CHECK64
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix-xcoff -mcpu=pwr9 -mattr=-altivec | FileCheck  %s --check-prefixes=CHECKAIX,CHECK64
 
 define signext i32 @shrinkwrapme(i32 signext %a, i32 signext %lim) {
 entry:
@@ -33,7 +33,8 @@ entry:
 
 ; CHECK32-COUNT-18:   stw
 
-; CHECK:              blt 0, {{.*}}BB0_3
+; CHECK:              ble 0, {{.*}}BB0_3
+; CHECKAIX:           blt 0, {{.*}}BB0_3
 ; CHECK:            # %bb.1:
 ; CHECK:              li
 ; CHECK:            {{.*}}BB0_2:

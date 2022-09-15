@@ -2538,7 +2538,12 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     else
       return false;
 
-    PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)), Pred));
+    // Convert the comparison and its user to a compare against zero with the
+    // appropriate predicate on the branch. Zero comparison might provide
+    // optimization opportunities post-RA (see optimization in
+    // PPCPreEmitPeephole.cpp).
+    UseMI->getOperand(0).setImm(Pred);
+    CmpInstr.getOperand(2).setImm(0);
   }
 
   // Search for Sub.
