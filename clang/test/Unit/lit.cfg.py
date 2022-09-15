@@ -30,6 +30,9 @@ if 'TMP' in os.environ:
 if 'TEMP' in os.environ:
     config.environment['TEMP'] = os.environ['TEMP']
 
+if 'HOME' in os.environ:
+    config.environment['HOME'] = os.environ['HOME']
+
 # Propagate sanitizer options.
 for var in [
     'ASAN_SYMBOLIZER_PATH',
