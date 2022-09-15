@@ -37,3 +37,12 @@ archives.
       symbol" error.
 - LLD: Duplicate symbols, regardless of which archives they are from, will
   raise errors.
+
+Aliases
+=======
+ld64 treats all aliases as strong extern definitions. Having two aliases of the
+same name, or an alias plus a regular extern symbol of the same name, both
+result in duplicate symbol errors. LLD does not check for duplicate aliases;
+instead we perform alias resolution first, and only then do we check for
+duplicate symbols. In particular, we will not report a duplicate symbol error if
+the aliased symbols turn out to be weak definitions, but ld64 will.

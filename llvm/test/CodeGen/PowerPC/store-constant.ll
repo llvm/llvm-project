@@ -196,8 +196,8 @@ entry:
 define void @SetArr(i32 signext %Len) {
 ; CHECK-LABEL: SetArr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpwi 3, 1
-; CHECK-NEXT:    bltlr 0
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    blelr 0
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
 ; CHECK-NEXT:    addis 4, 2, .LC5@toc@ha
 ; CHECK-NEXT:    addis 5, 2, .LC6@toc@ha

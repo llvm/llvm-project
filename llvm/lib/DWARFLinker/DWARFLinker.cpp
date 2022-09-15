@@ -2136,7 +2136,6 @@ Error DWARFLinker::loadClangModule(objFileLoader Loader, const DWARFDie &CUDie,
   std::unique_ptr<CompileUnit> Unit;
   for (const auto &CU : ErrOrObj->Dwarf->compile_units()) {
     OnCUDieLoaded(*CU);
-    updateDwarfVersion(CU->getVersion());
     // Recursively get all modules imported by this one.
     auto ChildCUDie = CU->getUnitDIE();
     if (!ChildCUDie)
@@ -2378,6 +2377,8 @@ void DWARFLinker::addObjectFile(DWARFFile &File, objFileLoader Loader,
 
 Error DWARFLinker::link() {
   assert(Options.NoOutput || TheDwarfEmitter);
+  assert((Options.TargetDWARFVersion != 0) &&
+         "TargetDWARFVersion should be set");
 
   // First populate the data structure we need for each iteration of the
   // parallel loop.
@@ -2497,7 +2498,6 @@ Error DWARFLinker::link() {
         OptContext.File.Dwarf->getNumCompileUnits());
 
     for (const auto &CU : OptContext.File.Dwarf->compile_units()) {
-      updateDwarfVersion(CU->getVersion());
       auto CUDie = CU->getUnitDIE(false);
       if (Options.Verbose) {
         outs() << "Input compilation unit:";
@@ -2514,10 +2514,6 @@ Error DWARFLinker::link() {
         reportWarning(toString(std::move(Err)), CU.File);
     }
   }
-
-  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
-  if (MaxDwarfVersion == 0)
-    MaxDwarfVersion = 3;
 
   // At this point we know how much data we have emitted. We use this value to
   // compare canonical DIE offsets in analyzeContextInfo to see if a definition
@@ -2542,7 +2538,6 @@ Error DWARFLinker::link() {
       return;
 
     for (const auto &CU : Context.File.Dwarf->compile_units()) {
-      updateDwarfVersion(CU->getVersion());
       // The !isClangModuleRef condition effectively skips over fully resolved
       // skeleton units.
       auto CUDie = CU->getUnitDIE();
@@ -2627,7 +2622,7 @@ Error DWARFLinker::link() {
   auto EmitLambda = [&]() {
     // Emit everything that's global.
     if (!Options.NoOutput) {
-      TheDwarfEmitter->emitAbbrevs(Abbreviations, MaxDwarfVersion);
+      TheDwarfEmitter->emitAbbrevs(Abbreviations, Options.TargetDWARFVersion);
       TheDwarfEmitter->emitStrings(OffsetsStringPool);
       switch (Options.TheAccelTableKind) {
       case DwarfLinkerAccelTableKind::None:
