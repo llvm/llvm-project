@@ -2227,6 +2227,8 @@ Specify Visual Studio C runtime library. "static" and "static_dbg" correspond
 to the cl flags /MT and /MTd which use the multithread, static version. "dll"
 and "dll_dbg" correspond to the cl flags /MD and /MDd which use the multithread,
 dll version.}]>;
+def fms_omit_default_lib : Joined<["-"], "fms-omit-default-lib">,
+  Group<f_Group>, Flags<[NoXarchOption, CoreOption]>;
 defm delayed_template_parsing : BoolFOption<"delayed-template-parsing",
   LangOpts<"DelayedTemplateParsing">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Parse templated function definitions at the end of the translation unit">,
@@ -6784,7 +6786,7 @@ def _SLASH_volatile_ms  : Option<["/", "-"], "volatile:ms", KIND_FLAG>,
   HelpText<"Volatile loads and stores have acquire and release semantics">;
 def _SLASH_clang : CLJoined<"clang:">,
   HelpText<"Pass <arg> to the clang driver">, MetaVarName<"<arg>">;
-def _SLASH_Zl : CLFlag<"Zl">,
+def _SLASH_Zl : CLFlag<"Zl">, Alias<fms_omit_default_lib>,
   HelpText<"Do not let object file auto-link default libraries">;
 
 def _SLASH_Yc : CLJoined<"Yc">,
