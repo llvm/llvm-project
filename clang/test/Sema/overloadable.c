@@ -74,6 +74,16 @@ void test() {
   f1();
 }
 
+// Validate that the invalid function doesn't stay overloadable. 
+int __attribute__((overloadable)) invalid(); // expected-error{{'overloadable' function 'invalid' must have a prototype}}
+int __attribute__((overloadable)) invalid(int); // expected-error{{redeclaration of 'invalid' must not have the 'overloadable' attribute}}
+                                                // expected-note@-2{{previous unmarked overload of function is here}}
+void use_invalid(void) {
+  invalid(); // expected-error{{too few arguments to function call, expected 1, have 0}}
+             // expected-note@-4{{'invalid' declared here}}
+  invalid(1);
+}
+
 void before_local_1(int) __attribute__((overloadable));
 void before_local_2(int); // expected-note {{here}}
 void before_local_3(int) __attribute__((overloadable));

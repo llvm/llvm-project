@@ -119,6 +119,9 @@ Bug Fixes
   `Issue 57169 <https://github.com/llvm/llvm-project/issues/57169>`_
 - Clang configuration files are now read through the virtual file system
   rather than the physical one, if these are different.
+- Clang will now no longer treat a C 'overloadable' function without a prototype as
+  a variadic function with the attribute.  This should make further diagnostics more
+  clear.
 
 
 Improvements to Clang's diagnostics
