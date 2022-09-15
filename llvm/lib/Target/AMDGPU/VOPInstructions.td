@@ -289,7 +289,10 @@ class VOP3a_gfx10<bits<10> op, VOPProfile p> : VOP3a<p> {
   let Inst{31-26} = 0x35;
 }
 
+// TODO: Remove after updating VOPC
 class VOP3a_gfx11<bits<10> op, VOPProfile p> : VOP3a_gfx10<op, p>;
+
+class VOP3a_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3a_gfx10<op, p>;
 
 class VOP3a_vi <bits<10> op, VOPProfile P> : VOP3a<P> {
   let Inst{25-16} = op;
@@ -306,6 +309,7 @@ class VOP3e_gfx10<bits<10> op, VOPProfile p> : VOP3a_gfx10<op, p> {
   let Inst{7-0} = !if(p.EmitDst, vdst{7-0}, 0);
 }
 
+// TODO: Remove after updating VOP1
 class VOP3e_gfx11<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p>;
 
 class VOP3e_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p>;
@@ -1588,14 +1592,6 @@ multiclass VOP3_Realtriple_gfx11<bits<10> op, bit isSingle = 0,
                                  string opName = NAME> :
   VOP3_Realtriple<GFX11Gen, op, isSingle, opName>;
 
-// TODO: Remove after updating VOP2
-multiclass VOP3Only_Realtriple_gfx11<bits<10> op> :
-  VOP3_Realtriple<GFX11Gen, op, 1>;
-
-// TODO: Remove after updating VOP2
-multiclass VOP3beOnly_Realtriple_gfx11<bits<10> op> :
-  VOP3be_Realtriple<GFX11Gen, op, 1>;
-
 //===----------------------------------------------------------------------===//
 // VOP3 GFX12
 //===----------------------------------------------------------------------===//
@@ -1614,9 +1610,6 @@ multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
 multiclass VOP3_Realtriple_with_name_gfx12<bits<10> op, string opName,
                                            string asmName, bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, isSingle>;
-
-multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
-  VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
 
 //===----------------------------------------------------------------------===//
 

@@ -537,10 +537,22 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
       MI = MCInst(); // clear
 
+      Res = tryDecodeInst(DecoderTableDPP8GFX1264, MI, QW, Address);
+      if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
+        break;
+      MI = MCInst(); // clear
+
       Res = tryDecodeInst(DecoderTableDPP64, MI, QW, Address);
       if (Res) break;
 
       Res = tryDecodeInst(DecoderTableDPPGFX1164, MI, QW, Address);
+      if (Res) {
+        if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOPC)
+          convertVOPCDPPInst(MI);
+        break;
+      }
+
+      Res = tryDecodeInst(DecoderTableDPPGFX1264, MI, QW, Address);
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOPC)
           convertVOPCDPPInst(MI);
@@ -654,10 +666,12 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
               MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_vi ||
               MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx10 ||
               MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx11 ||
+              MI.getOpcode() == AMDGPU::V_FMAC_F32_e64_gfx12 ||
               MI.getOpcode() == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
               MI.getOpcode() == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
               MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx11)) {
+              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx11 ||
+              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx12)) {
     // Insert dummy unused src2_modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src2_modifiers);
