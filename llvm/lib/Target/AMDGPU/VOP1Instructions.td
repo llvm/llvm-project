@@ -739,12 +739,12 @@ multiclass VOP1_Realtriple_e64_gfx11<bits<9> op> {
 }
 multiclass VOP1_Realtriple_T16_e64_gfx11<bits<9> op> {
   defm NAME
-      : VOP3_Realtriple_T16_gfx11<{0, 1, 1, op{6 - 0}},
-                                  !cast<VOP_Pseudo>(NAME #"_e64").Mnemonic>;
+      : VOP3_Realtriple_T16<GFX11Gen, {0, 1, 1, op{6 - 0}},
+                            !cast<VOP_Pseudo>(NAME #"_e64").Mnemonic>;
 }
 multiclass VOP1_Realtriple_e64_with_name_gfx11<bits<9> op, string opName,
   string asmName> {
-  defm NAME : VOP3_Realtriple_with_name_gfx11<{0, 1, 1, op{6-0}}, opName,
+  defm NAME : VOP3_Realtriple_with_name<GFX11Gen, {0, 1, 1, op{6-0}}, opName,
     asmName>;
 }
 

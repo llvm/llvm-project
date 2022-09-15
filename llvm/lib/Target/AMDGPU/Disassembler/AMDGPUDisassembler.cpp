@@ -470,7 +470,25 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
+      Res = tryDecodeInst(DecoderTableDPP8GFX1296, MI, DecW,
+                                          Address);
+      if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
+        break;
+      MI = MCInst(); // clear
       Res = tryDecodeInst(DecoderTableDPPGFX1196, MI, DecW,
+                                          Address);
+      if (Res) {
+        if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P)
+          convertVOP3PDPPInst(MI);
+        else if (AMDGPU::isVOPC64DPP(MI.getOpcode()))
+          convertVOPCDPPInst(MI); // Special VOP3 case
+        else {
+          assert(MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3);
+          convertVOP3DPPInst(MI); // Regular VOP3 case
+        }
+        break;
+      }
+      Res = tryDecodeInst(DecoderTableDPPGFX1296, MI, DecW,
                                           Address);
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P)

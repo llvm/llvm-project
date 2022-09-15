@@ -1332,16 +1332,16 @@ multiclass VOP2_Realtriple_e64_gfx11<bits<6> op> {
   defm NAME : VOP3_Realtriple_gfx11<{0, 1, 0, 0, op{5-0}}, /*isSingle=*/ 0, NAME> ;
 }
 multiclass VOP2_Realtriple_T16_e64_gfx11<bits<6> op, string asmName, string opName> {
-  defm NAME : VOP3_Realtriple_T16_gfx11<{0, 1, 0, 0, op{5-0}}, asmName, opName> ;
+  defm NAME : VOP3_Realtriple_T16<GFX11Gen, {0, 1, 0, 0, op{5-0}}, asmName, opName> ;
 }
 multiclass VOP2_Realtriple_e64_with_name_gfx11<bits<6> op, string opName,
                                                string asmName> {
-  defm NAME : VOP3_Realtriple_with_name_gfx11<{0, 1, 0, 0, op{5-0}}, opName, asmName> ;
+  defm NAME : VOP3_Realtriple_with_name<GFX11Gen, {0, 1, 0, 0, op{5-0}}, opName, asmName> ;
 }
 
 multiclass VOP2be_Real_gfx11<bits<6> op, string opName, string asmName> :
   VOP2be_Real_e32_gfx11<op, opName, asmName>,
-  VOP3be_Realtriple_gfx11<{0, 1, 0, 0, op{5-0}}, /*isSingle=*/ 0, opName, asmName>,
+  VOP3be_Realtriple<GFX11Gen, {0, 1, 0, 0, op{5-0}}, /*isSingle=*/ 0, opName, asmName>,
   VOP2be_Real_dpp_gfx11<op, opName, asmName>,
   VOP2be_Real_dpp8_gfx11<op, opName, asmName>;
 
