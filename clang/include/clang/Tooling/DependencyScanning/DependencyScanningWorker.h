@@ -15,15 +15,10 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include <string>
-
-namespace llvm {
-namespace cas {
-class CachingOnDiskFileSystem;
-}
-} // namespace llvm
 
 namespace clang {
 
