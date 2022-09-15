@@ -309,9 +309,6 @@ class VOP3e_gfx10<bits<10> op, VOPProfile p> : VOP3a_gfx10<op, p> {
   let Inst{7-0} = !if(p.EmitDst, vdst{7-0}, 0);
 }
 
-// TODO: Remove after updating VOP1
-class VOP3e_gfx11<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p>;
-
 class VOP3e_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p>;
 
 class VOP3e_T16_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3a_T16<p> {
