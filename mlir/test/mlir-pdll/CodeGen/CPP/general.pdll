@@ -1,4 +1,4 @@
-// RUN: mlir-pdll %s -I %S -split-input-file -x cpp | FileCheck %s
+// RUN: mlir-pdll %s -I %S -I %S/../../../../include -split-input-file -x cpp | FileCheck %s
 
 // Check that we generate a wrapper pattern for each PDL pattern. Also
 // add in a pattern awkwardly named the same as our generated patterns to
@@ -44,6 +44,8 @@ Pattern => erase op<test.op3>;
 
 // Check the generation of native constraints and rewrites.
 
+#include "include/ods.td"
+
 // CHECK:      static ::mlir::LogicalResult TestCstPDLFn(::mlir::PatternRewriter &rewriter,
 // CHECK-SAME:     ::mlir::Attribute attr, ::mlir::Operation * op, ::mlir::Type type,
 // CHECK-SAME:     ::mlir::Value value, ::mlir::TypeRange typeRange, ::mlir::ValueRange valueRange) {
@@ -58,6 +60,7 @@ Pattern => erase op<test.op3>;
 // CHECK: foo;
 // CHECK: }
 
+// CHECK: TestAttrInterface TestRewriteODSPDLFn(::mlir::PatternRewriter &rewriter, TestAttrInterface attr) {
 // CHECK: static ::mlir::Attribute TestRewriteSinglePDLFn(::mlir::PatternRewriter &rewriter) {
 // CHECK: std::tuple<::mlir::Attribute, ::mlir::Type> TestRewriteTuplePDLFn(::mlir::PatternRewriter &rewriter) {
 
@@ -73,6 +76,7 @@ Constraint TestCst(attr: Attr, op: Op, type: Type, value: Value, typeRange: Type
 Constraint TestUnusedCst() [{ return success(); }];
 
 Rewrite TestRewrite(attr: Attr, op: Op, type: Type, value: Value, typeRange: TypeRange, valueRange: ValueRange) [{ foo; }];
+Rewrite TestRewriteODS(attr: TestAttrInterface) -> TestAttrInterface [{}];
 Rewrite TestRewriteSingle() -> Attr [{}];
 Rewrite TestRewriteTuple() -> (Attr, Type) [{}];
 Rewrite TestUnusedRewrite(op: Op) [{}];
@@ -82,6 +86,7 @@ Pattern TestCstAndRewrite {
   TestCst(attr<"true">, root, type, operand, types, operands);
   rewrite root with {
     TestRewrite(attr<"true">, root, type, operand, types, operands);
+    TestRewriteODS(attr<"true">);
     TestRewriteSingle();
     TestRewriteTuple();
     erase root;
