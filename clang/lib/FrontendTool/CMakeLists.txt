@@ -9,9 +9,14 @@ set(link_libs
   clangDriver
   clangExtractAPI
   clangFrontend
-  clangCIRFrontendAction
   clangRewriteFrontend
   )
+
+if(CLANG_ENABLE_CIR)
+  list(APPEND link_libs
+    clangCIRFrontendAction
+    )
+endif()
 
 if(CLANG_ENABLE_ARCMT)
   list(APPEND link_libs

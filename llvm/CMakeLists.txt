@@ -116,7 +116,7 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
+set(LLVM_ALL_PROJECTS "bolt;cir;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
   # LLVM_ENABLE_RUNTIMES.
@@ -155,6 +155,17 @@ if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
     "become a fatal error in the LLVM 21 release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
     "https://libc.llvm.org/ for building the runtimes.")
+endif()
+
+if ("cir" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling MLIR as a dependency to CIR")
+    list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+  endif()
+
+  if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Clang is not enabled, but is required to use CIR")
+  endif()
 endif()
 
 # Select the runtimes to build
@@ -226,6 +237,13 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
       message(STATUS "${proj} project is enabled")
+      # ClangIR is integrated inside clang and also provides the cir-tool,
+      # it needs some special handling.
+      if ("${proj}" STREQUAL "cir")
+        set(CLANG_ENABLE_CIR ON)
+        continue()
+      endif()
+
       set(SHOULD_ENABLE_PROJECT TRUE)
       set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
       if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
