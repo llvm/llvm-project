@@ -11,14 +11,14 @@ class TestSwiftDynamicSelf(lldbtest.TestBase):
 
     def get_self_from_Base_method(self, frame):
         '''When stopped in a method in Base, get the 'self' with type Base.'''
-        var_self = frame.FindVariable("self")
+        var_self = frame.FindVariable("self", lldb.eNoDynamicValues)
         self.assertEqual(var_self.GetNumChildren(), 2)
         return var_self
 
     def get_self_as_Base_from_Child_method(self, frame):
         '''When stopped in a method in Child, get the 'self' with type Base.'''
-        var_self = frame.FindVariable("self")
-        dyn_self = var_self.GetDynamicValue(True)
+        dyn_self = frame.FindVariable("self")
+        self.assertTrue(dyn_self.IsDynamic())
         self.assertEqual(dyn_self.GetNumChildren(), 1)
         var_self_base = dyn_self.GetChildAtIndex(0)
         self.assertEqual(var_self_base.GetNumChildren(), 2)
@@ -50,6 +50,6 @@ class TestSwiftDynamicSelf(lldbtest.TestBase):
         lldbutil.continue_to_breakpoint(process, bkpt) # Stop in Child.show.
         frame = thread.frames[0]
         # When stopped in Child.show(), 'self' doesn't have a child.
-        self.assertEqual(frame.FindVariable("self").GetNumChildren(), 0)
+        self.assertEqual(frame.FindVariable("self", lldb.eNoDynamicValues).GetNumChildren(), 0)
         self.check_members(self.get_self_as_Base_from_Child_method(frame),
                 "100", "220")

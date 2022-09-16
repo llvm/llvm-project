@@ -60,7 +60,8 @@ class TestSwiftProtocolTypes(TestBase):
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        self.expect("frame variable --raw-output --show-types loc2d",
+        self.expect("frame variable --dynamic-type no-dynamic-values"
+                    " --raw-output --show-types loc2d",
                     substrs=['PointUtils) loc2d =',
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
@@ -68,11 +69,12 @@ class TestSwiftProtocolTypes(TestBase):
                              '(Any.Type) metadata = 0x',
                              '(Builtin.RawPointer) wtable = 0x'])
  
-        self.expect("frame variable --dynamic-type run-target loc2d",
+        self.expect("frame variable loc2d",
                     substrs=['Point2D) loc2d =',
                              'x = 1.25', 'y = 2.5'])
  
-        self.expect("frame variable --raw-output --show-types loc3d",
+        self.expect("frame variable --dynamic-type no-dynamic-values"
+                    " --raw-output --show-types loc3d",
                     substrs=['PointUtils) loc3d =',
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
@@ -81,14 +83,15 @@ class TestSwiftProtocolTypes(TestBase):
                              '(Builtin.RawPointer) wtable = 0x'])
  
         self.expect(
-            "frame variable --dynamic-type run-target loc3d",
+            "frame variable loc3d",
             substrs=[
                 'Point3D) loc3d = 0x',
                 'x = 1.25',
                 'y = 2.5',
                 'z = 1.25'])
  
-        self.expect("expression --raw-output --show-types -- loc2d",
+        self.expect("expression --dynamic-type no-dynamic-values"
+                    " --raw-output --show-types -- loc2d",
                     substrs=['PointUtils) $R',
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
@@ -96,25 +99,27 @@ class TestSwiftProtocolTypes(TestBase):
                              '(Any.Type) metadata = 0x',
                              '(Builtin.RawPointer) wtable = 0x'])
  
-        self.expect("expression --dynamic-type run-target -- loc2d",
+        self.expect("expression -- loc2d",
                     substrs=['Point2D) $R',
                              'x = 1.25', 'y = 2.5'])
  
-        self.expect("expression --raw-output --show-types -- loc3dCB",
+        self.expect("expression --dynamic-type no-dynamic-values"
+                    " --raw-output --show-types -- loc3dCB",
                     substrs=['PointUtils & Swift.AnyObject) $R',
                              '(Builtin.RawPointer) object = 0x',
                              '(Builtin.RawPointer) wtable = 0x'])
  
-        self.expect("expression --dynamic-type run-target -- loc3dCB",
+        self.expect("expression -- loc3dCB",
                     substrs=['Point3D) $R', 'x = 1.25', 'y = 2.5', 'z = 1.25'])
 
-        self.expect("expression --raw-output --show-types -- loc3dSuper",
+        self.expect("expression --dynamic-type no-dynamic-values"
+                    " --raw-output --show-types -- loc3dSuper",
                     substrs=['(a.PointSuperclass & a.PointUtils) $R',
 #                             Only supported by SwiftASTContext and of little usefulness.
 #                             '(a.PointSuperclass) object = 0x',
 #                             '(Swift.Int) superData = ',
                              '(Builtin.RawPointer) wtable = 0x'])
 
-        self.expect("expression --dynamic-type run-target -- loc3dSuper",
+        self.expect("expression -- loc3dSuper",
                     substrs=['Point3D) $R', 'x = 1.25', 'y = 2.5', 'z = 1.25'])
 

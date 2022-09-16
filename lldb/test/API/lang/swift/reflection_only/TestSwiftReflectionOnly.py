@@ -56,7 +56,7 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
 
         check_var(self, frame.FindVariable("generic"), use_dynamic=True, value="42")
 
-        gtup = frame.FindVariable("generic_tuple")
+        gtup = frame.FindVariable("generic_tuple", lldb.eNoDynamicValues)
         check_var(self, gtup, num_children=2)
         check_var(self, gtup.GetChildAtIndex(0), use_dynamic=True, value="42")
         check_var(self, gtup.GetChildAtIndex(1), use_dynamic=True, value="42")

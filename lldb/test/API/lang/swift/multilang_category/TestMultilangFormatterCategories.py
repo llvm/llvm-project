@@ -30,7 +30,6 @@ class TestMultilangFormatterCategories(TestBase):
         lldbutil.check_variable(
             self,
             dic,
-            use_dynamic=False,
             summary="2 key/value pairs",
             num_children=2)
 
@@ -38,12 +37,11 @@ class TestMultilangFormatterCategories(TestBase):
         lldbutil.check_variable(
             self,
             child0,
-            use_dynamic=False,
             num_children=2,
             typename="__lldb_autogen_nspair")
 
         id1 = child0.GetChildAtIndex(1)
-        lldbutil.check_variable(self, id1, use_dynamic=False, typename="id")
+        lldbutil.check_variable(self, id1, typename="__NSCFNumber *")
 
         id1child0 = dic.GetChildAtIndex(1).GetChildAtIndex(0)
         lldbutil.check_variable(

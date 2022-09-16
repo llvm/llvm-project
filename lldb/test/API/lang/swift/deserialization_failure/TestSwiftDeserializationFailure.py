@@ -35,7 +35,7 @@ class TestSwiftDeserializationFailure(TestBase):
 
         lldbutil.continue_to_breakpoint(process, generic_bkpt)
         # FIXME: this is formatted incorrectly.
-        self.expect("fr var t", substrs=["(T)"]) #, "world"])
+        self.expect("fr var -d no-dynamic t", substrs=["(T)"]) #, "world"])
 
     @swiftTest
     @skipIf(oslist=['windows'])

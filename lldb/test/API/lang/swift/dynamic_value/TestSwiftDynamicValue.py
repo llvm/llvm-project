@@ -37,7 +37,7 @@ class SwiftDynamicValueTest(TestBase):
         lldbutil.run_to_source_breakpoint(self, "// Set a breakpoint here", lldb.SBFileSpec("main.swift"))
 
         self.expect(
-            "frame variable",
+            "frame variable -d no-dynamic",
             substrs=[
                 "AWrapperClass) aWrapper",
                 "SomeClass) anItem = ",
@@ -45,7 +45,7 @@ class SwiftDynamicValueTest(TestBase):
                 "Base<Int>) aBase = 0x",
                 "v = 449493530"])
         self.expect(
-            "frame variable -d run --show-types",
+            "frame variable --show-types",
             substrs=[
                 "AWrapperClass) aWrapper",
                 "YetAnotherClass) anItem = ",
@@ -59,7 +59,7 @@ class SwiftDynamicValueTest(TestBase):
                 "q = 3735928559"])
         self.runCmd("continue")
         self.expect(
-            "frame variable",
+            "frame variable -d no-dynamic",
             substrs=[
                 "AWrapperClass) aWrapper",
                 "SomeClass) anItem = ",
@@ -67,7 +67,7 @@ class SwiftDynamicValueTest(TestBase):
                 "Base<Int>) aBase = 0x",
                 "v = 449493530"])
         self.expect(
-            "frame variable -d run --show-types",
+            "frame variable --show-types",
             substrs=[
                 "AWrapperClass) aWrapper",
                 "YetAnotherClass) anItem = ",

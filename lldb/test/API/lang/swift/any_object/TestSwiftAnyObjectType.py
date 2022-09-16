@@ -36,7 +36,8 @@ class TestSwiftAnyObjectType(TestBase):
 
         frame = thread.frames[0]
 
-        var_object = frame.FindVariable("object")
+        var_object = frame.FindVariable("object", lldb.eNoDynamicValues)
+
         lldbutil.check_variable(
             self,
             var_object,
