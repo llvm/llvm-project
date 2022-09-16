@@ -474,10 +474,6 @@ func.func @dyn_shape_fold(%L : index, %M : index) -> (memref<4 x ? x 8 x ? x ? x
   return %b, %c, %d, %e : memref<4 x ? x 8 x ? x ? x f32>, memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>
 }
 
-#map1 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-#map2 = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s2 + d1 * s1 + d2 + s0)>
-#map3 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-
 // CHECK-LABEL: func @dim_op_fold(
 // CHECK-SAME: %[[ARG0:[a-z0-9]*]]: index
 // CHECK-SAME: %[[ARG1:[a-z0-9]*]]: index
@@ -499,15 +495,15 @@ func.func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?x
     affine.for %arg4 = 0 to %ub {
       %s = memref.dim %0, %c0 : memref<?x?xf32>
       %v = memref.view %3[%c0][%arg4, %s] : memref<?xi8> to memref<?x?xf32>
-      %sv = memref.subview %0[%c0, %c0][%s,%arg4][%c1,%c1] : memref<?x?xf32> to memref<?x?xf32, #map1>
+      %sv = memref.subview %0[%c0, %c0][%s,%arg4][%c1,%c1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
       %l = memref.dim %v, %c1 : memref<?x?xf32>
-      %u = memref.dim %sv, %c0 : memref<?x?xf32, #map1>
+      %u = memref.dim %sv, %c0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
       affine.for %arg5 = %l to %u {
         "foo"() : () -> ()
       }
-      %sv2 = memref.subview %0[0, 0][17, %arg4][1, 1] : memref<?x?xf32> to memref<17x?xf32, #map3>
+      %sv2 = memref.subview %0[0, 0][17, %arg4][1, 1] : memref<?x?xf32> to memref<17x?xf32, strided<[?, 1], offset: ?>>
       %l2 = memref.dim %v, %c1 : memref<?x?xf32>
-      %u2 = memref.dim %sv2, %c1 : memref<17x?xf32, #map3>
+      %u2 = memref.dim %sv2, %c1 : memref<17x?xf32, strided<[?, 1], offset: ?>>
       scf.for %arg5 = %l2 to %u2 step %c1 {
         "foo"() : () -> ()
       }
