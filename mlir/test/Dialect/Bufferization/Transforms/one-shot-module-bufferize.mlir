@@ -48,24 +48,20 @@ func.func private @external_func_with_return_val(tensor<4xi32>) -> f32
 
 // A function that returns a non-equivalent tensor with layout map.
 
-// CHECK: #[[$map2:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 10 + s0 + d1)>
-// CHECK-LABEL: func @return_extract_slice(%{{.*}}) -> memref<2x?xf32,
-//  CHECK-SAME:     #[[$map2]]> {
+// CHECK-LABEL: func @return_extract_slice(%{{.*}}) -> memref<2x?xf32, strided<[10, 1], offset: ?>>
 //       CHECK:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<20x10xf32>
-//       CHECK:   %[[subview:.*]] = memref.subview {{.*}} : memref<20x10xf32> to memref<2x?xf32, #[[$map2]]>
+//       CHECK:   %[[subview:.*]] = memref.subview {{.*}} : memref<20x10xf32> to memref<2x?xf32, strided<[10, 1], offset: ?>>
 //       CHECK:   return %[[subview]]
 
-// CHECK-NO-LAYOUT-MAP: #[[$map2:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 10 + s0 + d1)>
 // CHECK-NO-LAYOUT-MAP-LABEL: func @return_extract_slice(%{{.*}}) -> memref<2x?xf32>
 //       CHECK-NO-LAYOUT-MAP:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<20x10xf32>
-//       CHECK-NO-LAYOUT-MAP:   %[[subview:.*]] = memref.subview {{.*}} : memref<20x10xf32> to memref<2x?xf32, #[[$map2]]>
+//       CHECK-NO-LAYOUT-MAP:   %[[subview:.*]] = memref.subview {{.*}} : memref<20x10xf32> to memref<2x?xf32, strided<[10, 1], offset: ?>>
 //       CHECK-NO-LAYOUT-MAP:   %[[alloc_no_layout:.*]] = memref.alloc(%{{.*}}) : memref<2x?xf32>
 //       CHECK-NO-LAYOUT-MAP:   memref.copy %[[subview]], %[[alloc_no_layout]]
 //       CHECK-NO-LAYOUT-MAP:   memref.dealloc %[[alloc]]
 //       CHECK-NO-LAYOUT-MAP:   return %[[alloc_no_layout]]
 
 // CHECK-FULLY-DYNAMIC-LAYOUT-MAP: #[[$map2a:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-// CHECK-FULLY-DYNAMIC-LAYOUT-MAP: #[[$map2b:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 10 + s0 + d1)>
 // CHECK-FULLY-DYNAMIC-LAYOUT-MAP-LABEL: func @return_extract_slice(%{{.*}}) -> memref<2x?xf32,
 //  CHECK-FULLY-DYNAMIC-LAYOUT-MAP-SAME: #[[$map2a]]> {
 func.func @return_extract_slice(%idx: index, %sz: index) -> (tensor<2x?xf32>)
@@ -375,11 +371,11 @@ func.func @scf_for_with_tensor_insert_slice(
       -> (tensor<?xf32>, tensor<?xf32>)
   {
     // CHECK-NEXT:   %[[SVA:.*]] = memref.subview %[[A]]
-    // CHECK-NEXT:   memref.copy %[[C]], %[[SVA]] : memref<4xf32, #[[$DYN_1D_MAP]]> to memref<4xf32, #[[$DYN_1D_MAP]]>
+    // CHECK-NEXT:   memref.copy %[[C]], %[[SVA]] : memref<4xf32, #[[$DYN_1D_MAP]]> to memref<4xf32, strided<[?], offset: ?>>
     %ttA = tensor.insert_slice %C into %tA[%i][4][1] : tensor<4xf32> into tensor<?xf32>
 
     // CHECK-NEXT:   %[[SVB:.*]] = memref.subview %[[B]]
-    // CHECK-NEXT:   memref.copy %[[C]], %[[SVB]] : memref<4xf32, #[[$DYN_1D_MAP]]> to memref<4xf32, #[[$DYN_1D_MAP]]>
+    // CHECK-NEXT:   memref.copy %[[C]], %[[SVB]] : memref<4xf32, #[[$DYN_1D_MAP]]> to memref<4xf32, strided<[?], offset: ?>>
     %ttB = tensor.insert_slice %C into %tB[%i][4][1] : tensor<4xf32> into tensor<?xf32>
 
     // scf.yield is empty and is elided

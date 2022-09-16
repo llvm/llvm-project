@@ -253,14 +253,12 @@ func.func @tensor.generate_unknown_ops_in_body(%arg0: index) -> tensor<?xindex> 
 
 // -----
 
- // CHECK-DAG: #[[$MAP0a:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-
 // CHECK-LABEL: func @tensor.extract_slice(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x?xf32>, %[[idx1:.*]]: index, %[[idx2:.*]]: index
 func.func @tensor.extract_slice(
     %t1: tensor<?x?xf32>, %idx1: index, %idx2: index) -> tensor<?x10xf32> {
   // CHECK: %[[m:.*]] = bufferization.to_memref %[[t1]] : memref<?x?xf32>
-  // CHECK: %[[r:.*]] = memref.subview %[[m]][5, %[[idx2]]] [%[[idx1]], 10] [1, 1] : memref<?x?xf32> to memref<?x10xf32, #[[$MAP0a]]>
+  // CHECK: %[[r:.*]] = memref.subview %[[m]][5, %[[idx2]]] [%[[idx1]], 10] [1, 1] : memref<?x?xf32> to memref<?x10xf32, strided<[?, 1], offset: ?>>
   %0 = tensor.extract_slice %t1[5, %idx2][%idx1, 10][1, 1]
       : tensor<?x?xf32> to tensor<?x10xf32>
   // CHECK: %[[r_tensor:.*]] = bufferization.to_tensor %[[r]]
@@ -270,15 +268,13 @@ func.func @tensor.extract_slice(
 
 // -----
 
-// CHECK-DAG: #[[$MAP0b:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-
 // CHECK-LABEL: func @tensor.extract_slice_rank_reducing(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x10x?xf32>, %[[idx1:.*]]: index,
 //  CHECK-SAME:     %[[idx2:.*]]: index
 func.func @tensor.extract_slice_rank_reducing(
     %t1: tensor<?x10x?xf32>, %idx1: index, %idx2: index) -> tensor<?x15xf32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x10x?xf32>
-  // CHECK: %[[r:.*]] = memref.subview %[[m1]][5, %[[idx1]], 10] [%[[idx2]], 1, 15] [1, 1, 1] : memref<?x10x?xf32> to memref<?x15xf32, #[[$MAP0b]]>
+  // CHECK: %[[r:.*]] = memref.subview %[[m1]][5, %[[idx1]], 10] [%[[idx2]], 1, 15] [1, 1, 1] : memref<?x10x?xf32> to memref<?x15xf32, strided<[?, 1], offset: ?>>
   %0 = tensor.extract_slice %t1[5, %idx1, 10][%idx2, 1, 15][1, 1, 1]
       : tensor<?x10x?xf32> to tensor<?x15xf32>
   // CHECK: %[[r_tensor:.*]] = bufferization.to_tensor %[[r]]
@@ -313,16 +309,14 @@ func.func @tensor.insert_slice(%t1: tensor<?x?xf32>, %t2: tensor<?x10xf32>,
 
 // -----
 
-// CHECK: #[[$MAP11:.*]] = affine_map<()[s0] -> (s0)>
-
 // CHECK-LABEL: func @tensor.insert_slice_rank_reducing_1(
 func.func @tensor.insert_slice_rank_reducing_1(
     %t1: tensor<?x?xf32>, %f: tensor<f32>, %idx1: index, %idx2: index)
   -> tensor<?x?xf32>
 {
   // CHECK: %[[alloc:.*]] = memref.alloc{{.*}} : memref<?x?xf32>
-  // CHECK: memref.subview %[[alloc]][%{{.*}}, %{{.*}}] [1, 1] [1, 1] : memref<?x?xf32> to memref<f32, #[[$MAP11]]>
-  // CHECK: memref.copy {{.*}} : memref<f32> to memref<f32, #[[$MAP11]]>
+  // CHECK: memref.subview %[[alloc]][%{{.*}}, %{{.*}}] [1, 1] [1, 1] : memref<?x?xf32> to memref<f32, strided<[], offset: ?>>
+  // CHECK: memref.copy {{.*}} : memref<f32> to memref<f32, strided<[], offset: ?>>
   %0 = tensor.insert_slice %f into %t1[%idx1, %idx2][1, 1][1, 1]
       : tensor<f32> into tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -330,16 +324,14 @@ func.func @tensor.insert_slice_rank_reducing_1(
 
 // -----
 
-// CHECK: #[[$MAP12:.*]] = affine_map<(d0, d1, d2, d3, d4)[s0, s1, s2, s3, s4, s5] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4 + d4 * s5)>
-
 // CHECK-LABEL: func @tensor.insert_slice_rank_reducing_2(
 func.func @tensor.insert_slice_rank_reducing_2(
     %t1: tensor<?x?x?x?x?x?x?xf32>, %t2: tensor<2x1x4x1x1xf32>, %i: index)
   -> tensor<?x?x?x?x?x?x?xf32>
 {
   // CHECK: %[[alloc:.*]] = memref.alloc{{.*}} : memref<?x?x?x?x?x?x?xf32>
-  // CHECK: memref.subview %[[alloc]][{{.*}}] [1, 2, 1, 4, 1, 1, 1] [1, 1, 1, 1, 1, 1, 1] : memref<?x?x?x?x?x?x?xf32> to memref<2x1x4x1x1xf32, #[[$MAP12]]>
-  // CHECK: memref.copy {{.*}} : memref<2x1x4x1x1xf32> to memref<2x1x4x1x1xf32, #[[$MAP12]]>
+  // CHECK: memref.subview %[[alloc]][{{.*}}] [1, 2, 1, 4, 1, 1, 1] [1, 1, 1, 1, 1, 1, 1] : memref<?x?x?x?x?x?x?xf32> to memref<2x1x4x1x1xf32, strided<[?, ?, ?, ?, ?], offset: ?>>
+  // CHECK: memref.copy {{.*}} : memref<2x1x4x1x1xf32> to memref<2x1x4x1x1xf32, strided<[?, ?, ?, ?, ?], offset: ?>>
   %0 = tensor.insert_slice %t2 into %t1[%i, %i, %i, %i, %i, %i, %i][1, 2, 1, 4, 1, 1, 1][1, 1, 1, 1, 1, 1, 1]
       : tensor<2x1x4x1x1xf32> into tensor<?x?x?x?x?x?x?xf32>
   return %0 : tensor<?x?x?x?x?x?x?xf32>
@@ -380,7 +372,6 @@ func.func @tensor.expand_shape(%t1: tensor<?x10xf32>) -> tensor<2x?x10xf32> {
 
 // -----
 
-// CHECK-DAG: #[[$MAP1b:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 20 + s0 + d1)>
 // CHECK-DAG: #[[$MAP2b:.*]] = affine_map<(d0, d1, d2, d3)[s0] -> (d0 * 140 + d1 * 20 + d2 * 5 + d3 + s0)>
 
 // CHECK-LABEL: func @tensor.expand_shape_of_slice(
@@ -388,11 +379,11 @@ func.func @tensor.expand_shape(%t1: tensor<?x10xf32>) -> tensor<2x?x10xf32> {
 func.func @tensor.expand_shape_of_slice(
     %t1: tensor<?x20xf32>, %o1: index, %s1: index) -> tensor<?x7x2x5xf32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x20xf32>
-  // CHECK: %[[subview:.*]] = memref.subview %[[m1]][%{{.*}}, 5] [%{{.*}}, 10] [1, 1] : memref<?x20xf32> to memref<?x10xf32, #[[$MAP1b]]>
+  // CHECK: %[[subview:.*]] = memref.subview %[[m1]][%{{.*}}, 5] [%{{.*}}, 10] [1, 1] : memref<?x20xf32> to memref<?x10xf32, strided<[20, 1], offset: ?>>
   %0 = tensor.extract_slice %t1[%o1, 5][%s1, 10][1, 1] :
       tensor<?x20xf32> to tensor<?x10xf32>
   // CHECK: %[[expanded:.*]] = memref.expand_shape %[[subview]] [
-  // CHECK-SAME: [0, 1], [2, 3]] : memref<?x10xf32, #[[$MAP1b]]> into memref<?x7x2x5xf32, #[[$MAP2b]]>
+  // CHECK-SAME: [0, 1], [2, 3]] : memref<?x10xf32, strided<[20, 1], offset: ?>> into memref<?x7x2x5xf32, #[[$MAP2b]]>
   %1 = tensor.expand_shape %0 [[0, 1], [2, 3]] :
       tensor<?x10xf32> into tensor<?x7x2x5xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[expanded]]
@@ -402,7 +393,6 @@ func.func @tensor.expand_shape_of_slice(
 
 // -----
 
-// CHECK-DAG: #[[$MAP9:.*]] = affine_map<()[s0] -> (s0)>
 // CHECK-DAG: #[[$MAP10:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
 // CHECK-LABEL: func @tensor.expand_shape_of_scalar_slice(
@@ -410,9 +400,9 @@ func.func @tensor.expand_shape_of_slice(
 func.func @tensor.expand_shape_of_scalar_slice(
     %t1: tensor<?xf32>, %o1: index, %s1: index) -> tensor<1xf32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?xf32>
-  // CHECK: %[[subview:.*]] = memref.subview %[[m1]][%{{.*}}] [1] [1] :  memref<?xf32> to memref<f32, #[[$MAP9]]>
+  // CHECK: %[[subview:.*]] = memref.subview %[[m1]][%{{.*}}] [1] [1] :  memref<?xf32> to memref<f32, strided<[], offset: ?>>
   %0 = tensor.extract_slice %t1[%o1][1][1] : tensor<?xf32> to tensor<f32>
-  // CHECK: %[[expanded:.*]] = memref.expand_shape %[[subview]] [] : memref<f32, #[[$MAP9]]> into memref<1xf32, #[[$MAP10]]>
+  // CHECK: %[[expanded:.*]] = memref.expand_shape %[[subview]] [] : memref<f32, strided{{.*}}> into memref<1xf32, #[[$MAP10]]>
   %1 = tensor.expand_shape %0 [] : tensor<f32> into tensor<1xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[expanded]]
   // CHECK: return %[[r]]
@@ -452,14 +442,13 @@ func.func @tensor.collapse_shape_to_scalar(%t1: tensor<1x1x1xf32>) -> tensor<f32
 
 // -----
 
-// CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0) -> (d0 + 1)>
 // CHECK-DAG: #[[$MAP4:.*]] = affine_map<() -> (1)>
 
 // CHECK-LABEL: func @tensor.collapse_shape_of_slice(
 func.func @tensor.collapse_shape_of_slice(%arg0: tensor<2xi32>) -> tensor<i32> {
-  // CHECK: memref.subview %{{.*}}[1] [1] [1] : memref<2xi32> to memref<1xi32, #[[$MAP3]]>
+  // CHECK: memref.subview %{{.*}}[1] [1] [1] : memref<2xi32> to memref<1xi32, strided<[1], offset: 1>>
   %0 = tensor.extract_slice %arg0[1] [1] [1] : tensor<2xi32> to tensor<1xi32>
-  // CHECK: memref.collapse_shape %{{.*}} [] : memref<1xi32, #[[$MAP3]]> into memref<i32, #[[$MAP4]]>
+  // CHECK: memref.collapse_shape %{{.*}} [] : memref<1xi32, strided<[1], offset: 1>> into memref<i32, #[[$MAP4]]>
   %1 = tensor.collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
   return %1 : tensor<i32>
 }
@@ -470,7 +459,7 @@ func.func @tensor.collapse_shape_of_slice(%arg0: tensor<2xi32>) -> tensor<i32> {
 func.func @tensor.collapse_shape_of_slice2(
     %arg0: tensor<?x?x?x?xi64>, %o1: index, %o2: index, %o3: index, %o4: index)
     -> tensor<87x63648xi64> {
-  // CHECK: %[[subview:.*]] = memref.subview %{{.*}} : memref<?x?x?x?xi64> to memref<87x78x68x12xi64, #{{.*}}>
+  // CHECK: %[[subview:.*]] = memref.subview %{{.*}} : memref<?x?x?x?xi64> to memref<87x78x68x12xi64, strided{{.*}}>
   %0 = tensor.extract_slice %arg0[%o1, %o2, %o3, %o4] [87, 78, 68, 12] [1, 1, 1, 1] : tensor<?x?x?x?xi64> to tensor<87x78x68x12xi64>
 
   // This memref may not be collapsible, so the buffer must be copied to get rid
@@ -485,33 +474,31 @@ func.func @tensor.collapse_shape_of_slice2(
 
 // -----
 
-// CHECK-DAG: #[[$MAP5:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
 // CHECK-DAG: #[[$MAP6:.*]] = affine_map<(d0) -> (d0 * 2)>
 
 // CHECK-LABEL: func @tensor.collapse_shape_of_slice3(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<1x2xf32>
 func.func @tensor.collapse_shape_of_slice3(%t1: tensor<1x2xf32>) -> tensor<1xf32> {
-  // CHECK: memref.subview {{.*}} : memref<1x2xf32> to memref<1x1xf32, #[[$MAP5]]>
+  // CHECK: memref.subview {{.*}} : memref<1x2xf32> to memref<1x1xf32, strided<[2, 1]>>
   %0 = tensor.extract_slice %t1[0, 0][1, 1][1, 1] : tensor<1x2xf32> to tensor<1x1xf32>
   // CHECK: memref.collapse_shape %{{.*}} [
-  // CHECK-SAME: [0, 1]] : memref<1x1xf32, #[[$MAP5]]> into memref<1xf32, #[[$MAP6]]>
+  // CHECK-SAME: [0, 1]] : memref<1x1xf32, strided<[2, 1]>> into memref<1xf32, #[[$MAP6]]>
   %1 = tensor.collapse_shape %0 [[0, 1]] : tensor<1x1xf32> into tensor<1xf32>
   return %1 : tensor<1xf32>
 }
 
 // -----
 
-// CHECK-DAG: #[[$MAP7:.*]] = affine_map<(d0, d1, d2)[s0] -> (d0 * 8 + s0 + d1 * 4 + d2)>
 // CHECK-DAG: #[[$MAP8:.*]] = affine_map<(d0)[s0] -> (d0 * 4 + s0)>
 
 // CHECK-LABEL:   func @tensor.collapse_shape_of_slice4(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x2x4xf32>,
 // CHECK-SAME:      %[[OFFSET:.*]]: index) -> tensor<8xf32> {
 func.func @tensor.collapse_shape_of_slice4(%arg0: tensor<?x2x4xf32>, %offset: index, %size: index) -> tensor<8xf32> {
-  // CHECK: memref.subview %{{.*}} : memref<?x2x4xf32> to memref<4x2x1xf32, #[[$MAP7]]>
+  // CHECK: memref.subview %{{.*}} : memref<?x2x4xf32> to memref<4x2x1xf32, strided<[8, 4, 1], offset: ?>>
   %0 = tensor.extract_slice %arg0[0, 0, %offset] [4, 2, 1] [1, 1, 1] : tensor<?x2x4xf32> to tensor<4x2x1xf32>
   // CHECK: memref.collapse_shape %{{.*}} [
-  // CHECK-SAME: [0, 1, 2]] : memref<4x2x1xf32, #[[$MAP7]]> into memref<8xf32, #[[$MAP8]]>
+  // CHECK-SAME: [0, 1, 2]] : memref<4x2x1xf32, strided<[8, 4, 1], offset: ?>> into memref<8xf32, #[[$MAP8]]>
   %ret = tensor.collapse_shape %0 [[0, 1, 2]] : tensor<4x2x1xf32> into tensor<8xf32>
   return %ret: tensor<8xf32>
 }

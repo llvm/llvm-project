@@ -2184,11 +2184,10 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
   }
 
   // The type is now known.
-  return MemRefType::get(
-      staticSizes, sourceMemRefType.getElementType(),
-      makeStridedLinearLayoutMap(targetStrides, targetOffset,
-                                 sourceMemRefType.getContext()),
-      sourceMemRefType.getMemorySpace());
+  return MemRefType::get(staticSizes, sourceMemRefType.getElementType(),
+                         StridedLayoutAttr::get(sourceMemRefType.getContext(),
+                                                targetOffset, targetStrides),
+                         sourceMemRefType.getMemorySpace());
 }
 
 Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
@@ -2224,14 +2223,19 @@ Type SubViewOp::inferRankReducedResultType(ArrayRef<int64_t> resultShape,
   Optional<llvm::SmallDenseSet<unsigned>> dimsToProject =
       computeRankReductionMask(inferredType.getShape(), resultShape);
   assert(dimsToProject.has_value() && "invalid rank reduction");
-  llvm::SmallBitVector dimsToProjectVector(inferredType.getRank());
-  for (unsigned dim : *dimsToProject)
-    dimsToProjectVector.set(dim);
 
-  // Compute layout map and result type.
-  AffineMap map = getProjectedMap(inferredType.getLayout().getAffineMap(),
-                                  dimsToProjectVector);
-  return MemRefType::get(resultShape, inferredType.getElementType(), map,
+  // Compute the layout and result type.
+  auto inferredLayout = inferredType.getLayout().cast<StridedLayoutAttr>();
+  SmallVector<int64_t> rankReducedStrides;
+  rankReducedStrides.reserve(resultShape.size());
+  for (auto [idx, value] : llvm::enumerate(inferredLayout.getStrides())) {
+    if (!dimsToProject->contains(idx))
+      rankReducedStrides.push_back(value);
+  }
+  return MemRefType::get(resultShape, inferredType.getElementType(),
+                         StridedLayoutAttr::get(inferredLayout.getContext(),
+                                                inferredLayout.getOffset(),
+                                                rankReducedStrides),
                          inferredType.getMemorySpace());
 }
 
@@ -2363,8 +2367,8 @@ Value SubViewOp::getViewSource() { return getSource(); }
 /// Return true if t1 and t2 have equal offsets (both dynamic or of same
 /// static value).
 static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
-  AffineExpr t1Offset, t2Offset;
-  SmallVector<AffineExpr> t1Strides, t2Strides;
+  int64_t t1Offset, t2Offset;
+  SmallVector<int64_t> t1Strides, t2Strides;
   auto res1 = getStridesAndOffset(t1, t1Strides, t1Offset);
   auto res2 = getStridesAndOffset(t2, t2Strides, t2Offset);
   return succeeded(res1) && succeeded(res2) && t1Offset == t2Offset;
@@ -2506,16 +2510,25 @@ static MemRefType getCanonicalSubViewResultType(
   // Return nullptr as failure mode.
   if (!unusedDims)
     return nullptr;
-  SmallVector<int64_t> shape;
-  for (const auto &sizes : llvm::enumerate(nonRankReducedType.getShape())) {
-    if (unusedDims->test(sizes.index()))
+
+  auto layout = nonRankReducedType.getLayout().cast<StridedLayoutAttr>();
+  SmallVector<int64_t> shape, strides;
+  unsigned numDimsAfterReduction =
+      nonRankReducedType.getRank() - unusedDims->count();
+  shape.reserve(numDimsAfterReduction);
+  strides.reserve(numDimsAfterReduction);
+  for (const auto &[idx, size, stride] :
+       llvm::zip(llvm::seq<unsigned>(0, nonRankReducedType.getRank()),
+                 nonRankReducedType.getShape(), layout.getStrides())) {
+    if (unusedDims->test(idx))
       continue;
-    shape.push_back(sizes.value());
+    shape.push_back(size);
+    strides.push_back(stride);
   }
-  AffineMap layoutMap = nonRankReducedType.getLayout().getAffineMap();
-  if (!layoutMap.isIdentity())
-    layoutMap = getProjectedMap(layoutMap, *unusedDims);
-  return MemRefType::get(shape, nonRankReducedType.getElementType(), layoutMap,
+
+  return MemRefType::get(shape, nonRankReducedType.getElementType(),
+                         StridedLayoutAttr::get(sourceType.getContext(),
+                                                layout.getOffset(), strides),
                          nonRankReducedType.getMemorySpace());
 }
 

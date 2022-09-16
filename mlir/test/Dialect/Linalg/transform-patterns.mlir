@@ -1,8 +1,6 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns=test-patterns -split-input-file -test-transform-dialect-interpreter | FileCheck %s
 
-// CHECK-DAG: #[[$STRIDED_1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // Map corresponding to a 2D memory access where the stride along the last dim is known to be 1.
-// CHECK-DAG: #[[$STRIDED_2D_u_1:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[$kn:.*]] = affine_map<(d0, d1, d2) -> (d2, d1)>
 // CHECK-DAG: #[[$nm:.*]] = affine_map<(d0, d1, d2) -> (d1, d0)>
 // CHECK-DAG: #[[$km:.*]] = affine_map<(d0, d1, d2) -> (d2, d0)>
@@ -46,8 +44,8 @@ func.func @matvec(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 // CHECK:         scf.parallel {{.*}} step (%[[c5]])
 // CHECK:           scf.for {{.*}} step %[[c6]]
 // CHECK:             linalg.matvec
-// CHECK:               ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?xf32, #[[$STRIDED_1D]]>)
-// CHECK:              outs({{.*}}: memref<?xf32, #[[$STRIDED_1D]]>)
+// CHECK:               ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?xf32, strided<[1], offset: ?>>)
+// CHECK:              outs({{.*}}: memref<?xf32, strided<[1], offset: ?>>)
 
 func.func @matmul(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
              %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
@@ -85,8 +83,8 @@ func.func @matmul(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 // CHECK:                             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c3]] {
 // CHECK:                               scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c4]] {
 // CHECK:                                 linalg.matmul
-// CHECK:                                   ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
-// CHECK:                                  outs({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
+// CHECK:                                   ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?x?xf32, strided<[?, 1], offset: ?>>)
+// CHECK:                                  outs({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>)
 
 #matmul_accesses = [
   affine_map<(m, n, k) -> (m, k)>,
@@ -147,8 +145,8 @@ func.func @matvec_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 // CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c6]]
 // CHECK:           scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c5]]
 // CHECK:             linalg.matvec
-// CHECK:               ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?xf32, #[[$STRIDED_1D]]>)
-// CHECK:              outs({{.*}}: memref<?xf32, #[[$STRIDED_1D]]>)
+// CHECK:               ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?xf32, strided<[1], offset: ?>>)
+// CHECK:              outs({{.*}}: memref<?xf32, strided<[1], offset: ?>>)
 
 func.func @matmul_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
              %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
@@ -180,8 +178,8 @@ func.func @matmul_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 // CHECK:                       scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c30]] {
 // CHECK:                         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c40]] {
 // CHECK:                                 linalg.matmul
-// CHECK:                                  ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
-// CHECK:                                   outs({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>)
+// CHECK:                                  ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?x?xf32, strided<[?, 1], offset: ?>>)
+// CHECK:                                   outs({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>)
 
 func.func @tile_permute_parallel_loop(%arg0: memref<?x?xf32>,
                                  %arg1: memref<?x?xf32>,
