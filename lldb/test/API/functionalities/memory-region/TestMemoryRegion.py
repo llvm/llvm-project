@@ -8,6 +8,8 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.gdbclientutils import MockGDBServerResponder
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class MemoryCommandRegion(TestBase):
@@ -126,3 +128,36 @@ class MemoryCommandRegion(TestBase):
 
                 previous_base = region_base
                 previous_end = region_end
+
+class MemoryCommandRegionAll(GDBRemoteTestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
+    def test_all_error(self):
+        # The --all option should keep looping until the end of the memory range.
+        # If there is an error it should be reported as if you were just asking
+        # for one region. In this case the error is the remote not supporting
+        # qMemoryRegionInfo.
+        # (a region being unmapped is not an error, we just get a result
+        # describing an unmapped range)
+        class MyResponder(MockGDBServerResponder):
+            def qMemoryRegionInfo(self, addr):
+                # Empty string means unsupported.
+                return ""
+
+        self.server.responder = MyResponder()
+        target = self.dbg.CreateTarget('')
+        if self.TraceOn():
+            self.runCmd("log enable gdb-remote packets")
+            self.addTearDownHook(
+                  lambda: self.runCmd("log disable gdb-remote packets"))
+
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateStopped])
+
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand("memory region --all ", result)
+        self.assertFalse(result.Succeeded())
+        self.assertEqual(result.GetError(),
+                    "error: qMemoryRegionInfo is not supported\n")
