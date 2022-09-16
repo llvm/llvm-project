@@ -424,7 +424,7 @@ func.func @expand_shape_to_smaller_rank(%arg0: memref<1xf32>) {
 
 func.func @expand_shape_invalid_result_layout(
     %arg0: memref<30x20xf32, strided<[4000, 2], offset: 100>>) {
-  // expected-error @+1 {{expected expanded type to be 'memref<2x15x20xf32, affine_map<(d0, d1, d2) -> (d0 * 60000 + d1 * 4000 + d2 * 2 + 100)>>' but found 'memref<2x15x20xf32, affine_map<(d0, d1, d2) -> (d0 * 5000 + d1 * 4000 + d2 * 2 + 100)>>'}}
+  // expected-error @+1 {{expected expanded type to be 'memref<2x15x20xf32, strided<[60000, 4000, 2], offset: 100>>' but found 'memref<2x15x20xf32, strided<[5000, 4000, 2], offset: 100>>'}}
   %0 = memref.expand_shape %arg0 [[0, 1], [2]] :
       memref<30x20xf32, strided<[4000, 2], offset: 100>>
       into memref<2x15x20xf32, strided<[5000, 4000, 2], offset: 100>>

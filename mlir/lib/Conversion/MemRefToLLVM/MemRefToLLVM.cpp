@@ -961,7 +961,25 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     auto srcType = op.getSource().getType().cast<BaseMemRefType>();
     auto targetType = op.getTarget().getType().cast<BaseMemRefType>();
 
-    auto isContiguousMemrefType = [](BaseMemRefType type) {
+    auto isStaticShapeAndContiguousRowMajor = [](MemRefType type) {
+      if (!type.hasStaticShape())
+        return false;
+
+      SmallVector<int64_t> strides;
+      int64_t offset;
+      if (failed(getStridesAndOffset(type, strides, offset)))
+        return false;
+
+      int64_t runningStride = 1;
+      for (unsigned i = strides.size(); i > 0; --i) {
+        if (strides[i - 1] != runningStride)
+          return false;
+        runningStride *= type.getDimSize(i - 1);
+      }
+      return true;
+    };
+
+    auto isContiguousMemrefType = [&](BaseMemRefType type) {
       auto memrefType = type.dyn_cast<mlir::MemRefType>();
       // We can use memcpy for memrefs if they have an identity layout or are
       // contiguous with an arbitrary offset. Ignore empty memrefs, which is a
