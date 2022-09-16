@@ -109,6 +109,7 @@ static void TypeInfoMapping(IO &IO, TypeInfo &I) {
 static void FieldTypeInfoMapping(IO &IO, FieldTypeInfo &I) {
   TypeInfoMapping(IO, I);
   IO.mapOptional("Name", I.Name, SmallString<16>());
+  IO.mapOptional("DefaultValue", I.DefaultValue, SmallString<16>());
 }
 
 static void InfoMapping(IO &IO, Info &I) {
@@ -183,6 +184,7 @@ template <> struct MappingTraits<FieldTypeInfo> {
   static void mapping(IO &IO, FieldTypeInfo &I) {
     TypeInfoMapping(IO, I);
     IO.mapOptional("Name", I.Name, SmallString<16>());
+    IO.mapOptional("DefaultValue", I.DefaultValue, SmallString<16>());
   }
 };
 

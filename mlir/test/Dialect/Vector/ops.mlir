@@ -754,21 +754,6 @@ func.func @expand_and_compress2d(%base: memref<?x?xf32>, %mask: vector<16xi1>, %
   return
 }
 
-// CHECK-LABEL: @extract_insert_map
-func.func @extract_insert_map(%v: vector<32xf32>, %v2: vector<16x32xf32>,
-  %id0 : index, %id1 : index) -> (vector<32xf32>, vector<16x32xf32>) {
-  // CHECK: %[[V:.*]] = vector.extract_map %{{.*}}[%{{.*}}] : vector<32xf32> to vector<2xf32>
-  %vd = vector.extract_map %v[%id0] : vector<32xf32> to vector<2xf32>
-  // CHECK: %[[V1:.*]] = vector.extract_map %{{.*}}[%{{.*}}, %{{.*}}] : vector<16x32xf32> to vector<4x2xf32>
-  %vd2 = vector.extract_map %v2[%id0, %id1] : vector<16x32xf32> to vector<4x2xf32>
-  // CHECK: %[[R:.*]] = vector.insert_map %[[V]], %{{.*}}[%{{.*}}] : vector<2xf32> into vector<32xf32>
-  %r = vector.insert_map %vd, %v[%id0] : vector<2xf32> into vector<32xf32>
-  // CHECK: %[[R1:.*]] = vector.insert_map %[[V1]], %{{.*}}[%{{.*}}, %{{.*}}] : vector<4x2xf32> into vector<16x32xf32>
-  %r2 = vector.insert_map %vd2, %v2[%id0, %id1] : vector<4x2xf32> into vector<16x32xf32>
-  // CHECK: return %[[R]], %[[R1]] : vector<32xf32>, vector<16x32xf32>
-  return %r, %r2 : vector<32xf32>, vector<16x32xf32>
-}
-
 // CHECK-LABEL: @multi_reduction
 func.func @multi_reduction(%0: vector<4x8x16x32xf32>, %acc0: vector<4x16xf32>,
                            %acc1: f32) -> f32 {

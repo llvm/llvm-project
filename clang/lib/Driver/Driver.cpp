@@ -1024,11 +1024,14 @@ bool Driver::loadConfigFile() {
     }
   }
 
-  // If config file is not specified explicitly, try to deduce configuration
-  // from executable name. For instance, an executable 'armv7l-clang' will
-  // search for config file 'armv7l-clang.cfg'.
-  if (CfgFileName.empty() && !ClangNameParts.TargetPrefix.empty())
-    CfgFileName = ClangNameParts.TargetPrefix + '-' + ClangNameParts.ModeSuffix;
+  if (!(CLOptions && CLOptions->hasArg(options::OPT_no_default_config))) {
+    // If config file is not specified explicitly, try to deduce configuration
+    // from executable name. For instance, an executable 'armv7l-clang' will
+    // search for config file 'armv7l-clang.cfg'.
+    if (CfgFileName.empty() && !ClangNameParts.TargetPrefix.empty())
+      CfgFileName =
+          ClangNameParts.TargetPrefix + '-' + ClangNameParts.ModeSuffix;
+  }
 
   if (CfgFileName.empty())
     return false;
