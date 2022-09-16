@@ -1054,8 +1054,15 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
       }
 
       if (type == PDB_SymType::Block) {
-        sc.block = &GetOrCreateBlock(csid);
-        sc.function = sc.block->CalculateSymbolContextFunction();
+        Block &block = GetOrCreateBlock(csid);
+        sc.function = block.CalculateSymbolContextFunction();
+        if (sc.function) {
+          sc.function->GetBlock(true);
+          addr_t func_base =
+              sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+          addr_t offset = file_addr - func_base;
+          sc.block = block.FindInnermostBlockByOffset(offset);
+        }
       }
       if (sc.function)
         resolved_flags |= eSymbolContextFunction;

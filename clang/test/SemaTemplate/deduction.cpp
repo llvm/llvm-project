@@ -162,6 +162,42 @@ template void e(const float *, int);
 
 } // namespace test4
 
+namespace test5 {
+
+template <bool, int = 0> class a {};
+template <class b> void c(b, b);
+template <bool b> void c(a<b>, a<b>);
+void d() { c(a<true>(), a<true>()); }
+
+} // namespace test5
+
+namespace test6 {
+template <class A1> using A = A1;
+
+template <class F1, class... F2> void f(A<F1>, F1, F2...);
+template <class F3> void f(A<F3>, F3);
+
+void g() { f(A<int>{}, int{}); }
+} // namespace test6
+
+namespace test7 {
+template <class T> void f(T&, T&);
+template <class T, unsigned long S> void f(T (&)[S], T (&)[S]);
+
+void g() {
+  int i[3], j[3];
+  f(i, j);
+}
+} // namespace test7
+
+namespace test8 {
+template <class T> void foo(T);
+void test(int a) {
+    char n[a];
+    foo(n);
+}
+} // namespace test8
+
 // Verify that we can deduce enum-typed arguments correctly.
 namespace test14 {
   enum E { E0, E1 };

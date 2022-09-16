@@ -1427,7 +1427,7 @@ public:
     if (!CurrentToken)
       return LT_Invalid;
     NonTemplateLess.clear();
-    if (CurrentToken->is(tok::hash)) {
+    if (!Line.InMacroBody && CurrentToken->is(tok::hash)) {
       // We were not yet allowed to use C++17 optional when this was being
       // written. So we used LT_Invalid to mark that the line is not a
       // preprocessor directive.
@@ -4241,7 +4241,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return false;
   }
   if (Right.is(tok::less) && Left.isNot(tok::l_paren) &&
-      Line.startsWith(tok::hash)) {
+      Line.Type == LT_ImportStatement) {
     return true;
   }
   if (Right.is(TT_TrailingUnaryOperator))

@@ -19,12 +19,10 @@
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/MapLattice.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/ADT/StringMapEntry.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -38,7 +36,7 @@ using namespace clang;
 using namespace dataflow;
 
 namespace {
-using ::testing::Pair;
+using ::llvm::IsStringMapEntry;
 using ::testing::UnorderedElementsAre;
 
 class BooleanLattice {
@@ -119,16 +117,19 @@ public:
 
 template <typename Matcher>
 void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
+  using namespace ast_matchers;
+  using namespace test;
   ASSERT_THAT_ERROR(
-      test::checkDataflow<TestAnalysis>(
-          Code, "fun",
-          [](ASTContext &C, Environment &) { return TestAnalysis(C); },
+      checkDataflow<TestAnalysis>(
+          AnalysisInputs<TestAnalysis>(
+              Code, hasName("fun"),
+              [](ASTContext &C, Environment &) { return TestAnalysis(C); })
+              .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
+          /*VerifyResults=*/
           [&Expectations](
-              llvm::ArrayRef<std::pair<
-                  std::string, DataflowAnalysisState<TestAnalysis::Lattice>>>
-                  Results,
-              ASTContext &) { EXPECT_THAT(Results, Expectations); },
-          {"-fsyntax-only", "-std=c++17"}),
+              const llvm::StringMap<
+                  DataflowAnalysisState<TestAnalysis::Lattice>> &Results,
+              const AnalysisOutputs &) { EXPECT_THAT(Results, Expectations); }),
       llvm::Succeeded());
 }
 
@@ -140,8 +141,8 @@ TEST(MatchSwitchTest, JustX) {
       // [[p]]
     }
   )";
-  RunDataflow(Code,
-              UnorderedElementsAre(Pair("p", Holds(BooleanLattice(true)))));
+  RunDataflow(Code, UnorderedElementsAre(
+                        IsStringMapEntry("p", Holds(BooleanLattice(true)))));
 }
 
 TEST(MatchSwitchTest, JustFoo) {
@@ -152,8 +153,8 @@ TEST(MatchSwitchTest, JustFoo) {
       // [[p]]
     }
   )";
-  RunDataflow(Code,
-              UnorderedElementsAre(Pair("p", Holds(BooleanLattice(false)))));
+  RunDataflow(Code, UnorderedElementsAre(
+                        IsStringMapEntry("p", Holds(BooleanLattice(false)))));
 }
 
 TEST(MatchSwitchTest, XThenFoo) {
@@ -166,8 +167,8 @@ TEST(MatchSwitchTest, XThenFoo) {
       // [[p]]
     }
   )";
-  RunDataflow(Code,
-              UnorderedElementsAre(Pair("p", Holds(BooleanLattice(false)))));
+  RunDataflow(Code, UnorderedElementsAre(
+                        IsStringMapEntry("p", Holds(BooleanLattice(false)))));
 }
 
 TEST(MatchSwitchTest, FooThenX) {
@@ -180,8 +181,8 @@ TEST(MatchSwitchTest, FooThenX) {
       // [[p]]
     }
   )";
-  RunDataflow(Code,
-              UnorderedElementsAre(Pair("p", Holds(BooleanLattice(true)))));
+  RunDataflow(Code, UnorderedElementsAre(
+                        IsStringMapEntry("p", Holds(BooleanLattice(true)))));
 }
 
 TEST(MatchSwitchTest, Neither) {
@@ -192,8 +193,8 @@ TEST(MatchSwitchTest, Neither) {
       // [[p]]
     }
   )";
-  RunDataflow(Code,
-              UnorderedElementsAre(Pair("p", Holds(BooleanLattice(false)))));
+  RunDataflow(Code, UnorderedElementsAre(
+                        IsStringMapEntry("p", Holds(BooleanLattice(false)))));
 }
 
 TEST(MatchSwitchTest, ReturnNonVoid) {

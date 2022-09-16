@@ -132,6 +132,7 @@ class VectorLegalizer {
   SDValue ExpandVSELECT(SDNode *Node);
   SDValue ExpandVP_SELECT(SDNode *Node);
   SDValue ExpandVP_MERGE(SDNode *Node);
+  SDValue ExpandVP_REM(SDNode *Node);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
@@ -735,6 +736,13 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VP_SELECT:
     Results.push_back(ExpandVP_SELECT(Node));
     return;
+  case ISD::VP_SREM:
+  case ISD::VP_UREM:
+    if (SDValue Expanded = ExpandVP_REM(Node)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::SELECT:
     Results.push_back(ExpandSELECT(Node));
     return;
@@ -1308,6 +1316,30 @@ SDValue VectorLegalizer::ExpandVP_MERGE(SDNode *Node) {
 
   SDValue FullMask = DAG.getNode(ISD::AND, DL, MaskVT, Mask, EVLMask);
   return DAG.getSelect(DL, Node->getValueType(0), FullMask, Op1, Op2);
+}
+
+SDValue VectorLegalizer::ExpandVP_REM(SDNode *Node) {
+  // Implement VP_SREM/UREM in terms of VP_SDIV/VP_UDIV, VP_MUL, VP_SUB.
+  EVT VT = Node->getValueType(0);
+
+  unsigned DivOpc = Node->getOpcode() == ISD::VP_SREM ? ISD::VP_SDIV : ISD::VP_UDIV;
+
+  if (!TLI.isOperationLegalOrCustom(DivOpc, VT) ||
+      !TLI.isOperationLegalOrCustom(ISD::VP_MUL, VT) ||
+      !TLI.isOperationLegalOrCustom(ISD::VP_SUB, VT))
+    return SDValue();
+
+  SDLoc DL(Node);
+
+  SDValue Dividend = Node->getOperand(0);
+  SDValue Divisor = Node->getOperand(1);
+  SDValue Mask = Node->getOperand(2);
+  SDValue EVL = Node->getOperand(3);
+
+  // X % Y -> X-X/Y*Y
+  SDValue Div = DAG.getNode(DivOpc, DL, VT, Dividend, Divisor, Mask, EVL);
+  SDValue Mul = DAG.getNode(ISD::VP_MUL, DL, VT, Divisor, Div, Mask, EVL);
+  return DAG.getNode(ISD::VP_SUB, DL, VT, Dividend, Mul, Mask, EVL);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,

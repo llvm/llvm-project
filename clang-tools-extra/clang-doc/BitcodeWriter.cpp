@@ -148,6 +148,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {COMMENT_ATTRVAL, {"AttrVal", &StringAbbrev}},
           {COMMENT_ARG, {"Arg", &StringAbbrev}},
           {FIELD_TYPE_NAME, {"Name", &StringAbbrev}},
+          {FIELD_DEFAULT_VALUE, {"DefaultValue", &StringAbbrev}},
           {MEMBER_TYPE_NAME, {"Name", &StringAbbrev}},
           {MEMBER_TYPE_ACCESS, {"Access", &IntAbbrev}},
           {NAMESPACE_USR, {"USR", &SymbolIDAbbrev}},
@@ -207,7 +208,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Type Block
         {BI_TYPE_BLOCK_ID, {}},
         // FieldType Block
-        {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME}},
+        {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE}},
         // MemberType Block
         {BI_MEMBER_TYPE_BLOCK_ID, {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS}},
         // Enum Block
@@ -419,6 +420,7 @@ void ClangDocBitcodeWriter::emitBlock(const FieldTypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_FIELD_TYPE_BLOCK_ID);
   emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, FIELD_TYPE_NAME);
+  emitRecord(T.DefaultValue, FIELD_DEFAULT_VALUE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {

@@ -27,7 +27,7 @@ class Symbol;
 class Defined;
 class DylibSymbol;
 class InputSection;
-class ConcatInputSection;
+class ObjFile;
 
 class TargetInfo {
 public:
@@ -97,8 +97,7 @@ public:
     llvm_unreachable("Unsupported architecture for dtrace symbols");
   }
 
-  virtual void applyOptimizationHints(uint8_t *buf,
-                                      const ConcatInputSection *) const {};
+  virtual void applyOptimizationHints(uint8_t *, const ObjFile &) const {};
 
   uint32_t magic;
   llvm::MachO::CPUType cpuType;

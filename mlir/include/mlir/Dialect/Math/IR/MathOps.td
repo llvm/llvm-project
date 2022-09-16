@@ -285,6 +285,7 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
     %a = math.sin %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
