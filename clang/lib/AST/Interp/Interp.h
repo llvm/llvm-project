@@ -492,6 +492,9 @@ bool InitThisFieldActive(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+/// 1) Pops the value from the stack
+/// 2) Pops a pointer from the stack
+/// 3) Writes the value to field I of the pointer
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const T &Value = S.Stk.pop<T>();

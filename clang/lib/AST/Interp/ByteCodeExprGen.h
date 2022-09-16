@@ -71,6 +71,7 @@ public:
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
+  bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
@@ -81,6 +82,7 @@ public:
   bool VisitInitListExpr(const InitListExpr *E);
   bool VisitConstantExpr(const ConstantExpr *E);
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
+  bool VisitMemberExpr(const MemberExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -138,6 +140,8 @@ protected:
   bool visitInitializer(const Expr *E);
   /// Compiles an array initializer.
   bool visitArrayInitializer(const Expr *Initializer);
+  /// Compiles a record initializer.
+  bool visitRecordInitializer(const Expr *Initializer);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
