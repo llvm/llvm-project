@@ -162,3 +162,18 @@ func.func @extract_slice_non_sliced_linearized_dim(%input: tensor<3x?x?x11x2xf32
   // CHECK: tensor.extract_slice %[[arg0]][%[[multiIndex]]#0, %[[multiIndex]]#1, %[[multiIndex]]#2, 0, 0] [1, 1, 1, 11, 2] [1, 1, 1, 1, 1]
   return %slice : tensor<?x22xf32>
 }
+
+// -----
+
+// CHECK: @no_sliced_linearized_dims(%[[arg0:.+]]: tensor<{{.*}}>, %[[arg1:.+]]: index, %[[arg2:.+]]: index
+func.func @no_sliced_linearized_dims(%input: tensor<30x11x100xf32>, %offt: index, %size: index) -> tensor<330x?xf32> {
+  %collapsed = tensor.collapse_shape %input [[0, 1], [2]] : tensor<30x11x100xf32> into tensor<330x100xf32>
+  %slice = tensor.extract_slice %collapsed [0, %offt] [330, %size] [1, 1] : tensor<330x100xf32> to tensor<330x?xf32>
+  // CHECK-NOT: scf.for  
+  // CHECK: %[[init:.+]] = linalg.init_tensor [330, %[[arg2]]]
+  // CHECK: %[[e:.+]] = tensor.extract_slice %[[arg0]][0, 0, %[[arg1]]] [30, 11, %[[arg2]]] [1, 1, 1]
+  // CHECK: %[[c:.+]] = tensor.collapse_shape %[[e]] {{\[}}[0, 1], [2]]
+  // CHECK: %[[res:.+]] = tensor.insert_slice %[[c]] into %[[init]]
+  // CHECK: return %[[res]]
+  return %slice : tensor<330x?xf32>
+}
