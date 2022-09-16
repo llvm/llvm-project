@@ -441,14 +441,16 @@ public:
   /// only one tiled dimension (D_0) and `arith.delinearize_index` produces the
   /// multi-index (%3) that would be passed to this function to generate the
   /// parameters for the `tensor.extract_slice` op (%4).
-  SmallVector<Range> getExtractSliceParams(ArrayRef<ValueRange> multiIndices);
+  SmallVector<Range> getExtractSliceParams(MLIRContext *ctx,
+                                           ArrayRef<ValueRange> multiIndices);
 
   /// This function takes indices in the index space of the "tiled dimensions"
   /// described above and returns a set of Range variables that describe how the
   /// slice should be inserted into the destination. In the example above, `%iv`
   /// would be passed to this function to generate the parameters for the
   /// `tensor.insert_slice` op producing %6.
-  SmallVector<Range> getInsertSliceParams(ValueRange tileIndices);
+  SmallVector<Range> getInsertSliceParams(MLIRContext *ctx,
+                                          ValueRange tileIndices);
 
 private:
   SmallVector<ReassociationIndices> reassociationIndices;
