@@ -359,6 +359,23 @@ struct ConvertTruncI final : OpConversionPattern<arith::TruncIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertVectorPrint
+//===----------------------------------------------------------------------===//
+
+// This is primarily a convenience conversion pattern for integration tests
+// with `mlir-cpu-runner`.
+struct ConvertVectorPrint final : OpConversionPattern<vector::PrintOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::PrintOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<vector::PrintOp>(op, adaptor.getSource());
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // Pass Definition
 //===----------------------------------------------------------------------===//
 
@@ -467,7 +484,7 @@ void arith::populateWideIntEmulationPatterns(
   // Populate `arith.*` conversion patterns.
   patterns.add<
       // Misc ops.
-      ConvertConstant,
+      ConvertConstant, ConvertVectorPrint,
       // Binary ops.
       ConvertAddI,
       // Extension and truncation ops.
