@@ -234,7 +234,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   }
 
   // Number of bytes required by fields and base classes.
-  unsigned Size = 0;
+  unsigned BaseSize = 0;
   // Number of bytes required by virtual base.
   unsigned VirtSize = 0;
 
@@ -258,9 +258,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
       Record *BR = getOrCreateRecord(BD);
       if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
-        Size += align(sizeof(InlineDescriptor));
-        Bases.push_back({BD, Size, Desc, BR});
-        Size += align(BR->getSize());
+        BaseSize += align(sizeof(InlineDescriptor));
+        Bases.push_back({BD, BaseSize, Desc, BR});
+        BaseSize += align(BR->getSize());
         continue;
       }
       return nullptr;
@@ -284,7 +284,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   Record::FieldList Fields;
   for (const FieldDecl *FD : RD->fields()) {
     // Reserve space for the field's descriptor and the offset.
-    Size += align(sizeof(InlineDescriptor));
+    BaseSize += align(sizeof(InlineDescriptor));
 
     // Classify the field and add its metadata.
     QualType FT = FD->getType();
@@ -300,12 +300,12 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     }
     if (!Desc)
       return nullptr;
-    Fields.push_back({FD, Size, Desc});
-    Size += align(Desc->getAllocSize());
+    Fields.push_back({FD, BaseSize, Desc});
+    BaseSize += align(Desc->getAllocSize());
   }
 
   Record *R = new (Allocator) Record(RD, std::move(Bases), std::move(Fields),
-                                     std::move(VirtBases), VirtSize, Size);
+                                     std::move(VirtBases), VirtSize, BaseSize);
   Records.insert({RD, R});
   return R;
 }
