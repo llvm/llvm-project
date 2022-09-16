@@ -352,11 +352,10 @@ void dr496(void) {
                                              */
 
   /* The DR asked a question about whether defining a new type within offsetof
-   * is allowed. C2x N2350 made this explicitly undefined behavior, but Clang
-   * has always supported defining a type in this location, and GCC also
-   * supports it.
+   * is allowed. C2x N2350 made this explicitly undefined behavior, but GCC
+   * supports it, Clang diagnoses this a UB and rejects it.
    */
-   (void)__builtin_offsetof(struct S { int a; }, a);
+   (void)__builtin_offsetof(struct S { int a; }, a); /* expected-error{{'struct S' cannot be defined in '__builtin_offsetof'}} */
 }
 
 /* WG14 DR499: yes
