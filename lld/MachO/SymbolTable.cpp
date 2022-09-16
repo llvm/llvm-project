@@ -54,8 +54,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   bool overridesWeakDef = false;
   auto [s, wasInserted] = insert(name, file);
 
-  assert(!isWeakDef || (isa<BitcodeFile>(file) && !isec) ||
-         (isa<ObjFile>(file) && file == isec->getFile()));
+  assert(!file || !isa<BitcodeFile>(file) || !isec);
 
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
@@ -115,9 +114,11 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   return defined;
 }
 
-Defined *SymbolTable::aliasDefined(Defined *src, StringRef target) {
-  return addDefined(target, src->getFile(), src->isec, src->value, src->size,
-                    src->isWeakDef(), src->privateExtern, src->thumb,
+Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
+                                   InputFile *newFile, bool makePrivateExtern) {
+  bool isPrivateExtern = makePrivateExtern || src->privateExtern;
+  return addDefined(target, newFile, src->isec, src->value, src->size,
+                    src->isWeakDef(), isPrivateExtern, src->thumb,
                     src->referencedDynamically, src->noDeadStrip,
                     src->weakDefCanBeHidden);
 }
