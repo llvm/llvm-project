@@ -73,30 +73,15 @@ private:
   CGOpenMPRuntimeGPU::ExecutionMode SavedExecMode =
       CGOpenMPRuntimeGPU::EM_Unknown;
   CGOpenMPRuntimeGPU::ExecutionMode &ExecMode;
-  bool SavedRuntimeMode = false;
-  bool *RuntimeMode = nullptr;
 
 public:
-  /// Constructor for Non-SPMD mode.
-  ExecutionRuntimeModesRAII(CGOpenMPRuntimeGPU::ExecutionMode &ExecMode)
+  ExecutionRuntimeModesRAII(CGOpenMPRuntimeGPU::ExecutionMode &ExecMode,
+                            CGOpenMPRuntimeGPU::ExecutionMode EntryMode)
       : ExecMode(ExecMode) {
     SavedExecMode = ExecMode;
-    ExecMode = CGOpenMPRuntimeGPU::EM_NonSPMD;
+    ExecMode = EntryMode;
   }
-  /// Constructor for SPMD mode.
-  ExecutionRuntimeModesRAII(CGOpenMPRuntimeGPU::ExecutionMode &ExecMode,
-                            bool &RuntimeMode, bool FullRuntimeMode)
-      : ExecMode(ExecMode), RuntimeMode(&RuntimeMode) {
-    SavedExecMode = ExecMode;
-    SavedRuntimeMode = RuntimeMode;
-    ExecMode = CGOpenMPRuntimeGPU::EM_SPMD;
-    RuntimeMode = FullRuntimeMode;
-  }
-  ~ExecutionRuntimeModesRAII() {
-    ExecMode = SavedExecMode;
-    if (RuntimeMode)
-      *RuntimeMode = SavedRuntimeMode;
-  }
+  ~ExecutionRuntimeModesRAII() { ExecMode = SavedExecMode; }
 };
 
 /// GPU Configuration:  This information can be derived from cuda registers,
@@ -745,274 +730,13 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
       "Unknown programming model for OpenMP directive on NVPTX target.");
 }
 
-/// Check if the directive is loops based and has schedule clause at all or has
-/// static scheduling.
-static bool hasStaticScheduling(const OMPExecutableDirective &D) {
-  assert(isOpenMPWorksharingDirective(D.getDirectiveKind()) &&
-         isOpenMPLoopDirective(D.getDirectiveKind()) &&
-         "Expected loop-based directive.");
-  return !D.hasClausesOfKind<OMPOrderedClause>() &&
-         (!D.hasClausesOfKind<OMPScheduleClause>() ||
-          llvm::any_of(D.getClausesOfKind<OMPScheduleClause>(),
-                       [](const OMPScheduleClause *C) {
-                         return C->getScheduleKind() == OMPC_SCHEDULE_static;
-                       }));
-}
-
-/// Check for inner (nested) lightweight runtime construct, if any
-static bool hasNestedLightweightDirective(ASTContext &Ctx,
-                                          const OMPExecutableDirective &D) {
-  assert(supportsSPMDExecutionMode(Ctx, D) && "Expected SPMD mode directive.");
-  const auto *CS = D.getInnermostCapturedStmt();
-  const auto *Body =
-      CS->getCapturedStmt()->IgnoreContainers(/*IgnoreCaptured=*/true);
-  const Stmt *ChildStmt = CGOpenMPRuntime::getSingleCompoundChild(Ctx, Body);
-
-  if (const auto *NestedDir =
-          dyn_cast_or_null<OMPExecutableDirective>(ChildStmt)) {
-    OpenMPDirectiveKind DKind = NestedDir->getDirectiveKind();
-    switch (D.getDirectiveKind()) {
-    case OMPD_target:
-      if (isOpenMPParallelDirective(DKind) &&
-          isOpenMPWorksharingDirective(DKind) && isOpenMPLoopDirective(DKind) &&
-          hasStaticScheduling(*NestedDir))
-        return true;
-      if (DKind == OMPD_teams_distribute_simd || DKind == OMPD_simd)
-        return true;
-      if (DKind == OMPD_parallel) {
-        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
-            /*IgnoreCaptured=*/true);
-        if (!Body)
-          return false;
-        ChildStmt = CGOpenMPRuntime::getSingleCompoundChild(Ctx, Body);
-        if (const auto *NND =
-                dyn_cast_or_null<OMPExecutableDirective>(ChildStmt)) {
-          DKind = NND->getDirectiveKind();
-          if (isOpenMPWorksharingDirective(DKind) &&
-              isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NND))
-            return true;
-        }
-      } else if (DKind == OMPD_teams) {
-        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
-            /*IgnoreCaptured=*/true);
-        if (!Body)
-          return false;
-        ChildStmt = CGOpenMPRuntime::getSingleCompoundChild(Ctx, Body);
-        if (const auto *NND =
-                dyn_cast_or_null<OMPExecutableDirective>(ChildStmt)) {
-          DKind = NND->getDirectiveKind();
-          if (isOpenMPParallelDirective(DKind) &&
-              isOpenMPWorksharingDirective(DKind) &&
-              isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NND))
-            return true;
-          if (DKind == OMPD_parallel) {
-            Body = NND->getInnermostCapturedStmt()->IgnoreContainers(
-                /*IgnoreCaptured=*/true);
-            if (!Body)
-              return false;
-            ChildStmt = CGOpenMPRuntime::getSingleCompoundChild(Ctx, Body);
-            if (const auto *NND =
-                    dyn_cast_or_null<OMPExecutableDirective>(ChildStmt)) {
-              DKind = NND->getDirectiveKind();
-              if (isOpenMPWorksharingDirective(DKind) &&
-                  isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NND))
-                return true;
-            }
-          }
-        }
-      }
-      return false;
-    case OMPD_target_teams:
-      if (isOpenMPParallelDirective(DKind) &&
-          isOpenMPWorksharingDirective(DKind) && isOpenMPLoopDirective(DKind) &&
-          hasStaticScheduling(*NestedDir))
-        return true;
-      if (DKind == OMPD_distribute_simd || DKind == OMPD_simd)
-        return true;
-      if (DKind == OMPD_parallel) {
-        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
-            /*IgnoreCaptured=*/true);
-        if (!Body)
-          return false;
-        ChildStmt = CGOpenMPRuntime::getSingleCompoundChild(Ctx, Body);
-        if (const auto *NND =
-                dyn_cast_or_null<OMPExecutableDirective>(ChildStmt)) {
-          DKind = NND->getDirectiveKind();
-          if (isOpenMPWorksharingDirective(DKind) &&
-              isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NND))
-            return true;
-        }
-      }
-      return false;
-    case OMPD_target_parallel:
-      if (DKind == OMPD_simd)
-        return true;
-      return isOpenMPWorksharingDirective(DKind) &&
-             isOpenMPLoopDirective(DKind) && hasStaticScheduling(*NestedDir);
-    case OMPD_target_teams_distribute:
-    case OMPD_target_simd:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_teams_distribute_simd:
-    case OMPD_target_teams_distribute_parallel_for:
-    case OMPD_target_teams_distribute_parallel_for_simd:
-    case OMPD_parallel:
-    case OMPD_for:
-    case OMPD_parallel_for:
-    case OMPD_parallel_master:
-    case OMPD_parallel_sections:
-    case OMPD_for_simd:
-    case OMPD_parallel_for_simd:
-    case OMPD_cancel:
-    case OMPD_cancellation_point:
-    case OMPD_ordered:
-    case OMPD_threadprivate:
-    case OMPD_allocate:
-    case OMPD_task:
-    case OMPD_simd:
-    case OMPD_sections:
-    case OMPD_section:
-    case OMPD_single:
-    case OMPD_master:
-    case OMPD_critical:
-    case OMPD_taskyield:
-    case OMPD_barrier:
-    case OMPD_taskwait:
-    case OMPD_taskgroup:
-    case OMPD_atomic:
-    case OMPD_flush:
-    case OMPD_depobj:
-    case OMPD_scan:
-    case OMPD_teams:
-    case OMPD_target_data:
-    case OMPD_target_exit_data:
-    case OMPD_target_enter_data:
-    case OMPD_distribute:
-    case OMPD_distribute_simd:
-    case OMPD_distribute_parallel_for:
-    case OMPD_distribute_parallel_for_simd:
-    case OMPD_teams_distribute:
-    case OMPD_teams_distribute_simd:
-    case OMPD_teams_distribute_parallel_for:
-    case OMPD_teams_distribute_parallel_for_simd:
-    case OMPD_target_update:
-    case OMPD_declare_simd:
-    case OMPD_declare_variant:
-    case OMPD_begin_declare_variant:
-    case OMPD_end_declare_variant:
-    case OMPD_declare_target:
-    case OMPD_end_declare_target:
-    case OMPD_declare_reduction:
-    case OMPD_declare_mapper:
-    case OMPD_taskloop:
-    case OMPD_taskloop_simd:
-    case OMPD_master_taskloop:
-    case OMPD_master_taskloop_simd:
-    case OMPD_parallel_master_taskloop:
-    case OMPD_parallel_master_taskloop_simd:
-    case OMPD_requires:
-    case OMPD_unknown:
-    default:
-      llvm_unreachable("Unexpected directive.");
-    }
-  }
-
-  return false;
-}
-
-/// Checks if the construct supports lightweight runtime. It must be SPMD
-/// construct + inner loop-based construct with static scheduling.
-static bool supportsLightweightRuntime(ASTContext &Ctx,
-                                       const OMPExecutableDirective &D) {
-  if (!supportsSPMDExecutionMode(Ctx, D))
-    return false;
-  OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
-  switch (DirectiveKind) {
-  case OMPD_target:
-  case OMPD_target_teams:
-  case OMPD_target_parallel:
-    return hasNestedLightweightDirective(Ctx, D);
-  case OMPD_target_parallel_for:
-  case OMPD_target_parallel_for_simd:
-  case OMPD_target_teams_distribute_parallel_for:
-  case OMPD_target_teams_distribute_parallel_for_simd:
-    // (Last|First)-privates must be shared in parallel region.
-    return hasStaticScheduling(D);
-  case OMPD_target_simd:
-  case OMPD_target_teams_distribute_simd:
-    return true;
-  case OMPD_target_teams_distribute:
-    return false;
-  case OMPD_parallel:
-  case OMPD_for:
-  case OMPD_parallel_for:
-  case OMPD_parallel_master:
-  case OMPD_parallel_sections:
-  case OMPD_for_simd:
-  case OMPD_parallel_for_simd:
-  case OMPD_cancel:
-  case OMPD_cancellation_point:
-  case OMPD_ordered:
-  case OMPD_threadprivate:
-  case OMPD_allocate:
-  case OMPD_task:
-  case OMPD_simd:
-  case OMPD_sections:
-  case OMPD_section:
-  case OMPD_single:
-  case OMPD_master:
-  case OMPD_critical:
-  case OMPD_taskyield:
-  case OMPD_barrier:
-  case OMPD_taskwait:
-  case OMPD_taskgroup:
-  case OMPD_atomic:
-  case OMPD_flush:
-  case OMPD_depobj:
-  case OMPD_scan:
-  case OMPD_teams:
-  case OMPD_target_data:
-  case OMPD_target_exit_data:
-  case OMPD_target_enter_data:
-  case OMPD_distribute:
-  case OMPD_distribute_simd:
-  case OMPD_distribute_parallel_for:
-  case OMPD_distribute_parallel_for_simd:
-  case OMPD_teams_distribute:
-  case OMPD_teams_distribute_simd:
-  case OMPD_teams_distribute_parallel_for:
-  case OMPD_teams_distribute_parallel_for_simd:
-  case OMPD_target_update:
-  case OMPD_declare_simd:
-  case OMPD_declare_variant:
-  case OMPD_begin_declare_variant:
-  case OMPD_end_declare_variant:
-  case OMPD_declare_target:
-  case OMPD_end_declare_target:
-  case OMPD_declare_reduction:
-  case OMPD_declare_mapper:
-  case OMPD_taskloop:
-  case OMPD_taskloop_simd:
-  case OMPD_master_taskloop:
-  case OMPD_master_taskloop_simd:
-  case OMPD_parallel_master_taskloop:
-  case OMPD_parallel_master_taskloop_simd:
-  case OMPD_requires:
-  case OMPD_unknown:
-  default:
-    break;
-  }
-  llvm_unreachable(
-      "Unknown programming model for OpenMP directive on NVPTX target.");
-}
-
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
                                              StringRef ParentName,
                                              llvm::Function *&OutlinedFn,
                                              llvm::Constant *&OutlinedFnID,
                                              bool IsOffloadEntry,
                                              const RegionCodeGenTy &CodeGen) {
-  ExecutionRuntimeModesRAII ModeRAII(CurrentExecutionMode);
+  ExecutionRuntimeModesRAII ModeRAII(CurrentExecutionMode, EM_NonSPMD);
   EntryFunctionState EST;
   WrapperFunctionsMap.clear();
 
@@ -1047,7 +771,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
 void CGOpenMPRuntimeGPU::emitKernelInit(CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
   CGBuilderTy &Bld = CGF.Builder;
-  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, IsSPMD, requiresFullRuntime()));
+  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, IsSPMD, true));
   IsInTargetMasterThreadRegion = IsSPMD;
   if (!IsSPMD)
     emitGenericVarsProlog(CGF, EST.Loc);
@@ -1060,7 +784,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
     emitGenericVarsEpilog(CGF);
 
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld, IsSPMD, requiresFullRuntime());
+  OMPBuilder.createTargetDeinit(Bld, IsSPMD, true);
 }
 
 void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
@@ -1069,10 +793,7 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
                                           llvm::Constant *&OutlinedFnID,
                                           bool IsOffloadEntry,
                                           const RegionCodeGenTy &CodeGen) {
-  ExecutionRuntimeModesRAII ModeRAII(
-      CurrentExecutionMode, RequiresFullRuntime,
-      CGM.getLangOpts().OpenMPCUDAForceFullRuntime ||
-          !supportsLightweightRuntime(CGM.getContext(), D));
+  ExecutionRuntimeModesRAII ModeRAII(CurrentExecutionMode, EM_SPMD);
   EntryFunctionState EST;
 
   // Emit target region as a standalone region.
@@ -1184,11 +905,8 @@ static const ModeFlagsTy UndefinedMode =
 unsigned CGOpenMPRuntimeGPU::getDefaultLocationReserved2Flags() const {
   switch (getExecutionMode()) {
   case EM_SPMD:
-    if (requiresFullRuntime())
-      return KMP_IDENT_SPMD_MODE & (~KMP_IDENT_SIMPLE_RT_MODE);
-    return KMP_IDENT_SPMD_MODE | KMP_IDENT_SIMPLE_RT_MODE;
+    return KMP_IDENT_SPMD_MODE & (~KMP_IDENT_SIMPLE_RT_MODE);
   case EM_NonSPMD:
-    assert(requiresFullRuntime() && "Expected full runtime.");
     return (~KMP_IDENT_SPMD_MODE) & (~KMP_IDENT_SIMPLE_RT_MODE);
   case EM_Unknown:
     return UndefinedMode;

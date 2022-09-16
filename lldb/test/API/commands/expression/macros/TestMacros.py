@@ -9,6 +9,12 @@ from lldbsuite.test import lldbutil
 class TestMacros(TestBase):
 
     @expectedFailureAll(
+        compiler="clang",
+        bugnumber="clang does not emit .debug_macro[.dwo] sections.")
+    @expectedFailureAll(
+        debug_info="dwo",
+        bugnumber="GCC produces multiple .debug_macro.dwo sections and the spec is unclear as to what it means")
+    @expectedFailureAll(
         hostoslist=["windows"],
         compiler="gcc",
         triple='.*-android')

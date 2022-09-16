@@ -320,7 +320,7 @@ struct MemRefRegion {
                             SmallVectorImpl<int64_t> *lb = nullptr,
                             int64_t *lbFloorDivisor = nullptr) const {
     assert(pos < getRank() && "invalid position");
-    return cst.getConstantBoundOnDimSize(pos, lb);
+    return cst.getConstantBoundOnDimSize64(pos, lb);
   }
 
   /// Returns the size of this MemRefRegion in bytes.

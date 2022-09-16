@@ -235,13 +235,14 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
           if (RISCVII::isRVVWideningReduction(TSFlags))
             return false;
 
+          // If the producing instruction does not depend on vsetvli, do not
+          // convert COPY to vmv.v.v. For example, VL1R_V or PseudoVRELOAD.
+          if (!RISCVII::hasSEWOp(TSFlags) || !RISCVII::hasVLOp(TSFlags))
+            return false;
+
           // Found the definition.
           FoundDef = true;
           DefMBBI = MBBI;
-          // If the producing instruction does not depend on vsetvli, do not
-          // convert COPY to vmv.v.v. For example, VL1R_V or PseudoVRELOAD.
-          if (!RISCVII::hasSEWOp(TSFlags))
-            return false;
           break;
         }
       }
@@ -361,11 +362,9 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (IsScalableVector) {
     bool UseVMV_V_V = false;
     MachineBasicBlock::const_iterator DefMBBI;
-    unsigned DefExplicitOpNum;
     unsigned VIOpc;
     if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
       UseVMV_V_V = true;
-      DefExplicitOpNum = DefMBBI->getNumExplicitOperands();
       // We only need to handle LMUL = 1/2/4/8 here because we only define
       // vector register classes for LMUL = 1/2/4/8.
       switch (LMul) {
@@ -403,10 +402,9 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       else
         MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
       if (UseVMV_V_V) {
-        // The last two arguments of vector instructions are
-        // AVL, SEW. We also need to append the implicit-use vl and vtype.
-        MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 2)); // AVL
-        MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 1)); // SEW
+        const MCInstrDesc &Desc = DefMBBI->getDesc();
+        MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
+        MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
         MIB.addReg(RISCV::VL, RegState::Implicit);
         MIB.addReg(RISCV::VTYPE, RegState::Implicit);
       }
@@ -435,8 +433,9 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           MIB = MIB.addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
                            getKillRegState(KillSrc));
         if (UseVMV_V_V) {
-          MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 2)); // AVL
-          MIB.add(DefMBBI->getOperand(DefExplicitOpNum - 1)); // SEW
+          const MCInstrDesc &Desc = DefMBBI->getDesc();
+          MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
+          MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
           MIB.addReg(RISCV::VL, RegState::Implicit);
           MIB.addReg(RISCV::VTYPE, RegState::Implicit);
         }
@@ -1128,8 +1127,7 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
 bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
                                        StringRef &ErrInfo) const {
-  const MCInstrInfo *MCII = STI.getInstrInfo();
-  MCInstrDesc const &Desc = MCII->get(MI.getOpcode());
+  MCInstrDesc const &Desc = MI.getDesc();
 
   for (auto &OI : enumerate(Desc.operands())) {
     unsigned OpType = OI.value().OperandType;
@@ -1196,17 +1194,14 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = isShiftedInt<7, 5>(Imm);
           break;
         case RISCVOp::OPERAND_UIMMLOG2XLEN:
-          Ok = STI.getTargetTriple().isArch64Bit() ? isUInt<6>(Imm)
-                                                   : isUInt<5>(Imm);
+          Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
           break;
         case RISCVOp::OPERAND_UIMMLOG2XLEN_NONZERO:
-          Ok = STI.getTargetTriple().isArch64Bit() ? isUInt<6>(Imm)
-                                                   : isUInt<5>(Imm);
+          Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
           Ok = Ok && Imm != 0;
           break;
         case RISCVOp::OPERAND_UIMM_SHFL:
-          Ok = STI.getTargetTriple().isArch64Bit() ? isUInt<5>(Imm)
-                                                   : isUInt<4>(Imm);
+          Ok = STI.is64Bit() ? isUInt<5>(Imm) : isUInt<4>(Imm);
           break;
         case RISCVOp::OPERAND_RVKRNUM:
           Ok = Imm >= 0 && Imm <= 10;
@@ -1217,6 +1212,51 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           return false;
         }
       }
+    }
+  }
+
+  const uint64_t TSFlags = Desc.TSFlags;
+  if (RISCVII::hasMergeOp(TSFlags)) {
+    unsigned OpIdx = RISCVII::getMergeOpNum(Desc);
+    if (MI.findTiedOperandIdx(0) != OpIdx) {
+      ErrInfo = "Merge op improperly tied";
+      return false;
+    }
+  }
+  if (RISCVII::hasVLOp(TSFlags)) {
+    const MachineOperand &Op = MI.getOperand(RISCVII::getVLOpNum(Desc));
+    if (!Op.isImm() && !Op.isReg())  {
+      ErrInfo = "Invalid operand type for VL operand";
+      return false;
+    }
+    if (Op.isReg() && Op.getReg() != RISCV::NoRegister) {
+      const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+      auto *RC = MRI.getRegClass(Op.getReg());
+      if (!RISCV::GPRRegClass.hasSubClassEq(RC)) {
+        ErrInfo = "Invalid register class for VL operand";
+        return false;
+      }
+    }
+  }
+  if (RISCVII::hasSEWOp(TSFlags)) {
+    unsigned OpIdx = RISCVII::getSEWOpNum(Desc);
+    uint64_t Log2SEW = MI.getOperand(OpIdx).getImm();
+    if (Log2SEW > 31) {
+      ErrInfo = "Unexpected SEW value";
+      return false;
+    }
+    unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
+    if (!RISCVVType::isValidSEW(SEW)) {
+      ErrInfo = "Unexpected SEW value";
+      return false;
+    }
+  }
+  if (RISCVII::hasVecPolicyOp(TSFlags)) {
+    unsigned OpIdx = RISCVII::getVecPolicyOpNum(Desc);
+    uint64_t Policy = MI.getOperand(OpIdx).getImm();
+    if (Policy > (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC)) {
+      ErrInfo = "Invalid Policy Value";
+      return false;
     }
   }
 

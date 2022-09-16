@@ -3262,17 +3262,20 @@ void OperationPrinter::printAffineExprOfSSAIds(AffineExpr expr,
 // print and dump methods
 //===----------------------------------------------------------------------===//
 
-void Attribute::print(raw_ostream &os) const {
+void Attribute::print(raw_ostream &os, bool elideType) const {
   if (!*this) {
     os << "<<NULL ATTRIBUTE>>";
     return;
   }
 
   AsmState state(getContext());
-  print(os, state);
+  print(os, state, elideType);
 }
-void Attribute::print(raw_ostream &os, AsmState &state) const {
-  AsmPrinter::Impl(os, state.getImpl()).printAttribute(*this);
+void Attribute::print(raw_ostream &os, AsmState &state, bool elideType) const {
+  using AttrTypeElision = AsmPrinter::Impl::AttrTypeElision;
+  AsmPrinter::Impl(os, state.getImpl())
+      .printAttribute(*this, elideType ? AttrTypeElision::Must
+                                       : AttrTypeElision::Never);
 }
 
 void Attribute::dump() const {

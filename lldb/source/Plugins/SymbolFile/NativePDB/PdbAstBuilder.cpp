@@ -537,7 +537,7 @@ PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
   MSVCUndecoratedNameParser parser(name);
   llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
 
-  auto context = FromCompilerDeclContext(GetTranslationUnitDecl());
+  auto *context = FromCompilerDeclContext(GetTranslationUnitDecl());
 
   llvm::StringRef uname = specs.back().GetBaseName();
   specs = specs.drop_back();
@@ -1226,7 +1226,6 @@ PdbAstBuilder::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
   llvm::StringRef proc_name = proc.Name;
   proc_name.consume_front(context_name);
   proc_name.consume_front("::");
-
   clang::FunctionDecl *function_decl =
       CreateFunctionDecl(func_id, proc_name, proc.FunctionType, func_ct,
                          func_type->getNumParams(), storage, false, parent);

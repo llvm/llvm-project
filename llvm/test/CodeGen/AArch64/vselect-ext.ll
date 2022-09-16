@@ -573,35 +573,53 @@ entry:
 define void @extension_in_loop_v16i8_to_v16i32(i8* %src, i32* %dst) {
 ; CHECK-LABEL: extension_in_loop_v16i8_to_v16i32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    movi.2d v0, #0xffffffffffffffff
+; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:    adrp x9, lCPI24_0@PAGE
+; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:    adrp x10, lCPI24_1@PAGE
+; CHECK-NEXT:  Lloh4:
+; CHECK-NEXT:    adrp x11, lCPI24_2@PAGE
+; CHECK-NEXT:  Lloh5:
+; CHECK-NEXT:    adrp x12, lCPI24_3@PAGE
+; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh6:
+; CHECK-NEXT:    ldr q0, [x9, lCPI24_0@PAGEOFF]
+; CHECK-NEXT:  Lloh7:
+; CHECK-NEXT:    ldr q1, [x10, lCPI24_1@PAGEOFF]
+; CHECK-NEXT:  Lloh8:
+; CHECK-NEXT:    ldr q3, [x11, lCPI24_2@PAGEOFF]
+; CHECK-NEXT:  Lloh9:
+; CHECK-NEXT:    ldr q4, [x12, lCPI24_3@PAGEOFF]
 ; CHECK-NEXT:  LBB24_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q1, [x0, x8]
+; CHECK-NEXT:    ldr q5, [x0, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    cmgt.16b v2, v1, v0
-; CHECK-NEXT:    ushll2.8h v3, v1, #0
-; CHECK-NEXT:    sshll2.8h v4, v2, #0
-; CHECK-NEXT:    ushll2.4s v5, v3, #0
-; CHECK-NEXT:    ushll.4s v3, v3, #0
-; CHECK-NEXT:    sshll2.4s v6, v4, #0
-; CHECK-NEXT:    sshll.4s v4, v4, #0
-; CHECK-NEXT:    ushll.8h v1, v1, #0
-; CHECK-NEXT:    sshll.8h v2, v2, #0
+; CHECK-NEXT:    cmgt.16b v6, v5, v2
+; CHECK-NEXT:    tbl.16b v7, { v5 }, v0
+; CHECK-NEXT:    tbl.16b v16, { v5 }, v1
+; CHECK-NEXT:    sshll2.8h v18, v6, #0
+; CHECK-NEXT:    tbl.16b v17, { v5 }, v3
+; CHECK-NEXT:    sshll2.4s v19, v18, #0
+; CHECK-NEXT:    sshll.4s v18, v18, #0
+; CHECK-NEXT:    tbl.16b v5, { v5 }, v4
+; CHECK-NEXT:    sshll.8h v6, v6, #0
+; CHECK-NEXT:    and.16b v7, v7, v19
+; CHECK-NEXT:    and.16b v16, v16, v18
+; CHECK-NEXT:    stp q16, q7, [x1, #32]
+; CHECK-NEXT:    sshll2.4s v7, v6, #0
+; CHECK-NEXT:    sshll.4s v6, v6, #0
+; CHECK-NEXT:    and.16b v7, v17, v7
 ; CHECK-NEXT:    and.16b v5, v5, v6
-; CHECK-NEXT:    and.16b v3, v3, v4
-; CHECK-NEXT:    stp q3, q5, [x1, #32]
-; CHECK-NEXT:    sshll2.4s v4, v2, #0
-; CHECK-NEXT:    sshll.4s v2, v2, #0
-; CHECK-NEXT:    ushll2.4s v3, v1, #0
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    and.16b v3, v3, v4
-; CHECK-NEXT:    and.16b v1, v1, v2
-; CHECK-NEXT:    stp q1, q3, [x1], #64
+; CHECK-NEXT:    stp q5, q7, [x1], #64
 ; CHECK-NEXT:    b.ne LBB24_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh5, Lloh9
+; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh8
+; CHECK-NEXT:    .loh AdrpLdr Lloh3, Lloh7
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh6
 entry:
   br label %loop
 
@@ -627,23 +645,23 @@ exit:
 define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(i8* %src, i32* %dst) {
 ; CHECK-LABEL: extension_in_loop_as_shuffle_v16i8_to_v16i32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:  Lloh10:
 ; CHECK-NEXT:    adrp x9, lCPI25_0@PAGE
-; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:  Lloh11:
 ; CHECK-NEXT:    adrp x10, lCPI25_1@PAGE
-; CHECK-NEXT:  Lloh4:
+; CHECK-NEXT:  Lloh12:
 ; CHECK-NEXT:    adrp x11, lCPI25_2@PAGE
-; CHECK-NEXT:  Lloh5:
+; CHECK-NEXT:  Lloh13:
 ; CHECK-NEXT:    adrp x12, lCPI25_3@PAGE
 ; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh6:
+; CHECK-NEXT:  Lloh14:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI25_0@PAGEOFF]
-; CHECK-NEXT:  Lloh7:
+; CHECK-NEXT:  Lloh15:
 ; CHECK-NEXT:    ldr q1, [x10, lCPI25_1@PAGEOFF]
-; CHECK-NEXT:  Lloh8:
+; CHECK-NEXT:  Lloh16:
 ; CHECK-NEXT:    ldr q3, [x11, lCPI25_2@PAGEOFF]
-; CHECK-NEXT:  Lloh9:
+; CHECK-NEXT:  Lloh17:
 ; CHECK-NEXT:    ldr q4, [x12, lCPI25_3@PAGEOFF]
 ; CHECK-NEXT:  LBB25_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -670,10 +688,10 @@ define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(i8* %src, i32* %dst) {
 ; CHECK-NEXT:    b.ne LBB25_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh5, Lloh9
-; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh8
-; CHECK-NEXT:    .loh AdrpLdr Lloh3, Lloh7
-; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh6
+; CHECK-NEXT:    .loh AdrpLdr Lloh13, Lloh17
+; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh16
+; CHECK-NEXT:    .loh AdrpLdr Lloh11, Lloh15
+; CHECK-NEXT:    .loh AdrpLdr Lloh10, Lloh14
 entry:
   br label %loop
 
@@ -700,23 +718,23 @@ exit:
 define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(i8* %src, i32* %dst) {
 ; CHECK-LABEL: shuffle_in_loop_is_no_extend_v16i8_to_v16i32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh10:
+; CHECK-NEXT:  Lloh18:
 ; CHECK-NEXT:    adrp x9, lCPI26_0@PAGE
-; CHECK-NEXT:  Lloh11:
+; CHECK-NEXT:  Lloh19:
 ; CHECK-NEXT:    adrp x10, lCPI26_1@PAGE
-; CHECK-NEXT:  Lloh12:
+; CHECK-NEXT:  Lloh20:
 ; CHECK-NEXT:    adrp x11, lCPI26_2@PAGE
-; CHECK-NEXT:  Lloh13:
+; CHECK-NEXT:  Lloh21:
 ; CHECK-NEXT:    adrp x12, lCPI26_3@PAGE
 ; CHECK-NEXT:    movi.2d v2, #0xffffffffffffffff
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh14:
+; CHECK-NEXT:  Lloh22:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI26_0@PAGEOFF]
-; CHECK-NEXT:  Lloh15:
+; CHECK-NEXT:  Lloh23:
 ; CHECK-NEXT:    ldr q1, [x10, lCPI26_1@PAGEOFF]
-; CHECK-NEXT:  Lloh16:
+; CHECK-NEXT:  Lloh24:
 ; CHECK-NEXT:    ldr q3, [x11, lCPI26_2@PAGEOFF]
-; CHECK-NEXT:  Lloh17:
+; CHECK-NEXT:  Lloh25:
 ; CHECK-NEXT:    ldr q4, [x12, lCPI26_3@PAGEOFF]
 ; CHECK-NEXT:  LBB26_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -743,10 +761,10 @@ define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(i8* %src, i32* %dst) {
 ; CHECK-NEXT:    b.ne LBB26_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh13, Lloh17
-; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh16
-; CHECK-NEXT:    .loh AdrpLdr Lloh11, Lloh15
-; CHECK-NEXT:    .loh AdrpLdr Lloh10, Lloh14
+; CHECK-NEXT:    .loh AdrpLdr Lloh21, Lloh25
+; CHECK-NEXT:    .loh AdrpLdr Lloh20, Lloh24
+; CHECK-NEXT:    .loh AdrpLdr Lloh19, Lloh23
+; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh22
 entry:
   br label %loop
 

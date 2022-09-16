@@ -1875,6 +1875,8 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'arm_aapcs_vfpcc'
 ///   ::= 'aarch64_vector_pcs'
 ///   ::= 'aarch64_sve_vector_pcs'
+///   ::= 'aarch64_sme_preservemost_from_x0'
+///   ::= 'aarch64_sme_preservemost_from_x2'
 ///   ::= 'msp430_intrcc'
 ///   ::= 'avr_intrcc'
 ///   ::= 'avr_signalcc'
@@ -1924,6 +1926,12 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_aarch64_vector_pcs:CC = CallingConv::AArch64_VectorCall; break;
   case lltok::kw_aarch64_sve_vector_pcs:
     CC = CallingConv::AArch64_SVE_VectorCall;
+    break;
+  case lltok::kw_aarch64_sme_preservemost_from_x0:
+    CC = CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0;
+    break;
+  case lltok::kw_aarch64_sme_preservemost_from_x2:
+    CC = CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2;
     break;
   case lltok::kw_msp430_intrcc:  CC = CallingConv::MSP430_INTR; break;
   case lltok::kw_avr_intrcc:     CC = CallingConv::AVR_INTR; break;

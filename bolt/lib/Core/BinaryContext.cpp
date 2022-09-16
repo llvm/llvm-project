@@ -186,13 +186,9 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     Large = true;
   unsigned LSDAEncoding =
       Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
-  unsigned TTypeEncoding =
-      Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
   if (IsPIC) {
     LSDAEncoding = dwarf::DW_EH_PE_pcrel |
                    (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
-    TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-                    (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
   }
 
   std::unique_ptr<MCDisassembler> DisAsm(
@@ -236,7 +232,6 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm));
 
-  BC->TTypeEncoding = TTypeEncoding;
   BC->LSDAEncoding = LSDAEncoding;
 
   BC->MAB = std::unique_ptr<MCAsmBackend>(

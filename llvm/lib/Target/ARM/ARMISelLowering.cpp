@@ -2778,8 +2778,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // we've carefully laid out the parameters so that when sp is reset they'll be
   // in the correct location.
   if (isTailCall && !isSibCall) {
-    Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, dl, true),
-                               DAG.getIntPtrConstant(0, dl, true), InFlag, dl);
+    Chain = DAG.getCALLSEQ_END(Chain, 0, 0, InFlag, dl);
     InFlag = Chain.getValue(1);
   }
 
@@ -2840,9 +2839,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   uint64_t CalleePopBytes =
       canGuaranteeTCO(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : -1ULL;
 
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, dl, true),
-                             DAG.getIntPtrConstant(CalleePopBytes, dl, true),
-                             InFlag, dl);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InFlag, dl);
   if (!Ins.empty())
     InFlag = Chain.getValue(1);
 

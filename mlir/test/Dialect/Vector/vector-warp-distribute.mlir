@@ -734,3 +734,45 @@ func.func @warp_execute_has_broadcast_semantics(%laneid: index, %s0: f32, %v0: v
   // CHECK-SCF-IF: return %[[RS0]], %[[RV0]], %[[RV1]], %[[RV2]] : f32, vector<f32>, vector<1xf32>, vector<1x1xf32>
   return %r#0, %r#1, %r#2, %r#3 : f32, vector<f32>, vector<1xf32>, vector<1x1xf32>
 }
+
+// -----
+
+// CHECK-SCF-IF-DAG: #[[$TIMES2:.*]] = affine_map<()[s0] -> (s0 * 2)>
+
+// CHECK-SCF-IF:   func @warp_execute_nd_distribute
+// CHECK-SCF-IF-SAME: (%[[LANEID:.*]]: index
+func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %v1: vector<1x2x128xf32>) 
+    -> (vector<1x64x1xf32>, vector<1x2x128xf32>) {
+  // CHECK-SCF-IF-DAG: %[[C0:.*]] = arith.constant 0 : index
+
+  // CHECK-SCF-IF:  vector.transfer_write %{{.*}}, %{{.*}}[%[[LANEID]], %c0, %c0] {in_bounds = [true, true, true]} : vector<1x64x1xf32>, memref<32x64x1xf32, 3>
+  // CHECK-SCF-IF:  %[[RID:.*]] = affine.apply #[[$TIMES2]]()[%[[LANEID]]]
+  // CHECK-SCF-IF:  vector.transfer_write %{{.*}}, %{{.*}}[%[[C0]], %[[RID]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x2x128xf32>, memref<1x64x128xf32, 3>
+  // CHECK-SCF-IF:  gpu.barrier
+
+  // CHECK-SCF-IF: scf.if{{.*}}{
+  %r:2 = vector.warp_execute_on_lane_0(%laneid)[32]
+      args(%v0, %v1 : vector<1x64x1xf32>, vector<1x2x128xf32>) -> (vector<1x64x1xf32>, vector<1x2x128xf32>) {
+    ^bb0(%arg0: vector<32x64x1xf32>, %arg1: vector<1x64x128xf32>):
+
+  // CHECK-SCF-IF-DAG: %[[SR0:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]]], %{{.*}} {in_bounds = [true, true, true]} : memref<32x64x1xf32, 3>, vector<32x64x1xf32>
+  // CHECK-SCF-IF-DAG: %[[SR1:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]]], %{{.*}} {in_bounds = [true, true, true]} : memref<1x64x128xf32, 3>, vector<1x64x128xf32>
+  //     CHECK-SCF-IF: %[[W0:.*]] = "some_def_0"(%[[SR0]]) : (vector<32x64x1xf32>) -> vector<32x64x1xf32>
+  //     CHECK-SCF-IF: %[[W1:.*]] = "some_def_1"(%[[SR1]]) : (vector<1x64x128xf32>) -> vector<1x64x128xf32>
+  // CHECK-SCF-IF-DAG: vector.transfer_write %[[W0]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<32x64x1xf32>, memref<32x64x1xf32, 3>
+  // CHECK-SCF-IF-DAG: vector.transfer_write %[[W1]], %{{.*}}[%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x64x128xf32>, memref<1x64x128xf32, 3>
+
+      %r0 = "some_def_0"(%arg0) : (vector<32x64x1xf32>) -> vector<32x64x1xf32>
+      %r1 = "some_def_1"(%arg1) : (vector<1x64x128xf32>) -> vector<1x64x128xf32>
+
+      // CHECK-SCF-IF-NOT: vector.yield
+      vector.yield %r0, %r1 : vector<32x64x1xf32>, vector<1x64x128xf32>
+  }
+
+  //     CHECK-SCF-IF: gpu.barrier
+  //     CHECK-SCF-IF: %[[WID:.*]] = affine.apply #[[$TIMES2]]()[%[[LANEID]]]
+  // CHECK-SCF-IF-DAG: %[[R0:.*]] = vector.transfer_read %{{.*}}[%[[LANEID]], %[[C0]], %[[C0]]], %cst {in_bounds = [true, true, true]} : memref<32x64x1xf32, 3>, vector<1x64x1xf32>
+  // CHECK-SCF-IF-DAG: %[[R1:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[WID]], %[[C0]]], %cst {in_bounds = [true, true, true]} : memref<1x64x128xf32, 3>, vector<1x2x128xf32>
+  //     CHECK-SCF-IF: return %[[R0]], %[[R1]] : vector<1x64x1xf32>, vector<1x2x128xf32>
+  return %r#0, %r#1 : vector<1x64x1xf32>, vector<1x2x128xf32>
+}

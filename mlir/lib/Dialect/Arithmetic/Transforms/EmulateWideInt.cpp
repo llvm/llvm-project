@@ -61,7 +61,7 @@ static Type reduceInnermostDim(VectorType type) {
 static Value extractLastDimSlice(ConversionPatternRewriter &rewriter,
                                  Location loc, Value input,
                                  int64_t lastOffset) {
-  llvm::ArrayRef<int64_t> shape = input.getType().cast<VectorType>().getShape();
+  ArrayRef<int64_t> shape = input.getType().cast<VectorType>().getShape();
   assert(lastOffset < shape.back() && "Offset out of bounds");
 
   // Scalarize the result in case of 1D vectors.
@@ -87,13 +87,45 @@ extractLastDimHalves(ConversionPatternRewriter &rewriter, Location loc,
           extractLastDimSlice(rewriter, loc, input, 1)};
 }
 
+// Performs a vector shape cast to drop the trailing x1 dimension. If the
+// `input` is a scalar, this is a noop.
+static Value dropTrailingX1Dim(ConversionPatternRewriter &rewriter,
+                               Location loc, Value input) {
+  auto vecTy = input.getType().dyn_cast<VectorType>();
+  if (!vecTy)
+    return input;
+
+  // Shape cast to drop the last x1 dimention.
+  ArrayRef<int64_t> shape = vecTy.getShape();
+  assert(shape.size() >= 2 && "Expected vector with at list two dims");
+  assert(shape.back() == 1 && "Expected the last vector dim to be x1");
+
+  auto newVecTy = VectorType::get(shape.drop_back(), vecTy.getElementType());
+  return rewriter.create<vector::ShapeCastOp>(loc, newVecTy, input);
+}
+
+// Performs a vector shape cast to append an x1 dimension. If the
+// `input` is a scalar, this is a noop.
+static Value appendX1Dim(ConversionPatternRewriter &rewriter, Location loc,
+                         Value input) {
+  auto vecTy = input.getType().dyn_cast<VectorType>();
+  if (!vecTy)
+    return input;
+
+  // Add a trailing x1 dim.
+  auto newShape = llvm::to_vector(vecTy.getShape());
+  newShape.push_back(1);
+  auto newTy = VectorType::get(newShape, vecTy.getElementType());
+  return rewriter.create<vector::ShapeCastOp>(loc, newTy, input);
+}
+
 // Inserts the `source` vector slice into the `dest` vector at offset
 // `lastOffset` in the last dimension. `source` can be a scalar when `dest` is a
 // 1D vector.
 static Value insertLastDimSlice(ConversionPatternRewriter &rewriter,
                                 Location loc, Value source, Value dest,
                                 int64_t lastOffset) {
-  llvm::ArrayRef<int64_t> shape = dest.getType().cast<VectorType>().getShape();
+  ArrayRef<int64_t> shape = dest.getType().cast<VectorType>().getShape();
   assert(lastOffset < shape.back() && "Offset out of bounds");
 
   // Handle scalar source.
@@ -229,6 +261,104 @@ struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertExtSI
+//===----------------------------------------------------------------------===//
+
+struct ConvertExtSI final : OpConversionPattern<arith::ExtSIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto newTy = getTypeConverter()
+                     ->convertType(op.getType())
+                     .dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(loc, "unsupported type");
+
+    Type newResultComponentTy = reduceInnermostDim(newTy);
+
+    // Sign-extend the input value to determine the low half of the result.
+    // Then, check if the low half is negative, and sign-extend the comparison
+    // result to get the high half.
+    Value newOperand = appendX1Dim(rewriter, loc, adaptor.getIn());
+    Value extended = rewriter.createOrFold<arith::ExtSIOp>(
+        loc, newResultComponentTy, newOperand);
+    Value operandZeroCst = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getZeroAttr(newResultComponentTy));
+    Value signBit = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::slt, extended, operandZeroCst);
+    Value signValue =
+        rewriter.create<arith::ExtSIOp>(loc, newResultComponentTy, signBit);
+
+    Value resultVec =
+        constructResultVector(rewriter, loc, newTy, {extended, signValue});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertExtUI
+//===----------------------------------------------------------------------===//
+
+struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto newTy = getTypeConverter()
+                     ->convertType(op.getType())
+                     .dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(loc, "unsupported type");
+
+    Type newResultComponentTy = reduceInnermostDim(newTy);
+
+    // Zero-extend the input value to determine the low half of the result.
+    // The high half is always zero.
+    Value newOperand = appendX1Dim(rewriter, loc, adaptor.getIn());
+    Value extended = rewriter.createOrFold<arith::ExtUIOp>(
+        loc, newResultComponentTy, newOperand);
+    Value zeroCst = rewriter.create<arith::ConstantOp>(
+        op->getLoc(), rewriter.getZeroAttr(newTy));
+    Value newRes = insertLastDimSlice(rewriter, loc, extended, zeroCst, 0);
+    rewriter.replaceOp(op, newRes);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertTruncI
+//===----------------------------------------------------------------------===//
+
+struct ConvertTruncI final : OpConversionPattern<arith::TruncIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    // Check if the result type is legal for this target. Currently, we do not
+    // support truncation to types wider than supported by the target.
+    if (!getTypeConverter()->isLegal(op.getType()))
+      return rewriter.notifyMatchFailure(loc,
+                                         "unsupported truncation result type");
+
+    // Discard the high half of the input. Truncate the low half, if necessary.
+    Value extracted = extractLastDimSlice(rewriter, loc, adaptor.getIn(), 0);
+    extracted = dropTrailingX1Dim(rewriter, loc, extracted);
+    Value truncated =
+        rewriter.createOrFold<arith::TruncIOp>(loc, op.getType(), extracted);
+    rewriter.replaceOp(op, truncated);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // Pass Definition
 //===----------------------------------------------------------------------===//
 
@@ -335,6 +465,12 @@ void arith::populateWideIntEmulationPatterns(
   populateReturnOpTypeConversionPattern(patterns, typeConverter);
 
   // Populate `arith.*` conversion patterns.
-  patterns.add<ConvertConstant, ConvertAddI>(typeConverter,
-                                             patterns.getContext());
+  patterns.add<
+      // Misc ops.
+      ConvertConstant,
+      // Binary ops.
+      ConvertAddI,
+      // Extension and truncation ops.
+      ConvertExtSI, ConvertExtUI, ConvertTruncI>(typeConverter,
+                                                 patterns.getContext());
 }

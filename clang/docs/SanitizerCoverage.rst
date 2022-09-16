@@ -331,6 +331,60 @@ will not be instrumented.
   void __sanitizer_cov_store8(uint64_t *addr);
   void __sanitizer_cov_store16(__int128 *addr);
 
+
+Tracing control flow
+====================
+
+With ``-fsanitize-coverage=control-flow`` the compiler will create a table to collect
+control flow for each function. More specifically, for each basic block in the function,
+two lists are populated. One list for successors of the basic block and another list for
+non-intrinsic called functions.
+
+**TODO:** in the current implementation, indirect calls are not tracked
+and are only marked with special value (-1) in the list.
+
+Each table row consists of the basic block address
+followed by ``null``-ended lists of successors and callees.
+The table is encoded in a special section named ``sancov_cfs``
+
+Example:
+
+.. code-block:: c++
+  int foo (int x) {
+    if (x > 0)
+      bar(x);
+    else
+      x = 0;
+    return x;
+  }
+
+The code above contains 4 basic blocks, let's name them A, B, C, D:
+
+.. code-block:: none
+
+    A
+    |\
+    | \
+    B  C
+    | /
+    |/
+    D
+
+The collected control flow table is as follows:
+``A, B, C, null, null, B, D, null, @bar, null, C, D, null, null, D, null, null.``
+
+Users need to implement a single function to capture the CF table at startup:
+
+.. code-block:: c++
+
+  extern "C"
+  void __sanitizer_cov_cfs_init(const uintptr_t *cfs_beg,
+                                const uintptr_t *cfs_end) {
+    // [cfs_beg,cfs_end) is the array of ptr-sized integers representing
+    // the collected control flow.
+  }
+
+
 Disabling instrumentation with ``__attribute__((no_sanitize("coverage")))``
 ===========================================================================
 

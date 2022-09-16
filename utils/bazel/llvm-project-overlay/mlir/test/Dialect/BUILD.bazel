@@ -1,0 +1,18 @@
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+package(default_visibility = ["//visibility:public"])
+
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = [
+            "//llvm:llvm-symbolizer",
+            "//mlir:mlir-opt",
+            "//mlir/test:lit_data",
+        ],
+    )
+    for src in glob(["**/*.mlir"])
+]

@@ -282,10 +282,13 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // Specify allocation priority for register allocators using a greedy
   // heuristic. Classes with higher priority values are assigned first. This is
   // useful as it is sometimes beneficial to assign registers to highly
-  // constrained classes first. The value has to be in the range [0,63].
-  // Values >= 32 should be used with care since they may overlap with other
-  // fields in the allocator's priority heuristics.
+  // constrained classes first. The value has to be in the range [0,31].
   int AllocationPriority = 0;
+
+  // Force register class to use greedy's global heuristic for all
+  // registers in this class. This should more aggressively try to
+  // avoid spilling in pathological cases.
+  bit GlobalPriority = false;
 
   // Generate register pressure set for this register class and any class
   // synthesized from it. Set to 0 to inhibit unneeded pressure sets.

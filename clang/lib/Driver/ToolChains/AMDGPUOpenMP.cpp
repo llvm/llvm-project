@@ -75,6 +75,12 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
+  for (auto BCFile : getDeviceLibs(DriverArgs)) {
+    CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
+                                               : "-mlink-bitcode-file");
+    CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
+  }
+
   // Link the bitcode library late if we're using device LTO.
   if (getDriver().isUsingLTO(/* IsOffload */ true))
     return;
@@ -157,4 +163,25 @@ VersionTuple
 AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
                                           const ArgList &Args) const {
   return HostTC.computeMSVCVersion(D, Args);
+}
+
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
+AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
+  if (Args.hasArg(options::OPT_nogpulib))
+    return {};
+
+  if (!RocmInstallation.hasDeviceLibrary()) {
+    getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
+    return {};
+  }
+
+  StringRef GpuArch = getProcessorFromTargetID(
+      getTriple(), Args.getLastArgValue(options::OPT_march_EQ));
+
+  SmallVector<BitCodeLibraryInfo, 12> BCLibs;
+  for (auto BCLib : getCommonDeviceLibNames(Args, GpuArch.str(),
+                                            /*IsOpenMP=*/true))
+    BCLibs.emplace_back(BCLib);
+
+  return BCLibs;
 }

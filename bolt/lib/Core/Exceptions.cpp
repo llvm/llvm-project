@@ -121,6 +121,7 @@ void BinaryFunction::parseLSDA(ArrayRef<uint8_t> LSDASectionData,
                                              : *MaybeLPStart - Address;
 
   const uint8_t TTypeEncoding = Data.getU8(&Offset);
+  LSDATypeEncoding = TTypeEncoding;
   size_t TTypeEncodingSize = 0;
   uintptr_t TTypeEnd = 0;
   if (TTypeEncoding != DW_EH_PE_omit) {

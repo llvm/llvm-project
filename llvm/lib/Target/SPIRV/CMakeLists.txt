@@ -30,6 +30,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVPrepareFunctions.cpp
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
+  SPIRVRegularizer.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVUtils.cpp

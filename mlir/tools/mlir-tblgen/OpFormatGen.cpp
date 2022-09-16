@@ -1657,7 +1657,7 @@ static void genLiteralPrinter(StringRef value, MethodBody &body,
   // Insert a space after certain literals.
   shouldEmitSpace =
       value.size() != 1 || !StringRef("<({[").contains(value.front());
-  lastWasPunctuation = !(value.front() == '_' || isalpha(value.front()));
+  lastWasPunctuation = value.front() != '_' && !isalpha(value.front());
 }
 
 /// Generate the printer for a space. `shouldEmitSpace` and `lastWasPunctuation`

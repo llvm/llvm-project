@@ -109,14 +109,15 @@ struct MaybeLocalRepr {
 /// system. The coefficients of the dividends are stored in order:
 /// [nonLocalVars, localVars, constant]. Each local variable may or may not have
 /// a representation. If the local does not have a representation, the dividend
-/// of the division has no meaning and the denominator is zero.
+/// of the division has no meaning and the denominator is zero. If it has a
+/// representation, the denominator will be positive.
 ///
 /// The i^th division here, represents the division representation of the
 /// variable at position `divOffset + i` in the constraint system.
 class DivisionRepr {
 public:
   DivisionRepr(unsigned numVars, unsigned numDivs)
-      : dividends(numDivs, numVars + 1), denoms(numDivs, 0) {}
+      : dividends(numDivs, numVars + 1), denoms(numDivs, MPInt(0)) {}
 
   DivisionRepr(unsigned numVars) : dividends(0, numVars + 1) {}
 
@@ -135,30 +136,26 @@ public:
   void clearRepr(unsigned i) { denoms[i] = 0; }
 
   // Get the dividend of the `i^th` division.
-  MutableArrayRef<int64_t> getDividend(unsigned i) {
-    return dividends.getRow(i);
-  }
-  ArrayRef<int64_t> getDividend(unsigned i) const {
-    return dividends.getRow(i);
-  }
+  MutableArrayRef<MPInt> getDividend(unsigned i) { return dividends.getRow(i); }
+  ArrayRef<MPInt> getDividend(unsigned i) const { return dividends.getRow(i); }
 
   // For a given point containing values for each variable other than the
   // division variables, try to find the values for each division variable from
   // their division representation.
-  SmallVector<Optional<int64_t>, 4> divValuesAt(ArrayRef<int64_t> point) const;
+  SmallVector<Optional<MPInt>, 4> divValuesAt(ArrayRef<MPInt> point) const;
 
   // Get the `i^th` denominator.
-  unsigned &getDenom(unsigned i) { return denoms[i]; }
-  unsigned getDenom(unsigned i) const { return denoms[i]; }
+  MPInt &getDenom(unsigned i) { return denoms[i]; }
+  MPInt getDenom(unsigned i) const { return denoms[i]; }
 
-  ArrayRef<unsigned> getDenoms() const { return denoms; }
+  ArrayRef<MPInt> getDenoms() const { return denoms; }
 
-  void setDiv(unsigned i, ArrayRef<int64_t> dividend, unsigned divisor) {
+  void setDiv(unsigned i, ArrayRef<MPInt> dividend, const MPInt &divisor) {
     dividends.setRow(i, dividend);
     denoms[i] = divisor;
   }
 
-  void insertDiv(unsigned pos, ArrayRef<int64_t> dividend, unsigned divisor);
+  void insertDiv(unsigned pos, ArrayRef<MPInt> dividend, const MPInt &divisor);
   void insertDiv(unsigned pos, unsigned num = 1);
 
   /// Removes duplicate divisions. On every possible duplicate division found,
@@ -183,7 +180,8 @@ private:
 
   /// Denominators of each division. If a denominator of a division is `0`, the
   /// division variable is considered to not have a division representation.
-  SmallVector<unsigned, 4> denoms;
+  /// Otherwise, the denominator is positive.
+  SmallVector<MPInt, 4> denoms;
 };
 
 /// If `q` is defined to be equal to `expr floordiv d`, this equivalent to
@@ -200,10 +198,13 @@ private:
 ///
 /// The coefficient of `q` in `dividend` must be zero, as it is not allowed for
 /// local variable to be a floor division of an expression involving itself.
-SmallVector<int64_t, 8> getDivUpperBound(ArrayRef<int64_t> dividend,
-                                         int64_t divisor, unsigned localVarIdx);
-SmallVector<int64_t, 8> getDivLowerBound(ArrayRef<int64_t> dividend,
-                                         int64_t divisor, unsigned localVarIdx);
+/// The divisor must be positive.
+SmallVector<MPInt, 8> getDivUpperBound(ArrayRef<MPInt> dividend,
+                                       const MPInt &divisor,
+                                       unsigned localVarIdx);
+SmallVector<MPInt, 8> getDivLowerBound(ArrayRef<MPInt> dividend,
+                                       const MPInt &divisor,
+                                       unsigned localVarIdx);
 
 llvm::SmallBitVector getSubrangeBitVector(unsigned len, unsigned setOffset,
                                           unsigned numSet);
@@ -216,14 +217,22 @@ llvm::SmallBitVector getSubrangeBitVector(unsigned len, unsigned setOffset,
 SmallVector<MPInt, 8> getMPIntVec(ArrayRef<int64_t> range);
 /// Return the given array as an array of int64_t.
 SmallVector<int64_t, 8> getInt64Vec(ArrayRef<MPInt> range);
+
 /// Returns the `MaybeLocalRepr` struct which contains the indices of the
 /// constraints that can be expressed as a floordiv of an affine function. If
-/// the representation could be computed, `dividend` and `denominator` are set.
-/// If the representation could not be computed, the kind attribute in
-/// `MaybeLocalRepr` is set to None.
+/// the representation could be computed, `dividend` and `divisor` are set,
+/// in which case, denominator will be positive. If the representation could
+/// not be computed, the kind attribute in `MaybeLocalRepr` is set to None.
 MaybeLocalRepr computeSingleVarRepr(const IntegerRelation &cst,
                                     ArrayRef<bool> foundRepr, unsigned pos,
-                                    MutableArrayRef<int64_t> dividend,
+                                    MutableArrayRef<MPInt> dividend,
+                                    MPInt &divisor);
+
+/// The following overload using int64_t is required for a callsite in
+/// AffineStructures.h.
+MaybeLocalRepr computeSingleVarRepr(const IntegerRelation &cst,
+                                    ArrayRef<bool> foundRepr, unsigned pos,
+                                    SmallVector<int64_t, 8> &dividend,
                                     unsigned &divisor);
 
 /// Given two relations, A and B, add additional local vars to the sets such
@@ -242,26 +251,25 @@ void mergeLocalVars(IntegerRelation &relA, IntegerRelation &relB,
                     llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
 /// Compute the gcd of the range.
-int64_t gcdRange(ArrayRef<int64_t> range);
+MPInt gcdRange(ArrayRef<MPInt> range);
 
 /// Divide the range by its gcd and return the gcd.
-int64_t normalizeRange(MutableArrayRef<int64_t> range);
+MPInt normalizeRange(MutableArrayRef<MPInt> range);
 
 /// Normalize the given (numerator, denominator) pair by dividing out the
 /// common factors between them. The numerator here is an affine expression
-/// with integer coefficients.
-void normalizeDiv(MutableArrayRef<int64_t> num, int64_t &denom);
+/// with integer coefficients. The denominator must be positive.
+void normalizeDiv(MutableArrayRef<MPInt> num, MPInt &denom);
 
 /// Return `coeffs` with all the elements negated.
-SmallVector<int64_t, 8> getNegatedCoeffs(ArrayRef<int64_t> coeffs);
+SmallVector<MPInt, 8> getNegatedCoeffs(ArrayRef<MPInt> coeffs);
 
 /// Return the complement of the given inequality.
 ///
 /// The complement of a_1 x_1 + ... + a_n x_ + c >= 0 is
 /// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
 /// since all the variables are constrained to be integers.
-SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq);
-
+SmallVector<MPInt, 8> getComplementIneq(ArrayRef<MPInt> ineq);
 } // namespace presburger
 } // namespace mlir
 

@@ -40,7 +40,6 @@ namespace mlir {
 #define GEN_PASS_DEF_LINALGSTRATEGYPADPASS
 #define GEN_PASS_DEF_LINALGSTRATEGYDECOMPOSEPASS
 #define GEN_PASS_DEF_LINALGSTRATEGYPEELPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYVECTORIZEPASS
 #define GEN_PASS_DEF_LINALGSTRATEGYLOWERVECTORSPASS
 #define GEN_PASS_DEF_LINALGSTRATEGYREMOVEMARKERSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
@@ -215,62 +214,6 @@ struct LinalgStrategyPeelPass
   LinalgTransformationFilter filter;
 };
 
-/// Configurable pass to apply pattern-based linalg vectorization.
-struct LinalgStrategyVectorizePass
-    : public impl::LinalgStrategyVectorizePassBase<
-          LinalgStrategyVectorizePass> {
-
-  LinalgStrategyVectorizePass() = default;
-
-  LinalgStrategyVectorizePass(StringRef opName, LinalgVectorizationOptions opt,
-                              LinalgTransformationFilter filt,
-                              bool padVectorize = false)
-      : options(opt), filter(std::move(filt)) {
-    this->anchorOpName.setValue(opName.str());
-    this->vectorizePadding.setValue(padVectorize);
-  }
-
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
-      return;
-
-    RewritePatternSet vectorizationPatterns(funcOp.getContext());
-    if (!anchorOpName.empty()) {
-      vectorizationPatterns.add<LinalgVectorizationPattern>(
-          anchorOpName, funcOp.getContext(), options, filter);
-    } else {
-      vectorizationPatterns.add<LinalgVectorizationPattern>(funcOp.getContext(),
-                                                            filter, options);
-    }
-    vector::populateVectorTransferPermutationMapLoweringPatterns(
-        vectorizationPatterns);
-    vector::populateVectorReductionToContractPatterns(vectorizationPatterns);
-    vectorizationPatterns.add<linalg::LinalgCopyVTRForwardingPattern,
-                              linalg::LinalgCopyVTWForwardingPattern>(
-        funcOp.getContext(), /*benefit=*/2);
-    TransferReadOp::getCanonicalizationPatterns(vectorizationPatterns,
-                                                funcOp.getContext());
-    TransferWriteOp::getCanonicalizationPatterns(vectorizationPatterns,
-                                                 funcOp.getContext());
-    (void)applyPatternsAndFoldGreedily(funcOp,
-                                       std::move(vectorizationPatterns));
-
-    // Apply the pad tensor op vectorization separately to avoid running the
-    // GenericPadOpVectorizationPattern too early.
-    // TODO: Improve once we have better infrastructure to control pattern
-    // application.
-    if (vectorizePadding) {
-      RewritePatternSet patterns(funcOp.getContext());
-      linalg::populatePadOpVectorizationPatterns(patterns);
-      (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-    }
-  }
-
-  LinalgVectorizationOptions options;
-  LinalgTransformationFilter filter;
-};
-
 /// Configurable pass to lower vector operations.
 struct LinalgStrategyLowerVectorsPass
     : public impl::LinalgStrategyLowerVectorsPassBase<
@@ -391,15 +334,6 @@ mlir::createLinalgStrategyPeelPass(StringRef opName,
                                    const LinalgPeelOptions &opt,
                                    const LinalgTransformationFilter &filter) {
   return std::make_unique<LinalgStrategyPeelPass>(opName, opt, filter);
-}
-
-/// Create a LinalgStrategyVectorizePass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyVectorizePass(
-    StringRef opName, LinalgVectorizationOptions opt,
-    const LinalgTransformationFilter &filter, bool padVectorize) {
-  return std::make_unique<LinalgStrategyVectorizePass>(opName, opt, filter,
-                                                       padVectorize);
 }
 
 /// Create a LinalgStrategyLowerVectorsPass.
