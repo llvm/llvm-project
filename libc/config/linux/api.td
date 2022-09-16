@@ -271,6 +271,10 @@ def UniStdAPI : PublicAPI<"unistd.h"> {
   let Types = ["off_t", "size_t", "ssize_t"];
 }
 
+def SysResourceAPI : PublicAPI<"sys/resource.h"> {
+  let Types = ["rlim_t", "struct rlimit_t"];
+}
+
 def SysStatAPI : PublicAPI<"sys/stat.h"> {
   let Types = ["mode_t"];
 }

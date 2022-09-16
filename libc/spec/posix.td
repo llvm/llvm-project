@@ -465,6 +465,29 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  NamedType RLimTType = NamedType<"rlim_t">;
+  NamedType StructRLimitTType = NamedType<"struct rlimit_t">;
+  PtrType StructRLimitPtr = PtrType<StructRLimitTType>;
+  ConstType ConstStructRLimitPtr = ConstType<StructRLimitTType>;
+  HeaderSpec SysResource = HeaderSpec<
+    "sys/resource.h",
+    [], // Macros
+    [RLimTType, StructRLimitTType], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+          "getrlimit",
+          RetValSpec<IntType>,
+          [ArgSpec<StructRLimitPtr>]
+        >,
+        FunctionSpec<
+          "setrlimit",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstStructRLimitPtr>]
+        >,
+    ]
+  >;
+
   HeaderSpec SysStat = HeaderSpec<
     "sys/stat.h",
     [], // Macros
@@ -764,6 +787,7 @@ def POSIX : StandardSpec<"POSIX"> {
     StdIO,
     StdLib,
     SysMMan,
+    SysResource,
     SysStat,
     UniStd,
     String
