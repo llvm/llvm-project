@@ -79,6 +79,8 @@ static lto::Config createConfig() {
   c.Options = initTargetOptionsFromCodeGenFlags();
   c.Options.RelaxELFRelocations = true;
   c.Options.EmitAddrsig = true;
+  for (StringRef C : config->mllvmOpts)
+    c.MllvmArgs.emplace_back(C.str());
 
   // Always emit a section per function/datum with LTO.
   c.Options.FunctionSections = true;
