@@ -61,6 +61,23 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
   return true;
 }
 
+static int executeAsProcess(ArrayRef<const char *> Args,
+                            DiagnosticsEngine &Diags) {
+  SmallVector<StringRef, 128> RefArgs;
+  RefArgs.reserve(Args.size());
+  for (const char *Arg : Args) {
+    RefArgs.push_back(Arg);
+  }
+  std::string ErrMsg;
+  int Result = llvm::sys::ExecuteAndWait(RefArgs[0], RefArgs, /*Env*/ None,
+                                         /*Redirects*/ {}, /*SecondsToWait*/ 0,
+                                         /*MemoryLimit*/ 0, &ErrMsg);
+  if (!ErrMsg.empty()) {
+    Diags.Report(diag::err_clang_cache_failed_execution) << ErrMsg;
+  }
+  return Result;
+}
+
 Optional<int>
 clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
                                   llvm::StringSaver &Saver) {
@@ -155,6 +172,16 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
                    Saver.save(CacheArg.str()).data()});
     }
     Args.append({"-greproducible"});
+
+    if (llvm::sys::Process::GetEnv("CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS")) {
+      // Run the compilation twice, without replaying, to check that we get the
+      // same compilation artifacts for the same key. If they are not the same
+      // the action cache will trigger a fatal error.
+      Args.append({"-Xclang", "-fcache-disable-replay"});
+      int Result = executeAsProcess(Args, Diags);
+      if (Result != 0)
+        return Result;
+    }
     return None;
   }
 
@@ -166,17 +193,5 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
   Diags.Report(diag::warn_clang_cache_disabled_caching)
       << "clang-cache invokes a different clang binary than itself";
 
-  SmallVector<StringRef, 128> RefArgs;
-  RefArgs.reserve(Args.size());
-  for (const char *Arg : Args) {
-    RefArgs.push_back(Arg);
-  }
-  std::string ErrMsg;
-  int Result = llvm::sys::ExecuteAndWait(compilerPath, RefArgs, /*Env*/ None,
-                                         /*Redirects*/ {}, /*SecondsToWait*/ 0,
-                                         /*MemoryLimit*/ 0, &ErrMsg);
-  if (!ErrMsg.empty()) {
-    Diags.Report(diag::err_clang_cache_failed_execution) << ErrMsg;
-  }
-  return Result;
+  return executeAsProcess(Args, Diags);
 }

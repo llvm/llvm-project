@@ -338,6 +338,7 @@ private:
   }
 
   bool CacheCompileJob = false;
+  bool DisableCachedCompileJobReplay = false;
 
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
@@ -403,6 +404,8 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   // TODO: Canonicalize DiagnosticOptions here to be "serialized" only. Pass in
   // a hook to mirror diagnostics to stderr (when writing there), and handle
   // other outputs during replay.
+  DisableCachedCompileJobReplay = FrontendOpts.DisableCachedCompileJobReplay;
+  FrontendOpts.DisableCachedCompileJobReplay = false;
   FrontendOpts.IncludeTimestamps = false;
 
   CacheBackend = std::make_unique<ObjectStoreCachingOutputs>(Clang, CAS, Cache);
@@ -482,8 +485,6 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
     assert(*Status == 0 && "Expected success status for a cache hit");
     return true;
   }
-  Diags.Report(diag::remark_compile_job_cache_miss)
-      << ResultCacheKey.toString();
   return false;
 }
 
@@ -499,12 +500,16 @@ Optional<int> CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
     return 1;
 
   Expected<bool> ReplayedResult =
-      CacheBackend->tryReplayCachedResult(*ResultCacheKey);
+      DisableCachedCompileJobReplay
+          ? false
+          : CacheBackend->tryReplayCachedResult(*ResultCacheKey);
   if (!ReplayedResult)
     return reportCachingBackendError(Clang.getDiagnostics(),
                                      ReplayedResult.takeError());
   if (*ReplayedResult)
     return 0;
+  Diags.Report(diag::remark_compile_job_cache_miss)
+      << ResultCacheKey->toString();
 
   if (CacheBackend->prepareOutputCollection())
     return 1;
