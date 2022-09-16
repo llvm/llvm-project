@@ -189,11 +189,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   // index into the InlineHistory vector.
   SmallVector<std::pair<Function *, int>, 16> InlineHistory;
 
-  // Track a set vector of inlined callees so that we can augment the caller
-  // with all of their edges in the call graph before pruning out the ones that
-  // got simplified away.
-  SmallSetVector<Function *, 4> InlinedCallees;
-
   // Track the dead functions to delete once finished with inlining calls. We
   // defer deleting these to make it easier to handle the call graph updates.
   SmallVector<Function *, 4> DeadFunctions;
@@ -251,7 +246,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     }
 
     DidInline = true;
-    InlinedCallees.insert(&Callee);
     ++NumInlined;
 
     LLVM_DEBUG(dbgs() << "    Size after inlining: " << F.getInstructionCount()
@@ -314,8 +308,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     if (!DidInline)
       continue;
     Changed = true;
-
-    InlinedCallees.clear();
   }
 
   // Now that we've finished inlining all of the calls across this module,
