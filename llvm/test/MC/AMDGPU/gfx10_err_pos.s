@@ -1037,50 +1037,50 @@ v_mov_b32 v0, v0 row_bcast:0
 // CHECK-NEXT:{{^}}                 ^
 
 //==============================================================================
-// only one literal operand is allowed
+// only one unique literal operand is allowed
 
 s_and_b32 s2, 0x12345678, 0x12345679
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}s_and_b32 s2, 0x12345678, 0x12345679
 // CHECK-NEXT:{{^}}                          ^
 
 v_add_f64 v[0:1], 1.23456, -abs(1.2345)
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_add_f64 v[0:1], 1.23456, -abs(1.2345)
 // CHECK-NEXT:{{^}}                                ^
 
 v_min3_i16 v5, 0x5678, 0x5678, 0x5679
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_min3_i16 v5, 0x5678, 0x5678, 0x5679
 // CHECK-NEXT:{{^}}                               ^
 
 v_pk_add_f16 v1, 25.0, 25.1
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_pk_add_f16 v1, 25.0, 25.1
 // CHECK-NEXT:{{^}}                       ^
 
 v_fma_mix_f32 v5, 0x7c, 0x7b, 1
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_fma_mix_f32 v5, 0x7c, 0x7b, 1
 // CHECK-NEXT:{{^}}                        ^
 
 v_pk_add_i16 v5, 0x7c, 0x4000
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_pk_add_i16 v5, 0x7c, 0x4000
 // CHECK-NEXT:{{^}}                       ^
 
 v_pk_add_i16 v5, 0x4400, 0x4000
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_pk_add_i16 v5, 0x4400, 0x4000
 // CHECK-NEXT:{{^}}                         ^
 
 v_bfe_u32 v0, v2, 123, undef
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, 123, undef
 // CHECK-NEXT:{{^}}                       ^
 
 v_bfe_u32 v0, v2, undef, 123
-// CHECK: error: only one literal operand is allowed
+// CHECK: error: only one unique literal operand is allowed
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, v2, undef, 123
 // CHECK-NEXT:{{^}}                         ^
 
