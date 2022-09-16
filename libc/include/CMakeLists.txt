@@ -211,7 +211,7 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-macros.sys_resource_macros
     .llvm-libc-types.rlim_t
-    .llvm-libc-types.struct_rlimit_t
+    .llvm-libc-types.struct_rlimit
 )
 
 add_gen_header(
