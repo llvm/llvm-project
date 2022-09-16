@@ -35,7 +35,7 @@
 // RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
 
 // RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-contract=fast -fno-fast-math \
-// RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON
+// RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-CONTRACTFAST
 
 // RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -ffp-contract=on -fno-fast-math \
 // RUN: %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPC-ON

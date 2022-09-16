@@ -1348,7 +1348,7 @@ bool __remove(const path& p, error_code* ec) {
 //
 // The second implementation is used on platforms where `openat()` & friends are available,
 // and it threads file descriptors through recursive calls to avoid such race conditions.
-#if defined(_LIBCPP_WIN32API)
+#if defined(_LIBCPP_WIN32API) || defined (__MVS__)
 # define REMOVE_ALL_USE_DIRECTORY_ITERATOR
 #endif
 

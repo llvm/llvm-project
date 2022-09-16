@@ -837,6 +837,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         /*in_reductions=*/nullptr, priorityClauseOperand, allocateOperands,
         allocatorOperands);
     createBodyOfOp(taskOp, converter, currentLocation, eval, &opClauseList);
+  } else if (blockDirective.v == llvm::omp::OMPD_taskgroup) {
+      // TODO: Add task_reduction support
+    auto taskGroupOp = firOpBuilder.create<mlir::omp::TaskGroupOp>(
+        currentLocation, /*task_reduction_vars=*/ValueRange(),
+        /*task_reductions=*/nullptr, allocateOperands, allocatorOperands);
+    createBodyOfOp(taskGroupOp, converter, currentLocation, eval,
+                   &opClauseList);
   } else {
     TODO(converter.getCurrentLocation(), "Unhandled block directive");
   }

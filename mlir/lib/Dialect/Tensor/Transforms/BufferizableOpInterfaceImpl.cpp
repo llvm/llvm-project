@@ -136,11 +136,10 @@ struct CollapseShapeOpInterface
         int64_t offset;
         if (failed(getStridesAndOffset(bufferType, strides, offset)))
           return failure();
-        AffineMap resultLayout =
-            makeStridedLinearLayoutMap({}, offset, op->getContext());
-        resultType =
-            MemRefType::get({}, tensorResultType.getElementType(), resultLayout,
-                            bufferType.getMemorySpaceAsInt());
+        resultType = MemRefType::get(
+            {}, tensorResultType.getElementType(),
+            StridedLayoutAttr::get(op->getContext(), offset, {}),
+            bufferType.getMemorySpace());
       }
 
       replaceOpWithNewBufferizedOp<memref::CollapseShapeOp>(

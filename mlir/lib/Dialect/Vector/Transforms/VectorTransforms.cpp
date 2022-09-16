@@ -1998,37 +1998,6 @@ ContractionOpLowering::lowerReduction(vector::ContractionOp op,
 
 } // namespace mlir
 
-Optional<mlir::vector::DistributeOps> mlir::vector::distributPointwiseVectorOp(
-    OpBuilder &builder, Operation *op, ArrayRef<Value> ids,
-    ArrayRef<int64_t> multiplicity, const AffineMap &map) {
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointAfter(op);
-  Location loc = op->getLoc();
-  if (op->getNumResults() != 1)
-    return {};
-  Value result = op->getResult(0);
-  VectorType type = op->getResult(0).getType().dyn_cast<VectorType>();
-  if (!type || map.getNumResults() != multiplicity.size())
-    return {};
-  // For each dimension being distributed check that the size is a multiple of
-  // the multiplicity. To handle more sizes we would need to support masking.
-  unsigned multiplictyCount = 0;
-  for (auto exp : map.getResults()) {
-    auto affinExp = exp.dyn_cast<AffineDimExpr>();
-    if (!affinExp || affinExp.getPosition() >= type.getRank() ||
-        type.getDimSize(affinExp.getPosition()) %
-                multiplicity[multiplictyCount++] !=
-            0)
-      return {};
-  }
-  DistributeOps ops;
-  ops.extract =
-      builder.create<vector::ExtractMapOp>(loc, result, ids, multiplicity, map);
-  ops.insert =
-      builder.create<vector::InsertMapOp>(loc, ops.extract, result, ids);
-  return ops;
-}
-
 /// Progressive lowering of transfer_read. This pattern supports lowering of
 /// `vector.transfer_read` to a combination of `vector.load` and
 /// `vector.broadcast` if all of the following hold:

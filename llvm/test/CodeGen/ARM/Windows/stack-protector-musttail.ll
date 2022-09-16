@@ -34,7 +34,6 @@ retblock:
   ret void
 }
 
-
 declare i64* @callee2()
 
 define i8* @caller2() sspreq {
@@ -51,6 +50,38 @@ define i8* @caller2() sspreq {
   %var = alloca [2 x i64]
   store [2 x i64]* %var, [2 x i64]** @var
   %tmp = musttail call i64* @callee2()
+  %res = bitcast i64* %tmp to i8*
+  ret i8* %res
+}
+
+define void @caller3() sspreq {
+; CHECK-LABEL: define void @caller3()
+; Prologue:
+
+; CHECK: call void @__security_check_cookie
+
+; CHECK: tail call void @callee()
+; CHECK-NEXT: ret void
+  %var = alloca [2 x i64]
+  store [2 x i64]* %var, [2 x i64]** @var
+  tail call void @callee()
+  ret void
+}
+
+define i8* @caller4() sspreq {
+; CHECK-LABEL: define i8* @caller4()
+; Prologue:
+; CHECK: @llvm.stackguard
+
+; CHECK: call void @__security_check_cookie
+
+; CHECK: [[TMP:%.*]] = tail call i64* @callee2()
+; CHECK-NEXT: [[RES:%.*]] = bitcast i64* [[TMP]] to i8*
+; CHECK-NEXT: ret i8* [[RES]]
+
+  %var = alloca [2 x i64]
+  store [2 x i64]* %var, [2 x i64]** @var
+  %tmp = tail call i64* @callee2()
   %res = bitcast i64* %tmp to i8*
   ret i8* %res
 }

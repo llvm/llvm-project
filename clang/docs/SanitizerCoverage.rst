@@ -350,6 +350,7 @@ The table is encoded in a special section named ``sancov_cfs``
 Example:
 
 .. code-block:: c++
+
   int foo (int x) {
     if (x > 0)
       bar(x);
