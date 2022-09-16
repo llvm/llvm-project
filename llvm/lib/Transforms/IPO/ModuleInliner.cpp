@@ -52,9 +52,7 @@ STATISTIC(NumDeleted, "Number of functions deleted because all callers found");
 static cl::opt<InlinePriorityMode> UseInlinePriority(
     "inline-priority-mode", cl::init(InlinePriorityMode::Size), cl::Hidden,
     cl::desc("Choose the priority mode to use in module inline"),
-    cl::values(clEnumValN(InlinePriorityMode::NoPriority, "no priority",
-                          "Use no priority, visit callsites in bottom-up."),
-               clEnumValN(InlinePriorityMode::Size, "size",
+    cl::values(clEnumValN(InlinePriorityMode::Size, "size",
                           "Use callee size priority."),
                clEnumValN(InlinePriorityMode::Cost, "cost",
                           "Use inline cost priority.")));
