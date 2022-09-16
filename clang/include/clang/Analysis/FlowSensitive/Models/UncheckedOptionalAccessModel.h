@@ -15,10 +15,10 @@
 #define CLANG_ANALYSIS_FLOWSENSITIVE_MODELS_UNCHECKEDOPTIONALACCESSMODEL_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
+#include "clang/AST/Stmt.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Basic/SourceLocation.h"
 #include <vector>
@@ -45,14 +45,14 @@ class UncheckedOptionalAccessModel
     : public DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice> {
 public:
   UncheckedOptionalAccessModel(
-      ASTContext &Ctx, UncheckedOptionalAccessModelOptions Options = {});
+      ASTContext &AstContext, UncheckedOptionalAccessModelOptions Options = {});
 
   /// Returns a matcher for the optional classes covered by this model.
   static ast_matchers::DeclarationMatcher optionalClassDecl();
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const CFGElement *Elt, NoopLattice &L, Environment &Env);
+  void transfer(const Stmt *Stmt, NoopLattice &State, Environment &Env);
 
   bool compareEquivalent(QualType Type, const Value &Val1,
                          const Environment &Env1, const Value &Val2,
@@ -63,7 +63,7 @@ public:
              Environment &MergedEnv) override;
 
 private:
-  CFGMatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
+  MatchSwitch<TransferState<NoopLattice>> TransferMatchSwitch;
 };
 
 class UncheckedOptionalAccessDiagnoser {
@@ -71,11 +71,11 @@ public:
   UncheckedOptionalAccessDiagnoser(
       UncheckedOptionalAccessModelOptions Options = {});
 
-  std::vector<SourceLocation> diagnose(ASTContext &Ctx, const CFGElement *Elt,
+  std::vector<SourceLocation> diagnose(ASTContext &Context, const Stmt *Stmt,
                                        const Environment &Env);
 
 private:
-  CFGMatchSwitch<const Environment, std::vector<SourceLocation>>
+  MatchSwitch<const Environment, std::vector<SourceLocation>>
       DiagnoseMatchSwitch;
 };
 

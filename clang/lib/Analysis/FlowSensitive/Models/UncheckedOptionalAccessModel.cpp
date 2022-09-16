@@ -18,9 +18,8 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/SourceLocation.h"
@@ -560,42 +559,41 @@ auto buildTransferMatchSwitch(
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
   auto IgnorableOptional = ignorableOptional(Options);
-  return CFGMatchSwitchBuilder<LatticeTransferState>()
+  return MatchSwitchBuilder<LatticeTransferState>()
       // Attach a symbolic "has_value" state to optional values that we see for
       // the first time.
-      .CaseOfCFGStmt<Expr>(
+      .CaseOf<Expr>(
           expr(anyOf(declRefExpr(), memberExpr()), hasOptionalType()),
           initializeOptionalReference)
 
       // make_optional
-      .CaseOfCFGStmt<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
+      .CaseOf<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
 
       // optional::optional
-      .CaseOfCFGStmt<CXXConstructExpr>(
+      .CaseOf<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             assignOptionalValue(*E, State, State.Env.getBoolLiteralValue(true));
           })
-      .CaseOfCFGStmt<CXXConstructExpr>(
+      .CaseOf<CXXConstructExpr>(
           isOptionalNulloptConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             assignOptionalValue(*E, State,
                                 State.Env.getBoolLiteralValue(false));
           })
-      .CaseOfCFGStmt<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
-                                       transferValueOrConversionConstructor)
+      .CaseOf<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
+                                transferValueOrConversionConstructor)
 
       // optional::operator=
-      .CaseOfCFGStmt<CXXOperatorCallExpr>(
-          isOptionalValueOrConversionAssignment(),
-          transferValueOrConversionAssignment)
-      .CaseOfCFGStmt<CXXOperatorCallExpr>(isOptionalNulloptAssignment(),
-                                          transferNulloptAssignment)
+      .CaseOf<CXXOperatorCallExpr>(isOptionalValueOrConversionAssignment(),
+                                   transferValueOrConversionAssignment)
+      .CaseOf<CXXOperatorCallExpr>(isOptionalNulloptAssignment(),
+                                   transferNulloptAssignment)
 
       // optional::value
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
+      .CaseOf<CXXMemberCallExpr>(
           valueCall(IgnorableOptional),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
@@ -603,25 +601,22 @@ auto buildTransferMatchSwitch(
           })
 
       // optional::operator*, optional::operator->
-      .CaseOfCFGStmt<CallExpr>(valueOperatorCall(IgnorableOptional),
-                               [](const CallExpr *E,
-                                  const MatchFinder::MatchResult &,
-                                  LatticeTransferState &State) {
-                                 transferUnwrapCall(E, E->getArg(0), State);
-                               })
+      .CaseOf<CallExpr>(valueOperatorCall(IgnorableOptional),
+                        [](const CallExpr *E, const MatchFinder::MatchResult &,
+                           LatticeTransferState &State) {
+                          transferUnwrapCall(E, E->getArg(0), State);
+                        })
 
       // optional::has_value
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithName("has_value"),
-          transferOptionalHasValueCall)
+      .CaseOf<CXXMemberCallExpr>(isOptionalMemberCallWithName("has_value"),
+                                 transferOptionalHasValueCall)
 
       // optional::operator bool
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithName("operator bool"),
-          transferOptionalHasValueCall)
+      .CaseOf<CXXMemberCallExpr>(isOptionalMemberCallWithName("operator bool"),
+                                 transferOptionalHasValueCall)
 
       // optional::emplace
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
+      .CaseOf<CXXMemberCallExpr>(
           isOptionalMemberCallWithName("emplace"),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
@@ -630,7 +625,7 @@ auto buildTransferMatchSwitch(
           })
 
       // optional::reset
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
+      .CaseOf<CXXMemberCallExpr>(
           isOptionalMemberCallWithName("reset"),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
@@ -639,22 +634,21 @@ auto buildTransferMatchSwitch(
           })
 
       // optional::swap
-      .CaseOfCFGStmt<CXXMemberCallExpr>(isOptionalMemberCallWithName("swap"),
-                                        transferSwapCall)
+      .CaseOf<CXXMemberCallExpr>(isOptionalMemberCallWithName("swap"),
+                                 transferSwapCall)
 
       // std::swap
-      .CaseOfCFGStmt<CallExpr>(isStdSwapCall(), transferStdSwapCall)
+      .CaseOf<CallExpr>(isStdSwapCall(), transferStdSwapCall)
 
       // opt.value_or("").empty()
-      .CaseOfCFGStmt<Expr>(isValueOrStringEmptyCall(),
-                           transferValueOrStringEmptyCall)
+      .CaseOf<Expr>(isValueOrStringEmptyCall(), transferValueOrStringEmptyCall)
 
       // opt.value_or(X) != X
-      .CaseOfCFGStmt<Expr>(isValueOrNotEqX(), transferValueOrNotEqX)
+      .CaseOf<Expr>(isValueOrNotEqX(), transferValueOrNotEqX)
 
       // returns optional
-      .CaseOfCFGStmt<CallExpr>(isCallReturningOptional(),
-                               transferCallReturningOptional)
+      .CaseOf<CallExpr>(isCallReturningOptional(),
+                        transferCallReturningOptional)
 
       .Build();
 }
@@ -683,9 +677,9 @@ auto buildDiagnoseMatchSwitch(
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
   auto IgnorableOptional = ignorableOptional(Options);
-  return CFGMatchSwitchBuilder<const Environment, std::vector<SourceLocation>>()
+  return MatchSwitchBuilder<const Environment, std::vector<SourceLocation>>()
       // optional::value
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
+      .CaseOf<CXXMemberCallExpr>(
           valueCall(IgnorableOptional),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              const Environment &Env) {
@@ -693,7 +687,7 @@ auto buildDiagnoseMatchSwitch(
           })
 
       // optional::operator*, optional::operator->
-      .CaseOfCFGStmt<CallExpr>(
+      .CaseOf<CallExpr>(
           valueOperatorCall(IgnorableOptional),
           [](const CallExpr *E, const MatchFinder::MatchResult &,
              const Environment &Env) {
@@ -714,10 +708,10 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(
     : DataflowAnalysis<UncheckedOptionalAccessModel, NoopLattice>(Ctx),
       TransferMatchSwitch(buildTransferMatchSwitch(Options)) {}
 
-void UncheckedOptionalAccessModel::transfer(const CFGElement *Elt,
-                                            NoopLattice &L, Environment &Env) {
+void UncheckedOptionalAccessModel::transfer(const Stmt *S, NoopLattice &L,
+                                            Environment &Env) {
   LatticeTransferState State(L, Env);
-  TransferMatchSwitch(*Elt, getASTContext(), State);
+  TransferMatchSwitch(*S, getASTContext(), State);
 }
 
 bool UncheckedOptionalAccessModel::compareEquivalent(QualType Type,
@@ -751,8 +745,8 @@ UncheckedOptionalAccessDiagnoser::UncheckedOptionalAccessDiagnoser(
     : DiagnoseMatchSwitch(buildDiagnoseMatchSwitch(Options)) {}
 
 std::vector<SourceLocation> UncheckedOptionalAccessDiagnoser::diagnose(
-    ASTContext &Ctx, const CFGElement *Elt, const Environment &Env) {
-  return DiagnoseMatchSwitch(*Elt, Ctx, Env);
+    ASTContext &Context, const Stmt *Stmt, const Environment &Env) {
+  return DiagnoseMatchSwitch(*Stmt, Context, Env);
 }
 
 } // namespace dataflow
