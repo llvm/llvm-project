@@ -97,16 +97,16 @@ define <4 x double> @Load(<4 x double>* %p, <4 x double> %v, <4 x i1> %mask) san
 ;
 ; ADDR-LABEL: @Load(
 ; ADDR-NEXT:  entry:
-; ADDR-NEXT:    [[TMP0:%.*]] = load <4 x i64>, <4 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <4 x i64>*), align 8
-; ADDR-NEXT:    [[TMP1:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8
-; ADDR-NEXT:    [[TMP2:%.*]] = load <4 x i1>, <4 x i1>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 40) to <4 x i1>*), align 8
+; ADDR-NEXT:    [[TMP0:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8
+; ADDR-NEXT:    [[TMP1:%.*]] = load <4 x i1>, <4 x i1>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 40) to <4 x i1>*), align 8
+; ADDR-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <4 x i64>*), align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[TMP3:%.*]] = ptrtoint <4 x double>* [[P:%.*]] to i64
 ; ADDR-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
 ; ADDR-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to <4 x i64>*
-; ADDR-NEXT:    [[_MSMASKEDLD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* [[TMP5]], i32 1, <4 x i1> [[MASK:%.*]], <4 x i64> [[TMP0]])
-; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; ADDR-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
+; ADDR-NEXT:    [[_MSMASKEDLD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* [[TMP5]], i32 1, <4 x i1> [[MASK:%.*]], <4 x i64> [[TMP2]])
+; ADDR-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP0]], 0
+; ADDR-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
 ; ADDR-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP6]], 0
 ; ADDR-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
@@ -133,19 +133,13 @@ define <4 x double> @Load(<4 x double>* %p, <4 x double> %v, <4 x i1> %mask) san
 ; ORIGINS-NEXT:    [[TMP8:%.*]] = sub <4 x i1> zeroinitializer, [[MASK]]
 ; ORIGINS-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i64>
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = and <4 x i64> [[TMP0]], [[TMP9]]
-; ORIGINS-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP10]], i32 0
-; ORIGINS-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP10]], i32 1
-; ORIGINS-NEXT:    [[TMP13:%.*]] = or i64 [[TMP11]], [[TMP12]]
-; ORIGINS-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[TMP10]], i32 2
-; ORIGINS-NEXT:    [[TMP15:%.*]] = or i64 [[TMP13]], [[TMP14]]
-; ORIGINS-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[TMP10]], i32 3
-; ORIGINS-NEXT:    [[TMP17:%.*]] = or i64 [[TMP15]], [[TMP16]]
-; ORIGINS-NEXT:    [[TMP18:%.*]] = icmp ne i64 [[TMP17]], 0
-; ORIGINS-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP7]], align 4
-; ORIGINS-NEXT:    [[TMP20:%.*]] = select i1 [[TMP18]], i32 [[TMP1]], i32 [[TMP19]]
+; ORIGINS-NEXT:    [[TMP11:%.*]] = bitcast <4 x i64> [[TMP10]] to i256
+; ORIGINS-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP11]], 0
+; ORIGINS-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP7]], align 4
+; ORIGINS-NEXT:    [[TMP13:%.*]] = select i1 [[_MSCMP]], i32 [[TMP1]], i32 [[TMP12]]
 ; ORIGINS-NEXT:    [[X:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* [[P]], i32 1, <4 x i1> [[MASK]], <4 x double> [[V:%.*]])
 ; ORIGINS-NEXT:    store <4 x i64> [[_MSMASKEDLD]], <4 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i64>*), align 8
-; ORIGINS-NEXT:    store i32 [[TMP20]], i32* @__msan_retval_origin_tls, align 4
+; ORIGINS-NEXT:    store i32 [[TMP13]], i32* @__msan_retval_origin_tls, align 4
 ; ORIGINS-NEXT:    ret <4 x double> [[X]]
 ;
 entry:

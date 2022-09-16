@@ -286,6 +286,7 @@ class DS_BVH_STACK<string opName>
   let DisableEncoding = "$addr_in";
   let has_gds = 0;
   let gdsValue = 0;
+  // TODO: Use MMOs in the LDS address space instead of hasSideEffects = 1.
   let hasSideEffects = 1;
   let SchedRW = [WriteLDS, WriteLDS];
 }

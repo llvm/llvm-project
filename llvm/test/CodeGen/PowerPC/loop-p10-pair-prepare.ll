@@ -15,8 +15,8 @@ define void @foo(i64* %.n, [0 x %_elem_type_of_x]* %.x, [0 x %_elem_type_of_y]* 
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r5, 0(r3)
-; CHECK-NEXT:    cmpdi r5, 1
-; CHECK-NEXT:    bltlr cr0
+; CHECK-NEXT:    cmpdi r5, 0
+; CHECK-NEXT:    blelr cr0
 ; CHECK-NEXT:  # %bb.1: # %_loop_1_do_.lr.ph
 ; CHECK-NEXT:    addi r3, r4, 1
 ; CHECK-NEXT:    addi r4, r5, -1
@@ -42,8 +42,8 @@ define void @foo(i64* %.n, [0 x %_elem_type_of_x]* %.x, [0 x %_elem_type_of_y]* 
 ; CHECK-BE-LABEL: foo:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    ld r5, 0(r3)
-; CHECK-BE-NEXT:    cmpdi r5, 1
-; CHECK-BE-NEXT:    bltlr cr0
+; CHECK-BE-NEXT:    cmpdi r5, 0
+; CHECK-BE-NEXT:    blelr cr0
 ; CHECK-BE-NEXT:  # %bb.1: # %_loop_1_do_.lr.ph
 ; CHECK-BE-NEXT:    addi r3, r4, 1
 ; CHECK-BE-NEXT:    addi r4, r5, -1

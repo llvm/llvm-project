@@ -2472,6 +2472,13 @@ FileCheck output:
             self.fail(self._formatMessage(msg,
                 "'{}' is not success".format(error)))
 
+    """Assert that a command return object is successful"""
+    def assertCommandReturn(self, obj, msg=None):
+        if not obj.Succeeded():
+            error = obj.GetError()
+            self.fail(self._formatMessage(msg,
+                "'{}' is not success".format(error)))
+            
     """Assert two states are equal"""
     def assertState(self, first, second, msg=None):
         if first != second:

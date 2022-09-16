@@ -75,11 +75,13 @@ if config.enable_spirv_cpu_runner:
 
 # The following tools are optional
 tools.extend([
-    ToolSubst('toy-ch1', unresolved='ignore'),
-    ToolSubst('toy-ch2', unresolved='ignore'),
-    ToolSubst('toy-ch3', unresolved='ignore'),
-    ToolSubst('toy-ch4', unresolved='ignore'),
-    ToolSubst('toy-ch5', unresolved='ignore'),
+    ToolSubst('toyc-ch1', unresolved='ignore'),
+    ToolSubst('toyc-ch2', unresolved='ignore'),
+    ToolSubst('toyc-ch3', unresolved='ignore'),
+    ToolSubst('toyc-ch4', unresolved='ignore'),
+    ToolSubst('toyc-ch5', unresolved='ignore'),
+    ToolSubst('toyc-ch6', unresolved='ignore'),
+    ToolSubst('toyc-ch7', unresolved='ignore'),
     ToolSubst('%mlir_lib_dir', config.mlir_lib_dir, unresolved='ignore'),
     ToolSubst('%mlir_src_dir', config.mlir_src_root, unresolved='ignore'),
 ])

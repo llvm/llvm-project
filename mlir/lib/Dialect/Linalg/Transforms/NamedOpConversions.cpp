@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_LINALGNAMEDOPCONVERSION
@@ -72,28 +73,30 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
   auto collapsedInit = rewriter.create<tensor::CollapseShapeOp>(
       loc, newInitTy, init, collapsedInitDims);
 
-  Value newConv;
-  if (isa<DepthwiseConv2DNhwcHwcmOp>(operation)) {
-    newConv = rewriter
-                  .create<DepthwiseConv2DNhwcHwcOp>(
-                      loc, newInitTy, ValueRange{input, collapsedKernel},
-                      ValueRange{collapsedInit}, stride, dilation)
-                  .getResult(0);
-  } else if (isa<DepthwiseConv2DNhwcHwcmQOp>(operation)) {
-    newConv =
-        rewriter
-            .create<DepthwiseConv2DNhwcHwcQOp>(
+  SmallVector<NamedAttribute> preservedAttrs;
+  Operation *newConv =
+      TypeSwitch<Operation *, Operation *>(operation)
+          .Case<DepthwiseConv2DNhwcHwcmOp>([&](auto op) {
+            preservedAttrs = getPrunedAttributeList(op);
+            return rewriter.create<DepthwiseConv2DNhwcHwcOp>(
+                loc, newInitTy, ValueRange{input, collapsedKernel},
+                ValueRange{collapsedInit}, stride, dilation);
+          })
+          .Case<DepthwiseConv2DNhwcHwcmQOp>([&](auto op) {
+            preservedAttrs = getPrunedAttributeList(op);
+            return rewriter.create<DepthwiseConv2DNhwcHwcQOp>(
                 loc, newInitTy, ValueRange{input, collapsedKernel, iZp, kZp},
-                ValueRange{collapsedInit}, stride, dilation)
-            .getResult(0);
-  }
-
+                ValueRange{collapsedInit}, stride, dilation);
+          })
+          .Default([](Operation *op) { return nullptr; });
   if (!newConv)
     return failure();
+  for (auto attr : preservedAttrs)
+    newConv->setAttr(attr.getName(), attr.getValue());
 
   // Expand dimensions back out to
   rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
-      operation, resultTy, newConv, collapsedInitDims);
+      operation, resultTy, newConv->getResult(0), collapsedInitDims);
   return success();
 }
 

@@ -3,16 +3,17 @@
 
 // Check clang unbundle the archive and link them by lld.
 
-// RUN: touch %T/libhipBundled.a
+// RUN: rm -rf %t && mkdir %t
+// RUN: touch %t/libhipBundled.a
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
-// RUN:   -nogpulib %s -fgpu-rdc -L%T -lhipBundled \
+// RUN:   -nogpulib %s -fgpu-rdc -L%t -lhipBundled \
 // RUN:   2>&1 | FileCheck -check-prefix=GNU %s
 
-// RUN: touch %T/hipBundled2.lib
+// RUN: touch %t/hipBundled2.lib
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-pc-windows-msvc \
-// RUN:   -nogpulib %s -fgpu-rdc -L%T -lhipBundled2 \
+// RUN:   -nogpulib %s -fgpu-rdc -L%t -lhipBundled2 \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
 // GNU: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}libhipBundled.a" "-targets=hip-amdgcn-amd-amdhsa-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"

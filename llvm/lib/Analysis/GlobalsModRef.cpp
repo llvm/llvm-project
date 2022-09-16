@@ -239,12 +239,8 @@ void GlobalsAAResult::DeletionCallbackHandle::deleted() {
 }
 
 FunctionModRefBehavior GlobalsAAResult::getModRefBehavior(const Function *F) {
-  if (FunctionInfo *FI = getFunctionInfo(F)) {
-    if (!isModOrRefSet(FI->getModRefInfo()))
-      return FMRB_DoesNotAccessMemory;
-    else if (!isModSet(FI->getModRefInfo()))
-      return FMRB_OnlyReadsMemory;
-  }
+  if (FunctionInfo *FI = getFunctionInfo(F))
+    return FunctionModRefBehavior(FI->getModRefInfo());
 
   return AAResultBase::getModRefBehavior(F);
 }
@@ -583,7 +579,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
               FunctionModRefBehavior Behaviour =
                   AAResultBase::getModRefBehavior(Callee);
-              FI.addModRefInfo(createModRefInfo(Behaviour));
+              FI.addModRefInfo(Behaviour.getModRef());
             }
           }
           continue;

@@ -25,6 +25,26 @@ transform.with_pdl_patterns {
 
 // -----
 
+func.func @by_type() {
+  %0 = arith.constant 0: i32
+  // expected-remark @below {{matched op name}}
+  %1 = arith.constant 1.0 : f32
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  transform.sequence %arg0 failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %match_name = transform.structured.match
+      ops{["arith.constant"]} filter_result_type = f32 in %arg1
+    transform.test_print_remark_at_operand %match_name, "matched op name"
+    transform.test_consume_operand %match_name
+  }
+}
+
+// -----
+
 #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 func.func @match_complex_attribute(%arg0: tensor<12x128x32xf32>)

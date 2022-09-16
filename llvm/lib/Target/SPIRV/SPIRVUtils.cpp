@@ -289,7 +289,7 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
          Name == "__translate_sampler_initializer";
 }
 
-std::string mayBeOclOrSpirvBuiltin(StringRef Name) {
+std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
   bool IsNonMangledSPIRV = Name.startswith("__spirv_");
   bool IsMangled = Name.startswith("_Z");
@@ -330,5 +330,25 @@ std::string mayBeOclOrSpirvBuiltin(StringRef Name) {
   Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
       .getAsInteger(10, Len);
   return Name.substr(Start, Len).str();
+}
+
+static bool isOpenCLBuiltinType(const StructType *SType) {
+  return SType->isOpaque() && SType->hasName() &&
+         SType->getName().startswith("opencl.");
+}
+
+static bool isSPIRVBuiltinType(const StructType *SType) {
+  return SType->isOpaque() && SType->hasName() &&
+         SType->getName().startswith("spirv.");
+}
+
+bool isSpecialOpaqueType(const Type *Ty) {
+  if (auto PType = dyn_cast<PointerType>(Ty)) {
+    if (!PType->isOpaque())
+      Ty = PType->getNonOpaquePointerElementType();
+  }
+  if (auto SType = dyn_cast<StructType>(Ty))
+    return isOpenCLBuiltinType(SType) || isSPIRVBuiltinType(SType);
+  return false;
 }
 } // namespace llvm

@@ -414,7 +414,7 @@ TypeBasedAAResult::getModRefBehavior(const CallBase *Call) {
   if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
     if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
         (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
-      return FMRB_OnlyReadsMemory;
+      return FunctionModRefBehavior::readOnly();
 
   return AAResultBase::getModRefBehavior(Call);
 }

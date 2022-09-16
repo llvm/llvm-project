@@ -803,9 +803,11 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
   Allocatable = R->getValueAsBit("isAllocatable");
   AltOrderSelect = R->getValueAsString("AltOrderSelect");
   int AllocationPriority = R->getValueAsInt("AllocationPriority");
-  if (AllocationPriority < 0 || AllocationPriority > 63)
-    PrintFatalError(R->getLoc(), "AllocationPriority out of range [0,63]");
+  if (!isUInt<5>(AllocationPriority))
+    PrintFatalError(R->getLoc(), "AllocationPriority out of range [0,31]");
   this->AllocationPriority = AllocationPriority;
+
+  GlobalPriority = R->getValueAsBit("GlobalPriority");
 
   BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
   for (unsigned I = 0, E = TSF->getNumBits(); I != E; ++I) {
@@ -821,7 +823,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
                                            StringRef Name, Key Props)
     : Members(*Props.Members), TheDef(nullptr), Name(std::string(Name)),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
-      CopyCost(0), Allocatable(true), AllocationPriority(0), TSFlags(0) {
+      CopyCost(0), Allocatable(true), AllocationPriority(0),
+      GlobalPriority(false), TSFlags(0) {
   Artificial = true;
   GeneratePressureSet = false;
   for (const auto R : Members) {
@@ -849,6 +852,7 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   });
   AltOrderSelect = Super.AltOrderSelect;
   AllocationPriority = Super.AllocationPriority;
+  GlobalPriority = Super.GlobalPriority;
   TSFlags = Super.TSFlags;
   GeneratePressureSet |= Super.GeneratePressureSet;
 

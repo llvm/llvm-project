@@ -315,7 +315,7 @@ void getUpperBoundForIndex(Value value, AffineMap &boundMap,
   // of the terminals of the index computation.
   unsigned pos = getPosition(value);
   if (constantRequired) {
-    auto ubConst = constraints.getConstantBound(
+    auto ubConst = constraints.getConstantBound64(
         FlatAffineValueConstraints::BoundType::UB, pos);
     if (!ubConst)
       return;

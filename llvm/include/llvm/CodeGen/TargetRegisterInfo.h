@@ -55,10 +55,12 @@ public:
   const uint16_t *SuperRegIndices;
   const LaneBitmask LaneMask;
   /// Classes with a higher priority value are assigned first by register
-  /// allocators using a greedy heuristic. The value is in the range [0,63].
-  /// Values >= 32 should be used with care since they may overlap with other
-  /// fields in the allocator's priority heuristics.
+  /// allocators using a greedy heuristic. The value is in the range [0,31].
   const uint8_t AllocationPriority;
+
+  // Change allocation priority heuristic used by greedy.
+  const bool GlobalPriority;
+
   /// Configurable target specific flags.
   const uint8_t TSFlags;
   /// Whether the class supports two (or more) disjunct subregister indices.

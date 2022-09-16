@@ -525,9 +525,8 @@ bool InstrProfiling::run(
   TT = Triple(M.getTargetTriple());
 
   bool MadeChange = false;
-
-  // Emit the runtime hook even if no counters are present.
-  if (needsRuntimeHookUnconditionally(TT))
+  bool NeedsRuntimeHook = needsRuntimeHookUnconditionally(TT);
+  if (NeedsRuntimeHook)
     MadeChange = emitRuntimeHook();
 
   // Improve compile time by avoiding linear scans when there is no work.
@@ -567,7 +566,14 @@ bool InstrProfiling::run(
 
   emitVNodes();
   emitNameData();
-  emitRuntimeHook();
+
+  // Emit runtime hook except for the cases where coverage is enabled on
+  // code that is eliminated by the front-end, e.g. unused functions with
+  // internal linkage, and the target does not require pulling in profile
+  // runtime.
+  if (containsProfilingIntrinsics(M) || !CoverageNamesVar || NeedsRuntimeHook)
+    emitRuntimeHook();
+
   emitRegistration();
   emitUses();
   emitInitialization();

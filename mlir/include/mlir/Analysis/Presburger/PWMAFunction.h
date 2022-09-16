@@ -62,7 +62,7 @@ public:
   /// Get a matrix with each row representing row^th output expression.
   const Matrix &getOutputMatrix() const { return output; }
   /// Get the `i^th` output expression.
-  ArrayRef<int64_t> getOutputExpr(unsigned i) const { return output.getRow(i); }
+  ArrayRef<MPInt> getOutputExpr(unsigned i) const { return output.getRow(i); }
 
   // Remove the specified range of outputs.
   void removeOutputs(unsigned start, unsigned end);
@@ -71,8 +71,11 @@ public:
   /// have the union of the division vars that exist in the functions.
   void mergeDivs(MultiAffineFunction &other);
 
-  /// Return the output of the function at the given point.
-  SmallVector<int64_t, 8> valueAt(ArrayRef<int64_t> point) const;
+  //// Return the output of the function at the given point.
+  SmallVector<MPInt, 8> valueAt(ArrayRef<MPInt> point) const;
+  SmallVector<MPInt, 8> valueAt(ArrayRef<int64_t> point) const {
+    return valueAt(getMPIntVec(point));
+  }
 
   /// Return whether the `this` and `other` are equal when the domain is
   /// restricted to `domain`. This is the case if they lie in the same space,
@@ -172,7 +175,10 @@ public:
   PresburgerSet getDomain() const;
 
   /// Return the output of the function at the given point.
-  Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
+  Optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<MPInt> point) const;
+  Optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<int64_t> point) const {
+    return valueAt(getMPIntVec(point));
+  }
 
   /// Return whether `this` and `other` are equal as PWMAFunctions, i.e. whether
   /// they have the same dimensions, the same domain and they take the same

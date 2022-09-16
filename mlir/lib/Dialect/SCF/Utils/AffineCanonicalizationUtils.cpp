@@ -189,7 +189,7 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
     // Skip unused operands and operands that are already constants.
     if (!newOperands[i] || getConstantIntValue(newOperands[i]))
       continue;
-    if (auto bound = constraints.getConstantBound(IntegerPolyhedron::EQ, i))
+    if (auto bound = constraints.getConstantBound64(IntegerPolyhedron::EQ, i))
       newOperands[i] =
           rewriter.create<arith::ConstantIndexOp>(op->getLoc(), *bound);
   }

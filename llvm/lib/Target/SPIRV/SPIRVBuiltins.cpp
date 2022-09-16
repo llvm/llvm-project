@@ -809,7 +809,7 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
 }
 
 // These queries ask for a single size_t result for a given dimension index, e.g
-// size_t get_global_id(uintt dimindex). In SPIR-V, the builtins corresonding to
+// size_t get_global_id(uint dimindex). In SPIR-V, the builtins corresonding to
 // these values are all vec3 types, so we need to extract the correct index or
 // return defaultVal (0 or 1 depending on the query). We also handle extending
 // or tuncating in case size_t does not match the expected result type's
@@ -1655,16 +1655,15 @@ using namespace ImageFormat;
 static const SPIRV::DemangledType *findBuiltinType(StringRef Name) {
   if (Name.startswith("opencl."))
     return SPIRV::lookupBuiltinType(Name);
-  if (Name.startswith("spirv.")) {
-    // Some SPIR-V builtin types have a complex list of parameters as part of
-    // their name (e.g. spirv.Image._void_1_0_0_0_0_0_0). Those parameters often
-    // are numeric literals which cannot be easily represented by TableGen
-    // records and should be parsed instead.
-    unsigned BaseTypeNameLength =
-        Name.contains('_') ? Name.find('_') - 1 : Name.size();
-    return SPIRV::lookupBuiltinType(Name.substr(0, BaseTypeNameLength).str());
-  }
-  return nullptr;
+  if (!Name.startswith("spirv."))
+    return nullptr;
+  // Some SPIR-V builtin types have a complex list of parameters as part of
+  // their name (e.g. spirv.Image._void_1_0_0_0_0_0_0). Those parameters often
+  // are numeric literals which cannot be easily represented by TableGen
+  // records and should be parsed instead.
+  unsigned BaseTypeNameLength =
+      Name.contains('_') ? Name.find('_') - 1 : Name.size();
+  return SPIRV::lookupBuiltinType(Name.substr(0, BaseTypeNameLength).str());
 }
 
 static std::unique_ptr<const SPIRV::ImageType>
@@ -1674,37 +1673,36 @@ lookupOrParseBuiltinImageType(StringRef Name) {
     const SPIRV::ImageType *Record = SPIRV::lookupImageType(Name);
     return std::unique_ptr<SPIRV::ImageType>(new SPIRV::ImageType(*Record));
   }
-  if (Name.startswith("spirv.")) {
-    // Parse the literals of SPIR-V image builtin parameters. The name should
-    // have the following format:
-    // spirv.Image._Type_Dim_Depth_Arrayed_MS_Sampled_ImageFormat_AccessQualifier
-    // e.g. %spirv.Image._void_1_0_0_0_0_0_0
-    StringRef TypeParametersString = Name.substr(strlen("spirv.Image."));
-    SmallVector<StringRef> TypeParameters;
-    SplitString(TypeParametersString, TypeParameters, "_");
-    assert(TypeParameters.size() == 8 &&
-           "Wrong number of literals in SPIR-V builtin image type");
+  if (!Name.startswith("spirv."))
+    llvm_unreachable("Unknown builtin image type name/literal");
+  // Parse the literals of SPIR-V image builtin parameters. The name should
+  // have the following format:
+  // spirv.Image._Type_Dim_Depth_Arrayed_MS_Sampled_ImageFormat_AccessQualifier
+  // e.g. %spirv.Image._void_1_0_0_0_0_0_0
+  StringRef TypeParametersString = Name.substr(strlen("spirv.Image."));
+  SmallVector<StringRef> TypeParameters;
+  SplitString(TypeParametersString, TypeParameters, "_");
+  assert(TypeParameters.size() == 8 &&
+         "Wrong number of literals in SPIR-V builtin image type");
 
-    StringRef SampledType = TypeParameters[0];
-    unsigned Dim, Depth, Arrayed, Multisampled, Sampled, Format, AccessQual;
-    bool AreParameterLiteralsValid =
-        !(TypeParameters[1].getAsInteger(10, Dim) ||
-          TypeParameters[2].getAsInteger(10, Depth) ||
-          TypeParameters[3].getAsInteger(10, Arrayed) ||
-          TypeParameters[4].getAsInteger(10, Multisampled) ||
-          TypeParameters[5].getAsInteger(10, Sampled) ||
-          TypeParameters[6].getAsInteger(10, Format) ||
-          TypeParameters[7].getAsInteger(10, AccessQual));
-    assert(AreParameterLiteralsValid &&
-           "Invalid format of SPIR-V image type parameter literals.");
+  StringRef SampledType = TypeParameters[0];
+  unsigned Dim, Depth, Arrayed, Multisampled, Sampled, Format, AccessQual;
+  bool AreParameterLiteralsValid =
+      !(TypeParameters[1].getAsInteger(10, Dim) ||
+        TypeParameters[2].getAsInteger(10, Depth) ||
+        TypeParameters[3].getAsInteger(10, Arrayed) ||
+        TypeParameters[4].getAsInteger(10, Multisampled) ||
+        TypeParameters[5].getAsInteger(10, Sampled) ||
+        TypeParameters[6].getAsInteger(10, Format) ||
+        TypeParameters[7].getAsInteger(10, AccessQual));
+  assert(AreParameterLiteralsValid &&
+         "Invalid format of SPIR-V image type parameter literals.");
 
-    return std::unique_ptr<SPIRV::ImageType>(new SPIRV::ImageType{
-        Name, SampledType, SPIRV::AccessQualifier::AccessQualifier(AccessQual),
-        SPIRV::Dim::Dim(Dim), static_cast<bool>(Arrayed),
-        static_cast<bool>(Depth), static_cast<bool>(Multisampled),
-        static_cast<bool>(Sampled), SPIRV::ImageFormat::ImageFormat(Format)});
-  }
-  llvm_unreachable("Unknown builtin image type name/literal");
+  return std::unique_ptr<SPIRV::ImageType>(new SPIRV::ImageType{
+      Name, SampledType, SPIRV::AccessQualifier::AccessQualifier(AccessQual),
+      SPIRV::Dim::Dim(Dim), static_cast<bool>(Arrayed),
+      static_cast<bool>(Depth), static_cast<bool>(Multisampled),
+      static_cast<bool>(Sampled), SPIRV::ImageFormat::ImageFormat(Format)});
 }
 
 static std::unique_ptr<const SPIRV::PipeType>
@@ -1714,46 +1712,46 @@ lookupOrParseBuiltinPipeType(StringRef Name) {
     const SPIRV::PipeType *Record = SPIRV::lookupPipeType(Name);
     return std::unique_ptr<SPIRV::PipeType>(new SPIRV::PipeType(*Record));
   }
-  if (Name.startswith("spirv.")) {
-    // Parse the access qualifier literal in the name of the SPIR-V pipe type.
-    // The name should have the following format:
-    // spirv.Pipe._AccessQualifier
-    // e.g. %spirv.Pipe._1
-    if (Name.endswith("_0"))
-      return std::unique_ptr<SPIRV::PipeType>(
-          new SPIRV::PipeType{Name, SPIRV::AccessQualifier::ReadOnly});
-    if (Name.endswith("_1"))
-      return std::unique_ptr<SPIRV::PipeType>(
-          new SPIRV::PipeType{Name, SPIRV::AccessQualifier::WriteOnly});
-    if (Name.endswith("_2"))
-      return std::unique_ptr<SPIRV::PipeType>(
-          new SPIRV::PipeType{Name, SPIRV::AccessQualifier::ReadWrite});
-    llvm_unreachable("Unknown pipe type access qualifier literal");
-  }
-  llvm_unreachable("Unknown builtin pipe type name/literal");
+  if (!Name.startswith("spirv."))
+    llvm_unreachable("Unknown builtin pipe type name/literal");
+  // Parse the access qualifier literal in the name of the SPIR-V pipe type.
+  // The name should have the following format:
+  // spirv.Pipe._AccessQualifier
+  // e.g. %spirv.Pipe._1
+  if (Name.endswith("_0"))
+    return std::unique_ptr<SPIRV::PipeType>(
+        new SPIRV::PipeType{Name, SPIRV::AccessQualifier::ReadOnly});
+  if (Name.endswith("_1"))
+    return std::unique_ptr<SPIRV::PipeType>(
+        new SPIRV::PipeType{Name, SPIRV::AccessQualifier::WriteOnly});
+  if (Name.endswith("_2"))
+    return std::unique_ptr<SPIRV::PipeType>(
+        new SPIRV::PipeType{Name, SPIRV::AccessQualifier::ReadWrite});
+  llvm_unreachable("Unknown pipe type access qualifier literal");
 }
 
 //===----------------------------------------------------------------------===//
 // Implementation functions for builtin types.
 //===----------------------------------------------------------------------===//
 
-SPIRVType *getNonParametrizedType(const StructType *OpaqueType,
-                                  const SPIRV::DemangledType *TypeRecord,
-                                  MachineIRBuilder &MIRBuilder,
-                                  SPIRVGlobalRegistry *GR) {
+static SPIRVType *getNonParametrizedType(const StructType *OpaqueType,
+                                         const SPIRV::DemangledType *TypeRecord,
+                                         MachineIRBuilder &MIRBuilder,
+                                         SPIRVGlobalRegistry *GR) {
   unsigned Opcode = TypeRecord->Opcode;
   // Create or get an existing type from GlobalRegistry.
   return GR->getOrCreateOpTypeByOpcode(OpaqueType, MIRBuilder, Opcode);
 }
 
-SPIRVType *getSamplerType(MachineIRBuilder &MIRBuilder,
-                          SPIRVGlobalRegistry *GR) {
+static SPIRVType *getSamplerType(MachineIRBuilder &MIRBuilder,
+                                 SPIRVGlobalRegistry *GR) {
   // Create or get an existing type from GlobalRegistry.
   return GR->getOrCreateOpTypeSampler(MIRBuilder);
 }
 
-SPIRVType *getPipeType(const StructType *OpaqueType,
-                       MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR) {
+static SPIRVType *getPipeType(const StructType *OpaqueType,
+                              MachineIRBuilder &MIRBuilder,
+                              SPIRVGlobalRegistry *GR) {
   // Lookup pipe type lowering details in TableGen records or parse the
   // name/literal for details.
   std::unique_ptr<const SPIRV::PipeType> Record =
@@ -1762,9 +1760,10 @@ SPIRVType *getPipeType(const StructType *OpaqueType,
   return GR->getOrCreateOpTypePipe(MIRBuilder, Record.get()->Qualifier);
 }
 
-SPIRVType *getImageType(const StructType *OpaqueType,
-                        SPIRV::AccessQualifier::AccessQualifier AccessQual,
-                        MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR) {
+static SPIRVType *
+getImageType(const StructType *OpaqueType,
+             SPIRV::AccessQualifier::AccessQualifier AccessQual,
+             MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR) {
   // Lookup image type lowering details in TableGen records or parse the
   // name/literal for details.
   std::unique_ptr<const SPIRV::ImageType> Record =
@@ -1781,9 +1780,9 @@ SPIRVType *getImageType(const StructType *OpaqueType,
           : Record.get()->Qualifier);
 }
 
-SPIRVType *getSampledImageType(const StructType *OpaqueType,
-                               MachineIRBuilder &MIRBuilder,
-                               SPIRVGlobalRegistry *GR) {
+static SPIRVType *getSampledImageType(const StructType *OpaqueType,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRVGlobalRegistry *GR) {
   StringRef TypeParametersString =
       OpaqueType->getName().substr(strlen("spirv.SampledImage."));
   LLVMContext &Context = MIRBuilder.getMF().getFunction().getContext();

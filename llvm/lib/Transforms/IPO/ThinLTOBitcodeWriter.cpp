@@ -318,8 +318,8 @@ void splitAndWriteThinLTOBitcode(
             return;
         }
         if (!F->isDeclaration() &&
-            computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) ==
-                FMRB_DoesNotAccessMemory)
+            computeFunctionBodyMemoryAccess(*F, AARGetter(*F))
+                .doesNotAccessMemory())
           EligibleVirtualFns.insert(F);
       });
     }
