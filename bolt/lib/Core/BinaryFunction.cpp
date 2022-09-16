@@ -1047,16 +1047,11 @@ void BinaryFunction::handlePCRelOperand(MCInst &Instruction, uint64_t Address,
   uint64_t TargetOffset;
   std::tie(TargetSymbol, TargetOffset) =
       BC.handleAddressRef(TargetAddress, *this, /*IsPCRel*/ true);
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(TargetSymbol, MCSymbolRefExpr::VK_None, *BC.Ctx);
-  if (TargetOffset) {
-    const MCConstantExpr *Offset =
-        MCConstantExpr::create(TargetOffset, *BC.Ctx);
-    Expr = MCBinaryExpr::createAdd(Expr, Offset, *BC.Ctx);
-  }
-  MIB->replaceMemOperandDisp(Instruction,
-                             MCOperand::createExpr(BC.MIB->getTargetExprFor(
-                                 Instruction, Expr, *BC.Ctx, 0)));
+
+  bool ReplaceSuccess = MIB->replaceMemOperandDisp(
+      Instruction, TargetSymbol, static_cast<int64_t>(TargetOffset), &*BC.Ctx);
+  (void)ReplaceSuccess;
+  assert(ReplaceSuccess && "Failed to replace mem operand with symbol+off.");
 }
 
 MCSymbol *BinaryFunction::handleExternalReference(MCInst &Instruction,

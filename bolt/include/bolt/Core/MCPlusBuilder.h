@@ -1266,8 +1266,18 @@ public:
   /// Replace displacement in compound memory operand with given \p Label.
   bool replaceMemOperandDisp(MCInst &Inst, const MCSymbol *Label,
                              MCContext *Ctx) const {
-    return replaceMemOperandDisp(
-        Inst, MCOperand::createExpr(MCSymbolRefExpr::create(Label, *Ctx)));
+    return replaceMemOperandDisp(Inst, Label, 0, Ctx);
+  }
+
+  /// Replace displacement in compound memory operand with given \p Label
+  /// plus addend.
+  bool replaceMemOperandDisp(MCInst &Inst, const MCSymbol *Label,
+                             int64_t Addend, MCContext *Ctx) const {
+    MCInst::iterator MemOpI = getMemOperandDisp(Inst);
+    if (MemOpI == Inst.end())
+      return false;
+    return setOperandToSymbolRef(Inst, MemOpI - Inst.begin(), Label, Addend,
+                                 Ctx, 0);
   }
 
   /// Returns how many bits we have in this instruction to encode a PC-rel

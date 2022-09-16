@@ -372,13 +372,11 @@ BinaryContext::getSubBinaryData(BinaryData *BD) {
 std::pair<const MCSymbol *, uint64_t>
 BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
                                 bool IsPCRel) {
-  uint64_t Addend = 0;
-
   if (isAArch64()) {
     // Check if this is an access to a constant island and create bookkeeping
     // to keep track of it and emit it later as part of this function.
     if (MCSymbol *IslandSym = BF.getOrCreateIslandAccess(Address))
-      return std::make_pair(IslandSym, Addend);
+      return std::make_pair(IslandSym, 0);
 
     // Detect custom code written in assembly that refers to arbitrary
     // constant islands from other functions. Write this reference so we
@@ -395,7 +393,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       if (MCSymbol *IslandSym =
               IslandIter->second->getOrCreateProxyIslandAccess(Address, BF)) {
         BF.createIslandDependency(IslandSym, IslandIter->second);
-        return std::make_pair(IslandSym, Addend);
+        return std::make_pair(IslandSym, 0);
       }
     }
   }
@@ -414,7 +412,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
         }
         BF.HasInternalLabelReference = true;
         return std::make_pair(
-            BF.addEntryPointAtOffset(Address - BF.getAddress()), Addend);
+            BF.addEntryPointAtOffset(Address - BF.getAddress()), 0);
       }
     } else {
       addInterproceduralReference(&BF, Address);
@@ -429,7 +427,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       const MCSymbol *Symbol =
           getOrCreateJumpTable(BF, Address, JumpTable::JTT_PIC);
 
-      return std::make_pair(Symbol, Addend);
+      return std::make_pair(Symbol, 0);
     }
   }
 
@@ -439,7 +437,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
   // TODO: use DWARF info to get size/alignment here?
   MCSymbol *TargetSymbol = getOrCreateGlobalSymbol(Address, "DATAat");
   LLVM_DEBUG(dbgs() << "Created symbol " << TargetSymbol->getName() << '\n');
-  return std::make_pair(TargetSymbol, Addend);
+  return std::make_pair(TargetSymbol, 0);
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
