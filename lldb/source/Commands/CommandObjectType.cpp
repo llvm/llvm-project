@@ -1097,36 +1097,20 @@ protected:
           "-----------------------\nCategory: %s%s\n-----------------------\n",
           category->GetName(), category->IsEnabled() ? "" : " (disabled)");
 
-      TypeCategoryImpl::ForEachCallbacks<FormatterType> foreach;
-      foreach
-        .SetExact([&result, &formatter_regex, &any_printed](
-                      const TypeMatcher &type_matcher,
-                      const FormatterSharedPointer &format_sp) -> bool {
-          if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
-                             formatter_regex.get())) {
-            any_printed = true;
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                format_sp->GetDescription().c_str());
-          }
-          return true;
-        });
-
-      foreach
-        .SetWithRegex([&result, &formatter_regex, &any_printed](
-                          const TypeMatcher &type_matcher,
-                          const FormatterSharedPointer &format_sp) -> bool {
-          if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
-                             formatter_regex.get())) {
-            any_printed = true;
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                format_sp->GetDescription().c_str());
-          }
-          return true;
-        });
-
-      category->ForEach(foreach);
+      TypeCategoryImpl::ForEachCallback<FormatterType> print_formatter =
+          [&result, &formatter_regex,
+           &any_printed](const TypeMatcher &type_matcher,
+                         const FormatterSharedPointer &format_sp) -> bool {
+        if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
+                           formatter_regex.get())) {
+          any_printed = true;
+          result.GetOutputStream().Printf(
+              "%s: %s\n", type_matcher.GetMatchString().GetCString(),
+              format_sp->GetDescription().c_str());
+        }
+        return true;
+      };
+      category->ForEach(print_formatter);
     };
 
     if (m_options.m_category_language.OptionWasSet()) {
