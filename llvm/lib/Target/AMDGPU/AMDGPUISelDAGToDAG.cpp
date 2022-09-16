@@ -95,7 +95,7 @@ static SDValue stripExtractLoElt(SDValue In) {
   return In;
 }
 
-}  // end anonymous namespace
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISel, "amdgpu-isel",
                       "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
@@ -2719,7 +2719,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
-  if (Src.getOpcode() == ISD::BUILD_VECTOR &&
+  if (Src.getOpcode() == ISD::BUILD_VECTOR && Src.getNumOperands() == 2 &&
       (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
     unsigned VecMods = Mods;
 

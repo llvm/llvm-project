@@ -235,6 +235,12 @@ namespace CallingConv {
     /// Used for M68k interrupt routines.
     M68k_INTR = 101,
 
+    /// Preserve X0-X13, X19-X29, SP, Z0-Z31, P0-P15.
+    AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 = 102,
+
+    /// Preserve X2-X15, X19-X29, SP, Z0-Z31, P0-P15.
+    AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 = 103,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

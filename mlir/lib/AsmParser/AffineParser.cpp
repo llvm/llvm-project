@@ -734,8 +734,8 @@ Parser::parseAffineExprOfSSAIds(AffineExpr &expr,
       .parseAffineExprOfSSAIds(expr);
 }
 
-IntegerSet mlir::parseIntegerSet(StringRef inputStr, MLIRContext *context,
-                                 bool printDiagnosticInfo) {
+static void parseAffineMapOrIntegerSet(StringRef inputStr, MLIRContext *context,
+                                       AffineMap &map, IntegerSet &set) {
   llvm::SourceMgr sourceMgr;
   auto memBuffer = llvm::MemoryBuffer::getMemBuffer(
       inputStr, /*BufferName=*/"<mlir_parser_buffer>",
@@ -747,17 +747,31 @@ IntegerSet mlir::parseIntegerSet(StringRef inputStr, MLIRContext *context,
                     /*codeCompleteContext=*/nullptr);
   Parser parser(state);
 
-  raw_ostream &os = printDiagnosticInfo ? llvm::errs() : llvm::nulls();
-  SourceMgrDiagnosticHandler handler(sourceMgr, context, os);
-  IntegerSet set;
-  if (parser.parseIntegerSetReference(set))
-    return IntegerSet();
+  SourceMgrDiagnosticHandler handler(sourceMgr, context, llvm::errs());
+  if (parser.parseAffineMapOrIntegerSetReference(map, set))
+    return;
 
   Token endTok = parser.getToken();
   if (endTok.isNot(Token::eof)) {
     parser.emitError(endTok.getLoc(), "encountered unexpected token");
-    return IntegerSet();
+    return;
   }
+}
 
+AffineMap mlir::parseAffineMap(StringRef inputStr, MLIRContext *context) {
+  AffineMap map;
+  IntegerSet set;
+  parseAffineMapOrIntegerSet(inputStr, context, map, set);
+  assert(!set &&
+         "expected string to represent AffineMap, but got IntegerSet instead");
+  return map;
+}
+
+IntegerSet mlir::parseIntegerSet(StringRef inputStr, MLIRContext *context) {
+  AffineMap map;
+  IntegerSet set;
+  parseAffineMapOrIntegerSet(inputStr, context, map, set);
+  assert(!map &&
+         "expected string to represent IntegerSet, but got AffineMap instead");
   return set;
 }

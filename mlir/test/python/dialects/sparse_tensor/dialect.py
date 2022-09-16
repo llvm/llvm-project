@@ -13,9 +13,12 @@ def run(f):
 @run
 def testEncodingAttr1D():
   with Context() as ctx:
-    parsed = Attribute.parse(
-      '#sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], '
-      'pointerBitWidth = 16, indexBitWidth = 32 }>')
+    parsed = Attribute.parse('#sparse_tensor.encoding<{'
+                             '  dimLevelType = [ "compressed" ],'
+                             '  pointerBitWidth = 16,'
+                             '  indexBitWidth = 32'
+                             '}>')
+    # CHECK: #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 16, indexBitWidth = 32 }>
     print(parsed)
 
     casted = st.EncodingAttr(parsed)
@@ -25,23 +28,22 @@ def testEncodingAttr1D():
     # CHECK: dim_level_types: [<DimLevelType.compressed: 1>]
     print(f"dim_level_types: {casted.dim_level_types}")
     # CHECK: dim_ordering: None
-    # Note that for 1D, the ordering is None, which exercises several special
-    # cases.
     print(f"dim_ordering: {casted.dim_ordering}")
     # CHECK: pointer_bit_width: 16
     print(f"pointer_bit_width: {casted.pointer_bit_width}")
     # CHECK: index_bit_width: 32
     print(f"index_bit_width: {casted.index_bit_width}")
 
-    created = st.EncodingAttr.get(casted.dim_level_types, None, 16, 32)
+    created = st.EncodingAttr.get(casted.dim_level_types, None, 0, 0)
+    # CHECK: #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
     print(created)
-    # CHECK: created_equal: True
+    # CHECK: created_equal: False
     print(f"created_equal: {created == casted}")
 
     # Verify that the factory creates an instance of the proper type.
     # CHECK: is_proper_instance: True
     print(f"is_proper_instance: {isinstance(created, st.EncodingAttr)}")
-    # CHECK: created_pointer_bit_width: 16
+    # CHECK: created_pointer_bit_width: 0
     print(f"created_pointer_bit_width: {created.pointer_bit_width}")
 
 
@@ -49,10 +51,13 @@ def testEncodingAttr1D():
 @run
 def testEncodingAttr2D():
   with Context() as ctx:
-    parsed = Attribute.parse(
-      '#sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], '
-      'dimOrdering = affine_map<(d0, d1) -> (d0, d1)>, '
-      'pointerBitWidth = 16, indexBitWidth = 32 }>')
+    parsed = Attribute.parse('#sparse_tensor.encoding<{'
+                             '  dimLevelType = [ "dense", "compressed" ],'
+                             '  dimOrdering = affine_map<(d0, d1) -> (d1, d0)>,'
+                             '  pointerBitWidth = 8,'
+                             '  indexBitWidth = 32'
+                             '}>')
+    # CHECK: #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, pointerBitWidth = 8, indexBitWidth = 32 }>
     print(parsed)
 
     casted = st.EncodingAttr(parsed)
@@ -61,30 +66,34 @@ def testEncodingAttr2D():
 
     # CHECK: dim_level_types: [<DimLevelType.dense: 0>, <DimLevelType.compressed: 1>]
     print(f"dim_level_types: {casted.dim_level_types}")
-    # CHECK: dim_ordering: (d0, d1) -> (d0, d1)
+    # CHECK: dim_ordering: (d0, d1) -> (d1, d0)
     print(f"dim_ordering: {casted.dim_ordering}")
-    # CHECK: pointer_bit_width: 16
+    # CHECK: pointer_bit_width: 8
     print(f"pointer_bit_width: {casted.pointer_bit_width}")
     # CHECK: index_bit_width: 32
     print(f"index_bit_width: {casted.index_bit_width}")
 
     created = st.EncodingAttr.get(casted.dim_level_types, casted.dim_ordering,
-        16, 32)
+                                  8, 32)
+    # CHECK: #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, pointerBitWidth = 8, indexBitWidth = 32 }>
     print(created)
     # CHECK: created_equal: True
     print(f"created_equal: {created == casted}")
 
 
-# CHECK-LABEL: TEST: testEncodingAttrOnTensor
+# CHECK-LABEL: TEST: testEncodingAttrOnTensorType
 @run
-def testEncodingAttrOnTensor():
+def testEncodingAttrOnTensorType():
   with Context() as ctx, Location.unknown():
-    encoding = st.EncodingAttr(Attribute.parse(
-      '#sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], '
-      'pointerBitWidth = 16, indexBitWidth = 32 }>'))
+    encoding = st.EncodingAttr(
+        Attribute.parse('#sparse_tensor.encoding<{'
+                        '  dimLevelType = [ "compressed" ], '
+                        '  pointerBitWidth = 64,'
+                        '  indexBitWidth = 32'
+                        '}>'))
     tt = RankedTensorType.get((1024,), F32Type.get(), encoding=encoding)
-    # CHECK: tensor<1024xf32, #sparse_tensor
+    # CHECK: tensor<1024xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 64, indexBitWidth = 32 }>>
     print(tt)
-    # CHECK: #sparse_tensor.encoding
+    # CHECK: #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 64, indexBitWidth = 32 }>
     print(tt.encoding)
     assert tt.encoding == encoding

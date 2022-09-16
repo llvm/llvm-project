@@ -928,31 +928,6 @@ struct LinalgVectorizationOptions {};
 
 /// `filter` controls LinalgTransformMarker matching and update when specified.
 /// See `vectorizeLinalgOp` for more details.
-struct LinalgVectorizationPattern : public OpInterfaceRewritePattern<LinalgOp> {
-  /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
-  LinalgVectorizationPattern(
-      MLIRContext *context,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      LinalgVectorizationOptions options = LinalgVectorizationOptions(),
-      PatternBenefit benefit = 1);
-
-  /// Construct a pattern specifically applied to `opName`.
-  LinalgVectorizationPattern(
-      StringRef opName, MLIRContext *context,
-      LinalgVectorizationOptions options = LinalgVectorizationOptions(),
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
-
-  LogicalResult matchAndRewrite(LinalgOp linalgOp,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  LinalgTransformationFilter filter;
-};
-
-/// `filter` controls LinalgTransformMarker matching and update when specified.
-/// See `vectorizeLinalgOp` for more details.
 struct CopyVectorizationPattern : public OpRewritePattern<memref::CopyOp> {
   using OpRewritePattern<memref::CopyOp>::OpRewritePattern;
 
@@ -1333,18 +1308,6 @@ public:
   static void insert(RewritePatternSet &patterns,
                      const LinalgVectorizationOptions &options,
                      const LinalgTransformationFilter &f) {}
-};
-
-template <typename OpTy, typename... OpTypes>
-class VectorizationPatterns<OpTy, OpTypes...> {
-public:
-  static void insert(RewritePatternSet &patterns,
-                     const LinalgVectorizationOptions &options,
-                     const LinalgTransformationFilter &f) {
-    patterns.add<LinalgVectorizationPattern>(OpTy::getOperationName(),
-                                             patterns.getContext(), options, f);
-    VectorizationPatterns<OpTypes...>::insert(patterns, options, f);
-  }
 };
 
 template <typename... OpTypes>

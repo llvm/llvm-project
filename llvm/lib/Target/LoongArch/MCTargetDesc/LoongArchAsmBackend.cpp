@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchAsmBackend.h"
+#include "LoongArchFixupKinds.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 
@@ -75,6 +77,52 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
+static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
+                                 MCContext &Ctx) {
+  switch (Fixup.getTargetKind()) {
+  default:
+    llvm_unreachable("Unknown fixup kind");
+  case FK_Data_1:
+  case FK_Data_2:
+  case FK_Data_4:
+  case FK_Data_8:
+    return Value;
+  case LoongArch::fixup_loongarch_b16: {
+    if (!isInt<18>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    if (Value % 4)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
+    return (Value >> 2) & 0xffff;
+  }
+  case LoongArch::fixup_loongarch_b21: {
+    if (!isInt<23>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    if (Value % 4)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
+    return ((Value & 0x3fffc) << 8) | ((Value >> 18) & 0x1f);
+  }
+  case LoongArch::fixup_loongarch_b26: {
+    if (!isInt<28>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    if (Value % 4)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
+    return ((Value & 0x3fffc) << 8) | ((Value >> 18) & 0x3ff);
+  }
+  case LoongArch::fixup_loongarch_abs_hi20:
+  case LoongArch::fixup_loongarch_tls_le_hi20:
+    return (Value >> 12) & 0xfffff;
+  case LoongArch::fixup_loongarch_abs_lo12:
+  case LoongArch::fixup_loongarch_tls_le_lo12:
+    return Value & 0xfff;
+  case LoongArch::fixup_loongarch_abs64_lo20:
+  case LoongArch::fixup_loongarch_tls_le64_lo20:
+    return (Value >> 32) & 0xfffff;
+  case LoongArch::fixup_loongarch_abs64_hi12:
+  case LoongArch::fixup_loongarch_tls_le64_hi12:
+    return (Value >> 52) & 0xfff;
+  }
+}
+
 void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
                                      const MCFixup &Fixup,
                                      const MCValue &Target,
@@ -88,7 +136,10 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
   if (Kind >= FirstLiteralRelocationKind)
     return;
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
-  // TODO: Apply any target-specific value adjustments.
+  MCContext &Ctx = Asm.getContext();
+
+  // Apply any target-specific value adjustments.
+  Value = adjustFixupValue(Fixup, Value, Ctx);
 
   // Shift the value into position.
   Value <<= Info.TargetOffset;
@@ -109,9 +160,15 @@ bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCValue &Target) {
   if (Fixup.getKind() >= FirstLiteralRelocationKind)
     return true;
-  // TODO: Determine which relocation require special processing at linking
-  // time.
-  return false;
+  switch (Fixup.getTargetKind()) {
+  default:
+    return false;
+  case FK_Data_1:
+  case FK_Data_2:
+  case FK_Data_4:
+  case FK_Data_8:
+    return !Target.isAbsolute();
+  }
 }
 
 bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,

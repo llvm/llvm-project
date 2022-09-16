@@ -33,7 +33,7 @@ static Register getPrevDefOfRCInMBB(MachineBasicBlock &MBB,
     auto &MI = *RI;
     // All Def operands explicit and implicit.
     for (auto &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isDef())
+      if (!MO.isReg() || !MO.isDef() || MO.isDead())
         continue;
       auto Reg = MO.getReg();
       if (Register::isPhysicalRegister(Reg))
@@ -89,7 +89,7 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
   // some other dominating definition (that is not to be deleted).
   for (auto *MI : ToDelete) {
     for (auto &MO : MI->operands()) {
-      if (!MO.isReg() || !MO.isDef())
+      if (!MO.isReg() || !MO.isDef() || MO.isDead())
         continue;
       auto Reg = MO.getReg();
       if (Register::isPhysicalRegister(Reg))

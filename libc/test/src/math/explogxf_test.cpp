@@ -39,15 +39,6 @@ TEST(LlvmLibcExpxfTest, InFloatRange) {
              def_prec);
 }
 
-TEST(LlvmLibcExp2xfTest, InFloatRange) {
-  auto f_check = [](float x) -> bool {
-    return !(
-        (isnan(x) || isinf(x) || x < -130 || x > 130 || fabsf(x) < 0x1.0p-10));
-  };
-  CHECK_DATA(0.0f, neg_inf, mpfr::Operation::Exp2, __llvm_libc::exp2_eval,
-             f_check, def_count, def_prec);
-}
-
 TEST(LlvmLibcLog2xfTest, InFloatRange) {
   CHECK_DATA(0.0f, inf, mpfr::Operation::Log2, __llvm_libc::log2_eval, f_normal,
              def_count, def_prec);

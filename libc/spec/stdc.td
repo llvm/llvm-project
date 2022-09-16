@@ -558,6 +558,11 @@ def StdC : StandardSpec<"stdc"> {
                ArgSpec<FILERestrictedPtr>]
           >,
           FunctionSpec<
+              "remove",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstCharPtr>]
+          >,
+          FunctionSpec<
               "sprintf",
               RetValSpec<IntType>,
               [ArgSpec<CharRestrictedPtr>,

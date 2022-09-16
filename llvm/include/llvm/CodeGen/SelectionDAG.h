@@ -978,6 +978,13 @@ public:
     return getNode(ISD::CALLSEQ_END, DL, NodeTys, Ops);
   }
 
+  SDValue getCALLSEQ_END(SDValue Chain, uint64_t Size1, uint64_t Size2,
+                         SDValue Glue, const SDLoc &DL) {
+    return getCALLSEQ_END(
+        Chain, getIntPtrConstant(Size1, DL, /*isTarget=*/true),
+        getIntPtrConstant(Size2, DL, /*isTarget=*/true), Glue, DL);
+  }
+
   /// Return true if the result of this operation is always undefined.
   bool isUndef(unsigned Opcode, ArrayRef<SDValue> Ops);
 

@@ -223,43 +223,65 @@ static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
   return annotated;
 }
 
-/// A DFS helper to compute a topological sort. Note that recursion is
-/// bounded by the number of implicit loops, which is always small.
-/// Returns false when a cycle is detected.
-static bool topSortDFS(unsigned i, std::vector<unsigned> &visit,
-                       std::vector<unsigned> &topSort,
-                       std::vector<std::vector<bool>> &adjM) {
-  if (visit[i] != 0)
-    return visit[i] != 1; // 1 denotes cycle!
-  visit[i] = 1;
-  for (unsigned j = 0, e = visit.size(); j < e; j++)
-    if (adjM[i][j])
-      if (!topSortDFS(j, visit, topSort, adjM))
-        return false;
-  visit[i] = 2;
-  topSort.push_back(i);
-  return true;
+/// A helper to compute a topological sort. O(n^2) time complexity
+/// as we use adj matrix for the graph.
+/// The sorted result will put the first Reduction iterator to the
+/// latest possible index.
+static bool topSortOptimal(unsigned n, ArrayRef<Attribute> iteratorTypes,
+                           std::vector<unsigned> &topSort,
+                           std::vector<unsigned> &inDegree,
+                           std::vector<std::vector<bool>> &adjM) {
+  std::vector<unsigned> redIt; // reduce iterator with 0 degree
+  std::vector<unsigned> parIt; // parallel iterator with 0 degree
+  for (unsigned i = 0; i < n; i++) {
+    if (inDegree[i] == 0) {
+      if (linalg::isReductionIterator(iteratorTypes[i]))
+        redIt.push_back(i);
+      else
+        parIt.push_back(i);
+    }
+  }
+
+  while (!redIt.empty() || !parIt.empty()) {
+    // We always choose parallel iterator if there is any.
+    auto &it = !parIt.empty() ? parIt : redIt;
+    auto src = it.back();
+    topSort.push_back(src);
+    it.pop_back();
+    // Update in-degree, and push 0-degree node into worklist.
+    for (unsigned dst = 0; dst < n; dst++)
+      if (adjM[src][dst] && --inDegree[dst] == 0) {
+        if (linalg::isReductionIterator(iteratorTypes[dst]))
+          redIt.push_back(dst);
+        else
+          parIt.push_back(dst);
+      }
+  }
+  return topSort.size() == n;
 }
 
 /// Helper method to add all constraints from the indices in one affine
 /// expression before all indices in the other affine expression. For
 /// example i0+i1 < i2+i3+1 yields i0<i2, i0<i3, i1<i2, and i1<i3.
 static void addAffineOrderings(std::vector<std::vector<bool>> &adjM,
-                               AffineExpr a, AffineExpr b, unsigned fidx) {
+                               std::vector<unsigned> &inDegree, AffineExpr a,
+                               AffineExpr b, unsigned fidx) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
     unsigned idx = a.cast<AffineDimExpr>().getPosition();
     if (b)
-      addAffineOrderings(adjM, b, AffineExpr(), idx);
-    else
+      addAffineOrderings(adjM, inDegree, b, AffineExpr(), idx);
+    else if (!adjM[fidx][idx]) {
       adjM[fidx][idx] = true;
+      inDegree[idx]++;
+    }
     break;
   }
   case AffineExprKind::Add:
   case AffineExprKind::Mul: {
     auto binOp = a.cast<AffineBinaryOpExpr>();
-    addAffineOrderings(adjM, binOp.getLHS(), b, fidx);
-    addAffineOrderings(adjM, binOp.getRHS(), b, fidx);
+    addAffineOrderings(adjM, inDegree, binOp.getLHS(), b, fidx);
+    addAffineOrderings(adjM, inDegree, binOp.getRHS(), b, fidx);
     break;
   }
   default:
@@ -279,7 +301,8 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   // for the implicit loop indices i_0 .. i_n-1.
   unsigned n = op.getNumLoops();
   std::vector<std::vector<bool>> adjM(n, std::vector<bool>(n, false));
-
+  std::vector<unsigned> inDegree(n, 0); // in-degree of each node.
+  auto iteratorTypes = op.iterator_types().getValue();
   // Iterate over the indexing maps of every tensor in the tensor expression.
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     // Skip tensor during cycle resolution.
@@ -299,7 +322,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     for (unsigned d = 1, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr f = map.getResult(perm(enc, d - 1));
       AffineExpr t = map.getResult(perm(enc, d));
-      addAffineOrderings(adjM, f, t, 0);
+      addAffineOrderings(adjM, inDegree, f, t, 0);
     }
     // Push unrelated loops into sparse iteration space, so these
     // will be skipped more often.
@@ -309,21 +332,17 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
         if (merger.isDimLevelType(tensor, i, DimLvlType::kCompressed) ||
             merger.isDimLevelType(tensor, i, DimLvlType::kSingleton))
           for (unsigned j = 0; j < n; j++)
-            if (merger.isDimLevelType(tensor, j, DimLvlType::kUndef))
+            if (merger.isDimLevelType(tensor, j, DimLvlType::kUndef)) {
               adjM[i][j] = true;
+              inDegree[j]++;
+            }
     }
   }
   // Topologically sort the iteration graph to determine loop order.
   // Report failure for a cyclic iteration graph.
   topSort.clear();
   topSort.reserve(n);
-  std::vector<unsigned> visit(n, 0);
-  for (unsigned i = 0; i < n; i++)
-    if (visit[i] == 0)
-      if (!topSortDFS(i, visit, topSort, adjM))
-        return false; // cycle!
-  std::reverse(std::begin(topSort), std::end(topSort));
-  return true;
+  return topSortOptimal(n, iteratorTypes, topSort, inDegree, adjM);
 }
 
 /// Returns true if tensor materializes uninitialized into the computation.
@@ -1271,7 +1290,8 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   bool isParallel =
       isParallelFor(codegen, isOuter, isReduction, isSparse, isVector);
 
-  assert(!merger.isDimLevelType(fb, DimLvlType::kSingleton) && "TODO: implement");
+  assert(!merger.isDimLevelType(fb, DimLvlType::kSingleton) &&
+         "TODO: implement");
 
   // Prepare vector length.
   if (isVector)
@@ -1798,33 +1818,42 @@ public:
     if (!findSparseAnnotations(merger, op))
       return failure();
 
+    // Builds the tensor expression for the Linalg operation in SSA form.
+    Optional<unsigned> optExp = merger.buildTensorExpFromLinalg(op);
+    if (!optExp.has_value())
+      return failure();
+
+    unsigned exp = optExp.value();
+    OpOperand *sparseOut = nullptr;
+    unsigned outerParNest = 0;
     // Computes a topologically sorted iteration graph to ensure tensors
     // are visited in natural index order. Gradually relaxes the considered
     // constraints until an acyclic iteration graph results, such that sparse
     // code generation can proceed. As a last resort, an attempt is made
     // to resolve cycles by inserting a conversion.
     std::vector<unsigned> topSort;
-    if (!computeIterationGraph(merger, op, topSort, SortMask::kIncludeAll) &&
-        !computeIterationGraph(merger, op, topSort, SortMask::kIncludeUndef) &&
-        !computeIterationGraph(merger, op, topSort, SortMask::kIncludeDense) &&
-        !computeIterationGraph(merger, op, topSort, SortMask::kSparseOnly)) {
-      return resolveCycle(merger, rewriter, op);
+    // Whether the current GenericOp is admissible
+    bool isAdmissible = false;
+    // An const list of all masks that we used for interation graph
+    // computation. Must be ordered from strict -> loose.
+    const auto allMask = {SortMask::kIncludeAll, SortMask::kIncludeUndef,
+                          SortMask::kIncludeDense, SortMask::kSparseOnly};
+    for (auto mask : allMask) {
+      if (computeIterationGraph(merger, op, topSort, mask) &&
+          isAdmissableTensorExp(merger, op, topSort, exp, &sparseOut,
+                                outerParNest)) {
+        // This is an admissible GenericOp.
+        isAdmissible = true;
+        break;
+      }
+      // else try a less strict constraints.
     }
 
-    // Builds the tensor expression for the Linalg operation in SSA form.
-    Optional<unsigned> optExp = merger.buildTensorExpFromLinalg(op);
-    if (!optExp.has_value())
-      return failure();
-    unsigned exp = optExp.value();
+    if (!isAdmissible)
+      // Give it one last shot to resolve the cycle.
+      return resolveCycle(merger, rewriter, op);
 
-    // Rejects an inadmissable tensor expression.
-    OpOperand *sparseOut = nullptr;
-    unsigned outerParNest = 0;
-    if (!isAdmissableTensorExp(merger, op, topSort, exp, &sparseOut,
-                               outerParNest))
-      return failure();
-
-    // Recursively generates code.
+    // Recursively generates code if admissible.
     merger.setHasSparseOut(sparseOut != nullptr);
     CodeGen codegen(options, numTensors, numLoops, sparseOut, outerParNest);
     genBuffers(merger, codegen, rewriter, op);

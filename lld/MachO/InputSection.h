@@ -285,6 +285,7 @@ inline bool isWordLiteralSection(uint32_t flags) {
 bool isCodeSection(const InputSection *);
 bool isCfStringSection(const InputSection *);
 bool isClassRefsSection(const InputSection *);
+bool isSelRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
 

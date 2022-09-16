@@ -590,25 +590,6 @@ LogicalResult mlir::linalg::LinalgPeelingPattern::matchAndRewrite(
   return success();
 }
 
-mlir::linalg::LinalgVectorizationPattern::LinalgVectorizationPattern(
-    MLIRContext *context, LinalgTransformationFilter f,
-    LinalgVectorizationOptions options, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(f)) {}
-
-mlir::linalg::LinalgVectorizationPattern::LinalgVectorizationPattern(
-    StringRef opName, MLIRContext *context, LinalgVectorizationOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(f.addOpNameFilter(opName)) {}
-
-LogicalResult mlir::linalg::LinalgVectorizationPattern::matchAndRewrite(
-    LinalgOp linalgOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
-    return failure();
-  return vectorize(rewriter, linalgOp);
-}
-
 LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
     memref::CopyOp copyOp, PatternRewriter &rewriter) const {
   return vectorizeCopy(rewriter, copyOp);

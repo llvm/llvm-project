@@ -708,23 +708,8 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
   }
 
   if (AllowModrefCall) {
-    switch (AA.getModRefBehavior(CalledFunction)) {
-    case FMRB_UnknownModRefBehavior:
-      return false;
-    case FMRB_DoesNotAccessMemory:
-    case FMRB_OnlyReadsMemory:
-    case FMRB_OnlyReadsInaccessibleMem:
-    case FMRB_OnlyReadsInaccessibleOrArgMem:
-      // Implicitly disable delinearization since we have an unknown
-      // accesses with an unknown access function.
-      Context.HasUnknownAccess = true;
-      // Explicitly use addUnknown so we don't put a loop-variant
-      // pointer into the alias set.
-      Context.AST.addUnknown(&CI);
-      return true;
-    case FMRB_OnlyReadsArgumentPointees:
-    case FMRB_OnlyAccessesArgumentPointees:
-    case FMRB_OnlyWritesArgumentPointees:
+    FunctionModRefBehavior FMRB = AA.getModRefBehavior(CalledFunction);
+    if (FMRB.onlyAccessesArgPointees()) {
       for (const auto &Arg : CI.args()) {
         if (!Arg->getType()->isPointerTy())
           continue;
@@ -748,13 +733,18 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
       // pointer into the alias set.
       Context.AST.addUnknown(&CI);
       return true;
-    case FMRB_OnlyWritesMemory:
-    case FMRB_OnlyWritesInaccessibleMem:
-    case FMRB_OnlyWritesInaccessibleOrArgMem:
-    case FMRB_OnlyAccessesInaccessibleMem:
-    case FMRB_OnlyAccessesInaccessibleOrArgMem:
-      return false;
     }
+
+    if (FMRB.onlyReadsMemory()) {
+      // Implicitly disable delinearization since we have an unknown
+      // accesses with an unknown access function.
+      Context.HasUnknownAccess = true;
+      // Explicitly use addUnknown so we don't put a loop-variant
+      // pointer into the alias set.
+      Context.AST.addUnknown(&CI);
+      return true;
+    }
+    return false;
   }
 
   return false;

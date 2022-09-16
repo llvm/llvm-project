@@ -181,6 +181,14 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
     break;
   }
+  case Instruction::AShr: {
+    // If the shifted value is not negative, this is a logical shift right.
+    Value *Op0 = Inst.getOperand(0);
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
+      return false;
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    break;
+  }
   case Instruction::SDiv:
   case Instruction::SRem: {
     // If both operands are not negative, this is the same as udiv/urem.

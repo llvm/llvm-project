@@ -848,8 +848,8 @@ define i32 @test_dcmpgt(double %a, double %b) #0 {
 ; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
 ; EFPU2-NEXT:    bl __gtdf2
-; EFPU2-NEXT:    cmpwi 3, 1
-; EFPU2-NEXT:    blt 0, .LBB37_2
+; EFPU2-NEXT:    cmpwi 3, 0
+; EFPU2-NEXT:    ble 0, .LBB37_2
 ; EFPU2-NEXT:  # %bb.1: # %tr
 ; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:    b .LBB37_3
@@ -908,8 +908,8 @@ define i32 @test_dcmpugt(double %a, double %b) #0 {
 ; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
 ; EFPU2-NEXT:    bl __ledf2
-; EFPU2-NEXT:    cmpwi 3, 1
-; EFPU2-NEXT:    blt 0, .LBB38_2
+; EFPU2-NEXT:    cmpwi 3, 0
+; EFPU2-NEXT:    ble 0, .LBB38_2
 ; EFPU2-NEXT:  # %bb.1: # %tr
 ; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:    b .LBB38_3
@@ -1324,8 +1324,8 @@ define i32 @test_dcmplt(double %a, double %b) #0 {
 ; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
 ; EFPU2-NEXT:    bl __ltdf2
-; EFPU2-NEXT:    cmpwi 3, -1
-; EFPU2-NEXT:    bgt 0, .LBB45_2
+; EFPU2-NEXT:    cmpwi 3, 0
+; EFPU2-NEXT:    bge 0, .LBB45_2
 ; EFPU2-NEXT:  # %bb.1: # %tr
 ; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:    b .LBB45_3
@@ -1384,8 +1384,8 @@ define i32 @test_dcmpult(double %a, double %b) #0 {
 ; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
 ; EFPU2-NEXT:    bl __gedf2
-; EFPU2-NEXT:    cmpwi 3, -1
-; EFPU2-NEXT:    bgt 0, .LBB46_2
+; EFPU2-NEXT:    cmpwi 3, 0
+; EFPU2-NEXT:    bge 0, .LBB46_2
 ; EFPU2-NEXT:  # %bb.1: # %tr
 ; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:    b .LBB46_3
@@ -1782,10 +1782,10 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -32(1)
-; CHECK-NEXT:    cmpwi 3, 1
+; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    evstdd 29, 8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    evstdd 30, 16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    blt 0, .LBB56_3
+; CHECK-NEXT:    ble 0, .LBB56_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    li 29, 0

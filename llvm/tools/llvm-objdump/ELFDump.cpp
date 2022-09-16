@@ -282,27 +282,28 @@ static void printProgramHeaders(const ELFFile<ELFT> &Obj, StringRef FileName) {
 }
 
 template <class ELFT>
-static void printSymbolVersionDependency(ArrayRef<uint8_t> Contents,
-                                         StringRef StrTab) {
+static void printSymbolVersionDependency(StringRef FileName,
+                                         const ELFFile<ELFT> &Obj,
+                                         const typename ELFT::Shdr &Sec) {
   outs() << "\nVersion References:\n";
 
-  const uint8_t *Buf = Contents.data();
-  while (Buf) {
-    auto *Verneed = reinterpret_cast<const typename ELFT::Verneed *>(Buf);
-    outs() << "  required from "
-           << StringRef(StrTab.drop_front(Verneed->vn_file).data()) << ":\n";
+  auto WarningHandler = [&](const Twine &Msg) {
+    reportWarning(Msg, FileName);
+    return Error::success();
+  };
+  Expected<std::vector<VerNeed>> V =
+      Obj.getVersionDependencies(Sec, WarningHandler);
+  if (!V) {
+    reportWarning(toString(V.takeError()), FileName);
+    return;
+  }
 
-    const uint8_t *BufAux = Buf + Verneed->vn_aux;
-    while (BufAux) {
-      auto *Vernaux = reinterpret_cast<const typename ELFT::Vernaux *>(BufAux);
-      outs() << "    "
-             << format("0x%08" PRIx32 " ", (uint32_t)Vernaux->vna_hash)
-             << format("0x%02" PRIx16 " ", (uint16_t)Vernaux->vna_flags)
-             << format("%02" PRIu16 " ", (uint16_t)Vernaux->vna_other)
-             << StringRef(StrTab.drop_front(Vernaux->vna_name).data()) << '\n';
-      BufAux = Vernaux->vna_next ? BufAux + Vernaux->vna_next : nullptr;
-    }
-    Buf = Verneed->vn_next ? Buf + Verneed->vn_next : nullptr;
+  raw_fd_ostream &OS = outs();
+  for (const VerNeed &VN : *V) {
+    OS << "  required from " << VN.File << ":\n";
+    for (const VernAux &Aux : VN.AuxV)
+      OS << format("    0x%08x 0x%02x %02u %s\n", Aux.Hash, Aux.Flags,
+                   Aux.Other, Aux.Name.c_str());
   }
 }
 
@@ -355,7 +356,7 @@ static void printSymbolVersionInfo(const ELFFile<ELFT> &Elf,
     StringRef StrTab = unwrapOrError(Elf.getStringTable(*StrTabSec), FileName);
 
     if (Shdr.sh_type == ELF::SHT_GNU_verneed)
-      printSymbolVersionDependency<ELFT>(Contents, StrTab);
+      printSymbolVersionDependency<ELFT>(FileName, Elf, Shdr);
     else
       printSymbolVersionDefinition<ELFT>(Shdr, Contents, StrTab);
   }

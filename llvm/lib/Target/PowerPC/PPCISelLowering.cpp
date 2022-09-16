@@ -5109,8 +5109,7 @@ PrepareTailCall(SelectionDAG &DAG, SDValue &InFlag, SDValue &Chain,
   Chain = EmitTailCallStoreFPAndRetAddr(DAG, Chain, LROp, FPOp, SPDiff, dl);
 
   // Emit callseq_end just before tailcall node.
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, dl, true),
-                             DAG.getIntPtrConstant(0, dl, true), InFlag, dl);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, dl);
   InFlag = Chain.getValue(1);
 }
 
@@ -5621,9 +5620,7 @@ SDValue PPCTargetLowering::FinishCall(
                             ? NumBytes
                             : 0;
 
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, dl, true),
-                             DAG.getIntPtrConstant(BytesCalleePops, dl, true),
-                             Glue, dl);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, BytesCalleePops, Glue, dl);
   Glue = Chain.getValue(1);
 
   return LowerCallResult(Chain, Glue, CFlags.CallConv, CFlags.IsVarArg, Ins, dl,

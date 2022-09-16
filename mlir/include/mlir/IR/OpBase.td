@@ -359,7 +359,7 @@ class AllOfType<list<Type> allowedTypes, string summary = "",
 
 // A type that satisfies additional predicates.
 class ConfinedType<Type type, list<Pred> predicates, string summary = "",
-                   string cppClassName = "::mlir::Type"> : Type<
+                   string cppClassName = type.cppClassName> : Type<
     And<!listconcat([type.predicate], !foreach(pred, predicates, pred))>,
     summary, cppClassName>;
 

@@ -32,6 +32,10 @@ class Value;
 class MemRefType;
 struct MutableAffineMap;
 
+namespace presburger {
+class MultiAffineFunction;
+} // namespace presburger
+
 /// FlatAffineValueConstraints represents an extension of IntegerPolyhedron
 /// where each non-local variable can have an SSA Value attached to it.
 class FlatAffineValueConstraints : public presburger::IntegerPolyhedron {
@@ -614,6 +618,10 @@ LogicalResult
 getFlattenedAffineExprs(IntegerSet set,
                         std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
                         FlatAffineValueConstraints *cst = nullptr);
+
+LogicalResult
+getMultiAffineFunctionFromMap(AffineMap map,
+                              presburger::MultiAffineFunction &multiAff);
 
 /// Re-indexes the dimensions and symbols of an affine map with given `operands`
 /// values to align with `dims` and `syms` values.
