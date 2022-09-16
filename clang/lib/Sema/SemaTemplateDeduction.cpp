@@ -563,6 +563,12 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
   // FIXME: Try to preserve type sugar here, which is hard
   // because of the unresolved template arguments.
   const auto *TP = UP.getCanonicalType()->castAs<TemplateSpecializationType>();
+  TemplateName TNP = TP->getTemplateName();
+
+  // If the parameter is an alias template, there is nothing to deduce.
+  if (const auto *TD = TNP.getAsTemplateDecl(); TD && TD->isTypeAlias())
+    return Sema::TDK_Success;
+
   ArrayRef<TemplateArgument> PResolved = TP->template_arguments();
 
   QualType UA = A;
@@ -574,10 +580,15 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
   // FIXME: Should not lose sugar here.
   if (const auto *SA =
           dyn_cast<TemplateSpecializationType>(UA.getCanonicalType())) {
+    TemplateName TNA = SA->getTemplateName();
+
+    // If the argument is an alias template, there is nothing to deduce.
+    if (const auto *TD = TNA.getAsTemplateDecl(); TD && TD->isTypeAlias())
+      return Sema::TDK_Success;
+
     // Perform template argument deduction for the template name.
     if (auto Result =
-            DeduceTemplateArguments(S, TemplateParams, TP->getTemplateName(),
-                                    SA->getTemplateName(), Info, Deduced))
+            DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info, Deduced))
       return Result;
     // Perform template argument deduction on each template
     // argument. Ignore any missing/extra arguments, since they could be
@@ -3825,13 +3836,11 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
     //   - If A is an array type, the pointer type produced by the
     //     array-to-pointer standard conversion (4.2) is used in place of
     //     A for type deduction; otherwise,
-    if (ArgType->isArrayType())
-      ArgType = S.Context.getArrayDecayedType(ArgType);
     //   - If A is a function type, the pointer type produced by the
     //     function-to-pointer standard conversion (4.3) is used in place
     //     of A for type deduction; otherwise,
-    else if (ArgType->isFunctionType())
-      ArgType = S.Context.getPointerType(ArgType);
+    if (ArgType->canDecayToPointerType())
+      ArgType = S.Context.getDecayedType(ArgType);
     else {
       // - If A is a cv-qualified type, the top level cv-qualifiers of A's
       //   type are ignored for type deduction.

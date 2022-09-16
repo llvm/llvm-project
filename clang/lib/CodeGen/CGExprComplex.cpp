@@ -1055,7 +1055,8 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
   if (PromotionTypeCR.isNull())
     PromotionTypeCR = E->getComputationResultType();
   OpInfo.Ty = PromotionTypeCR;
-  QualType ComplexElementTy = cast<ComplexType>(OpInfo.Ty)->getElementType();
+  QualType ComplexElementTy =
+      OpInfo.Ty->castAs<ComplexType>()->getElementType();
   QualType PromotionTypeRHS = getPromotionType(E->getRHS()->getType());
 
   // The RHS should have been converted to the computation type.

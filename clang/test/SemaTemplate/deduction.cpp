@@ -190,6 +190,14 @@ void g() {
 }
 } // namespace test7
 
+namespace test8 {
+template <class T> void foo(T);
+void test(int a) {
+    char n[a];
+    foo(n);
+}
+} // namespace test8
+
 // Verify that we can deduce enum-typed arguments correctly.
 namespace test14 {
   enum E { E0, E1 };
