@@ -440,7 +440,8 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   DTU.applyUpdates(Updates);
   Updates.clear();
 
-  setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
+  if (MaxCount)
+    setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
 
   LLVM_DEBUG(dbgs() << *BB << "\n");
   LLVM_DEBUG(dbgs() << *DefaultBB << "\n");
