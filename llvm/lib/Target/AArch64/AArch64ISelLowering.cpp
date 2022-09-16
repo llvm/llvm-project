@@ -13235,6 +13235,21 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
     createTblShuffleForZExt(ZExt, Subtarget->isLittleEndian());
     return true;
   }
+
+  auto *UIToFP = dyn_cast<UIToFPInst>(I);
+  if (UIToFP &&
+      (SrcTy->getNumElements() == 8 || SrcTy->getNumElements() == 16) &&
+      SrcTy->getElementType()->isIntegerTy(8) &&
+      DstTy->getElementType()->isFloatTy()) {
+    IRBuilder<> Builder(I);
+    auto *ZExt = cast<ZExtInst>(
+        Builder.CreateZExt(I->getOperand(0), VectorType::getInteger(DstTy)));
+    auto *UI = Builder.CreateUIToFP(ZExt, DstTy);
+    I->replaceAllUsesWith(UI);
+    I->eraseFromParent();
+    createTblShuffleForZExt(ZExt, Subtarget->isLittleEndian());
+    return true;
+  }
   return false;
 }
 
