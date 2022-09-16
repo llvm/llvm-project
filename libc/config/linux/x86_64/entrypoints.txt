@@ -115,6 +115,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
 
+    # sys/utsname.h entrypoints
+    libc.src.sys.utsname.uname
+
     # unistd.h entrypoints
     libc.src.unistd.access
     libc.src.unistd.chdir

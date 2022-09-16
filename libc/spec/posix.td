@@ -522,6 +522,22 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  NamedType StructUtsName = NamedType<"struct utsname">;
+  PtrType StructUtsNamePtr = PtrType<StructUtsName>;
+  HeaderSpec SysUtsName = HeaderSpec<
+    "sys/utsname.h",
+    [], // Macros
+    [StructUtsName], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+            "uname",
+            RetValSpec<IntType>,
+            [ArgSpec<StructUtsNamePtr>]
+        >,
+    ]
+  >;
+
   HeaderSpec PThread = HeaderSpec<
     "pthread.h",
     [], // Macros
@@ -789,6 +805,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysMMan,
     SysResource,
     SysStat,
+    SysUtsName,
     UniStd,
     String
   ];
