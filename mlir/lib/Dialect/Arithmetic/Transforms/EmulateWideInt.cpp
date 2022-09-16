@@ -28,10 +28,10 @@ using namespace mlir;
 // Common Helper Functions
 //===----------------------------------------------------------------------===//
 
-// Returns N bottom and N top bits from `value`, where N = `newBitWidth`.
-// Treats `value` as a 2*N bits-wide integer.
-// The bottom bits are returned in the first pair element, while the top bits in
-// the second one.
+/// Returns N bottom and N top bits from `value`, where N = `newBitWidth`.
+/// Treats `value` as a 2*N bits-wide integer.
+/// The bottom bits are returned in the first pair element, while the top bits
+/// in the second one.
 static std::pair<APInt, APInt> getHalves(const APInt &value,
                                          unsigned newBitWidth) {
   APInt low = value.extractBits(newBitWidth, 0);
@@ -39,11 +39,11 @@ static std::pair<APInt, APInt> getHalves(const APInt &value,
   return {std::move(low), std::move(high)};
 }
 
-// Returns the type with the last (innermost) dimention reduced to x1.
-// Scalarizes 1D vector inputs to match how we extract/insert vector values,
-// e.g.:
-//   - vector<3x2xi16> --> vector<3x1xi16>
-//   - vector<2xi16>   --> i16
+/// Returns the type with the last (innermost) dimention reduced to x1.
+/// Scalarizes 1D vector inputs to match how we extract/insert vector values,
+/// e.g.:
+///   - vector<3x2xi16> --> vector<3x1xi16>
+///   - vector<2xi16>   --> i16
 static Type reduceInnermostDim(VectorType type) {
   if (type.getShape().size() == 1)
     return type.getElementType();
@@ -53,7 +53,7 @@ static Type reduceInnermostDim(VectorType type) {
   return VectorType::get(newShape, type.getElementType());
 }
 
-// Returns a constant of integer of vector type filled with (repeated) `value`.
+/// Returns a constant of integer of vector type filled with (repeated) `value`.
 static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
                                          Location loc, Type type,
                                          const APInt &value) {
@@ -68,7 +68,7 @@ static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
   return rewriter.create<arith::ConstantOp>(loc, attr);
 }
 
-// Returns a constant of integer of vector type filled with (repeated) `value`.
+/// Returns a constant of integer of vector type filled with (repeated) `value`.
 static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
                                          Location loc, Type type,
                                          int64_t value) {
@@ -82,11 +82,11 @@ static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
                                      APInt(elementBitWidth, value));
 }
 
-// Extracts the `input` vector slice with elements at the last dimension offset
-// by `lastOffset`. Returns a value of vector type with the last dimension
-// reduced to x1 or fully scalarized, e.g.:
-//   - vector<3x2xi16> --> vector<3x1xi16>
-//   - vector<2xi16>   --> i16
+/// Extracts the `input` vector slice with elements at the last dimension offset
+/// by `lastOffset`. Returns a value of vector type with the last dimension
+/// reduced to x1 or fully scalarized, e.g.:
+///   - vector<3x2xi16> --> vector<3x1xi16>
+///   - vector<2xi16>   --> i16
 static Value extractLastDimSlice(ConversionPatternRewriter &rewriter,
                                  Location loc, Value input,
                                  int64_t lastOffset) {
@@ -107,8 +107,8 @@ static Value extractLastDimSlice(ConversionPatternRewriter &rewriter,
                                                         sizes, strides);
 }
 
-// Extracts two vector slices from the `input` whose type is `vector<...x2T>`,
-// with the first element at offset 0 and the second element at offset 1.
+/// Extracts two vector slices from the `input` whose type is `vector<...x2T>`,
+/// with the first element at offset 0 and the second element at offset 1.
 static std::pair<Value, Value>
 extractLastDimHalves(ConversionPatternRewriter &rewriter, Location loc,
                      Value input) {
@@ -133,8 +133,8 @@ static Value dropTrailingX1Dim(ConversionPatternRewriter &rewriter,
   return rewriter.create<vector::ShapeCastOp>(loc, newVecTy, input);
 }
 
-// Performs a vector shape cast to append an x1 dimension. If the
-// `input` is a scalar, this is a noop.
+/// Performs a vector shape cast to append an x1 dimension. If the
+/// `input` is a scalar, this is a noop.
 static Value appendX1Dim(ConversionPatternRewriter &rewriter, Location loc,
                          Value input) {
   auto vecTy = input.getType().dyn_cast<VectorType>();
@@ -148,9 +148,9 @@ static Value appendX1Dim(ConversionPatternRewriter &rewriter, Location loc,
   return rewriter.create<vector::ShapeCastOp>(loc, newTy, input);
 }
 
-// Inserts the `source` vector slice into the `dest` vector at offset
-// `lastOffset` in the last dimension. `source` can be a scalar when `dest` is a
-// 1D vector.
+/// Inserts the `source` vector slice into the `dest` vector at offset
+/// `lastOffset` in the last dimension. `source` can be a scalar when `dest` is
+/// a 1D vector.
 static Value insertLastDimSlice(ConversionPatternRewriter &rewriter,
                                 Location loc, Value source, Value dest,
                                 int64_t lastOffset) {
@@ -168,12 +168,12 @@ static Value insertLastDimSlice(ConversionPatternRewriter &rewriter,
                                                        offsets, strides);
 }
 
-// Constructs a new vector of type `resultType` by creating a series of
-// insertions of `resultComponents`, each at the next offset of the last vector
-// dimension.
-// When all `resultComponents` are scalars, the result type is `vector<NxT>`;
-// when `resultComponents` are `vector<...x1xT>`s, the result type is
-// `vector<...xNxT>`, where `N` is the number of `resultComponenets`.
+/// Constructs a new vector of type `resultType` by creating a series of
+/// insertions of `resultComponents`, each at the next offset of the last vector
+/// dimension.
+/// When all `resultComponents` are scalars, the result type is `vector<NxT>`;
+/// when `resultComponents` are `vector<...x1xT>`s, the result type is
+/// `vector<...xNxT>`, where `N` is the number of `resultComponenets`.
 static Value constructResultVector(ConversionPatternRewriter &rewriter,
                                    Location loc, VectorType resultType,
                                    ValueRange resultComponents) {
@@ -452,6 +452,90 @@ struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertShRUI
+//===----------------------------------------------------------------------===//
+
+struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ShRUIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+
+    Type oldTy = op.getType();
+    auto newTy = getTypeConverter()->convertType(oldTy).cast<VectorType>();
+    Type newOperandTy = reduceInnermostDim(newTy);
+    unsigned newBitWidth = newTy.getElementTypeBitWidth();
+
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    Value rhsElem0 = extractLastDimSlice(rewriter, loc, adaptor.getRhs(), 0);
+
+    // Assume that the shift amount is < 2 * newBitWidth. Calculate the low and
+    // high halves of the results separately:
+    //   1. low := a or b or c, where:
+    //     a) Bits from LHS.low, shifted by the RHS.
+    //     b) Bits from LHS.high, shifted left. These matter when
+    //        RHS < newBitWidth, e.g.:
+    //         [hhhh][0000] shrui 3 --> [000h][hhh0]
+    //                                          ^
+    //                                          |
+    //                                 [hhhh] shli (4 - 1)
+    //     c) Bits from LHS.high, shifted right. These come into play when
+    //        RHS > newBitWidth, e.g.:
+    //         [hhhh][0000] shrui 7 --> [0000][000h]
+    //                                          ^
+    //                                          |
+    //                                 [hhhh] shrui (7 - 4)
+    //
+    //   2. high := LHS.high shrui RHS
+    //
+    // Because shifts by values >= newBitWidth are undefined, we ignore the high
+    // half of RHS, and introduce 'bounds checks' to account for
+    // RHS.low > newBitWidth.
+    //
+    // TODO: Explore possible optimizations.
+    Value zeroCst = createScalarOrSplatConstant(rewriter, loc, newOperandTy, 0);
+    Value elemBitWidth =
+        createScalarOrSplatConstant(rewriter, loc, newOperandTy, newBitWidth);
+
+    Value illegalElemShift = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::uge, rhsElem0, elemBitWidth);
+
+    Value shiftedElem0 =
+        rewriter.create<arith::ShRUIOp>(loc, lhsElem0, rhsElem0);
+    Value resElem0Low = rewriter.create<arith::SelectOp>(loc, illegalElemShift,
+                                                         zeroCst, shiftedElem0);
+    Value shiftedElem1 =
+        rewriter.create<arith::ShRUIOp>(loc, lhsElem1, rhsElem0);
+    Value resElem1 = rewriter.create<arith::SelectOp>(loc, illegalElemShift,
+                                                      zeroCst, shiftedElem1);
+
+    Value cappedShiftAmount = rewriter.create<arith::SelectOp>(
+        loc, illegalElemShift, elemBitWidth, rhsElem0);
+    Value leftShiftAmount =
+        rewriter.create<arith::SubIOp>(loc, elemBitWidth, cappedShiftAmount);
+    Value shiftedLeft =
+        rewriter.create<arith::ShLIOp>(loc, lhsElem1, leftShiftAmount);
+    Value overshotShiftAmount =
+        rewriter.create<arith::SubIOp>(loc, rhsElem0, elemBitWidth);
+    Value shiftedRight =
+        rewriter.create<arith::ShRUIOp>(loc, lhsElem1, overshotShiftAmount);
+
+    Value resElem0High = rewriter.create<arith::SelectOp>(
+        loc, illegalElemShift, shiftedRight, shiftedLeft);
+    Value resElem0 =
+        rewriter.create<arith::OrIOp>(loc, resElem0Low, resElem0High);
+
+    Value resultVec =
+        constructResultVector(rewriter, loc, newTy, {resElem0, resElem1});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertTruncI
 //===----------------------------------------------------------------------===//
 
@@ -607,7 +691,7 @@ void arith::populateWideIntEmulationPatterns(
       // Misc ops.
       ConvertConstant, ConvertVectorPrint,
       // Binary ops.
-      ConvertAddI, ConvertMulI,
+      ConvertAddI, ConvertMulI, ConvertShRUI,
       // Extension and truncation ops.
       ConvertExtSI, ConvertExtUI, ConvertTruncI>(typeConverter,
                                                  patterns.getContext());
