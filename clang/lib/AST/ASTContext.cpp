@@ -4859,7 +4859,8 @@ ASTContext::getTemplateSpecializationTypeInfo(TemplateName Name,
                                               QualType Underlying) const {
   assert(!Name.getAsDependentTemplateName() &&
          "No dependent template names here!");
-  QualType TST = getTemplateSpecializationType(Name, Args, Underlying);
+  QualType TST =
+      getTemplateSpecializationType(Name, Args.arguments(), Underlying);
 
   TypeSourceInfo *DI = CreateTypeSourceInfo(TST);
   TemplateSpecializationTypeLoc TL =
@@ -4875,14 +4876,14 @@ ASTContext::getTemplateSpecializationTypeInfo(TemplateName Name,
 
 QualType
 ASTContext::getTemplateSpecializationType(TemplateName Template,
-                                          const TemplateArgumentListInfo &Args,
+                                          ArrayRef<TemplateArgumentLoc> Args,
                                           QualType Underlying) const {
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
 
   SmallVector<TemplateArgument, 4> ArgVec;
   ArgVec.reserve(Args.size());
-  for (const TemplateArgumentLoc &Arg : Args.arguments())
+  for (const TemplateArgumentLoc &Arg : Args)
     ArgVec.push_back(Arg.getArgument());
 
   return getTemplateSpecializationType(Template, ArgVec, Underlying);
@@ -4908,8 +4909,8 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
   if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
     Template = QTN->getUnderlyingTemplate();
 
-  bool IsTypeAlias =
-      isa_and_nonnull<TypeAliasTemplateDecl>(Template.getAsTemplateDecl());
+  const auto *TD = Template.getAsTemplateDecl();
+  bool IsTypeAlias = TD && TD->isTypeAlias();
   QualType CanonType;
   if (!Underlying.isNull())
     CanonType = getCanonicalType(Underlying);
