@@ -2115,6 +2115,12 @@ public:
   /// cannot be statically evaluated for any given indirect branch.
   bool postProcessIndirectBranches(MCPlusBuilder::AllocatorIdTy AllocId);
 
+  /// Validate that all data references to function offsets are claimed by
+  /// recognized jump tables. Register externally referenced blocks as entry
+  /// points. Returns true if there are no unclaimed externally referenced
+  /// offsets.
+  bool validateExternallyReferencedOffsets();
+
   /// Return all call site profile info for this function.
   IndirectCallSiteProfile &getAllCallSites() { return AllCallSites; }
 
