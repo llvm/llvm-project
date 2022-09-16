@@ -392,6 +392,8 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   CompileJobCachingOptions CacheOpts;
   ResultCacheKey =
       canonicalizeAndCreateCacheKey(*CAS, Diags, Invocation, CacheOpts);
+  if (!ResultCacheKey)
+    return 1; // Exit with error!
 
   DisableCachedCompileJobReplay = CacheOpts.DisableCachedCompileJobReplay;
 
@@ -481,10 +483,7 @@ Optional<int> CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
 
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
-  // Create the result cache key once Invocation has been canonicalized.
-  ResultCacheKey = createCompileJobCacheKey(*CAS, Diags, Clang.getInvocation());
-  if (!ResultCacheKey)
-    return 1;
+  assert(ResultCacheKey.has_value() && "ResultCacheKey not initialized?");
 
   Expected<bool> ReplayedResult =
       DisableCachedCompileJobReplay
