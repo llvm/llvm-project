@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-int getrlimit(int resource, struct rlimit_t *lim);
+int getrlimit(int resource, struct rlimit *lim);
 
 } // namespace __llvm_libc
 

@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-int setrlimit(int resource, const struct rlimit_t *lim);
+int setrlimit(int resource, const struct rlimit *lim);
 
 } // namespace __llvm_libc
 

@@ -40,7 +40,7 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   ASSERT_THAT(__llvm_libc::close(fd1), Succeeds(0));
   ASSERT_THAT(__llvm_libc::close(fd2), Succeeds(0));
 
-  struct rlimit_t limits {
+  struct rlimit limits {
     4, 4
   };
   ASSERT_THAT(__llvm_libc::setrlimit(RLIMIT_NOFILE, &limits), Succeeds(0));
@@ -69,7 +69,7 @@ TEST(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   ASSERT_THAT(__llvm_libc::unlink(TEST_FILE1), Succeeds(0));
   ASSERT_THAT(__llvm_libc::unlink(TEST_FILE2), Succeeds(0));
 
-  struct rlimit_t current_limits;
+  struct rlimit current_limits;
   ASSERT_THAT(__llvm_libc::getrlimit(RLIMIT_NOFILE, &current_limits),
               Succeeds(0));
   ASSERT_EQ(current_limits.rlim_cur, rlim_t(4));
