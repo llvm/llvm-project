@@ -996,11 +996,11 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (llvm::Optional<uint64_t> safelenVar = loop.getSafelen())
     safelen = builder.getInt64(safelenVar.value());
 
-  ompBuilder->applySimd(loopInfo,
-                        loop.getIfExpr()
-                            ? moduleTranslation.lookupValue(loop.getIfExpr())
-                            : nullptr,
-                        simdlen, safelen);
+  ompBuilder->applySimd(
+      loopInfo,
+      loop.getIfExpr() ? moduleTranslation.lookupValue(loop.getIfExpr())
+                       : nullptr,
+      llvm::omp::OrderKind::OMP_ORDER_unknown, simdlen, safelen);
 
   builder.restoreIP(afterIP);
   return success();

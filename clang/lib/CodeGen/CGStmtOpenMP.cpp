@@ -2600,8 +2600,9 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
 static bool isSupportedByOpenMPIRBuilder(const OMPSimdDirective &S) {
   // Check for unsupported clauses
   for (OMPClause *C : S.clauses()) {
-    // Currently only simdlen and safelen clauses are supported
-    if (!(isa<OMPSimdlenClause>(C) || isa<OMPSafelenClause>(C)))
+    // Currently only order, simdlen and safelen clauses are supported
+    if (!(isa<OMPSimdlenClause>(C) || isa<OMPSafelenClause>(C) ||
+          isa<OMPOrderClause>(C)))
       return false;
   }
 
@@ -2660,9 +2661,15 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
           auto *Val = cast<llvm::ConstantInt>(Len.getScalarVal());
           Safelen = Val;
         }
+        llvm::omp::OrderKind Order = llvm::omp::OrderKind::OMP_ORDER_unknown;
+        if (const auto *C = S.getSingleClause<OMPOrderClause>()) {
+          if (C->getKind() == OpenMPOrderClauseKind ::OMPC_ORDER_concurrent) {
+            Order = llvm::omp::OrderKind::OMP_ORDER_concurrent;
+          }
+        }
         // Add simd metadata to the collapsed loop. Do not generate
         // another loop for if clause. Support for if clause is done earlier.
-        OMPBuilder.applySimd(CLI, /*IfCond*/ nullptr, Simdlen, Safelen);
+        OMPBuilder.applySimd(CLI, /*IfCond*/ nullptr, Order, Simdlen, Safelen);
         return;
       }
     };
