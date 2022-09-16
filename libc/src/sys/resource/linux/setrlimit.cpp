@@ -12,12 +12,12 @@
 #include "src/__support/common.h"
 
 #include <errno.h>
-#include <sys/resource.h> // For struct rlimit_t
+#include <sys/resource.h> // For struct rlimit
 #include <sys/syscall.h>  // For syscall numbers.
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(int, setrlimit, (int res, const struct rlimit_t *limits)) {
+LLVM_LIBC_FUNCTION(int, setrlimit, (int res, const struct rlimit *limits)) {
   long ret = __llvm_libc::syscall(SYS_prlimit64, 0, res, limits, nullptr);
   if (ret < 0) {
     errno = -ret;
