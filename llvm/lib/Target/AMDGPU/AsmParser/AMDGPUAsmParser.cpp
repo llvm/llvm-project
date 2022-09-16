@@ -4353,7 +4353,7 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
   }
 
   if (NumLiterals > 1) {
-    Error(getLitLoc(Operands, true), "only one literal operand is allowed");
+    Error(getLitLoc(Operands, true), "only one unique literal operand is allowed");
     return false;
   }
 
@@ -4613,7 +4613,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   }
   if (!validateSOPLiteral(Inst)) {
     Error(getLitLoc(Operands),
-      "only one literal operand is allowed");
+      "only one unique literal operand is allowed");
     return false;
   }
   if (!validateVOPLiteral(Inst, Operands)) {
