@@ -3835,6 +3835,10 @@ bool TypeSystemSwiftTypeRef::ShouldSkipValidation(opaque_compiler_type_t type) {
   // so we skip validation in that casse as well.
   if (mangled_name == "$s10Foundation12NotificationV4NameaD")
     return true;
+
+  if (mangled_name ==  "$s10Foundation12NotificationVD")
+    return true;
+
   if (mangled_name == "$sSo9NSDecimalaD")
     return true;
   // Reconstruct($sSo11CFStringRefaD) returns a non-typealias type, breaking
