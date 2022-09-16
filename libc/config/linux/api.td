@@ -282,3 +282,7 @@ def SysStatAPI : PublicAPI<"sys/stat.h"> {
 def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {
   let Types = ["off_t", "size_t", "ssize_t"];
 }
+
+def SysUtsNameAPI : PublicAPI<"sys/utsname.h"> {
+  let Types = ["struct utsname"];
+}

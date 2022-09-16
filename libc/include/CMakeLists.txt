@@ -244,6 +244,15 @@ add_gen_header(
     ../config/${LIBC_TARGET_OS}/syscall_numbers.h.inc
 )
 
+add_gen_header(
+  sys_utsname
+  DEF_FILE sys/utsname.h.def
+  GEN_HDR sys/utsname.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_utsname
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.
   return()
