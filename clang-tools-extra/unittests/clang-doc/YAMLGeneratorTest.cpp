@@ -209,6 +209,8 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
   I.ReturnType =
       TypeInfo(EmptySID, "void", InfoType::IT_default, "path/to/void");
   I.Params.emplace_back("int", "path/to/int", "P");
+  I.Params.emplace_back("double", "path/to/double", "D");
+  I.Params.back().DefaultValue = "2.0 * M_PI";
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -240,6 +242,11 @@ Params:
       Name:            'int'
       Path:            'path/to/int'
     Name:            'P'
+  - Type:
+      Name:            'double'
+      Path:            'path/to/double'
+    Name:            'D'
+    DefaultValue:    '2.0 * M_PI'
 ReturnType:
   Type:
     Name:            'void'
