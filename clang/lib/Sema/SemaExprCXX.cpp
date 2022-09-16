@@ -6216,7 +6216,7 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
           << LHSType << RHSType;
       return {};
     }
-    ResultType = Context.getCommonSugaredType(LHSType, RHSType);
+    ResultType = LHSType;
   } else if (LHSVT || RHSVT) {
     ResultType = CheckVectorOperands(
         LHS, RHS, QuestionLoc, /*isCompAssign*/ false, /*AllowBothBool*/ true,
@@ -6227,13 +6227,15 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
       return {};
   } else {
     // Both are scalar.
-    LHSType = LHSType.getUnqualifiedType();
-    RHSType = RHSType.getUnqualifiedType();
-    QualType ResultElementTy =
-        Context.hasSameType(LHSType, RHSType)
-            ? Context.getCommonSugaredType(LHSType, RHSType)
-            : UsualArithmeticConversions(LHS, RHS, QuestionLoc,
-                                         ACK_Conditional);
+    QualType ResultElementTy;
+    LHSType = LHSType.getCanonicalType().getUnqualifiedType();
+    RHSType = RHSType.getCanonicalType().getUnqualifiedType();
+
+    if (Context.hasSameType(LHSType, RHSType))
+      ResultElementTy = LHSType;
+    else
+      ResultElementTy =
+          UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
 
     if (ResultElementTy->isEnumeralType()) {
       Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
@@ -6453,7 +6455,7 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     //   -- Both the second and third operands have type void; the result is of
     //      type void and is a prvalue.
     if (LVoid && RVoid)
-      return Context.getCommonSugaredType(LTy, RTy);
+      return Context.VoidTy;
 
     // Neither holds, error.
     Diag(QuestionLoc, diag::err_conditional_void_nonvoid)
@@ -6559,7 +6561,21 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     if (LHS.get()->getObjectKind() == OK_BitField ||
         RHS.get()->getObjectKind() == OK_BitField)
       OK = OK_BitField;
-    return Context.getCommonSugaredType(LTy, RTy);
+
+    // If we have function pointer types, unify them anyway to unify their
+    // exception specifications, if any.
+    if (LTy->isFunctionPointerType() || LTy->isMemberFunctionPointerType()) {
+      Qualifiers Qs = LTy.getQualifiers();
+      LTy = FindCompositePointerType(QuestionLoc, LHS, RHS,
+                                     /*ConvertArgs*/false);
+      LTy = Context.getQualifiedType(LTy, Qs);
+
+      assert(!LTy.isNull() && "failed to find composite pointer type for "
+                              "canonically equivalent function ptr types");
+      assert(Context.hasSameType(LTy, RTy) && "bad composite pointer type");
+    }
+
+    return LTy;
   }
 
   // C++11 [expr.cond]p5
@@ -6589,23 +6605,36 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   //      is a prvalue temporary of the result type, which is
   //      copy-initialized from either the second operand or the third
   //      operand depending on the value of the first operand.
-  if (Context.hasSameType(LTy, RTy)) {
+  if (Context.getCanonicalType(LTy) == Context.getCanonicalType(RTy)) {
     if (LTy->isRecordType()) {
       // The operands have class type. Make a temporary copy.
-      ExprResult LHSCopy = PerformCopyInitialization(
-          InitializedEntity::InitializeTemporary(LTy), SourceLocation(), LHS);
+      InitializedEntity Entity = InitializedEntity::InitializeTemporary(LTy);
+
+      ExprResult LHSCopy = PerformCopyInitialization(Entity,
+                                                     SourceLocation(),
+                                                     LHS);
       if (LHSCopy.isInvalid())
         return QualType();
 
-      ExprResult RHSCopy = PerformCopyInitialization(
-          InitializedEntity::InitializeTemporary(RTy), SourceLocation(), RHS);
+      ExprResult RHSCopy = PerformCopyInitialization(Entity,
+                                                     SourceLocation(),
+                                                     RHS);
       if (RHSCopy.isInvalid())
         return QualType();
 
       LHS = LHSCopy;
       RHS = RHSCopy;
     }
-    return Context.getCommonSugaredType(LTy, RTy);
+
+    // If we have function pointer types, unify them anyway to unify their
+    // exception specifications, if any.
+    if (LTy->isFunctionPointerType() || LTy->isMemberFunctionPointerType()) {
+      LTy = FindCompositePointerType(QuestionLoc, LHS, RHS);
+      assert(!LTy.isNull() && "failed to find composite pointer type for "
+                              "canonically equivalent function ptr types");
+    }
+
+    return LTy;
   }
 
   // Extension: conditional operator involving vector types.
@@ -7019,7 +7048,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
     Steps[I].Quals.addConst();
 
   // Rebuild the composite type.
-  QualType Composite = Context.getCommonSugaredType(Composite1, Composite2);
+  QualType Composite = Composite1;
   for (auto &S : llvm::reverse(Steps))
     Composite = S.rebuild(Context, Composite);
 
