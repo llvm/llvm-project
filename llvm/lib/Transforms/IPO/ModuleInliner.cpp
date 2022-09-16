@@ -91,8 +91,7 @@ InlineAdvisor &ModuleInlinerPass::getAdvisor(const ModuleAnalysisManager &MAM,
     // would get from the MAM can be invalidated as a result of the inliner's
     // activity.
     OwnedAdvisor = std::make_unique<DefaultInlineAdvisor>(
-        M, FAM, Params,
-        InlineContext{LTOPhase, InlinePass::ModuleInliner});
+        M, FAM, Params, InlineContext{LTOPhase, InlinePass::ModuleInliner});
 
     return *OwnedAdvisor;
   }
@@ -117,9 +116,8 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   LLVM_DEBUG(dbgs() << "---- Module Inliner is Running ---- \n");
 
   auto &IAA = MAM.getResult<InlineAdvisorAnalysis>(M);
-  if (!IAA.tryCreate(
-          Params, Mode, {},
-          InlineContext{LTOPhase, InlinePass::ModuleInliner})) {
+  if (!IAA.tryCreate(Params, Mode, {},
+                     InlineContext{LTOPhase, InlinePass::ModuleInliner})) {
     M.getContext().emitError(
         "Could not setup Inlining Advisor for the requested "
         "mode and/or options");
