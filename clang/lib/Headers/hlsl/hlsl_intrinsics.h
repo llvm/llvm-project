@@ -9,6 +9,7 @@
 #ifndef _HLSL_HLSL_INTRINSICS_H_
 #define _HLSL_HLSL_INTRINSICS_H_
 
+__attribute__((availability(shadermodel, introduced = 6.0)))
 __attribute__((clang_builtin_alias(__builtin_hlsl_wave_active_count_bits))) uint
 WaveActiveCountBits(bool bBit);
 
