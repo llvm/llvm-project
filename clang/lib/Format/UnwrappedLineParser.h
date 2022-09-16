@@ -46,6 +46,8 @@ struct UnwrappedLine {
 
   /// Whether this \c UnwrappedLine is part of a preprocessor directive.
   bool InPPDirective;
+  /// Whether it is part of a macro body.
+  bool InMacroBody;
 
   bool MustBeDeclaration;
 
@@ -353,8 +355,8 @@ struct UnwrappedLineNode {
 };
 
 inline UnwrappedLine::UnwrappedLine()
-    : Level(0), InPPDirective(false), MustBeDeclaration(false),
-      MatchingOpeningBlockLineIndex(kInvalidIndex) {}
+    : Level(0), InPPDirective(false), InMacroBody(false),
+      MustBeDeclaration(false), MatchingOpeningBlockLineIndex(kInvalidIndex) {}
 
 } // end namespace format
 } // end namespace clang
