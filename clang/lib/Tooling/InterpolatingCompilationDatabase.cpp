@@ -165,8 +165,8 @@ struct TransferableCommand {
       const unsigned OldPos = Pos;
       std::unique_ptr<llvm::opt::Arg> Arg(OptTable.ParseOneArg(
           ArgList, Pos,
-          /* Include */ ClangCLMode ? CoreOption | CLOption : 0,
-          /* Exclude */ ClangCLMode ? 0 : CLOption));
+          /* Include */ ClangCLMode ? CoreOption | CLOption | CLDXCOption : 0,
+          /* Exclude */ ClangCLMode ? 0 : CLOption | CLDXCOption));
 
       if (!Arg)
         continue;

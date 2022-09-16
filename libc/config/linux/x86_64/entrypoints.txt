@@ -101,6 +101,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
 
+    # sys/resource.h entrypoints
+    libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
+
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
 
@@ -110,6 +114,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.fchmodat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
+
+    # sys/utsname.h entrypoints
+    libc.src.sys.utsname.uname
 
     # unistd.h entrypoints
     libc.src.unistd.access

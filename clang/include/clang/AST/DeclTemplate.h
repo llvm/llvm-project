@@ -440,6 +440,9 @@ public:
   /// Get the underlying, templated declaration.
   NamedDecl *getTemplatedDecl() const { return TemplatedDecl; }
 
+  // Should a specialization behave like an alias for another type.
+  bool isTypeAlias() const;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 

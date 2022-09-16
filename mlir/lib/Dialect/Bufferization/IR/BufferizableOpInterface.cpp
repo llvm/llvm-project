@@ -758,8 +758,8 @@ bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
   int64_t dynamicOffset = ShapedType::kDynamicStrideOrOffset;
   SmallVector<int64_t> dynamicStrides(rankedTensorType.getRank(),
                                       ShapedType::kDynamicStrideOrOffset);
-  AffineMap stridedLayout = makeStridedLinearLayoutMap(
-      dynamicStrides, dynamicOffset, rankedTensorType.getContext());
+  auto stridedLayout = StridedLayoutAttr::get(tensorType.getContext(),
+                                              dynamicOffset, dynamicStrides);
   return MemRefType::get(rankedTensorType.getShape(),
                          rankedTensorType.getElementType(), stridedLayout,
                          memorySpaceAttr);

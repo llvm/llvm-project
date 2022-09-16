@@ -9,7 +9,7 @@
 // RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // CHECK-LABEL: func @write_to_select_op_source
-//  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>
+//  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, strided{{.*}}>, %[[t2:.*]]: memref<?xf32, strided{{.*}}>
 func.func @write_to_select_op_source(
     %t1 : tensor<?xf32> {bufferization.writable = true},
     %t2 : tensor<?xf32> {bufferization.writable = true},
@@ -34,7 +34,7 @@ func.func @write_to_select_op_source(
 // maps are passed to arith.select. A cast must be inserted.
 
 // CHECK-LABEL: func @write_after_select_read_one
-//  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>
+//  CHECK-SAME:     %[[t1:.*]]: memref<?xf32, strided{{.*}}>, %[[t2:.*]]: memref<?xf32, strided{{.*}}>
 func.func @write_after_select_read_one(
     %t1 : tensor<?xf32> {bufferization.writable = true},
     %t2 : tensor<?xf32> {bufferization.writable = true},

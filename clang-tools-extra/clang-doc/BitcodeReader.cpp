@@ -259,6 +259,8 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
   switch (ID) {
   case FIELD_TYPE_NAME:
     return decodeRecord(R, I->Name, Blob);
+  case FIELD_DEFAULT_VALUE:
+    return decodeRecord(R, I->DefaultValue, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for TypeInfo");
