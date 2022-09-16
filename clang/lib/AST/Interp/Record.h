@@ -13,7 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_RECORD_H
 #define LLVM_CLANG_AST_INTERP_RECORD_H
 
-#include "Pointer.h"
+#include "clang/AST/Decl.h"
+#include "Descriptor.h"
 
 namespace clang {
 namespace interp {
