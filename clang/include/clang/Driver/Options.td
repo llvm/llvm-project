@@ -6569,6 +6569,11 @@ defm cache_compile_job : BoolFOption<"cache-compile-job",
                          " (for now) without -fcas-fs.">,
     NegFlag<SetFalse>>;
 
+defm cache_disable_replay : BoolFOption<"cache-disable-replay",
+    FrontendOpts<"DisableCachedCompileJobReplay">, DefaultFalse,
+    PosFlag<SetTrue, [], "Disable replaying a cached compile job">,
+    NegFlag<SetFalse>>;
+
 } // let Flags = [CC1Option, NoDriverOption]
 
 def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>,
