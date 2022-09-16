@@ -13209,6 +13209,44 @@ static void createTblShuffleForZExt(ZExtInst *ZExt, bool IsLittleEndian) {
   ZExt->eraseFromParent();
 }
 
+static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
+  IRBuilder<> Builder(TI);
+  SmallVector<Value *> Parts;
+  Type *VecTy = FixedVectorType::get(Builder.getInt8Ty(), 16);
+  Parts.push_back(Builder.CreateBitCast(
+      Builder.CreateShuffleVector(TI->getOperand(0), {0, 1, 2, 3}), VecTy));
+  Parts.push_back(Builder.CreateBitCast(
+      Builder.CreateShuffleVector(TI->getOperand(0), {4, 5, 6, 7}), VecTy));
+
+  Intrinsic::ID TblID = Intrinsic::aarch64_neon_tbl2;
+  unsigned NumElements = cast<FixedVectorType>(TI->getType())->getNumElements();
+  if (NumElements == 16) {
+    Parts.push_back(Builder.CreateBitCast(
+        Builder.CreateShuffleVector(TI->getOperand(0), {8, 9, 10, 11}), VecTy));
+    Parts.push_back(Builder.CreateBitCast(
+        Builder.CreateShuffleVector(TI->getOperand(0), {12, 13, 14, 15}),
+        VecTy));
+    TblID = Intrinsic::aarch64_neon_tbl4;
+  }
+  SmallVector<Constant *, 16> MaskConst;
+  for (unsigned Idx = 0; Idx < NumElements * 4; Idx += 4)
+    MaskConst.push_back(
+        ConstantInt::get(Builder.getInt8Ty(), IsLittleEndian ? Idx : Idx + 3));
+
+  for (unsigned Idx = NumElements * 4; Idx < 64; Idx += 4)
+    MaskConst.push_back(ConstantInt::get(Builder.getInt8Ty(), 255));
+
+  Parts.push_back(ConstantVector::get(MaskConst));
+  auto *F =
+      Intrinsic::getDeclaration(TI->getModule(), TblID, Parts[0]->getType());
+  Value *Res = Builder.CreateCall(F, Parts);
+
+  if (NumElements == 8)
+    Res = Builder.CreateShuffleVector(Res, {0, 1, 2, 3, 4, 5, 6, 7});
+  TI->replaceAllUsesWith(Res);
+  TI->eraseFromParent();
+}
+
 bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
                                                                Loop *L) const {
   // Try to optimize conversions using tbl. This requires materializing constant
@@ -13250,6 +13288,18 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
     createTblShuffleForZExt(ZExt, Subtarget->isLittleEndian());
     return true;
   }
+
+  // Convert 'trunc <(8|16) x i32> %x to <(8|16) x i8>' to a single tbl.4
+  // instruction selecting the lowest 8 bits per lane of the input interpreted
+  // as 2 or 4 <4 x i32> vectors.
+  auto *TI = dyn_cast<TruncInst>(I);
+  if (TI && (SrcTy->getNumElements() == 8 || SrcTy->getNumElements() == 16) &&
+      SrcTy->getElementType()->isIntegerTy(32) &&
+      DstTy->getElementType()->isIntegerTy(8)) {
+    createTblForTrunc(TI, Subtarget->isLittleEndian());
+    return true;
+  }
+
   return false;
 }
 
