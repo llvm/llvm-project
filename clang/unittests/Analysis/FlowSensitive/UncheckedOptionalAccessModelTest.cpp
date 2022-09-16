@@ -14,8 +14,10 @@
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -1246,9 +1248,13 @@ private:
                  Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
                     ASTContext &Ctx, const CFGElement &Elt,
                     const TypeErasedDataflowAnalysisState &State) mutable {
-                  auto EltDiagnostics =
-                      Diagnoser.diagnose(Ctx, &Elt, State.Env);
-                  llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
+                  auto Stmt = Elt.getAs<CFGStmt>();
+                  if (!Stmt) {
+                    return;
+                  }
+                  auto StmtDiagnostics =
+                      Diagnoser.diagnose(Ctx, Stmt->getStmt(), State.Env);
+                  llvm::move(StmtDiagnostics, std::back_inserter(Diagnostics));
                 })
             .withASTBuildArgs(
                 {"-fsyntax-only", "-std=c++17", "-Wno-undefined-inline"})
