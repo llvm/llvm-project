@@ -2,49 +2,90 @@
 ; RUN: llc -mtriple=arm64-apple-ios -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64_be-unknown-linux -o - %s | FileCheck --check-prefix=CHECK-BE %s
 
+; CHECK-LABEL: lCPI0_0:
+; CHECK-NEXT:	.byte	0                               ; 0x0
+; CHECK-NEXT:	.byte	4                               ; 0x4
+; CHECK-NEXT:	.byte	8                               ; 0x8
+; CHECK-NEXT:	.byte	12                              ; 0xc
+; CHECK-NEXT:	.byte	16                              ; 0x10
+; CHECK-NEXT:	.byte	20                              ; 0x14
+; CHECK-NEXT:	.byte	24                              ; 0x18
+; CHECK-NEXT:	.byte	28                              ; 0x1c
+; CHECK-NEXT:	.byte	32                              ; 0x20
+; CHECK-NEXT:	.byte	36                              ; 0x24
+; CHECK-NEXT:	.byte	40                              ; 0x28
+; CHECK-NEXT:	.byte	44                              ; 0x2c
+; CHECK-NEXT:	.byte	48                              ; 0x30
+; CHECK-NEXT:	.byte	52                              ; 0x34
+; CHECK-NEXT:	.byte	56                              ; 0x38
+; CHECK-NEXT:	.byte	60                              ; 0x3c
+
+; CHECK-BE-LABEL:   .LCPI0_0:
+; CHECK-BE-NEXT:   .byte    3                               // 0x3
+; CHECK-BE-NEXT:   .byte    7                               // 0x7
+; CHECK-BE-NEXT:   .byte    11                              // 0xb
+; CHECK-BE-NEXT:   .byte    15                              // 0xf
+; CHECK-BE-NEXT:   .byte    19                              // 0x13
+; CHECK-BE-NEXT:   .byte    23                              // 0x17
+; CHECK-BE-NEXT:   .byte    27                              // 0x1b
+; CHECK-BE-NEXT:   .byte    31                              // 0x1f
+; CHECK-BE-NEXT:   .byte    35                              // 0x23
+; CHECK-BE-NEXT:   .byte    39                              // 0x27
+; CHECK-BE-NEXT:   .byte    43                              // 0x2b
+; CHECK-BE-NEXT:   .byte    47                              // 0x2f
+; CHECK-BE-NEXT:   .byte    51                              // 0x33
+; CHECK-BE-NEXT:   .byte    55                              // 0x37
+; CHECK-BE-NEXT:   .byte    59                              // 0x3b
+; CHECK-BE-NEXT:   .byte    63                              // 0x3f
+
 ; It's profitable to use a single tbl.4 instruction to lower the truncate.
 define void @trunc_v16i32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: trunc_v16i32_to_v16i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x9, lCPI0_0@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr q0, [x9, lCPI0_0@PAGEOFF]
 ; CHECK-NEXT:  LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-NEXT:    ldp q1, q0, [x9, #32]
-; CHECK-NEXT:    ldp q3, q2, [x9]
-; CHECK-NEXT:    uzp1.8h v0, v1, v0
-; CHECK-NEXT:    uzp1.8h v1, v3, v2
-; CHECK-NEXT:    uzp1.16b v0, v1, v0
-; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
+; CHECK-NEXT:    ldp q1, q2, [x9]
+; CHECK-NEXT:    ldp q3, q4, [x9, #32]
+; CHECK-NEXT:    tbl.16b v1, { v1, v2, v3, v4 }, v0
+; CHECK-NEXT:    str q1, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    b.eq LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 ;
 ; CHECK-BE-LABEL: trunc_v16i32_to_v16i8_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    adrp x8, .LCPI0_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI0_0
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
 ; CHECK-BE-NEXT:    mov x8, xzr
 ; CHECK-BE-NEXT:  .LBB0_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-BE-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-BE-NEXT:    add x10, x9, #48
+; CHECK-BE-NEXT:    add x10, x9, #16
 ; CHECK-BE-NEXT:    add x11, x9, #32
-; CHECK-BE-NEXT:    ld1 { v0.4s }, [x9]
-; CHECK-BE-NEXT:    add x9, x9, #16
-; CHECK-BE-NEXT:    ld1 { v1.4s }, [x10]
-; CHECK-BE-NEXT:    ld1 { v2.4s }, [x11]
-; CHECK-BE-NEXT:    ld1 { v3.4s }, [x9]
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
+; CHECK-BE-NEXT:    add x9, x9, #48
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x11]
+; CHECK-BE-NEXT:    ld1 { v4.16b }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, x8, lsl #4
 ; CHECK-BE-NEXT:    add x8, x8, #1
 ; CHECK-BE-NEXT:    cmp x8, #1000
-; CHECK-BE-NEXT:    uzp1 v1.8h, v2.8h, v1.8h
-; CHECK-BE-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
-; CHECK-BE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-BE-NEXT:    st1 { v0.16b }, [x9]
+; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v0.16b
+; CHECK-BE-NEXT:    st1 { v1.16b }, [x9]
 ; CHECK-BE-NEXT:    b.eq .LBB0_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
+
 entry:
   br label %loop
 
@@ -97,42 +138,85 @@ entry:
   ret void
 }
 
+
+; CHECK-LABEL: lCPI2_0:
+; CHECK-NEXT:     .byte    0                               ; 0x0
+; CHECK-NEXT:     .byte    4                               ; 0x4
+; CHECK-NEXT:     .byte    8                               ; 0x8
+; CHECK-NEXT:     .byte    12                              ; 0xc
+; CHECK-NEXT:     .byte    16                              ; 0x10
+; CHECK-NEXT:     .byte    20                              ; 0x14
+; CHECK-NEXT:     .byte    24                              ; 0x18
+; CHECK-NEXT:     .byte    28                              ; 0x1c
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+
+; CHECK-BE-LABEL: .LCPI2_0:
+; CHECK-BE-NEXT:     .byte    3                               // 0x3
+; CHECK-BE-NEXT:     .byte    7                               // 0x7
+; CHECK-BE-NEXT:     .byte    11                              // 0xb
+; CHECK-BE-NEXT:     .byte    15                              // 0xf
+; CHECK-BE-NEXT:     .byte    19                              // 0x13
+; CHECK-BE-NEXT:     .byte    23                              // 0x17
+; CHECK-BE-NEXT:     .byte    27                              // 0x1b
+; CHECK-BE-NEXT:     .byte    31                              // 0x1f
+; CHECK-BE-NEXT:     .byte    255                             // 0xff
+; CHECK-BE-NEXT:     .byte    255                             // 0xff
+; CHECK-BE-NEXT:     .byte    255                             // 0xff
+; CHECK-BE-NEXT:     .byte    255                             // 0xff
+; CHECK-BE-NEXT:     .byte    255                             // 0xff
+; CHECK-BE-NEXT:     .byte    255                             // 0xff
+; CHECK-BE-NEXT:     .byte    255                             // 0xff
+; CHECK-BE-NEXT:     .byte    255                             // 0xff
 ; It's profitable to use a single tbl.2 instruction to lower the truncate.
 define void @trunc_v8i32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: trunc_v8i32_to_v8i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:    adrp x9, lCPI2_0@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:    ldr q0, [x9, lCPI2_0@PAGEOFF]
 ; CHECK-NEXT:  LBB2_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-NEXT:    ldp q1, q0, [x9]
-; CHECK-NEXT:    uzp1.8h v0, v1, v0
-; CHECK-NEXT:    xtn.8b v0, v0
-; CHECK-NEXT:    str d0, [x1, x8, lsl #3]
+; CHECK-NEXT:    ldp q1, q2, [x9]
+; CHECK-NEXT:    tbl.16b v1, { v1, v2 }, v0
+; CHECK-NEXT:    str d1, [x1, x8, lsl #3]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    b.eq LBB2_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
 ;
 ; CHECK-BE-LABEL: trunc_v8i32_to_v8i8_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    adrp x8, .LCPI2_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI2_0
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
 ; CHECK-BE-NEXT:    mov x8, xzr
 ; CHECK-BE-NEXT:  .LBB2_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-BE-NEXT:    add x9, x0, x8, lsl #5
 ; CHECK-BE-NEXT:    add x10, x9, #16
-; CHECK-BE-NEXT:    ld1 { v0.4s }, [x9]
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, x8, lsl #3
 ; CHECK-BE-NEXT:    add x8, x8, #1
-; CHECK-BE-NEXT:    ld1 { v1.4s }, [x10]
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
 ; CHECK-BE-NEXT:    cmp x8, #1000
-; CHECK-BE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-BE-NEXT:    st1 { v0.8b }, [x9]
+; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v0.16b
+; CHECK-BE-NEXT:    st1 { v1.8b }, [x9]
 ; CHECK-BE-NEXT:    b.eq .LBB2_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
+
 entry:
   br label %loop
 
