@@ -21,7 +21,7 @@ namespace llvm {
 class CallBase;
 class Function;
 
-enum class InlinePriorityMode : int { NoPriority, Size, Cost, OptRatio };
+enum class InlinePriorityMode : int { Size, Cost, OptRatio };
 
 template <typename T> class InlineOrder {
 public:
@@ -46,36 +46,6 @@ public:
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
 getInlineOrder(InlinePriorityMode UseInlinePriority,
                FunctionAnalysisManager &FAM, const InlineParams &Params);
-
-template <typename T, typename Container = SmallVector<T, 16>>
-class DefaultInlineOrder : public InlineOrder<T> {
-  using reference = T &;
-  using const_reference = const T &;
-
-public:
-  size_t size() override { return Calls.size() - FirstIndex; }
-
-  void push(const T &Elt) override { Calls.push_back(Elt); }
-
-  T pop() override {
-    assert(size() > 0);
-    return Calls[FirstIndex++];
-  }
-
-  const_reference front() override {
-    assert(size() > 0);
-    return Calls[FirstIndex];
-  }
-
-  void erase_if(function_ref<bool(T)> Pred) override {
-    Calls.erase(std::remove_if(Calls.begin() + FirstIndex, Calls.end(), Pred),
-                Calls.end());
-  }
-
-private:
-  Container Calls;
-  size_t FirstIndex = 0;
-};
 
 } // namespace llvm
 #endif // LLVM_ANALYSIS_INLINEORDER_H
