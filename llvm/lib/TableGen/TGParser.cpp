@@ -1159,6 +1159,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XADD:
   case tgtok::XSUB:
   case tgtok::XMUL:
+  case tgtok::XDIV:
   case tgtok::XAND:
   case tgtok::XOR:
   case tgtok::XXOR:
@@ -1187,6 +1188,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XADD:    Code = BinOpInit::ADD; break;
     case tgtok::XSUB:    Code = BinOpInit::SUB; break;
     case tgtok::XMUL:    Code = BinOpInit::MUL; break;
+    case tgtok::XDIV:    Code = BinOpInit::DIV; break;
     case tgtok::XAND:    Code = BinOpInit::AND; break;
     case tgtok::XOR:     Code = BinOpInit::OR; break;
     case tgtok::XXOR:    Code = BinOpInit::XOR; break;
@@ -1225,6 +1227,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XADD:
     case tgtok::XSUB:
     case tgtok::XMUL:
+    case tgtok::XDIV:
       Type = IntRecTy::get(Records);
       ArgType = IntRecTy::get(Records);
       break;
@@ -1384,7 +1387,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
             Code != BinOpInit::AND && Code != BinOpInit::OR &&
             Code != BinOpInit::XOR && Code != BinOpInit::SRA &&
             Code != BinOpInit::SRL && Code != BinOpInit::SHL &&
-            Code != BinOpInit::MUL)
+            Code != BinOpInit::MUL && Code != BinOpInit::DIV)
           ArgType = Resolved;
       }
 
@@ -2139,6 +2142,7 @@ Init *TGParser::ParseOperationCond(Record *CurRec, RecTy *ItemType) {
 ///   SimpleValue ::= '(' IDValue DagArgList ')'
 ///   SimpleValue ::= CONCATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= ADDTOK '(' Value ',' Value ')'
+///   SimpleValue ::= DIVTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SUBTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SHLTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SRATOK '(' Value ',' Value ')'
@@ -2427,6 +2431,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XADD:
   case tgtok::XSUB:
   case tgtok::XMUL:
+  case tgtok::XDIV:
   case tgtok::XNOT:
   case tgtok::XAND:
   case tgtok::XOR:
