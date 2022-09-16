@@ -24,17 +24,7 @@
 
 namespace __orc_rt {
 
-/// Represents the difference between two addresses in the executor process.
-class ExecutorAddrDiff {
-public:
-  ExecutorAddrDiff() = default;
-  explicit ExecutorAddrDiff(uint64_t Value) : Value(Value) {}
-
-  uint64_t getValue() const { return Value; }
-
-private:
-  int64_t Value = 0;
-};
+using ExecutorAddrDiff = uint64_t;
 
 /// Represents an address in the executor process.
 class ExecutorAddr {
@@ -148,12 +138,12 @@ public:
   ExecutorAddr operator--(int) { return ExecutorAddr(Addr++); }
 
   ExecutorAddr &operator+=(const ExecutorAddrDiff Delta) {
-    Addr += Delta.getValue();
+    Addr += Delta;
     return *this;
   }
 
   ExecutorAddr &operator-=(const ExecutorAddrDiff Delta) {
-    Addr -= Delta.getValue();
+    Addr -= Delta;
     return *this;
   }
 
@@ -170,13 +160,13 @@ inline ExecutorAddrDiff operator-(const ExecutorAddr &LHS,
 /// Adding an offset and an address yields an address.
 inline ExecutorAddr operator+(const ExecutorAddr &LHS,
                               const ExecutorAddrDiff &RHS) {
-  return ExecutorAddr(LHS.getValue() + RHS.getValue());
+  return ExecutorAddr(LHS.getValue() + RHS);
 }
 
 /// Adding an address and an offset yields an address.
 inline ExecutorAddr operator+(const ExecutorAddrDiff &LHS,
                               const ExecutorAddr &RHS) {
-  return ExecutorAddr(LHS.getValue() + RHS.getValue());
+  return ExecutorAddr(LHS + RHS.getValue());
 }
 
 /// Represents an address range in the exceutor process.
@@ -204,9 +194,9 @@ struct ExecutorAddrRange {
   }
 
   template <typename T> span<T> toSpan() const {
-    assert(size().getValue() % sizeof(T) == 0 &&
+    assert(size() % sizeof(T) == 0 &&
            "AddressRange is not a multiple of sizeof(T)");
-    return span<T>(Start.toPtr<T *>(), size().getValue() / sizeof(T));
+    return span<T>(Start.toPtr<T *>(), size() / sizeof(T));
   }
 
   ExecutorAddr Start;
