@@ -32,7 +32,7 @@ v_bfe_u32 v0, 0x3039, 0x3039, 0x3039
 // GFX9-ERR:  error: literal operands are not supported
 
 v_bfe_u32 v0, 0x3039, s1, 0x3038
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_bfe_u32 v0, 0x3039, v1, v2
@@ -40,7 +40,7 @@ v_bfe_u32 v0, 0x3039, v1, v2
 // GFX9-ERR: error: literal operands are not supported
 
 v_bfe_u32 v0, 0x3039, 0x12345, v2
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_bfe_u32 v0, s1, 0x3039, s1
@@ -64,7 +64,7 @@ v_bfm_b32_e64 v0, 0x3039, 0x3039
 // GFX9-ERR: error: literal operands are not supported
 
 v_bfm_b32_e64 v0, 0x3039, 0x3038
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_pk_add_f16 v1, 25.0, v2
@@ -84,7 +84,7 @@ v_pk_add_f16 v1, 25.0, 25.0
 // GFX9-ERR: error: literal operands are not supported
 
 v_pk_add_f16 v1, 25.0, 25.1
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_pk_add_u16 v1, -200, v2
@@ -156,7 +156,7 @@ v_add_f64 v[0:1], 1.23456, -abs(1.23456)
 // GFX9-ERR: error: literal operands are not supported
 
 v_add_f64 v[0:1], 1.23456, -abs(1.2345)
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_max_i16_e64 v5, 0xfe0b, v2
@@ -188,11 +188,11 @@ v_min3_i16 v5, 0x5678, 0x5678, 0x5678
 // GFX9-ERR: error: literal operands are not supported
 
 v_min3_i16 v5, 0x5678, 0x5679, 0x5678
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_min3_i16 v5, 0x5678, 0x5678, 0x5679
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_add_nc_u16 v5, 0xfe0b, v2
@@ -256,7 +256,7 @@ v_cmp_f_i32_e64 s[10:11], 0xaf123456, 0xaf123456
 // GFX9-ERR: error: literal operands are not supported
 
 v_cmp_f_i32_e64 s[10:11], 0xaf123456, 0xaf123455
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR: error: literal operands are not supported
 
 v_cmp_f_u64_e64 s[10:11], 0xaf123456, v[2:3]
@@ -284,7 +284,7 @@ v_cmpx_class_f32_e64 0xaf123456, 0xaf123456
 // GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_class_f32_e64 0xaf123456, 0xaf123455
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR: error: operands are not valid for this GPU or mode
 
 v_cmpx_lt_i16_e64 v1, 0x3456
@@ -364,7 +364,7 @@ v_pk_add_i16 v5, 0xab7b, 0xab7b
 // GFX9-ERR: error: literal operands are not supported
 
 v_pk_add_i16 v5, 0xab7b, 0xab7a
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_div_fmas_f32 v5, v1, 0x123, v3
@@ -388,7 +388,7 @@ v_div_fmas_f64 v[5:6], 0x12345678, 0x12345678, 0x12345678
 // GFX9-ERR:  error: literal operands are not supported
 
 v_div_fmas_f64 v[5:6], v[1:2], 0x123457, 0x123456
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
 
 v_ldexp_f64 v[5:6], 0.12345, v2
@@ -400,5 +400,5 @@ v_ldexp_f64 v[5:6], 0.12345, 0x3fbf9a6b
 // GFX9-ERR:  error: literal operands are not supported
 
 v_ldexp_f64 v[5:6], 0.12345, 0x3fbf9a6c
-// GFX10-ERR: error: only one literal operand is allowed
+// GFX10-ERR: error: only one unique literal operand is allowed
 // GFX9-ERR:  error: literal operands are not supported
