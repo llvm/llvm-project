@@ -5,12 +5,79 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This provides lightweight and dependency-free machinery to trace execution
+// time around arbitrary code. Two API flavors are available.
+//
+// The primary API uses a RAII object to trigger tracing:
+//
+// \code
+//   {
+//     TimeTraceScope scope("my_event_name");
+//     ...my code...
+//   }
+// \endcode
+//
+// If the code to be profiled does not have a natural lexical scope then
+// it is also possible to start and end events with respect to an implicit
+// per-thread stack of profiling entries:
+//
+// \code
+//   timeTraceProfilerBegin("my_event_name");
+//   ...my code...
+//   timeTraceProfilerEnd();  // must be called on all control flow paths
+// \endcode
+//
+// Time profiling entries can be given an arbitrary name and, optionally,
+// an arbitrary 'detail' string. The resulting trace will include 'Total'
+// entries summing the time spent for each name. Thus, it's best to choose
+// names to be fairly generic, and rely on the detail field to capture
+// everything else of interest.
+//
+// To avoid lifetime issues name and detail strings are copied into the event
+// entries at their time of creation. Care should be taken to make string
+// construction cheap to prevent 'Heisenperf' effects. In particular, the
+// 'detail' argument may be a string-returning closure:
+//
+// \code
+//   int n;
+//   {
+//     TimeTraceScope scope("my_event_name",
+//                          [n]() { return (Twine("x=") + Twine(n)).str(); });
+//     ...my code...
+//   }
+// \endcode
+// The closure will not be called if tracing is disabled. Otherwise, the
+// resulting string will be directly moved into the entry.
+//
+// The main process should begin with a timeTraceProfilerInitialize, and
+// finish with timeTraceProfileWrite and timeTraceProfilerCleanup calls.
+// Each new thread should begin with a timeTraceProfilerInitialize, and
+// finish with a timeTraceProfilerFinishThread call.
+//
+// Timestamps come from std::chrono::stable_clock. Note that threads need
+// not see the same time from that clock, and the resolution may not be
+// the best available.
+//
+// Currently, there are a number of compatible viewers:
+//  - chrome://tracing is the original chromium trace viewer.
+//  - http://ui.perfetto.dev is the replacement for the above, under active
+//    development by Google as part of the 'Perfetto' project.
+//  - https://www.speedscope.app/ has also been reported as an option.
+//
+// Future work:
+//  - Support akin to LLVM_DEBUG for runtime enable/disable of named tracing
+//    families for non-debug builds which wish to support optional tracing.
+//  - Evaluate the detail closures at profile write time to avoid
+//    stringification costs interfering with tracing.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_TIMEPROFILER_H
 #define LLVM_SUPPORT_TIMEPROFILER_H
 
-#include "llvm/Support/Error.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Error.h"
 
 namespace llvm {
 
