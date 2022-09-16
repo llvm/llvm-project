@@ -386,28 +386,69 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: lCPI8_0:
+; CHECK-NEXT:   .byte   4                               ; 0x4
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   5                               ; 0x5
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   6                               ; 0x6
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   7                               ; 0x7
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT: lCPI8_1:
+; CHECK-NEXT:   .byte   0                               ; 0x0
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   1                               ; 0x1
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   2                               ; 0x2
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   3                               ; 0x3
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+; CHECK-NEXT:   .byte   255                             ; 0xff
+
 define void @uitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: uitofp_v8i8_to_v8f32:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:    adrp x9, lCPI8_0@PAGE
+; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:    adrp x10, lCPI8_1@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh4:
+; CHECK-NEXT:    ldr q0, [x9, lCPI8_0@PAGEOFF]
+; CHECK-NEXT:  Lloh5:
+; CHECK-NEXT:    ldr q1, [x10, lCPI8_1@PAGEOFF]
 ; CHECK-NEXT:  LBB8_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d0, [x0, x8, lsl #3]
+; CHECK-NEXT:    ldr d2, [x0, x8, lsl #3]
 ; CHECK-NEXT:    add x9, x1, x8, lsl #5
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    zip1.8b v1, v0, v0
-; CHECK-NEXT:    zip2.8b v0, v0, v0
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    ucvtf.4s v0, v0
-; CHECK-NEXT:    ucvtf.4s v1, v1
-; CHECK-NEXT:    stp q1, q0, [x9]
+; CHECK-NEXT:    tbl.16b v3, { v2 }, v0
+; CHECK-NEXT:    tbl.16b v2, { v2 }, v1
+; CHECK-NEXT:    ucvtf.4s v3, v3
+; CHECK-NEXT:    ucvtf.4s v2, v2
+; CHECK-NEXT:    stp q2, q3, [x9]
 ; CHECK-NEXT:    b.eq LBB8_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh3, Lloh5
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh4
 entry:
   br label %loop
 
@@ -426,38 +467,118 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: lCPI9_0:
+; CHECK-NEXT:     .byte   12                              ; 0xc
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   13                              ; 0xd
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   14                              ; 0xe
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   15                              ; 0xf
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT: lCPI9_1:
+; CHECK-NEXT:     .byte   8                               ; 0x8
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   9                               ; 0x9
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   10                              ; 0xa
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   11                              ; 0xb
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT: lCPI9_2:
+; CHECK-NEXT:     .byte   4                               ; 0x4
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   5                               ; 0x5
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   6                               ; 0x6
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   7                               ; 0x7
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT: lCPI9_3:
+; CHECK-NEXT:     .byte   0                               ; 0x0
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   1                               ; 0x1
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   2                               ; 0x2
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   3                               ; 0x3
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+; CHECK-NEXT:     .byte   255                             ; 0xff
+
 define void @uitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: uitofp_v16i8_to_v16f32:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh6:
+; CHECK-NEXT:    adrp x9, lCPI9_0@PAGE
+; CHECK-NEXT:  Lloh7:
+; CHECK-NEXT:    adrp x10, lCPI9_1@PAGE
+; CHECK-NEXT:  Lloh8:
+; CHECK-NEXT:    adrp x11, lCPI9_2@PAGE
+; CHECK-NEXT:  Lloh9:
+; CHECK-NEXT:    adrp x12, lCPI9_3@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh10:
+; CHECK-NEXT:    ldr q0, [x9, lCPI9_0@PAGEOFF]
+; CHECK-NEXT:  Lloh11:
+; CHECK-NEXT:    ldr q1, [x10, lCPI9_1@PAGEOFF]
+; CHECK-NEXT:  Lloh12:
+; CHECK-NEXT:    ldr q2, [x11, lCPI9_2@PAGEOFF]
+; CHECK-NEXT:  Lloh13:
+; CHECK-NEXT:    ldr q3, [x12, lCPI9_3@PAGEOFF]
 ; CHECK-NEXT:  LBB9_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q0, [x0, x8, lsl #4]
+; CHECK-NEXT:    ldr q4, [x0, x8, lsl #4]
 ; CHECK-NEXT:    add x9, x1, x8, lsl #6
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    ext.16b v1, v0, v0, #8
-; CHECK-NEXT:    zip1.8b v2, v0, v0
-; CHECK-NEXT:    zip2.8b v0, v0, v0
-; CHECK-NEXT:    bic.4h v2, #255, lsl #8
-; CHECK-NEXT:    zip1.8b v3, v1, v0
-; CHECK-NEXT:    zip2.8b v1, v1, v0
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    ushll.4s v2, v2, #0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    bic.4h v3, #255, lsl #8
-; CHECK-NEXT:    bic.4h v1, #255, lsl #8
-; CHECK-NEXT:    ucvtf.4s v2, v2
-; CHECK-NEXT:    ushll.4s v1, v1, #0
-; CHECK-NEXT:    ucvtf.4s v0, v0
-; CHECK-NEXT:    ushll.4s v3, v3, #0
-; CHECK-NEXT:    ucvtf.4s v1, v1
-; CHECK-NEXT:    ucvtf.4s v3, v3
-; CHECK-NEXT:    stp q2, q0, [x9]
-; CHECK-NEXT:    stp q3, q1, [x9, #32]
+; CHECK-NEXT:    tbl.16b v5, { v4 }, v0
+; CHECK-NEXT:    tbl.16b v6, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    ucvtf.4s v5, v5
+; CHECK-NEXT:    ucvtf.4s v6, v6
+; CHECK-NEXT:    ucvtf.4s v7, v7
+; CHECK-NEXT:    ucvtf.4s v4, v4
+; CHECK-NEXT:    stp q6, q5, [x9, #32]
+; CHECK-NEXT:    stp q4, q7, [x9]
 ; CHECK-NEXT:    b.eq LBB9_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh9, Lloh13
+; CHECK-NEXT:    .loh AdrpLdr Lloh8, Lloh12
+; CHECK-NEXT:    .loh AdrpLdr Lloh7, Lloh11
+; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh10
 entry:
   br label %loop
 

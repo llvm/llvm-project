@@ -23,8 +23,8 @@ func.func @buffer_forwarding_conflict(
   %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: memref.copy %[[FUNC_ARG]], %[[ALLOC]] : memref<?xf32> to memref<?xf32>
-  //     CHECK: %[[SV0_ALLOC:.*]] = memref.subview %[[ALLOC]][0] [%[[sz]]] [1] : memref<?xf32> to memref<?xf32>
-  //     CHECK: memref.copy %[[EXTRACT_SLICE_ALLOC]], %[[SV0_ALLOC]] : memref<?xf32> to memref<?xf32>
+  //     CHECK: %[[SV0_ALLOC:.*]] = memref.subview %[[ALLOC]][0] [%[[sz]]] [1] : memref<?xf32> to memref<?xf32, strided<[1]>>
+  //     CHECK: memref.copy %[[EXTRACT_SLICE_ALLOC]], %[[SV0_ALLOC]] : memref<?xf32> to memref<?xf32, strided<[1]>>
   %r0 = tensor.insert_slice %f into %t[0][%sz][1]: tensor<?xf32> into tensor<?xf32>
 
   //     CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
@@ -63,7 +63,7 @@ func.func @buffer_forwarding_no_conflict(
 // -----
 
 //      CHECK: func @insertion_point_inside_loop(
-// CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index)
+// CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided{{.*}}>, %[[sz:.*]]: index)
 func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -92,7 +92,7 @@ func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tens
 // -----
 
 //      CHECK: func @insertion_point_outside_loop(
-// CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
+// CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
 func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
                                         %idx : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
