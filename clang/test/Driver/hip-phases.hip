@@ -305,23 +305,23 @@
 //
 // Test linking two objects with two gpu architectures.
 //
-// RUN: touch %T/obj1.o
-// RUN: touch %T/obj2.o
-//
+// RUN: rm -rf %t && mkdir %t
+// RUN: touch %t/obj1.o %t/obj2.o
+
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o 2>&1 \
+// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o 2>&1 \
 // RUN: | FileCheck -check-prefixes=L2,NL2 %s
 //
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o \
+// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
 // RUN: -fgpu-rdc 2>&1 | FileCheck -check-prefixes=L2,RL2,RL2-EM %s
 //
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o \
+// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
 // RUN: -fgpu-rdc --cuda-device-only 2>&1 | FileCheck -check-prefixes=L2,RL2,RL2-DEV %s
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
-// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o \
+// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %t/obj1.o %t/obj2.o \
 // RUN: -fgpu-rdc --cuda-device-only --no-gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=L2,RL2,RL2-NB %s
 
@@ -528,10 +528,10 @@
 // Test HIP bitcode to bitcode linking. Input should be bundled or unbundled bitcode, and
 // output should be unbundled linked bitcode
 
-// RUN: touch %T/bitcodeA.bc
-// RUN: touch %T/bitcodeB.bc
+// RUN: touch %t/bitcodeA.bc
+// RUN: touch %t/bitcodeB.bc
 // RUN: %clang -ccc-print-phases --hip-link -emit-llvm --cuda-device-only \
-// RUN: --offload-arch=gfx906 %T/bitcodeA.bc %T/bitcodeB.bc 2>&1 \
+// RUN: --offload-arch=gfx906 %t/bitcodeA.bc %t/bitcodeB.bc 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHECK %s
 
 // CHECK: [[A0:[0-9]+]]: input, "{{.*}}bitcodeA.bc", ir

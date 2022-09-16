@@ -872,7 +872,8 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
 
 template <class NList>
 macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
-                                              StringRef name) {
+                                              const char *strtab) {
+  StringRef name = StringRef(strtab + sym.n_strx);
   uint8_t type = sym.n_type & N_TYPE;
   bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
   switch (type) {
@@ -884,9 +885,20 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
                                    isPrivateExtern);
   case N_ABS:
     return createAbsolute(sym, this, name, forceHidden);
+  case N_INDR: {
+    // Not much point in making local aliases -- relocs in the current file can
+    // just refer to the actual symbol itself. ld64 ignores these symbols too.
+    if (!(sym.n_type & N_EXT))
+      return nullptr;
+    StringRef aliasedName = StringRef(strtab + sym.n_value);
+    // isPrivateExtern is the only symbol flag that has an impact on the final
+    // aliased symbol.
+    auto alias = make<AliasSymbol>(this, name, aliasedName, isPrivateExtern);
+    aliases.push_back(alias);
+    return alias;
+  }
   case N_PBUD:
-  case N_INDR:
-    error("TODO: support symbols of type " + std::to_string(type));
+    error("TODO: support symbols of type N_PBUD");
     return nullptr;
   case N_SECT:
     llvm_unreachable(
@@ -927,7 +939,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     } else if (isUndef(sym)) {
       undefineds.push_back(i);
     } else {
-      symbols[i] = parseNonSectionSymbol(sym, StringRef(strtab + sym.n_strx));
+      symbols[i] = parseNonSectionSymbol(sym, strtab);
     }
   }
 
@@ -1026,11 +1038,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   // symbol resolution behavior. In addition, a set of interconnected symbols
   // will all be resolved to the same file, instead of being resolved to
   // different files.
-  for (unsigned i : undefineds) {
-    const NList &sym = nList[i];
-    StringRef name = strtab + sym.n_strx;
-    symbols[i] = parseNonSectionSymbol(sym, name);
-  }
+  for (unsigned i : undefineds)
+    symbols[i] = parseNonSectionSymbol(nList[i], strtab);
 }
 
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
