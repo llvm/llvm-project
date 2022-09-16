@@ -30,7 +30,7 @@ Supported Systems
 =================
 
 Clang has the ability to generate compilation database fragments via
-the :option:`-MJ argument <clang -MJ\<arg>>`. You can concatenate those
+``-MJ argument <clang -MJ\<arg>>``. You can concatenate those
 fragments together between ``[`` and ``]`` to create a compilation database.
 
 Currently `CMake <https://cmake.org>`_ (since 2.8.5) supports generation
