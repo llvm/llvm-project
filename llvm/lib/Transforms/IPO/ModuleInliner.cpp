@@ -195,10 +195,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
 
   // Loop forward over all of the calls.
   while (!Calls->empty()) {
-    // We expect the calls to typically be batched with sequences of calls that
-    // have the same caller, so we first set up some shared infrastructure for
-    // this caller. We also do any pruning we can at this layer on the caller
-    // alone.
     Function &F = *Calls->front().first->getCaller();
 
     LLVM_DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n"
@@ -209,9 +205,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
       return FAM.getResult<AssumptionAnalysis>(F);
     };
 
-    // Now process as many calls as we have within this caller in the sequence.
-    // We bail out as soon as the caller has to change so we can
-    // prepare the context of that new caller.
     auto P = Calls->pop();
     CallBase *CB = P.first;
     const int InlineHistoryID = P.second;
