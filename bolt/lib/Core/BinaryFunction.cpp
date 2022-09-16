@@ -1748,6 +1748,43 @@ void BinaryFunction::postProcessJumpTables() {
   TakenBranches.erase(NewEnd, TakenBranches.end());
 }
 
+bool BinaryFunction::validateExternallyReferencedOffsets() {
+  SmallPtrSet<MCSymbol *, 4> JTTargets;
+  for (const JumpTable *JT : llvm::make_second_range(JumpTables))
+    JTTargets.insert(JT->Entries.begin(), JT->Entries.end());
+
+  bool HasUnclaimedReference = false;
+  for (uint64_t Destination : ExternallyReferencedOffsets) {
+    // Ignore __builtin_unreachable().
+    if (Destination == getSize())
+      continue;
+    // Ignore constant islands
+    if (isInConstantIsland(Destination + getAddress()))
+      continue;
+
+    if (BinaryBasicBlock *BB = getBasicBlockAtOffset(Destination)) {
+      // Check if the externally referenced offset is a recognized jump table
+      // target.
+      if (JTTargets.contains(BB->getLabel()))
+        continue;
+
+      if (opts::Verbosity >= 1) {
+        errs() << "BOLT-WARNING: unclaimed data to code reference (possibly "
+               << "an unrecognized jump table entry) to " << BB->getName()
+               << " in " << *this << "\n";
+      }
+      auto L = BC.scopeLock();
+      addEntryPoint(*BB);
+    } else {
+      errs() << "BOLT-WARNING: unknown data to code reference to offset "
+             << Twine::utohexstr(Destination) << " in " << *this << "\n";
+      setIgnored();
+    }
+    HasUnclaimedReference = true;
+  }
+  return !HasUnclaimedReference;
+}
+
 bool BinaryFunction::postProcessIndirectBranches(
     MCPlusBuilder::AllocatorIdTy AllocId) {
   auto addUnknownControlFlow = [&](BinaryBasicBlock &BB) {
@@ -1867,6 +1904,14 @@ bool BinaryFunction::postProcessIndirectBranches(
 
   if (HasFixedIndirectBranch)
     return false;
+
+  // Validate that all data references to function offsets are claimed by
+  // recognized jump tables. Register externally referenced blocks as entry
+  // points.
+  if (!opts::StrictMode && hasInternalReference()) {
+    if (!validateExternallyReferencedOffsets())
+      return false;
+  }
 
   if (HasUnknownControlFlow && !BC.HasRelocations)
     return false;
