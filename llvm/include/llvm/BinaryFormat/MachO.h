@@ -869,6 +869,12 @@ struct build_version_command {
   uint32_t ntools;   // number of tool entries following this
 };
 
+struct dyld_env_command {
+  uint32_t cmd;
+  uint32_t cmdsize;
+  uint32_t name;
+};
+
 struct dyld_info_command {
   uint32_t cmd;
   uint32_t cmdsize;
