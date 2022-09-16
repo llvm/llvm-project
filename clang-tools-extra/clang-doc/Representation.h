@@ -181,10 +181,15 @@ struct FieldTypeInfo : public TypeInfo {
       : TypeInfo(RefName, Path), Name(Name) {}
 
   bool operator==(const FieldTypeInfo &Other) const {
-    return std::tie(Type, Name) == std::tie(Other.Type, Other.Name);
+    return std::tie(Type, Name, DefaultValue) ==
+           std::tie(Other.Type, Other.Name, Other.DefaultValue);
   }
 
   SmallString<16> Name; // Name associated with this info.
+
+  // When used for function parameters, contains the string representing the
+  // expression of the default value, if any.
+  SmallString<16> DefaultValue;
 };
 
 // Info for member types.
