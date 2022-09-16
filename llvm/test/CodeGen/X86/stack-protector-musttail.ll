@@ -1,15 +1,15 @@
-; RUN: llc -mtriple=arm64-apple-macosx -fast-isel %s -o - -start-before=stack-protector -stop-after=stack-protector  | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -fast-isel %s -o - -start-before=stack-protector -stop-after=stack-protector  | FileCheck %s
 
 @var = global [2 x i64]* null
 
 declare void @callee()
 
-define void @caller1() ssp {
+define void @caller1() sspreq {
 ; CHECK-LABEL: define void @caller1()
 ; Prologue:
-; CHECK: @llvm.stackguard
+; CHECK: @llvm.stackprotector
 
-; CHECK: [[GUARD:%.*]] = call i8* @llvm.stackguard()
+; CHECK: [[GUARD:%.*]] = load volatile i8*, i8*
 ; CHECK: [[TOKEN:%.*]] = load volatile i8*, i8** {{%.*}}
 ; CHECK: [[TST:%.*]] = icmp eq i8* [[GUARD]], [[TOKEN]]
 ; CHECK: br i1 [[TST]]
@@ -22,12 +22,12 @@ define void @caller1() ssp {
   ret void
 }
 
-define void @justret() ssp {
+define void @justret() sspreq {
 ; CHECK-LABEL: define void @justret()
 ; Prologue:
-; CHECK: @llvm.stackguard
+; CHECK: @llvm.stackprotector
 
-; CHECK: [[GUARD:%.*]] = call i8* @llvm.stackguard()
+; CHECK: [[GUARD:%.*]] = load volatile i8*, i8*
 ; CHECK: [[TOKEN:%.*]] = load volatile i8*, i8** {{%.*}}
 ; CHECK: [[TST:%.*]] = icmp eq i8* [[GUARD]], [[TOKEN]]
 ; CHECK: br i1 [[TST]]
@@ -44,12 +44,12 @@ retblock:
 
 declare i64* @callee2()
 
-define i8* @caller2() ssp {
+define i8* @caller2() sspreq {
 ; CHECK-LABEL: define i8* @caller2()
 ; Prologue:
-; CHECK: @llvm.stackguard
+; CHECK: @llvm.stackprotector
 
-; CHECK: [[GUARD:%.*]] = call i8* @llvm.stackguard()
+; CHECK: [[GUARD:%.*]] = load volatile i8*, i8*
 ; CHECK: [[TOKEN:%.*]] = load volatile i8*, i8** {{%.*}}
 ; CHECK: [[TST:%.*]] = icmp eq i8* [[GUARD]], [[TOKEN]]
 ; CHECK: br i1 [[TST]]
@@ -65,12 +65,12 @@ define i8* @caller2() ssp {
   ret i8* %res
 }
 
-define void @caller3() ssp {
+define void @caller3() sspreq {
 ; CHECK-LABEL: define void @caller3()
 ; Prologue:
-; CHECK: @llvm.stackguard
+; CHECK: @llvm.stackprotector
 
-; CHECK: [[GUARD:%.*]] = call i8* @llvm.stackguard()
+; CHECK: [[GUARD:%.*]] = load volatile i8*, i8*
 ; CHECK: [[TOKEN:%.*]] = load volatile i8*, i8** {{%.*}}
 ; CHECK: [[TST:%.*]] = icmp eq i8* [[GUARD]], [[TOKEN]]
 ; CHECK: br i1 [[TST]]
@@ -83,12 +83,12 @@ define void @caller3() ssp {
   ret void
 }
 
-define i8* @caller4() ssp {
+define i8* @caller4() sspreq {
 ; CHECK-LABEL: define i8* @caller4()
 ; Prologue:
-; CHECK: @llvm.stackguard
+; CHECK: @llvm.stackprotector
 
-; CHECK: [[GUARD:%.*]] = call i8* @llvm.stackguard()
+; CHECK: [[GUARD:%.*]] = load volatile i8*, i8*
 ; CHECK: [[TOKEN:%.*]] = load volatile i8*, i8** {{%.*}}
 ; CHECK: [[TST:%.*]] = icmp eq i8* [[GUARD]], [[TOKEN]]
 ; CHECK: br i1 [[TST]]
