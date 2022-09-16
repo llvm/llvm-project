@@ -116,12 +116,14 @@ public:
     TokenSource = this;
     Line.Level = 0;
     Line.InPPDirective = true;
+    // InMacroBody gets set after the `#define x` part.
   }
 
   ~ScopedMacroState() override {
     TokenSource = PreviousTokenSource;
     ResetToken = Token;
     Line.InPPDirective = false;
+    Line.InMacroBody = false;
     Line.Level = PreviousLineLevel;
   }
 
@@ -196,6 +198,7 @@ public:
     Parser.Line = std::make_unique<UnwrappedLine>();
     Parser.Line->Level = PreBlockLine->Level;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
+    Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
   }
 
   ~ScopedLineState() {
@@ -1253,6 +1256,7 @@ void UnwrappedLineParser::parsePPDefine() {
     Line->Level += PPBranchLevel + 1;
   addUnwrappedLine();
   ++Line->Level;
+  Line->InMacroBody = true;
 
   // Errors during a preprocessor directive can only affect the layout of the
   // preprocessor directive, and thus we ignore them. An alternative approach
