@@ -4,28 +4,49 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios"
 
+; CHECK-LABEL: lCPI0_0:
+; CHECK-NEXT:     .byte    0                               ; 0x0
+; CHECK-NEXT:     .byte    4                               ; 0x4
+; CHECK-NEXT:     .byte    8                               ; 0x8
+; CHECK-NEXT:     .byte    12                              ; 0xc
+; CHECK-NEXT:     .byte    16                              ; 0x10
+; CHECK-NEXT:     .byte    20                              ; 0x14
+; CHECK-NEXT:     .byte    24                              ; 0x18
+; CHECK-NEXT:     .byte    28                              ; 0x1c
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+; CHECK-NEXT:     .byte    255                             ; 0xff
+
 ; It's profitable to convert the fptoui float -> i8 to first convert from
 ; float -> i32 and then use tbl for the truncate in a loop, so the mask can be
 ; materialized outside the loop.
 define void @fptoui_v8f32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: fptoui_v8f32_to_v8i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x9, lCPI0_0@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr q0, [x9, lCPI0_0@PAGEOFF]
 ; CHECK-NEXT:  LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x0, x8, lsl #5
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    ldp q0, q1, [x9]
-; CHECK-NEXT:    fcvtzs.4s v0, v0
-; CHECK-NEXT:    fcvtzs.4s v1, v1
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    uzp1.8b v0, v0, v1
-; CHECK-NEXT:    str d0, [x1], #16
+; CHECK-NEXT:    ldp q2, q1, [x9]
+; CHECK-NEXT:    fcvtzu.4s v4, v1
+; CHECK-NEXT:    fcvtzu.4s v3, v2
+; CHECK-NEXT:    tbl.16b v1, { v3, v4 }, v0
+; CHECK-NEXT:    str d1, [x1], #16
 ; CHECK-NEXT:    b.eq LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 entry:
   br label %loop
 
@@ -64,36 +85,55 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: lCPI2_0:
+; CHECK-NEXT:    .byte    0                               ; 0x0
+; CHECK-NEXT:    .byte    4                               ; 0x4
+; CHECK-NEXT:    .byte    8                               ; 0x8
+; CHECK-NEXT:    .byte    12                              ; 0xc
+; CHECK-NEXT:    .byte    16                              ; 0x10
+; CHECK-NEXT:    .byte    20                              ; 0x14
+; CHECK-NEXT:    .byte    24                              ; 0x18
+; CHECK-NEXT:    .byte    28                              ; 0x1c
+; CHECK-NEXT:    .byte    255                             ; 0xff
+; CHECK-NEXT:    .byte    255                             ; 0xff
+; CHECK-NEXT:    .byte    255                             ; 0xff
+; CHECK-NEXT:    .byte    255                             ; 0xff
+; CHECK-NEXT:    .byte    255                             ; 0xff
+; CHECK-NEXT:    .byte    255                             ; 0xff
+; CHECK-NEXT:    .byte    255                             ; 0xff
+; CHECK-NEXT:    .byte    255                             ; 0xff
+
 ; Tbl can also be used when combining multiple fptoui using a shuffle. The loop
 ; vectorizer may create such patterns.
 define void @fptoui_2x_v8f32_to_v8i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-LABEL: fptoui_2x_v8f32_to_v8i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:    adrp x9, lCPI2_0@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:    ldr q0, [x9, lCPI2_0@PAGEOFF]
 ; CHECK-NEXT:  LBB2_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lsl x9, x8, #5
-; CHECK-NEXT:    add x10, x1, x9
-; CHECK-NEXT:    add x9, x0, x9
-; CHECK-NEXT:    ldp q1, q0, [x10]
-; CHECK-NEXT:    fcvtzs.4s v1, v1
-; CHECK-NEXT:    ldp q3, q2, [x9]
-; CHECK-NEXT:    fcvtzs.4s v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    fcvtzs.4s v3, v3
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    fcvtzs.4s v2, v2
-; CHECK-NEXT:    mov.d v1[1], v0[0]
-; CHECK-NEXT:    xtn.4h v3, v3
-; CHECK-NEXT:    xtn.4h v2, v2
-; CHECK-NEXT:    mov.d v3[1], v2[0]
-; CHECK-NEXT:    uzp1.16b v0, v3, v1
-; CHECK-NEXT:    str q0, [x2, x8, lsl #4]
+; CHECK-NEXT:    add x10, x0, x9
+; CHECK-NEXT:    add x9, x1, x9
+; CHECK-NEXT:    ldp q1, q2, [x10]
+; CHECK-NEXT:    ldp q4, q3, [x9]
+; CHECK-NEXT:    fcvtzu.4s v6, v2
+; CHECK-NEXT:    fcvtzu.4s v5, v1
+; CHECK-NEXT:    fcvtzu.4s v2, v3
+; CHECK-NEXT:    fcvtzu.4s v1, v4
+; CHECK-NEXT:    tbl.16b v3, { v5, v6 }, v0
+; CHECK-NEXT:    tbl.16b v1, { v1, v2 }, v0
+; CHECK-NEXT:    mov.d v3[1], v1[0]
+; CHECK-NEXT:    str q3, [x2, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    b.eq LBB2_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
 entry:
   br label %loop
 
@@ -116,64 +156,76 @@ exit:
   ret void
 }
 
-; Should not use tbl lowering, as the shuffle isn't a concat-shuffle.
+; CHECK-LABEL: lCPI3_0:
+; CHECK-NEXT: 	.byte	0                               ; 0x0
+; CHECK-NEXT: 	.byte	4                               ; 0x4
+; CHECK-NEXT: 	.byte	8                               ; 0x8
+; CHECK-NEXT: 	.byte	12                              ; 0xc
+; CHECK-NEXT: 	.byte	16                              ; 0x10
+; CHECK-NEXT: 	.byte	20                              ; 0x14
+; CHECK-NEXT: 	.byte	24                              ; 0x18
+; CHECK-NEXT: 	.byte	28                              ; 0x1c
+; CHECK-NEXT: 	.byte	255                             ; 0xff
+; CHECK-NEXT: 	.byte	255                             ; 0xff
+; CHECK-NEXT: 	.byte	255                             ; 0xff
+; CHECK-NEXT: 	.byte	255                             ; 0xff
+; CHECK-NEXT: 	.byte	255                             ; 0xff
+; CHECK-NEXT: 	.byte	255                             ; 0xff
+; CHECK-NEXT: 	.byte	255                             ; 0xff
+; CHECK-NEXT: 	.byte	255                             ; 0xff
+; CHECK-NEXT: lCPI3_1:
+; CHECK-NEXT: 	.byte	0                               ; 0x0
+; CHECK-NEXT: 	.byte	17                              ; 0x11
+; CHECK-NEXT: 	.byte	2                               ; 0x2
+; CHECK-NEXT: 	.byte	3                               ; 0x3
+; CHECK-NEXT: 	.byte	4                               ; 0x4
+; CHECK-NEXT: 	.byte	5                               ; 0x5
+; CHECK-NEXT: 	.byte	6                               ; 0x6
+; CHECK-NEXT: 	.byte	19                              ; 0x13
+; CHECK-NEXT: 	.byte	16                              ; 0x10
+; CHECK-NEXT: 	.byte	17                              ; 0x11
+; CHECK-NEXT: 	.byte	18                              ; 0x12
+; CHECK-NEXT: 	.byte	19                              ; 0x13
+; CHECK-NEXT: 	.byte	20                              ; 0x14
+; CHECK-NEXT: 	.byte	3                               ; 0x3
+; CHECK-NEXT: 	.byte	22                              ; 0x16
+; CHECK-NEXT: 	.byte	23                              ; 0x17
+
+; We need multiple tbl for the shuffle.
 define void @fptoui_2x_v8f32_to_v8i8_in_loop_no_concat_shuffle(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-LABEL: fptoui_2x_v8f32_to_v8i8_in_loop_no_concat_shuffle:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:  Lloh4:
 ; CHECK-NEXT:    adrp x9, lCPI3_0@PAGE
+; CHECK-NEXT:  Lloh5:
+; CHECK-NEXT:    adrp x10, lCPI3_1@PAGE
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:  Lloh6:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI3_0@PAGEOFF]
+; CHECK-NEXT:  Lloh7:
+; CHECK-NEXT:    ldr q1, [x10, lCPI3_1@PAGEOFF]
 ; CHECK-NEXT:  LBB3_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lsl x9, x8, #5
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9
-; CHECK-NEXT:    ldp q1, q2, [x10]
-; CHECK-NEXT:    fcvtzs.4s v1, v1
-; CHECK-NEXT:    fcvtzs.4s v2, v2
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    umov.h w10, v1[0]
-; CHECK-NEXT:    umov.h w11, v1[2]
-; CHECK-NEXT:    fmov s3, w10
-; CHECK-NEXT:    umov.h w10, v1[3]
-; CHECK-NEXT:    xtn.4h v1, v2
-; CHECK-NEXT:    ldp q2, q5, [x9]
-; CHECK-NEXT:    mov.b v3[2], w11
-; CHECK-NEXT:    umov.h w11, v1[0]
-; CHECK-NEXT:    umov.h w9, v1[1]
-; CHECK-NEXT:    fcvtzs.4s v2, v2
-; CHECK-NEXT:    mov.b v3[3], w10
-; CHECK-NEXT:    umov.h w10, v1[2]
-; CHECK-NEXT:    xtn.4h v1, v2
-; CHECK-NEXT:    fcvtzs.4s v2, v5
-; CHECK-NEXT:    mov.b v3[4], w11
-; CHECK-NEXT:    umov.h w11, v1[1]
-; CHECK-NEXT:    mov.b v3[5], w9
-; CHECK-NEXT:    umov.h w9, v1[0]
-; CHECK-NEXT:    mov.b v3[6], w10
-; CHECK-NEXT:    umov.h w10, v1[3]
-; CHECK-NEXT:    fmov s4, w9
-; CHECK-NEXT:    umov.h w9, v1[2]
-; CHECK-NEXT:    xtn.4h v1, v2
-; CHECK-NEXT:    mov.b v4[1], w11
-; CHECK-NEXT:    mov.b v4[2], w9
-; CHECK-NEXT:    umov.h w9, v1[0]
-; CHECK-NEXT:    mov.b v4[3], w10
-; CHECK-NEXT:    umov.h w10, v1[2]
-; CHECK-NEXT:    mov.b v4[4], w9
-; CHECK-NEXT:    umov.h w9, v1[3]
-; CHECK-NEXT:    mov.b v4[6], w10
-; CHECK-NEXT:    mov.b v4[7], w9
-; CHECK-NEXT:    tbl.16b v1, { v3, v4 }, v0
-; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
+; CHECK-NEXT:    ldp q2, q3, [x10]
+; CHECK-NEXT:    ldp q5, q4, [x9]
+; CHECK-NEXT:    fcvtzu.4s v7, v3
+; CHECK-NEXT:    fcvtzu.4s v6, v2
+; CHECK-NEXT:    fcvtzu.4s v3, v4
+; CHECK-NEXT:    fcvtzu.4s v2, v5
+; CHECK-NEXT:    tbl.16b v4, { v6, v7 }, v0
+; CHECK-NEXT:    tbl.16b v5, { v2, v3 }, v0
+; CHECK-NEXT:    tbl.16b v2, { v4, v5 }, v1
+; CHECK-NEXT:    str q2, [x2, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    b.eq LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
+; CHECK-NEXT:    .loh AdrpLdr Lloh5, Lloh7
+; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh6
 entry:
   br label %loop
 
@@ -196,33 +248,49 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: lCPI4_0:
+; CHECK-NEXT: 	.byte	0                               ; 0x0
+; CHECK-NEXT: 	.byte	4                               ; 0x4
+; CHECK-NEXT: 	.byte	8                               ; 0x8
+; CHECK-NEXT: 	.byte	12                              ; 0xc
+; CHECK-NEXT: 	.byte	16                              ; 0x10
+; CHECK-NEXT: 	.byte	20                              ; 0x14
+; CHECK-NEXT: 	.byte	24                              ; 0x18
+; CHECK-NEXT: 	.byte	28                              ; 0x1c
+; CHECK-NEXT: 	.byte	32                              ; 0x20
+; CHECK-NEXT: 	.byte	36                              ; 0x24
+; CHECK-NEXT: 	.byte	40                              ; 0x28
+; CHECK-NEXT: 	.byte	44                              ; 0x2c
+; CHECK-NEXT: 	.byte	48                              ; 0x30
+; CHECK-NEXT: 	.byte	52                              ; 0x34
+; CHECK-NEXT: 	.byte	56                              ; 0x38
+; CHECK-NEXT: 	.byte	60                              ; 0x3c
 
 define void @fptoui_v16f32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: fptoui_v16f32_to_v16i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh8:
+; CHECK-NEXT:    adrp x9, lCPI4_0@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh9:
+; CHECK-NEXT:    ldr q0, [x9, lCPI4_0@PAGEOFF]
 ; CHECK-NEXT:  LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    add x9, x0, x8, lsl #6
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    ldp q0, q1, [x9, #32]
-; CHECK-NEXT:    fcvtzs.4s v0, v0
-; CHECK-NEXT:    ldp q2, q3, [x9]
-; CHECK-NEXT:    fcvtzs.4s v1, v1
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    fcvtzs.4s v2, v2
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    fcvtzs.4s v3, v3
-; CHECK-NEXT:    mov.d v0[1], v1[0]
-; CHECK-NEXT:    xtn.4h v2, v2
-; CHECK-NEXT:    xtn.4h v3, v3
-; CHECK-NEXT:    mov.d v2[1], v3[0]
-; CHECK-NEXT:    uzp1.16b v0, v2, v0
-; CHECK-NEXT:    str q0, [x1], #32
+; CHECK-NEXT:    ldp q2, q1, [x9, #32]
+; CHECK-NEXT:    ldp q4, q3, [x9]
+; CHECK-NEXT:    fcvtzu.4s v19, v1
+; CHECK-NEXT:    fcvtzu.4s v18, v2
+; CHECK-NEXT:    fcvtzu.4s v17, v3
+; CHECK-NEXT:    fcvtzu.4s v16, v4
+; CHECK-NEXT:    tbl.16b v1, { v16, v17, v18, v19 }, v0
+; CHECK-NEXT:    str q1, [x1], #32
 ; CHECK-NEXT:    b.eq LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh8, Lloh9
 entry:
   br label %loop
 
@@ -241,48 +309,59 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: lCPI5_0:
+; CHECK-NEXT: 	.byte	0                               ; 0x0
+; CHECK-NEXT: 	.byte	4                               ; 0x4
+; CHECK-NEXT: 	.byte	8                               ; 0x8
+; CHECK-NEXT: 	.byte	12                              ; 0xc
+; CHECK-NEXT: 	.byte	16                              ; 0x10
+; CHECK-NEXT: 	.byte	20                              ; 0x14
+; CHECK-NEXT: 	.byte	24                              ; 0x18
+; CHECK-NEXT: 	.byte	28                              ; 0x1c
+; CHECK-NEXT: 	.byte	32                              ; 0x20
+; CHECK-NEXT: 	.byte	36                              ; 0x24
+; CHECK-NEXT: 	.byte	40                              ; 0x28
+; CHECK-NEXT: 	.byte	44                              ; 0x2c
+; CHECK-NEXT: 	.byte	48                              ; 0x30
+; CHECK-NEXT: 	.byte	52                              ; 0x34
+; CHECK-NEXT: 	.byte	56                              ; 0x38
+; CHECK-NEXT: 	.byte	60                              ; 0x3c
+
 define void @fptoui_2x_v16f32_to_v16i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-LABEL: fptoui_2x_v16f32_to_v16i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh10:
+; CHECK-NEXT:    adrp x9, lCPI5_0@PAGE
 ; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  Lloh11:
+; CHECK-NEXT:    ldr q0, [x9, lCPI5_0@PAGEOFF]
 ; CHECK-NEXT:  LBB5_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lsl x9, x8, #6
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9
-; CHECK-NEXT:    ldp q0, q1, [x10]
-; CHECK-NEXT:    fcvtzs.4s v0, v0
-; CHECK-NEXT:    ldp q2, q3, [x10, #32]
-; CHECK-NEXT:    fcvtzs.4s v1, v1
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    fcvtzs.4s v2, v2
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    ldp q4, q5, [x9]
-; CHECK-NEXT:    fcvtzs.4s v3, v3
-; CHECK-NEXT:    xtn.4h v2, v2
-; CHECK-NEXT:    mov.d v0[1], v1[0]
-; CHECK-NEXT:    fcvtzs.4s v4, v4
-; CHECK-NEXT:    xtn.4h v3, v3
-; CHECK-NEXT:    ldp q6, q7, [x9, #32]
-; CHECK-NEXT:    fcvtzs.4s v5, v5
+; CHECK-NEXT:    ldp q1, q2, [x10, #32]
+; CHECK-NEXT:    ldp q3, q4, [x9, #32]
+; CHECK-NEXT:    fcvtzu.4s v24, v2
+; CHECK-NEXT:    fcvtzu.4s v23, v1
+; CHECK-NEXT:    ldp q5, q6, [x9]
+; CHECK-NEXT:    fcvtzu.4s v20, v4
 ; CHECK-NEXT:    add x9, x2, x8, lsl #5
-; CHECK-NEXT:    xtn.4h v4, v4
+; CHECK-NEXT:    fcvtzu.4s v19, v3
 ; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    mov.d v2[1], v3[0]
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    fcvtzs.4s v6, v6
-; CHECK-NEXT:    xtn.4h v5, v5
-; CHECK-NEXT:    fcvtzs.4s v7, v7
-; CHECK-NEXT:    mov.d v4[1], v5[0]
-; CHECK-NEXT:    xtn.4h v6, v6
-; CHECK-NEXT:    uzp1.16b v0, v0, v2
-; CHECK-NEXT:    xtn.4h v7, v7
-; CHECK-NEXT:    mov.d v6[1], v7[0]
-; CHECK-NEXT:    uzp1.16b v1, v4, v6
-; CHECK-NEXT:    stp q0, q1, [x9]
+; CHECK-NEXT:    ldp q7, q16, [x10]
+; CHECK-NEXT:    fcvtzu.4s v18, v6
+; CHECK-NEXT:    fcvtzu.4s v17, v5
+; CHECK-NEXT:    fcvtzu.4s v22, v16
+; CHECK-NEXT:    fcvtzu.4s v21, v7
+; CHECK-NEXT:    tbl.16b v1, { v17, v18, v19, v20 }, v0
+; CHECK-NEXT:    tbl.16b v2, { v21, v22, v23, v24 }, v0
+; CHECK-NEXT:    stp q2, q1, [x9]
 ; CHECK-NEXT:    b.eq LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh10, Lloh11
 entry:
   br label %loop
 
@@ -424,14 +503,14 @@ exit:
 define void @uitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: uitofp_v8i8_to_v8f32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh2:
+; CHECK-NEXT:  Lloh12:
 ; CHECK-NEXT:    adrp x9, lCPI8_0@PAGE
-; CHECK-NEXT:  Lloh3:
+; CHECK-NEXT:  Lloh13:
 ; CHECK-NEXT:    adrp x10, lCPI8_1@PAGE
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh4:
+; CHECK-NEXT:  Lloh14:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI8_0@PAGEOFF]
-; CHECK-NEXT:  Lloh5:
+; CHECK-NEXT:  Lloh15:
 ; CHECK-NEXT:    ldr q1, [x10, lCPI8_1@PAGEOFF]
 ; CHECK-NEXT:  LBB8_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -447,8 +526,8 @@ define void @uitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.eq LBB8_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh3, Lloh5
-; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh4
+; CHECK-NEXT:    .loh AdrpLdr Lloh13, Lloh15
+; CHECK-NEXT:    .loh AdrpLdr Lloh12, Lloh14
 entry:
   br label %loop
 
@@ -539,22 +618,22 @@ exit:
 define void @uitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: uitofp_v16i8_to_v16f32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:  Lloh6:
+; CHECK-NEXT:  Lloh16:
 ; CHECK-NEXT:    adrp x9, lCPI9_0@PAGE
-; CHECK-NEXT:  Lloh7:
+; CHECK-NEXT:  Lloh17:
 ; CHECK-NEXT:    adrp x10, lCPI9_1@PAGE
-; CHECK-NEXT:  Lloh8:
+; CHECK-NEXT:  Lloh18:
 ; CHECK-NEXT:    adrp x11, lCPI9_2@PAGE
-; CHECK-NEXT:  Lloh9:
+; CHECK-NEXT:  Lloh19:
 ; CHECK-NEXT:    adrp x12, lCPI9_3@PAGE
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  Lloh10:
+; CHECK-NEXT:  Lloh20:
 ; CHECK-NEXT:    ldr q0, [x9, lCPI9_0@PAGEOFF]
-; CHECK-NEXT:  Lloh11:
+; CHECK-NEXT:  Lloh21:
 ; CHECK-NEXT:    ldr q1, [x10, lCPI9_1@PAGEOFF]
-; CHECK-NEXT:  Lloh12:
+; CHECK-NEXT:  Lloh22:
 ; CHECK-NEXT:    ldr q2, [x11, lCPI9_2@PAGEOFF]
-; CHECK-NEXT:  Lloh13:
+; CHECK-NEXT:  Lloh23:
 ; CHECK-NEXT:    ldr q3, [x12, lCPI9_3@PAGEOFF]
 ; CHECK-NEXT:  LBB9_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -575,10 +654,10 @@ define void @uitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    b.eq LBB9_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:    .loh AdrpLdr Lloh9, Lloh13
-; CHECK-NEXT:    .loh AdrpLdr Lloh8, Lloh12
-; CHECK-NEXT:    .loh AdrpLdr Lloh7, Lloh11
-; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh10
+; CHECK-NEXT:    .loh AdrpLdr Lloh19, Lloh23
+; CHECK-NEXT:    .loh AdrpLdr Lloh18, Lloh22
+; CHECK-NEXT:    .loh AdrpLdr Lloh17, Lloh21
+; CHECK-NEXT:    .loh AdrpLdr Lloh16, Lloh20
 entry:
   br label %loop
 
