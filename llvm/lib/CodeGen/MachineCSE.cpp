@@ -60,6 +60,11 @@ STATISTIC(NumCrossBBCSEs,
           "Number of cross-MBB physreg referencing CS eliminated");
 STATISTIC(NumCommutes,  "Number of copies coalesced after commuting");
 
+// Threshold to avoid excessive cost to compute isProfitableToCSE.
+static cl::opt<int>
+    CSUsesThreshold("csuses-threshold", cl::Hidden, cl::init(1024),
+                    cl::desc("Threshold for the size of CSUses"));
+
 namespace {
 
   class MachineCSE : public MachineFunctionPass {
@@ -443,15 +448,23 @@ bool MachineCSE::isProfitableToCSE(Register CSReg, Register Reg,
   if (Register::isVirtualRegister(CSReg) && Register::isVirtualRegister(Reg)) {
     MayIncreasePressure = false;
     SmallPtrSet<MachineInstr*, 8> CSUses;
+    int NumOfUses = 0;
     for (MachineInstr &MI : MRI->use_nodbg_instructions(CSReg)) {
       CSUses.insert(&MI);
-    }
-    for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
-      if (!CSUses.count(&MI)) {
+      // Too costly to compute if NumOfUses is very large. Conservatively assume
+      // MayIncreasePressure to avoid spending too much time here.
+      if (++NumOfUses > CSUsesThreshold) {
         MayIncreasePressure = true;
         break;
       }
     }
+    if (!MayIncreasePressure)
+      for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
+        if (!CSUses.count(&MI)) {
+          MayIncreasePressure = true;
+          break;
+        }
+      }
   }
   if (!MayIncreasePressure) return true;
 
