@@ -397,7 +397,7 @@ struct LinalgDetensorize
         // Note: No need to check whether the result type of this op is
         // detensorable since if it wasn't we wouldn't reach that point in the
         // work list.
-        if (dyn_cast<tensor::FromElementsOp>(currentItemDefiningOp))
+        if (isa<tensor::FromElementsOp>(currentItemDefiningOp))
           continue;
 
         // 2.4 - The current item is the result of a scalar op, add all its
