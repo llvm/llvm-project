@@ -250,6 +250,16 @@ bool TemplateDecl::hasAssociatedConstraints() const {
   return false;
 }
 
+bool TemplateDecl::isTypeAlias() const {
+  switch (getKind()) {
+  case TemplateDecl::TypeAliasTemplate:
+  case TemplateDecl::BuiltinTemplate:
+    return true;
+  default:
+    return false;
+  };
+}
+
 //===----------------------------------------------------------------------===//
 // RedeclarableTemplateDecl Implementation
 //===----------------------------------------------------------------------===//

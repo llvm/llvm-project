@@ -10,6 +10,7 @@
 #include "BitcodeWriter.h"
 #include "clang/AST/Comment.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SHA1.h"
@@ -310,21 +311,31 @@ static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
 
 static void parseParameters(FunctionInfo &I, const FunctionDecl *D) {
   for (const ParmVarDecl *P : D->parameters()) {
+    FieldTypeInfo *FieldInfo = nullptr;
     if (const auto *T = getDeclForType(P->getOriginalType())) {
       if (const auto *N = dyn_cast<EnumDecl>(T)) {
-        I.Params.emplace_back(getUSRForDecl(N), N->getNameAsString(),
-                              InfoType::IT_enum, getInfoRelativePath(N),
-                              P->getNameAsString());
-        continue;
+        FieldInfo = &I.Params.emplace_back(
+            getUSRForDecl(N), N->getNameAsString(), InfoType::IT_enum,
+            getInfoRelativePath(N), P->getNameAsString());
       } else if (const auto *N = dyn_cast<RecordDecl>(T)) {
-        I.Params.emplace_back(getUSRForDecl(N), N->getNameAsString(),
-                              InfoType::IT_record, getInfoRelativePath(N),
-                              P->getNameAsString());
-        continue;
+        FieldInfo = &I.Params.emplace_back(
+            getUSRForDecl(N), N->getNameAsString(), InfoType::IT_record,
+            getInfoRelativePath(N), P->getNameAsString());
       }
+      // Otherwise fall through to the default case below.
     }
-    I.Params.emplace_back(P->getOriginalType().getAsString(),
-                          P->getNameAsString());
+
+    if (!FieldInfo) {
+      FieldInfo = &I.Params.emplace_back(P->getOriginalType().getAsString(),
+                                         P->getNameAsString());
+    }
+
+    if (const Expr *DefaultArg = P->getDefaultArg()) {
+      FieldInfo->DefaultValue = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(DefaultArg->getSourceRange()),
+          D->getASTContext().getSourceManager(),
+          D->getASTContext().getLangOpts());
+    }
   }
 }
 

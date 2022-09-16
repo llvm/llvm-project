@@ -413,38 +413,24 @@ inline bool TensorType::classof(Type type) {
 /// MemRefs with a layout map in strided form include:
 ///   1. empty or identity layout map, in which case the stride information is
 ///      the canonical form computed from sizes;
-///   2. single affine map layout of the form `K + k0 * d0 + ... kn * dn`,
-///      where K and ki's are constants or symbols.
+///   2. a StridedLayoutAttr layout;
+///   3. any other layout that be converted into a single affine map layout of
+///      the form `K + k0 * d0 + ... kn * dn`, where K and ki's are constants or
+///      symbols.
 ///
 /// A stride specification is a list of integer values that are either static
-/// or dynamic (encoded with getDynamicStrideOrOffset()). Strides encode the
-/// distance in the number of elements between successive entries along a
+/// or dynamic (encoded with ShapedType::kDynamicStrideOrOffset). Strides encode
+/// the distance in the number of elements between successive entries along a
 /// particular dimension.
-///
-/// For example, `memref<42x16xf32, (64 * d0 + d1)>` specifies a view into a
-/// non-contiguous memory region of `42` by `16` `f32` elements in which the
-/// distance between two consecutive elements along the outer dimension is `1`
-/// and the distance between two consecutive elements along the inner dimension
-/// is `64`.
-///
-/// The convention is that the strides for dimensions d0, .. dn appear in
-/// order to make indexing intuitive into the result.
 LogicalResult getStridesAndOffset(MemRefType t,
                                   SmallVectorImpl<int64_t> &strides,
                                   int64_t &offset);
-LogicalResult getStridesAndOffset(MemRefType t,
-                                  SmallVectorImpl<AffineExpr> &strides,
-                                  AffineExpr &offset);
 
 /// Return a version of `t` with identity layout if it can be determined
 /// statically that the layout is the canonical contiguous strided layout.
 /// Otherwise pass `t`'s layout into `simplifyAffineMap` and return a copy of
 /// `t` with simplified layout.
 MemRefType canonicalizeStridedLayout(MemRefType t);
-
-/// Return a version of `t` with a layout that has all dynamic offset and
-/// strides. This is used to erase the static layout.
-MemRefType eraseStridedLayout(MemRefType t);
 
 /// Given MemRef `sizes` that are either static or dynamic, returns the
 /// canonical "contiguous" strides AffineExpr. Strides are multiplicative and
@@ -471,15 +457,6 @@ AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 
 /// Return true if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
-
-/// Return the layout map in strided linear layout AffineMap form.
-/// Return null if the layout is not compatible with a strided layout.
-AffineMap getStridedLinearLayoutMap(MemRefType t);
-
-/// Helper determining if a memref is static-shape and contiguous-row-major
-/// layout, while still allowing for an arbitrary offset (any static or
-/// dynamic value).
-bool isStaticShapeAndContiguousRowMajor(MemRefType memrefType);
 
 } // namespace mlir
 

@@ -10,6 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<0>, SDTCisInt<0>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<0>, SDTCisInt<0>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+
 //===----------------------------------------------------------------------===//
 // Add vector elements horizontally or vertically to ZA tile.
 //===----------------------------------------------------------------------===//
@@ -117,8 +126,8 @@ defm ZERO_M : sme_zero<"zero">;
 // It's tricky to using the existing pstate operand defined in
 // AArch64SystemOperands.td since it only encodes 5 bits including op1;op2,
 // when these fields are also encoded in CRm[3:1].
-class MSRpstatesvcrImm0_1
-  : PstateWriteSimple<(ins svcr_op:$pstatefield, imm0_1:$imm), "msr",
+def MSRpstatesvcrImm1
+  : PstateWriteSimple<(ins svcr_op:$pstatefield, timm0_1:$imm), "msr",
                       "\t$pstatefield, $imm">,
     Sched<[WriteSys]> {
   bits<3> pstatefield;
@@ -129,7 +138,6 @@ class MSRpstatesvcrImm0_1
   let Inst{7-5} = 0b011; // op2
 }
 
-def MSRpstatesvcrImm1 : MSRpstatesvcrImm0_1;
 def : InstAlias<"smstart",    (MSRpstatesvcrImm1 0b011, 0b1)>;
 def : InstAlias<"smstart sm", (MSRpstatesvcrImm1 0b001, 0b1)>;
 def : InstAlias<"smstart za", (MSRpstatesvcrImm1 0b010, 0b1)>;
@@ -137,6 +145,56 @@ def : InstAlias<"smstart za", (MSRpstatesvcrImm1 0b010, 0b1)>;
 def : InstAlias<"smstop",     (MSRpstatesvcrImm1 0b011, 0b0)>;
 def : InstAlias<"smstop sm",  (MSRpstatesvcrImm1 0b001, 0b0)>;
 def : InstAlias<"smstop za",  (MSRpstatesvcrImm1 0b010, 0b0)>;
+
+
+// Pseudo to match to smstart/smstop. This expands:
+//
+//  pseudonode (pstate_za|pstate_sm), before_call, expected_value
+//
+// Into:
+//
+//   if (before_call != expected_value)
+//     node (pstate_za|pstate_sm)
+//
+// where node can be either 'smstart' or 'smstop'.
+def MSRpstatePseudo :
+  Pseudo<(outs),
+           (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
+    Sched<[WriteSys]>;
+
+// Scenario A:
+//
+//   %pstate.before.call = 1
+//   if (%pstate.before.call != 0)
+//     smstop (pstate_za|pstate_sm)
+//   call fn()
+//   if (%pstate.before.call != 0)
+//     smstart (pstate_za|pstate_sm)
+//
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 1), (i64 0)),   // before call
+          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 1), (i64 0)),  // after call
+          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
+
+// Scenario B:
+//
+//   %pstate.before.call = 0
+//   if (%pstate.before.call != 1)
+//     smstart (pstate_za|pstate_sm)
+//   call fn()
+//   if (%pstate.before.call != 1)
+//     smstop (pstate_za|pstate_sm)
+//
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 0), (i64 1)),  // before call
+          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 0), (i64 1)),   // after call
+          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
+
+// The generic case which gets expanded to a pseudo node.
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b1, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b0, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
 
 // Read and write TPIDR2_EL0
 def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),

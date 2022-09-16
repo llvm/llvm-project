@@ -159,6 +159,7 @@ public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
           bool lazy = false, bool forceHidden = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
+  ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
@@ -176,7 +177,6 @@ public:
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
-  std::vector<OptimizationHint> optimizationHints;
   std::vector<AliasSymbol *> aliases;
 
 private:
@@ -193,7 +193,6 @@ private:
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
   void parseDebugInfo();
-  void parseOptimizationHints(ArrayRef<uint8_t> data);
   void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
   void registerCompactUnwind(Section &compactUnwindSection);
   void registerEhFrames(Section &ehFrameSection);

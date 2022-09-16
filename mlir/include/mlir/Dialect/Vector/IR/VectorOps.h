@@ -119,11 +119,6 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
                                                bool force32BitVectorIndices,
                                                PatternBenefit benefit = 1);
 
-/// Collect a set of patterns to propagate insert_map/extract_map in the ssa
-/// chain.
-void populatePropagateVectorDistributionPatterns(RewritePatternSet &patterns,
-                                                 PatternBenefit benefit = 1);
-
 /// Collects patterns to progressively lower vector.broadcast ops on high-D
 /// vectors to low-D vector ops.
 void populateVectorBroadcastLoweringPatterns(RewritePatternSet &patterns,

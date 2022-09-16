@@ -204,6 +204,17 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_resource
+  DEF_FILE sys/resource.h.def
+  GEN_HDR sys/resource.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_resource_macros
+    .llvm-libc-types.rlim_t
+    .llvm-libc-types.struct_rlimit
+)
+
+add_gen_header(
   sys_stat
   DEF_FILE sys/stat.h.def
   GEN_HDR sys/stat.h
@@ -231,6 +242,15 @@ add_gen_header(
     syscall_numbers=../config/${LIBC_TARGET_OS}/syscall_numbers.h.inc
   DATA_FILES
     ../config/${LIBC_TARGET_OS}/syscall_numbers.h.inc
+)
+
+add_gen_header(
+  sys_utsname
+  DEF_FILE sys/utsname.h.def
+  GEN_HDR sys/utsname.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_utsname
 )
 
 if(NOT LLVM_LIBC_FULL_BUILD)

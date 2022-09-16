@@ -321,6 +321,10 @@ void AArch64RegisterInfo::UpdateCustomCallPreservedMask(MachineFunction &MF,
   *Mask = UpdatedMask;
 }
 
+const uint32_t *AArch64RegisterInfo::getSMStartStopCallPreservedMask() const {
+  return CSR_AArch64_SMStartStop_RegMask;
+}
+
 const uint32_t *AArch64RegisterInfo::getNoPreservedMask() const {
   return CSR_AArch64_NoRegs_RegMask;
 }

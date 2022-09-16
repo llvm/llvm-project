@@ -465,6 +465,29 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  NamedType RLimTType = NamedType<"rlim_t">;
+  NamedType StructRLimitType = NamedType<"struct rlimit">;
+  PtrType StructRLimitPtr = PtrType<StructRLimitType>;
+  ConstType ConstStructRLimitPtr = ConstType<StructRLimitType>;
+  HeaderSpec SysResource = HeaderSpec<
+    "sys/resource.h",
+    [], // Macros
+    [RLimTType, StructRLimitType], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+          "getrlimit",
+          RetValSpec<IntType>,
+          [ArgSpec<StructRLimitPtr>]
+        >,
+        FunctionSpec<
+          "setrlimit",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstStructRLimitPtr>]
+        >,
+    ]
+  >;
+
   HeaderSpec SysStat = HeaderSpec<
     "sys/stat.h",
     [], // Macros
@@ -495,6 +518,22 @@ def POSIX : StandardSpec<"POSIX"> {
             "mkdirat",
             RetValSpec<IntType>,
             [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
+        >,
+    ]
+  >;
+
+  NamedType StructUtsName = NamedType<"struct utsname">;
+  PtrType StructUtsNamePtr = PtrType<StructUtsName>;
+  HeaderSpec SysUtsName = HeaderSpec<
+    "sys/utsname.h",
+    [], // Macros
+    [StructUtsName], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+            "uname",
+            RetValSpec<IntType>,
+            [ArgSpec<StructUtsNamePtr>]
         >,
     ]
   >;
@@ -764,7 +803,9 @@ def POSIX : StandardSpec<"POSIX"> {
     StdIO,
     StdLib,
     SysMMan,
+    SysResource,
     SysStat,
+    SysUtsName,
     UniStd,
     String
   ];

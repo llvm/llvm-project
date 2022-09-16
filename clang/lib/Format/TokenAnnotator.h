@@ -40,7 +40,7 @@ public:
       : First(Line.Tokens.front().Tok), Level(Line.Level),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
-        InPPDirective(Line.InPPDirective),
+        InPPDirective(Line.InPPDirective), InMacroBody(Line.InMacroBody),
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
@@ -130,6 +130,7 @@ public:
   size_t MatchingOpeningBlockLineIndex;
   size_t MatchingClosingBlockLineIndex;
   bool InPPDirective;
+  bool InMacroBody;
   bool MustBeDeclaration;
   bool MightBeFunctionDecl;
   bool IsMultiVariableDeclStmt;

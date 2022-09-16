@@ -364,126 +364,6 @@ struct TestVectorUnrollingPatterns
       llvm::cl::init(false)};
 };
 
-struct TestVectorDistributePatterns
-    : public PassWrapper<TestVectorDistributePatterns,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDistributePatterns)
-
-  StringRef getArgument() const final {
-    return "test-vector-distribute-patterns";
-  }
-  StringRef getDescription() const final {
-    return "Test lowering patterns to distribute vector ops in the vector "
-           "dialect";
-  }
-  TestVectorDistributePatterns() = default;
-  TestVectorDistributePatterns(const TestVectorDistributePatterns &pass)
-      : PassWrapper(pass) {}
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<VectorDialect>();
-    registry.insert<AffineDialect>();
-  }
-  ListOption<int32_t> multiplicity{
-      *this, "distribution-multiplicity",
-      llvm::cl::desc("Set the multiplicity used for distributing vector")};
-
-  void runOnOperation() override {
-    MLIRContext *ctx = &getContext();
-    RewritePatternSet patterns(ctx);
-    func::FuncOp func = getOperation();
-    func.walk([&](arith::AddFOp op) {
-      OpBuilder builder(op);
-      if (auto vecType = op.getType().dyn_cast<VectorType>()) {
-        SmallVector<int64_t, 2> mul;
-        SmallVector<AffineExpr, 2> perm;
-        SmallVector<Value, 2> ids;
-        unsigned count = 0;
-        // Remove the multiplicity of 1 and calculate the affine map based on
-        // the multiplicity.
-        SmallVector<int32_t, 4> m(multiplicity.begin(), multiplicity.end());
-        for (unsigned i = 0, e = vecType.getRank(); i < e; i++) {
-          if (i < m.size() && m[i] != 1 && vecType.getDimSize(i) % m[i] == 0) {
-            mul.push_back(m[i]);
-            ids.push_back(func.getArgument(count++));
-            perm.push_back(getAffineDimExpr(i, ctx));
-          }
-        }
-        auto map = AffineMap::get(op.getType().cast<VectorType>().getRank(), 0,
-                                  perm, ctx);
-        Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
-            builder, op.getOperation(), ids, mul, map);
-        if (ops) {
-          SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
-          op.getResult().replaceAllUsesExcept(ops->insert.getResult(),
-                                              extractOp);
-        }
-      }
-    });
-    populatePropagateVectorDistributionPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-  }
-};
-
-struct TestVectorToLoopPatterns
-    : public PassWrapper<TestVectorToLoopPatterns,
-                         OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorToLoopPatterns)
-
-  StringRef getArgument() const final { return "test-vector-to-forloop"; }
-  StringRef getDescription() const final {
-    return "Test lowering patterns to break up a vector op into a for loop";
-  }
-  TestVectorToLoopPatterns() = default;
-  TestVectorToLoopPatterns(const TestVectorToLoopPatterns &pass)
-      : PassWrapper(pass) {}
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<VectorDialect>();
-    registry.insert<AffineDialect>();
-  }
-  Option<int32_t> multiplicity{
-      *this, "distribution-multiplicity",
-      llvm::cl::desc("Set the multiplicity used for distributing vector"),
-      llvm::cl::init(32)};
-  void runOnOperation() override {
-    MLIRContext *ctx = &getContext();
-    RewritePatternSet patterns(ctx);
-    func::FuncOp func = getOperation();
-    func.walk([&](arith::AddFOp op) {
-      // Check that the operation type can be broken down into a loop.
-      VectorType type = op.getType().dyn_cast<VectorType>();
-      if (!type || type.getRank() != 1 ||
-          type.getNumElements() % multiplicity != 0)
-        return mlir::WalkResult::advance();
-      auto filterAlloc = [](Operation *op) {
-        return !isa<arith::ConstantOp, memref::AllocOp, func::CallOp>(op);
-      };
-      auto dependentOps = getSlice(op, filterAlloc);
-      // Create a loop and move instructions from the Op slice into the loop.
-      OpBuilder builder(op);
-      auto zero = builder.create<arith::ConstantIndexOp>(op.getLoc(), 0);
-      auto one = builder.create<arith::ConstantIndexOp>(op.getLoc(), 1);
-      auto numIter =
-          builder.create<arith::ConstantIndexOp>(op.getLoc(), multiplicity);
-      auto forOp = builder.create<scf::ForOp>(op.getLoc(), zero, numIter, one);
-      for (Operation *it : dependentOps) {
-        it->moveBefore(forOp.getBody()->getTerminator());
-      }
-      auto map = AffineMap::getMultiDimIdentityMap(1, ctx);
-      // break up the original op and let the patterns propagate.
-      Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
-          builder, op.getOperation(), {forOp.getInductionVar()}, {multiplicity},
-          map);
-      if (ops) {
-        SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
-        op.getResult().replaceAllUsesExcept(ops->insert.getResult(), extractOp);
-      }
-      return mlir::WalkResult::interrupt();
-    });
-    populatePropagateVectorDistributionPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-  }
-};
-
 struct TestVectorTransferUnrollingPatterns
     : public PassWrapper<TestVectorTransferUnrollingPatterns,
                          OperationPass<func::FuncOp>> {
@@ -917,10 +797,6 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorTransferUnrollingPatterns>();
 
   PassRegistration<TestVectorTransferFullPartialSplitPatterns>();
-
-  PassRegistration<TestVectorDistributePatterns>();
-
-  PassRegistration<TestVectorToLoopPatterns>();
 
   PassRegistration<TestVectorTransferOpt>();
 

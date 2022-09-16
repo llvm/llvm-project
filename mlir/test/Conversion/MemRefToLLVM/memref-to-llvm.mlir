@@ -609,7 +609,7 @@ func.func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
 //       CHECK:   llvm.extractvalue {{.*}}[3, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:    llvm.insertvalue {{.*}}[3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 func.func @transpose(%arg0: memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>>) {
-  %0 = memref.transpose %arg0 (i, j, k) -> (k, i, j) : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d0 * s2 + d1)>>
+  %0 = memref.transpose %arg0 (i, j, k) -> (k, i, j) : memref<?x?x?xf32, strided<[?, ?, 1], offset: ?>> to memref<?x?x?xf32, strided<[1, ?, ?], offset: ?>>
   return
 }
 
@@ -725,12 +725,12 @@ func.func @collapse_shape_static(%arg0: memref<1x3x4x1x5xf32>) -> memref<3x4x5xf
 // -----
 
 func.func @collapse_shape_dynamic_with_non_identity_layout(
-        %arg0 : memref<4x?x?xf32, affine_map<(d0, d1, d2)[s0, s1] -> (d0 * s1 + s0 + d1 * 4 + d2)>>) ->
-        memref<4x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>> {
+        %arg0 : memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>>) ->
+        memref<4x?xf32, strided<[?, ?], offset: ?>> {
   %0 = memref.collapse_shape %arg0 [[0], [1, 2]]:
-    memref<4x?x?xf32, affine_map<(d0, d1, d2)[s0, s1] -> (d0 * s1 + s0 + d1 * 4 + d2)>> into
-    memref<4x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>>
-  return %0 : memref<4x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>>
+    memref<4x?x?xf32, strided<[?, 4, 1], offset: ?>> into
+    memref<4x?xf32, strided<[?, ?], offset: ?>>
+  return %0 : memref<4x?xf32, strided<[?, ?], offset: ?>>
 }
 // CHECK-LABEL:   func @collapse_shape_dynamic_with_non_identity_layout(
 //       CHECK:      llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -898,12 +898,12 @@ func.func @expand_shape_dynamic(%arg0 : memref<1x?xf32>) -> memref<1x2x?xf32> {
 // -----
 
 func.func @expand_shape_dynamic_with_non_identity_layout(
-            %arg0 : memref<1x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>>) ->
-            memref<1x2x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>> {
+            %arg0 : memref<1x?xf32, strided<[?, ?], offset: ?>>) ->
+            memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>> {
   %0 = memref.expand_shape %arg0 [[0], [1, 2]]:
-    memref<1x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>> into
-    memref<1x2x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>>
-  return %0 : memref<1x2x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>>
+    memref<1x?xf32, strided<[?, ?], offset: ?>> into
+    memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>>
+  return %0 : memref<1x2x?xf32, strided<[?, ?, ?], offset: ?>>
 }
 // CHECK-LABEL:   func @expand_shape_dynamic_with_non_identity_layout(
 // CHECK:           llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
@@ -982,10 +982,10 @@ func.func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fv
 // -----
 
 // CHECK-LABEL: func @collapse_static_shape_with_non_identity_layout
-func.func @collapse_static_shape_with_non_identity_layout(%arg: memref<1x1x8x8xf32, affine_map<(d0, d1, d2, d3)[s0] -> (d0 * 64 + s0 + d1 * 64 + d2 * 8 + d3)>>) -> memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>> {
+func.func @collapse_static_shape_with_non_identity_layout(%arg: memref<1x1x8x8xf32, strided<[64, 64, 8, 1], offset: ?>>) -> memref<64xf32, strided<[1], offset: ?>> {
 // CHECK-NOT: memref.collapse_shape
-  %1 = memref.collapse_shape %arg [[0, 1, 2, 3]] : memref<1x1x8x8xf32, affine_map<(d0, d1, d2, d3)[s0] -> (d0 * 64 + s0 + d1 * 64 + d2 * 8 + d3)>> into memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
-  return %1 : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
+  %1 = memref.collapse_shape %arg [[0, 1, 2, 3]] : memref<1x1x8x8xf32, strided<[64, 64, 8, 1], offset: ?>> into memref<64xf32, strided<[1], offset: ?>>
+  return %1 : memref<64xf32, strided<[1], offset: ?>>
 }
 
 // -----
@@ -1069,13 +1069,11 @@ func.func @memref_copy_contiguous(%in: memref<16x2xi32>, %offset: index) {
 // -----
 
 // CHECK-LABEL: func @memref_copy_0d_offset
-#map0 = affine_map<(d0) -> (d0 + 1)>
-#map1 = affine_map<() -> (1)>
 func.func @memref_copy_0d_offset(%in: memref<2xi32>) {
   %buf = memref.alloc() : memref<i32>
-  %sub = memref.subview %in[1] [1] [1] : memref<2xi32> to memref<1xi32, #map0>
-  %scalar = memref.collapse_shape %sub [] : memref<1xi32, #map0> into memref<i32, #map1>
-  memref.copy %scalar, %buf : memref<i32, #map1> to memref<i32>
+  %sub = memref.subview %in[1] [1] [1] : memref<2xi32> to memref<1xi32, strided<[1], offset: 1>>
+  %scalar = memref.collapse_shape %sub [] : memref<1xi32, strided<[1], offset: 1>> into memref<i32, strided<[], offset: 1>>
+  memref.copy %scalar, %buf : memref<i32, strided<[], offset: 1>> to memref<i32>
   // CHECK: llvm.intr.memcpy
   return
 }

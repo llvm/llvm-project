@@ -766,9 +766,22 @@ static LogicalResult extractStrides(AffineExpr e,
   llvm_unreachable("unexpected binary operation");
 }
 
-LogicalResult mlir::getStridesAndOffset(MemRefType t,
-                                        SmallVectorImpl<AffineExpr> &strides,
-                                        AffineExpr &offset) {
+/// A stride specification is a list of integer values that are either static
+/// or dynamic (encoded with ShapedType::kDynamicStrideOrOffset). Strides encode
+/// the distance in the number of elements between successive entries along a
+/// particular dimension.
+///
+/// For example, `memref<42x16xf32, (64 * d0 + d1)>` specifies a view into a
+/// non-contiguous memory region of `42` by `16` `f32` elements in which the
+/// distance between two consecutive elements along the outer dimension is `1`
+/// and the distance between two consecutive elements along the inner dimension
+/// is `64`.
+///
+/// The convention is that the strides for dimensions d0, .. dn appear in
+/// order to make indexing intuitive into the result.
+static LogicalResult getStridesAndOffset(MemRefType t,
+                                         SmallVectorImpl<AffineExpr> &strides,
+                                         AffineExpr &offset) {
   AffineMap m = t.getLayout().getAffineMap();
 
   if (m.getNumResults() != 1 && !m.isIdentity())
@@ -807,12 +820,12 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   for (auto &stride : strides)
     stride = simplifyAffineExpr(stride, numDims, numSymbols);
 
-  /// In practice, a strided memref must be internally non-aliasing. Test
-  /// against 0 as a proxy.
-  /// TODO: static cases can have more advanced checks.
-  /// TODO: dynamic cases would require a way to compare symbolic
-  /// expressions and would probably need an affine set context propagated
-  /// everywhere.
+  // In practice, a strided memref must be internally non-aliasing. Test
+  // against 0 as a proxy.
+  // TODO: static cases can have more advanced checks.
+  // TODO: dynamic cases would require a way to compare symbolic
+  // expressions and would probably need an affine set context propagated
+  // everywhere.
   if (llvm::any_of(strides, [](AffineExpr e) {
         return e == getAffineConstantExpr(0, e.getContext());
       })) {
@@ -827,6 +840,15 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
 LogicalResult mlir::getStridesAndOffset(MemRefType t,
                                         SmallVectorImpl<int64_t> &strides,
                                         int64_t &offset) {
+  // Happy path: the type uses the strided layout directly.
+  if (auto strided = t.getLayout().dyn_cast<StridedLayoutAttr>()) {
+    llvm::append_range(strides, strided.getStrides());
+    offset = strided.getOffset();
+    return success();
+  }
+
+  // Otherwise, defer to the affine fallback as layouts are supposed to be
+  // convertible to affine maps.
   AffineExpr offsetExpr;
   SmallVector<AffineExpr, 4> strideExprs;
   if (failed(::getStridesAndOffset(t, strideExprs, offsetExpr)))
@@ -970,15 +992,6 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
   return simplifyAffineExpr(expr, numDims, nSymbols);
 }
 
-/// Return a version of `t` with a layout that has all dynamic offset and
-/// strides. This is used to erase the static layout.
-MemRefType mlir::eraseStridedLayout(MemRefType t) {
-  auto val = ShapedType::kDynamicStrideOrOffset;
-  return MemRefType::Builder(t).setLayout(
-      AffineMapAttr::get(makeStridedLinearLayoutMap(
-          SmallVector<int64_t, 4>(t.getRank(), val), val, t.getContext())));
-}
-
 AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                                 MLIRContext *context) {
   SmallVector<AffineExpr, 4> exprs;
@@ -994,51 +1007,4 @@ bool mlir::isStrided(MemRefType t) {
   SmallVector<int64_t, 4> strides;
   auto res = getStridesAndOffset(t, strides, offset);
   return succeeded(res);
-}
-
-/// Return the layout map in strided linear layout AffineMap form.
-/// Return null if the layout is not compatible with a strided layout.
-AffineMap mlir::getStridedLinearLayoutMap(MemRefType t) {
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(t, strides, offset)))
-    return AffineMap();
-  return makeStridedLinearLayoutMap(strides, offset, t.getContext());
-}
-
-/// Return the AffineExpr representation of the offset, assuming `memRefType`
-/// is a strided memref.
-static AffineExpr getOffsetExpr(MemRefType memrefType) {
-  SmallVector<AffineExpr> strides;
-  AffineExpr offset;
-  if (failed(getStridesAndOffset(memrefType, strides, offset)))
-    assert(false && "expected strided memref");
-  return offset;
-}
-
-/// Helper to construct a contiguous MemRefType of `shape`, `elementType` and
-/// `offset` AffineExpr.
-static MemRefType makeContiguousRowMajorMemRefType(MLIRContext *context,
-                                                   ArrayRef<int64_t> shape,
-                                                   Type elementType,
-                                                   AffineExpr offset) {
-  AffineExpr canonical = makeCanonicalStridedLayoutExpr(shape, context);
-  AffineExpr contiguousRowMajor = canonical + offset;
-  AffineMap contiguousRowMajorMap =
-      AffineMap::inferFromExprList({contiguousRowMajor})[0];
-  return MemRefType::get(shape, elementType, contiguousRowMajorMap);
-}
-
-/// Helper determining if a memref is static-shape and contiguous-row-major
-/// layout, while still allowing for an arbitrary offset (any static or
-/// dynamic value).
-bool mlir::isStaticShapeAndContiguousRowMajor(MemRefType memrefType) {
-  if (!memrefType.hasStaticShape())
-    return false;
-  AffineExpr offset = getOffsetExpr(memrefType);
-  MemRefType contiguousRowMajorMemRefType = makeContiguousRowMajorMemRefType(
-      memrefType.getContext(), memrefType.getShape(),
-      memrefType.getElementType(), offset);
-  return canonicalizeStridedLayout(memrefType) ==
-         canonicalizeStridedLayout(contiguousRowMajorMemRefType);
 }

@@ -40,7 +40,13 @@
 // RUN: %t/testdmode/qqq-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --config i386-qqq -c -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-EXPLICIT
 //
 // CHECK-EXPLICIT: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
+
+//--- --no-default-config disables config search.
 //
+// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir=%t/testdmode --no-default-config -c -### %s 2>&1 | FileCheck %s -check-prefix NO-DEFAULT-CONFIG
+//
+// NO-DEFAULT-CONFIG-NOT: Configuration file:
+
 //--- Invocation qqq-clang-g++ tries to find config file qqq.cfg if qqq-clang-g++.cfg is not found.
 //
 // RUN: rm %t/testdmode/qqq-clang-g++.cfg
