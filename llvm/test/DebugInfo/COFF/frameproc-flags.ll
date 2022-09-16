@@ -65,7 +65,7 @@
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_alloca`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = VFRAME, param fp reg = EBP
-; CHECK:   flags = has alloca | secure checks | opt speed
+; CHECK:   flags = has alloca | secure checks | strict secure checks | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `call_setjmp`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
@@ -73,7 +73,7 @@
 ; CHECK-LABEL: S_GPROC32_ID [size = 56] `use_inlineasm`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
-; CHECK:   flags = has inline asm | opt speed
+; CHECK:   flags = has inline asm | safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 48] `cpp_eh`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
@@ -81,11 +81,11 @@
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_inline`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
-; CHECK:   flags = opt speed
+; CHECK:   flags = safe buffers | opt speed
 ; CHECK-LABEL: S_LPROC32_ID [size = 56] `is_marked_inline`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
-; CHECK:   flags = marked inline | opt speed
+; CHECK:   flags = marked inline | safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 44] `seh`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
@@ -93,15 +93,15 @@
 ; CHECK-LABEL: S_LPROC32_ID [size = 56] `?filt$0@0@seh@@`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = EBP, param fp reg = EBP
-; CHECK:   flags = opt speed
+; CHECK:   flags = safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `use_naked`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = NONE, param fp reg = NONE
-; CHECK:   flags = has inline asm | naked | opt speed
+; CHECK:   flags = has inline asm | naked | safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `stack_guard`
 ; CHECK: S_FRAMEPROC [size = 32]
 ; CHECK:   local fp reg = VFRAME, param fp reg = EBP
-; CHECK:   flags = secure checks | opt speed
+; CHECK:   flags = secure checks | strict secure checks | opt speed
 
 ; ModuleID = 'frameproc-flags.cpp'
 source_filename = "frameproc-flags.cpp"

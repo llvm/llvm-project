@@ -201,30 +201,32 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
   if (TT.isOSBinFormatCOFF()) {
-    // Emit an absolute @feat.00 symbol.  This appears to be some kind of
-    // compiler features bitfield read by link.exe.
+    // Emit an absolute @feat.00 symbol
     MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
     OutStreamer->beginCOFFSymbolDef(S);
     OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
     OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
     OutStreamer->endCOFFSymbolDef();
-    int64_t Feat00Flags = 0;
+    int64_t Feat00Value = 0;
 
     if (M.getModuleFlag("cfguard")) {
-      Feat00Flags |= 0x800; // Object is CFG-aware.
+      // Object is CFG-aware.
+      Feat00Value |= COFF::Feat00Flags::GuardCF;
     }
 
     if (M.getModuleFlag("ehcontguard")) {
-      Feat00Flags |= 0x4000; // Object also has EHCont.
+      // Object also has EHCont.
+      Feat00Value |= COFF::Feat00Flags::GuardEHCont;
     }
 
     if (M.getModuleFlag("ms-kernel")) {
-      Feat00Flags |= 0x40000000; // Object is compiled with /kernel.
+      // Object is compiled with /kernel.
+      Feat00Value |= COFF::Feat00Flags::Kernel;
     }
 
     OutStreamer->emitSymbolAttribute(S, MCSA_Global);
     OutStreamer->emitAssignment(
-        S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
+        S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
   }
 
   if (!TT.isOSBinFormatELF())
