@@ -212,7 +212,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     // Now process as many calls as we have within this caller in the sequence.
     // We bail out as soon as the caller has to change so we can
     // prepare the context of that new caller.
-    bool DidInline = false;
     auto P = Calls->pop();
     CallBase *CB = P.first;
     const int InlineHistoryID = P.second;
@@ -245,7 +244,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
       continue;
     }
 
-    DidInline = true;
     ++NumInlined;
 
     LLVM_DEBUG(dbgs() << "    Size after inlining: " << F.getInstructionCount()
@@ -305,8 +303,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     else
       Advice->recordInlining();
 
-    if (!DidInline)
-      continue;
     Changed = true;
   }
 
