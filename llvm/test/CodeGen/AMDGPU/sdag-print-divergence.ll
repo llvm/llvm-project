@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -O0 -verify-machineinstrs < %s -debug-only=isel -o /dev/null |& FileCheck --check-prefixes=GCN,GCN-DEFAULT %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -O0 -verify-machineinstrs < %s -debug-only=isel -dag-dump-verbose -o /dev/null |& FileCheck --check-prefixes=GCN,GCN-VERBOSE %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -O0 -verify-machineinstrs < %s -debug-only=isel 2>&1 | FileCheck --check-prefixes=GCN,GCN-DEFAULT %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -O0 -verify-machineinstrs < %s -debug-only=isel -dag-dump-verbose 2>&1 | FileCheck --check-prefixes=GCN,GCN-VERBOSE %s
 
 ; REQUIRES: asserts
 
