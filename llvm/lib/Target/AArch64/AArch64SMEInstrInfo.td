@@ -147,6 +147,21 @@ def : InstAlias<"smstop sm",  (MSRpstatesvcrImm1 0b001, 0b0)>;
 def : InstAlias<"smstop za",  (MSRpstatesvcrImm1 0b010, 0b0)>;
 
 
+// Pseudo to match to smstart/smstop. This expands:
+//
+//  pseudonode (pstate_za|pstate_sm), before_call, expected_value
+//
+// Into:
+//
+//   if (before_call != expected_value)
+//     node (pstate_za|pstate_sm)
+//
+// where node can be either 'smstart' or 'smstop'.
+def MSRpstatePseudo :
+  Pseudo<(outs),
+           (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
+    Sched<[WriteSys]>;
+
 // Scenario A:
 //
 //   %pstate.before.call = 1
@@ -174,6 +189,12 @@ def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 0), (i64 1)),  // before 
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
 def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 0), (i64 1)),   // after call
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
+
+// The generic case which gets expanded to a pseudo node.
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b1, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b0, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
 
 // Read and write TPIDR2_EL0
 def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
