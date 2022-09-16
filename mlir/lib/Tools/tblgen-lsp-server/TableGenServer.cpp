@@ -202,16 +202,15 @@ void TableGenIndex::initialize(const llvm::RecordKeeper &records) {
     // Add references to the definition.
     for (SMLoc loc : def.getLoc().drop_front())
       insertRef(sym, lsp::convertTokenLocToRange(loc));
-
-    // Add references to any super classes.
-    for (auto &it : def.getSuperClasses())
-      insertRef(getOrInsertDef(it.first),
-                lsp::convertTokenLocToRange(it.second.Start));
+    for (SMRange loc : def.getReferenceLocs())
+      insertRef(sym, loc);
 
     // Add definitions for any values.
     for (const llvm::RecordVal &value : def.getValues()) {
       auto *sym = getOrInsertDef(&value);
       insertRef(sym, sym->defLoc, /*isDef=*/true);
+      for (SMRange refLoc : value.getReferenceLocs())
+        insertRef(sym, refLoc);
     }
   }
 }
