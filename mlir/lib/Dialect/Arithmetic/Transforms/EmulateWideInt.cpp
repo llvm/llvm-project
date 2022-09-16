@@ -53,6 +53,35 @@ static Type reduceInnermostDim(VectorType type) {
   return VectorType::get(newShape, type.getElementType());
 }
 
+// Returns a constant of integer of vector type filled with (repeated) `value`.
+static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
+                                         Location loc, Type type,
+                                         const APInt &value) {
+  Attribute attr;
+  if (auto intTy = type.dyn_cast<IntegerType>()) {
+    attr = rewriter.getIntegerAttr(type, value);
+  } else {
+    auto vecTy = type.cast<VectorType>();
+    attr = SplatElementsAttr::get(vecTy, value);
+  }
+
+  return rewriter.create<arith::ConstantOp>(loc, attr);
+}
+
+// Returns a constant of integer of vector type filled with (repeated) `value`.
+static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
+                                         Location loc, Type type,
+                                         int64_t value) {
+  unsigned elementBitWidth = 0;
+  if (auto intTy = type.dyn_cast<IntegerType>())
+    elementBitWidth = intTy.getWidth();
+  else
+    elementBitWidth = type.cast<VectorType>().getElementTypeBitWidth();
+
+  return createScalarOrSplatConstant(rewriter, loc, type,
+                                     APInt(elementBitWidth, value));
+}
+
 // Extracts the `input` vector slice with elements at the last dimension offset
 // by `lastOffset`. Returns a value of vector type with the last dimension
 // reduced to x1 or fully scalarized, e.g.:
@@ -154,8 +183,7 @@ static Value constructResultVector(ConversionPatternRewriter &rewriter,
   assert(resultShape.back() == static_cast<int64_t>(resultComponents.size()) &&
          "Wrong number of result components");
 
-  Value resultVec =
-      rewriter.create<arith::ConstantOp>(loc, rewriter.getZeroAttr(resultType));
+  Value resultVec = createScalarOrSplatConstant(rewriter, loc, resultType, 0);
   for (auto [i, component] : llvm::enumerate(resultComponents))
     resultVec = insertLastDimSlice(rewriter, loc, component, resultVec, i);
 
@@ -232,9 +260,6 @@ struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
   matchAndRewrite(arith::AddIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-
-    Value lhs = adaptor.getLhs();
-    Value rhs = adaptor.getRhs();
     auto newTy = getTypeConverter()
                      ->convertType(op.getType())
                      .dyn_cast_or_null<VectorType>();
@@ -243,8 +268,10 @@ struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
 
     Type newElemTy = reduceInnermostDim(newTy);
 
-    auto [lhsElem0, lhsElem1] = extractLastDimHalves(rewriter, loc, lhs);
-    auto [rhsElem0, rhsElem1] = extractLastDimHalves(rewriter, loc, rhs);
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    auto [rhsElem0, rhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getRhs());
 
     auto lowSum = rewriter.create<arith::AddUICarryOp>(loc, lhsElem0, rhsElem0);
     Value carryVal =
@@ -255,6 +282,100 @@ struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
 
     Value resultVec =
         constructResultVector(rewriter, loc, newTy, {lowSum.getSum(), high});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertMulI
+//===----------------------------------------------------------------------===//
+
+struct ConvertMulI final : OpConversionPattern<arith::MulIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::MulIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto newTy = getTypeConverter()
+                     ->convertType(op.getType())
+                     .dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(loc, "expected scalar or vector type");
+
+    Type newElemTy = reduceInnermostDim(newTy);
+    unsigned newBitWidth = newTy.getElementTypeBitWidth();
+    unsigned digitBitWidth = newBitWidth / 2;
+
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    auto [rhsElem0, rhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getRhs());
+
+    // Emulate multiplication by splitting each input element of type i2N into 4
+    // digits of type iN and bit width i(N/2). This is so that the intermediate
+    // multiplications and additions do not overflow. We extract these i(N/2)
+    // digits from iN vector elements by masking (low digit) and shifting right
+    // (high digit).
+    //
+    // The multiplication algorithm used is the standard (long) multiplication.
+    // Multiplying two i2N integers produces (at most) a i4N result, but because
+    // the calculation of top i2N is not necessary, we omit it.
+    // In total, this implementations performs 10 intermediate multiplications
+    // and 16 additions. The number of multiplications could be decreased by
+    // switching to a more efficient algorithm like Karatsuba. This would,
+    // however, require being able to perform (intermediate) wide additions and
+    // subtractions, so it is not clear that such implementation would be more
+    // efficient.
+
+    APInt lowMaskVal(newBitWidth, 1);
+    lowMaskVal = lowMaskVal.shl(digitBitWidth) - 1;
+    Value lowMask =
+        createScalarOrSplatConstant(rewriter, loc, newElemTy, lowMaskVal);
+    auto getLowDigit = [lowMask, newElemTy, loc, &rewriter](Value v) {
+      return rewriter.create<arith::AndIOp>(loc, newElemTy, v, lowMask);
+    };
+
+    Value shiftVal =
+        createScalarOrSplatConstant(rewriter, loc, newElemTy, digitBitWidth);
+    auto getHighDigit = [shiftVal, loc, &rewriter](Value v) {
+      return rewriter.create<arith::ShRUIOp>(loc, v, shiftVal);
+    };
+
+    Value zeroDigit = createScalarOrSplatConstant(rewriter, loc, newElemTy, 0);
+    std::array<Value, 4> resultDigits = {zeroDigit, zeroDigit, zeroDigit,
+                                         zeroDigit};
+    std::array<Value, 4> lhsDigits = {
+        getLowDigit(lhsElem0), getHighDigit(lhsElem0), getLowDigit(lhsElem1),
+        getHighDigit(lhsElem1)};
+    std::array<Value, 4> rhsDigits = {
+        getLowDigit(rhsElem0), getHighDigit(rhsElem0), getLowDigit(rhsElem1),
+        getHighDigit(rhsElem1)};
+
+    for (unsigned i = 0, e = lhsDigits.size(); i != e; ++i) {
+      for (unsigned j = 0; i + j != e; ++j) {
+        Value mul =
+            rewriter.create<arith::MulIOp>(loc, lhsDigits[i], rhsDigits[j]);
+        Value current =
+            rewriter.createOrFold<arith::AddIOp>(loc, resultDigits[i + j], mul);
+        resultDigits[i + j] = getLowDigit(current);
+        if (i + j + 1 != e) {
+          Value carry = rewriter.createOrFold<arith::AddIOp>(
+              loc, resultDigits[i + j + 1], getHighDigit(current));
+          resultDigits[i + j + 1] = carry;
+        }
+      }
+    }
+
+    auto combineDigits = [shiftVal, loc, &rewriter](Value low, Value high) {
+      Value highBits = rewriter.create<arith::ShLIOp>(loc, high, shiftVal);
+      return rewriter.create<arith::OrIOp>(loc, low, highBits);
+    };
+    Value resultElem0 = combineDigits(resultDigits[0], resultDigits[1]);
+    Value resultElem1 = combineDigits(resultDigits[2], resultDigits[3]);
+    Value resultVec =
+        constructResultVector(rewriter, loc, newTy, {resultElem0, resultElem1});
     rewriter.replaceOp(op, resultVec);
     return success();
   }
@@ -285,8 +406,8 @@ struct ConvertExtSI final : OpConversionPattern<arith::ExtSIOp> {
     Value newOperand = appendX1Dim(rewriter, loc, adaptor.getIn());
     Value extended = rewriter.createOrFold<arith::ExtSIOp>(
         loc, newResultComponentTy, newOperand);
-    Value operandZeroCst = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getZeroAttr(newResultComponentTy));
+    Value operandZeroCst =
+        createScalarOrSplatConstant(rewriter, loc, newResultComponentTy, 0);
     Value signBit = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::slt, extended, operandZeroCst);
     Value signValue =
@@ -323,8 +444,7 @@ struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
     Value newOperand = appendX1Dim(rewriter, loc, adaptor.getIn());
     Value extended = rewriter.createOrFold<arith::ExtUIOp>(
         loc, newResultComponentTy, newOperand);
-    Value zeroCst = rewriter.create<arith::ConstantOp>(
-        op->getLoc(), rewriter.getZeroAttr(newTy));
+    Value zeroCst = createScalarOrSplatConstant(rewriter, loc, newTy, 0);
     Value newRes = insertLastDimSlice(rewriter, loc, extended, zeroCst, 0);
     rewriter.replaceOp(op, newRes);
     return success();
@@ -384,7 +504,7 @@ struct EmulateWideIntPass final
   using ArithmeticEmulateWideIntBase::ArithmeticEmulateWideIntBase;
 
   void runOnOperation() override {
-    if (!llvm::isPowerOf2_32(widestIntSupported)) {
+    if (!llvm::isPowerOf2_32(widestIntSupported) || widestIntSupported < 2) {
       signalPassFailure();
       return;
     }
@@ -421,7 +541,8 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
     unsigned widestIntSupportedByTarget)
     : maxIntWidth(widestIntSupportedByTarget) {
   assert(llvm::isPowerOf2_32(widestIntSupportedByTarget) &&
-         "Only power-of-two integers are supported");
+         "Only power-of-two integers with are supported");
+  assert(widestIntSupportedByTarget >= 2 && "Integer type too narrow");
 
   // Scalar case.
   addConversion([this](IntegerType ty) -> Optional<Type> {
@@ -486,7 +607,7 @@ void arith::populateWideIntEmulationPatterns(
       // Misc ops.
       ConvertConstant, ConvertVectorPrint,
       // Binary ops.
-      ConvertAddI,
+      ConvertAddI, ConvertMulI,
       // Extension and truncation ops.
       ConvertExtSI, ConvertExtUI, ConvertTruncI>(typeConverter,
                                                  patterns.getContext());
