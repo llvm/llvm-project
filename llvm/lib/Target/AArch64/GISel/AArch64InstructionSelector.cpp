@@ -2341,10 +2341,10 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
   }
   case TargetOpcode::G_FENCE: {
     if (I.getOperand(1).getImm() == 0)
-      BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::CompilerBarrier))
+      BuildMI(MBB, I, MIMetadata(I), TII.get(AArch64::CompilerBarrier))
           .addImm(I.getOperand(0).getImm());
     else
-      BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::DMB))
+      BuildMI(MBB, I, MIMetadata(I), TII.get(AArch64::DMB))
           .addImm(I.getOperand(0).getImm() == 4 ? 0x9 : 0xb);
     I.eraseFromParent();
     return true;

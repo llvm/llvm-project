@@ -126,16 +126,16 @@ static FunctionModRefBehavior
 checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
                           const SCCNodeSet &SCCNodes) {
   FunctionModRefBehavior MRB = AAR.getModRefBehavior(&F);
-  if (MRB == FMRB_DoesNotAccessMemory)
+  if (MRB.doesNotAccessMemory())
     // Already perfect!
     return MRB;
 
   if (!ThisBody)
     return MRB;
 
+  // TODO: We should directly populate a FunctionModRefBehavior here.
   // Scan the function body for instructions that may read or write memory.
-  bool ReadsMemory = false;
-  bool WritesMemory = false;
+  ModRefInfo MR = ModRefInfo::NoModRef;
   // Track if the function accesses memory not based on pointer arguments or
   // allocas.
   bool AccessesNonArgsOrAlloca = false;
@@ -156,7 +156,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
           SCCNodes.count(Call->getCalledFunction()))
         continue;
       FunctionModRefBehavior MRB = AAR.getModRefBehavior(Call);
-      ModRefInfo MRI = createModRefInfo(MRB);
+      ModRefInfo MRI = MRB.getModRef();
 
       // If the call doesn't access memory, we're done.
       if (isNoModRef(MRI))
@@ -169,13 +169,9 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (isa<PseudoProbeInst>(I))
         continue;
 
-      if (!AliasAnalysis::onlyAccessesArgPointees(MRB)) {
-        // The call could access any memory. If that includes writes, note it.
-        if (isModSet(MRI))
-          WritesMemory = true;
-        // If it reads, note it.
-        if (isRefSet(MRI))
-          ReadsMemory = true;
+      if (!MRB.onlyAccessesArgPointees()) {
+        // The call could access any memory.
+        MR |= MRI;
         AccessesNonArgsOrAlloca = true;
         continue;
       }
@@ -195,13 +191,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
           continue;
 
         AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
-
-        if (isModSet(MRI))
-          // Writes non-local memory.
-          WritesMemory = true;
-        if (isRefSet(MRI))
-          // Ok, it reads non-local memory.
-          ReadsMemory = true;
+        MR |= MRI;
       }
       continue;
     } else if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
@@ -234,23 +224,17 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
     // read or write memory.
     //
     // Writes memory, remember that.
-    WritesMemory |= I.mayWriteToMemory();
+    if (I.mayWriteToMemory())
+      MR |= ModRefInfo::Mod;
 
     // If this instruction may read memory, remember that.
-    ReadsMemory |= I.mayReadFromMemory();
+    if (I.mayReadFromMemory())
+      MR |= ModRefInfo::Ref;
   }
 
-  if (!WritesMemory && !ReadsMemory)
-    return FMRB_DoesNotAccessMemory;
-
-  FunctionModRefBehavior Result = FunctionModRefBehavior(FMRL_Anywhere);
   if (!AccessesNonArgsOrAlloca)
-    Result = FunctionModRefBehavior(FMRL_ArgumentPointees);
-  if (WritesMemory)
-    Result = FunctionModRefBehavior(Result | static_cast<int>(ModRefInfo::Mod));
-  if (ReadsMemory)
-    Result = FunctionModRefBehavior(Result | static_cast<int>(ModRefInfo::Ref));
-  return Result;
+    return FunctionModRefBehavior::argMemOnly(MR);
+  return FunctionModRefBehavior(MR);
 }
 
 FunctionModRefBehavior llvm::computeFunctionBodyMemoryAccess(Function &F,
@@ -276,12 +260,12 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
     // comment on GlobalValue::isDefinitionExact for more details.
     FunctionModRefBehavior FMRB =
         checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
-    if (FMRB == FMRB_DoesNotAccessMemory)
+    if (FMRB.doesNotAccessMemory())
       continue;
-    ModRefInfo MR = createModRefInfo(FMRB);
+    ModRefInfo MR = FMRB.getModRef();
     ReadsMemory |= isRefSet(MR);
     WritesMemory |= isModSet(MR);
-    ArgMemOnly &= AliasAnalysis::onlyAccessesArgPointees(FMRB);
+    ArgMemOnly &= FMRB.onlyAccessesArgPointees();
     // Reached neither readnone, readonly, writeonly nor argmemonly can be
     // inferred. Exit.
     if (ReadsMemory && WritesMemory && !ArgMemOnly)

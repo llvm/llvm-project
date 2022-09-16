@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -100,6 +101,10 @@ static cl::opt<bool>
     PrintCrashIR("print-on-crash",
                  cl::desc("Print the last form of the IR before crash"),
                  cl::init(false), cl::Hidden);
+
+static cl::opt<std::string> OptBisectPrintIRPath(
+    "opt-bisect-print-ir-path",
+    cl::desc("Print IR to path when opt-bisect-limit is reached"), cl::Hidden);
 
 namespace {
 
@@ -765,9 +770,23 @@ void OptBisectInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
   if (!getOptBisector().isEnabled())
     return;
-  PIC.registerShouldRunOptionalPassCallback([](StringRef PassID, Any IR) {
-    return isIgnored(PassID) ||
-           getOptBisector().checkPass(PassID, getIRName(IR));
+  PIC.registerShouldRunOptionalPassCallback([this](StringRef PassID, Any IR) {
+    if (isIgnored(PassID))
+      return true;
+    bool ShouldRun = getOptBisector().checkPass(PassID, getIRName(IR));
+    if (!ShouldRun && !this->HasWrittenIR && !OptBisectPrintIRPath.empty()) {
+      // FIXME: print IR if limit is higher than number of opt-bisect
+      // invocations
+      this->HasWrittenIR = true;
+      const Module *M = unwrapModule(IR, /*Force=*/true);
+      assert(M && "expected Module");
+      std::error_code EC;
+      raw_fd_ostream OS(OptBisectPrintIRPath, EC);
+      if (EC)
+        report_fatal_error(errorCodeToError(EC));
+      M->print(OS, nullptr);
+    }
+    return ShouldRun;
   });
 }
 

@@ -959,7 +959,8 @@ def run_suite():
     # Note that it's not dotest's job to clean this directory.
     lldbutil.mkdir_p(configuration.test_build_dir)
 
-    print("Skipping the following test categories: {}".format(configuration.skip_categories))
+    skipped_categories_list = ", ".join(configuration.skip_categories)
+    print("Skipping the following test categories: {}".format(skipped_categories_list))
 
     for testdir in configuration.testdirs:
         for (dirpath, dirnames, filenames) in os.walk(testdir):

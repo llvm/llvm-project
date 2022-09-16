@@ -1876,7 +1876,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
 
 // We need to handle this here because tablegen doesn't support matching
 // instructions with multiple outputs.
-bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(MachineInstr &MI) const {
+bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
+    MachineInstr &MI) const {
   Register Dst0 = MI.getOperand(0).getReg();
   Register Dst1 = MI.getOperand(1).getReg();
 
@@ -1889,12 +1890,12 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(MachineInstr &MI) cons
   unsigned Offset = MI.getOperand(6).getImm();
 
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::DS_BVH_STACK_RTN_B32), Dst0)
-    .addDef(Dst1)
-    .addUse(Addr)
-    .addUse(Data0)
-    .addUse(Data1)
-    .addImm(Offset)
-    .cloneMemRefs(MI);
+                 .addDef(Dst1)
+                 .addUse(Addr)
+                 .addUse(Data0)
+                 .addUse(Data1)
+                 .addImm(Offset)
+                 .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);

@@ -530,8 +530,8 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   return RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
 }
 
-int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
-  return RTL->data_delete(RTLDeviceID, TgtPtrBegin);
+int32_t DeviceTy::deleteData(void *TgtPtrBegin, int32_t Kind) {
+  return RTL->data_delete(RTLDeviceID, TgtPtrBegin, Kind);
 }
 
 // Submit data to device

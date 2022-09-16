@@ -43,6 +43,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -84,9 +85,11 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <iomanip>
 #include <iterator>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -120,6 +123,12 @@ static cl::opt<bool> EnableSWPOptSize("enable-pipeliner-opt-size",
 static cl::opt<int> SwpMaxMii("pipeliner-max-mii",
                               cl::desc("Size limit for the MII."),
                               cl::Hidden, cl::init(27));
+
+/// A command line argument to force pipeliner to use specified initial
+/// interval.
+static cl::opt<int> SwpForceII("pipeliner-force-ii",
+                               cl::desc("Force pipeliner to use specified II."),
+                               cl::Hidden, cl::init(-1));
 
 /// A command line argument to limit the number of stages in the pipeline.
 static cl::opt<int>
@@ -171,6 +180,13 @@ namespace llvm {
 cl::opt<bool> SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
                                  cl::init(true),
                                  cl::desc("Enable CopyToPhi DAG Mutation"));
+
+/// A command line argument to force pipeliner to use specified issue
+/// width.
+cl::opt<int> SwpForceIssueWidth(
+    "pipeliner-force-issue-width",
+    cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
+    cl::init(-1));
 
 } // end namespace llvm
 
@@ -454,14 +470,18 @@ void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
-  if (II_setByPragma > 0)
+  if (SwpForceII > 0)
+    MII = SwpForceII;
+  else if (II_setByPragma > 0)
     MII = II_setByPragma;
   else
     MII = std::max(ResMII, RecMII);
 }
 
 void SwingSchedulerDAG::setMAX_II() {
-  if (II_setByPragma > 0)
+  if (SwpForceII > 0)
+    MAX_II = SwpForceII;
+  else if (II_setByPragma > 0)
     MAX_II = II_setByPragma;
   else
     MAX_II = MII + 10;
@@ -560,7 +580,7 @@ void SwingSchedulerDAG::schedule() {
   // check for node order issues
   checkValidNodeOrder(Circuits);
 
-  SMSchedule Schedule(Pass.MF);
+  SMSchedule Schedule(Pass.MF, this);
   Scheduled = schedulePipeline(Schedule);
 
   if (!Scheduled){
@@ -1093,72 +1113,9 @@ struct FuncUnitSorter {
 /// to add it to each existing DFA, until a legal space is found. If the
 /// instruction cannot be reserved in an existing DFA, we create a new one.
 unsigned SwingSchedulerDAG::calculateResMII() {
-
   LLVM_DEBUG(dbgs() << "calculateResMII:\n");
-  SmallVector<ResourceManager*, 8> Resources;
-  MachineBasicBlock *MBB = Loop.getHeader();
-  Resources.push_back(new ResourceManager(&MF.getSubtarget()));
-
-  // Sort the instructions by the number of available choices for scheduling,
-  // least to most. Use the number of critical resources as the tie breaker.
-  FuncUnitSorter FUS = FuncUnitSorter(MF.getSubtarget());
-  for (MachineInstr &MI :
-       llvm::make_range(MBB->getFirstNonPHI(), MBB->getFirstTerminator()))
-    FUS.calcCriticalResources(MI);
-  PriorityQueue<MachineInstr *, std::vector<MachineInstr *>, FuncUnitSorter>
-      FuncUnitOrder(FUS);
-
-  for (MachineInstr &MI :
-       llvm::make_range(MBB->getFirstNonPHI(), MBB->getFirstTerminator()))
-    FuncUnitOrder.push(&MI);
-
-  while (!FuncUnitOrder.empty()) {
-    MachineInstr *MI = FuncUnitOrder.top();
-    FuncUnitOrder.pop();
-    if (TII->isZeroCost(MI->getOpcode()))
-      continue;
-    // Attempt to reserve the instruction in an existing DFA. At least one
-    // DFA is needed for each cycle.
-    unsigned NumCycles = getSUnit(MI)->Latency;
-    unsigned ReservedCycles = 0;
-    SmallVectorImpl<ResourceManager *>::iterator RI = Resources.begin();
-    SmallVectorImpl<ResourceManager *>::iterator RE = Resources.end();
-    LLVM_DEBUG({
-      dbgs() << "Trying to reserve resource for " << NumCycles
-             << " cycles for \n";
-      MI->dump();
-    });
-    for (unsigned C = 0; C < NumCycles; ++C)
-      while (RI != RE) {
-        if ((*RI)->canReserveResources(*MI)) {
-          (*RI)->reserveResources(*MI);
-          ++ReservedCycles;
-          break;
-        }
-        RI++;
-      }
-    LLVM_DEBUG(dbgs() << "ReservedCycles:" << ReservedCycles
-                      << ", NumCycles:" << NumCycles << "\n");
-    // Add new DFAs, if needed, to reserve resources.
-    for (unsigned C = ReservedCycles; C < NumCycles; ++C) {
-      LLVM_DEBUG(if (SwpDebugResource) dbgs()
-                 << "NewResource created to reserve resources"
-                 << "\n");
-      ResourceManager *NewResource = new ResourceManager(&MF.getSubtarget());
-      assert(NewResource->canReserveResources(*MI) && "Reserve error.");
-      NewResource->reserveResources(*MI);
-      Resources.push_back(NewResource);
-    }
-  }
-  int Resmii = Resources.size();
-  LLVM_DEBUG(dbgs() << "Return Res MII:" << Resmii << "\n");
-  // Delete the memory for each of the DFAs that were created earlier.
-  for (ResourceManager *RI : Resources) {
-    ResourceManager *D = RI;
-    delete D;
-  }
-  Resources.clear();
-  return Resmii;
+  ResourceManager RM(&MF.getSubtarget(), this);
+  return RM.calculateResMII();
 }
 
 /// Calculate the recurrence-constrainted minimum initiation interval.
@@ -2375,28 +2332,15 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
   for (int curCycle = StartCycle; curCycle != termCycle;
        forward ? ++curCycle : --curCycle) {
 
-    // Add the already scheduled instructions at the specified cycle to the
-    // DFA.
-    ProcItinResources.clearResources();
-    for (int checkCycle = FirstCycle + ((curCycle - FirstCycle) % II);
-         checkCycle <= LastCycle; checkCycle += II) {
-      std::deque<SUnit *> &cycleInstrs = ScheduledInstrs[checkCycle];
-
-      for (SUnit *CI : cycleInstrs) {
-        if (ST.getInstrInfo()->isZeroCost(CI->getInstr()->getOpcode()))
-          continue;
-        assert(ProcItinResources.canReserveResources(*CI->getInstr()) &&
-               "These instructions have already been scheduled.");
-        ProcItinResources.reserveResources(*CI->getInstr());
-      }
-    }
     if (ST.getInstrInfo()->isZeroCost(SU->getInstr()->getOpcode()) ||
-        ProcItinResources.canReserveResources(*SU->getInstr())) {
+        ProcItinResources.canReserveResources(*SU, curCycle)) {
       LLVM_DEBUG({
         dbgs() << "\tinsert at cycle " << curCycle << " ";
         SU->getInstr()->dump();
       });
 
+      if (!ST.getInstrInfo()->isZeroCost(SU->getInstr()->getOpcode()))
+        ProcItinResources.reserveResources(*SU, curCycle);
       ScheduledInstrs[curCycle].push_back(SU);
       InstrToCycle.insert(std::make_pair(SU, curCycle));
       if (curCycle > LastCycle)
@@ -3025,6 +2969,26 @@ void SMSchedule::print(raw_ostream &os) const {
 LLVM_DUMP_METHOD void SMSchedule::dump() const { print(dbgs()); }
 LLVM_DUMP_METHOD void NodeSet::dump() const { print(dbgs()); }
 
+void ResourceManager::dumpMRT() const {
+  LLVM_DEBUG({
+    if (UseDFA)
+      return;
+    std::stringstream SS;
+    SS << "MRT:\n";
+    SS << std::setw(4) << "Slot";
+    for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I)
+      SS << std::setw(3) << I;
+    SS << std::setw(7) << "#Mops"
+       << "\n";
+    for (int Slot = 0; Slot < InitiationInterval; ++Slot) {
+      SS << std::setw(4) << Slot;
+      for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I)
+        SS << std::setw(3) << MRT[Slot][I];
+      SS << std::setw(7) << NumScheduledMops[Slot] << "\n";
+    }
+    dbgs() << SS.str();
+  });
+}
 #endif
 
 void ResourceManager::initProcResourceVectors(
@@ -3069,97 +3033,244 @@ void ResourceManager::initProcResourceVectors(
   });
 }
 
-bool ResourceManager::canReserveResources(const MCInstrDesc *MID) const {
-
+bool ResourceManager::canReserveResources(SUnit &SU, int Cycle) {
   LLVM_DEBUG({
     if (SwpDebugResource)
       dbgs() << "canReserveResources:\n";
   });
   if (UseDFA)
-    return DFAResources->canReserveResources(MID);
+    return DFAResources[positiveModulo(Cycle, InitiationInterval)]
+        ->canReserveResources(&SU.getInstr()->getDesc());
 
-  unsigned InsnClass = MID->getSchedClass();
-  const MCSchedClassDesc *SCDesc = SM.getSchedClassDesc(InsnClass);
+  const MCSchedClassDesc *SCDesc = DAG->getSchedClass(&SU);
   if (!SCDesc->isValid()) {
     LLVM_DEBUG({
       dbgs() << "No valid Schedule Class Desc for schedClass!\n";
-      dbgs() << "isPseudo:" << MID->isPseudo() << "\n";
+      dbgs() << "isPseudo:" << SU.getInstr()->isPseudo() << "\n";
     });
     return true;
   }
 
-  const MCWriteProcResEntry *I = STI->getWriteProcResBegin(SCDesc);
-  const MCWriteProcResEntry *E = STI->getWriteProcResEnd(SCDesc);
-  for (; I != E; ++I) {
-    if (!I->Cycles)
-      continue;
-    const MCProcResourceDesc *ProcResource =
-        SM.getProcResource(I->ProcResourceIdx);
-    unsigned NumUnits = ProcResource->NumUnits;
-    LLVM_DEBUG({
-      if (SwpDebugResource)
-        dbgs() << format(" %16s(%2d): Count: %2d, NumUnits:%2d, Cycles:%2d\n",
-                         ProcResource->Name, I->ProcResourceIdx,
-                         ProcResourceCount[I->ProcResourceIdx], NumUnits,
-                         I->Cycles);
-    });
-    if (ProcResourceCount[I->ProcResourceIdx] >= NumUnits)
-      return false;
-  }
-  LLVM_DEBUG(if (SwpDebugResource) dbgs() << "return true\n\n";);
-  return true;
+  reserveResources(SCDesc, Cycle);
+  bool Result = !isOverbooked();
+  unreserveResources(SCDesc, Cycle);
+
+  LLVM_DEBUG(if (SwpDebugResource) dbgs() << "return " << Result << "\n\n";);
+  return Result;
 }
 
-void ResourceManager::reserveResources(const MCInstrDesc *MID) {
+void ResourceManager::reserveResources(SUnit &SU, int Cycle) {
   LLVM_DEBUG({
     if (SwpDebugResource)
       dbgs() << "reserveResources:\n";
   });
   if (UseDFA)
-    return DFAResources->reserveResources(MID);
+    return DFAResources[positiveModulo(Cycle, InitiationInterval)]
+        ->reserveResources(&SU.getInstr()->getDesc());
 
-  unsigned InsnClass = MID->getSchedClass();
-  const MCSchedClassDesc *SCDesc = SM.getSchedClassDesc(InsnClass);
+  const MCSchedClassDesc *SCDesc = DAG->getSchedClass(&SU);
   if (!SCDesc->isValid()) {
     LLVM_DEBUG({
       dbgs() << "No valid Schedule Class Desc for schedClass!\n";
-      dbgs() << "isPseudo:" << MID->isPseudo() << "\n";
+      dbgs() << "isPseudo:" << SU.getInstr()->isPseudo() << "\n";
     });
     return;
   }
-  for (const MCWriteProcResEntry &PRE :
-       make_range(STI->getWriteProcResBegin(SCDesc),
-                  STI->getWriteProcResEnd(SCDesc))) {
-    if (!PRE.Cycles)
-      continue;
-    ++ProcResourceCount[PRE.ProcResourceIdx];
-    LLVM_DEBUG({
-      if (SwpDebugResource) {
-        const MCProcResourceDesc *ProcResource =
-            SM.getProcResource(PRE.ProcResourceIdx);
-        dbgs() << format(" %16s(%2d): Count: %2d, NumUnits:%2d, Cycles:%2d\n",
-                         ProcResource->Name, PRE.ProcResourceIdx,
-                         ProcResourceCount[PRE.ProcResourceIdx],
-                         ProcResource->NumUnits, PRE.Cycles);
-      }
-    });
-  }
+
+  reserveResources(SCDesc, Cycle);
+
   LLVM_DEBUG({
-    if (SwpDebugResource)
+    if (SwpDebugResource) {
+      dumpMRT();
       dbgs() << "reserveResources: done!\n\n";
+    }
   });
 }
 
-bool ResourceManager::canReserveResources(const MachineInstr &MI) const {
-  return canReserveResources(&MI.getDesc());
+void ResourceManager::reserveResources(const MCSchedClassDesc *SCDesc,
+                                       int Cycle) {
+  assert(!UseDFA);
+  for (const MCWriteProcResEntry &PRE : make_range(
+           STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
+    for (int C = Cycle; C < Cycle + PRE.Cycles; ++C)
+      ++MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
+
+  for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
+    ++NumScheduledMops[positiveModulo(C, InitiationInterval)];
 }
 
-void ResourceManager::reserveResources(const MachineInstr &MI) {
-  return reserveResources(&MI.getDesc());
+void ResourceManager::unreserveResources(const MCSchedClassDesc *SCDesc,
+                                         int Cycle) {
+  assert(!UseDFA);
+  for (const MCWriteProcResEntry &PRE : make_range(
+           STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
+    for (int C = Cycle; C < Cycle + PRE.Cycles; ++C)
+      --MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
+
+  for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
+    --NumScheduledMops[positiveModulo(C, InitiationInterval)];
 }
 
-void ResourceManager::clearResources() {
+bool ResourceManager::isOverbooked() const {
+  assert(!UseDFA);
+  for (int Slot = 0; Slot < InitiationInterval; ++Slot) {
+    for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+      const MCProcResourceDesc *Desc = SM.getProcResource(I);
+      if (MRT[Slot][I] > Desc->NumUnits)
+        return true;
+    }
+    if (NumScheduledMops[Slot] > IssueWidth)
+      return true;
+  }
+  return false;
+}
+
+int ResourceManager::calculateResMIIDFA() const {
+  assert(UseDFA);
+
+  // Sort the instructions by the number of available choices for scheduling,
+  // least to most. Use the number of critical resources as the tie breaker.
+  FuncUnitSorter FUS = FuncUnitSorter(*ST);
+  for (SUnit &SU : DAG->SUnits)
+    FUS.calcCriticalResources(*SU.getInstr());
+  PriorityQueue<MachineInstr *, std::vector<MachineInstr *>, FuncUnitSorter>
+      FuncUnitOrder(FUS);
+
+  for (SUnit &SU : DAG->SUnits)
+    FuncUnitOrder.push(SU.getInstr());
+
+  SmallVector<std::unique_ptr<DFAPacketizer>, 8> Resources;
+  Resources.push_back(
+      std::unique_ptr<DFAPacketizer>(TII->CreateTargetScheduleState(*ST)));
+
+  while (!FuncUnitOrder.empty()) {
+    MachineInstr *MI = FuncUnitOrder.top();
+    FuncUnitOrder.pop();
+    if (TII->isZeroCost(MI->getOpcode()))
+      continue;
+
+    // Attempt to reserve the instruction in an existing DFA. At least one
+    // DFA is needed for each cycle.
+    unsigned NumCycles = DAG->getSUnit(MI)->Latency;
+    unsigned ReservedCycles = 0;
+    auto *RI = Resources.begin();
+    auto *RE = Resources.end();
+    LLVM_DEBUG({
+      dbgs() << "Trying to reserve resource for " << NumCycles
+             << " cycles for \n";
+      MI->dump();
+    });
+    for (unsigned C = 0; C < NumCycles; ++C)
+      while (RI != RE) {
+        if ((*RI)->canReserveResources(*MI)) {
+          (*RI)->reserveResources(*MI);
+          ++ReservedCycles;
+          break;
+        }
+        RI++;
+      }
+    LLVM_DEBUG(dbgs() << "ReservedCycles:" << ReservedCycles
+                      << ", NumCycles:" << NumCycles << "\n");
+    // Add new DFAs, if needed, to reserve resources.
+    for (unsigned C = ReservedCycles; C < NumCycles; ++C) {
+      LLVM_DEBUG(if (SwpDebugResource) dbgs()
+                 << "NewResource created to reserve resources"
+                 << "\n");
+      auto *NewResource = TII->CreateTargetScheduleState(*ST);
+      assert(NewResource->canReserveResources(*MI) && "Reserve error.");
+      NewResource->reserveResources(*MI);
+      Resources.push_back(std::unique_ptr<DFAPacketizer>(NewResource));
+    }
+  }
+
+  int Resmii = Resources.size();
+  LLVM_DEBUG(dbgs() << "Return Res MII:" << Resmii << "\n");
+  return Resmii;
+}
+
+int ResourceManager::calculateResMII() const {
   if (UseDFA)
-    return DFAResources->clearResources();
-  std::fill(ProcResourceCount.begin(), ProcResourceCount.end(), 0);
+    return calculateResMIIDFA();
+
+  // Count each resource consumption and divide it by the number of units.
+  // ResMII is the max value among them.
+
+  int NumMops = 0;
+  SmallVector<uint64_t> ResourceCount(SM.getNumProcResourceKinds());
+  for (SUnit &SU : DAG->SUnits) {
+    if (TII->isZeroCost(SU.getInstr()->getOpcode()))
+      continue;
+
+    const MCSchedClassDesc *SCDesc = DAG->getSchedClass(&SU);
+    if (!SCDesc->isValid())
+      continue;
+
+    LLVM_DEBUG({
+      if (SwpDebugResource) {
+        DAG->dumpNode(SU);
+        dbgs() << "  #Mops: " << SCDesc->NumMicroOps << "\n"
+               << "  WriteProcRes: ";
+      }
+    });
+    NumMops += SCDesc->NumMicroOps;
+    for (const MCWriteProcResEntry &PRE :
+         make_range(STI->getWriteProcResBegin(SCDesc),
+                    STI->getWriteProcResEnd(SCDesc))) {
+      LLVM_DEBUG({
+        if (SwpDebugResource) {
+          const MCProcResourceDesc *Desc =
+              SM.getProcResource(PRE.ProcResourceIdx);
+          dbgs() << Desc->Name << ": " << PRE.Cycles << ", ";
+        }
+      });
+      ResourceCount[PRE.ProcResourceIdx] += PRE.Cycles;
+    }
+    LLVM_DEBUG(if (SwpDebugResource) dbgs() << "\n");
+  }
+
+  int Result = (NumMops + IssueWidth - 1) / IssueWidth;
+  LLVM_DEBUG({
+    if (SwpDebugResource)
+      dbgs() << "#Mops: " << NumMops << ", "
+             << "IssueWidth: " << IssueWidth << ", "
+             << "Cycles: " << Result << "\n";
+  });
+
+  LLVM_DEBUG({
+    if (SwpDebugResource) {
+      std::stringstream SS;
+      SS << std::setw(2) << "ID" << std::setw(16) << "Name" << std::setw(10)
+         << "Units" << std::setw(10) << "Consumed" << std::setw(10) << "Cycles"
+         << "\n";
+      dbgs() << SS.str();
+    }
+  });
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    const MCProcResourceDesc *Desc = SM.getProcResource(I);
+    int Cycles = (ResourceCount[I] + Desc->NumUnits - 1) / Desc->NumUnits;
+    LLVM_DEBUG({
+      if (SwpDebugResource) {
+        std::stringstream SS;
+        SS << std::setw(2) << I << std::setw(16) << Desc->Name << std::setw(10)
+           << Desc->NumUnits << std::setw(10) << ResourceCount[I]
+           << std::setw(10) << Cycles << "\n";
+        dbgs() << SS.str();
+      }
+    });
+    if (Cycles > Result)
+      Result = Cycles;
+  }
+  return Result;
+}
+
+void ResourceManager::init(int II) {
+  InitiationInterval = II;
+  DFAResources.clear();
+  DFAResources.resize(II);
+  for (auto &I : DFAResources)
+    I.reset(ST->getInstrInfo()->CreateTargetScheduleState(*ST));
+  MRT.clear();
+  MRT.resize(II, SmallVector<uint64_t>(SM.getNumProcResourceKinds()));
+  NumScheduledMops.clear();
+  NumScheduledMops.resize(II);
 }

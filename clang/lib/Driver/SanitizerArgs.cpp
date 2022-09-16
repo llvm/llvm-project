@@ -98,6 +98,7 @@ enum CoverageFeature {
   CoverageInlineBoolFlag = 1 << 15,
   CoverageTraceLoads = 1 << 16,
   CoverageTraceStores = 1 << 17,
+  CoverageControlFlow = 1 << 18,
 };
 
 enum BinaryMetadataFeature {
@@ -808,19 +809,21 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   int InsertionPointTypes = CoverageFunc | CoverageBB | CoverageEdge;
   int InstrumentationTypes = CoverageTracePC | CoverageTracePCGuard |
                              CoverageInline8bitCounters | CoverageTraceLoads |
-                             CoverageTraceStores | CoverageInlineBoolFlag;
+                             CoverageTraceStores | CoverageInlineBoolFlag |
+                             CoverageControlFlow;
   if ((CoverageFeatures & InsertionPointTypes) &&
       !(CoverageFeatures & InstrumentationTypes) && DiagnoseErrors) {
     D.Diag(clang::diag::warn_drv_deprecated_arg)
         << "-fsanitize-coverage=[func|bb|edge]"
-        << "-fsanitize-coverage=[func|bb|edge],[trace-pc-guard|trace-pc]";
+        << "-fsanitize-coverage=[func|bb|edge],[trace-pc-guard|trace-pc],["
+           "control-flow]";
   }
 
   // trace-pc w/o func/bb/edge implies edge.
   if (!(CoverageFeatures & InsertionPointTypes)) {
     if (CoverageFeatures &
         (CoverageTracePC | CoverageTracePCGuard | CoverageInline8bitCounters |
-         CoverageInlineBoolFlag))
+         CoverageInlineBoolFlag | CoverageControlFlow))
       CoverageFeatures |= CoverageEdge;
 
     if (CoverageFeatures & CoverageStackDepth)
@@ -1111,7 +1114,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
       std::make_pair(CoverageNoPrune, "-fsanitize-coverage-no-prune"),
       std::make_pair(CoverageStackDepth, "-fsanitize-coverage-stack-depth"),
       std::make_pair(CoverageTraceLoads, "-fsanitize-coverage-trace-loads"),
-      std::make_pair(CoverageTraceStores, "-fsanitize-coverage-trace-stores")};
+      std::make_pair(CoverageTraceStores, "-fsanitize-coverage-trace-stores"),
+      std::make_pair(CoverageControlFlow, "-fsanitize-coverage-control-flow")};
   for (auto F : CoverageFlags) {
     if (CoverageFeatures & F.first)
       CmdArgs.push_back(F.second);
@@ -1369,6 +1373,7 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                 .Case("stack-depth", CoverageStackDepth)
                 .Case("trace-loads", CoverageTraceLoads)
                 .Case("trace-stores", CoverageTraceStores)
+                .Case("control-flow", CoverageControlFlow)
                 .Default(0);
     if (F == 0 && DiagnoseErrors)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)

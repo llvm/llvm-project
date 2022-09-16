@@ -1006,6 +1006,37 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
   HI.CallPassType.emplace(PassType);
 }
 
+const NamedDecl *pickDeclToUse(llvm::ArrayRef<const NamedDecl *> Candidates) {
+  if (Candidates.empty())
+    return nullptr;
+
+  // This is e.g the case for
+  //     namespace ns { void foo(); }
+  //     void bar() { using ns::foo; f^oo(); }
+  // One declaration in Candidates will refer to the using declaration,
+  // which isn't really useful for Hover. So use the other one,
+  // which in this example would be the actual declaration of foo.
+  if (Candidates.size() <= 2) {
+    if (llvm::isa<BaseUsingDecl>(Candidates.front()))
+      return Candidates.back();
+    return Candidates.front();
+  }
+
+  // For something like
+  //     namespace ns { void foo(int); void foo(char); }
+  //     using ns::foo;
+  //     template <typename T> void bar() { fo^o(T{}); }
+  // we actually want to show the using declaration,
+  // it's not clear which declaration to pick otherwise.
+  auto BaseDecls = llvm::make_filter_range(Candidates, [](const NamedDecl *D) {
+    return llvm::isa<BaseUsingDecl>(D);
+  });
+  if (std::distance(BaseDecls.begin(), BaseDecls.end()) == 1)
+    return *BaseDecls.begin();
+
+  return Candidates.front();
+}
+
 } // namespace
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
@@ -1081,11 +1112,11 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       // FIXME: Fill in HighlightRange with range coming from N->ASTNode.
       auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias,
                                             AST.getHeuristicResolver());
-      if (!Decls.empty()) {
-        HI = getHoverContents(Decls.front(), PP, Index, TB);
+      if (const auto *DeclToUse = pickDeclToUse(Decls)) {
+        HI = getHoverContents(DeclToUse, PP, Index, TB);
         // Layout info only shown when hovering on the field/class itself.
-        if (Decls.front() == N->ASTNode.get<Decl>())
-          addLayoutInfo(*Decls.front(), *HI);
+        if (DeclToUse == N->ASTNode.get<Decl>())
+          addLayoutInfo(*DeclToUse, *HI);
         // Look for a close enclosing expression to show the value of.
         if (!HI->Value)
           HI->Value = printExprValue(N, AST.getASTContext());

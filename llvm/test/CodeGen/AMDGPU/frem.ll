@@ -1002,22 +1002,27 @@ define amdgpu_kernel void @frem_f64(double addrspace(1)* %out, double addrspace(
 ; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_div_fmas_f64 v[4:5], v[12:13], v[6:7], v[10:11]
 ; SI-NEXT:    v_div_fixup_f64 v[4:5], v[4:5], v[2:3], v[0:1]
-; SI-NEXT:    v_bfe_u32 v6, v5, 20, 11
-; SI-NEXT:    v_add_i32_e32 v8, vcc, 0xfffffc01, v6
+; SI-NEXT:    v_readfirstlane_b32 s2, v5
+; SI-NEXT:    s_bfe_u32 s0, s2, 0xb0014
+; SI-NEXT:    s_add_i32 s3, s0, 0xfffffc01
 ; SI-NEXT:    s_mov_b32 s1, 0xfffff
 ; SI-NEXT:    s_mov_b32 s0, s6
-; SI-NEXT:    v_lshr_b64 v[6:7], s[0:1], v8
-; SI-NEXT:    v_not_b32_e32 v6, v6
+; SI-NEXT:    s_lshr_b64 s[0:1], s[0:1], s3
+; SI-NEXT:    v_not_b32_e32 v6, s0
 ; SI-NEXT:    v_and_b32_e32 v6, v4, v6
-; SI-NEXT:    v_not_b32_e32 v7, v7
-; SI-NEXT:    v_and_b32_e32 v7, v5, v7
-; SI-NEXT:    v_and_b32_e32 v9, 0x80000000, v5
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v8
-; SI-NEXT:    v_cndmask_b32_e32 v7, v7, v9, vcc
-; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], 51, v8
-; SI-NEXT:    v_cndmask_b32_e64 v5, v7, v5, s[0:1]
+; SI-NEXT:    v_not_b32_e32 v7, s1
+; SI-NEXT:    v_and_b32_e32 v5, v5, v7
+; SI-NEXT:    s_and_b32 s0, s2, 0x80000000
+; SI-NEXT:    s_cmp_lt_i32 s3, 0
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e64 v4, v6, v4, s[0:1]
+; SI-NEXT:    v_mov_b32_e32 v7, s0
+; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; SI-NEXT:    s_cmp_gt_i32 s3, 51
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_mov_b32_e32 v7, s2
+; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; SI-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -1185,21 +1190,21 @@ define amdgpu_kernel void @frem_f64(double addrspace(1)* %out, double addrspace(
 define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
 ; SI-LABEL: fast_frem_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s8
-; SI-NEXT:    s_mov_b32 s5, s9
-; SI-NEXT:    s_mov_b32 s8, s10
-; SI-NEXT:    s_mov_b32 s9, s11
-; SI-NEXT:    s_mov_b32 s10, s6
-; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    s_mov_b32 s2, s6
-; SI-NEXT:    s_mov_b32 s3, s7
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    s_mov_b32 s1, s5
+; SI-NEXT:    s_mov_b32 s4, s6
+; SI-NEXT:    s_mov_b32 s5, s7
+; SI-NEXT:    s_mov_b32 s6, s2
+; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    s_mov_b32 s10, s2
+; SI-NEXT:    s_mov_b32 s11, s3
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[8:11], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
 ; SI-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
@@ -1209,24 +1214,29 @@ define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrs
 ; SI-NEXT:    v_mul_f64 v[6:7], v[0:1], v[4:5]
 ; SI-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[6:7], v[0:1]
 ; SI-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[6:7]
-; SI-NEXT:    v_bfe_u32 v6, v5, 20, 11
-; SI-NEXT:    v_add_i32_e32 v8, vcc, 0xfffffc01, v6
-; SI-NEXT:    s_mov_b32 s1, 0xfffff
-; SI-NEXT:    s_mov_b32 s0, s6
-; SI-NEXT:    v_lshr_b64 v[6:7], s[0:1], v8
-; SI-NEXT:    v_not_b32_e32 v6, v6
+; SI-NEXT:    v_readfirstlane_b32 s6, v5
+; SI-NEXT:    s_bfe_u32 s4, s6, 0xb0014
+; SI-NEXT:    s_add_i32 s7, s4, 0xfffffc01
+; SI-NEXT:    s_mov_b32 s5, 0xfffff
+; SI-NEXT:    s_mov_b32 s4, s2
+; SI-NEXT:    s_lshr_b64 s[4:5], s[4:5], s7
+; SI-NEXT:    v_not_b32_e32 v6, s4
 ; SI-NEXT:    v_and_b32_e32 v6, v4, v6
-; SI-NEXT:    v_not_b32_e32 v7, v7
-; SI-NEXT:    v_and_b32_e32 v7, v5, v7
-; SI-NEXT:    v_and_b32_e32 v9, 0x80000000, v5
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v8
-; SI-NEXT:    v_cndmask_b32_e32 v7, v7, v9, vcc
-; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], 51, v8
-; SI-NEXT:    v_cndmask_b32_e64 v5, v7, v5, s[0:1]
+; SI-NEXT:    v_not_b32_e32 v7, s5
+; SI-NEXT:    v_and_b32_e32 v5, v5, v7
+; SI-NEXT:    s_and_b32 s4, s6, 0x80000000
+; SI-NEXT:    s_cmp_lt_i32 s7, 0
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e64 v4, v6, v4, s[0:1]
+; SI-NEXT:    v_mov_b32_e32 v7, s4
+; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; SI-NEXT:    s_cmp_gt_i32 s7, 51
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_mov_b32_e32 v7, s6
+; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; SI-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; CI-LABEL: fast_frem_f64:
@@ -1373,21 +1383,21 @@ define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrs
 define amdgpu_kernel void @unsafe_frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
 ; SI-LABEL: unsafe_frem_f64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xd
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s8
-; SI-NEXT:    s_mov_b32 s5, s9
-; SI-NEXT:    s_mov_b32 s8, s10
-; SI-NEXT:    s_mov_b32 s9, s11
-; SI-NEXT:    s_mov_b32 s10, s6
-; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    s_mov_b32 s2, s6
-; SI-NEXT:    s_mov_b32 s3, s7
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
-; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    s_mov_b32 s1, s5
+; SI-NEXT:    s_mov_b32 s4, s6
+; SI-NEXT:    s_mov_b32 s5, s7
+; SI-NEXT:    s_mov_b32 s6, s2
+; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    s_mov_b32 s10, s2
+; SI-NEXT:    s_mov_b32 s11, s3
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    buffer_load_dwordx2 v[2:3], off, s[8:11], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
 ; SI-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
@@ -1397,24 +1407,29 @@ define amdgpu_kernel void @unsafe_frem_f64(double addrspace(1)* %out, double add
 ; SI-NEXT:    v_mul_f64 v[6:7], v[0:1], v[4:5]
 ; SI-NEXT:    v_fma_f64 v[8:9], -v[2:3], v[6:7], v[0:1]
 ; SI-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[6:7]
-; SI-NEXT:    v_bfe_u32 v6, v5, 20, 11
-; SI-NEXT:    v_add_i32_e32 v8, vcc, 0xfffffc01, v6
-; SI-NEXT:    s_mov_b32 s1, 0xfffff
-; SI-NEXT:    s_mov_b32 s0, s6
-; SI-NEXT:    v_lshr_b64 v[6:7], s[0:1], v8
-; SI-NEXT:    v_not_b32_e32 v6, v6
+; SI-NEXT:    v_readfirstlane_b32 s6, v5
+; SI-NEXT:    s_bfe_u32 s4, s6, 0xb0014
+; SI-NEXT:    s_add_i32 s7, s4, 0xfffffc01
+; SI-NEXT:    s_mov_b32 s5, 0xfffff
+; SI-NEXT:    s_mov_b32 s4, s2
+; SI-NEXT:    s_lshr_b64 s[4:5], s[4:5], s7
+; SI-NEXT:    v_not_b32_e32 v6, s4
 ; SI-NEXT:    v_and_b32_e32 v6, v4, v6
-; SI-NEXT:    v_not_b32_e32 v7, v7
-; SI-NEXT:    v_and_b32_e32 v7, v5, v7
-; SI-NEXT:    v_and_b32_e32 v9, 0x80000000, v5
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v8
-; SI-NEXT:    v_cndmask_b32_e32 v7, v7, v9, vcc
-; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], 51, v8
-; SI-NEXT:    v_cndmask_b32_e64 v5, v7, v5, s[0:1]
+; SI-NEXT:    v_not_b32_e32 v7, s5
+; SI-NEXT:    v_and_b32_e32 v5, v5, v7
+; SI-NEXT:    s_and_b32 s4, s6, 0x80000000
+; SI-NEXT:    s_cmp_lt_i32 s7, 0
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e64 v4, v6, v4, s[0:1]
+; SI-NEXT:    v_mov_b32_e32 v7, s4
+; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; SI-NEXT:    s_cmp_gt_i32 s7, 51
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_mov_b32_e32 v7, s6
+; SI-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; SI-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; CI-LABEL: unsafe_frem_f64:
@@ -3125,21 +3140,26 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_div_fmas_f64 v[8:9], v[16:17], v[10:11], v[14:15]
 ; SI-NEXT:    v_div_fixup_f64 v[8:9], v[8:9], v[6:7], v[2:3]
-; SI-NEXT:    v_bfe_u32 v10, v9, 20, 11
-; SI-NEXT:    v_add_i32_e32 v12, vcc, 0xfffffc01, v10
+; SI-NEXT:    v_readfirstlane_b32 s8, v9
+; SI-NEXT:    s_bfe_u32 s0, s8, 0xb0014
+; SI-NEXT:    s_add_i32 s9, s0, 0xfffffc01
 ; SI-NEXT:    s_mov_b32 s3, 0xfffff
-; SI-NEXT:    v_lshr_b64 v[10:11], s[2:3], v12
-; SI-NEXT:    v_not_b32_e32 v10, v10
+; SI-NEXT:    s_lshr_b64 s[0:1], s[2:3], s9
+; SI-NEXT:    v_not_b32_e32 v10, s0
 ; SI-NEXT:    v_and_b32_e32 v10, v8, v10
-; SI-NEXT:    v_not_b32_e32 v11, v11
-; SI-NEXT:    v_and_b32_e32 v11, v9, v11
-; SI-NEXT:    v_and_b32_e32 v13, 0x80000000, v9
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v12
-; SI-NEXT:    v_cndmask_b32_e32 v11, v11, v13, vcc
-; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], 51, v12
-; SI-NEXT:    v_cndmask_b32_e64 v9, v11, v9, s[0:1]
+; SI-NEXT:    v_not_b32_e32 v11, s1
+; SI-NEXT:    v_and_b32_e32 v9, v9, v11
+; SI-NEXT:    s_and_b32 s0, s8, 0x80000000
+; SI-NEXT:    s_cmp_lt_i32 s9, 0
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v10, v10, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e64 v8, v10, v8, s[0:1]
+; SI-NEXT:    v_mov_b32_e32 v11, s0
+; SI-NEXT:    v_cndmask_b32_e32 v9, v9, v11, vcc
+; SI-NEXT:    s_cmp_gt_i32 s9, 51
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_mov_b32_e32 v11, s8
+; SI-NEXT:    v_cndmask_b32_e32 v9, v9, v11, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v8, v10, v8, vcc
 ; SI-NEXT:    v_fma_f64 v[2:3], -v[8:9], v[6:7], v[2:3]
 ; SI-NEXT:    v_div_scale_f64 v[6:7], s[0:1], v[4:5], v[4:5], v[0:1]
 ; SI-NEXT:    v_rcp_f64_e32 v[8:9], v[6:7]
@@ -3156,20 +3176,25 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_div_fmas_f64 v[6:7], v[14:15], v[8:9], v[12:13]
 ; SI-NEXT:    v_div_fixup_f64 v[6:7], v[6:7], v[4:5], v[0:1]
-; SI-NEXT:    v_bfe_u32 v8, v7, 20, 11
-; SI-NEXT:    v_add_i32_e32 v10, vcc, 0xfffffc01, v8
-; SI-NEXT:    v_lshr_b64 v[8:9], s[2:3], v10
-; SI-NEXT:    v_not_b32_e32 v8, v8
+; SI-NEXT:    v_readfirstlane_b32 s8, v7
+; SI-NEXT:    s_bfe_u32 s0, s8, 0xb0014
+; SI-NEXT:    s_add_i32 s9, s0, 0xfffffc01
+; SI-NEXT:    s_lshr_b64 s[0:1], s[2:3], s9
+; SI-NEXT:    v_not_b32_e32 v8, s0
 ; SI-NEXT:    v_and_b32_e32 v8, v6, v8
-; SI-NEXT:    v_not_b32_e32 v9, v9
-; SI-NEXT:    v_and_b32_e32 v9, v7, v9
-; SI-NEXT:    v_and_b32_e32 v11, 0x80000000, v7
-; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v10
-; SI-NEXT:    v_cndmask_b32_e32 v9, v9, v11, vcc
-; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], 51, v10
-; SI-NEXT:    v_cndmask_b32_e64 v7, v9, v7, s[0:1]
+; SI-NEXT:    v_not_b32_e32 v9, s1
+; SI-NEXT:    v_and_b32_e32 v7, v7, v9
+; SI-NEXT:    s_and_b32 s0, s8, 0x80000000
+; SI-NEXT:    s_cmp_lt_i32 s9, 0
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e64 v8, v8, 0, vcc
-; SI-NEXT:    v_cndmask_b32_e64 v6, v8, v6, s[0:1]
+; SI-NEXT:    v_mov_b32_e32 v9, s0
+; SI-NEXT:    v_cndmask_b32_e32 v7, v7, v9, vcc
+; SI-NEXT:    s_cmp_gt_i32 s9, 51
+; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_mov_b32_e32 v9, s8
+; SI-NEXT:    v_cndmask_b32_e32 v7, v7, v9, vcc
+; SI-NEXT:    v_cndmask_b32_e32 v6, v8, v6, vcc
 ; SI-NEXT:    v_fma_f64 v[0:1], -v[6:7], v[4:5], v[0:1]
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm

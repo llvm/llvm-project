@@ -2606,7 +2606,7 @@ int32_t __tgt_rtl_data_retrieve_async(int DeviceId, void *HstPtr, void *TgtPtr,
   return dataRetrieve(DeviceId, HstPtr, TgtPtr, Size, AsyncInfo);
 }
 
-int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr) {
+int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
   // HSA can free pointers allocated from different types of memory pool.
   hsa_status_t Err;

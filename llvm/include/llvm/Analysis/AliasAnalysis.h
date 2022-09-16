@@ -39,6 +39,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/PassManager.h"
@@ -196,145 +197,193 @@ intersectModRef(const ModRefInfo MRI1, const ModRefInfo MRI2) {
   return MRI1 & MRI2;
 }
 
-/// The locations at which a function might access memory.
-///
-/// These are primarily used in conjunction with the \c AccessKind bits to
-/// describe both the nature of access and the locations of access for a
-/// function call.
-enum FunctionModRefLocation {
-  /// Base case is no access to memory.
-  FMRL_Nowhere = 0,
-  /// Access to memory via argument pointers.
-  FMRL_ArgumentPointees = 8,
-  /// Memory that is inaccessible via LLVM IR.
-  FMRL_InaccessibleMem = 16,
-  /// Access to any memory.
-  FMRL_Anywhere = 32 | FMRL_InaccessibleMem | FMRL_ArgumentPointees
-};
+/// Debug print ModRefInfo.
+raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
 /// Summary of how a function affects memory in the program.
 ///
 /// Loads from constant globals are not considered memory accesses for this
 /// interface. Also, functions may freely modify stack space local to their
 /// invocation without having to report it through these interfaces.
-enum FunctionModRefBehavior {
-  /// This function does not perform any non-local loads or stores to memory.
-  ///
-  /// This property corresponds to the GCC 'const' attribute.
-  /// This property corresponds to the LLVM IR 'readnone' attribute.
-  /// This property corresponds to the IntrNoMem LLVM intrinsic flag.
-  FMRB_DoesNotAccessMemory =
-      FMRL_Nowhere | static_cast<int>(ModRefInfo::NoModRef),
+class FunctionModRefBehavior {
+public:
+  /// The locations at which a function might access memory.
+  enum Location {
+    /// Access to memory via argument pointers.
+    ArgMem = 0,
+    /// Memory that is inaccessible via LLVM IR.
+    InaccessibleMem = 1,
+    /// Any other memory.
+    Other = 2,
+  };
 
-  /// The only memory references in this function (if it has any) are
-  /// non-volatile loads from objects pointed to by its pointer-typed
-  /// arguments, with arbitrary offsets.
-  ///
-  /// This property corresponds to the combination of the IntrReadMem
-  /// and IntrArgMemOnly LLVM intrinsic flags.
-  FMRB_OnlyReadsArgumentPointees =
-      FMRL_ArgumentPointees | static_cast<int>(ModRefInfo::Ref),
+private:
+  uint32_t Data = 0;
 
-  /// The only memory references in this function (if it has any) are
-  /// non-volatile stores from objects pointed to by its pointer-typed
-  /// arguments, with arbitrary offsets.
-  ///
-  /// This property corresponds to the combination of the IntrWriteMem
-  /// and IntrArgMemOnly LLVM intrinsic flags.
-  FMRB_OnlyWritesArgumentPointees =
-      FMRL_ArgumentPointees | static_cast<int>(ModRefInfo::Mod),
+  static constexpr uint32_t BitsPerLoc = 2;
+  static constexpr uint32_t LocMask = (1 << BitsPerLoc) - 1;
 
-  /// The only memory references in this function (if it has any) are
-  /// non-volatile loads and stores from objects pointed to by its
-  /// pointer-typed arguments, with arbitrary offsets.
-  ///
-  /// This property corresponds to the IntrArgMemOnly LLVM intrinsic flag.
-  FMRB_OnlyAccessesArgumentPointees =
-      FMRL_ArgumentPointees | static_cast<int>(ModRefInfo::ModRef),
+  static uint32_t getLocationPos(Location Loc) {
+    return (uint32_t)Loc * BitsPerLoc;
+  }
 
-  /// The only memory references in this function (if it has any) are
-  /// reads of memory that is otherwise inaccessible via LLVM IR.
-  ///
-  /// This property corresponds to the LLVM IR inaccessiblememonly attribute.
-  FMRB_OnlyReadsInaccessibleMem =
-      FMRL_InaccessibleMem | static_cast<int>(ModRefInfo::Ref),
+  static auto locations() {
+    return enum_seq_inclusive(Location::ArgMem, Location::Other,
+                              force_iteration_on_noniterable_enum);
+  }
 
-  /// The only memory references in this function (if it has any) are
-  /// writes to memory that is otherwise inaccessible via LLVM IR.
-  ///
-  /// This property corresponds to the LLVM IR inaccessiblememonly attribute.
-  FMRB_OnlyWritesInaccessibleMem =
-      FMRL_InaccessibleMem | static_cast<int>(ModRefInfo::Mod),
+  FunctionModRefBehavior(uint32_t Data) : Data(Data) {}
 
-  /// The only memory references in this function (if it has any) are
-  /// references of memory that is otherwise inaccessible via LLVM IR.
-  ///
-  /// This property corresponds to the LLVM IR inaccessiblememonly attribute.
-  FMRB_OnlyAccessesInaccessibleMem =
-      FMRL_InaccessibleMem | static_cast<int>(ModRefInfo::ModRef),
+  void setModRef(Location Loc, ModRefInfo MR) {
+    Data &= ~(LocMask << getLocationPos(Loc));
+    Data |= static_cast<uint32_t>(MR) << getLocationPos(Loc);
+  }
 
-  /// The function may perform non-volatile loads from objects pointed
-  /// to by its pointer-typed arguments, with arbitrary offsets, and
-  /// it may also perform loads of memory that is otherwise
-  /// inaccessible via LLVM IR.
-  ///
-  /// This property corresponds to the LLVM IR
-  /// inaccessiblemem_or_argmemonly attribute.
-  FMRB_OnlyReadsInaccessibleOrArgMem = FMRL_InaccessibleMem |
-                                       FMRL_ArgumentPointees |
-                                       static_cast<int>(ModRefInfo::Ref),
+  friend raw_ostream &operator<<(raw_ostream &OS, FunctionModRefBehavior RMRB);
 
-  /// The function may perform non-volatile stores to objects pointed
-  /// to by its pointer-typed arguments, with arbitrary offsets, and
-  /// it may also perform stores of memory that is otherwise
-  /// inaccessible via LLVM IR.
-  ///
-  /// This property corresponds to the LLVM IR
-  /// inaccessiblemem_or_argmemonly attribute.
-  FMRB_OnlyWritesInaccessibleOrArgMem = FMRL_InaccessibleMem |
-                                        FMRL_ArgumentPointees |
-                                        static_cast<int>(ModRefInfo::Mod),
+public:
+  /// Create FunctionModRefBehavior that can access only the given location
+  /// with the given ModRefInfo.
+  FunctionModRefBehavior(Location Loc, ModRefInfo MR) { setModRef(Loc, MR); }
 
-  /// The function may perform non-volatile loads and stores of objects
-  /// pointed to by its pointer-typed arguments, with arbitrary offsets, and
-  /// it may also perform loads and stores of memory that is otherwise
-  /// inaccessible via LLVM IR.
-  ///
-  /// This property corresponds to the LLVM IR
-  /// inaccessiblemem_or_argmemonly attribute.
-  FMRB_OnlyAccessesInaccessibleOrArgMem = FMRL_InaccessibleMem |
-                                          FMRL_ArgumentPointees |
-                                          static_cast<int>(ModRefInfo::ModRef),
+  /// Create FunctionModRefBehavior that can access any location with the
+  /// given ModRefInfo.
+  explicit FunctionModRefBehavior(ModRefInfo MR) {
+    for (Location Loc : locations())
+      setModRef(Loc, MR);
+  }
 
-  /// This function does not perform any non-local stores or volatile loads,
-  /// but may read from any memory location.
-  ///
-  /// This property corresponds to the GCC 'pure' attribute.
-  /// This property corresponds to the LLVM IR 'readonly' attribute.
-  /// This property corresponds to the IntrReadMem LLVM intrinsic flag.
-  FMRB_OnlyReadsMemory = FMRL_Anywhere | static_cast<int>(ModRefInfo::Ref),
+  /// Create FunctionModRefBehavior that can read and write any memory.
+  static FunctionModRefBehavior unknown() {
+    return FunctionModRefBehavior(ModRefInfo::ModRef);
+  }
 
-  // This function does not read from memory anywhere, but may write to any
-  // memory location.
-  //
-  // This property corresponds to the LLVM IR 'writeonly' attribute.
-  // This property corresponds to the IntrWriteMem LLVM intrinsic flag.
-  FMRB_OnlyWritesMemory = FMRL_Anywhere | static_cast<int>(ModRefInfo::Mod),
+  /// Create FunctionModRefBehavior that cannot read or write any memory.
+  static FunctionModRefBehavior none() {
+    return FunctionModRefBehavior(ModRefInfo::NoModRef);
+  }
 
-  /// This indicates that the function could not be classified into one of the
-  /// behaviors above.
-  FMRB_UnknownModRefBehavior =
-      FMRL_Anywhere | static_cast<int>(ModRefInfo::ModRef)
+  /// Create FunctionModRefBehavior that can read any memory.
+  static FunctionModRefBehavior readOnly() {
+    return FunctionModRefBehavior(ModRefInfo::Ref);
+  }
+
+  /// Create FunctionModRefBehavior that can write any memory.
+  static FunctionModRefBehavior writeOnly() {
+    return FunctionModRefBehavior(ModRefInfo::Mod);
+  }
+
+  /// Create FunctionModRefBehavior that can only access argument memory.
+  static FunctionModRefBehavior argMemOnly(ModRefInfo MR) {
+    return FunctionModRefBehavior(ArgMem, MR);
+  }
+
+  /// Create FunctionModRefBehavior that can only access inaccessible memory.
+  static FunctionModRefBehavior inaccessibleMemOnly(ModRefInfo MR) {
+    return FunctionModRefBehavior(InaccessibleMem, MR);
+  }
+
+  /// Create FunctionModRefBehavior that can only access inaccessible or
+  /// argument memory.
+  static FunctionModRefBehavior inaccessibleOrArgMemOnly(ModRefInfo MR) {
+    FunctionModRefBehavior FRMB = none();
+    FRMB.setModRef(ArgMem, MR);
+    FRMB.setModRef(InaccessibleMem, MR);
+    return FRMB;
+  }
+
+  /// Get ModRefInfo for the given Location.
+  ModRefInfo getModRef(Location Loc) const {
+    return ModRefInfo((Data >> getLocationPos(Loc)) & LocMask);
+  }
+
+  /// Get new FunctionModRefBehavior with modified ModRefInfo for Loc.
+  FunctionModRefBehavior getWithModRef(Location Loc, ModRefInfo MR) const {
+    FunctionModRefBehavior FMRB = *this;
+    FMRB.setModRef(Loc, MR);
+    return FMRB;
+  }
+
+  /// Get new FunctionModRefBehavior with NoModRef on the given Loc.
+  FunctionModRefBehavior getWithoutLoc(Location Loc) const {
+    FunctionModRefBehavior FMRB = *this;
+    FMRB.setModRef(Loc, ModRefInfo::NoModRef);
+    return FMRB;
+  }
+
+  /// Get ModRefInfo for any location.
+  ModRefInfo getModRef() const {
+    ModRefInfo MR = ModRefInfo::NoModRef;
+    for (Location Loc : locations())
+      MR |= getModRef(Loc);
+    return MR;
+  }
+
+  /// Whether this function accesses no memory.
+  bool doesNotAccessMemory() const { return Data == 0; }
+
+  /// Whether this function only (at most) reads memory.
+  bool onlyReadsMemory() const { return !isModSet(getModRef()); }
+
+  /// Whether this function only (at most) writes memory.
+  bool onlyWritesMemory() const { return !isRefSet(getModRef()); }
+
+  /// Whether this function only (at most) accesses argument memory.
+  bool onlyAccessesArgPointees() const {
+    return getWithoutLoc(ArgMem).doesNotAccessMemory();
+  }
+
+  /// Whether this function may access argument memory.
+  bool doesAccessArgPointees() const {
+    return isModOrRefSet(getModRef(ArgMem));
+  }
+
+  /// Whether this function only (at most) accesses inaccessible memory.
+  bool onlyAccessesInaccessibleMem() const {
+    return getWithoutLoc(InaccessibleMem).doesNotAccessMemory();
+  }
+
+  /// Whether this function only (at most) accesses argument and inaccessible
+  /// memory.
+  bool onlyAccessesInaccessibleOrArgMem() const {
+    return isNoModRef(getModRef(Other));
+  }
+
+  /// Intersect with another FunctionModRefBehavior.
+  FunctionModRefBehavior operator&(FunctionModRefBehavior Other) const {
+    return FunctionModRefBehavior(Data & Other.Data);
+  }
+
+  /// Intersect (in-place) with another FunctionModRefBehavior.
+  FunctionModRefBehavior &operator&=(FunctionModRefBehavior Other) {
+    Data &= Other.Data;
+    return *this;
+  }
+
+  /// Union with another FunctionModRefBehavior.
+  FunctionModRefBehavior operator|(FunctionModRefBehavior Other) const {
+    return FunctionModRefBehavior(Data | Other.Data);
+  }
+
+  /// Union (in-place) with another FunctionModRefBehavior.
+  FunctionModRefBehavior &operator|=(FunctionModRefBehavior Other) {
+    Data |= Other.Data;
+    return *this;
+  }
+
+  /// Check whether this is the same as another FunctionModRefBehavior.
+  bool operator==(FunctionModRefBehavior Other) const {
+    return Data == Other.Data;
+  }
+
+  /// Check whether this is different from another FunctionModRefBehavior.
+  bool operator!=(FunctionModRefBehavior Other) const {
+    return !operator==(Other);
+  }
 };
 
-// Wrapper method strips bits significant only in FunctionModRefBehavior,
-// to obtain a valid ModRefInfo. The benefit of using the wrapper is that if
-// ModRefInfo enum changes, the wrapper can be updated to & with the new enum
-// entry with all bits set to 1.
-[[nodiscard]] inline ModRefInfo
-createModRefInfo(const FunctionModRefBehavior FMRB) {
-  return ModRefInfo(FMRB & static_cast<int>(ModRefInfo::ModRef));
-}
+/// Debug print FunctionModRefBehavior.
+raw_ostream &operator<<(raw_ostream &OS, FunctionModRefBehavior RMRB);
 
 /// Virtual base class for providers of capture information.
 struct CaptureInfo {
@@ -588,7 +637,7 @@ public:
   ///
   /// This property corresponds to the GCC 'const' attribute.
   bool doesNotAccessMemory(const CallBase *Call) {
-    return getModRefBehavior(Call) == FMRB_DoesNotAccessMemory;
+    return getModRefBehavior(Call).doesNotAccessMemory();
   }
 
   /// Checks if the specified function is known to never read or write memory.
@@ -603,7 +652,7 @@ public:
   ///
   /// This property corresponds to the GCC 'const' attribute.
   bool doesNotAccessMemory(const Function *F) {
-    return getModRefBehavior(F) == FMRB_DoesNotAccessMemory;
+    return getModRefBehavior(F).doesNotAccessMemory();
   }
 
   /// Checks if the specified call is known to only read from non-volatile
@@ -616,7 +665,7 @@ public:
   ///
   /// This property corresponds to the GCC 'pure' attribute.
   bool onlyReadsMemory(const CallBase *Call) {
-    return onlyReadsMemory(getModRefBehavior(Call));
+    return getModRefBehavior(Call).onlyReadsMemory();
   }
 
   /// Checks if the specified function is known to only read from non-volatile
@@ -629,55 +678,7 @@ public:
   ///
   /// This property corresponds to the GCC 'pure' attribute.
   bool onlyReadsMemory(const Function *F) {
-    return onlyReadsMemory(getModRefBehavior(F));
-  }
-
-  /// Checks if functions with the specified behavior are known to only read
-  /// from non-volatile memory (or not access memory at all).
-  static bool onlyReadsMemory(FunctionModRefBehavior MRB) {
-    return !isModSet(createModRefInfo(MRB));
-  }
-
-  /// Checks if functions with the specified behavior are known to only write
-  /// memory (or not access memory at all).
-  static bool onlyWritesMemory(FunctionModRefBehavior MRB) {
-    return !isRefSet(createModRefInfo(MRB));
-  }
-
-  /// Checks if functions with the specified behavior are known to read and
-  /// write at most from objects pointed to by their pointer-typed arguments
-  /// (with arbitrary offsets).
-  static bool onlyAccessesArgPointees(FunctionModRefBehavior MRB) {
-    return !((unsigned)MRB & FMRL_Anywhere & ~FMRL_ArgumentPointees);
-  }
-
-  /// Checks if functions with the specified behavior are known to potentially
-  /// read or write from objects pointed to be their pointer-typed arguments
-  /// (with arbitrary offsets).
-  static bool doesAccessArgPointees(FunctionModRefBehavior MRB) {
-    return isModOrRefSet(createModRefInfo(MRB)) &&
-           ((unsigned)MRB & FMRL_ArgumentPointees);
-  }
-
-  /// Checks if functions with the specified behavior are known to read and
-  /// write at most from memory that is inaccessible from LLVM IR.
-  static bool onlyAccessesInaccessibleMem(FunctionModRefBehavior MRB) {
-    return !((unsigned)MRB & FMRL_Anywhere & ~FMRL_InaccessibleMem);
-  }
-
-  /// Checks if functions with the specified behavior are known to potentially
-  /// read or write from memory that is inaccessible from LLVM IR.
-  static bool doesAccessInaccessibleMem(FunctionModRefBehavior MRB) {
-    return isModOrRefSet(createModRefInfo(MRB)) &&
-             ((unsigned)MRB & FMRL_InaccessibleMem);
-  }
-
-  /// Checks if functions with the specified behavior are known to read and
-  /// write at most from memory that is inaccessible from LLVM IR or objects
-  /// pointed to by their pointer-typed arguments (with arbitrary offsets).
-  static bool onlyAccessesInaccessibleOrArgMem(FunctionModRefBehavior MRB) {
-    return !((unsigned)MRB & FMRL_Anywhere &
-             ~(FMRL_InaccessibleMem | FMRL_ArgumentPointees));
+    return getModRefBehavior(F).onlyReadsMemory();
   }
 
   /// getModRefInfo (for call sites) - Return information about whether
@@ -1190,11 +1191,11 @@ public:
   }
 
   FunctionModRefBehavior getModRefBehavior(const CallBase *Call) {
-    return FMRB_UnknownModRefBehavior;
+    return FunctionModRefBehavior::unknown();
   }
 
   FunctionModRefBehavior getModRefBehavior(const Function *F) {
-    return FMRB_UnknownModRefBehavior;
+    return FunctionModRefBehavior::unknown();
   }
 
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,

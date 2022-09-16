@@ -130,7 +130,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1 {vectorize_padding = true}
+    %2 = transform.structured.vectorize %1 {vectorize_padding}
   }
 }
 

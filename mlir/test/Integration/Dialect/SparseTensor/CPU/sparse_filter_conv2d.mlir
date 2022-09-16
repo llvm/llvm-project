@@ -24,6 +24,15 @@ module {
     return %0 : tensor<6x6xi32>
   }
 
+  func.func @conv2d_sparse_out(%input:  tensor<8x8xi32>,
+               %filter: tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR> {
+    %s = bufferization.alloc_tensor() : tensor<6x6xi32, #DCSR>           
+    %0 = linalg.conv_2d
+      ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32, #DCSR>)
+      outs (%s: tensor<6x6xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
+    return %0 : tensor<6x6xi32, #DCSR>
+  }
+
   func.func @entry() {
     %c0 = arith.constant 0 : index
     %i0 = arith.constant 0 : i32
@@ -53,7 +62,10 @@ module {
     %0 = call @conv2d(%input, %sparse_filter, %output)
        : (tensor<8x8xi32>,
           tensor<3x3xi32, #DCSR>, tensor<6x6xi32>) -> tensor<6x6xi32>
-
+    %1 = call @conv2d_sparse_out(%input, %sparse_filter)
+       : (tensor<8x8xi32>,
+          tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
+ 
     // Verify the output.
     //
     // CHECK:    ( ( 0, 0, -1, -6, -1, 6 ),
@@ -67,9 +79,24 @@ module {
       : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v : vector<6x6xi32>
 
+    //
+    // Should be the same as dense output
+    // CHECK:    ( ( 0, 0, -1, -6, -1, 6 ),
+    // CHECK-SAME: ( -1, 0, 1, 0, 1, 0 ),
+    // CHECK-SAME: ( 0, -1, 1, 0, 0, 0 ),
+    // CHECK-SAME: ( -1, 0, 0, 0, 0, 0 ),
+    // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
+    // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
+    //
+    %sparse_ret = sparse_tensor.convert %1
+      : tensor<6x6xi32, #DCSR> to tensor<6x6xi32>
+    %v1 = vector.transfer_read %sparse_ret[%c0, %c0], %i0
+      : tensor<6x6xi32>, vector<6x6xi32>
+    vector.print %v1 : vector<6x6xi32>
+
     // Release the resources.
     bufferization.dealloc_tensor %sparse_filter : tensor<3x3xi32, #DCSR>
-
+    bufferization.dealloc_tensor %1 : tensor<6x6xi32, #DCSR>
     return
   }
 }

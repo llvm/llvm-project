@@ -793,8 +793,8 @@ define i64 @test_ds_cross_basic_blocks(i8* %0, i32 signext %1) {
 define float @test_ds_float(i8* %0, i32 signext %1) {
 ; CHECK-LABEL: test_ds_float:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpwi r4, 1
-; CHECK-NEXT:    blt cr0, .LBB7_4
+; CHECK-NEXT:    cmpwi r4, 0
+; CHECK-NEXT:    ble cr0, .LBB7_4
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    clrldi r4, r4, 32
 ; CHECK-NEXT:    addi r3, r3, 4002
@@ -875,8 +875,8 @@ define float @test_ds_float(i8* %0, i32 signext %1) {
 define float @test_ds_combine_float_int(i8* %0, i32 signext %1) {
 ; CHECK-LABEL: test_ds_combine_float_int:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpwi r4, 1
-; CHECK-NEXT:    blt cr0, .LBB8_4
+; CHECK-NEXT:    cmpwi r4, 0
+; CHECK-NEXT:    ble cr0, .LBB8_4
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    clrldi r4, r4, 32
 ; CHECK-NEXT:    addi r3, r3, 4002
@@ -958,8 +958,8 @@ define float @test_ds_combine_float_int(i8* %0, i32 signext %1) {
 define i64 @test_ds_lwa_prep(i8* %0, i32 signext %1) {
 ; CHECK-LABEL: test_ds_lwa_prep:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpwi r4, 1
-; CHECK-NEXT:    blt cr0, .LBB9_4
+; CHECK-NEXT:    cmpwi r4, 0
+; CHECK-NEXT:    ble cr0, .LBB9_4
 ; CHECK-NEXT:  # %bb.1: # %.preheader
 ; CHECK-NEXT:    mtctr r4
 ; CHECK-NEXT:    addi r5, r3, 2

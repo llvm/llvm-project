@@ -81,7 +81,7 @@ define i64 @test_complex_atomic() {
 ; CHECK-UNOPT-NEXT:  stlxr
 ; CHECK-UNOPT:     .Lpcsection9:
 ; CHECK-UNOPT-NEXT:  cbnz
-; CHECK-UNOPT:     .Lpcsection12:
+; CHECK-UNOPT:     .Lpcsection13:
 ; CHECK-UNOPT-NEXT:  b
 ; ---
 ; CHECK-NOT:   .Lpcsection
@@ -100,7 +100,7 @@ define i64 @test_complex_atomic() {
 ; CHECK-NEXT:  .Lpcsection_base7:
 ; DEFCM-NEXT:  .word	.Lpcsection5-.Lpcsection_base7
 ; LARGE-NEXT:  .xword	.Lpcsection5-.Lpcsection_base7
-; CHECK-UNOPT: .word	.Lpcsection12-.Lpcsection_base14
+; CHECK-UNOPT: .word	.Lpcsection13-.Lpcsection_base15
 ; CHECK-NEXT:  .text
 entry:
   %0 = atomicrmw add i64* @foo, i64 1 monotonic, align 8, !pcsections !0
