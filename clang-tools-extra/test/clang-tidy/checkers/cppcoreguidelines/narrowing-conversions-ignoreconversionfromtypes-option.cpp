@@ -42,7 +42,7 @@ void narrowing_size_method() {
   // IGNORED: Warning is disabled with IgnoreConversionFromTypes=global_size_t.
 
   i = j + v.size();
-  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:7: warning: narrowing conversion from 'global_size_t' (aka 'long long') to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:7: warning: narrowing conversion from 'long long' to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
   // IGNORED: Warning is disabled with IgnoreConversionFromTypes=global_size_t.
 }
 
@@ -51,7 +51,7 @@ void narrowing_size_method_binary_expr() {
   int j;
   vector v;
   i = j + v.size();
-  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:7: warning: narrowing conversion from 'global_size_t' (aka 'long long') to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:7: warning: narrowing conversion from 'long long' to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
   // IGNORED: Warning is disabled with IgnoreConversionFromTypes=global_size_t.
 }
 
@@ -63,7 +63,7 @@ void narrowing_size_method_binary_op() {
   // IGNORED: Warning is disabled with IgnoreConversionFromTypes=global_size_t.
 
   i += j + v.size();
-  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:8: warning: narrowing conversion from 'global_size_t' (aka 'long long') to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:8: warning: narrowing conversion from 'long long' to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
   // IGNORED: Warning is disabled with IgnoreConversionFromTypes=global_size_t.
 }
 

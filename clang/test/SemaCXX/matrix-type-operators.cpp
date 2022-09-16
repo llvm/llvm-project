@@ -68,7 +68,7 @@ void test_subtract_template(unsigned *Ptr1, float *Ptr2) {
 template <typename EltTy0, unsigned R0, unsigned C0, typename EltTy1, unsigned R1, unsigned C1, typename EltTy2, unsigned R2, unsigned C2>
 typename MyMatrix<EltTy2, R2, C2>::matrix_t multiply(MyMatrix<EltTy0, R0, C0> &A, MyMatrix<EltTy1, R1, C1> &B) {
   char *v1 = A.value * B.value;
-  // expected-error@-1 {{cannot initialize a variable of type 'char *' with an rvalue of type 'matrix_t' (aka 'unsigned int __attribute__((matrix_type(2, 2)))')}}
+  // expected-error@-1 {{cannot initialize a variable of type 'char *' with an rvalue of type 'unsigned int __attribute__((matrix_type(2, 2)))'}}
   // expected-error@-2 {{invalid operands to binary expression ('matrix_t' (aka 'unsigned int __attribute__((matrix_type(3, 2)))') and 'matrix_t' (aka 'unsigned int __attribute__((matrix_type(3, 3)))'))}}
   // expected-error@-3 {{invalid operands to binary expression ('matrix_t' (aka 'float __attribute__((matrix_type(2, 2)))') and 'matrix_t' (aka 'unsigned int __attribute__((matrix_type(2, 2)))'))}}
 

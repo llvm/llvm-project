@@ -157,7 +157,7 @@ auto t7(fp3 a, fp4 b) {
     return true ? a : b;
   if (false)
     return a;
-  return N(); // expected-error {{but deduced as 'Virus (*)() throw(Man, Vibrio)' (aka 'void (*)() throw(Man, Vibrio)')}}
+  return N(); // expected-error {{but deduced as 'SARS (*)() throw(Man, Vibrio)' (aka 'void (*)() throw(Man, Vibrio)')}}
 }
 #endif
 

@@ -18,7 +18,7 @@ int main() {
 
 #ifdef ADD_I64
   (void)(int64_t(8000000000000000000ll) + int64_t(2000000000000000000ll));
-  // CHECK-ADD_I64: 8000000000000000000 + 2000000000000000000 cannot be represented in type '{{int64_t|long( long)?}}'
+  // CHECK-ADD_I64: 8000000000000000000 + 2000000000000000000 cannot be represented in type '{{long( long)?}}'
 #endif
 
 #ifdef ADD_I128
@@ -27,6 +27,6 @@ int main() {
 # else
   puts("__int128 not supported");
 # endif
-  // CHECK-ADD_I128: {{0x40000000000000000000000000000000 \+ 0x40000000000000000000000000000000 cannot be represented in type '__int128_t'|__int128 not supported}}
+  // CHECK-ADD_I128: {{0x40000000000000000000000000000000 \+ 0x40000000000000000000000000000000 cannot be represented in type '__int128'|__int128 not supported}}
 #endif
 }
