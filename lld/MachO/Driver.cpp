@@ -1437,6 +1437,17 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     addFile(arg->getValue(), LoadType::CommandLine, /*isLazy=*/false,
             /*isExplicit=*/false, /*isBundleLoader=*/true);
   }
+  for (auto *arg : args.filtered(OPT_dyld_env)) {
+    StringRef envPair(arg->getValue());
+    if (!envPair.contains('='))
+      error("-dyld_env's argument is  malformed. Expected "
+            "-dyld_env <ENV_VAR>=<VALUE>, got `" +
+            envPair + "`");
+    config->dyldEnvs.push_back(envPair);
+  }
+  if (!config->dyldEnvs.empty() && config->outputType != MH_EXECUTE)
+    error("-dyld_env can only be used when creating executable output");
+
   if (const Arg *arg = args.getLastArg(OPT_umbrella)) {
     if (config->outputType != MH_DYLIB)
       warn("-umbrella used, but not creating dylib");
