@@ -24,6 +24,7 @@
 #include <string>
 #include <type_traits>
 
+#include "test_format_context.h"
 #include "test_macros.h"
 
 enum class color { black, red, gold };
@@ -46,7 +47,8 @@ void test(std::string expected, std::string_view fmt, color arg) {
   auto out = std::back_inserter(result);
   using FormatCtxT = std::basic_format_context<decltype(out), char>;
 
-  auto format_ctx = std::__format_context_create<decltype(out), char>(out, std::make_format_args<FormatCtxT>(arg));
+  std::basic_format_context format_ctx =
+      test_format_context_create<decltype(out), char>(out, std::make_format_args<FormatCtxT>(arg));
   formatter.format(arg, format_ctx);
   assert(result == expected);
 }
