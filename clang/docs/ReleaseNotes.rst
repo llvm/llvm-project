@@ -156,6 +156,12 @@ Improvements to Clang's diagnostics
 - Clang will now give a more suitale diagnostic for declaration of block
   scope identifiers that have external/internal linkage that has an initializer.
   Fixes `Issue 57478: <https://github.com/llvm/llvm-project/issues/57478>`_.
+- New analysis pass will now help preserve sugar when combining deductions, in an
+  order agnostic way. This will be in effect when deducing template arguments,
+  when deducing function return type from multiple return statements, for the
+  conditional operator, and for most binary operations. Type sugar is combined
+  in a way that strips the sugar which is different between terms, and preserves
+  those which are common.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
