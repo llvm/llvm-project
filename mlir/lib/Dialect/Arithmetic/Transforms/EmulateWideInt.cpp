@@ -566,8 +566,6 @@ struct ConvertTruncI final : OpConversionPattern<arith::TruncIOp> {
 // ConvertVectorPrint
 //===----------------------------------------------------------------------===//
 
-// This is primarily a convenience conversion pattern for integration tests
-// with `mlir-cpu-runner`.
 struct ConvertVectorPrint final : OpConversionPattern<vector::PrintOp> {
   using OpConversionPattern::OpConversionPattern;
 
