@@ -1042,11 +1042,10 @@ func.func @memref_copy_ranked() {
 // -----
 
 // CHECK-LABEL: func @memref_copy_contiguous
-#map = affine_map<(d0, d1)[s0] -> (d0 * 2 + s0 + d1)>
 func.func @memref_copy_contiguous(%in: memref<16x2xi32>, %offset: index) {
   %buf = memref.alloc() : memref<1x2xi32>
-  %sub = memref.subview %in[%offset, 0] [1, 2] [1, 1] : memref<16x2xi32> to memref<1x2xi32, #map>
-  memref.copy %sub, %buf : memref<1x2xi32, #map> to memref<1x2xi32>
+  %sub = memref.subview %in[%offset, 0] [1, 2] [1, 1] : memref<16x2xi32> to memref<1x2xi32, strided<[2, 1], offset: ?>>
+  memref.copy %sub, %buf : memref<1x2xi32, strided<[2, 1], offset: ?>> to memref<1x2xi32>
   // CHECK: [[EXTRACT0:%.*]] = llvm.extractvalue {{%.*}}[3, 0] : !llvm.struct<(ptr<i32>, ptr<i32>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: [[MUL1:%.*]] = llvm.mul {{.*}}, [[EXTRACT0]] : i64
   // CHECK: [[EXTRACT1:%.*]] = llvm.extractvalue {{%.*}}[3, 1] : !llvm.struct<(ptr<i32>, ptr<i32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -1081,11 +1080,10 @@ func.func @memref_copy_0d_offset(%in: memref<2xi32>) {
 // -----
 
 // CHECK-LABEL: func @memref_copy_noncontiguous
-#map = affine_map<(d0, d1)[s0] -> (d0 * 2 + s0 + d1)>
 func.func @memref_copy_noncontiguous(%in: memref<16x2xi32>, %offset: index) {
   %buf = memref.alloc() : memref<2x1xi32>
-  %sub = memref.subview %in[%offset, 0] [2, 1] [1, 1] : memref<16x2xi32> to memref<2x1xi32, #map>
-  memref.copy %sub, %buf : memref<2x1xi32, #map> to memref<2x1xi32>
+  %sub = memref.subview %in[%offset, 0] [2, 1] [1, 1] : memref<16x2xi32> to memref<2x1xi32, strided<[2, 1], offset: ?>>
+  memref.copy %sub, %buf : memref<2x1xi32, strided<[2, 1], offset: ?>> to memref<2x1xi32>
   // CHECK: llvm.call @memrefCopy
   return
 }
