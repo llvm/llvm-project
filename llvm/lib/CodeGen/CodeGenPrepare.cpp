@@ -8047,7 +8047,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     if (OptimizeNoopCopyExpression(CI, *TLI, *DL))
       return true;
 
-    if ((isa<UIToFPInst>(I) || isa<TruncInst>(I)) &&
+    if ((isa<UIToFPInst>(I) || isa<FPToUIInst>(I) || isa<TruncInst>(I)) &&
         TLI->optimizeExtendOrTruncateConversion(I,
                                                 LI->getLoopFor(I->getParent())))
       return true;
