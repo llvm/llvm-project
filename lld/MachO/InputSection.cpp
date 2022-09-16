@@ -29,8 +29,8 @@ using namespace lld::macho;
 // Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
 // can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
 // so account for that.
-static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
-                                         sizeof(std::vector<Reloc>) + 104,
+static_assert(sizeof(void *) != 8 ||
+                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 88,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -219,8 +219,6 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);
   }
-
-  target->applyOptimizationHints(buf, this);
 }
 
 ConcatInputSection *macho::makeSyntheticInputSection(StringRef segName,
