@@ -432,3 +432,453 @@ define <vscale x 2 x i32> @vpmerge_trunc(<vscale x 2 x i32> %passthru, <vscale x
   %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   ret <vscale x 2 x i32> %b
 }
+
+declare <vscale x 2 x i16> @llvm.vp.select.nxv2i16(<vscale x 2 x i1>, <vscale x 2 x i16>, <vscale x 2 x i16>, i32)
+declare <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1>, <vscale x 2 x i32>, <vscale x 2 x i32>, i32)
+declare <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1>, <vscale x 2 x float>, <vscale x 2 x float>, i32)
+declare <vscale x 2 x double> @llvm.vp.select.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>, i32)
+
+; Test binary operator with vp.select and vp.smax.
+define <vscale x 2 x i32> @vpselect_vpadd(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test glued node of select should not be deleted.
+define <vscale x 2 x i32> @vpselect_vpadd2(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpadd2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmseq.vv v0, v9, v10
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %mask, i32 %vl)
+  %m = call <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, metadata !"eq", <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test vp.select has all-ones mask.
+define <vscale x 2 x i32> @vpselect_vpadd3(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpadd3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vmset.m v0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %mask, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test float binary operator with vp.select and vp.fadd.
+define <vscale x 2 x float> @vpselect_vpfadd(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpfadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vfadd.vv v9, v9, v10
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x float> @llvm.vp.fadd.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test for binary operator with specific EEW by riscv.vrgatherei16.
+define <vscale x 2 x i32> @vpselect_vrgatherei16(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i16> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vrgatherei16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vrgatherei16.vv v8, v9, v10
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %2 = tail call <vscale x 2 x i32> @llvm.riscv.vrgatherei16.vv.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32> %x, <vscale x 2 x i16> %y, i64 %1)
+  %3 = tail call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %2, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %2
+}
+
+; Test conversion by fptosi.
+define <vscale x 2 x i16> @vpselect_vpfptosi(<vscale x 2 x i16> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpfptosi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i16> @llvm.vp.fptosi.nxv2i16.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i16> @llvm.vp.select.nxv2i16(<vscale x 2 x i1> %m, <vscale x 2 x i16> %a, <vscale x 2 x i16> %passthru, i32 %vl)
+  ret <vscale x 2 x i16> %b
+}
+
+; Test conversion by sitofp.
+define <vscale x 2 x float> @vpselect_vpsitofp(<vscale x 2 x float> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpsitofp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vfncvt.f.x.w v9, v10
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2f32.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test integer extension by vp.zext.
+define <vscale x 2 x i32> @vpselect_vpzext(<vscale x 2 x i32> %passthru, <vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpzext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vzext.vf4 v10, v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test integer truncation by vp.trunc.
+define <vscale x 2 x i32> @vpselect_vptrunc(<vscale x 2 x i32> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vptrunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vnsrl.wi v9, v10, 0
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test integer extension by vp.fpext.
+define <vscale x 2 x double> @vpselect_vpfpext(<vscale x 2 x double> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpfpext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vfwcvt.f.f.v v12, v10
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x double> @llvm.vp.select.nxv2f64(<vscale x 2 x i1> %m, <vscale x 2 x double> %a, <vscale x 2 x double> %passthru, i32 %vl)
+  ret <vscale x 2 x double> %b
+}
+
+; Test integer truncation by vp.trunc.
+define <vscale x 2 x float> @vpselect_vpfptrunc(<vscale x 2 x float> %passthru, <vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpfptrunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vfncvt.f.f.w v9, v10
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x float> @llvm.vp.fptrunc.nxv2f32.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test load operation by vp.load.
+define <vscale x 2 x i32> @vpselect_vpload(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> * %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpload:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test result has chain and glued node.
+define <vscale x 2 x i32> @vpselect_vpload2(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> * %p, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpload2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v11, (a0)
+; CHECK-NEXT:    vmseq.vv v0, v9, v10
+; CHECK-NEXT:    vmerge.vvm v8, v8, v11, v0
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %m = call <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, metadata !"eq", <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test result has chain output of true operand of select.vvm.
+define void @vpselect_vpload_store(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> * %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vpload_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vs1r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
+  %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+  %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0nxv2i32(<vscale x 2 x i32> * %p, <vscale x 2 x i1> %mask, i32 %vl)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  store <vscale x 2 x i32> %b, <vscale x 2 x i32> * %p
+  ret void
+}
+
+; FIXME: select vselect.vvm and vleffN.v
+define <vscale x 2 x i32> @vpselect_vleff(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> * %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vleff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vle32ff.v v9, (a0)
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call { <vscale x 2 x i32>, i64 } @llvm.riscv.vleff.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %p, i64 %1)
+  %b = extractvalue { <vscale x 2 x i32>, i64 } %a, 0
+  %c = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %b, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %c
+}
+
+; Test strided load by riscv.vlse
+define <vscale x 2 x i32> @vpselect_vlse(<vscale x 2 x i32> %passthru,  <vscale x 2 x i32> * %p, <vscale x 2 x i1> %m, i64 %s, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vlse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vlse32.v v9, (a0), a1
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x i32> @llvm.riscv.vlse.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %p, i64 %s, i64 %1)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test indexed load by riscv.vluxei
+define <vscale x 2 x i32> @vpselect_vluxei(<vscale x 2 x i32> %passthru,  <vscale x 2 x i32> * %p, <vscale x 2 x i64> %idx, <vscale x 2 x i1> %m, i64 %s, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vluxei:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vluxei64.v v9, (a0), v10
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x i32> @llvm.riscv.vluxei.nxv2i32.nxv2i64(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %p, <vscale x 2 x i64> %idx, i64 %1)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test vector index by riscv.vid
+define <vscale x 2 x i32> @vpselect_vid(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vid:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x i32> @llvm.riscv.vid.nxv2i32(<vscale x 2 x i32> undef, i64 %1)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test riscv.viota
+define <vscale x 2 x i32> @vpselect_viota(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %m, <vscale x 2 x i1> %vm, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_viota:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    viota.m v10, v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x i32> @llvm.riscv.viota.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i1> %vm, i64 %1)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test riscv.vfclass
+define <vscale x 2 x i32> @vpselect_vflcass(<vscale x 2 x i32> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vflcass:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vfclass.v v9, v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x i32> @llvm.riscv.vfclass.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x float> %vf, i64 %1)
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test riscv.vfsqrt
+define <vscale x 2 x float> @vpselect_vfsqrt(<vscale x 2 x float> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vfsqrt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vfsqrt.v v9, v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test reciprocal operation by riscv.vfrec7
+define <vscale x 2 x float> @vpselect_vfrec7(<vscale x 2 x float> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_vfrec7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vfrec7.v v9, v9
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %1 = zext i32 %vl to i64
+  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test vector operations with VLMAX vector length.
+
+; Test binary operator with vp.select and add.
+define <vscale x 2 x i32> @vpselect_add(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %a = add <vscale x 2 x i32> %x, %y
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test binary operator with vp.select and fadd.
+define <vscale x 2 x float> @vpselect_fadd(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_fadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vfadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %a = fadd <vscale x 2 x float> %x, %y
+  %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test conversion by fptosi.
+define <vscale x 2 x i16> @vpselect_fptosi(<vscale x 2 x i16> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_fptosi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v9
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    ret
+  %a = fptosi <vscale x 2 x float> %x to <vscale x 2 x i16>
+  %b = call <vscale x 2 x i16> @llvm.vp.select.nxv2i16(<vscale x 2 x i1> %m, <vscale x 2 x i16> %a, <vscale x 2 x i16> %passthru, i32 %vl)
+  ret <vscale x 2 x i16> %b
+}
+
+; Test conversion by sitofp.
+define <vscale x 2 x float> @vpselect_sitofp(<vscale x 2 x float> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_sitofp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vfncvt.f.x.w v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %a = sitofp <vscale x 2 x i64> %x to <vscale x 2 x float>
+  %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test float extension by fpext.
+define <vscale x 2 x double> @vpselect_fpext(<vscale x 2 x double> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_fpext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vfwcvt.f.f.v v12, v10
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
+; CHECK-NEXT:    ret
+  %a = fpext <vscale x 2 x float> %x to <vscale x 2 x double>
+  %b = call <vscale x 2 x double> @llvm.vp.select.nxv2f64(<vscale x 2 x i1> %m, <vscale x 2 x double> %a, <vscale x 2 x double> %passthru, i32 %vl)
+  ret <vscale x 2 x double> %b
+}
+
+; Test float truncation by fptrunc.
+define <vscale x 2 x float> @vpselect_fptrunc(<vscale x 2 x float> %passthru, <vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_fptrunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vfncvt.f.f.w v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %a = fptrunc <vscale x 2 x double> %x to <vscale x 2 x float>
+  %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test integer extension by zext.
+define <vscale x 2 x i32> @vpselect_zext(<vscale x 2 x i32> %passthru, <vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vzext.vf4 v10, v9
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    ret
+  %a = zext <vscale x 2 x i8> %x to <vscale x 2 x i32>
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test integer truncation by trunc.
+define <vscale x 2 x i32> @vpselect_trunc(<vscale x 2 x i32> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpselect_trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vnsrl.wi v9, v10, 0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %a = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
+  %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
