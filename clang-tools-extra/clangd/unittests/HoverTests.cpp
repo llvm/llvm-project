@@ -1991,7 +1991,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "class std::initializer_list<int>";
+            HI.Definition = "std::initializer_list<int>";
           }},
       {
           R"cpp(// User defined conversion to auto
