@@ -495,6 +495,23 @@ func.func @tensor.collapse_shape_of_slice4(%arg0: tensor<?x2x4xf32>, %offset: in
 
 // -----
 
+// CHECK-LABEL: func @tensor.collapse_shape_of_slice5(
+func.func @tensor.collapse_shape_of_slice5(%arg0: tensor<2x2x2xi64>) -> tensor<4xi64> {
+  // CHECK: %[[subview:.*]] = memref.subview %{{.*}} : memref<2x2x2xi64> to memref<2x1x2xi64, #{{.*}}>
+  %0 = tensor.extract_slice %arg0[0, 0, 0] [2, 1, 2] [1, 1, 1] : tensor<2x2x2xi64> to tensor<2x1x2xi64>
+
+  // This memref is not collapsible, so the buffer must be copied to get rid of
+  // the layout map.
+  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<2x1x2xi64>
+  // CHECK: memref.copy %[[subview]], %[[alloc]]
+  // CHECK: memref.collapse_shape %[[alloc]] [
+  // CHECK-SAME: [0, 1, 2]] : memref<2x1x2xi64> into memref<4xi64>
+  %1 = tensor.collapse_shape %0 [[0, 1, 2]] : tensor<2x1x2xi64> into tensor<4xi64>
+  return %1 : tensor<4xi64>
+}
+
+// -----
+
 // CHECK-LABEL: func @tensor.reshape(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?x10xf32>
 func.func @tensor.reshape(%t1: tensor<?x10xf32>) -> tensor<2x2x5xf32> {

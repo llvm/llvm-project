@@ -1917,12 +1917,6 @@ computeCollapsedLayoutMap(MemRefType srcType,
       // Both source and result stride must have the same static value. In that
       // case, we can be sure, that the dimensions are collapsible (because they
       // are contiguous).
-      //
-      // One special case is when the srcShape is `1`, in which case it can
-      // never produce non-contiguity.
-      if (srcShape[idx] == 1)
-        continue;
-
       // If `strict = false` (default during op verification), we accept cases
       // where one or both strides are dynamic. This is best effort: We reject
       // ops where obviously non-contiguous dims are collapsed, but accept ops
