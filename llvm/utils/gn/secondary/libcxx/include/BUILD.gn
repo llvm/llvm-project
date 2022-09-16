@@ -590,7 +590,6 @@ if (current_toolchain == default_toolchain) {
       "__thread/timed_backoff_policy.h",
       "__threading_support",
       "__tree",
-      "__tuple",
       "__tuple/apply_cv.h",
       "__tuple/make_tuple_types.h",
       "__tuple/sfinae_helpers.h",
