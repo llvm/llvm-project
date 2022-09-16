@@ -114,6 +114,11 @@ public:
     return success(parser.consumeIf(Token::comma));
   }
 
+  /// Parses a `...`.
+  ParseResult parseEllipsis() override {
+    return parser.parseToken(Token::ellipsis, "expected '...'");
+  }
+
   /// Parses a `...` if present.
   ParseResult parseOptionalEllipsis() override {
     return success(parser.consumeIf(Token::ellipsis));

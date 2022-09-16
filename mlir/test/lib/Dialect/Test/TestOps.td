@@ -797,6 +797,13 @@ def OIListAllowedLiteral : TEST_Op<"oilist_allowed_literal"> {
   }];
 }
 
+def TestEllipsisOp : TEST_Op<"ellipsis"> {
+  let arguments = (ins Variadic<AnyType>:$operands, UnitAttr:$variadic);
+  let assemblyFormat = [{
+    `(` $operands (`...` $variadic^)? `)` attr-dict `:` type($operands) `...`
+  }];
+}
+
 def ElseAnchorOp : TEST_Op<"else_anchor"> {
   let arguments = (ins Optional<AnyType>:$a);
   let assemblyFormat = "`(` (`?`) : (`` $a^ `:` type($a))? `)` attr-dict";
