@@ -29,7 +29,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -182,7 +181,7 @@ private:
   // consisting of instructions exclusively computed for producing the operands
   // of the source instruction.
   void getExclBackwardsSlice(Instruction *I, std::stack<Instruction *> &Slice,
-                             bool ForSinking = false);
+                             Instruction *SI, bool ForSinking = false);
 
   // Returns true if the condition of the select is highly predictable.
   bool isSelectHighlyPredictable(const SelectInst *SI);
@@ -377,13 +376,13 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       // false operands.
       if (auto *TI = dyn_cast<Instruction>(SI->getTrueValue())) {
         std::stack<Instruction *> TrueSlice;
-        getExclBackwardsSlice(TI, TrueSlice, true);
+        getExclBackwardsSlice(TI, TrueSlice, SI, true);
         maxTrueSliceLen = std::max(maxTrueSliceLen, TrueSlice.size());
         TrueSlices.push_back(TrueSlice);
       }
       if (auto *FI = dyn_cast<Instruction>(SI->getFalseValue())) {
         std::stack<Instruction *> FalseSlice;
-        getExclBackwardsSlice(FI, FalseSlice, true);
+        getExclBackwardsSlice(FI, FalseSlice, SI, true);
         maxFalseSliceLen = std::max(maxFalseSliceLen, FalseSlice.size());
         FalseSlices.push_back(FalseSlice);
       }
@@ -469,22 +468,6 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
                                       EndBlock->getParent(), EndBlock);
       auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(SI->getDebugLoc());
-    }
-    // If there was sinking, move any lifetime-end intrinsic calls found in the
-    // StartBlock to the newly-created end block to ensure sound lifetime info
-    // after sinking (in case any use is sinked).
-    else {
-      SmallVector<Instruction *, 2> EndLifetimeCalls;
-      for (Instruction &I : *StartBlock) {
-        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
-          if (II->getIntrinsicID() == Intrinsic::lifetime_end) {
-            EndLifetimeCalls.push_back(&I);
-          }
-        }
-      }
-      for (auto *LC : EndLifetimeCalls) {
-        LC->moveBefore(&*EndBlock->getFirstInsertionPt());
-      }
     }
 
     // Insert the real conditional branch based on the original condition.
@@ -700,7 +683,7 @@ bool SelectOptimize::hasExpensiveColdOperand(
     }
     if (ColdI) {
       std::stack<Instruction *> ColdSlice;
-      getExclBackwardsSlice(ColdI, ColdSlice);
+      getExclBackwardsSlice(ColdI, ColdSlice, SI);
       InstructionCost SliceCost = 0;
       while (!ColdSlice.empty()) {
         SliceCost += TTI->getInstructionCost(ColdSlice.top(),
@@ -721,6 +704,22 @@ bool SelectOptimize::hasExpensiveColdOperand(
   return false;
 }
 
+// Check if it is safe to move LoadI next to the SI.
+// Conservatively assume it is safe only if there is no instruction
+// modifying memory in-between the load and the select instruction.
+static bool isSafeToSinkLoad(Instruction *LoadI, Instruction *SI) {
+  // Assume loads from different basic blocks are unsafe to move.
+  if (LoadI->getParent() != SI->getParent())
+    return false;
+  auto It = LoadI->getIterator();
+  while (&*It != SI) {
+    if (It->mayWriteToMemory())
+      return false;
+    It++;
+  }
+  return true;
+}
+
 // For a given source instruction, collect its backwards dependence slice
 // consisting of instructions exclusively computed for the purpose of producing
 // the operands of the source instruction. As an approximation
@@ -729,7 +728,7 @@ bool SelectOptimize::hasExpensiveColdOperand(
 // form an one-use chain that leads to the source instruction.
 void SelectOptimize::getExclBackwardsSlice(Instruction *I,
                                            std::stack<Instruction *> &Slice,
-                                           bool ForSinking) {
+                                           Instruction *SI, bool ForSinking) {
   SmallPtrSet<Instruction *, 2> Visited;
   std::queue<Instruction *> Worklist;
   Worklist.push(I);
@@ -749,6 +748,13 @@ void SelectOptimize::getExclBackwardsSlice(Instruction *I,
     // Avoid sinking other select instructions (should be handled separetely).
     if (ForSinking && (II->isTerminator() || II->mayHaveSideEffects() ||
                        isa<SelectInst>(II) || isa<PHINode>(II)))
+      continue;
+
+    // Avoid sinking loads in order not to skip state-modifying instructions,
+    // that may alias with the loaded address.
+    // Only allow sinking of loads within the same basic block that are
+    // conservatively proven to be safe.
+    if (ForSinking && II->mayReadFromMemory() && !isSafeToSinkLoad(II, SI))
       continue;
 
     // Avoid considering instructions with less frequency than the source
