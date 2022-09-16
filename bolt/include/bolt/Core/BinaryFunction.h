@@ -1074,6 +1074,14 @@ public:
     return N;
   }
 
+  /// Return true if function has instructions to emit.
+  bool hasNonPseudoInstructions() const {
+    for (const BinaryBasicBlock &BB : blocks())
+      if (BB.getNumNonPseudos() > 0)
+        return true;
+    return false;
+  }
+
   /// Return MC symbol associated with the function.
   /// All references to the function should use this symbol.
   MCSymbol *getSymbol(const FragmentNum Fragment = FragmentNum::main()) {
