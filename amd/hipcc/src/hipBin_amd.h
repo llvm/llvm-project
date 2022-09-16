@@ -847,7 +847,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
           isObj =  (hipBinUtilPtr_->substringPresent(fileType, "ELF") ||
                     hipBinUtilPtr_->substringPresent(fileType, "COFF"));
           if (hipBinUtilPtr_->substringPresent(fileType, "ELF")) {
-            cmd = "readelf -e -W " + obj;
+            cmd = "llvm-readelf -e -W " + obj;
             SystemCmdOut sysOut;
             sysOut = hipBinUtilPtr_->exec(cmd.c_str());
             string sections = sysOut.out;
