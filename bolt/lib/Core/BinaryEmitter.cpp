@@ -287,6 +287,11 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   if (Function.getState() == BinaryFunction::State::Empty)
     return false;
 
+  // Avoid emitting function without instructions when overwriting the original
+  // function in-place. Otherwise, emit the empty function to define the symbol.
+  if (!BC.HasRelocations && !Function.hasNonPseudoInstructions())
+    return false;
+
   MCSection *Section =
       BC.getCodeSection(Function.getCodeSectionName(FF.getFragmentNum()));
   Streamer.switchSection(Section);

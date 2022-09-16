@@ -11,6 +11,12 @@ add_header(
 )
 
 add_header(
+  sys_resource_macros
+  HDR
+    sys-resource-macros.h
+)
+
+add_header(
   unistd_macros
   HDR
     unistd-macros.h

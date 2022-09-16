@@ -44,8 +44,7 @@ define <8 x float> @simple_select2(<4 x float> %a, <4 x float> %b, <4 x i32> %c)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <8 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 undef, i32 3>
-; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <8 x float> undef, <8 x float> [[TMP3]], <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 6, i32 15>
-; CHECK-NEXT:    ret <8 x float> [[RD1]]
+; CHECK-NEXT:    ret <8 x float> [[TMP3]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
