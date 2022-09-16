@@ -161,3 +161,37 @@ class MemoryCommandRegionAll(GDBRemoteTestBase):
         self.assertFalse(result.Succeeded())
         self.assertEqual(result.GetError(),
                     "error: qMemoryRegionInfo is not supported\n")
+
+    @skipIfAsan
+    def test_all_no_abi_plugin(self):
+        # There are two conditions for breaking the all loop. Either we get to
+        # LLDB_INVALID_ADDRESS, or the ABI plugin tells us we have got beyond
+        # the mappable range. If we don't have an ABI plugin, the option should still
+        # work and only check the first condition.
+
+        class MyResponder(MockGDBServerResponder):
+            def qMemoryRegionInfo(self, addr):
+                if addr == 0:
+                    return "start:0;size:100000000;"
+                # Goes until the end of memory.
+                if addr == 0x100000000:
+                    return "start:100000000;size:fffffffeffffffff;"
+
+        self.server.responder = MyResponder()
+        target = self.dbg.CreateTarget('')
+        if self.TraceOn():
+          self.runCmd("log enable gdb-remote packets")
+          self.addTearDownHook(
+                lambda: self.runCmd("log disable gdb-remote packets"))
+
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateStopped])
+
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand("memory region --all ", result)
+        self.assertTrue(result.Succeeded())
+        self.assertEqual(result.GetOutput(),
+                    "[0x0000000000000000-0x0000000100000000) ---\n"
+                    "[0x0000000100000000-0xffffffffffffffff) ---\n")
