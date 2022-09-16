@@ -992,15 +992,6 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
   return simplifyAffineExpr(expr, numDims, nSymbols);
 }
 
-/// Return a version of `t` with a layout that has all dynamic offset and
-/// strides. This is used to erase the static layout.
-MemRefType mlir::eraseStridedLayout(MemRefType t) {
-  auto val = ShapedType::kDynamicStrideOrOffset;
-  return MemRefType::Builder(t).setLayout(
-      AffineMapAttr::get(makeStridedLinearLayoutMap(
-          SmallVector<int64_t, 4>(t.getRank(), val), val, t.getContext())));
-}
-
 AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                                 MLIRContext *context) {
   SmallVector<AffineExpr, 4> exprs;
@@ -1016,14 +1007,4 @@ bool mlir::isStrided(MemRefType t) {
   SmallVector<int64_t, 4> strides;
   auto res = getStridesAndOffset(t, strides, offset);
   return succeeded(res);
-}
-
-/// Return the layout map in strided linear layout AffineMap form.
-/// Return null if the layout is not compatible with a strided layout.
-AffineMap mlir::getStridedLinearLayoutMap(MemRefType t) {
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(t, strides, offset)))
-    return AffineMap();
-  return makeStridedLinearLayoutMap(strides, offset, t.getContext());
 }

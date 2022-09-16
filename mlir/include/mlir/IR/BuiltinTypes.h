@@ -432,10 +432,6 @@ LogicalResult getStridesAndOffset(MemRefType t,
 /// `t` with simplified layout.
 MemRefType canonicalizeStridedLayout(MemRefType t);
 
-/// Return a version of `t` with a layout that has all dynamic offset and
-/// strides. This is used to erase the static layout.
-MemRefType eraseStridedLayout(MemRefType t);
-
 /// Given MemRef `sizes` that are either static or dynamic, returns the
 /// canonical "contiguous" strides AffineExpr. Strides are multiplicative and
 /// once a dynamic dimension is encountered, all canonical strides become
@@ -461,10 +457,6 @@ AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 
 /// Return true if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
-
-/// Return the layout map in strided linear layout AffineMap form.
-/// Return null if the layout is not compatible with a strided layout.
-AffineMap getStridedLinearLayoutMap(MemRefType t);
 
 } // namespace mlir
 

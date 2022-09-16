@@ -25,6 +25,13 @@ namespace mlir {
 using namespace mlir;
 using namespace mlir::linalg;
 
+static MemRefType makeStridedLayoutDynamic(MemRefType type) {
+  return MemRefType::Builder(type).setLayout(StridedLayoutAttr::get(
+      type.getContext(), ShapedType::kDynamicStrideOrOffset,
+      SmallVector<int64_t>(type.getRank(),
+                           ShapedType::kDynamicStrideOrOffset)));
+}
+
 /// Helper function to extract the operand types that are passed to the
 /// generated CallOp. MemRefTypes have their layout canonicalized since the
 /// information is not used in signature generation.
@@ -37,7 +44,7 @@ static SmallVector<Type, 4> extractOperandTypes(Operation *op) {
     // information. Canonicalizing the type at the level of std when going into
     // a library call avoids needing to introduce DialectCastOp.
     if (auto memrefType = type.dyn_cast<MemRefType>())
-      result.push_back(eraseStridedLayout(memrefType));
+      result.push_back(makeStridedLayoutDynamic(memrefType));
     else
       result.push_back(type);
   }
@@ -95,7 +102,7 @@ createTypeCanonicalizedMemRefOperands(OpBuilder &b, Location loc,
       continue;
     }
     Value cast =
-        b.create<memref::CastOp>(loc, eraseStridedLayout(memrefType), op);
+        b.create<memref::CastOp>(loc, makeStridedLayoutDynamic(memrefType), op);
     res.push_back(cast);
   }
   return res;

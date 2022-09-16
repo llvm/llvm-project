@@ -63,7 +63,7 @@ func.func @buffer_forwarding_no_conflict(
 // -----
 
 //      CHECK: func @insertion_point_inside_loop(
-// CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index)
+// CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided{{.*}}>, %[[sz:.*]]: index)
 func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -92,7 +92,7 @@ func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tens
 // -----
 
 //      CHECK: func @insertion_point_outside_loop(
-// CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
+// CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
 func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
                                         %idx : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
