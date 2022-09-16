@@ -904,6 +904,10 @@ clang build using CMake parameters, CLANG_CONFIG_FILE_USER_DIR and
 CLANG_CONFIG_FILE_SYSTEM_DIR respectively. The first file found is used. It is
 an error if the required file cannot be found.
 
+If no explicit configuration file is specified, Clang searches for a default
+configuration file following the rules described in the next paragraphs.
+To disable this behavior, `--no-default-config` flag can be used.
+
 Another way to specify a configuration file is to encode it in executable name.
 For example, if the Clang executable is named `armv7l-clang` (it may be a
 symbolic link to `clang`), then Clang will search for file `armv7l.cfg` in the
