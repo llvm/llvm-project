@@ -24,10 +24,17 @@
 #include <string>
 #include <vector>
 
-using namespace std::chrono;
 using namespace llvm;
 
 namespace {
+
+using std::chrono::duration;
+using std::chrono::duration_cast;
+using std::chrono::microseconds;
+using std::chrono::steady_clock;
+using std::chrono::system_clock;
+using std::chrono::time_point;
+using std::chrono::time_point_cast;
 
 struct TimeTraceProfilerInstances {
   std::mutex Lock;
@@ -48,57 +55,62 @@ TimeTraceProfiler *llvm::getTimeTraceProfilerInstance() {
   return TimeTraceProfilerInstance;
 }
 
-typedef duration<steady_clock::rep, steady_clock::period> DurationType;
-typedef time_point<steady_clock> TimePointType;
-typedef std::pair<size_t, DurationType> CountAndDurationType;
-typedef std::pair<std::string, CountAndDurationType>
-    NameAndCountAndDurationType;
-
 namespace {
-struct Entry {
+
+using ClockType = steady_clock;
+using TimePointType = time_point<ClockType>;
+using DurationType = duration<ClockType::rep, ClockType::period>;
+using CountAndDurationType = std::pair<size_t, DurationType>;
+using NameAndCountAndDurationType =
+    std::pair<std::string, CountAndDurationType>;
+
+/// Represents an open or completed time section entry to be captured.
+struct TimeTraceProfilerEntry {
   const TimePointType Start;
   TimePointType End;
   const std::string Name;
   const std::string Detail;
 
-  Entry(TimePointType &&S, TimePointType &&E, std::string &&N, std::string &&Dt)
+  TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
+                         std::string &&Dt)
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)),
         Detail(std::move(Dt)) {}
 
   // Calculate timings for FlameGraph. Cast time points to microsecond precision
-  // rather than casting duration. This avoid truncation issues causing inner
+  // rather than casting duration. This avoids truncation issues causing inner
   // scopes overruning outer scopes.
-  steady_clock::rep getFlameGraphStartUs(TimePointType StartTime) const {
+  ClockType::rep getFlameGraphStartUs(TimePointType StartTime) const {
     return (time_point_cast<microseconds>(Start) -
             time_point_cast<microseconds>(StartTime))
         .count();
   }
 
-  steady_clock::rep getFlameGraphDurUs() const {
+  ClockType::rep getFlameGraphDurUs() const {
     return (time_point_cast<microseconds>(End) -
             time_point_cast<microseconds>(Start))
         .count();
   }
 };
-} // namespace
+
+} // anonymous namespace
 
 struct llvm::TimeTraceProfiler {
   TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "")
-      : BeginningOfTime(system_clock::now()), StartTime(steady_clock::now()),
+      : BeginningOfTime(system_clock::now()), StartTime(ClockType::now()),
         ProcName(ProcName), Pid(sys::Process::getProcessId()),
         Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity) {
     llvm::get_thread_name(ThreadName);
   }
 
   void begin(std::string Name, llvm::function_ref<std::string()> Detail) {
-    Stack.emplace_back(steady_clock::now(), TimePointType(), std::move(Name),
+    Stack.emplace_back(ClockType::now(), TimePointType(), std::move(Name),
                        Detail());
   }
 
   void end() {
     assert(!Stack.empty() && "Must call begin() first");
-    Entry &E = Stack.back();
-    E.End = steady_clock::now();
+    TimeTraceProfilerEntry &E = Stack.back();
+    E.End = ClockType::now();
 
     // Check that end times monotonically increase.
     assert((Entries.empty() ||
@@ -120,7 +132,9 @@ struct llvm::TimeTraceProfiler {
     // happens to be the ones that don't have any currently open entries above
     // itself.
     if (llvm::none_of(llvm::drop_begin(llvm::reverse(Stack)),
-                      [&](const Entry &Val) { return Val.Name == E.Name; })) {
+                      [&](const TimeTraceProfilerEntry &Val) {
+                        return Val.Name == E.Name;
+                      })) {
       auto &CountAndTotal = CountAndTotalPerName[E.Name];
       CountAndTotal.first++;
       CountAndTotal.second += Duration;
@@ -163,10 +177,10 @@ struct llvm::TimeTraceProfiler {
         }
       });
     };
-    for (const Entry &E : Entries)
+    for (const TimeTraceProfilerEntry &E : Entries)
       writeEvent(E, this->Tid);
     for (const TimeTraceProfiler *TTP : Instances.List)
-      for (const Entry &E : TTP->Entries)
+      for (const TimeTraceProfilerEntry &E : TTP->Entries)
         writeEvent(E, TTP->Tid);
 
     // Emit totals by section name as additional "thread" events, sorted from
@@ -255,10 +269,12 @@ struct llvm::TimeTraceProfiler {
     J.objectEnd();
   }
 
-  SmallVector<Entry, 16> Stack;
-  SmallVector<Entry, 128> Entries;
+  SmallVector<TimeTraceProfilerEntry, 16> Stack;
+  SmallVector<TimeTraceProfilerEntry, 128> Entries;
   StringMap<CountAndDurationType> CountAndTotalPerName;
+  // System clock time when the session was begun.
   const time_point<system_clock> BeginningOfTime;
+  // Profiling clock time when the session was begun.
   const TimePointType StartTime;
   const std::string ProcName;
   const sys::Process::Pid Pid;
