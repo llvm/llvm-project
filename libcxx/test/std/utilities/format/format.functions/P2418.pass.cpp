@@ -28,8 +28,7 @@
 
 template <class CharT>
 struct std::formatter<MoveOnly, CharT> : std::formatter<int, CharT> {
-  // TODO FMT Make this a const member function after the base class has been adapted.
-  auto format(const MoveOnly& m, auto& ctx) -> decltype(ctx.out()) {
+  auto format(const MoveOnly& m, auto& ctx) const -> decltype(ctx.out()) {
     return std::formatter<int, CharT>::format(m.get(), ctx);
   }
 };

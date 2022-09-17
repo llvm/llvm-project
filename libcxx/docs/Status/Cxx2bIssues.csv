@@ -189,4 +189,5 @@
 "`3629 <https://wg21.link/LWG3629>`__","``make_error_code`` and ``make_error_condition`` are customization points","Not voted in","|Complete|","16.0",""
 "`3631 <https://wg21.link/LWG3631>`__","``basic_format_arg(T&&)`` should use ``remove_cvref_t<T>`` throughout","Not voted in","|Complete|","15.0",""
 "`3645 <https://wg21.link/LWG3645>`__","``resize_and_overwrite`` is overspecified to call its callback with lvalues","Not voted in","|Complete|","14.0",""
+"`3636 <https://wg21.link/LWG3636>`__","``formatter<T>::format`` should be ``const``-qualified","Not voted in","|Complete|","16.0",""
 "","","","",""
