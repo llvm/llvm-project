@@ -43,17 +43,7 @@ def ArgUint64 : ArgType { let Name = "uint64_t"; }
 def ArgBool : ArgType { let Name = "bool"; }
 
 def ArgFunction : ArgType { let Name = "const Function *"; }
-def ArgRecord : ArgType { let Name = "Record *"; }
-
-def ArgSema : ArgType { let Name = "const fltSemantics *"; }
-
-def ArgExpr : ArgType { let Name = "const Expr *"; }
-def ArgFloatingLiteral : ArgType { let Name = "const FloatingLiteral *"; }
-def ArgCXXMethodDecl : ArgType { let Name = "const CXXMethodDecl *"; }
-def ArgFunctionDecl : ArgType { let Name = "const FunctionDecl *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
-def ArgCXXRecordDecl : ArgType { let Name = "const CXXRecordDecl *"; }
-def ArgValueDecl : ArgType { let Name = "const ValueDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 
 //===----------------------------------------------------------------------===//
