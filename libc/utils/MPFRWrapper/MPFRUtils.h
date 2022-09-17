@@ -34,6 +34,7 @@ enum class Operation : int {
   Cosh,
   Exp,
   Exp2,
+  Exp10,
   Expm1,
   Floor,
   Log,
