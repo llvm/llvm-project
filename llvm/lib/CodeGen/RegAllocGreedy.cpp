@@ -2665,6 +2665,10 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
                        TimerGroupDescription, TimePassesIsEnabled);
     LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
     spiller().spill(LRE);
+    if (TRI->isPrioRC(MRI->getRegClass(VirtReg.reg())->getID()))
+      ++NumFPSpilled;
+    else
+      ++NumOtherSpilled;
     ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 
     // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
@@ -2869,6 +2873,17 @@ bool RAGreedy::hasVirtRegAlloc() {
   return false;
 }
 
+#include "llvm/IR/Module.h"
+
+std::string getFunctionID(const Function *F) {
+  std::string TmpStr;
+  raw_string_ostream OS(TmpStr);
+  OS << F->getParent()->getModuleIdentifier() << "OOOOOOO"
+     << F->getName();
+  return OS.str();
+}
+static cl::opt<bool> RegallocStats("regalloc-stats", cl::init(false));
+
 bool RAGreedy::run(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "********** GREEDY REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
@@ -2880,6 +2895,13 @@ bool RAGreedy::run(MachineFunction &mf) {
     MF->verify(LIS, Indexes, "Before greedy register allocator", &errs());
 
   RegAllocBase::init(*this->VRM, *this->LIS, *this->Matrix);
+
+  NumFPSpilled = 0;
+  NumOtherSpilled = 0;
+  unsigned NumVirtRegs = MRI->getNumVirtRegs();
+  unsigned NumInstrs = 0;
+  for (auto &MBBI : *MF)
+    NumInstrs += MBBI.size();
 
   // Early return if there is no virtual register to be allocated to a
   // physical register.
@@ -2929,6 +2951,16 @@ bool RAGreedy::run(MachineFunction &mf) {
     MF->verify(LIS, Indexes, "Before post optimization", &errs());
   postOptimization();
   reportStats();
+
+  //////////
+  if (RegallocStats) {
+    dbgs() << "REGALLOCSTAT: " << getFunctionID(&MF->getFunction()) << "\t";
+    dbgs() << "_NumInstrs" << NumInstrs << "_NumVirtRegs" << NumVirtRegs;
+    dbgs() << "_NumFPSpilled" << NumFPSpilled;
+    dbgs() << "_NumOtherSpilled" << NumOtherSpilled;
+    dbgs() << "\n";
+  }
+  //////////
 
   releaseMemory();
   return true;

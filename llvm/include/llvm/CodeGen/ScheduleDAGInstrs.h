@@ -396,6 +396,9 @@ namespace llvm {
 
     /// Returns true if the def register in \p MO has no uses.
     bool deadDefHasNoUse(const MachineOperand &MO);
+
+  public:
+    unsigned CurrRegionIdx;
   };
 
   /// Creates a new SUnit and return a ptr to it.

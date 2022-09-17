@@ -146,6 +146,25 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
+  /// EXPERIMENTAL
+  unsigned getRCCountFactor(unsigned RegClassID) const override {
+    if (RegClassID == SystemZ::FP128BitRegClassID ||
+        RegClassID == SystemZ::GR128BitRegClassID ||
+        RegClassID == SystemZ::ADDR128BitRegClassID)
+      return 2;
+    return 1;
+  }
+  bool isGPRLoRC(unsigned RegClassID) const override {
+    return (RegClassID == SystemZ::GR32BitRegClassID ||
+            RegClassID == SystemZ::ADDR32BitRegClassID);
+  }
+  bool isGPRHiRC(unsigned RegClassID) const override {
+    return RegClassID == SystemZ::GRH32BitRegClassID;
+  }
+  bool isGPRLoHiRC(unsigned RegClassID) const override {
+    return RegClassID == SystemZ::GRX32BitRegClassID;
+  }
+
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,

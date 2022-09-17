@@ -456,6 +456,38 @@ bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
   return shareSameRegisterFile(*this, DefRC, DefSubReg, SrcRC, SrcSubReg);
 }
 
+void TargetRegisterInfo::initializePrioRegClasses() const {
+  if (!PrioRegClasses.empty())
+    return;
+  for (const TargetRegisterClass *RC : regclasses()) {
+    for (MVT VT : MVT::fp_valuetypes())
+      if (isTypeLegalForClass(*RC, VT)) {
+        PrioRegClasses.insert(RC->getID());
+        break;
+      }
+
+    // On SystemZ vector and FP registers overlap: add any vector RC.
+    if (!PrioRegClasses.count(RC->getID()))
+      for (MVT VT : MVT::fp_fixedlen_vector_valuetypes())
+        if (isTypeLegalForClass(*RC, VT)) {
+          PrioRegClasses.insert(RC->getID());
+          break;
+        }
+  }
+}
+
+bool TargetRegisterInfo::isPrioRC(unsigned RegClassID) const {
+  initializePrioRegClasses();
+  return PrioRegClasses.count(RegClassID);
+}
+
+bool TargetRegisterInfo::
+isPrioVirtReg(Register Reg, const MachineRegisterInfo *MRI) const {
+  initializePrioRegClasses();
+  return (Reg.isVirtual() &&
+          PrioRegClasses.count(MRI->getRegClass(Reg)->getID()));
+}
+
 float TargetRegisterInfo::getSpillWeightScaleFactor(
     const TargetRegisterClass *RC) const {
   return 1.0;

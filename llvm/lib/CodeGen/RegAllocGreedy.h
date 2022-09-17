@@ -286,6 +286,8 @@ private:
 
   bool ReverseLocalAssignment = false;
 
+  unsigned NumFPSpilled;
+  unsigned NumOtherSpilled;
 public:
   RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F = nullptr);
 

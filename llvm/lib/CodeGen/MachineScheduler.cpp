@@ -70,6 +70,14 @@
 #include <utility>
 #include <vector>
 
+#include "llvm/IR/Module.h"
+#include <sstream>
+#include <iomanip>
+#include <fstream>
+#include <stdio.h>
+#include <unistd.h>
+#include <cstdio>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
@@ -193,6 +201,15 @@ static cl::opt<bool> MISchedSortResourcesInTrace(
 static cl::opt<unsigned>
     MIResourceCutOff("misched-resource-cutoff", cl::Hidden,
                      cl::desc("Number of intervals to track"), cl::init(10));
+
+// Dump pressure changes for all regions individually.
+static cl::opt<bool> SchedPrintPressures("sched-print-pressures", cl::Hidden,
+                                         cl::init(false));
+// Show (FP) intervals with ASCII graphics. Use with -misched-only-block=.
+static cl::opt<bool> SchedShowIntervals("sched-show-ints", cl::Hidden,
+                                        cl::init(false));
+// Show GPR intervals as well with -sched-show-ints.
+cl::opt<bool> SHOWGR("showgr", cl::init(false));
 
 // DAG subtrees must have at least this many nodes.
 static const unsigned MinSubtreeSize = 8;
@@ -770,6 +787,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
     MBBRegionsVector MBBRegions;
     getSchedRegions(&*MBB, MBBRegions, Scheduler.doMBBSchedRegionsTopDown());
     bool ScheduleSingleMI = Scheduler.shouldScheduleSingleMIRegions();
+    Scheduler.CurrRegionIdx = 0;
     for (const SchedRegion &R : MBBRegions) {
       MachineBasicBlock::iterator I = R.RegionBegin;
       MachineBasicBlock::iterator RegionEnd = R.RegionEnd;
@@ -803,6 +821,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       // Schedule a region: possibly reorder instructions.
       // This invalidates the original region iterators.
       Scheduler.schedule();
+      Scheduler.CurrRegionIdx++;
 
       // Close the current region.
       Scheduler.exitRegion();
@@ -1604,6 +1623,315 @@ void ScheduleDAGMILive::dump() const {
 #endif
 }
 
+static bool LIisLiveAt(const LiveInterval &LI, unsigned idx) {
+  for (LiveInterval::const_iterator RI = LI.begin(), RE = LI.end(); RI != RE;
+       ++RI) {
+    if (RI->start.getIndex() <= idx && idx < RI->end.getIndex())
+      return true;
+  }
+  return false;
+}
+
+bool isDefedByImplicitDef(MachineInstr *UseMI, const LiveInterval &LI,
+                          LiveIntervals *LIS) {
+  LiveQueryResult LRQ = LI.Query(LIS->getInstructionIndex(*UseMI));
+  if (LRQ.valueIn())
+    if (MachineInstr *DefMI = LIS->getInstructionFromIndex(LRQ.valueIn()->def))
+      if (DefMI->isImplicitDef())
+        return true;
+  return false;
+}
+
+// Get number of live vregs at MI, summarized for FP and GPR regs.
+static void getNumLive(MachineInstr &MI, LiveIntervals *LIS,
+                       MachineRegisterInfo &MRI,
+                       const TargetRegisterInfo *TRI,
+                       std::vector<Register> &HandledVRegs,
+                       unsigned &NumLiveFP, unsigned &NumLiveGPR) {
+  MachineFunction *MF = MI.getParent()->getParent();
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+  unsigned MIIdx = LIS->getSlotIndexes()->getInstructionIndex(MI)
+    .getRegSlot().getIndex();
+  std::vector<unsigned> RCCounts(TRI->getNumRegClasses(), 0);
+  NumLiveFP = NumLiveGPR = 0;
+
+  // Find number of live vregs (out of HandledVRegs) at MI, per register class.
+  for (auto Reg : HandledVRegs) {
+    Register VirtReg = Register::index2VirtReg(Reg);
+    const LiveInterval &LI = LIS->getInterval(VirtReg);
+    if (isDefedByImplicitDef(&MI, LI, LIS))
+      continue;
+    if (MachineInstr *DefMI = MRI.getUniqueVRegDef(VirtReg))
+      if (TII->isTriviallyReMaterializable(*DefMI) || DefMI->isMoveImmediate())
+        continue;
+    if (LIisLiveAt(LI, MIIdx))
+      RCCounts[MRI.getRegClass(VirtReg)->getID()]++;
+  }
+
+  // Summarize all RC Liveness counts into 2 FP and GPR counts.
+  unsigned NumGPRLo = 0, NumGPRHi = 0, NumGPRLoHi = 0;
+  for (unsigned I = 0; I < TRI->getNumRegClasses(); ++I) {
+    if (TRI->isPrioRC(I))
+      NumLiveFP += RCCounts[I] * TRI->getRCCountFactor(I);
+    else if (TRI->isGPRLoRC(I))
+      NumGPRLo += RCCounts[I];
+    else if (TRI->isGPRHiRC(I))
+      NumGPRHi += RCCounts[I];
+    else if (TRI->isGPRLoHiRC(I))
+      NumGPRLoHi += RCCounts[I];
+    else
+      NumLiveGPR += RCCounts[I] * TRI->getRCCountFactor(I);
+  }
+  unsigned E = 0;
+  if (NumGPRLo > NumGPRHi) {
+    NumLiveGPR += NumGPRLo;
+    E = NumGPRLo - NumGPRHi;
+  } else if (NumGPRHi > NumGPRLo) {
+    NumLiveGPR += NumGPRHi;
+    E = NumGPRHi - NumGPRLo;
+  } else
+    NumLiveGPR += NumGPRLo;
+  if (NumGPRLoHi > E)
+    NumLiveGPR += (NumGPRLoHi - E) / 2;
+}
+
+void ScheduleDAGMILive::countRegOverlaps(RegOverlaps &RO,
+                                         MachineBasicBlock::iterator FirstItr,
+                                         MachineBasicBlock::iterator EndItr) const {
+  std::vector<Register> HandledVRegs;
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I)
+    HandledVRegs.push_back(I);
+
+  for (MachineBasicBlock::iterator I = FirstItr; I != EndItr; I++) {
+    unsigned NumLiveFP, NumLiveGPR;
+    getNumLive(*I, LIS, MRI, TRI, HandledVRegs, NumLiveFP, NumLiveGPR);
+
+    RO.FP += NumLiveFP;
+    RO.GPR += NumLiveGPR;
+    RO.FPMax = std::max(RO.FPMax, int(NumLiveFP));
+    RO.GPRMax = std::max(RO.GPRMax, int(NumLiveGPR));
+  }
+}
+
+struct Properties {
+  unsigned NumLoads = 0;
+  unsigned NumStores = 0;
+
+  unsigned FPDefs = 0;
+  unsigned OtherDefs = 0;
+
+  unsigned FPTotLat = 0;
+  unsigned OtherLat = 0;
+};
+
+static void countProperties(Properties &P, ScheduleDAGMILive *DAG) {
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+    const SUnit *SU = &DAG->SUnits[Idx];
+    MachineInstr *MI = SU->getInstr();
+    if (!MI || !MI->getNumOperands())
+      continue;
+    MachineFunction *MF = MI->getParent()->getParent();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    bool UsingFPReg = false;
+    for (unsigned Idx = 1; Idx < MI->getNumOperands(); Idx++) {
+      MachineOperand &MO = MI->getOperand(Idx);
+      UsingFPReg |= (MO.isReg() && MO.isUse() &&
+                     DAG->TRI->isPrioVirtReg(MO.getReg(), &MRI));
+    }
+    MachineOperand &MO0 = MI->getOperand(0);
+    bool IsDef = MO0.isReg() && MO0.isDef() && !MO0.isDead();
+    bool FPDef = IsDef && DAG->TRI->isPrioVirtReg(MO0.getReg(), &MRI);
+    if (FPDef) {
+      P.FPDefs++;
+      P.FPTotLat += SU->Latency;
+    }
+    else if (IsDef) {
+      P.OtherDefs++;
+      P.OtherLat += SU->Latency;
+    }
+
+    if (MI->mayLoad()) {
+      if (FPDef && !UsingFPReg) {
+        // dbgs() << "Load: " <<  *MI;
+        P.NumLoads++;
+      }
+    } else if (MI->mayStore()) {
+      bool FPStore = (MO0.isReg() && MO0.isUse() &&
+                      DAG->TRI->isPrioVirtReg(MO0.getReg(), &MRI));
+      if (FPStore && !UsingFPReg) {
+        // dbgs() << "Store: " << *MI;
+        P.NumStores++;
+      }
+    }
+  }
+}
+
+std::string getRegionID(unsigned CurrRegionIdx, const MachineBasicBlock *MBB) {
+  const Function *F = &MBB->getParent()->getFunction();
+  std::string TmpStr;
+  raw_string_ostream OS(TmpStr);
+  OS << F->getParent()->getModuleIdentifier() << "OOOOOOO"
+     << F->getName() << "OOOOOOO"
+     << "MBB" << MBB->getNumber()
+     << "Region" << CurrRegionIdx;
+  return OS.str();
+}
+
+void printRegionID(unsigned CurrRegionIdx, const MachineBasicBlock *MBB) {
+  dbgs() << getRegionID(CurrRegionIdx, MBB) << "\t";
+}
+
+void ScheduleDAGMILive::showIntervals(std::string Msg,
+                                      std::string InterestingRegs,
+                                      MachineBasicBlock *MBB) const {
+
+  dbgs() << "\nShowing of intervals (" << Msg << "):\n";
+
+  // Decide which vregs to show.
+  std::vector<Register> VRegsToShow;
+  if (!InterestingRegs.empty()) {
+    // Handle only some regs according to InterestingRegs;
+    size_t pos = 0;
+    std::vector<std::string> Ranges;
+    while ((pos = InterestingRegs.find(",")) != std::string::npos) {
+      Ranges.push_back(InterestingRegs.substr(0, pos));
+      InterestingRegs.erase(0, pos + 1);
+    }
+    Ranges.push_back(InterestingRegs);
+    for (auto &R : Ranges) {
+      unsigned Start = 0, End = 0;
+      if ((pos = R.find("-")) != std::string::npos) {
+        Start = std::stoi(R.substr(0, pos));
+        End = std::stoi(R.substr(pos + 1, R.length() - 1));
+      }
+      else
+        Start = End = std::stoi(R);
+      for (unsigned i = Start; i <= End; i++)
+        VRegsToShow.push_back(i);
+    }
+  } else {
+    // Handle all registers present in region.
+    std::set<unsigned> vregs;
+    for (auto &I : *MBB)
+      for (auto &MO : I.operands())
+        if (MO.isReg() && Register::isVirtualRegister(MO.getReg()) &&
+            (SHOWGR || TRI->isPrioRC(MRI.getRegClass(MO.getReg())->getID())))
+          vregs.insert(MO.getReg().virtRegIndex());
+    VRegsToShow.insert(VRegsToShow.begin(), vregs.begin(), vregs.end());
+  }
+
+  unsigned SmallestIdx = UINT_MAX, LargestIdx = 0;
+  for (auto Reg : VRegsToShow) {
+    const LiveInterval &LI = LIS->getInterval(Register::index2VirtReg(Reg));
+    for (LiveInterval::const_iterator RI = LI.begin(), RE = LI.end(); RI != RE;
+         ++RI) {
+      if (RI->start.getIndex() < SmallestIdx)
+        SmallestIdx = RI->start.getIndex();
+      if (RI->end.getIndex() > LargestIdx)
+        LargestIdx = RI->end.getIndex();
+    }
+  }
+
+  std::vector<unsigned> Colors;
+  Colors.push_back(31);  Colors.push_back(32);  Colors.push_back(33);
+  Colors.push_back(34);  Colors.push_back(35);  Colors.push_back(36);
+  Colors.push_back(37);
+
+  std::map<MachineInstr*, unsigned> NodeNum;
+  for (unsigned Idx = 0, End = SUnits.size(); Idx != End; ++Idx) {
+    const SUnit *SU = &SUnits[Idx];
+    NodeNum[SU->getInstr()] = Idx;
+  }
+
+  // Print reg numbers vertically.
+  for(unsigned i = 0; i < 5; i++) {
+    for (auto Reg : VRegsToShow) {
+      const LiveInterval &LI = LIS->getInterval(Register::index2VirtReg(Reg));
+      if (LI.empty())
+        continue;
+      dbgs() << "\033[" << Colors[Reg % Colors.size()] << "m";
+      std::ostringstream convert;
+      convert << Reg;
+      std::string S = convert.str() + "     ";
+      dbgs() << S[i];
+    }
+    dbgs() << "\n";
+  }
+
+  for (auto &I : *MBB) {
+    unsigned CurrIdx = LIS->getSlotIndexes()->getInstructionIndex(I)
+      .getRegSlot().getIndex();
+    // Indicate liveness for each vreg.
+    for (auto Reg : VRegsToShow) {
+      const LiveInterval &LI = LIS->getInterval(Register::index2VirtReg(Reg));
+      if (LI.empty())
+        continue;
+      dbgs() << "\033[" << Colors[Reg % Colors.size()] << "m";
+      bool reads, writes;
+      std::tie(reads, writes) =
+        I.readsWritesVirtualRegister(Register::index2VirtReg(Reg));
+      if (writes)
+        dbgs() << "\xE2\x94\xA2";
+      else if (reads)
+        dbgs() << "\xE2\x94\x9c";
+      else if (LIisLiveAt(LI, CurrIdx))
+        dbgs() << "\xE2\x94\x82";
+      else
+        dbgs() << " ";
+    }
+    dbgs() << "  ";
+    dbgs() << "\033[30m";
+    // I.dump();
+
+    // Print the number of live registers at the current MI.
+    unsigned NumLiveFP, NumLiveGPR;
+    getNumLive(I, LIS, MRI, TRI, VRegsToShow, NumLiveFP, NumLiveGPR);
+
+    std::stringstream dbgstr;
+    dbgstr << std::setw(2) << NumLiveFP << "F";
+    if (SHOWGR)
+      dbgstr << " / " << std::setw(2) << NumLiveGPR << "G";
+    unsigned Idx = NodeNum[&I];
+    // const SUnit *SU = &SUnits[Idx];
+    // unsigned TreeID = getDFSResult()->getSubtreeID(SU);
+    // unsigned SubtreeLevel = getDFSResult()->getSubtreeLevel(TreeID);
+    // dbgstr << "  " << std::setw(2) << TreeID << "T@" << std::setw(2)
+    //        << SubtreeLevel;
+    dbgs() << dbgstr.str() << "  ";
+    dbgs() << "SU(" << Idx << ")  ";
+    I.print(dbgs(), false, true);
+    dbgs() << "\n";
+  }
+  dbgs() << "\033[30m";
+}
+
+// Use a file to set the sched policy for regions (Step one is to build with
+// different policies, compare and decide per region and write this file).
+static cl::opt<bool> SCHEDFILE("schedfile", cl::init(false));
+using std::string;
+string getcwd( void ) {
+   char buff[PATH_MAX];
+   getcwd( buff, PATH_MAX );
+   string cwd( buff );
+   return cwd;
+}
+string getNextSchedPolicy() {
+  string CWD = getcwd();
+  string PoliciesFile = CWD + "/sched_policies";
+  string Line = "";
+  std::ifstream fin(PoliciesFile);
+  assert(fin.is_open());
+
+  fin.seekg(0, std::ios_base::end);
+  int64_t length = fin.tellg();
+  fin.seekg(-6, std::ios_base::end);
+  std::getline(fin, Line);
+  fin.close();
+  truncate(PoliciesFile.c_str(), length - 6);
+
+  return Line;
+}
+
 /// schedule - Called back from MachineScheduler::runOnMachineFunction
 /// after setting up the current scheduling region. [RegionBegin, RegionEnd)
 /// only includes instructions that have DAG nodes, not scheduling boundaries.
@@ -1615,6 +1943,33 @@ void ScheduleDAGMILive::dump() const {
 /// ScheduleDAGMILive then it will want to override this virtual method in order
 /// to update any specialized state.
 void ScheduleDAGMILive::schedule() {
+  GenericScheduler *Strategy = ((GenericScheduler*) SchedImpl.get());
+  if (SCHEDFILE) {
+    string NextPolicy = getNextSchedPolicy();
+    string RegionID = getRegionID(CurrRegionIdx, BB);
+    if (NextPolicy.compare("BOTUP") == 0) {
+      dbgs() << RegionID << " BOTTOMUP\n";
+      Strategy->RegionPolicy.OnlyTopDown = false;
+      Strategy->RegionPolicy.OnlyBottomUp = true;
+    }
+    else if (NextPolicy.compare("TOPDW") == 0) {
+      dbgs() << RegionID << " TOPDOWN\n";
+      Strategy->RegionPolicy.OnlyTopDown = true;
+      Strategy->RegionPolicy.OnlyBottomUp = false;
+    }
+    else if (NextPolicy.compare("BIDIR") == 0) {
+      dbgs() << RegionID << " BIDIR\n";
+      Strategy->RegionPolicy.OnlyTopDown = false;
+      Strategy->RegionPolicy.OnlyBottomUp = false;
+    }
+    else if (NextPolicy.compare("NOSCH") == 0) {
+      dbgs() << RegionID << " NOSCH\n";
+      return;
+    }
+    else
+      assert(0 && "Bad read of next sched policy.");
+  }
+
   LLVM_DEBUG(dbgs() << "ScheduleDAGMILive::schedule starting\n");
   LLVM_DEBUG(SchedImpl->dumpPolicy());
   buildDAGWithRegPressure();
@@ -1634,6 +1989,25 @@ void ScheduleDAGMILive::schedule() {
 
   // Initialize ready queues now that the DAG and priority data are finalized.
   initQueues(TopRoots, BotRoots);
+
+  std::string InterestingRegs(""); // e.g. ("215-255,302-307");
+  int InterestingMBB = SchedOnlyBlock;
+  if (SchedShowIntervals && BB->getNumber() == InterestingMBB)
+    showIntervals("before", InterestingRegs, BB);
+
+  const SUnit *RegionFirst = &SUnits[0];
+  const SUnit *RegionLast = &SUnits[SUnits.size() - 1];
+  bool IsFirstInMBB = RegionFirst->getInstr() == BB->begin();
+  MachineBasicBlock::iterator BeforeRegItr;
+  MachineBasicBlock::iterator
+    AfterRegItr = std::next(RegionLast->getInstr()->getIterator());
+  if (!IsFirstInMBB)
+    BeforeRegItr = std::prev(RegionFirst->getInstr()->getIterator());
+  MachineBasicBlock::iterator
+    FirstItr = IsFirstInMBB ? BB->begin() : std::next(BeforeRegItr);
+  RegOverlaps OL0, OL1;
+  if (SchedPrintPressures)
+    countRegOverlaps(OL0, FirstItr, AfterRegItr);
 
   bool IsTopNode = false;
   while (true) {
@@ -1662,6 +2036,25 @@ void ScheduleDAGMILive::schedule() {
     updateQueues(SU, IsTopNode);
   }
   assert(CurrentTop == CurrentBottom && "Nonempty unscheduled zone.");
+
+  if (SchedShowIntervals && this->BB->getNumber() == InterestingMBB)
+    showIntervals("after", InterestingRegs, this->BB);
+
+  if (SchedPrintPressures) {
+    FirstItr = IsFirstInMBB ? BB->begin() : std::next(BeforeRegItr);
+    countRegOverlaps(OL1, FirstItr, AfterRegItr);
+    Properties P;
+    countProperties(P, this);
+    printRegionID(CurrRegionIdx, BB);
+    dbgs() << "_GPR" << OL1.GPR - OL0.GPR << "_FP" << OL1.FP - OL0.FP;
+    dbgs() << "_GPRMax" << OL1.GPRMax - OL0.GPRMax << "_FPMax" <<
+      OL1.FPMax - OL0.FPMax;
+    dbgs() << "_Size" << SUnits.size();
+    dbgs() << "_Stores" << P.NumStores << "_Loads" << P.NumLoads;
+    dbgs() << "_FPDefs" << P.FPDefs << "_OtherDefs" << P.OtherDefs;
+    dbgs() << "_FPTotLat" << P.FPTotLat << "_OtherLat" << P.OtherLat;
+    dbgs() << "\n";
+  }
 
   placeDebugValues();
 
@@ -2601,6 +2994,9 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
   return std::make_pair(MinNextUnreserved, InstanceIdx);
 }
 
+// EXPERIMENTAL
+cl::opt<bool> INPUTORDER("misched-inputorder", cl::init(false));
+
 /// Does this SU have a hazard within the current instruction group.
 ///
 /// The scheduler supports two modes of hazard recognition. The first is the
@@ -2615,6 +3011,9 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
 ///
 /// TODO: Also check whether the SU must start a new group.
 bool SchedBoundary::checkHazard(SUnit *SU) {
+  if (INPUTORDER)
+    return false; // Make SU available.
+
   if (HazardRec->isEnabled()
       && HazardRec->getHazardType(SU) != ScheduleHazardRecognizer::NoHazard) {
     LLVM_DEBUG(dbgs().indent(2)
@@ -2871,9 +3270,10 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   // exceed the issue width.
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
   unsigned IncMOps = SchedModel->getNumMicroOps(SU->getInstr());
-  assert(
-      (CurrMOps == 0 || (CurrMOps + IncMOps) <= SchedModel->getIssueWidth()) &&
-      "Cannot schedule this instruction's MicroOps in the current cycle.");
+  // Allow for input order by skipping this assertion:
+  // assert(
+  //     (CurrMOps == 0 || (CurrMOps + IncMOps) <= SchedModel->getIssueWidth()) &&
+  //     "Cannot schedule this instruction's MicroOps in the current cycle.");
 
   unsigned ReadyCycle = (isTop() ? SU->TopReadyCycle : SU->BotReadyCycle);
   LLVM_DEBUG(dbgs() << "  Ready @" << ReadyCycle << "c\n");
@@ -3715,6 +4115,16 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
   if (!Cand.isValid()) {
     TryCand.Reason = FirstValid;
     return true;
+  }
+
+  // EXPERIMENTAL
+  // Allow effectifely disabling scheduling while still dumping stats.
+  if (INPUTORDER) {
+    if (TryCand.SU->NodeNum > Cand.SU->NodeNum) {
+      TryCand.Reason = NodeOrder;
+      return true;
+    }
+    return false;
   }
 
   // Bias PhysReg Defs and copies to their uses and defined respectively.
