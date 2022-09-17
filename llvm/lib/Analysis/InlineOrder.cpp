@@ -16,10 +16,21 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "inline-order"
+
+enum class InlinePriorityMode : int { Size, Cost, OptRatio };
+
+static cl::opt<InlinePriorityMode> UseInlinePriority(
+    "inline-priority-mode", cl::init(InlinePriorityMode::Size), cl::Hidden,
+    cl::desc("Choose the priority mode to use in module inline"),
+    cl::values(clEnumValN(InlinePriorityMode::Size, "size",
+                          "Use callee size priority."),
+               clEnumValN(InlinePriorityMode::Cost, "cost",
+                          "Use inline cost priority.")));
 
 namespace {
 
@@ -213,8 +224,7 @@ static llvm::InlineCost getInlineCostWrapper(CallBase &CB,
 }
 
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
-llvm::getInlineOrder(InlinePriorityMode UseInlinePriority,
-                     FunctionAnalysisManager &FAM, const InlineParams &Params) {
+llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params) {
   switch (UseInlinePriority) {
   case InlinePriorityMode::Size:
     LLVM_DEBUG(dbgs() << "    Current used priority: Size priority ---- \n");

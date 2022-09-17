@@ -21,8 +21,6 @@ namespace llvm {
 class CallBase;
 class Function;
 
-enum class InlinePriorityMode : int { Size, Cost, OptRatio };
-
 template <typename T> class InlineOrder {
 public:
   using reference = T &;
@@ -44,8 +42,7 @@ public:
 };
 
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
-getInlineOrder(InlinePriorityMode UseInlinePriority,
-               FunctionAnalysisManager &FAM, const InlineParams &Params);
+getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params);
 
 } // namespace llvm
 #endif // LLVM_ANALYSIS_INLINEORDER_H
