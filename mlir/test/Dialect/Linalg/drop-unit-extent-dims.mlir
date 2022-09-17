@@ -753,8 +753,6 @@ func.func @fold_unit_dim_for_init_memref(%input: memref<1x1000xf32>) -> memref<1
 // Test that nothing changes and no assertions are fired for memrefs with affine
 // maps while still changing the other operations.
 
-#map0 = affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 + d2)>
-
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,
   affine_map<(i, j, k, l, m) -> ()>,
@@ -767,9 +765,9 @@ func.func @fold_unit_dim_for_init_memref(%input: memref<1x1000xf32>) -> memref<1
   library_call = "some_external_func"
 }
 
-func.func @input_stays_same(%arg0 : memref<?x1x?xf32, #map0>, %arg1 : f32, %shape: memref<?x1x?x1x?xf32>) -> memref<?x1x?x1x?xf32> {
+func.func @input_stays_same(%arg0 : memref<?x1x?xf32, strided<[?, 1, 1]>>, %arg1 : f32, %shape: memref<?x1x?x1x?xf32>) -> memref<?x1x?x1x?xf32> {
   linalg.generic #trait
-     ins(%arg0, %arg1 : memref<?x1x?xf32, #map0>, f32)
+     ins(%arg0, %arg1 : memref<?x1x?xf32, strided<[?, 1, 1]>>, f32)
     outs(%shape : memref<?x1x?x1x?xf32>) {
        ^bb0(%arg2 : f32, %arg3 : f32, %arg4 : f32) :
          linalg.yield %arg3 : f32
@@ -777,12 +775,11 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, #map0>, %arg1 : f32, %shap
   return %shape : memref<?x1x?x1x?xf32>
 }
 
-// CHECK:     #[[MAP0:.*]] = affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 + d2)>
 // CHECK:     #[[MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d2)>
 // CHECK:     #[[MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
 // CHECK:     #[[MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK:     func @input_stays_same(
-// CHECK-SAME:  %[[ARG0:.*]]: memref<?x1x?xf32, #[[MAP0]]>,
+// CHECK-SAME:  %[[ARG0:.*]]: memref<?x1x?xf32, strided<[?, 1, 1]>>,
 // CHECK-SAME:  %[[ARG1:.*]]: f32, %[[ARG2:.*]]: memref<?x1x?x1x?xf32>)
 // CHECK-SAME   -> memref<?x1x?x1x?xf32> {
 // CHECK:      %[[OUT:.*]] = memref.collapse_shape %[[ARG2]] {{\[}}[0, 1], [2, 3], [4]]
@@ -790,7 +787,7 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, #map0>, %arg1 : f32, %shap
 // CHECK:      linalg.generic
 // CHECK-SAME:   {indexing_maps = [#[[MAP1]], #[[MAP2]], #[[MAP3]]],
 // CHECK-SAME:   iterator_types = ["parallel", "parallel", "parallel"]}
-// CHECK-SAME:   ins(%[[ARG0]], %[[ARG1]] : memref<?x1x?xf32, #[[MAP0]]>, f32)
+// CHECK-SAME:   ins(%[[ARG0]], %[[ARG1]] : memref<?x1x?xf32, strided<[?, 1, 1]>>, f32)
 // CHECK-SAME:   outs(%[[OUT]] : memref<?x?x?xf32>) {
 // CHECK:      ^bb0(%{{.*}}: f32, %[[ARG:.*]]: f32, %{{.*}}: f32):
 // CHECK:       linalg.yield %[[ARG]] : f32

@@ -42,15 +42,14 @@ func.func @subview_of_static_full_size(%arg0 : memref<4x6x16x32xi8>) -> memref<4
 
 // -----
 
-#map0 = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>
 func.func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
-    %arg2 : index) -> memref<?x?x?xf32, #map0>
+    %arg2 : index) -> memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?x?xf32, #map0>
-  return %0 : memref<?x?x?xf32, #map0>
+  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, %c1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  return %0 : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 }
 // CHECK-LABEL: func @subview_canonicalize
 //  CHECK-SAME:   %[[ARG0:.+]]: memref<?x?x?xf32>
@@ -62,15 +61,14 @@ func.func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
 
 // -----
 
-#map0 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 func.func @rank_reducing_subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
-    %arg2 : index) -> memref<?x?xf32, #map0>
+  %arg2 : index) -> memref<?x?xf32, strided<[?, 1], offset: ?>>
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
-  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?xf32, #map0>
-  return %0 : memref<?x?xf32, #map0>
+  %0 = memref.subview %arg0[%c0, %arg1, %c1] [%c4, 1, %arg2] [%c1, %c1, %c1] : memref<?x?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
+  return %0 : memref<?x?xf32, strided<[?, 1], offset: ?>>
 }
 // CHECK-LABEL: func @rank_reducing_subview_canonicalize
 //  CHECK-SAME:   %[[ARG0:.+]]: memref<?x?x?xf32>
@@ -254,27 +252,25 @@ func.func @alloc_alignment_const_fold() -> memref<?xf32> {
 
 // CHECK-LABEL: func @alloc_const_fold_with_symbols1(
 //  CHECK: %[[c1:.+]] = arith.constant 1 : index
-//  CHECK: %[[mem1:.+]] = memref.alloc({{.*}})[%[[c1]], %[[c1]]] : memref<?xi32, #map>
-//  CHECK: return %[[mem1]] : memref<?xi32, #map>
-#map0 = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-func.func @alloc_const_fold_with_symbols1(%arg0 : index) -> memref<?xi32, #map0> {
+//  CHECK: %[[mem1:.+]] = memref.alloc({{.*}})[%[[c1]], %[[c1]]] : memref<?xi32, strided{{.*}}>
+//  CHECK: return %[[mem1]] : memref<?xi32, strided{{.*}}>
+func.func @alloc_const_fold_with_symbols1(%arg0 : index) -> memref<?xi32, strided<[?], offset: ?>> {
   %c1 = arith.constant 1 : index
-  %0 = memref.alloc(%arg0)[%c1, %c1] : memref<?xi32, #map0>
-  return %0 : memref<?xi32, #map0>
+  %0 = memref.alloc(%arg0)[%c1, %c1] : memref<?xi32, strided<[?], offset: ?>>
+  return %0 : memref<?xi32, strided<[?], offset: ?>>
 }
 
 // -----
 
 // CHECK-LABEL: func @alloc_const_fold_with_symbols2(
 //  CHECK: %[[c1:.+]] = arith.constant 1 : index
-//  CHECK: %[[mem1:.+]] = memref.alloc()[%[[c1]], %[[c1]]] : memref<1xi32, #map>
-//  CHECK: %[[mem2:.+]] = memref.cast %[[mem1]] : memref<1xi32, #map> to memref<?xi32, #map>
-//  CHECK: return %[[mem2]] : memref<?xi32, #map>
-#map0 = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-func.func @alloc_const_fold_with_symbols2() -> memref<?xi32, #map0> {
+//  CHECK: %[[mem1:.+]] = memref.alloc()[%[[c1]], %[[c1]]] : memref<1xi32, strided{{.*}}>
+//  CHECK: %[[mem2:.+]] = memref.cast %[[mem1]] : memref<1xi32, strided{{.*}}> to memref<?xi32, strided{{.*}}>
+//  CHECK: return %[[mem2]] : memref<?xi32, strided{{.*}}>
+func.func @alloc_const_fold_with_symbols2() -> memref<?xi32, strided<[?], offset: ?>> {
   %c1 = arith.constant 1 : index
-  %0 = memref.alloc(%c1)[%c1, %c1] : memref<?xi32, #map0>
-  return %0 : memref<?xi32, #map0>
+  %0 = memref.alloc(%c1)[%c1, %c1] : memref<?xi32, strided<[?], offset: ?>>
+  return %0 : memref<?xi32, strided<[?], offset: ?>>
 }
 
 // -----
@@ -475,10 +471,9 @@ func.func @fold_rank_memref(%arg0 : memref<?x?xf32>) -> (index) {
 
 // -----
 
-#map = affine_map<(d0, d1) -> (d0 * 42 + d1)>
-func.func @fold_no_op_subview(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, #map> {
-  %0 = memref.subview %arg0[0, 0] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, #map>
-  return %0 : memref<20x42xf32, #map>
+func.func @fold_no_op_subview(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, strided<[42, 1]>> {
+  %0 = memref.subview %arg0[0, 0] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, strided<[42, 1]>>
+  return %0 : memref<20x42xf32, strided<[42, 1]>>
 }
 // CHECK-LABEL: func @fold_no_op_subview(
 //       CHECK:   %[[ARG0:.+]]: memref<20x42xf32>)
@@ -487,10 +482,9 @@ func.func @fold_no_op_subview(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, #m
 
 // -----
 
-#map = affine_map<(d0, d1) -> (d0 * 42 + d1 + 1)>
-func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, #map> {
-  %0 = memref.subview %arg0[0, 1] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, #map>
-  return %0 : memref<20x42xf32, #map>
+func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, strided<[42, 1], offset: 1>> {
+  %0 = memref.subview %arg0[0, 1] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, strided<[42, 1], offset: 1>>
+  return %0 : memref<20x42xf32, strided<[42, 1], offset: 1>>
 }
 // CHECK-LABEL: func @no_fold_subview_with_non_zero_offset(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
@@ -498,10 +492,9 @@ func.func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> me
 
 // -----
 
-#map = affine_map<(d0, d1) -> (d0 * 42 + d1 * 2)>
-func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, #map> {
-  %0 = memref.subview %arg0[0, 0] [20, 42] [1, 2] : memref<20x42xf32> to memref<20x42xf32, #map>
-  return %0 : memref<20x42xf32, #map>
+func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, strided<[42, 2]>> {
+  %0 = memref.subview %arg0[0, 0] [20, 42] [1, 2] : memref<20x42xf32> to memref<20x42xf32, strided<[42, 2]>>
+  return %0 : memref<20x42xf32, strided<[42, 2]>>
 }
 // CHECK-LABEL: func @no_fold_subview_with_non_unit_stride(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
@@ -509,14 +502,13 @@ func.func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> me
 
 // -----
 
-#map = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>
-func.func @no_fold_dynamic_no_op_subview(%arg0 : memref<?x?xf32>) -> memref<?x?xf32, #map> {
+func.func @no_fold_dynamic_no_op_subview(%arg0 : memref<?x?xf32>) -> memref<?x?xf32, strided<[?, 1], offset: ?>> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
   %1 = memref.dim %arg0, %c1 : memref<?x?xf32>
-  %2 = memref.subview %arg0[0, 0] [%0, %1] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map>
-  return %2 : memref<?x?xf32, #map>
+  %2 = memref.subview %arg0[0, 0] [%0, %1] [1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
+  return %2 : memref<?x?xf32, strided<[?, 1], offset: ?>>
 }
 // CHECK-LABEL: func @no_fold_dynamic_no_op_subview(
 //       CHECK:   %[[SUBVIEW:.+]] = memref.subview
@@ -535,11 +527,10 @@ func.func @atomicrmw_cast_fold(%arg0 : f32, %arg1 : memref<4xf32>, %c : index) {
 
 // -----
 
-#map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 func.func @copy_of_cast(%m1: memref<?xf32>, %m2: memref<*xf32>) {
-  %casted1 = memref.cast %m1 : memref<?xf32> to memref<?xf32, #map>
-  %casted2 = memref.cast %m2 : memref<*xf32> to memref<?xf32, #map>
-  memref.copy %casted1, %casted2 : memref<?xf32, #map> to memref<?xf32, #map>
+  %casted1 = memref.cast %m1 : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
+  %casted2 = memref.cast %m2 : memref<*xf32> to memref<?xf32, strided<[?], offset: ?>>
+  memref.copy %casted1, %casted2 : memref<?xf32, strided<[?], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
   return
 }
 
