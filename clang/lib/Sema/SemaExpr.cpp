@@ -3937,16 +3937,6 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
   } else {
     QualType Ty;
 
-    // 'long long' is a C99 or C++11 feature.
-    if (!getLangOpts().C99 && Literal.isLongLong) {
-      if (getLangOpts().CPlusPlus)
-        Diag(Tok.getLocation(),
-             getLangOpts().CPlusPlus11 ?
-             diag::warn_cxx98_compat_longlong : diag::ext_cxx11_longlong);
-      else
-        Diag(Tok.getLocation(), diag::ext_c99_longlong);
-    }
-
     // 'z/uz' literals are a C++2b feature.
     if (Literal.isSizeT)
       Diag(Tok.getLocation(), getLangOpts().CPlusPlus
@@ -4113,6 +4103,15 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           else if (AllowUnsigned)
             Ty = Context.UnsignedLongLongTy;
           Width = LongLongSize;
+
+          // 'long long' is a C99 or C++11 feature, whether the literal
+          // explicitly specified 'long long' or we needed the extra width.
+          if (getLangOpts().CPlusPlus)
+            Diag(Tok.getLocation(), getLangOpts().CPlusPlus11
+                                        ? diag::warn_cxx98_compat_longlong
+                                        : diag::ext_cxx11_longlong);
+          else if (!getLangOpts().C99)
+            Diag(Tok.getLocation(), diag::ext_c99_longlong);
         }
       }
 
