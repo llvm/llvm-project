@@ -60,9 +60,9 @@ Error compression::decompress(compression::Format F, ArrayRef<uint8_t> Input,
                               size_t UncompressedSize) {
   switch (F) {
   case compression::Format::Zlib:
-    return zlib::uncompress(Input, Output, UncompressedSize);
+    return zlib::decompress(Input, Output, UncompressedSize);
   case compression::Format::Zstd:
-    return zstd::uncompress(Input, Output, UncompressedSize);
+    return zstd::decompress(Input, Output, UncompressedSize);
   }
   llvm_unreachable("");
 }
@@ -109,27 +109,25 @@ void zlib::compress(ArrayRef<uint8_t> Input,
     CompressedBuffer.truncate(CompressedSize);
 }
 
-Error zlib::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+Error zlib::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                        size_t &UncompressedSize) {
-  int Res =
-      ::uncompress((Bytef *)UncompressedBuffer, (uLongf *)&UncompressedSize,
-                   (const Bytef *)Input.data(), Input.size());
+  int Res = ::uncompress((Bytef *)Output, (uLongf *)&UncompressedSize,
+                         (const Bytef *)Input.data(), Input.size());
   // Tell MemorySanitizer that zlib output buffer is fully initialized.
   // This avoids a false report when running LLVM with uninstrumented ZLib.
-  __msan_unpoison(UncompressedBuffer, UncompressedSize);
+  __msan_unpoison(Output, UncompressedSize);
   return Res ? make_error<StringError>(convertZlibCodeToString(Res),
                                        inconvertibleErrorCode())
              : Error::success();
 }
 
-Error zlib::uncompress(ArrayRef<uint8_t> Input,
-                       SmallVectorImpl<uint8_t> &UncompressedBuffer,
+Error zlib::decompress(ArrayRef<uint8_t> Input,
+                       SmallVectorImpl<uint8_t> &Output,
                        size_t UncompressedSize) {
-  UncompressedBuffer.resize_for_overwrite(UncompressedSize);
-  Error E =
-      zlib::uncompress(Input, UncompressedBuffer.data(), UncompressedSize);
-  if (UncompressedSize < UncompressedBuffer.size())
-    UncompressedBuffer.truncate(UncompressedSize);
+  Output.resize_for_overwrite(UncompressedSize);
+  Error E = zlib::decompress(Input, Output.data(), UncompressedSize);
+  if (UncompressedSize < Output.size())
+    Output.truncate(UncompressedSize);
   return E;
 }
 
@@ -139,14 +137,14 @@ void zlib::compress(ArrayRef<uint8_t> Input,
                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
   llvm_unreachable("zlib::compress is unavailable");
 }
-Error zlib::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+Error zlib::decompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
                        size_t &UncompressedSize) {
-  llvm_unreachable("zlib::uncompress is unavailable");
+  llvm_unreachable("zlib::decompress is unavailable");
 }
-Error zlib::uncompress(ArrayRef<uint8_t> Input,
+Error zlib::decompress(ArrayRef<uint8_t> Input,
                        SmallVectorImpl<uint8_t> &UncompressedBuffer,
                        size_t UncompressedSize) {
-  llvm_unreachable("zlib::uncompress is unavailable");
+  llvm_unreachable("zlib::decompress is unavailable");
 }
 #endif
 
@@ -170,28 +168,26 @@ void zstd::compress(ArrayRef<uint8_t> Input,
     CompressedBuffer.truncate(CompressedSize);
 }
 
-Error zstd::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+Error zstd::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                        size_t &UncompressedSize) {
-  const size_t Res =
-      ::ZSTD_decompress(UncompressedBuffer, UncompressedSize,
-                        (const uint8_t *)Input.data(), Input.size());
+  const size_t Res = ::ZSTD_decompress(
+      Output, UncompressedSize, (const uint8_t *)Input.data(), Input.size());
   UncompressedSize = Res;
   // Tell MemorySanitizer that zstd output buffer is fully initialized.
   // This avoids a false report when running LLVM with uninstrumented ZLib.
-  __msan_unpoison(UncompressedBuffer, UncompressedSize);
+  __msan_unpoison(Output, UncompressedSize);
   return ZSTD_isError(Res) ? make_error<StringError>(ZSTD_getErrorName(Res),
                                                      inconvertibleErrorCode())
                            : Error::success();
 }
 
-Error zstd::uncompress(ArrayRef<uint8_t> Input,
-                       SmallVectorImpl<uint8_t> &UncompressedBuffer,
+Error zstd::decompress(ArrayRef<uint8_t> Input,
+                       SmallVectorImpl<uint8_t> &Output,
                        size_t UncompressedSize) {
-  UncompressedBuffer.resize_for_overwrite(UncompressedSize);
-  Error E =
-      zstd::uncompress(Input, UncompressedBuffer.data(), UncompressedSize);
-  if (UncompressedSize < UncompressedBuffer.size())
-    UncompressedBuffer.truncate(UncompressedSize);
+  Output.resize_for_overwrite(UncompressedSize);
+  Error E = zstd::decompress(Input, Output.data(), UncompressedSize);
+  if (UncompressedSize < Output.size())
+    Output.truncate(UncompressedSize);
   return E;
 }
 
@@ -201,13 +197,13 @@ void zstd::compress(ArrayRef<uint8_t> Input,
                     SmallVectorImpl<uint8_t> &CompressedBuffer, int Level) {
   llvm_unreachable("zstd::compress is unavailable");
 }
-Error zstd::uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+Error zstd::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                        size_t &UncompressedSize) {
-  llvm_unreachable("zstd::uncompress is unavailable");
+  llvm_unreachable("zstd::decompress is unavailable");
 }
-Error zstd::uncompress(ArrayRef<uint8_t> Input,
-                       SmallVectorImpl<uint8_t> &UncompressedBuffer,
+Error zstd::decompress(ArrayRef<uint8_t> Input,
+                       SmallVectorImpl<uint8_t> &Output,
                        size_t UncompressedSize) {
-  llvm_unreachable("zstd::uncompress is unavailable");
+  llvm_unreachable("zstd::decompress is unavailable");
 }
 #endif
