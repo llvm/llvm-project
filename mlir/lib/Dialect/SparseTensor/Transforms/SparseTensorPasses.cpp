@@ -64,6 +64,7 @@ struct SparsificationPass
     RewritePatternSet patterns(ctx);
     populateSparsificationPatterns(patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);
+    scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
