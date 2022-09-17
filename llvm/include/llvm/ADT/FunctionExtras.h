@@ -59,7 +59,7 @@ namespace detail {
 
 template <typename T>
 using EnableIfTrivial =
-    std::enable_if_t<std::is_trivially_move_constructible<T>::value &&
+    std::enable_if_t<llvm::is_trivially_move_constructible<T>::value &&
                      std::is_trivially_destructible<T>::value>;
 template <typename CallableT, typename ThisT>
 using EnableUnlessSameType =
@@ -100,8 +100,8 @@ protected:
     static_assert(!std::is_reference<T>::value,
                   "references should be handled by template specialization");
     using type = typename std::conditional<
-        std::is_trivially_copy_constructible<T>::value &&
-            std::is_trivially_move_constructible<T>::value &&
+        llvm::is_trivially_copy_constructible<T>::value &&
+            llvm::is_trivially_move_constructible<T>::value &&
             IsSizeLessThanThresholdT<T>::value,
         T, T &>::type;
   };
