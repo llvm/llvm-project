@@ -957,6 +957,7 @@ public:
       bool HadMultipleCandidates;
       FunctionDecl *Function;
       DeclAccessPair FoundDecl;
+      const TemplateArgumentList *ConvertedArgs;
     };
 
     union {
@@ -1262,9 +1263,10 @@ public:
   ///
   /// \param Function the function to which the overloaded function reference
   /// resolves.
-  void AddAddressOverloadResolutionStep(FunctionDecl *Function,
-                                        DeclAccessPair Found,
-                                        bool HadMultipleCandidates);
+  void
+  AddAddressOverloadResolutionStep(FunctionDecl *Function, DeclAccessPair Found,
+                                   const TemplateArgumentList *ConvertedArgs,
+                                   bool HadMultipleCandidates);
 
   /// Add a new step in the initialization that performs a derived-to-
   /// base cast.

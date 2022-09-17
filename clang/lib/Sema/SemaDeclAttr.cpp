@@ -1816,7 +1816,8 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
     }
   } else if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(DeallocE)) {
-    DeallocFD = S.ResolveSingleFunctionTemplateSpecialization(ULE, true);
+    DeclAccessPair DAP;
+    DeallocFD = S.resolveAddressOfSingleOverloadCandidate(ULE, DAP);
     DeallocNI = ULE->getNameInfo();
     if (!DeallocFD) {
       S.Diag(DeallocLoc, diag::err_attribute_malloc_arg_not_function)
@@ -3610,9 +3611,14 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
     }
   } else if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
-    if (ULE->hasExplicitTemplateArgs())
+    if (ULE->hasExplicitTemplateArgs()) {
       S.Diag(Loc, diag::warn_cleanup_ext);
-    FD = S.ResolveSingleFunctionTemplateSpecialization(ULE, true);
+      TemplateArgumentListInfo ExplicitTemplateArgs;
+      const TemplateArgumentList *ConvertedArgs;
+      ULE->copyTemplateArgumentsInto(ExplicitTemplateArgs);
+      FD = S.ResolveSingleFunctionTemplateSpecialization(
+          ULE, ExplicitTemplateArgs, ConvertedArgs, /*Complain=*/true);
+    }
     NI = ULE->getNameInfo();
     if (!FD) {
       S.Diag(Loc, diag::err_attribute_cleanup_arg_not_function) << 2

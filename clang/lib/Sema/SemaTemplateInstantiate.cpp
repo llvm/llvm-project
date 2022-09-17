@@ -1635,6 +1635,7 @@ namespace {
       }
       return Type;
     }
+    using inherited::TransformTemplateArgument;
     // Override the default version to handle a rewrite-template-arg-pack case
     // for building a deduction guide.
     bool TransformTemplateArgument(const TemplateArgumentLoc &Input,
