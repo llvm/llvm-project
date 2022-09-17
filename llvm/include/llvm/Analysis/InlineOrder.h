@@ -9,17 +9,12 @@
 #ifndef LLVM_ANALYSIS_INLINEORDER_H
 #define LLVM_ANALYSIS_INLINEORDER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InlineCost.h"
-#include "llvm/IR/InstrTypes.h"
-#include <algorithm>
 #include <utility>
 
 namespace llvm {
 class CallBase;
-class Function;
 
 template <typename T> class InlineOrder {
 public:
