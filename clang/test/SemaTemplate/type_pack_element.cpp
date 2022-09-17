@@ -11,7 +11,7 @@ using test1 = __type_pack_element<0, int>;
 // CHECK-NEXT:       |     `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:35> 'int' 0
 // CHECK-NEXT:       |-TemplateArgument type 'int'
 // CHECK-NEXT:       | `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
-// CHECK-NEXT:       `-SubstTemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'int' sugar
+// CHECK-NEXT:       `-SubstTemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'int' sugar pack_index 0
 // CHECK-NEXT:         |-TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'auto' dependent depth 0 index 1
 // CHECK-NEXT:         | `-TemplateTypeParm 0x{{[0-9A-Fa-f]+}} ''
 // CHECK-NEXT:         `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
