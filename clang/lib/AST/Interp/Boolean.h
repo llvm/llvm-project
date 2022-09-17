@@ -22,7 +22,7 @@ namespace clang {
 namespace interp {
 
 /// Wrapper around boolean types.
-class Boolean {
+class Boolean final {
  private:
   /// Underlying boolean.
   bool V;

@@ -37,7 +37,7 @@ class Context;
 class Record;
 
 /// The program contains and links the bytecode for all functions.
-class Program {
+class Program final {
 public:
   Program(Context &Ctx) : Ctx(Ctx) {}
 

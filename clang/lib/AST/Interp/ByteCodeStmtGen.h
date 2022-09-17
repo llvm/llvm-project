@@ -33,7 +33,7 @@ template <class Emitter> class LabelScope;
 
 /// Compilation context for statements.
 template <class Emitter>
-class ByteCodeStmtGen : public ByteCodeExprGen<Emitter> {
+class ByteCodeStmtGen final : public ByteCodeExprGen<Emitter> {
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
   using OptLabelTy = llvm::Optional<LabelTy>;
