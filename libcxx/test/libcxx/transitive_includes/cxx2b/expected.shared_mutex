@@ -22,6 +22,5 @@ stdexcept
 string
 string_view
 system_error
-tuple
 type_traits
 version

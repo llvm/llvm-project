@@ -11,10 +11,13 @@
 #define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
 
 #include <__config>
+#include <__fwd/get.h>
+#include <__fwd/tuple.h>
+#include <__tuple/tuple_indices.h>
 #include <__type_traits/dependent_type.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <tuple> // needed in c++03 for some constructors
+#include <__utility/piecewise_construct.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
