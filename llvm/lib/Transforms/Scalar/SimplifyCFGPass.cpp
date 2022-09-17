@@ -221,7 +221,8 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
 /// iterating until no more changes are made.
 static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
                                    DomTreeUpdater *DTU,
-                                   const SimplifyCFGOptions &Options) {
+                                   const SimplifyCFGOptions &Options,
+                                   SimplifyCFGCostTracker &CostTracker) {
   bool Changed = false;
   bool LocalChange = true;
 
@@ -252,7 +253,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
         while (BBIt != F.end() && DTU->isBBPendingDeletion(&*BBIt))
           ++BBIt;
       }
-      if (simplifyCFG(&BB, TTI, DTU, Options, LoopHeaders)) {
+      if (simplifyCFG(&BB, TTI, DTU, Options, LoopHeaders, &CostTracker)) {
         LocalChange = true;
         ++NumSimpl;
       }
@@ -266,11 +267,13 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
                                     DominatorTree *DT,
                                     const SimplifyCFGOptions &Options) {
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  SimplifyCFGCostTracker CostTracker;
 
   bool EverChanged = removeUnreachableBlocks(F, DT ? &DTU : nullptr);
   EverChanged |=
       tailMergeBlocksWithSimilarFunctionTerminators(F, DT ? &DTU : nullptr);
-  EverChanged |= iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
+  EverChanged |=
+      iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options, CostTracker);
 
   // If neither pass changed anything, we're done.
   if (!EverChanged) return false;
@@ -284,7 +287,8 @@ static bool simplifyFunctionCFGImpl(Function &F, const TargetTransformInfo &TTI,
     return true;
 
   do {
-    EverChanged = iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options);
+    EverChanged = iterativelySimplifyCFG(F, TTI, DT ? &DTU : nullptr, Options,
+                                         CostTracker);
     EverChanged |= removeUnreachableBlocks(F, DT ? &DTU : nullptr);
   } while (EverChanged);
 
