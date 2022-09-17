@@ -155,6 +155,9 @@ Bug Fixes
   This is the suggested resolution to CWG DR2628.
   `Issue 57646 <https://github.com/llvm/llvm-project/issues/57646>`_
   `Issue 43829 <https://github.com/llvm/llvm-project/issues/43829>`_
+- Fixed a crash in C++20 mode in Clang and Clangd when compile source
+  with compilation errors.
+  `Issue 53628 <https://github.com/llvm/llvm-project/issues/53628>`_
 
 
 Improvements to Clang's diagnostics
