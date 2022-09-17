@@ -168,6 +168,10 @@ Improvements to Clang's diagnostics
   conditional operator, and for most binary operations. Type sugar is combined
   in a way that strips the sugar which is different between terms, and preserves
   those which are common.
+- Correctly diagnose use of an integer literal without a suffix whose
+  underlying type is ``long long`` or ``unsigned long long`` as an extension in
+  C89 mode . Clang previously only diagnosed if the literal had an explicit
+  ``LL`` suffix.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
