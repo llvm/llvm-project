@@ -161,6 +161,10 @@ label2:
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:9> 'void *' lvalue Var 0x{{[^ ]*}} 'ptr' 'void *'
+
+label3:
+  // CHECK-NEXT: LabelStmt 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:7> 'label3'
+  // CHECK-NEXT: NullStmt 0x{{[^ ]*}} <col:7>
 }
 
 void TestSwitch(int i) {

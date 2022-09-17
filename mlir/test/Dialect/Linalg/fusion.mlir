@@ -599,7 +599,6 @@ func.func @pointwise_no_view(%M: index, %N: index) {
 
 #map0 = affine_map<(d0, d1) -> (d0)>
 #map1 = affine_map<(d0, d1) -> (d0, d1)>
-#map2 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
 func.func @fusion_of_three(%arg0: memref<100x10xf32>,
                       %arg1: memref<100xf32>,
@@ -633,14 +632,14 @@ func.func @fusion_of_three(%arg0: memref<100x10xf32>,
   scf.for %i = %c0 to %2 step %c1 {
     scf.for %j = %c0 to %3 step %c1 {
       %6 = memref.subview %1[%i, %j][%c1, %c1][%c1, %c1] :
-      memref<100x10xf32> to memref<?x?xf32, #map2>
+      memref<100x10xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
       %7 = memref.subview %arg2[%i, %j][%c1, %c1][%c1, %c1] :
-      memref<100x10xf32> to memref<?x?xf32, #map2>
+      memref<100x10xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
       linalg.generic {
         indexing_maps = [#map1, #map1],
         iterator_types = ["parallel", "parallel"]}
-        ins(%6 : memref<?x?xf32, #map2>)
-       outs(%7 : memref<?x?xf32, #map2>) {
+        ins(%6 : memref<?x?xf32, strided<[?, ?], offset: ?>>)
+       outs(%7 : memref<?x?xf32, strided<[?, ?], offset: ?>>) {
           ^bb0(%arg3: f32, %arg4: f32):
             %8 = math.exp %arg3 : f32
             linalg.yield %8 : f32
@@ -669,7 +668,6 @@ func.func @fusion_of_three(%arg0: memref<100x10xf32>,
 
 #map0 = affine_map<(d0)[s0] -> (2, -d0 + s0)>
 #map1 = affine_map<(d0)[s0] -> (3, -d0 + s0)>
-#map2 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 #map3 = affine_map<(d0)[s0, s1] -> (s0 + 1, -d0 + s0 + s1)>
 #map4 = affine_map<(d0)[s0, s1] -> (s0 + 2, -d0 + s0 + s1)>
 
@@ -688,11 +686,11 @@ func.func @fill_and_conv(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: 
     scf.for %arg4 = %c0 to %5 step %c3 {
       %6 = affine.min #map3(%arg3)[%2, %4]
       %7 = affine.min #map4(%arg4)[%3, %5]
-      %8 = memref.subview %arg0[%arg3, %arg4] [%6, %7] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map2>
+      %8 = memref.subview %arg0[%arg3, %arg4] [%6, %7] [1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
       %9 = affine.min #map0(%arg3)[%4]
       %10 = affine.min #map1(%arg4)[%5]
-      %11 = memref.subview %arg2[%arg3, %arg4] [%9, %10] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map2>
-      linalg.conv_2d ins(%8, %arg1 : memref<?x?xf32, #map2>, memref<?x?xf32>) outs(%11 : memref<?x?xf32, #map2>)
+      %11 = memref.subview %arg2[%arg3, %arg4] [%9, %10] [1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1], offset: ?>>
+      linalg.conv_2d ins(%8, %arg1 : memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?x?xf32>) outs(%11 : memref<?x?xf32, strided<[?, 1], offset: ?>>)
     }
   }
   return
