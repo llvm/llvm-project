@@ -1,7 +1,5 @@
 atomic
 climits
-cmath
-compare
 cstddef
 cstdint
 cstdlib
@@ -12,6 +10,5 @@ iosfwd
 limits
 new
 ratio
-tuple
 type_traits
 version
