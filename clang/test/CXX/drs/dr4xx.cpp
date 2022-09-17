@@ -1013,7 +1013,7 @@ namespace dr483 { // dr483: yes
     int check4[__LONG_MAX__ >= 2147483647 ? 1 : -1];
     int check5[__LONG_LONG_MAX__ >= 9223372036854775807 ? 1 : -1];
 #if __cplusplus < 201103L
-    // expected-error@-2 {{extension}}
+    // expected-error@-2 2{{extension}}
 #endif
   }
   namespace cstdint {
