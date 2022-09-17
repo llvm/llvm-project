@@ -160,14 +160,14 @@ void test12(int x) {
 void missing_statement_case(int x) {
   switch (x) {
     case 1:
-    case 0: // expected-error {{label at end of compound statement: expected statement}}
+    case 0: // expected-error {{label at end of switch compound statement: expected statement}}
   }
 }
 
 void missing_statement_default(int x) {
   switch (x) {
     case 0:
-    default: // expected-error {{label at end of compound statement: expected statement}}
+    default: // expected-error {{label at end of switch compound statement: expected statement}}
   }
 }
 
@@ -179,7 +179,7 @@ void pr19022_1() {
 void pr19022_1a(int x) {
   switch(x) {
   case 1  // expected-error{{expected ':' after 'case'}} \
-          // expected-error{{label at end of compound statement: expected statement}}
+          // expected-error{{label at end of switch compound statement: expected statement}}
   }
 }
 
