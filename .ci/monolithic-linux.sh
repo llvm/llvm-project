@@ -54,12 +54,19 @@ lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-outpu
 
 echo "--- cmake"
 export PIP_BREAK_SYSTEM_PACKAGES=1
+
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
+
+# This is an lldb requirement which is not listed above.
+pip install -q swig
+
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
+      -D LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
       -G Ninja \
+      -D CMAKE_PREFIX_PATH="${HOME}/.local" \
       -D CMAKE_BUILD_TYPE=Release \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
@@ -68,7 +75,10 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D LLVM_CCACHE_BUILD=ON \
+      -D LIBCXX_CXX_ABI=libcxxabi \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D LLDB_ENABLE_PYTHON=ON \
+      -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 echo "--- ninja"

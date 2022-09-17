@@ -49,7 +49,7 @@ DEPENDENTS_TO_TEST = {
     },
     "lld": {"bolt", "cross-project-tests"},
     # TODO(issues/132795): LLDB should be enabled on clang changes.
-    "clang": {"clang-tools-extra", "compiler-rt", "cross-project-tests"},
+    "clang": {"clang-tools-extra", "compiler-rt", "cross-project-tests", "lldb"},
     "clang-tools-extra": {"libc"},
     "mlir": {"flang"},
 }
