@@ -224,6 +224,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
       continue;
     }
 
+    Changed = true;
     ++NumInlined;
 
     LLVM_DEBUG(dbgs() << "    Size after inlining: " << F.getInstructionCount()
@@ -282,8 +283,6 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
       Advice->recordInliningWithCalleeDeleted();
     else
       Advice->recordInlining();
-
-    Changed = true;
   }
 
   // Now that we've finished inlining all of the calls across this module,
