@@ -79,6 +79,12 @@ enum { WARPSIZE = getGridValue().GV_Warp_Size };
 #define MAX_SM  72
 #elif defined(__gfx1031__)
 #define MAX_SM  40
+#elif defined(__gfx1100__)
+#define MAX_SM  84
+#elif defined(__gfx1101__)
+#define MAX_SM  64
+#elif defined(__gfx1102__)
+#define MAX_SM  40
 #else
 #define MAX_SM  120
 #endif

@@ -34,6 +34,8 @@ double getWTick() { return ((double)1E-9); }
 double getWTime() {
 #if __gfx700__ || __gfx701__ || __gfx702__
   uint64_t t = __builtin_amdgcn_s_memtime();
+#elif __gfx1100__ || __gfx1101__ || __gfx1102__ || __gfx1103__
+  uint64_t t = __builtin_readcyclecounter();
 #else
   uint64_t t = __builtin_amdgcn_s_memrealtime();
 #endif
