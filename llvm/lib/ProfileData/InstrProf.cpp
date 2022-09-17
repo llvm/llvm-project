@@ -506,7 +506,7 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
       if (!llvm::compression::zlib::isAvailable())
         return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
 
-      if (Error E = compression::zlib::uncompress(
+      if (Error E = compression::zlib::decompress(
               makeArrayRef(P, CompressedSize), UncompressedNameStrings,
               UncompressedSize)) {
         consumeError(std::move(E));
