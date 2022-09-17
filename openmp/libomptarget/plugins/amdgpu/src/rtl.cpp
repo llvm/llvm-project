@@ -1915,6 +1915,8 @@ void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
     assert(LoopTripcount &&
            "No loop exec mode needs a non-zero loop tripcount");
     NumGroups = ((LoopTripcount - 1) / ThreadsPerGroup) + 1;
+    DP("Final %d NumGroups and %d ThreadsPerGroup\n", NumGroups,
+      ThreadsPerGroup);
     return;
   }
 
@@ -1923,6 +1925,8 @@ void getLaunchVals(int &ThreadsPerGroup, int &NumGroups, int WarpSize,
   if (ExecutionMode ==
       llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED) {
     NumGroups = DeviceNumCUs;
+    DP("Final %d NumGroups and %d ThreadsPerGroup\n", NumGroups,
+      ThreadsPerGroup);
     return;
   }
 
