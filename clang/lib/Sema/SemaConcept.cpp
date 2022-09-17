@@ -183,7 +183,8 @@ DiagRecursiveConstraintEval(Sema &S, llvm::FoldingSetNodeID &ID,
   E->Profile(ID, S.Context, /*Canonical=*/true);
   for (const auto &List : MLTAL)
     for (const auto &TemplateArg : List.Args)
-      TemplateArg.Profile(ID, S.Context);
+      S.Context.getCanonicalTemplateArgument(TemplateArg)
+          .Profile(ID, S.Context, /*Canonical=*/true);
 
   // Note that we have to do this with our own collection, because there are
   // times where a constraint-expression check can cause us to need to evaluate
@@ -1924,7 +1925,7 @@ auto SubsumptionChecker::find(AtomicConstraint *Ori) -> Literal {
     for (const TemplateArgumentLoc &TAL : *Mapping) {
       SemaRef.getASTContext()
           .getCanonicalTemplateArgument(TAL.getArgument())
-          .Profile(ID, SemaRef.getASTContext());
+          .Profile(ID, SemaRef.getASTContext(), /*Canonical=*/true);
     }
   }
   auto It = Elems.find(ID);

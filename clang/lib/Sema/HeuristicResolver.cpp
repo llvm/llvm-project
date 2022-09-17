@@ -193,9 +193,9 @@ QualType HeuristicResolverImpl::getPointeeType(QualType T) {
   auto *TST = T->getAs<TemplateSpecializationType>();
   if (!TST)
     return QualType();
-  if (TST->template_arguments().size() == 0)
+  if (TST->getSpecifiedArguments().size() == 0)
     return QualType();
-  const TemplateArgument &FirstArg = TST->template_arguments()[0];
+  const TemplateArgument &FirstArg = TST->getSpecifiedArguments()[0];
   if (FirstArg.getKind() != TemplateArgument::Type)
     return QualType();
   return FirstArg.getAsType();

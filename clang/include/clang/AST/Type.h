@@ -2199,10 +2199,9 @@ protected:
     /// specialization, which is expected to be able to hold at least 1024
     /// according to [implimits]. However, as this limit is somewhat easy to
     /// hit with template metaprogramming we'd prefer to keep it as large
-    /// as possible. At the moment it has been left as a non-bitfield since
-    /// this type safely fits in 64 bits as an unsigned, so there is no reason
-    /// to introduce the performance impact of a bitfield.
-    unsigned NumArgs;
+    /// as possible.
+    unsigned NumSpecifiedArgs : 16;
+    unsigned NumConvertedArgs : 16;
   };
 
   class DependentTemplateSpecializationTypeBitfields {
@@ -2820,6 +2819,18 @@ public:
   /// There are some specializations of this member template listed
   /// immediately following this class.
   template <typename T> const T *getAs() const;
+
+  /// Look through sugar for an instance of TemplateSpecializationType which
+  /// is not a type alias.
+  const TemplateSpecializationType *
+  getAsNonAliasTemplateSpecializationType() const;
+
+  const TemplateSpecializationType *
+  castAsNonAliasTemplateSpecializationType() const {
+    auto TST = getAsNonAliasTemplateSpecializationType();
+    assert(TST && "not a TemplateSpecializationType");
+    return TST;
+  }
 
   /// Member-template getAsAdjusted<specific type>. Look through specific kinds
   /// of sugar (parens, attributes, etc) for an instance of \<specific type>.
@@ -6594,7 +6605,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       QualType Deduced, AutoTypeKeyword Keyword,
                       bool IsDependent, ConceptDecl *CD,
-                      ArrayRef<TemplateArgument> Arguments);
+                      ArrayRef<TemplateArgument> Arguments, bool Canonical);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;
@@ -6672,10 +6683,10 @@ class TemplateSpecializationType : public Type, public llvm::FoldingSetNode {
   /// replacement must, recursively, be one of these).
   TemplateName Template;
 
-  TemplateSpecializationType(TemplateName T,
-                             ArrayRef<TemplateArgument> Args,
-                             QualType Canon,
-                             QualType Aliased);
+  TemplateSpecializationType(TemplateName T, bool IsAlias,
+                             ArrayRef<TemplateArgument> SpecifiedArgs,
+                             ArrayRef<TemplateArgument> ConvertedArgs,
+                             QualType Underlying);
 
 public:
   /// Determine whether any of the given template arguments are dependent.
@@ -6728,10 +6739,12 @@ public:
   /// Retrieve the name of the template that we are specializing.
   TemplateName getTemplateName() const { return Template; }
 
-  ArrayRef<TemplateArgument> template_arguments() const {
+  ArrayRef<TemplateArgument> getSpecifiedArguments() const {
     return {reinterpret_cast<const TemplateArgument *>(this + 1),
-            TemplateSpecializationTypeBits.NumArgs};
+            TemplateSpecializationTypeBits.NumSpecifiedArgs};
   }
+
+  ArrayRef<TemplateArgument> getConvertedArguments() const;
 
   bool isSugared() const {
     return !isDependentType() || isCurrentInstantiation() || isTypeAlias();
@@ -6743,8 +6756,10 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName T,
-                      ArrayRef<TemplateArgument> Args,
-                      const ASTContext &Context);
+                      ArrayRef<TemplateArgument> SpecifiedArgs,
+                      ArrayRef<TemplateArgument> ConvertedArgs,
+                      QualType Underlying, const ASTContext &Context,
+                      bool Canonical);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == TemplateSpecialization;
@@ -7099,13 +7114,14 @@ public:
   QualType desugar() const { return QualType(this, 0); }
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getKeyword(), Name, template_arguments());
+    Profile(ID, Context, getKeyword(), Name, template_arguments(),
+            isCanonicalUnqualified());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       ElaboratedTypeKeyword Keyword,
                       const DependentTemplateStorage &Name,
-                      ArrayRef<TemplateArgument> Args);
+                      ArrayRef<TemplateArgument> Args, bool IsCanonical);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == DependentTemplateSpecialization;
