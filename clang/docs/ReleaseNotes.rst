@@ -44,20 +44,39 @@ code bases.
 
 - Clang will now correctly diagnose as ill-formed a constant expression where an
   enum without a fixed underlying type is set to a value outside the range of
-  the enumeration's values. Due to the extended period of time this bug was
-  present in major C++ implementations (including Clang), this error has the
-  ability to be downgraded into a warning (via:
-  ``-Wno-error=enum-constexpr-conversion``) to provide a transition period for
-  users. This diagnostic is expected to turn into an error-only diagnostic in
-  the next Clang release. Fixes
-  `Issue 50055: <https://github.com/llvm/llvm-project/issues/50055>`_.
+  the enumeration's values.
+
+  .. code-block:: c++
+
+    enum E { Zero, One, Two, Three, Four };
+    constexpr E Val1 = (E)3;  // Ok
+    constexpr E Val2 = (E)7;  // Ok
+    constexpr E Val3 = (E)8;  // Now diagnosed as out of the range [0, 7]
+    constexpr E Val4 = (E)-1; // Now diagnosed as out of the range [0, 7]
+
+  Due to the extended period of time this bug was present in major C++
+  implementations (including Clang), this error has the ability to be
+  downgraded into a warning (via: ``-Wno-error=enum-constexpr-conversion``) to
+  provide a transition period for users. This diagnostic is expected to turn
+  into an error-only diagnostic in the next Clang release. Fixes
+  `Issue 50055 <https://github.com/llvm/llvm-project/issues/50055>`_.
+
 - ``-Wincompatible-function-pointer-types`` now defaults to an error in all C
   language modes. It may be downgraded to a warning with
   ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
-  ``-Wno-implicit-function-pointer-types``. *NOTE* We recommend that projects
-  using configure scripts verify the results do not change before/after setting
+  ``-Wno-implicit-function-pointer-types``.
+
+  **NOTE:** We recommend that projects using configure scripts verify that the
+  results do not change before/after setting
   ``-Werror=incompatible-function-pointer-types`` to avoid incompatibility with
   Clang 16.
+
+  .. code-block:: c
+
+    void func(const int *i);
+    void other(void) {
+      void (*fp)(int *) = func; // Previously a warning, now a downgradable error.
+    }
 
 
 What's New in Clang |release|?
