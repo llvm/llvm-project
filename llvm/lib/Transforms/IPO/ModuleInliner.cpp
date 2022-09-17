@@ -49,14 +49,6 @@ using namespace llvm;
 STATISTIC(NumInlined, "Number of functions inlined");
 STATISTIC(NumDeleted, "Number of functions deleted because all callers found");
 
-static cl::opt<InlinePriorityMode> UseInlinePriority(
-    "inline-priority-mode", cl::init(InlinePriorityMode::Size), cl::Hidden,
-    cl::desc("Choose the priority mode to use in module inline"),
-    cl::values(clEnumValN(InlinePriorityMode::Size, "size",
-                          "Use callee size priority."),
-               clEnumValN(InlinePriorityMode::Cost, "cost",
-                          "Use inline cost priority.")));
-
 /// Return true if the specified inline history ID
 /// indicates an inline history that includes the specified function.
 static bool inlineHistoryIncludes(
@@ -147,7 +139,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   //
   // TODO: Here is a huge amount duplicate code between the module inliner and
   // the SCC inliner, which need some refactoring.
-  auto Calls = getInlineOrder(UseInlinePriority, FAM, Params);
+  auto Calls = getInlineOrder(FAM, Params);
   assert(Calls != nullptr && "Expected an initialized InlineOrder");
 
   // Populate the initial list of calls in this module.
