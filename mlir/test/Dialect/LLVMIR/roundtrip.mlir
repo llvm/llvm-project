@@ -522,3 +522,13 @@ llvm.func @vararg_func(%arg0: i32, ...) {
   // CHECK: llvm.return
   llvm.return
 }
+
+// CHECK-LABEL: @lifetime
+// CHECK-SAME: %[[P:.*]]: !llvm.ptr
+llvm.func @lifetime(%p: !llvm.ptr) {
+  // CHECK: llvm.intr.lifetime.start 16, %[[P]]
+  llvm.intr.lifetime.start 16, %p : !llvm.ptr
+  // CHECK: llvm.intr.lifetime.end 16, %[[P]]
+  llvm.intr.lifetime.end 16, %p : !llvm.ptr
+  llvm.return
+}

@@ -156,8 +156,16 @@ void MapperJITLinkMemoryManager::deallocate(
   Mapper->deinitialize(Bases, [this, Allocs = std::move(Allocs),
                                OnDeallocated = std::move(OnDeallocated)](
                                   llvm::Error Err) mutable {
-    if (Err)
+    // TODO: How should we treat memory that we fail to deinitialize?
+    // We're currently bailing out and treating it as "burned" -- should we
+    // require that a failure to deinitialize still reset the memory so that
+    // we can reclaim it?
+    if (Err) {
+      for (auto &FA : Allocs)
+        FA.release();
       OnDeallocated(std::move(Err));
+      return;
+    }
 
     {
       std::lock_guard<std::mutex> Lock(Mutex);

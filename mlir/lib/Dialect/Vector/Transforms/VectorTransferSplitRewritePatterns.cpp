@@ -179,7 +179,7 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
       (aOffset == bOffset) ? aOffset : ShapedType::kDynamicStrideOrOffset;
   return MemRefType::get(
       resShape, aT.getElementType(),
-      makeStridedLinearLayoutMap(resStrides, resOffset, aT.getContext()));
+      StridedLayoutAttr::get(aT.getContext(), resOffset, resStrides));
 }
 
 /// Operates under a scoped context to build the intersection between the

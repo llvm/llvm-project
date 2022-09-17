@@ -62,6 +62,7 @@ public:
 
   void openFile();
   void writeSections();
+  void applyOptimizationHints();
   void writeUuid();
   void writeCodeSignature();
   void writeOutputFile();
@@ -1124,6 +1125,18 @@ void Writer::writeSections() {
   });
 }
 
+void Writer::applyOptimizationHints() {
+  if (config->arch() != AK_arm64 || config->ignoreOptimizationHints)
+    return;
+
+  uint8_t *buf = buffer->getBufferStart();
+  TimeTraceScope timeScope("Apply linker optimization hints");
+  parallelForEach(inputFiles, [buf](const InputFile *file) {
+    if (const auto *objFile = dyn_cast<ObjFile>(file))
+      target->applyOptimizationHints(buf, *objFile);
+  });
+}
+
 // In order to utilize multiple cores, we first split the buffer into chunks,
 // compute a hash for each chunk, and then compute a hash value of the hash
 // values.
@@ -1166,11 +1179,13 @@ void Writer::writeOutputFile() {
   if (errorCount())
     return;
   writeSections();
+  applyOptimizationHints();
   writeUuid();
   writeCodeSignature();
 
   if (auto e = buffer->commit())
-    error("failed to write to the output file: " + toString(std::move(e)));
+    fatal("failed to write output '" + buffer->getPath() +
+          "': " + toString(std::move(e)));
 }
 
 template <class LP> void Writer::run() {

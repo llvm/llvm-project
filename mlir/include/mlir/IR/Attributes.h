@@ -76,8 +76,8 @@ public:
   }
 
   /// Print the attribute.
-  void print(raw_ostream &os) const;
-  void print(raw_ostream &os, AsmState &state) const;
+  void print(raw_ostream &os, bool elideType = false) const;
+  void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
   void dump() const;
 
   /// Get an opaque pointer to the attribute.

@@ -919,8 +919,7 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
   InFlag = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getConstant(NumBytes, dl, PtrVT, true),
-                             DAG.getConstant(0, dl, PtrVT, true), InFlag, dl);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, dl);
   InFlag = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we

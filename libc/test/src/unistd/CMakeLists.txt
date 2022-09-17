@@ -120,6 +120,25 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  pread_pwrite_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    pread_pwrite_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.fsync
+    libc.src.unistd.pread
+    libc.src.unistd.pwrite
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.errno_setter_matcher
+)
+
+add_libc_unittest(
   read_write_test
   SUITE
     libc_unistd_unittests

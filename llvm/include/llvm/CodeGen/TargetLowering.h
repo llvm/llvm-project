@@ -67,6 +67,7 @@ class Constant;
 class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
+class Loop;
 class GISelKnownBits;
 class IntrinsicInst;
 class IRBuilderBase;
@@ -2798,6 +2799,13 @@ public:
     return false;
   }
 
+  /// Try to optimize extending or truncating conversion instructions (like
+  /// zext, trunc, fptoui, uitofp) for the target.
+  virtual bool optimizeExtendOrTruncateConversion(Instruction *I,
+                                                  Loop *L) const {
+    return false;
+  }
+
   /// Return true if the target supplies and combines to a paired load
   /// two loaded values of type LoadedType next to each other in memory.
   /// RequiredAlignment gives the minimal alignment constraints that must be met
@@ -4012,6 +4020,23 @@ public:
                                            SDValue Val, SDValue *Parts,
                                            unsigned NumParts, MVT PartVT,
                                            Optional<CallingConv::ID> CC) const {
+    return false;
+  }
+
+  /// Allows the target to handle physreg-carried dependency
+  /// in target-specific way. Used from the ScheduleDAGSDNodes to decide whether
+  /// to add the edge to the dependency graph.
+  /// Def - input: Selection DAG node defininfg physical register
+  /// User - input: Selection DAG node using physical register
+  /// Op - input: Number of User operand
+  /// PhysReg - inout: set to the physical register if the edge is
+  /// necessary, unchanged otherwise
+  /// Cost - inout: physical register copy cost.
+  /// Returns 'true' is the edge is necessary, 'false' otherwise
+  virtual bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
+                                         const TargetRegisterInfo *TRI,
+                                         const TargetInstrInfo *TII,
+                                         unsigned &PhysReg, int &Cost) const {
     return false;
   }
 

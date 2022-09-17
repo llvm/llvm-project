@@ -40,7 +40,7 @@ namespace {
 
 Error validatePointerSectionExtent(const char *SectionName,
                                    const ExecutorAddrRange &SE) {
-  if (SE.size().getValue() % sizeof(uintptr_t)) {
+  if (SE.size() % sizeof(uintptr_t)) {
     std::ostringstream ErrMsg;
     ErrMsg << std::hex << "Size of " << SectionName << " 0x"
            << SE.Start.getValue() << " -- 0x" << SE.End.getValue()

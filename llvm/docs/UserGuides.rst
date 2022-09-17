@@ -14,6 +14,7 @@ intermediate LLVM representation.
 .. toctree::
    :hidden:
 
+   AArch64SME
    AddingConstrainedIntrinsics
    AdvancedBuilds
    AliasAnalysis
@@ -230,6 +231,9 @@ Additional Topics
 :doc:`BigEndianNEON`
   LLVM's support for generating NEON instructions on big endian ARM targets is
   somewhat nonintuitive. This document explains the implementation and rationale.
+
+:doc:`AArch64SME`
+  LLVM's support for AArch64 SME ACLE and ABI.
 
 :doc:`CompileCudaWithLLVM`
   LLVM support for CUDA.

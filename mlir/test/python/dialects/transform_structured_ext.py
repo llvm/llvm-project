@@ -178,4 +178,4 @@ def testVectorize():
   # CHECK-LABEL: TEST: testVectorize
   # CHECK: transform.sequence
   # CHECK: = transform.structured.vectorize
-  # CHECK: vectorize_padding = true
+  # CHECK: {vectorize_padding}

@@ -909,6 +909,8 @@ def combine : Flag<["-", "--"], "combine">, Flags<[NoXarchOption, Unsupported]>;
 def compatibility__version : JoinedOrSeparate<["-"], "compatibility_version">;
 def config : Separate<["--"], "config">, Flags<[NoXarchOption]>,
   HelpText<"Specifies configuration file">;
+def no_default_config : Flag<["--"], "no-default-config">, Flags<[NoXarchOption]>,
+  HelpText<"Disable loading default configuration files">;
 def config_system_dir_EQ : Joined<["--"], "config-system-dir=">, Flags<[NoXarchOption, HelpHidden]>,
   HelpText<"System directory for configuration files">;
 def config_user_dir_EQ : Joined<["--"], "config-user-dir=">, Flags<[NoXarchOption, HelpHidden]>,
@@ -2228,6 +2230,14 @@ def fms_compatibility_version
       HelpText<"Dot-separated value representing the Microsoft compiler "
                "version number to report in _MSC_VER (0 = don't define it "
                "(default))">;
+def fms_runtime_lib_EQ : Joined<["-"], "fms-runtime-lib=">, Group<f_Group>,
+  Flags<[NoXarchOption, CoreOption]>, Values<"static,static_dbg,dll,dll_dbg">,
+  HelpText<"Select Windows run-time library">,
+  DocBrief<[{
+Specify Visual Studio C runtime library. "static" and "static_dbg" correspond
+to the cl flags /MT and /MTd which use the multithread, static version. "dll"
+and "dll_dbg" correspond to the cl flags /MD and /MDd which use the multithread,
+dll version.}]>;
 defm delayed_template_parsing : BoolFOption<"delayed-template-parsing",
   LangOpts<"DelayedTemplateParsing">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Parse templated function definitions at the end of the translation unit">,
@@ -5665,6 +5675,10 @@ def fsanitize_coverage_pc_table
     : Flag<["-"], "fsanitize-coverage-pc-table">,
       HelpText<"Create a table of coverage-instrumented PCs">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoveragePCTable">>;
+def fsanitize_coverage_control_flow
+    : Flag<["-"], "fsanitize-coverage-control-flow">,
+      HelpText<"Collect control flow of function">,
+      MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageControlFlow">>;
 def fsanitize_coverage_trace_pc
     : Flag<["-"], "fsanitize-coverage-trace-pc">,
       HelpText<"Enable PC tracing in sanitizer coverage">,

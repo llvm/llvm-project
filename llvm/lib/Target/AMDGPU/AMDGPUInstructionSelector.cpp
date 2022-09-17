@@ -1803,6 +1803,33 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   return true;
 }
 
+// We need to handle this here because tablegen doesn't support matching
+// instructions with multiple outputs.
+bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
+    MachineInstr &MI) const {
+  Register Dst0 = MI.getOperand(0).getReg();
+  Register Dst1 = MI.getOperand(1).getReg();
+
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock *MBB = MI.getParent();
+
+  Register Addr = MI.getOperand(3).getReg();
+  Register Data0 = MI.getOperand(4).getReg();
+  Register Data1 = MI.getOperand(5).getReg();
+  unsigned Offset = MI.getOperand(6).getImm();
+
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::DS_BVH_STACK_RTN_B32), Dst0)
+                 .addDef(Dst1)
+                 .addUse(Addr)
+                 .addUse(Data0)
+                 .addUse(Data1)
+                 .addImm(Offset)
+                 .cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+}
+
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   unsigned IntrinsicID = I.getIntrinsicID();
@@ -1841,6 +1868,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
       return false;
     }
     break;
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+    return selectDSBvhStackIntrinsic(I);
   }
   return selectImpl(I, *CoverageInfo);
 }

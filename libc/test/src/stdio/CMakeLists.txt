@@ -111,6 +111,21 @@ add_libc_unittest(
     libc.src.fenv.fesetround
 )
 
-add_subdirectory(printf_core)
+add_libc_unittest(
+  remove_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    remove_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.stdio.remove
+    libc.src.sys.stat.mkdirat
+    libc.src.unistd.access
+    libc.src.unistd.close
+)
 
+add_subdirectory(printf_core)
 add_subdirectory(testdata)

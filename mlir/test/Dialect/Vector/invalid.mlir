@@ -1470,48 +1470,6 @@ func.func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>
 
 // -----
 
-func.func @extract_map_rank(%v: vector<32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op expected source and destination vectors of same rank}}
-  %0 = vector.extract_map %v[%id] : vector<32xf32> to vector<2x1xf32>
-}
-
-// -----
-
-func.func @extract_map_size(%v: vector<63xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op source vector dimensions must be a multiple of destination vector dimensions}}
-  %0 = vector.extract_map %v[%id] : vector<63xf32> to vector<2xf32>
-}
-
-// -----
-
-func.func @extract_map_id(%v: vector<2x32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op expected number of ids must match the number of dimensions distributed}}
-  %0 = vector.extract_map %v[%id] : vector<2x32xf32> to vector<1x1xf32>
-}
-
-// -----
-
-func.func @insert_map_rank(%v: vector<2x1xf32>, %v1: vector<32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op expected source and destination vectors of same rank}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<32xf32>
-}
-
-// -----
-
-func.func @insert_map_size(%v: vector<3xf32>, %v1: vector<64xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op destination vector size must be a multiple of source vector size}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<3xf32> into vector<64xf32>
-}
-
-// -----
-
-func.func @insert_map_id(%v: vector<2x1xf32>, %v1: vector<4x32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op expected number of ids must match the number of dimensions distributed}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<4x32xf32>
-}
-
-// -----
-
 func.func @scan_reduction_dim_constraint(%arg0: vector<2x3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
   // expected-error@+1 {{'vector.scan' op reduction dimension 5 has to be less than 2}}
   %0:2 = vector.scan <add>, %arg0, %arg1 {inclusive = true, reduction_dim = 5} :

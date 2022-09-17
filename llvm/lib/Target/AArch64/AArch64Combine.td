@@ -228,6 +228,7 @@ def AArch64PostLegalizerCombinerHelper
                         select_combines, fold_merge_to_zext,
                         constant_fold, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
-                        split_store_zero_128, undef_combines]> {
+                        split_store_zero_128, undef_combines,
+                        select_to_minmax]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

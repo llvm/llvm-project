@@ -66,19 +66,8 @@ LLVM_LIBC_FUNCTION(float, sinhf, (float x)) {
     return fputil::multiply_add(xdbl, pe, xdbl);
   }
 
-  // MULT_POWER2 = -1
-  auto ep_p = exp_eval<-1>(x);  // 0.5 * exp(x)
-  auto ep_m = exp_eval<-1>(-x); // 0.5 * exp(-x)
-
-  // 0.5 * expm1(x)  = ep_p.mult_exp * (ep_p.r + 1) - 0.5
-  //               = ep_p.mult_exp * ep_p.r + ep_p.mult_exp - 0.5
-  // 0.5 * expm1(-x) = ep_m.mult_exp * (ep_m.r + 1) - 0.5
-  //               = ep_m.mult_exp * ep_m.r + ep_m.mult_exp - 0.5
-  // sinh(x) = 0.5 * expm1(x) - 0.5 * expm1(-x)
-  // Using expm1 instead of exp improved precision around zero.
-  double ep = fputil::multiply_add(ep_p.mult_exp, ep_p.r, ep_p.mult_exp - 0.5) -
-              fputil::multiply_add(ep_m.mult_exp, ep_m.r, ep_m.mult_exp - 0.5);
-  return ep;
+  // sinh(x) = (e^x - e^(-x)) / 2.
+  return exp_pm_eval</*is_sinh*/ true>(x);
 }
 
 } // namespace __llvm_libc

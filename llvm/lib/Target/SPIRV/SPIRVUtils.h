@@ -84,8 +84,11 @@ bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID);
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
 
-// Return a demangled name with arg type info by itaniumDemangle().
-// If the parser fails, return only function name.
-std::string mayBeOclOrSpirvBuiltin(StringRef Name);
+// If OpenCL or SPIR-V builtin function name is recognized, return a demangled
+// name, otherwise return an empty string.
+std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);
+
+// Check if given LLVM type is a special opaque builtin type.
+bool isSpecialOpaqueType(const Type *Ty);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

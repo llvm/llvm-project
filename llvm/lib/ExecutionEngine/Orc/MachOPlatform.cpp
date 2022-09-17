@@ -163,6 +163,8 @@ private:
 constexpr MachOHeaderMaterializationUnit::HeaderSymbol
     MachOHeaderMaterializationUnit::AdditionalHeaderSymbols[];
 
+StringRef DataCommonSectionName = "__DATA,__common";
+StringRef DataDataSectionName = "__DATA,__data";
 StringRef EHFrameSectionName = "__TEXT,__eh_frame";
 StringRef ModInitFuncSectionName = "__DATA,__mod_init_func";
 StringRef ObjCClassListSectionName = "__DATA,__objc_classlist";
@@ -910,8 +912,19 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     }
   }
 
+  // Collect data sections to register.
+  StringRef DataSections[] = {DataDataSectionName, DataCommonSectionName};
+  for (auto &SecName : DataSections) {
+    if (auto *Sec = G.findSectionByName(SecName)) {
+      jitlink::SectionRange R(*Sec);
+      if (!R.empty())
+        MachOPlatformSecs.push_back({SecName, R.getRange()});
+    }
+  }
+
   // If any platform sections were found then add an allocation action to call
   // the registration function.
+  bool RegistrationRequired = false;
   StringRef PlatformSections[] = {
       ModInitFuncSectionName,   ObjCClassListSectionName,
       ObjCImageInfoSectionName, ObjCSelRefsSectionName,
@@ -927,6 +940,7 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     if (R.empty())
       continue;
 
+    RegistrationRequired = true;
     MachOPlatformSecs.push_back({SecName, R.getRange()});
   }
 
@@ -939,9 +953,16 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
         HeaderAddr = I->second;
     }
 
-    if (!HeaderAddr)
+    if (!HeaderAddr) {
+      // If we only found data sections and we're not done bootstrapping yet
+      // then continue -- this must be a data section for the runtime itself,
+      // and we don't need to register those.
+      if (MP.State != MachOPlatform::Initialized && !RegistrationRequired)
+        return Error::success();
+
       return make_error<StringError>("Missing header for " + JD.getName(),
                                      inconvertibleErrorCode());
+    }
 
     // Dump the scraped inits.
     LLVM_DEBUG({

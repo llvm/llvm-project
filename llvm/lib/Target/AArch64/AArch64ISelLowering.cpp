@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -2057,6 +2058,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((AArch64ISD::NodeType)Opcode) {
   case AArch64ISD::FIRST_NUMBER:
     break;
+    MAKE_CASE(AArch64ISD::SMSTART)
+    MAKE_CASE(AArch64ISD::SMSTOP)
     MAKE_CASE(AArch64ISD::CALL)
     MAKE_CASE(AArch64ISD::ADRP)
     MAKE_CASE(AArch64ISD::ADR)
@@ -2533,7 +2536,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
 
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
-
   case TargetOpcode::STATEPOINT:
     // STATEPOINT is a pseudo instruction which has no implicit defs/uses
     // while bl call instruction (where statepoint will be lowered at the end)
@@ -4490,6 +4492,43 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::AND, DL, VT, Reinterpret, Mask);
 }
 
+SDValue AArch64TargetLowering::getPStateSM(SelectionDAG &DAG, SDValue Chain,
+                                           SMEAttrs Attrs, SDLoc DL,
+                                           EVT VT) const {
+  if (Attrs.hasStreamingInterfaceOrBody())
+    return DAG.getConstant(1, DL, VT);
+
+  if (Attrs.hasNonStreamingInterfaceAndBody())
+    return DAG.getConstant(0, DL, VT);
+
+  assert(Attrs.hasStreamingCompatibleInterface() && "Unexpected interface");
+
+  SDValue Callee = DAG.getExternalSymbol("__arm_sme_state",
+                                         getPointerTy(DAG.getDataLayout()));
+  Type *Int64Ty = Type::getInt64Ty(*DAG.getContext());
+  Type *RetTy = StructType::get(Int64Ty, Int64Ty);
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  ArgListTy Args;
+  CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2,
+      RetTy, Callee, std::move(Args));
+  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+  SDValue Mask = DAG.getConstant(/*PSTATE.SM*/ 1, DL, MVT::i64);
+  return DAG.getNode(ISD::AND, DL, MVT::i64, CallResult.first.getOperand(0),
+                     Mask);
+}
+
+static Optional<SMEAttrs> getCalleeAttrsFromExternalFunction(SDValue V) {
+  if (auto *ES = dyn_cast<ExternalSymbolSDNode>(V)) {
+    StringRef S(ES->getSymbol());
+    if (S == "__arm_sme_state" || S == "__arm_tpidr2_save")
+      return SMEAttrs(SMEAttrs::SM_Compatible | SMEAttrs::ZA_Preserved);
+    if (S == "__arm_tpidr2_restore")
+      return SMEAttrs(SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared);
+  }
+  return None;
+}
+
 SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                       SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(1);
@@ -4521,13 +4560,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getMergeValues({MS.getValue(0), MS.getValue(2)}, DL);
   }
   case Intrinsic::aarch64_sme_get_pstatesm: {
-    SDValue Chain = Op.getOperand(0);
-    SDValue MRS = DAG.getNode(
-        AArch64ISD::MRS, DL, DAG.getVTList(MVT::i64, MVT::Glue, MVT::Other),
-        Chain, DAG.getConstant(AArch64SysReg::SVCR, DL, MVT::i64));
-    SDValue Mask = DAG.getConstant(/* PSTATE.SM */ 1, DL, MVT::i64);
-    SDValue And = DAG.getNode(ISD::AND, DL, MVT::i64, MRS, Mask);
-    return DAG.getMergeValues({And, Chain}, DL);
+    SDValue Chain = Op->getOperand(0);
+    SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
+    SDValue PStateSM = getPStateSM(DAG, Chain, Attrs, DL, Op.getValueType());
+    return DAG.getMergeValues({PStateSM, Chain}, DL);
   }
   }
 }
@@ -5834,6 +5870,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
      return CC_AArch64_Win64_CFGuard_Check;
    case CallingConv::AArch64_VectorCall:
    case CallingConv::AArch64_SVE_VectorCall:
+   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
+   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
      return CC_AArch64_AAPCS;
   }
 }
@@ -6614,6 +6652,25 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   return ZExtBool;
 }
 
+SDValue AArch64TargetLowering::changeStreamingMode(
+    SelectionDAG &DAG, SDLoc DL, bool Enable,
+    SDValue Chain, SDValue InFlag, SDValue PStateSM, bool Entry) const {
+  const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+  SDValue RegMask = DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask());
+  SDValue MSROp =
+      DAG.getTargetConstant((int32_t)AArch64SVCR::SVCRSM, DL, MVT::i32);
+
+  SDValue ExpectedSMVal =
+      DAG.getTargetConstant(Entry ? Enable : !Enable, DL, MVT::i64);
+  SmallVector<SDValue> Ops = {Chain, MSROp, PStateSM, ExpectedSMVal, RegMask};
+
+  if (InFlag)
+    Ops.push_back(InFlag);
+
+  unsigned Opcode = Enable ? AArch64ISD::SMSTART : AArch64ISD::SMSTOP;
+  return DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -6733,6 +6790,19 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // satisfy the same constraint.
     assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
   }
+
+  // Determine whether we need any streaming mode changes.
+  SMEAttrs CalleeAttrs, CallerAttrs(MF.getFunction());
+  if (CLI.CB)
+    CalleeAttrs = SMEAttrs(*CLI.CB);
+  else if (Optional<SMEAttrs> Attrs =
+               getCalleeAttrsFromExternalFunction(CLI.Callee))
+    CalleeAttrs = *Attrs;
+
+  SDValue InFlag, PStateSM;
+  Optional<bool> RequiresSMChange = CallerAttrs.requiresSMChange(CalleeAttrs);
+  if (RequiresSMChange)
+    PStateSM = getPStateSM(DAG, Chain, CallerAttrs, DL, MVT::i64);
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -6985,9 +7055,15 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
 
+  if (RequiresSMChange) {
+    SDValue NewChain = changeStreamingMode(DAG, DL, *RequiresSMChange, Chain,
+                                           InFlag, PStateSM, true);
+    Chain = NewChain.getValue(0);
+    InFlag = NewChain.getValue(1);
+  }
+
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into the appropriate regs.
-  SDValue InFlag;
   for (auto &RegToPass : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, DL, RegToPass.first,
                              RegToPass.second, InFlag);
@@ -7025,8 +7101,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // we've carefully laid out the parameters so that when sp is reset they'll be
   // in the correct location.
   if (IsTailCall && !IsSibCall) {
-    Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, DL, true),
-                               DAG.getIntPtrConstant(0, DL, true), InFlag, DL);
+    Chain = DAG.getCALLSEQ_END(Chain, 0, 0, InFlag, DL);
     InFlag = Chain.getValue(1);
   }
 
@@ -7117,17 +7192,37 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   uint64_t CalleePopBytes =
       DoesCalleeRestoreStack(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : 0;
 
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, DL, true),
-                             DAG.getIntPtrConstant(CalleePopBytes, DL, true),
-                             InFlag, DL);
-  if (!Ins.empty())
-    InFlag = Chain.getValue(1);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InFlag, DL);
+  InFlag = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InFlag, CallConv, IsVarArg, Ins, DL, DAG,
-                         InVals, IsThisReturn,
-                         IsThisReturn ? OutVals[0] : SDValue());
+  SDValue Result =
+      LowerCallResult(Chain, InFlag, CallConv, IsVarArg, Ins, DL, DAG, InVals,
+                      IsThisReturn, IsThisReturn ? OutVals[0] : SDValue());
+
+  if (!Ins.empty())
+    InFlag = Result.getValue(Result->getNumValues() - 1);
+
+  if (RequiresSMChange) {
+    assert(PStateSM && "Expected a PStateSM to be set");
+    Result = changeStreamingMode(DAG, DL, !*RequiresSMChange, Result, InFlag,
+                                 PStateSM, false);
+    for (unsigned I = 0; I < InVals.size(); ++I) {
+      // The smstart/smstop is chained as part of the call, but when the
+      // resulting chain is discarded (which happens when the call is not part
+      // of a chain, e.g. a call to @llvm.cos()), we need to ensure the
+      // smstart/smstop is chained to the result value. We can do that by doing
+      // a vreg -> vreg copy.
+      Register Reg = MF.getRegInfo().createVirtualRegister(
+          getRegClassFor(InVals[I].getValueType().getSimpleVT()));
+      SDValue X = DAG.getCopyToReg(Result, DL, Reg, InVals[I]);
+      InVals[I] = DAG.getCopyFromReg(X, DL, Reg,
+                                     InVals[I].getValueType());
+    }
+  }
+
+  return Result;
 }
 
 bool AArch64TargetLowering::CanLowerReturn(
@@ -12558,8 +12653,7 @@ AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                      DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
   Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
 
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(0, dl, true),
-                             DAG.getIntPtrConstant(0, dl, true), SDValue(), dl);
+  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
   SDValue Ops[2] = {SP, Chain};
   return DAG.getMergeValues(Ops, dl);
@@ -13159,6 +13253,142 @@ bool AArch64TargetLowering::shouldSinkOperands(
   default:
     return false;
   }
+  return false;
+}
+
+static void createTblShuffleForZExt(ZExtInst *ZExt, bool IsLittleEndian) {
+  Value *Op = ZExt->getOperand(0);
+  auto *SrcTy = dyn_cast<FixedVectorType>(Op->getType());
+  auto *DstTy = dyn_cast<FixedVectorType>(ZExt->getType());
+  unsigned NumElts = SrcTy->getNumElements();
+  IRBuilder<> Builder(ZExt);
+  SmallVector<int> Mask(4 * NumElts, NumElts);
+  // Create a mask that selects <0,0,0,Op[i]> for each lane of vector of i32 to
+  // replace the original ZExt. This can later be lowered to a set of tbl
+  // instructions.
+  for (unsigned i = 0; i < NumElts; i++) {
+    if (IsLittleEndian)
+      Mask[i * 4] = i;
+    else
+      Mask[i * 4 + 3] = i;
+  }
+
+  auto *FirstEltZero = Builder.CreateInsertElement(
+      PoisonValue::get(SrcTy), Builder.getInt8(0), uint64_t(0));
+  Value *Result = Builder.CreateShuffleVector(Op, FirstEltZero, Mask);
+  Result = Builder.CreateBitCast(Result, DstTy);
+  ZExt->replaceAllUsesWith(Result);
+  ZExt->eraseFromParent();
+}
+
+static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
+  IRBuilder<> Builder(TI);
+  SmallVector<Value *> Parts;
+  Type *VecTy = FixedVectorType::get(Builder.getInt8Ty(), 16);
+  Parts.push_back(Builder.CreateBitCast(
+      Builder.CreateShuffleVector(TI->getOperand(0), {0, 1, 2, 3}), VecTy));
+  Parts.push_back(Builder.CreateBitCast(
+      Builder.CreateShuffleVector(TI->getOperand(0), {4, 5, 6, 7}), VecTy));
+
+  Intrinsic::ID TblID = Intrinsic::aarch64_neon_tbl2;
+  unsigned NumElements = cast<FixedVectorType>(TI->getType())->getNumElements();
+  if (NumElements == 16) {
+    Parts.push_back(Builder.CreateBitCast(
+        Builder.CreateShuffleVector(TI->getOperand(0), {8, 9, 10, 11}), VecTy));
+    Parts.push_back(Builder.CreateBitCast(
+        Builder.CreateShuffleVector(TI->getOperand(0), {12, 13, 14, 15}),
+        VecTy));
+    TblID = Intrinsic::aarch64_neon_tbl4;
+  }
+  SmallVector<Constant *, 16> MaskConst;
+  for (unsigned Idx = 0; Idx < NumElements * 4; Idx += 4)
+    MaskConst.push_back(
+        ConstantInt::get(Builder.getInt8Ty(), IsLittleEndian ? Idx : Idx + 3));
+
+  for (unsigned Idx = NumElements * 4; Idx < 64; Idx += 4)
+    MaskConst.push_back(ConstantInt::get(Builder.getInt8Ty(), 255));
+
+  Parts.push_back(ConstantVector::get(MaskConst));
+  auto *F =
+      Intrinsic::getDeclaration(TI->getModule(), TblID, Parts[0]->getType());
+  Value *Res = Builder.CreateCall(F, Parts);
+
+  if (NumElements == 8)
+    Res = Builder.CreateShuffleVector(Res, {0, 1, 2, 3, 4, 5, 6, 7});
+  TI->replaceAllUsesWith(Res);
+  TI->eraseFromParent();
+}
+
+bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(Instruction *I,
+                                                               Loop *L) const {
+  // Try to optimize conversions using tbl. This requires materializing constant
+  // index vectors, which can increase code size and add loads. Skip the
+  // transform unless the conversion is in a loop block guaranteed to execute
+  // and we are not optimizing for size.
+  Function *F = I->getParent()->getParent();
+  if (!L || L->getHeader() != I->getParent() || F->hasMinSize() ||
+      F->hasOptSize())
+    return false;
+
+  auto *SrcTy = dyn_cast<FixedVectorType>(I->getOperand(0)->getType());
+  auto *DstTy = dyn_cast<FixedVectorType>(I->getType());
+  if (!SrcTy || !DstTy)
+    return false;
+
+  // Convert 'zext <(8|16) x i8> %x to <(8|16) x i32>' to a shuffle that can be
+  // lowered to either 2 or 4 tbl instructions to insert the original i8
+  // elements into i32 lanes.
+  auto *ZExt = dyn_cast<ZExtInst>(I);
+  if (ZExt && (SrcTy->getNumElements() == 8 || SrcTy->getNumElements() == 16) &&
+      SrcTy->getElementType()->isIntegerTy(8) &&
+      DstTy->getElementType()->isIntegerTy(32)) {
+    createTblShuffleForZExt(ZExt, Subtarget->isLittleEndian());
+    return true;
+  }
+
+  auto *UIToFP = dyn_cast<UIToFPInst>(I);
+  if (UIToFP &&
+      (SrcTy->getNumElements() == 8 || SrcTy->getNumElements() == 16) &&
+      SrcTy->getElementType()->isIntegerTy(8) &&
+      DstTy->getElementType()->isFloatTy()) {
+    IRBuilder<> Builder(I);
+    auto *ZExt = cast<ZExtInst>(
+        Builder.CreateZExt(I->getOperand(0), VectorType::getInteger(DstTy)));
+    auto *UI = Builder.CreateUIToFP(ZExt, DstTy);
+    I->replaceAllUsesWith(UI);
+    I->eraseFromParent();
+    createTblShuffleForZExt(ZExt, Subtarget->isLittleEndian());
+    return true;
+  }
+
+  // Convert 'fptoui <(8|16) x float> to <(8|16) x i8>' to a wide fptoui
+  // followed by a truncate lowered to using tbl.4.
+  auto *FPToUI = dyn_cast<FPToUIInst>(I);
+  if (FPToUI &&
+      (SrcTy->getNumElements() == 8 || SrcTy->getNumElements() == 16) &&
+      SrcTy->getElementType()->isFloatTy() &&
+      DstTy->getElementType()->isIntegerTy(8)) {
+    IRBuilder<> Builder(I);
+    auto *WideConv = Builder.CreateFPToUI(FPToUI->getOperand(0),
+                                          VectorType::getInteger(SrcTy));
+    auto *TruncI = Builder.CreateTrunc(WideConv, DstTy);
+    I->replaceAllUsesWith(TruncI);
+    I->eraseFromParent();
+    createTblForTrunc(cast<TruncInst>(TruncI), Subtarget->isLittleEndian());
+    return true;
+  }
+
+  // Convert 'trunc <(8|16) x i32> %x to <(8|16) x i8>' to a single tbl.4
+  // instruction selecting the lowest 8 bits per lane of the input interpreted
+  // as 2 or 4 <4 x i32> vectors.
+  auto *TI = dyn_cast<TruncInst>(I);
+  if (TI && (SrcTy->getNumElements() == 8 || SrcTy->getNumElements() == 16) &&
+      SrcTy->getElementType()->isIntegerTy(32) &&
+      DstTy->getElementType()->isIntegerTy(8)) {
+    createTblForTrunc(TI, Subtarget->isLittleEndian());
+    return true;
+  }
+
   return false;
 }
 

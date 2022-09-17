@@ -599,6 +599,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(arm_aapcs_vfpcc);
   KEYWORD(aarch64_vector_pcs);
   KEYWORD(aarch64_sve_vector_pcs);
+  KEYWORD(aarch64_sme_preservemost_from_x0);
+  KEYWORD(aarch64_sme_preservemost_from_x2);
   KEYWORD(msp430_intrcc);
   KEYWORD(avr_intrcc);
   KEYWORD(avr_signalcc);

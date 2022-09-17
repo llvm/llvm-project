@@ -36,6 +36,30 @@ main Clang web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <https://llvm.org/releases/>`_.
 
+Potentially Breaking Changes
+============================
+These changes are ones which we think may surprise users when upgrading to
+Clang |release| because of the opportunity they pose for disruption to existing
+code bases.
+
+- Clang will now correctly diagnose as ill-formed a constant expression where an
+  enum without a fixed underlying type is set to a value outside the range of
+  the enumeration's values. Due to the extended period of time this bug was
+  present in major C++ implementations (including Clang), this error has the
+  ability to be downgraded into a warning (via:
+  ``-Wno-error=enum-constexpr-conversion``) to provide a transition period for
+  users. This diagnostic is expected to turn into an error-only diagnostic in
+  the next Clang release. Fixes
+  `Issue 50055: <https://github.com/llvm/llvm-project/issues/50055>`_.
+- ``-Wincompatible-function-pointer-types`` now defaults to an error in all C
+  language modes. It may be downgraded to a warning with
+  ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
+  ``-Wno-implicit-function-pointer-types``. *NOTE* We recommend that projects
+  using configure scripts verify the results do not change before/after setting
+  ``-Werror=incompatible-function-pointer-types`` to avoid incompatibility with
+  Clang 16.
+
+
 What's New in Clang |release|?
 ==============================
 
@@ -95,18 +119,16 @@ Bug Fixes
   `Issue 57169 <https://github.com/llvm/llvm-project/issues/57169>`_
 - Clang configuration files are now read through the virtual file system
   rather than the physical one, if these are different.
+- Clang will now no longer treat a C 'overloadable' function without a prototype as
+  a variadic function with the attribute.  This should make further diagnostics more
+  clear.
+- Fixes to builtin template emulation of regular templates.
+  `Issue 42102 <https://github.com/llvm/llvm-project/issues/42102>`_
+  `Issue 51928 <https://github.com/llvm/llvm-project/issues/51928>`_
 
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-- Clang will now correctly diagnose as ill-formed a constant expression where an
-  enum without a fixed underlying type is set to a value outside the range of
-  the enumeration's values. Due to the extended period of time this bug was
-  present in major C++ implementations (including Clang), this error has the
-  ability to be downgraded into a warning (via: -Wno-error=enum-constexpr-conversion)
-  to provide a transition period for users. This diagnostic is expected to turn
-  into an error-only diagnostic in the next Clang release. Fixes
-  `Issue 50055: <https://github.com/llvm/llvm-project/issues/50055>`_.
 - Clang will now check compile-time determinable string literals as format strings.
   Fixes `Issue 55805: <https://github.com/llvm/llvm-project/issues/55805>`_.
 - ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of
@@ -119,10 +141,6 @@ Improvements to Clang's diagnostics
   potential false positives, this diagnostic will not diagnose use of the
   ``true`` macro (from ``<stdbool.h>>`) in C language mode despite the macro
   being defined to expand to ``1``.
-- ``-Wincompatible-function-pointer-types`` now defaults to an error in all C
-  language modes. It may be downgraded to a warning with
-  ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
-  ``-Wno-implicit-function-pointer-types``.
 - Clang will now print more information about failed static assertions. In
   particular, simple static assertion expressions are evaluated to their
   compile-time value and printed out if the assertion fails.
@@ -141,6 +159,12 @@ Improvements to Clang's diagnostics
 - Clang will now give a more suitale diagnostic for declaration of block
   scope identifiers that have external/internal linkage that has an initializer.
   Fixes `Issue 57478: <https://github.com/llvm/llvm-project/issues/57478>`_.
+- New analysis pass will now help preserve sugar when combining deductions, in an
+  order agnostic way. This will be in effect when deducing template arguments,
+  when deducing function return type from multiple return statements, for the
+  conditional operator, and for most binary operations. Type sugar is combined
+  in a way that strips the sugar which is different between terms, and preserves
+  those which are common.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

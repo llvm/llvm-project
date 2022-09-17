@@ -185,9 +185,8 @@ define i32 @expensive_val_operand2(ptr nocapture %a, i32 %x, i1 %cmp) {
   ret i32 %sel
 }
 
-; Cold value operand with load in its one-use dependence slice shoud result
+; Cold value operand with load in its one-use dependence slice should result
 ; into a branch with sinked dependence slice.
-; The lifetime-end intrinsics should be soundly preserved.
 define i32 @expensive_val_operand3(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
 ; CHECK-LABEL: @expensive_val_operand3(
 ; CHECK-NEXT:    [[SEL_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
@@ -198,7 +197,47 @@ define i32 @expensive_val_operand3(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
 ; CHECK-NEXT:    br label [[SELECT_END]]
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X]], [[SELECT_TRUE_SINK]] ], [ [[Y:%.*]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %load = load i32, ptr %a, align 8
+  %x = add i32 %load, %b
+  %sel = select i1 %cmp, i32 %x, i32 %y, !prof !17
+  ret i32 %sel
+}
+
+; Expensive cold value operand with unsafe-to-sink (due to func call) load (partial slice sinking).
+define i32 @expensive_val_operand4(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
+; CHECK-LABEL: @expensive_val_operand4(
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    call void @free(ptr [[A]])
+; CHECK-NEXT:    [[SEL_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
+; CHECK-NEXT:    br i1 [[SEL_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]], !prof [[PROF18]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[LOAD]], [[B:%.*]]
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X]], [[SELECT_TRUE_SINK]] ], [ [[Y:%.*]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %load = load i32, ptr %a, align 8
+  call void @free(ptr %a)
+  %x = add i32 %load, %b
+  %sel = select i1 %cmp, i32 %x, i32 %y, !prof !17
+  ret i32 %sel
+}
+
+; Expensive cold value operand with unsafe-to-sink (due to lifetime-end marker) load (partial slice sinking).
+define i32 @expensive_val_operand5(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
+; CHECK-LABEL: @expensive_val_operand5(
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr nonnull [[A]])
+; CHECK-NEXT:    [[SEL_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
+; CHECK-NEXT:    br i1 [[SEL_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]], !prof [[PROF18]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[LOAD]], [[B:%.*]]
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X]], [[SELECT_TRUE_SINK]] ], [ [[Y:%.*]], [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %load = load i32, ptr %a, align 8
@@ -208,9 +247,35 @@ define i32 @expensive_val_operand3(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
   ret i32 %sel
 }
 
+; Expensive cold value operand with potentially-unsafe-to-sink load (located
+; in a different basic block and thus unchecked for sinkability).
+define i32 @expensive_val_operand6(ptr nocapture %a, i32 %b, i32 %y, i1 %cmp) {
+; CHECK-LABEL: @expensive_val_operand6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[SEL_FROZEN:%.*]] = freeze i1 [[CMP:%.*]]
+; CHECK-NEXT:    br i1 [[SEL_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]], !prof [[PROF18]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[LOAD]], [[B:%.*]]
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[X]], [[SELECT_TRUE_SINK]] ], [ [[Y:%.*]], [[BB1]] ]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  %load = load i32, ptr %a, align 8
+  br label %bb1
+bb1:                                 ; preds = %entry
+  %x = add i32 %load, %b
+  %sel = select i1 %cmp, i32 %x, i32 %y, !prof !17
+  ret i32 %sel
+}
+
 ; Multiple uses of the load value operand.
-define i32 @expensive_val_operand4(i32 %a, ptr nocapture %b, i32 %x, i1 %cmp) {
-; CHECK-LABEL: @expensive_val_operand4(
+define i32 @expensive_val_operand7(i32 %a, ptr nocapture %b, i32 %x, i1 %cmp) {
+; CHECK-LABEL: @expensive_val_operand7(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[X:%.*]], i32 [[LOAD]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SEL]], [[LOAD]]
@@ -452,6 +517,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+
+declare void @free(ptr nocapture)
 
 !llvm.module.flags = !{!0, !26, !27}
 !0 = !{i32 1, !"ProfileSummary", !1}

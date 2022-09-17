@@ -274,6 +274,9 @@ static Optional<size_t> getRecordSize(StringRef segname, StringRef name) {
 
   if (name == section_names::objcClassRefs && segname == segment_names::data)
     return target->wordSize;
+
+  if (name == section_names::objcSelrefs && segname == segment_names::data)
+    return target->wordSize;
   return {};
 }
 
@@ -458,155 +461,6 @@ static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
     return nullptr;
   }
   return *it;
-}
-
-// Linker optimization hints mark a sequence of instructions used for
-// synthesizing an address which that be transformed into a faster sequence. The
-// transformations depend on conditions that are determined at link time, like
-// the distance to the referenced symbol or its alignment.
-//
-// Each hint has a type and refers to 2 or 3 instructions. Each of those
-// instructions must have a corresponding relocation. After addresses have been
-// finalized and relocations have been performed, we check if the requirements
-// hold, and perform the optimizations if they do.
-//
-// Similar linker relaxations exist for ELF as well, with the difference being
-// that the explicit marking allows for the relaxation of non-consecutive
-// relocations too.
-//
-// The specific types of hints are documented in Arch/ARM64.cpp
-void ObjFile::parseOptimizationHints(ArrayRef<uint8_t> data) {
-  auto expectedArgCount = [](uint8_t type) {
-    switch (type) {
-    case LOH_ARM64_ADRP_ADRP:
-    case LOH_ARM64_ADRP_LDR:
-    case LOH_ARM64_ADRP_ADD:
-    case LOH_ARM64_ADRP_LDR_GOT:
-      return 2;
-    case LOH_ARM64_ADRP_ADD_LDR:
-    case LOH_ARM64_ADRP_ADD_STR:
-    case LOH_ARM64_ADRP_LDR_GOT_LDR:
-    case LOH_ARM64_ADRP_LDR_GOT_STR:
-      return 3;
-    }
-    return -1;
-  };
-
-  // Each hint contains at least 4 ULEB128-encoded fields, so in the worst case,
-  // there are data.size() / 4 LOHs. It's a huge overestimation though, as
-  // offsets are unlikely to fall in the 0-127 byte range, so we pre-allocate
-  // half as much.
-  optimizationHints.reserve(data.size() / 8);
-
-  for (const uint8_t *p = data.begin(); p < data.end();) {
-    const ptrdiff_t inputOffset = p - data.begin();
-    unsigned int n = 0;
-    uint8_t type = decodeULEB128(p, &n, data.end());
-    p += n;
-
-    // An entry of type 0 terminates the list.
-    if (type == 0)
-      break;
-
-    int expectedCount = expectedArgCount(type);
-    if (LLVM_UNLIKELY(expectedCount == -1)) {
-      error("Linker optimization hint at offset " + Twine(inputOffset) +
-            " has unknown type " + Twine(type));
-      return;
-    }
-
-    uint8_t argCount = decodeULEB128(p, &n, data.end());
-    p += n;
-
-    if (LLVM_UNLIKELY(argCount != expectedCount)) {
-      error("Linker optimization hint at offset " + Twine(inputOffset) +
-            " has " + Twine(argCount) + " arguments instead of the expected " +
-            Twine(expectedCount));
-      return;
-    }
-
-    uint64_t offset0 = decodeULEB128(p, &n, data.end());
-    p += n;
-
-    int16_t delta[2];
-    for (int i = 0; i < argCount - 1; ++i) {
-      uint64_t address = decodeULEB128(p, &n, data.end());
-      p += n;
-      int64_t d = address - offset0;
-      if (LLVM_UNLIKELY(d > std::numeric_limits<int16_t>::max() ||
-                        d < std::numeric_limits<int16_t>::min())) {
-        error("Linker optimization hint at offset " + Twine(inputOffset) +
-              " has addresses too far apart");
-        return;
-      }
-      delta[i] = d;
-    }
-
-    optimizationHints.push_back({offset0, {delta[0], delta[1]}, type});
-  }
-
-  // We sort the per-object vector of optimization hints so each section only
-  // needs to hold an ArrayRef to a contiguous range of hints.
-  llvm::sort(optimizationHints,
-             [](const OptimizationHint &a, const OptimizationHint &b) {
-               return a.offset0 < b.offset0;
-             });
-
-  auto section = sections.begin();
-  auto subsection = (*section)->subsections.begin();
-  uint64_t subsectionBase = 0;
-  uint64_t subsectionEnd = 0;
-
-  auto updateAddr = [&]() {
-    subsectionBase = (*section)->addr + subsection->offset;
-    subsectionEnd = subsectionBase + subsection->isec->getSize();
-  };
-
-  auto advanceSubsection = [&]() {
-    if (section == sections.end())
-      return;
-    ++subsection;
-    while (subsection == (*section)->subsections.end()) {
-      ++section;
-      if (section == sections.end())
-        return;
-      subsection = (*section)->subsections.begin();
-    }
-  };
-
-  updateAddr();
-  auto hintStart = optimizationHints.begin();
-  for (auto hintEnd = hintStart, end = optimizationHints.end(); hintEnd != end;
-       ++hintEnd) {
-    if (hintEnd->offset0 >= subsectionEnd) {
-      subsection->isec->optimizationHints =
-          ArrayRef<OptimizationHint>(&*hintStart, hintEnd - hintStart);
-
-      hintStart = hintEnd;
-      while (hintStart->offset0 >= subsectionEnd) {
-        advanceSubsection();
-        if (section == sections.end())
-          break;
-        updateAddr();
-        assert(hintStart->offset0 >= subsectionBase);
-      }
-    }
-
-    hintEnd->offset0 -= subsectionBase;
-    for (int i = 0, count = expectedArgCount(hintEnd->type); i < count - 1;
-         ++i) {
-      if (LLVM_UNLIKELY(
-              hintEnd->delta[i] < -static_cast<int64_t>(hintEnd->offset0) ||
-              hintEnd->delta[i] >=
-                  static_cast<int64_t>(subsectionEnd - hintEnd->offset0))) {
-        error("Linker optimization hint spans multiple sections");
-        return;
-      }
-    }
-  }
-  if (section != sections.end())
-    subsection->isec->optimizationHints = ArrayRef<OptimizationHint>(
-        &*hintStart, optimizationHints.end() - hintStart);
 }
 
 template <class SectionHeader>
@@ -869,7 +723,8 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
 
 template <class NList>
 macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
-                                              StringRef name) {
+                                              const char *strtab) {
+  StringRef name = StringRef(strtab + sym.n_strx);
   uint8_t type = sym.n_type & N_TYPE;
   bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
   switch (type) {
@@ -881,9 +736,20 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const NList &sym,
                                    isPrivateExtern);
   case N_ABS:
     return createAbsolute(sym, this, name, forceHidden);
+  case N_INDR: {
+    // Not much point in making local aliases -- relocs in the current file can
+    // just refer to the actual symbol itself. ld64 ignores these symbols too.
+    if (!(sym.n_type & N_EXT))
+      return nullptr;
+    StringRef aliasedName = StringRef(strtab + sym.n_value);
+    // isPrivateExtern is the only symbol flag that has an impact on the final
+    // aliased symbol.
+    auto alias = make<AliasSymbol>(this, name, aliasedName, isPrivateExtern);
+    aliases.push_back(alias);
+    return alias;
+  }
   case N_PBUD:
-  case N_INDR:
-    error("TODO: support symbols of type " + std::to_string(type));
+    error("TODO: support symbols of type N_PBUD");
     return nullptr;
   case N_SECT:
     llvm_unreachable(
@@ -924,7 +790,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     } else if (isUndef(sym)) {
       undefineds.push_back(i);
     } else {
-      symbols[i] = parseNonSectionSymbol(sym, StringRef(strtab + sym.n_strx));
+      symbols[i] = parseNonSectionSymbol(sym, strtab);
     }
   }
 
@@ -1023,11 +889,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   // symbol resolution behavior. In addition, a set of interconnected symbols
   // will all be resolved to the same file, instead of being resolved to
   // different files.
-  for (unsigned i : undefineds) {
-    const NList &sym = nList[i];
-    StringRef name = strtab + sym.n_strx;
-    symbols[i] = parseNonSectionSymbol(sym, name);
-  }
+  for (unsigned i : undefineds)
+    symbols[i] = parseNonSectionSymbol(nList[i], strtab);
 }
 
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
@@ -1117,11 +980,6 @@ template <class LP> void ObjFile::parse() {
     if (!sections[i]->subsections.empty())
       parseRelocations(sectionHeaders, sectionHeaders[i], *sections[i]);
 
-  if (!config->ignoreOptimizationHints)
-    if (auto *cmd = findCommand<linkedit_data_command>(
-            hdr, LC_LINKER_OPTIMIZATION_HINT))
-      parseOptimizationHints({buf + cmd->dataoff, cmd->datasize});
-
   parseDebugInfo();
 
   Section *ehFrameSection = nullptr;
@@ -1199,6 +1057,14 @@ ArrayRef<data_in_code_entry> ObjFile::getDataInCode() const {
   const auto *c = reinterpret_cast<const linkedit_data_command *>(cmd);
   return {reinterpret_cast<const data_in_code_entry *>(buf + c->dataoff),
           c->datasize / sizeof(data_in_code_entry)};
+}
+
+ArrayRef<uint8_t> ObjFile::getOptimizationHints() const {
+  const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  if (auto *cmd =
+          findCommand<linkedit_data_command>(buf, LC_LINKER_OPTIMIZATION_HINT))
+    return {buf + cmd->dataoff, cmd->datasize};
+  return {};
 }
 
 // Create pointers from symbols to their associated compact unwind entries.

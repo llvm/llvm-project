@@ -1074,6 +1074,14 @@ public:
     return N;
   }
 
+  /// Return true if function has instructions to emit.
+  bool hasNonPseudoInstructions() const {
+    for (const BinaryBasicBlock &BB : blocks())
+      if (BB.getNumNonPseudos() > 0)
+        return true;
+    return false;
+  }
+
   /// Return MC symbol associated with the function.
   /// All references to the function should use this symbol.
   MCSymbol *getSymbol(const FragmentNum Fragment = FragmentNum::main()) {
@@ -2114,6 +2122,12 @@ public:
   /// Return true upon successful processing, or false if the control flow
   /// cannot be statically evaluated for any given indirect branch.
   bool postProcessIndirectBranches(MCPlusBuilder::AllocatorIdTy AllocId);
+
+  /// Validate that all data references to function offsets are claimed by
+  /// recognized jump tables. Register externally referenced blocks as entry
+  /// points. Returns true if there are no unclaimed externally referenced
+  /// offsets.
+  bool validateExternallyReferencedOffsets();
 
   /// Return all call site profile info for this function.
   IndirectCallSiteProfile &getAllCallSites() { return AllCallSites; }

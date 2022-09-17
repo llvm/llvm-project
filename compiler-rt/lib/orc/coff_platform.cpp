@@ -542,7 +542,7 @@ Error COFFPlatformRuntimeState::registerBlockRange(ExecutorAddr HeaderAddr,
                                                    ExecutorAddrRange Range) {
   assert(!BlockRanges.count(Range.Start.toPtr<void *>()) &&
          "Block range address already registered");
-  BlockRange B = {HeaderAddr.toPtr<void *>(), Range.size().getValue()};
+  BlockRange B = {HeaderAddr.toPtr<void *>(), Range.size()};
   BlockRanges.emplace(Range.Start.toPtr<void *>(), B);
   return Error::success();
 }

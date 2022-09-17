@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=ir-instruction-references,ir-block-references,ir-function-references -simplify-mir -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --check-prefix=RESULT %s < %t
 
 # CHECK-INTERESTINGNESS: G_LOAD
@@ -25,11 +25,11 @@
 
 
 # RESULT: bb.2:
-# RESULT-NEXT: G_STORE %{{[0-9]+}}(<2 x s32>), %{{[0-9]+}}(p5) :: (store (<2 x s32>) into %fixed-stack.0, addrspace 5)
+# RESULT: G_STORE %{{[0-9]+}}(<2 x s32>), %{{[0-9]+}}(p5) :: (store (<2 x s32>) into %fixed-stack.0, addrspace 5)
 # RESULT-NEXT: G_STORE %{{[0-9]+}}(<2 x s32>), %{{[0-9]+}}(p5) :: (store (<2 x s32>) into %stack.0, addrspace 5)
 
 # RESULT: bb.3:
-# RESULT-NEXT: G_STORE %{{[0-9]+}}(s32), %{{[0-9]+}}(p5) :: (store (s32) into %ir.keep.store, addrspace 5)
+# RESULT: G_STORE %{{[0-9]+}}(s32), %{{[0-9]+}}(p5) :: (store (s32) into %ir.keep.store, addrspace 5)
 # RESULT-NEXT: S_ENDPGM
 
 --- |

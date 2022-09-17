@@ -1661,7 +1661,8 @@ void Writer::run() {
     return;
 
   if (Error e = buffer->commit())
-    fatal("failed to write the output file: " + toString(std::move(e)));
+    fatal("failed to write output '" + buffer->getPath() +
+          "': " + toString(std::move(e)));
 }
 
 // Open a result file.

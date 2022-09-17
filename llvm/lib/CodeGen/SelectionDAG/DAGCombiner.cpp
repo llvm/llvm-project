@@ -9244,6 +9244,28 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
   EVT NarrowVT = LeftOp.getOperand(0).getValueType();
   unsigned NarrowVTSize = NarrowVT.getScalarSizeInBits();
 
+  // return true if U may use the lower bits of its operands
+  auto UserOfLowerBits = [NarrowVTSize](SDNode *U) {
+    if (U->getOpcode() != ISD::SRL || U->getOpcode() != ISD::SRA) {
+      return true;
+    }
+    ConstantSDNode *UShiftAmtSrc = isConstOrConstSplat(U->getOperand(1));
+    if (!UShiftAmtSrc) {
+      return true;
+    }
+    unsigned UShiftAmt = UShiftAmtSrc->getZExtValue();
+    return UShiftAmt < NarrowVTSize;
+  };
+
+  // If the lower part of the MUL is also used and MUL_LOHI is supported
+  // do not introduce the MULH in favor of MUL_LOHI
+  unsigned MulLoHiOp = IsSignExt ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
+  if (!ShiftOperand.hasOneUse() &&
+      TLI.isOperationLegalOrCustom(MulLoHiOp, NarrowVT) &&
+      llvm::any_of(ShiftOperand->uses(), UserOfLowerBits)) {
+    return SDValue();
+  }
+
   SDValue MulhRightOp;
   if (ConstantSDNode *Constant = isConstOrConstSplat(RightOp)) {
     unsigned ActiveBits = IsSignExt
@@ -16725,7 +16747,6 @@ static inline ElementCount numVectorEltsOrZero(EVT T) {
 }
 
 bool DAGCombiner::getTruncatedStoreValue(StoreSDNode *ST, SDValue &Val) {
-  Val = ST->getValue();
   EVT STType = Val.getValueType();
   EVT STMemType = ST->getMemoryVT();
   if (STType == STMemType)
@@ -16817,6 +16838,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   // significant bit in the loaded value maps to the least significant bit in
   // the stored value). With Offset=n (for n > 0) the loaded value starts at the
   // n:th least significant byte of the stored value.
+  int64_t OrigOffset = Offset;
   if (DAG.getDataLayout().isBigEndian())
     Offset = ((int64_t)STMemType.getStoreSizeInBits().getFixedSize() -
               (int64_t)LDMemType.getStoreSizeInBits().getFixedSize()) /
@@ -16868,11 +16890,23 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     }
   }
 
+  // Handle some cases for big-endian that would be Offset 0 and handled for
+  // little-endian.
+  SDValue Val = ST->getValue();
+  if (DAG.getDataLayout().isBigEndian() && Offset > 0 && OrigOffset == 0) {
+    if (STType.isInteger() && !STType.isVector() && LDType.isInteger() &&
+        !LDType.isVector() && isTypeLegal(STType) &&
+        TLI.isOperationLegal(ISD::SRL, STType)) {
+      Val = DAG.getNode(ISD::SRL, SDLoc(LD), STType, Val,
+                        DAG.getConstant(Offset * 8, SDLoc(LD), STType));
+      Offset = 0;
+    }
+  }
+
   // TODO: Deal with nonzero offset.
   if (LD->getBasePtr().isUndef() || Offset != 0)
     return SDValue();
   // Model necessary truncations / extenstions.
-  SDValue Val;
   // Truncate Value To Stored Memory Size.
   do {
     if (!getTruncatedStoreValue(ST, Val))

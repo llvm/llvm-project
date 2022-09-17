@@ -904,6 +904,10 @@ clang build using CMake parameters, CLANG_CONFIG_FILE_USER_DIR and
 CLANG_CONFIG_FILE_SYSTEM_DIR respectively. The first file found is used. It is
 an error if the required file cannot be found.
 
+If no explicit configuration file is specified, Clang searches for a default
+configuration file following the rules described in the next paragraphs.
+To disable this behavior, `--no-default-config` flag can be used.
+
 Another way to specify a configuration file is to encode it in executable name.
 For example, if the Clang executable is named `armv7l-clang` (it may be a
 symbolic link to `clang`), then Clang will search for file `armv7l.cfg` in the
@@ -1359,8 +1363,8 @@ floating point semantic models: precise (the default), strict, and fast.
   "fenv_access", "off", "on", "off"
   "rounding_mode", "tonearest", "dynamic", "tonearest"
   "contract", "on", "off", "fast"
-  "denormal_fp_math", "IEEE", "IEEE", "PreserveSign"
-  "denormal_fp32_math", "IEEE","IEEE", "PreserveSign"
+  "denormal_fp_math", "IEEE", "IEEE", "IEEE"
+  "denormal_fp32_math", "IEEE","IEEE", "IEEE"
   "support_math_errno", "on", "on", "off"
   "no_honor_nans", "off", "off", "on"
   "no_honor_infinities", "off", "off", "on"
@@ -1407,6 +1411,61 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``-fno-trapping-math``
 
    * ``-ffp-contract=fast``
+
+   Note: ``-ffast-math`` causes ``crtfastmath.o`` to be linked with code. See
+   :ref:`crtfastmath.o` for more details.
+
+.. option:: -fno-fast-math
+
+   Disable fast-math mode.  This options disables unsafe floating-point
+   optimizations by preventing the compiler from making any tranformations that
+   could affect the results.
+
+   This option implies:
+
+   * ``-fhonor-infinities``
+
+   * ``-fhonor-nans``
+
+   * ``-fmath-errno``
+
+   * ``-fno-finite-math-only``
+
+   * ``-fno-associative-math``
+
+   * ``-fno-reciprocal-math``
+
+   * ``-fsigned-zeros``
+
+   * ``-fno-trapping-math``
+
+   * ``-ffp-contract=on``
+
+   * ``-fdenormal-fp-math=ieee``
+
+   There is ambiguity about how ``-ffp-contract``, ``-ffast-math``,
+   and ``-fno-fast-math`` behave in combination. To keep the value of
+   ``-ffp-contract`` consistent, we define this set of rules:
+
+   * ``-ffast-math`` sets ``ffp-contract`` to ``fast``.
+
+   * ``-fno-fast-math`` sets ``-ffp-contract`` to ``on`` (``fast`` for CUDA and
+     HIP).
+
+   * If ``-ffast-math`` and ``-ffp-contract`` are both seen, but
+     ``-ffast-math`` is not followed by ``-fno-fast-math``, ``ffp-contract``
+     will be given the value of whichever option was last seen.
+
+   * If ``-fno-fast-math`` is seen and ``-ffp-contract`` has been seen at least
+     once, the ``ffp-contract`` will get the value of the last seen value of
+     ``-ffp-contract``.
+
+   * If ``-fno-fast-math`` is seen and ``-ffp-contract`` has not been seen, the
+     ``-ffp-contract`` setting is determined by the default value of
+     ``-ffp-contract``.
+
+   Note: ``-fno-fast-math`` implies ``-fdenormal-fp-math=ieee``.
+   ``-fno-fast-math`` causes ``crtfastmath.o`` to not be linked with code.
 
 .. option:: -fdenormal-fp-math=<value>
 
@@ -1631,6 +1690,15 @@ Note that floating-point operations performed as part of constant initialization
    modes, such as `-ffp-model=precise` or `-ffp-model=strict`, this option
    has no effect because the optimizer is prohibited from making unsafe
    transformations.
+
+.. _crtfastmath.o:
+
+A note about ``crtfastmath.o``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``-ffast-math`` and ``-funsafe-math-optimizations`` cause ``crtfastmath.o`` to be
+automatically linked,  which adds a static constructor that sets the FTZ/DAZ
+bits in MXCSR, affecting not only the current compilation unit but all static
+and shared libraries included in the program.
 
 .. _FLT_EVAL_METHOD:
 

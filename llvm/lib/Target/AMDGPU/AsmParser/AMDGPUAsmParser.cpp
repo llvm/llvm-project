@@ -1662,6 +1662,7 @@ private:
   bool validateVccOperand(unsigned Reg) const;
   bool validateVOPLiteral(const MCInst &Inst, const OperandVector &Operands);
   bool validateMAIAccWrite(const MCInst &Inst, const OperandVector &Operands);
+  bool validateMAISrc2(const MCInst &Inst, const OperandVector &Operands);
   bool validateMFMA(const MCInst &Inst, const OperandVector &Operands);
   bool validateAGPRLdSt(const MCInst &Inst) const;
   bool validateVGPRAlign(const MCInst &Inst) const;
@@ -3424,6 +3425,35 @@ unsigned AMDGPUAsmParser::getConstantBusLimit(unsigned Opcode) const {
   }
 }
 
+constexpr unsigned MAX_SRC_OPERANDS_NUM = 6;
+using OperandIndices = SmallVector<int16_t, MAX_SRC_OPERANDS_NUM>;
+
+// Get regular operand indices in the same order as specified
+// in the instruction (but append mandatory literals to the end).
+static OperandIndices getSrcOperandIndices(unsigned Opcode,
+                                           bool AddMandatoryLiterals = false) {
+
+  int16_t ImmIdx =
+      AddMandatoryLiterals ? getNamedOperandIdx(Opcode, OpName::imm) : -1;
+
+  if (isVOPD(Opcode)) {
+    int16_t ImmDeferredIdx =
+        AddMandatoryLiterals ? getNamedOperandIdx(Opcode, OpName::immDeferred)
+                             : -1;
+
+    return {getNamedOperandIdx(Opcode, OpName::src0X),
+            getNamedOperandIdx(Opcode, OpName::vsrc1X),
+            getNamedOperandIdx(Opcode, OpName::src0Y),
+            getNamedOperandIdx(Opcode, OpName::vsrc1Y),
+            ImmDeferredIdx,
+            ImmIdx};
+  }
+
+  return {getNamedOperandIdx(Opcode, OpName::src0),
+          getNamedOperandIdx(Opcode, OpName::src1),
+          getNamedOperandIdx(Opcode, OpName::src2), ImmIdx};
+}
+
 bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   const MCOperand &MO = Inst.getOperand(OpIdx);
   if (MO.isImm()) {
@@ -3438,9 +3468,8 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
   }
 }
 
-bool
-AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst,
-                                                const OperandVector &Operands) {
+bool AMDGPUAsmParser::validateConstantBusLimitations(
+    const MCInst &Inst, const OperandVector &Operands) {
   const unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
   unsigned LastSGPR = AMDGPU::NoRegister;
@@ -3448,69 +3477,67 @@ AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst,
   unsigned NumLiterals = 0;
   unsigned LiteralSize;
 
-  if (Desc.TSFlags &
-      (SIInstrFlags::VOPC |
-       SIInstrFlags::VOP1 | SIInstrFlags::VOP2 |
-       SIInstrFlags::VOP3 | SIInstrFlags::VOP3P |
-       SIInstrFlags::SDWA)) {
-    // Check special imm operands (used by madmk, etc)
-    if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm) != -1) {
-      ++NumLiterals;
-      LiteralSize = 4;
-    }
+  if (!(Desc.TSFlags &
+        (SIInstrFlags::VOPC | SIInstrFlags::VOP1 | SIInstrFlags::VOP2 |
+         SIInstrFlags::VOP3 | SIInstrFlags::VOP3P | SIInstrFlags::SDWA)) &&
+      !isVOPD(Opcode))
+    return true;
 
-    SmallDenseSet<unsigned> SGPRsUsed;
-    unsigned SGPRUsed = findImplicitSGPRReadInVOP(Inst);
-    if (SGPRUsed != AMDGPU::NoRegister) {
-      SGPRsUsed.insert(SGPRUsed);
-      ++ConstantBusUseCount;
-    }
+  // Check special imm operands (used by madmk, etc)
+  if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm) != -1) {
+    ++NumLiterals;
+    LiteralSize = 4;
+  }
 
-    const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
-    const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
-    const int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
+  SmallDenseSet<unsigned> SGPRsUsed;
+  unsigned SGPRUsed = findImplicitSGPRReadInVOP(Inst);
+  if (SGPRUsed != AMDGPU::NoRegister) {
+    SGPRsUsed.insert(SGPRUsed);
+    ++ConstantBusUseCount;
+  }
 
-    const int OpIndices[] = { Src0Idx, Src1Idx, Src2Idx };
+  OperandIndices OpIndices = getSrcOperandIndices(Opcode);
 
-    for (int OpIdx : OpIndices) {
-      if (OpIdx == -1) break;
+  for (int OpIdx : OpIndices) {
+    if (OpIdx == -1)
+      continue;
 
-      const MCOperand &MO = Inst.getOperand(OpIdx);
-      if (usesConstantBus(Inst, OpIdx)) {
-        if (MO.isReg()) {
-          LastSGPR = mc2PseudoReg(MO.getReg());
-          // Pairs of registers with a partial intersections like these
-          //   s0, s[0:1]
-          //   flat_scratch_lo, flat_scratch
-          //   flat_scratch_lo, flat_scratch_hi
-          // are theoretically valid but they are disabled anyway.
-          // Note that this code mimics SIInstrInfo::verifyInstruction
-          if (SGPRsUsed.insert(LastSGPR).second) {
-            ++ConstantBusUseCount;
-          }
-        } else { // Expression or a literal
+    const MCOperand &MO = Inst.getOperand(OpIdx);
+    if (usesConstantBus(Inst, OpIdx)) {
+      if (MO.isReg()) {
+        LastSGPR = mc2PseudoReg(MO.getReg());
+        // Pairs of registers with a partial intersections like these
+        //   s0, s[0:1]
+        //   flat_scratch_lo, flat_scratch
+        //   flat_scratch_lo, flat_scratch_hi
+        // are theoretically valid but they are disabled anyway.
+        // Note that this code mimics SIInstrInfo::verifyInstruction
+        if (SGPRsUsed.insert(LastSGPR).second) {
+          ++ConstantBusUseCount;
+        }
+      } else { // Expression or a literal
 
-          if (Desc.OpInfo[OpIdx].OperandType == MCOI::OPERAND_IMMEDIATE)
-            continue; // special operand like VINTERP attr_chan
+        if (Desc.OpInfo[OpIdx].OperandType == MCOI::OPERAND_IMMEDIATE)
+          continue; // special operand like VINTERP attr_chan
 
-          // An instruction may use only one literal.
-          // This has been validated on the previous step.
-          // See validateVOPLiteral.
-          // This literal may be used as more than one operand.
-          // If all these operands are of the same size,
-          // this literal counts as one scalar value.
-          // Otherwise it counts as 2 scalar values.
-          // See "GFX10 Shader Programming", section 3.6.2.3.
+        // An instruction may use only one literal.
+        // This has been validated on the previous step.
+        // See validateVOPLiteral.
+        // This literal may be used as more than one operand.
+        // If all these operands are of the same size,
+        // this literal counts as one scalar value.
+        // Otherwise it counts as 2 scalar values.
+        // See "GFX10 Shader Programming", section 3.6.2.3.
 
-          unsigned Size = AMDGPU::getOperandSize(Desc, OpIdx);
-          if (Size < 4) Size = 4;
+        unsigned Size = AMDGPU::getOperandSize(Desc, OpIdx);
+        if (Size < 4)
+          Size = 4;
 
-          if (NumLiterals == 0) {
-            NumLiterals = 1;
-            LiteralSize = Size;
-          } else if (LiteralSize != Size) {
-            NumLiterals = 2;
-          }
+        if (NumLiterals == 0) {
+          NumLiterals = 1;
+          LiteralSize = Size;
+        } else if (LiteralSize != Size) {
+          NumLiterals = 2;
         }
       }
     }
@@ -3801,6 +3828,28 @@ bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst,
   if (!isGFX90A() && isSGPR(Reg, TRI)) {
     Error(getRegLoc(Reg, Operands),
           "source operand must be either a VGPR or an inline constant");
+    return false;
+  }
+
+  return true;
+}
+
+bool AMDGPUAsmParser::validateMAISrc2(const MCInst &Inst,
+                                      const OperandVector &Operands) {
+  unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opcode);
+
+  if (!(Desc.TSFlags & SIInstrFlags::IsMAI) ||
+      !getFeatureBits()[FeatureMFMAInlineLiteralBug])
+    return true;
+
+  const int Src2Idx = getNamedOperandIdx(Opcode, OpName::src2);
+  if (Src2Idx == -1)
+    return true;
+
+  if (Inst.getOperand(Src2Idx).isImm() && isInlineConstant(Inst, Src2Idx)) {
+    Error(getConstLoc(Operands),
+          "inline constants are not allowed for this operand");
     return false;
   }
 
@@ -4262,16 +4311,12 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
                                          const OperandVector &Operands) {
   unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
-  const int ImmIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm);
+  bool HasMandatoryLiteral = getNamedOperandIdx(Opcode, OpName::imm) != -1;
   if (!(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P)) &&
-      ImmIdx == -1)
+      !HasMandatoryLiteral && !isVOPD(Opcode))
     return true;
 
-  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
-  const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
-  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
-
-  const int OpIndices[] = {Src0Idx, Src1Idx, Src2Idx, ImmIdx};
+  OperandIndices OpIndices = getSrcOperandIndices(Opcode, HasMandatoryLiteral);
 
   unsigned NumExprs = 0;
   unsigned NumLiterals = 0;
@@ -4284,15 +4329,8 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
     const MCOperand &MO = Inst.getOperand(OpIdx);
     if (!MO.isImm() && !MO.isExpr())
       continue;
-    if (!AMDGPU::isSISrcOperand(Desc, OpIdx))
+    if (!isSISrcOperand(Desc, OpIdx))
       continue;
-
-    if (OpIdx == Src2Idx && (Desc.TSFlags & SIInstrFlags::IsMAI) &&
-        getFeatureBits()[AMDGPU::FeatureMFMAInlineLiteralBug]) {
-      Error(getConstLoc(Operands),
-            "inline constants are not allowed for this operand");
-      return false;
-    }
 
     if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
       uint32_t Value = static_cast<uint32_t>(MO.getImm());
@@ -4309,13 +4347,13 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
   if (!NumLiterals)
     return true;
 
-  if (ImmIdx == -1 && !getFeatureBits()[AMDGPU::FeatureVOP3Literal]) {
+  if (!HasMandatoryLiteral && !getFeatureBits()[FeatureVOP3Literal]) {
     Error(getLitLoc(Operands), "literal operands are not supported");
     return false;
   }
 
   if (NumLiterals > 1) {
-    Error(getLitLoc(Operands), "only one literal operand is allowed");
+    Error(getLitLoc(Operands, true), "only one unique literal operand is allowed");
     return false;
   }
 
@@ -4575,7 +4613,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   }
   if (!validateSOPLiteral(Inst)) {
     Error(getLitLoc(Operands),
-      "only one literal operand is allowed");
+      "only one unique literal operand is allowed");
     return false;
   }
   if (!validateVOPLiteral(Inst, Operands)) {
@@ -4643,6 +4681,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateMAIAccWrite(Inst, Operands)) {
+    return false;
+  }
+  if (!validateMAISrc2(Inst, Operands)) {
     return false;
   }
   if (!validateMFMA(Inst, Operands)) {
@@ -6341,10 +6382,19 @@ void AMDGPUAsmParser::cvtDSOffset01(MCInst &Inst,
 void AMDGPUAsmParser::cvtDSImpl(MCInst &Inst, const OperandVector &Operands,
                                 bool IsGdsHardcoded) {
   OptionalImmIndexMap OptionalIdx;
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   AMDGPUOperand::ImmTy OffsetType = AMDGPUOperand::ImmTyOffset;
 
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+
+    auto TiedTo =
+        Desc.getOperandConstraint(Inst.getNumOperands(), MCOI::TIED_TO);
+
+    if (TiedTo != -1) {
+      assert((unsigned)TiedTo < Inst.getNumOperands());
+      Inst.addOperand(Inst.getOperand(TiedTo));
+    }
 
     // Add the register arguments
     if (Op.isReg()) {

@@ -263,6 +263,14 @@ Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
                                           .str()))
     return createStringError(std::errc::invalid_argument, "");
 
+  std::unique_ptr<DWARFContext> Context = DWARFContext::create(File);
+
+  uint16_t MaxDWARFVersion = 0;
+  std::function<void(const DWARFUnit &Unit)> OnCUDieLoaded =
+      [&MaxDWARFVersion](const DWARFUnit &Unit) {
+        MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
+      };
+
   // Create DWARF linker.
   DWARFLinker DebugInfoLinker(&OutStreamer, DwarfLinkerClient::LLD);
 
@@ -278,8 +286,6 @@ Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
   std::vector<std::unique_ptr<DWARFFile>> ObjectsForLinking(1);
   std::vector<std::unique_ptr<AddressesMap>> AddresssMapForLinking(1);
   std::vector<std::string> EmptyWarnings;
-
-  std::unique_ptr<DWARFContext> Context = DWARFContext::create(File);
 
   // Unknown debug sections would be removed. Display warning
   // for such sections.
@@ -300,7 +306,15 @@ Error linkDebugInfo(object::ObjectFile &File, const Options &Options,
       EmptyWarnings);
 
   for (size_t I = 0; I < ObjectsForLinking.size(); I++)
-    DebugInfoLinker.addObjectFile(*ObjectsForLinking[I]);
+    DebugInfoLinker.addObjectFile(*ObjectsForLinking[I], nullptr,
+                                  OnCUDieLoaded);
+
+  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
+  if (MaxDWARFVersion == 0)
+    MaxDWARFVersion = 3;
+
+  if (Error Err = DebugInfoLinker.setTargetDWARFVersion(MaxDWARFVersion))
+    return Err;
 
   // Link debug info.
   if (Error Err = DebugInfoLinker.link())

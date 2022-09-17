@@ -270,3 +270,30 @@ func.func @_QPsimdloop_with_nested_loop() {
 // CHECK:           }
 // CHECK:           llvm.return
 // CHECK:         }
+
+// -----
+
+func.func @_QPomp_taskgroup() {
+  omp.taskgroup {
+    omp.task   {
+      fir.call @_QPwork() : () -> ()
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+func.func private @_QPwork()
+
+// CHECK-LABEL: llvm.func @_QPomp_taskgroup() {
+// CHECK:          omp.taskgroup   {
+// CHECK:            omp.task   {
+// CHECK:              llvm.call @_QPwork() : () -> ()
+// CHECK:              omp.terminator
+// CHECK:            }
+// CHECK:            omp.terminator
+// CHECK:          }
+// CHECK:          llvm.return
+// CHECK:        }
+// CHECK:        llvm.func @_QPwork() attributes {sym_visibility = "private"}
+// CHECK:      }

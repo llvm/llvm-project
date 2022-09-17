@@ -111,3 +111,205 @@ func.func @addi_vector_a_b(%a : vector<4xi64>, %b : vector<4xi64>) -> vector<4xi
     %x = arith.addi %a, %b : vector<4xi64>
     return %x : vector<4xi64>
 }
+
+// CHECK-LABEL: func @extsi_scalar
+// CHECK-SAME:    ([[ARG:%.+]]: i16) -> vector<2xi32>
+// CHECK-NEXT:    [[EXT:%.+]]  = arith.extsi [[ARG]] : i16 to i32
+// CHECK-NEXT:    [[SZ:%.+]]   = arith.constant 0 : i32
+// CHECK-NEXT:    [[SB:%.+]]   = arith.cmpi slt, [[EXT]], [[SZ]] : i32
+// CHECK-NEXT:    [[SV:%.+]]   = arith.extsi [[SB]] : i1 to i32
+// CHECK-NEXT:    [[VZ:%.+]]   = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]] = vector.insert [[EXT]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK-NEXT:    [[INS1:%.+]] = vector.insert [[SV]], [[INS0]] [1] : i32 into vector<2xi32>
+// CHECK:         return [[INS1]] : vector<2xi32>
+func.func @extsi_scalar(%a : i16) -> i64 {
+    %r = arith.extsi %a : i16 to i64
+    return %r : i64
+}
+
+// CHECK-LABEL: func @extsi_vector
+// CHECK-SAME:    ([[ARG:%.+]]: vector<3xi16>) -> vector<3x2xi32>
+// CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[ARG]] : vector<3xi16> to vector<3x1xi16>
+// CHECK-NEXT:    [[EXT:%.+]]   = arith.extsi [[SHAPE]] : vector<3x1xi16> to vector<3x1xi32>
+// CHECK-NEXT:    [[CSTE:%.+]]  = arith.constant dense<0> : vector<3x1xi32>
+// CHECK-NEXT:    [[CMP:%.+]]   = arith.cmpi slt, [[EXT]], [[CSTE]] : vector<3x1xi32>
+// CHECK-NEXT:    [[HIGH:%.+]]  = arith.extsi [[CMP]] : vector<3x1xi1> to vector<3x1xi32>
+// CHECK-NEXT:    [[CSTZ:%.+]]  = arith.constant dense<0> : vector<3x2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]  = vector.insert_strided_slice [[EXT]], [[CSTZ]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]  = vector.insert_strided_slice [[HIGH]], [[INS0]] {offsets = [0, 1], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
+// CHECK-NEXT:    return [[INS1]] : vector<3x2xi32>
+func.func @extsi_vector(%a : vector<3xi16>) -> vector<3xi64> {
+    %r = arith.extsi %a : vector<3xi16> to vector<3xi64>
+    return %r : vector<3xi64>
+}
+
+// CHECK-LABEL: func @extui_scalar1
+// CHECK-SAME:    ([[ARG:%.+]]: i16) -> vector<2xi32>
+// CHECK-NEXT:    [[EXT:%.+]]  = arith.extui [[ARG]] : i16 to i32
+// CHECK-NEXT:    [[VZ:%.+]]   = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]] = vector.insert [[EXT]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK:         return [[INS0]] : vector<2xi32>
+func.func @extui_scalar1(%a : i16) -> i64 {
+    %r = arith.extui %a : i16 to i64
+    return %r : i64
+}
+
+// CHECK-LABEL: func @extui_scalar2
+// CHECK-SAME:    ([[ARG:%.+]]: i32) -> vector<2xi32>
+// CHECK-NEXT:    [[VZ:%.+]]   = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]] = vector.insert [[ARG]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK:         return [[INS0]] : vector<2xi32>
+func.func @extui_scalar2(%a : i32) -> i64 {
+    %r = arith.extui %a : i32 to i64
+    return %r : i64
+}
+
+// CHECK-LABEL: func @extui_vector
+// CHECK-SAME:    ([[ARG:%.+]]: vector<3xi16>) -> vector<3x2xi32>
+// CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[ARG]] : vector<3xi16> to vector<3x1xi16>
+// CHECK-NEXT:    [[EXT:%.+]]   = arith.extui [[SHAPE]] : vector<3x1xi16> to vector<3x1xi32>
+// CHECK-NEXT:    [[CST:%.+]]   = arith.constant dense<0> : vector<3x2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]  = vector.insert_strided_slice [[EXT]], [[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<3x1xi32> into vector<3x2xi32>
+// CHECK:         return [[INS0]] : vector<3x2xi32>
+func.func @extui_vector(%a : vector<3xi16>) -> vector<3xi64> {
+    %r = arith.extui %a : vector<3xi16> to vector<3xi64>
+    return %r : vector<3xi64>
+}
+
+// CHECK-LABEL: func @trunci_scalar1
+// CHECK-SAME:    ([[ARG:%.+]]: vector<2xi32>) -> i32
+// CHECK-NEXT:    [[EXT:%.+]] = vector.extract [[ARG]][0] : vector<2xi32>
+// CHECK-NEXT:    return [[EXT]] : i32
+func.func @trunci_scalar1(%a : i64) -> i32 {
+    %b = arith.trunci %a : i64 to i32
+    return %b : i32
+}
+
+// CHECK-LABEL: func @trunci_scalar2
+// CHECK-SAME:    ([[ARG:%.+]]: vector<2xi32>) -> i16
+// CHECK-NEXT:    [[EXTR:%.+]] = vector.extract [[ARG]][0] : vector<2xi32>
+// CHECK-NEXT:    [[TRNC:%.+]] = arith.trunci [[EXTR]] : i32 to i16
+// CHECK-NEXT:    return [[TRNC]] : i16
+func.func @trunci_scalar2(%a : i64) -> i16 {
+    %b = arith.trunci %a : i64 to i16
+    return %b : i16
+}
+
+// CHECK-LABEL: func @trunci_vector
+// CHECK-SAME:    ([[ARG:%.+]]: vector<3x2xi32>) -> vector<3xi16>
+// CHECK-NEXT:    [[EXTR:%.+]]  = vector.extract_strided_slice [[ARG]] {offsets = [0, 0], sizes = [3, 1], strides = [1, 1]} : vector<3x2xi32> to vector<3x1xi32>
+// CHECK-NEXT:    [[SHAPE:%.+]] = vector.shape_cast [[EXTR]] : vector<3x1xi32> to vector<3xi32>
+// CHECK-NEXT:    [[TRNC:%.+]]  = arith.trunci [[SHAPE]] : vector<3xi32> to vector<3xi16>
+// CHECK-NEXT:    return [[TRNC]] : vector<3xi16>
+func.func @trunci_vector(%a : vector<3xi64>) -> vector<3xi16> {
+    %b = arith.trunci %a : vector<3xi64> to vector<3xi16>
+    return %b : vector<3xi16>
+}
+
+// CHECK-LABEL: func.func @muli_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>) -> vector<2xi32>
+// CHECK-NEXT:    [[LOW0:%.+]]      = vector.extract [[ARG0]][0] : vector<2xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]]     = vector.extract [[ARG0]][1] : vector<2xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]      = vector.extract [[ARG1]][0] : vector<2xi32>
+// CHECK-NEXT:    [[HIGH1:%.+]]     = vector.extract [[ARG1]][1] : vector<2xi32>
+//
+// CHECK-DAG:     [[MASK:%.+]]      = arith.constant 65535 : i32
+// CHECK-DAG:     [[C16:%.+]]       = arith.constant 16 : i32
+//
+// CHECK:         [[LOWLOW0:%.+]]   = arith.andi [[LOW0]], [[MASK]] : i32
+// CHECK-NEXT:    [[HIGHLOW0:%.+]]  = arith.shrui [[LOW0]], [[C16]] : i32
+// CHECK-NEXT:    [[LOWHIGH0:%.+]]  = arith.andi [[HIGH0]], [[MASK]] : i32
+// CHECK-NEXT:    [[HIGHHIGH0:%.+]] = arith.shrui [[HIGH0]], [[C16]] : i32
+// CHECK-NEXT:    [[LOWLOW1:%.+]]   = arith.andi [[LOW1]], [[MASK]] : i32
+// CHECK-NEXT:    [[HIGHLOW1:%.+]]  = arith.shrui [[LOW1]], [[C16]] : i32
+// CHECK-NEXT:    [[LOWHIGH1:%.+]]  = arith.andi [[HIGH1]], [[MASK]] : i32
+// CHECK-NEXT:    [[HIGHHIGH1:%.+]] = arith.shrui [[HIGH1]], [[C16]] : i32
+//
+// CHECK-DAG:     {{%.+}}           = arith.muli [[LOWLOW0]], [[LOWLOW1]] : i32
+// CHECK-DAG      {{%.+}}           = arith.muli [[LOWLOW0]], [[HIGHLOW1]] : i32
+// CHECK-DAG:     {{%.+}}           = arith.muli [[LOWLOW0]], [[LOWHIGH1]] : i32
+// CHECK-DAG:     {{%.+}}           = arith.muli [[LOWLOW0]], [[HIGHHIGH1]] : i32
+//
+// CHECK-DAG:     {{%.+}}           = arith.muli [[HIGHLOW0]], [[LOWLOW1]] : i32
+// CHECK-DAG:     {{%.+}}           = arith.muli [[HIGHLOW0]], [[HIGHLOW1]] : i32
+// CHECK-DAG:     {{%.+}}           = arith.muli [[HIGHLOW0]], [[LOWHIGH1]] : i32
+//
+// CHECK-DAG:     {{%.+}}           = arith.muli [[LOWHIGH0]], [[LOWLOW1]] : i32
+// CHECK-DAG:     {{%.+}}           = arith.muli [[LOWHIGH0]], [[HIGHLOW1]] : i32
+//
+// CHECK-DAG:     {{%.+}}           = arith.muli [[HIGHHIGH0]], [[LOWLOW1]] : i32
+//
+// CHECK:         [[RESHIGH0:%.+]]  = arith.shli {{%.+}}, [[C16]] : i32
+// CHECK-NEXT:    [[RES0:%.+]]      = arith.ori {{%.+}}, [[RESHIGH0]] : i32
+// CHECK-NEXT:    [[RESHIGH1:%.+]]  = arith.shli {{%.+}}, [[C16]] : i32
+// CHECK-NEXT:    [[RES1:%.+]]      = arith.ori {{%.+}}, [[RESHIGH1]] : i32
+// CHECK-NEXT:    [[VZ:%.+]]        = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]      = vector.insert [[RES0]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]      = vector.insert [[RES1]], [[INS0]] [1] : i32 into vector<2xi32>
+// CHECK-NEXT:    return [[INS1]] : vector<2xi32>
+func.func @muli_scalar(%a : i64, %b : i64) -> i64 {
+    %m = arith.muli %a, %b : i64
+    return %m : i64
+}
+
+// CHECK-LABEL: func.func @muli_vector
+// CHECK-SAME:    ({{%.+}}: vector<3x2xi32>, {{%.+}}: vector<3x2xi32>) -> vector<3x2xi32>
+// CHECK:       return {{%.+}} : vector<3x2xi32>
+func.func @muli_vector(%a : vector<3xi64>, %b : vector<3xi64>) -> vector<3xi64> {
+    %m = arith.muli %a, %b : vector<3xi64>
+    return %m : vector<3xi64>
+}
+
+// CHECK-LABEL: func.func @shrui_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<2xi32>, [[ARG1:%.+]]: vector<2xi32>) -> vector<2xi32>
+// CHECK-NEXT:    [[LOW0:%.+]]     = vector.extract [[ARG0]][0] : vector<2xi32>
+// CHECK-NEXT:    [[HIGH0:%.+]]    = vector.extract [[ARG0]][1] : vector<2xi32>
+// CHECK-NEXT:    [[LOW1:%.+]]     = vector.extract [[ARG1]][0] : vector<2xi32>
+// CHECK-NEXT:    [[CST0:%.+]]     = arith.constant 0 : i32
+// CHECK-NEXT:    [[CST32:%.+]]    = arith.constant 32 : i32
+// CHECK-DAG:     [[OOB:%.+]]      = arith.cmpi uge, [[LOW1]], [[CST32]] : i32
+// CHECK-DAG:     [[SHLOW0:%.+]]   = arith.shrui [[LOW0]], [[LOW1]] : i32
+// CHECK-NEXT:    [[RES0LOW:%.+]]  = arith.select [[OOB]], [[CST0]], [[SHLOW0]] : i32
+// CHECK-NEXT:    [[SHRHIGH0:%.+]] = arith.shrui [[HIGH0]], [[LOW1]] : i32
+// CHECK-NEXT:    [[RESLOW1:%.+]]  = arith.select [[OOB]], [[CST0]], [[SHRHIGH0]] : i32
+// CHECK-NEXT:    [[SHAMT:%.+]]    = arith.select [[OOB]], [[CST32]], [[LOW1]] : i32
+// CHECK-NEXT:    [[LSHAMT:%.+]]   = arith.subi [[CST32]], [[SHAMT]] : i32
+// CHECK-NEXT:    [[SHLHIGH0:%.+]] = arith.shli [[HIGH0]], [[LSHAMT]] : i32
+// CHECK-NEXT:    [[RSHAMT:%.+]]   = arith.subi [[LOW1]], [[CST32]] : i32
+// CHECK-NEXT:    [[SHRHIGH0:%.+]] = arith.shrui [[HIGH0]], [[RSHAMT]] : i32
+// CHECK-NEXT:    [[RES0HIGH:%.+]] = arith.select [[OOB]], [[SHRHIGH0]], [[SHLHIGH0]] : i32
+// CHECK-NEXT:    [[RES0:%.+]]     = arith.ori [[RES0LOW]], [[RES0HIGH]] : i32
+// CHECK-NEXT:    [[VZ:%.+]]       = arith.constant dense<0> : vector<2xi32>
+// CHECK-NEXT:    [[INS0:%.+]]     = vector.insert [[RES0]], [[VZ]] [0] : i32 into vector<2xi32>
+// CHECK-NEXT:    [[INS1:%.+]]     = vector.insert [[RESLOW1]], [[INS0]] [1] : i32 into vector<2xi32>
+// CHECK-NEXT:    return [[INS1]] : vector<2xi32>
+func.func @shrui_scalar(%a : i64, %b : i64) -> i64 {
+    %c = arith.shrui %a, %b : i64
+    return %c : i64
+}
+
+// CHECK-LABEL: func.func @shrui_scalar_cst_2
+// CHECK-SAME:    ({{%.+}}: vector<2xi32>) -> vector<2xi32>
+// CHECK:       return {{%.+}} : vector<2xi32>
+func.func @shrui_scalar_cst_2(%a : i64) -> i64 {
+    %b = arith.constant 2 : i64
+    %c = arith.shrui %a, %b : i64
+    return %c : i64
+}
+
+// CHECK-LABEL: func.func @shrui_scalar_cst_36
+// CHECK-SAME:    ({{%.+}}: vector<2xi32>) -> vector<2xi32>
+// CHECK:       return {{%.+}} : vector<2xi32>
+func.func @shrui_scalar_cst_36(%a : i64) -> i64 {
+    %b = arith.constant 36 : i64
+    %c = arith.shrui %a, %b : i64
+    return %c : i64
+}
+
+// CHECK-LABEL: func.func @shrui_vector
+// CHECK-SAME:    ({{%.+}}: vector<3x2xi32>, {{%.+}}: vector<3x2xi32>) -> vector<3x2xi32>
+// CHECK:       return {{%.+}} : vector<3x2xi32>
+func.func @shrui_vector(%a : vector<3xi64>, %b : vector<3xi64>) -> vector<3xi64> {
+    %m = arith.shrui %a, %b : vector<3xi64>
+    return %m : vector<3xi64>
+}

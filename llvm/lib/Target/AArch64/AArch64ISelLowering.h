@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64ISELLOWERING_H
 
 #include "AArch64.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -56,6 +57,9 @@ enum NodeType : unsigned {
   CALL_RVMARKER,
 
   CALL_BTI, // Function call followed by a BTI instruction.
+
+  SMSTART,
+  SMSTOP,
 
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
@@ -605,6 +609,9 @@ public:
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 
+  bool optimizeExtendOrTruncateConversion(Instruction *I,
+                                          Loop *L) const override;
+
   bool hasPairedLoad(EVT LoadedType, Align &RequiredAligment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
@@ -867,6 +874,14 @@ public:
                              bool AllowUnknown = false) const override;
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
+
+  /// If a change in streaming mode is required on entry to/return from a
+  /// function call it emits and returns the corresponding SMSTART or SMSTOP node.
+  /// \p Entry tells whether this is before/after the Call, which is necessary
+  /// because PSTATE.SM is only queried once.
+  SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
+                              SDValue Chain, SDValue InFlag,
+                              SDValue PStateSM, bool Entry) const;
 
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
@@ -1157,6 +1172,11 @@ private:
   // with BITCAST used otherwise.
   // This function does not handle predicate bitcasts.
   SDValue getSVESafeBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) const;
+
+  // Returns the runtime value for PSTATE.SM. When the function is streaming-
+  // compatible, this generates a call to __arm_sme_state.
+  SDValue getPStateSM(SelectionDAG &DAG, SDValue Chain, SMEAttrs Attrs,
+                      SDLoc DL, EVT VT) const;
 
   bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
                                               LLT Ty2) const override;

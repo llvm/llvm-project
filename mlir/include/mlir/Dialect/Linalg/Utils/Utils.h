@@ -14,6 +14,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace mlir {
 class AffineExpr;
@@ -494,6 +495,23 @@ struct GenerateLoopNest {
                        bodyBuilderFn,
                    ArrayRef<linalg::ProcInfo> procInfo = {});
 };
+
+/// Returns an attribute list that excludes pre-defined attributes.
+template <typename OpTy>
+SmallVector<NamedAttribute> getPrunedAttributeList(OpTy op) {
+  llvm::StringSet<> elidedAttrs;
+  elidedAttrs.insert(op.getAttributeNames().begin(),
+                     op.getAttributeNames().end());
+  if (isa<linalg::LinalgOp>(op.getOperation()))
+    elidedAttrs.insert(LinalgDialect::kMemoizedIndexingMapsAttrName);
+  SmallVector<NamedAttribute> attrs;
+  for (auto attr : op->getAttrs()) {
+    if (elidedAttrs.count(attr.getName()))
+      continue;
+    attrs.push_back(attr);
+  }
+  return attrs;
+}
 
 } // namespace linalg
 } // namespace mlir

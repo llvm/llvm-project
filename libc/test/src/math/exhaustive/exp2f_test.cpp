@@ -32,9 +32,9 @@ struct LlvmLibcExp2fExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
   }
 };
 
-// Range: [0, 128];
+// Range: [0, +Inf];
 static constexpr uint32_t POS_START = 0x0000'0000U;
-static constexpr uint32_t POS_STOP = 0x4300'0000U;
+static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
 TEST_F(LlvmLibcExp2fExhaustiveTest, PostiveRangeRoundNearestTieToEven) {
   test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::Nearest);
@@ -52,9 +52,9 @@ TEST_F(LlvmLibcExp2fExhaustiveTest, PostiveRangeRoundTowardZero) {
   test_full_range(POS_START, POS_STOP, mpfr::RoundingMode::TowardZero);
 }
 
-// Range: [-150, 0];
+// Range: [-Inf, 0];
 static constexpr uint32_t NEG_START = 0x8000'0000U;
-static constexpr uint32_t NEG_STOP = 0xc316'0000U;
+static constexpr uint32_t NEG_STOP = 0xff80'0000U;
 
 TEST_F(LlvmLibcExp2fExhaustiveTest, NegativeRangeRoundNearestTieToEven) {
   test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Nearest);

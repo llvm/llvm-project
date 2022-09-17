@@ -11584,7 +11584,9 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
   Args.addArgument(TemplateArgumentLoc(TemplateArgument(Element),
                                        Context.getTrivialTypeSourceInfo(Element,
                                                                         Loc)));
-  return Context.getCanonicalType(
+  return Context.getElaboratedType(
+      ElaboratedTypeKeyword::ETK_None,
+      NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()),
       CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
 }
 
@@ -14431,13 +14433,10 @@ static void diagnoseDeprecatedCopyOperation(Sema &S, CXXMethodDecl *CopyOp) {
   CXXRecordDecl *RD = CopyOp->getParent();
   CXXMethodDecl *UserDeclaredOperation = nullptr;
 
-  // In Microsoft mode, assignment operations don't affect constructors and
-  // vice versa.
   if (RD->hasUserDeclaredDestructor()) {
     UserDeclaredOperation = RD->getDestructor();
   } else if (!isa<CXXConstructorDecl>(CopyOp) &&
-             RD->hasUserDeclaredCopyConstructor() &&
-             !S.getLangOpts().MSVCCompat) {
+             RD->hasUserDeclaredCopyConstructor()) {
     // Find any user-declared copy constructor.
     for (auto *I : RD->ctors()) {
       if (I->isCopyConstructor()) {
@@ -14447,8 +14446,7 @@ static void diagnoseDeprecatedCopyOperation(Sema &S, CXXMethodDecl *CopyOp) {
     }
     assert(UserDeclaredOperation);
   } else if (isa<CXXConstructorDecl>(CopyOp) &&
-             RD->hasUserDeclaredCopyAssignment() &&
-             !S.getLangOpts().MSVCCompat) {
+             RD->hasUserDeclaredCopyAssignment()) {
     // Find any user-declared move assignment operator.
     for (auto *I : RD->methods()) {
       if (I->isCopyAssignmentOperator()) {

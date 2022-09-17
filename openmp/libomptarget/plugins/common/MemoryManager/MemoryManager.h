@@ -38,6 +38,7 @@ public:
 
   /// Delete the pointer \p TgtPtr on the device
   virtual int dev_free(void *TgtPtr) = 0;
+
   virtual int free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 };
 

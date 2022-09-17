@@ -1161,6 +1161,23 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+
+    const GCNTargetMachine &TM =
+        static_cast<const GCNTargetMachine &>(getTargetMachine());
+
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    Info.ptrVal = MFI->getGWSPSV(TM);
+
+    // This is an abstract access, but we need to specify a type and size.
+    Info.memVT = MVT::i32;
+    Info.size = 4;
+    Info.align = Align(4);
+
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    return true;
+  }
   default:
     return false;
   }
@@ -3279,10 +3296,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // we've carefully laid out the parameters so that when sp is reset they'll be
   // in the correct location.
   if (IsTailCall && !IsSibCall) {
-    Chain = DAG.getCALLSEQ_END(Chain,
-                               DAG.getTargetConstant(NumBytes, DL, MVT::i32),
-                               DAG.getTargetConstant(0, DL, MVT::i32),
-                               InFlag, DL);
+    Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, DL);
     InFlag = Chain.getValue(1);
   }
 
@@ -3337,9 +3351,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   InFlag = Call.getValue(1);
 
   uint64_t CalleePopBytes = NumBytes;
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getTargetConstant(0, DL, MVT::i32),
-                             DAG.getTargetConstant(CalleePopBytes, DL, MVT::i32),
-                             InFlag, DL);
+  Chain = DAG.getCALLSEQ_END(Chain, 0, CalleePopBytes, InFlag, DL);
   if (!Ins.empty())
     InFlag = Chain.getValue(1);
 
@@ -3394,9 +3406,7 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(
   }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, Tmp1);    // Output chain
-  Tmp2 = DAG.getCALLSEQ_END(
-      Chain, DAG.getIntPtrConstant(0, dl, true),
-      DAG.getIntPtrConstant(0, dl, true), SDValue(), dl);
+  Tmp2 = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
 
   return DAG.getMergeValues({Tmp1, Tmp2}, dl);
 }
@@ -12977,4 +12987,29 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (I.getMetadata("amdgpu.noclobber"))
     return MONoClobber;
   return MachineMemOperand::MONone;
+}
+
+bool SITargetLowering::checkForPhysRegDependency(
+    SDNode *Def, SDNode *User, unsigned Op, const TargetRegisterInfo *TRI,
+    const TargetInstrInfo *TII, unsigned &PhysReg, int &Cost) const {
+  if (User->getOpcode() != ISD::CopyToReg)
+    return false;
+  if (!Def->isMachineOpcode())
+    return false;
+  MachineSDNode *MDef = dyn_cast<MachineSDNode>(Def);
+  if (!MDef)
+    return false;
+
+  unsigned ResNo = User->getOperand(Op).getResNo();
+  if (User->getOperand(Op)->getValueType(ResNo) != MVT::i1)
+    return false;
+  const MCInstrDesc &II = TII->get(MDef->getMachineOpcode());
+  if (II.isCompare() && II.hasImplicitDefOfPhysReg(AMDGPU::SCC)) {
+    PhysReg = AMDGPU::SCC;
+    const TargetRegisterClass *RC =
+        TRI->getMinimalPhysRegClass(PhysReg, Def->getSimpleValueType(ResNo));
+    Cost = RC->getCopyCost();
+    return true;
+  }
+  return false;
 }

@@ -137,6 +137,8 @@ private:
     std::vector<JITDylibState *> Deps;
     AtExitsVector AtExits;
     const objc_image_info *ObjCImageInfo = nullptr;
+    std::unordered_map<void *, std::vector<char>> DataSectionContent;
+    std::unordered_map<void *, size_t> ZeroInitRanges;
     std::vector<span<void (*)()>> ModInitsSections;
     std::vector<span<void (*)()>> ModInitsSectionsNew;
     std::vector<span<uintptr_t>> ObjCClassListSections;
@@ -340,7 +342,17 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
 
   for (auto &KV : Secs) {
     // FIXME: Validate section ranges?
-    if (KV.first == "__DATA,__thread_data") {
+    if (KV.first == "__DATA,__data") {
+      assert(!JDS->DataSectionContent.count(KV.second.Start.toPtr<char *>()) &&
+             "Address already registered.");
+      auto S = KV.second.toSpan<char>();
+      JDS->DataSectionContent[KV.second.Start.toPtr<char *>()] =
+          std::vector<char>(S.begin(), S.end());
+    } else if (KV.first == "__DATA,__common") {
+      // fprintf(stderr, "Adding zero-init range %llx -- %llx\n",
+      // KV.second.Start.getValue(), KV.second.size());
+      JDS->ZeroInitRanges[KV.second.Start.toPtr<char *>()] = KV.second.size();
+    } else if (KV.first == "__DATA,__thread_data") {
       if (auto Err = registerThreadDataSection(KV.second.toSpan<const char>()))
         return Err;
     } else if (KV.first == "__DATA,__objc_selrefs")
@@ -406,9 +418,17 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
   // FIXME: Implement faster-path by returning immediately if JDS is being
   // torn down entirely?
 
+  // TODO: Make library permanent (i.e. not able to be dlclosed) if it contains
+  // any Swift or ObjC. Once this happens we can clear (and no longer record)
+  // data section content, as the library could never be re-initialized.
+
   for (auto &KV : Secs) {
     // FIXME: Validate section ranges?
-    if (KV.first == "__DATA,__thread_data") {
+    if (KV.first == "__DATA,__data") {
+      JDS->DataSectionContent.erase(KV.second.Start.toPtr<char *>());
+    } else if (KV.first == "__DATA,__common") {
+      JDS->ZeroInitRanges.erase(KV.second.Start.toPtr<char *>());
+    } else if (KV.first == "__DATA,__thread_data") {
       if (auto Err =
               deregisterThreadDataSection(KV.second.toSpan<const char>()))
         return Err;
@@ -873,6 +893,12 @@ Error MachOPlatformRuntimeState::dlcloseDeinitialize(JITDylibState &JDS) {
   // Reset mod-inits
   moveAppendSections(JDS.ModInitsSections, JDS.ModInitsSectionsNew);
   JDS.ModInitsSectionsNew = std::move(JDS.ModInitsSections);
+
+  // Reset data section contents.
+  for (auto &KV : JDS.DataSectionContent)
+    memcpy(KV.first, KV.second.data(), KV.second.size());
+  for (auto &KV : JDS.ZeroInitRanges)
+    memset(KV.first, 0, KV.second);
 
   // Deinitialize any dependencies.
   for (auto *DepJDS : JDS.Deps) {
