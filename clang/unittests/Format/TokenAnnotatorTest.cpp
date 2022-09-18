@@ -441,6 +441,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[11], tok::kw_requires, TT_RequiresClause);
 
   Tokens = annotate("template <typename T>\n"
+                    "requires Bar<T> || Baz<T>\n"
+                    "auto foo(T) -> int;");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+  EXPECT_EQ(Tokens[11]->FakeLParens.size(), 0u);
+  EXPECT_TRUE(Tokens[14]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[20], tok::arrow, TT_TrailingReturnArrow);
+
+  Tokens = annotate("template <typename T>\n"
                     "struct S {\n"
                     "  void foo() const requires Bar<T>;\n"
                     "  void bar() const & requires Baz<T>;\n"
