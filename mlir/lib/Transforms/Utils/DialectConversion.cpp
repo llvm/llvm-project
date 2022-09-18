@@ -34,7 +34,7 @@ computeConversionSet(iterator_range<Region::iterator> region,
                      Location regionLoc,
                      SmallVectorImpl<Operation *> &toConvert,
                      ConversionTarget *target = nullptr) {
-  if (llvm::empty(region))
+  if (region.empty())
     return success();
 
   // Traverse starting from the entry block.

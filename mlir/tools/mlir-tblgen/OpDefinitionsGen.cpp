@@ -2839,7 +2839,7 @@ void OpEmitter::genOpAsmInterface() {
   auto &body = method->body();
   for (int i = 0; i != numResults; ++i) {
     body << "  auto resultGroup" << i << " = getODSResults(" << i << ");\n"
-         << "  if (!llvm::empty(resultGroup" << i << "))\n"
+         << "  if (!resultGroup" << i << ".empty())\n"
          << "    setNameFn(*resultGroup" << i << ".begin(), \""
          << resultNames[i] << "\");\n";
   }
