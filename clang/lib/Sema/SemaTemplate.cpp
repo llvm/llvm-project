@@ -8919,9 +8919,12 @@ void Sema::CheckConceptRedefinition(ConceptDecl *NewDecl,
 
 /// \brief Strips various properties off an implicit instantiation
 /// that has just been explicitly specialized.
-static void StripImplicitInstantiation(NamedDecl *D) {
-  D->dropAttr<DLLImportAttr>();
-  D->dropAttr<DLLExportAttr>();
+static void StripImplicitInstantiation(NamedDecl *D, bool MinGW) {
+  if (MinGW || (isa<FunctionDecl>(D) &&
+                cast<FunctionDecl>(D)->isFunctionTemplateSpecialization())) {
+    D->dropAttr<DLLImportAttr>();
+    D->dropAttr<DLLExportAttr>();
+  }
 
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
     FD->setInlineSpecified(false);
@@ -8996,7 +8999,9 @@ Sema::CheckSpecializationInstantiationRedecl(SourceLocation NewLoc,
       if (PrevPointOfInstantiation.isInvalid()) {
         // The declaration itself has not actually been instantiated, so it is
         // still okay to specialize it.
-        StripImplicitInstantiation(PrevDecl);
+        StripImplicitInstantiation(
+            PrevDecl,
+            Context.getTargetInfo().getTriple().isWindowsGNUEnvironment());
         return false;
       }
       // Fall through

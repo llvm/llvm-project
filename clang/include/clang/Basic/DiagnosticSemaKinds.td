@@ -3469,6 +3469,8 @@ def warn_attribute_dll_redeclaration : Warning<
   InGroup<DiagGroup<"dll-attribute-on-redeclaration">>;
 def err_attribute_dllimport_function_definition : Error<
   "dllimport cannot be applied to non-inline function definition">;
+def err_attribute_dllimport_function_specialization_definition : Error<
+  "cannot define non-inline dllimport template specialization">;
 def err_attribute_dll_deleted : Error<
   "attribute %q0 cannot be applied to a deleted function">;
 def err_attribute_dllimport_data_definition : Error<

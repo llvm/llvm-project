@@ -7041,13 +7041,24 @@ static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
       (!IsInline || (IsMicrosoftABI && IsTemplate)) && !IsStaticDataMember &&
       !NewDecl->isLocalExternDecl() && !IsQualifiedFriend) {
     if (IsMicrosoftABI && IsDefinition) {
-      S.Diag(NewDecl->getLocation(),
-             diag::warn_redeclaration_without_import_attribute)
-          << NewDecl;
-      S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
-      NewDecl->dropAttr<DLLImportAttr>();
-      NewDecl->addAttr(
-          DLLExportAttr::CreateImplicit(S.Context, NewImportAttr->getRange()));
+      if (IsSpecialization) {
+        S.Diag(
+            NewDecl->getLocation(),
+            diag::err_attribute_dllimport_function_specialization_definition);
+        S.Diag(OldImportAttr->getLocation(), diag::note_attribute);
+        NewDecl->dropAttr<DLLImportAttr>();
+      } else {
+        S.Diag(NewDecl->getLocation(),
+               diag::warn_redeclaration_without_import_attribute)
+            << NewDecl;
+        S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
+        NewDecl->dropAttr<DLLImportAttr>();
+        NewDecl->addAttr(DLLExportAttr::CreateImplicit(
+            S.Context, NewImportAttr->getRange()));
+      }
+    } else if (IsMicrosoftABI && IsSpecialization) {
+      assert(!IsDefinition);
+      // MSVC allows this. Keep the inherited attribute.
     } else {
       S.Diag(NewDecl->getLocation(),
              diag::warn_redeclaration_without_attribute_prev_attribute_ignored)
