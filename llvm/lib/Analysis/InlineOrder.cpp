@@ -111,12 +111,12 @@ class CostPriority : public InlinePriority {
 
   PriorityT evaluate(const CallBase *CB) {
     auto IC = getInlineCost(CB);
-    int cost = 0;
+    int Cost = 0;
     if (IC.isVariable())
-      cost = IC.getCost();
+      Cost = IC.getCost();
     else
-      cost = IC.isNever() ? INT_MAX : INT_MIN;
-    return cost;
+      Cost = IC.isNever() ? INT_MAX : INT_MIN;
+    return Cost;
   }
 
   bool isMoreDesirable(const PriorityT &P1, const PriorityT &P2) const {
