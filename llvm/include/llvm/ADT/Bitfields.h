@@ -203,7 +203,7 @@ template <typename T> struct ResolveUnderlyingType<T, false> {
 template <> struct ResolveUnderlyingType<bool, false> {
   /// In case sizeof(bool) != 1, replace `void` by an additionnal
   /// std::conditional.
-  using type = std::conditional<sizeof(bool) == 1, uint8_t, void>::type;
+  using type = std::conditional_t<sizeof(bool) == 1, uint8_t, void>;
 };
 
 } // namespace bitfields_details

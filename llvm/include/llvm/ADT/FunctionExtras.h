@@ -99,11 +99,11 @@ protected:
   template <typename T> struct AdjustedParamTBase {
     static_assert(!std::is_reference<T>::value,
                   "references should be handled by template specialization");
-    using type = typename std::conditional<
+    using type = std::conditional_t<
         llvm::is_trivially_copy_constructible<T>::value &&
             llvm::is_trivially_move_constructible<T>::value &&
             IsSizeLessThanThresholdT<T>::value,
-        T, T &>::type;
+        T, T &>;
   };
 
   // This specialization ensures that 'AdjustedParam<V<T>&>' or
