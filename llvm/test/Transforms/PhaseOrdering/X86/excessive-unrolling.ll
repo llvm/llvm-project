@@ -183,7 +183,7 @@ define void @test_runtime_trip_count(i32 %N) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], 28
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; CHECK:       vector.ph.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP2]], 9223372036854775800
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP2]], -8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_7:%.*]], [[VECTOR_BODY]] ]

@@ -70,7 +70,7 @@ define void @scalar_store(i32** %a, i32 *%b, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 9223372036854775806
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; CHECK-NEXT:    [[IND_END:%.*]] = shl nuw i64 [[N_VEC]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -130,7 +130,7 @@ define void @expansion(i32** %a, i64 *%b, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 9223372036854775806
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; CHECK-NEXT:    [[IND_END:%.*]] = shl nuw i64 [[N_VEC]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
