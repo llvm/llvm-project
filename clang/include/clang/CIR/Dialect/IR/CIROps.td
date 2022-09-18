@@ -547,6 +547,51 @@ def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface
 }
 
 //===----------------------------------------------------------------------===//
+// UnaryOp
+//===----------------------------------------------------------------------===//
+
+def UnaryOpKind_Inc : I32EnumAttrCase<"Inc", 1, "inc">;
+def UnaryOpKind_Dec : I32EnumAttrCase<"Dec", 2, "dec">;
+
+def UnaryOpKind : I32EnumAttr<
+    "UnaryOpKind",
+    "unary operation kind",
+    [UnaryOpKind_Inc,
+     UnaryOpKind_Dec]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+// FIXME: NoSideEffect won't work when we add overloading.
+def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
+  let summary = "Unary operations";
+  let description = [{
+    `cir.unary` performs the unary operation according to
+    the specified opcode kind: [inc, dec].
+
+    Note for inc and dec: the operation corresponds only to the
+    addition/subtraction, its input is expect to come from a load
+    and the result to be used by a corresponding store.
+
+    It requires one input operand and has one result, both types
+    should be the same.
+
+    ```mlir
+    %7 = cir.unary(inc, %1) : i32 -> i32
+    %8 = cir.unary(dec, %2) : i32 -> i32
+    ```
+  }];
+
+  let results = (outs AnyType:$result);
+  let arguments = (ins Arg<UnaryOpKind, "unary op kind">:$kind, Arg<AnyType>:$input);
+
+  let assemblyFormat = [{
+      `(` $kind `,` $input `)` `:` type($input) `,` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // BinOp
 //===----------------------------------------------------------------------===//
 

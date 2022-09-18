@@ -198,3 +198,26 @@ module {
 module {
   cir.global "public" internal @v = 3 : i32 // expected-error {{public visibility not allowed with 'internal' linkage}}
 }
+
+// -----
+
+cir.func @unary0() {
+  %0 = cir.alloca i32, cir.ptr <i32>, ["a", cinit] {alignment = 4 : i64}
+  %1 = cir.cst(2 : i32) : i32
+
+  %3 = cir.unary(inc, %1) : i32, i32 // expected-error {{'cir.unary' op requires input to be defined by a memory load}}
+  cir.store %3, %0 : i32, cir.ptr <i32>
+  cir.return
+}
+
+// -----
+
+cir.func @unary1() {
+  %0 = cir.alloca i32, cir.ptr <i32>, ["a", cinit] {alignment = 4 : i64}
+  %1 = cir.cst(2 : i32) : i32
+  cir.store %1, %0 : i32, cir.ptr <i32>
+
+  %2 = cir.load %0 : cir.ptr <i32>, i32
+  %3 = cir.unary(dec, %2) : i32, i32 //  // expected-error {{'cir.unary' op requires result to be used by a memory store to the same address as the input memory load}}
+  cir.return
+}
