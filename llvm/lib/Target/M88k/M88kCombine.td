@@ -55,28 +55,6 @@ def M88kPreLegalizerCombinerHelper: GICombinerHelper<
 }
 
 // Combine
-//   G_ADD $dst, (G_ZEXT (G_ICMP eq, $src, 0))
-// into
-//   G_UADDE $dst, (G_USUBO 0, %src)
-// under certain restrictions.
-def subadd_from_icmpadd_matchdata : GIDefMatchData<"std::tuple<Register, Register, Register>">;
-def subadd_from_icmpadd1 : GICombineRule<
-  (defs root:$root, subadd_from_icmpadd_matchdata:$matchinfo),
-  (match (wip_match_opcode G_ADD):$root,
-         [{ return matchAddCmpToSubAdd(*${root}, MRI,
-                                                   ${matchinfo}); }]),
-  (apply [{ applyAddCmpToSubAdd(*${root}, MRI, ${matchinfo}); }])>;
-
-def subadd_from_icmpadd2 : GICombineRule<
-  (defs root:$dst, build_fn_matchinfo:$matchinfo),
-  (match (G_ICMP $icmp, $cc, $src2, $src3),
-         (G_ZEXT $zext, $icmp),
-         (G_ADD $dst, $zext, $src1):$mi,
-         [{ return matchAddCmpToSubAdd2(*${mi}, ${src1}, ${src2}, ${src3}, ${cc}, MRI,
-                                                   ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
-
-// Combine
 //  Dst = G_ADD SrcA, (G_ZEXT (G_ICMP Pred, SrcB, SrcC)
 // with:
 //  - Pred = unsigned >=
