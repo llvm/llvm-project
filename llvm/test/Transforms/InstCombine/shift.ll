@@ -1902,3 +1902,82 @@ define i64 @lshr_mul_negpow2_extra_use(i64 %x) {
   call void @use(i64 %a)
   ret i64 %b
 }
+
+define i8 @ashr_sdiv_pos(i8 %x) {
+; CHECK-LABEL: @ashr_sdiv_pos(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[D]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %d = sdiv i8 %x, 42
+  %r = ashr i8 %d, 7
+  ret i8 %r
+}
+
+define <2 x i8> @ashr_sdiv_neg_splat_vec(<2 x i8> %x) {
+; CHECK-LABEL: @ashr_sdiv_neg_splat_vec(
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[X:%.*]], <i8 -42, i8 -42>
+; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i8> [[D]], <i8 7, i8 7>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %d = sdiv <2 x i8> %x, <i8 -42, i8 -42>
+  %r = ashr <2 x i8> %d, <i8 7, i8 7>
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @ashr_sdiv_neg_splat_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @ashr_sdiv_neg_splat_vec_poison(
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[X:%.*]], <i8 -127, i8 -127>
+; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i8> [[D]], <i8 7, i8 poison>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %d = sdiv <2 x i8> %x, <i8 -127, i8 -127>
+  %r = ashr <2 x i8> %d, <i8 7, i8 poison>
+  ret <2 x i8> %r
+}
+
+define i8 @lshr_sdiv_pos(i8 %x) {
+; CHECK-LABEL: @lshr_sdiv_pos(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[D]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %d = sdiv i8 %x, 12
+  %r = lshr i8 %d, 7
+  ret i8 %r
+}
+
+define i18 @lshr_sdiv_neg(i18 %x) {
+; CHECK-LABEL: @lshr_sdiv_neg(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i18 [[X:%.*]], -12
+; CHECK-NEXT:    [[R:%.*]] = lshr i18 [[D]], 17
+; CHECK-NEXT:    ret i18 [[R]]
+;
+  %d = sdiv i18 %x, -12
+  %r = lshr i18 %d, 17
+  ret i18 %r
+}
+
+define i8 @ashr_sdiv_not_full_shift(i8 %x) {
+; CHECK-LABEL: @ashr_sdiv_not_full_shift(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[D]], 6
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %d = sdiv i8 %x, 42
+  %r = ashr i8 %d, 6
+  ret i8 %r
+}
+
+define i32 @ashr_sdiv_extra_use(i32 %x) {
+; CHECK-LABEL: @ashr_sdiv_extra_use(
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use_i32(i32 [[D]])
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[D]], 31
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %d = sdiv i32 %x, 42
+  call void @use_i32(i32 %d)
+  %r = ashr i32 %d, 31
+  ret i32 %r
+}
