@@ -269,14 +269,9 @@ AffineMap StridedLayoutAttr::getAffineMap() const {
 LogicalResult
 StridedLayoutAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                           int64_t offset, ArrayRef<int64_t> strides) {
-  if (offset < 0 && offset != ShapedType::kDynamicStrideOrOffset)
-    return emitError() << "offset must be non-negative or dynamic";
+  if (llvm::any_of(strides, [&](int64_t stride) { return stride == 0; }))
+    return emitError() << "strides must not be zero";
 
-  if (llvm::any_of(strides, [&](int64_t stride) {
-        return stride <= 0 && stride != ShapedType::kDynamicStrideOrOffset;
-      })) {
-    return emitError() << "strides must be positive or dynamic";
-  }
   return success();
 }
 
