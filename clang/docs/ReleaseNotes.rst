@@ -146,6 +146,11 @@ Bug Fixes
 - A SubstTemplateTypeParmType can now represent the pack index for a
   substitution from an expanded pack.
   `Issue 56099 <https://github.com/llvm/llvm-project/issues/56099>`_
+- Fix `-Wpre-c++17-compat` crashing Clang when compiling C++20 code which
+  contains deduced template specializations. This Fixes
+  `Issue 57369 <https://github.com/llvm/llvm-project/issues/57369>`_
+  `Issue 57643 <https://github.com/llvm/llvm-project/issues/57643>`_
+  `Issue 57793 <https://github.com/llvm/llvm-project/issues/57793>`_
 
 
 Improvements to Clang's diagnostics
