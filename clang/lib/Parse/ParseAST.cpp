@@ -177,7 +177,7 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
 
   // At this point, we should know if we are building a non-header C++20 module.
   if (S.getLangOpts().CPlusPlusModules && !S.getLangOpts().IsHeaderFile &&
-      !S.getLangOpts().CurrentModule.empty()) {
+      S.getLangOpts().isCompilingModuleInterface()) {
     // If we are building the module from source, then the top level module
     // will be here.
     Module *CodegenModule = S.getCurrentModule();
