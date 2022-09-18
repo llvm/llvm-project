@@ -183,6 +183,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   // Loop forward over all of the calls.
   while (!Calls->empty()) {
     Function &F = *Calls->front().first->getCaller();
+    (void)F;
 
     LLVM_DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n"
                       << "    Function size: " << F.getInstructionCount()
