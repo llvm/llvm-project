@@ -1878,7 +1878,7 @@ public:
   MCSymbol *getLSDASymbol(const FragmentNum F) {
     if (F.get() < LSDASymbols.size() && LSDASymbols[F.get()] != nullptr)
       return LSDASymbols[F.get()];
-    if (llvm::empty(getCallSites(F)))
+    if (getCallSites(F).empty())
       return nullptr;
 
     if (F.get() >= LSDASymbols.size())
