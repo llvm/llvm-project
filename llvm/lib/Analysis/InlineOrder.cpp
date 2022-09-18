@@ -169,14 +169,6 @@ public:
     return Result;
   }
 
-  const_reference front() override {
-    assert(size() > 0);
-    adjust();
-
-    CallBase *CB = Heap.front();
-    return *InlineHistoryMap.find(CB);
-  }
-
   void erase_if(function_ref<bool(T)> Pred) override {
     auto PredWrapper = [=](CallBase *CB) -> bool {
       return Pred(std::make_pair(CB, 0));
