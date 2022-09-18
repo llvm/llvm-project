@@ -2019,12 +2019,6 @@ void CombinerHelper::applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) {
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::matchCombineP2IToI2P(MachineInstr &MI, Register &Reg) {
-  assert(MI.getOpcode() == TargetOpcode::G_PTRTOINT && "Expected a G_PTRTOINT");
-  Register SrcReg = MI.getOperand(1).getReg();
-  return mi_match(SrcReg, MRI, m_GIntToPtr(m_Reg(Reg)));
-}
-
 void CombinerHelper::applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) {
   assert(MI.getOpcode() == TargetOpcode::G_PTRTOINT && "Expected a G_PTRTOINT");
   Register DstReg = MI.getOperand(0).getReg();
@@ -2193,19 +2187,6 @@ void CombinerHelper::applyCombineMulByNegativeOne(MachineInstr &MI) {
   Builder.buildSub(DstReg, Builder.buildConstant(DstTy, 0), SrcReg,
                    MI.getFlags());
   MI.eraseFromParent();
-}
-
-bool CombinerHelper::matchCombineFNegOfFNeg(MachineInstr &MI, Register &Reg) {
-  assert(MI.getOpcode() == TargetOpcode::G_FNEG && "Expected a G_FNEG");
-  Register SrcReg = MI.getOperand(1).getReg();
-  return mi_match(SrcReg, MRI, m_GFNeg(m_Reg(Reg)));
-}
-
-bool CombinerHelper::matchCombineFAbsOfFAbs(MachineInstr &MI, Register &Src) {
-  assert(MI.getOpcode() == TargetOpcode::G_FABS && "Expected a G_FABS");
-  Src = MI.getOperand(1).getReg();
-  Register AbsSrc;
-  return mi_match(Src, MRI, m_GFabs(m_Reg(AbsSrc)));
 }
 
 bool CombinerHelper::matchCombineFAbsOfFNeg(MachineInstr &MI,

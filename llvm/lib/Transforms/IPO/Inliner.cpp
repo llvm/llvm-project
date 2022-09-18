@@ -315,14 +315,14 @@ static InlineResult inlineCallIfPossible(
 
   // Try to inline the function.  Get the list of static allocas that were
   // inlined.
-  InlineResult IR = InlineFunction(CB, IFI, &AAR, InsertLifetime);
+  InlineResult IR = InlineFunction(CB, IFI, &AAR, InsertLifetime,
+                                   /*ForwardVarArgsTo=*/nullptr,
+                                   /*MergeAttributes=*/true);
   if (!IR.isSuccess())
     return IR;
 
   if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
     ImportedFunctionsStats.recordInline(*Caller, *Callee);
-
-  AttributeFuncs::mergeAttributesForInlining(*Caller, *Callee);
 
   if (!DisableInlinedAllocaMerging)
     mergeInlinedArrayAllocas(Caller, IFI, InlinedArrayAllocas, InlineHistory);
@@ -915,7 +915,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 
       InlineResult IR =
-          InlineFunction(*CB, IFI, &FAM.getResult<AAManager>(*CB->getCaller()));
+          InlineFunction(*CB, IFI, &FAM.getResult<AAManager>(*CB->getCaller()),
+                         /*InsertLifetime=*/true,
+                         /*ForwardVarArgsTo=*/nullptr,
+                         /*MergeAttributes=*/true);
       if (!IR.isSuccess()) {
         Advice->recordUnsuccessfulInlining(IR);
         continue;
@@ -969,9 +972,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           }
         }
       }
-
-      // Merge the attributes based on the inlining.
-      AttributeFuncs::mergeAttributesForInlining(F, Callee);
 
       // For local functions or discardable functions without comdats, check
       // whether this makes the callee trivially dead. In that case, we can drop
