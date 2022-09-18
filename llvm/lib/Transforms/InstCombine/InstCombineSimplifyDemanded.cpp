@@ -1078,11 +1078,6 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
-    bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    Known = KnownBits::computeForAddSub(true, NSW, LHSKnown, RHSKnown);
-    if (DemandedMask.isSubsetOf(Known.Zero|Known.One))
-      return Constant::getIntegerValue(ITy, Known.One);
-
     break;
   }
   case Instruction::AShr: {
