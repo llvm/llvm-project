@@ -679,3 +679,21 @@ template __declspec(dllexport) const int MemVarTmpl::StaticVar<ExplicitInst_Expo
 // MSC-DAG: @"??$StaticVar@UExplicitSpec_Def_Exported@@@MemVarTmpl@@2HB" = weak_odr dso_local dllexport constant i32 1, comdat, align 4
 // GNU-DAG: @_ZN10MemVarTmpl9StaticVarI25ExplicitSpec_Def_ExportedEE        = dso_local dllexport constant i32 1, align 4
 template<> __declspec(dllexport) const int MemVarTmpl::StaticVar<ExplicitSpec_Def_Exported> = 1;
+
+
+//===----------------------------------------------------------------------===//
+// Class template members
+//===----------------------------------------------------------------------===//
+
+template <typename> struct ClassTmplMem {
+  void __declspec(dllexport) exportedNormal();
+  static void __declspec(dllexport) exportedStatic();
+};
+// MSVC exports explicit specialization of exported class template member function; MinGW does not.
+// M32-DAG: define dso_local dllexport x86_thiscallcc void @"?exportedNormal@?$ClassTmplMem@H@@QAEXXZ"
+// G32-DAG: define dso_local           x86_thiscallcc void @_ZN12ClassTmplMemIiE14exportedNormalEv
+template<> void ClassTmplMem<int>::exportedNormal() {}
+
+// M32-DAG: define dso_local dllexport void @"?exportedStatic@?$ClassTmplMem@H@@SAXXZ"
+// G32-DAG: define dso_local           void @_ZN12ClassTmplMemIiE14exportedStaticEv
+template<> void ClassTmplMem<int>::exportedStatic() {}
