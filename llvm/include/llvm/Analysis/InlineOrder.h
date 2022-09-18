@@ -29,8 +29,6 @@ public:
 
   virtual T pop() = 0;
 
-  virtual const_reference front() = 0;
-
   virtual void erase_if(function_ref<bool(T)> Pred) = 0;
 
   bool empty() { return !size(); }

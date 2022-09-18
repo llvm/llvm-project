@@ -182,21 +182,20 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
 
   // Loop forward over all of the calls.
   while (!Calls->empty()) {
-    Function &F = *Calls->front().first->getCaller();
-    (void)F;
+    auto P = Calls->pop();
+    CallBase *CB = P.first;
+    const int InlineHistoryID = P.second;
+    Function &F = *CB->getCaller();
+    Function &Callee = *CB->getCalledFunction();
 
     LLVM_DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n"
                       << "    Function size: " << F.getInstructionCount()
                       << "\n");
+    (void)F;
 
     auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
       return FAM.getResult<AssumptionAnalysis>(F);
     };
-
-    auto P = Calls->pop();
-    CallBase *CB = P.first;
-    const int InlineHistoryID = P.second;
-    Function &Callee = *CB->getCalledFunction();
 
     if (InlineHistoryID != -1 &&
         inlineHistoryIncludes(&Callee, InlineHistoryID, InlineHistory)) {
