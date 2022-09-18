@@ -94,7 +94,33 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
-  if (auto *Body = F->getBody())
+  // Constructor. Set up field initializers.
+  if (const auto Ctor = dyn_cast<CXXConstructorDecl>(F)) {
+    const RecordDecl *RD = Ctor->getParent();
+    const Record *R = this->getRecord(RD);
+
+    for (const auto *Init : Ctor->inits()) {
+      const FieldDecl *Member = Init->getMember();
+      const Expr *InitExpr = Init->getInit();
+
+      if (Optional<PrimType> T = this->classify(InitExpr->getType())) {
+        const Record::Field *F = R->getField(Member);
+
+        if (!this->emitDupPtr(InitExpr))
+          return false;
+
+        if (!this->visit(InitExpr))
+          return false;
+
+        if (!this->emitInitField(*T, F->Offset, InitExpr))
+          return false;
+      } else {
+        assert(false && "Handle initializer for non-primitive values");
+      }
+    }
+  }
+
+  if (const auto *Body = F->getBody())
     if (!visitStmt(Body))
       return false;
 

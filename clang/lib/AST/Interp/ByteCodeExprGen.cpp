@@ -637,34 +637,16 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
   assert(Initializer->getType()->isRecordType());
 
   if (const auto CtorExpr = dyn_cast<CXXConstructExpr>(Initializer)) {
-    const CXXConstructorDecl *Ctor = CtorExpr->getConstructor();
-    const RecordDecl *RD = Ctor->getParent();
-    const Record *R = getRecord(RD);
+    const Function *Func = getFunction(CtorExpr->getConstructor());
 
-    for (const auto *Init : Ctor->inits()) {
-      const FieldDecl *Member = Init->getMember();
-      const Expr *InitExpr = Init->getInit();
+    if (!Func)
+      return false;
 
-      if (Optional<PrimType> T = classify(InitExpr->getType())) {
-        const Record::Field *F = R->getField(Member);
-
-        if (!this->emitDupPtr(Initializer))
-          return false;
-
-        if (!this->visit(InitExpr))
-          return false;
-
-        if (!this->emitInitField(*T, F->Offset, Initializer))
-          return false;
-      } else {
-        assert(false && "Handle initializer for non-primitive values");
-      }
-    }
-
-    // FIXME: Actually visit() the constructor Body
-    const Stmt *Body = Ctor->getBody();
-    (void)Body;
-    return true;
+    // The This pointer is already on the stack because this is an initializer,
+    // but we need to dup() so the call() below has its own copy.
+    if (!this->emitDupPtr(Initializer))
+      return false;
+    return this->emitCallVoid(Func, Initializer);
   } else if (const auto *InitList = dyn_cast<InitListExpr>(Initializer)) {
     const Record *R = getRecord(InitList->getType());
 
@@ -688,7 +670,10 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
     return true;
   } else if (const CallExpr *CE = dyn_cast<CallExpr>(Initializer)) {
     const Decl *Callee = CE->getCalleeDecl();
-    const Function *Func = P.getFunction(dyn_cast<FunctionDecl>(Callee));
+    const Function *Func = getFunction(dyn_cast<FunctionDecl>(Callee));
+
+    if (!Func)
+      return false;
 
     if (Func->hasRVO()) {
       // RVO functions expect a pointer to initialize on the stack.
@@ -699,7 +684,6 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
       return this->visit(CE);
     }
   }
-
   return false;
 }
 
@@ -766,6 +750,23 @@ Record *ByteCodeExprGen<Emitter>::getRecord(const RecordDecl *RD) {
 }
 
 template <class Emitter>
+const Function *ByteCodeExprGen<Emitter>::getFunction(const FunctionDecl *FD) {
+  assert(FD);
+  const Function *Func = P.getFunction(FD);
+
+  if (!Func) {
+    if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(Ctx, P).compileFunc(FD))
+      Func = *R;
+    else {
+      llvm::consumeError(R.takeError());
+      return nullptr;
+    }
+  }
+
+  return Func;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *Exp) {
   ExprScope<Emitter> RootScope(this);
   if (!visit(Exp))
@@ -820,16 +821,9 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
 
   const Decl *Callee = E->getCalleeDecl();
   if (const auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(Callee)) {
-    const Function *Func = P.getFunction(FuncDecl);
-
-    // Templated functions might not have been compiled yet, so do it now.
-    if (!Func) {
-      if (auto R =
-              ByteCodeStmtGen<ByteCodeEmitter>(Ctx, P).compileFunc(FuncDecl))
-        Func = *R;
-    }
-    assert(Func);
-
+    const Function *Func = getFunction(FuncDecl);
+    if (!Func)
+      return false;
     // If the function is being compiled right now, this is a recursive call.
     // In that case, the function can't be valid yet, even though it will be
     // later.
@@ -840,28 +834,39 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
 
     QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
     Optional<PrimType> T = classify(ReturnType);
-
-    if (T || ReturnType->isVoidType()) {
-      // Put arguments on the stack.
-      for (const auto *Arg : E->arguments()) {
-        if (!this->visit(Arg))
-          return false;
-      }
-
-      if (T)
-        return this->emitCall(*T, Func, E);
-      return this->emitCallVoid(Func, E);
-    } else {
-      if (Func->hasRVO())
-        return this->emitCallVoid(Func, E);
-      assert(false && "Can't classify function return type");
+    // Put arguments on the stack.
+    for (const auto *Arg : E->arguments()) {
+      if (!this->visit(Arg))
+        return false;
     }
 
+    // Primitive return value, just call it.
+    if (T)
+      return this->emitCall(*T, Func, E);
+
+    // Void Return value, easy.
+    if (ReturnType->isVoidType())
+      return this->emitCallVoid(Func, E);
+
+    // Non-primitive return value with Return Value Optimization,
+    // we already have a pointer on the stack to write the result into.
+    if (Func->hasRVO())
+      return this->emitCallVoid(Func, E);
   } else {
     assert(false && "We don't support non-FunctionDecl callees right now.");
   }
 
   return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXMemberCallExpr(
+    const CXXMemberCallExpr *E) {
+  // Get a This pointer on the stack.
+  if (!this->visit(E->getImplicitObjectArgument()))
+    return false;
+
+  return VisitCallExpr(E);
 }
 
 template <class Emitter>
@@ -892,6 +897,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
     return true;
 
   return this->emitNullPtr(E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
+  return this->emitThis(E);
 }
 
 template <class Emitter>
