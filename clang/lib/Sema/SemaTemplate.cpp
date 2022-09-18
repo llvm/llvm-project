@@ -2445,6 +2445,8 @@ private:
                                       TInfo->getType(), TInfo, LocEnd, Ctor);
     Guide->setImplicit();
     Guide->setParams(Params);
+    if (Ctor && Ctor->getTrailingRequiresClause())
+      Guide->setTrailingRequiresClause(Ctor->getTrailingRequiresClause());
 
     for (auto *Param : Params)
       Param->setDeclContext(Guide);
