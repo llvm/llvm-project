@@ -18,9 +18,6 @@ class CallBase;
 
 template <typename T> class InlineOrder {
 public:
-  using reference = T &;
-  using const_reference = const T &;
-
   virtual ~InlineOrder() = default;
 
   virtual size_t size() = 0;
