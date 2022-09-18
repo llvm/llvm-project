@@ -1014,6 +1014,23 @@ TEST(CodeCompleteTest, NoColonColonAtTheEnd) {
   EXPECT_THAT(Results.Completions, Not(Contains(labeled("clang::"))));
 }
 
+TEST(CompletionTests, EmptySnippetDoesNotCrash) {
+    // See https://github.com/clangd/clangd/issues/1216
+    auto Results = completions(R"cpp(
+        int main() {
+          auto w = [&](auto &&f) { return f(f); };
+          auto f = w([&](auto &&f) {
+            return [&](auto &&n) {
+              if (n == 0) {
+                return 1;
+              }
+              return n * ^(f)(n - 1);
+            };
+          })(10);
+        }
+    )cpp");
+}
+
 TEST(CompletionTest, BacktrackCrashes) {
   // Sema calls code completion callbacks twice in these cases.
   auto Results = completions(R"cpp(
