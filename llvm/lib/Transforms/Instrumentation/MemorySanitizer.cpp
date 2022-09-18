@@ -3592,6 +3592,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  void handleVtestIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow0 = getShadow(&I, 0);
+    Value *Shadow1 = getShadow(&I, 1);
+    Value *Or = IRB.CreateOr(Shadow0, Shadow1);
+    Value *NZ = IRB.CreateICmpNE(Or, Constant::getNullValue(Or->getType()));
+    Value *Scalar = convertShadowToScalar(NZ, IRB);
+    Value *Shadow = IRB.CreateZExt(Scalar, getShadowTy(&I));
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
   void handleBinarySdSsIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     unsigned Width =
@@ -3898,6 +3911,27 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_sse2_min_sd:
     case Intrinsic::x86_sse_min_ss:
       handleBinarySdSsIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_avx_vtestc_pd:
+    case Intrinsic::x86_avx_vtestc_pd_256:
+    case Intrinsic::x86_avx_vtestc_ps:
+    case Intrinsic::x86_avx_vtestc_ps_256:
+    case Intrinsic::x86_avx_vtestnzc_pd:
+    case Intrinsic::x86_avx_vtestnzc_pd_256:
+    case Intrinsic::x86_avx_vtestnzc_ps:
+    case Intrinsic::x86_avx_vtestnzc_ps_256:
+    case Intrinsic::x86_avx_vtestz_pd:
+    case Intrinsic::x86_avx_vtestz_pd_256:
+    case Intrinsic::x86_avx_vtestz_ps:
+    case Intrinsic::x86_avx_vtestz_ps_256:
+    case Intrinsic::x86_avx_ptestc_256:
+    case Intrinsic::x86_avx_ptestnzc_256:
+    case Intrinsic::x86_avx_ptestz_256:
+    case Intrinsic::x86_sse41_ptestc:
+    case Intrinsic::x86_sse41_ptestnzc:
+    case Intrinsic::x86_sse41_ptestz:
+      handleVtestIntrinsic(I);
       break;
 
     case Intrinsic::fshl:
