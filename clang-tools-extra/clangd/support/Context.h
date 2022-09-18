@@ -116,33 +116,31 @@ public:
   /// It is safe to move or destroy a parent context after calling derive().
   /// The child will keep its parent alive, and its data remains accessible.
   template <class Type>
-  Context derive(const Key<Type> &Key,
-                 typename std::decay<Type>::type Value) const & {
+  Context derive(const Key<Type> &Key, std::decay_t<Type> Value) const & {
     return Context(std::make_shared<Data>(
         Data{/*Parent=*/DataPtr, &Key,
-             std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
+             std::make_unique<TypedAnyStorage<std::decay_t<Type>>>(
                  std::move(Value))}));
   }
 
   template <class Type>
-  Context
-  derive(const Key<Type> &Key,
-         typename std::decay<Type>::type Value) && /* takes ownership */ {
+  Context derive(const Key<Type> &Key,
+                 std::decay_t<Type> Value) && /* takes ownership */ {
     return Context(std::make_shared<Data>(
         Data{/*Parent=*/std::move(DataPtr), &Key,
-             std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
+             std::make_unique<TypedAnyStorage<std::decay_t<Type>>>(
                  std::move(Value))}));
   }
 
   /// Derives a child context, using an anonymous key.
   /// Intended for objects stored only for their destructor's side-effect.
   template <class Type> Context derive(Type &&Value) const & {
-    static Key<typename std::decay<Type>::type> Private;
+    static Key<std::decay_t<Type>> Private;
     return derive(Private, std::forward<Type>(Value));
   }
 
   template <class Type> Context derive(Type &&Value) && {
-    static Key<typename std::decay<Type>::type> Private;
+    static Key<std::decay_t<Type>> Private;
     return std::move(*this).derive(Private, std::forward<Type>(Value));
   }
 
