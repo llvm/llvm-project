@@ -1920,10 +1920,13 @@ private:
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
           Next = NextLine->First;
-        const auto Start =
-            Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)
-                ? Token->Tok.getLocation()
-                : Token->WhitespaceRange.getBegin();
+        SourceLocation Start;
+        if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
+          Start = Token->Tok.getLocation();
+          Next->WhitespaceRange = Token->WhitespaceRange;
+        } else {
+          Start = Token->WhitespaceRange.getBegin();
+        }
         const auto Range =
             CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
         cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
