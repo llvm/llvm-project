@@ -430,9 +430,9 @@ define <4 x float> @test_x86_avx_cvt_pd2_ps_256(<4 x double> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx.cvt.pd2.ps.256(<4 x double> [[A0:%.*]])
