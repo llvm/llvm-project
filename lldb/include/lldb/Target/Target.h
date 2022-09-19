@@ -154,6 +154,8 @@ public:
 
   PathMappingList &GetSourcePathMap() const;
 
+  bool GetAutoSourceMapRelative() const;
+
   FileSpecList GetExecutableSearchPaths();
 
   void AppendExecutableSearchPaths(const FileSpec &);
