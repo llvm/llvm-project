@@ -114,6 +114,8 @@ void compress(Params P, ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &Output);
 
 // Decompress Input. The uncompressed size must be available.
+Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+                 uint8_t *Output, size_t UncompressedSize);
 Error decompress(Format F, ArrayRef<uint8_t> Input,
                  SmallVectorImpl<uint8_t> &Output, size_t UncompressedSize);
 Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,

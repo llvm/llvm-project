@@ -16,7 +16,6 @@
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Status.h"
 
 #include "gtest/gtest.h"
@@ -28,7 +27,6 @@ using namespace lldb;
 namespace {
 class VerifyUserMultiwordCmdPathTest : public ::testing::Test {
   void SetUp() override {
-    llvm::cantFail(Reproducer::Initialize(ReproducerMode::Off, llvm::None));
     FileSystem::Initialize();
     HostInfo::Initialize();
     PlatformMacOSX::Initialize();
@@ -37,7 +35,6 @@ class VerifyUserMultiwordCmdPathTest : public ::testing::Test {
     PlatformMacOSX::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
-    Reproducer::Terminate();
   }
 };
 } // namespace

@@ -3330,17 +3330,69 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void handleMaskedExpandLoad(IntrinsicInst &I) {
-    // PassThru can be undef, so default visitInstruction is too strict.
-    // TODO: Provide real implementation.
+    IRBuilder<> IRB(&I);
+    Value *Ptr = I.getArgOperand(0);
+    Value *Mask = I.getArgOperand(1);
+
+    if (ClCheckAccessAddress) {
+      insertShadowCheck(Ptr, &I);
+      insertShadowCheck(Mask, &I);
+    }
+
+    // TODO: Check loaded shadow.
+
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
   }
 
+  void handleMaskedCompressStore(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Ptr = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(2);
+
+    if (ClCheckAccessAddress) {
+      insertShadowCheck(Ptr, &I);
+      insertShadowCheck(Mask, &I);
+    }
+
+    // TODO: Store shadow.
+  }
+
   void handleMaskedGather(IntrinsicInst &I) {
-    // PassThru can be undef, so default visitInstruction is too strict.
-    // TODO: Provide real implementation.
+    IRBuilder<> IRB(&I);
+    Value *Ptrs = I.getArgOperand(0);
+    Value *Mask = I.getArgOperand(2);
+
+    Type *PtrsShadowTy = getShadowTy(Ptrs);
+    if (ClCheckAccessAddress) {
+      insertShadowCheck(Mask, &I);
+      Value *MaskedPtrShadow = IRB.CreateSelect(
+          Mask, getShadow(Ptrs), Constant::getNullValue((PtrsShadowTy)),
+          "_msmaskedptrs");
+      insertShadowCheck(MaskedPtrShadow, getOrigin(Ptrs), &I);
+    }
+
+    // TODO: Check loaded shadow.
+
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
+  }
+
+  void handleMaskedScatter(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Ptrs = I.getArgOperand(1);
+    Value *Mask = I.getArgOperand(3);
+
+    Type *PtrsShadowTy = getShadowTy(Ptrs);
+    if (ClCheckAccessAddress) {
+      insertShadowCheck(Mask, &I);
+      Value *MaskedPtrShadow = IRB.CreateSelect(
+          Mask, getShadow(Ptrs), Constant::getNullValue((PtrsShadowTy)),
+          "_msmaskedptrs");
+      insertShadowCheck(MaskedPtrShadow, getOrigin(Ptrs), &I);
+    }
+
+    // TODO: Store shadow.
   }
 
   void handleMaskedStore(IntrinsicInst &I) {
@@ -3533,11 +3585,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::bswap:
       handleBswap(I);
       break;
+    case Intrinsic::masked_compressstore:
+      handleMaskedCompressStore(I);
+      break;
     case Intrinsic::masked_expandload:
       handleMaskedExpandLoad(I);
       break;
     case Intrinsic::masked_gather:
       handleMaskedGather(I);
+      break;
+    case Intrinsic::masked_scatter:
+      handleMaskedScatter(I);
       break;
     case Intrinsic::masked_store:
       handleMaskedStore(I);

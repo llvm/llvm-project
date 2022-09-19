@@ -1,4 +1,3 @@
-; RUN: opt < %s -S -basic-aa -licm -enable-new-pm=0 | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
 ; Check that we can hoist unordered loads

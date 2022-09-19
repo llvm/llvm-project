@@ -141,6 +141,8 @@ public:
 
   PathMappingList &GetSourcePathMap() const;
 
+  bool GetAutoSourceMapRelative() const;
+
   FileSpecList GetExecutableSearchPaths();
 
   void AppendExecutableSearchPaths(const FileSpec &);
@@ -779,6 +781,9 @@ public:
   bool EnableBreakpointByID(lldb::break_id_t break_id);
 
   bool RemoveBreakpointByID(lldb::break_id_t break_id);
+
+  /// Resets the hit count of all breakpoints.
+  void ResetBreakpointHitCounts();
 
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.

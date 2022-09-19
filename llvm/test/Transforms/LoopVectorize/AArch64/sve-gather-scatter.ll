@@ -21,7 +21,7 @@ define void @gather_nxv4i32_ind64(float* noalias nocapture readonly %a, i64* noa
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <vscale x 4 x i64>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i64>, <vscale x 4 x i64>* [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[A:%.*]], <vscale x 4 x i64> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> [[TMP6]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> [[TMP6]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[TMP7]] to <vscale x 4 x float>*
 ; CHECK-NEXT:    store <vscale x 4 x float> [[WIDE_MASKED_GATHER]], <vscale x 4 x float>* [[TMP8]], align 4
@@ -235,7 +235,7 @@ define void @gather_inv_nxv4i32(i32* noalias nocapture %a, i32* noalias nocaptur
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0i32(<vscale x 4 x i32*> [[BROADCAST_SPLAT]], i32 4, <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0i32(<vscale x 4 x i32*> [[BROADCAST_SPLAT]], i32 4, <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP4]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_GATHER]], <vscale x 4 x i32>* [[TMP7]], i32 4, <vscale x 4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
@@ -318,8 +318,8 @@ define void @gather_nxv4i32_ind64_stride2(float* noalias nocapture readonly %a, 
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl <vscale x 4 x i64> [[STEP_ADD]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[B:%.*]], <vscale x 4 x i64> [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, float* [[B]], <vscale x 4 x i64> [[TMP8]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> [[TMP9]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER2:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> [[TMP10]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> [[TMP9]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER2:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> [[TMP10]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> poison)
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float* [[TMP11]] to <vscale x 4 x float>*
 ; CHECK-NEXT:    store <vscale x 4 x float> [[WIDE_MASKED_GATHER]], <vscale x 4 x float>* [[TMP12]], align 4

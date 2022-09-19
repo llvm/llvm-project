@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -715,6 +717,24 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
   }
 };
 
+/// Util function that tries to compute a constant diff between u and l.
+/// Returns llvm::None when the difference between two AffineValueMap is
+/// dynamic.
+static Optional<int64_t> computeConstDiff(Value l, Value u) {
+  auto alb = l.getDefiningOp<AffineApplyOp>();
+  auto aub = u.getDefiningOp<AffineApplyOp>();
+  // ID map: (d0)->d0
+  auto id = AffineMap::getMultiDimIdentityMap(1, l.getContext());
+  auto lb = alb ? alb.getAffineValueMap() : AffineValueMap(id, l);
+  auto ub = aub ? aub.getAffineValueMap() : AffineValueMap(id, u);
+
+  AffineValueMap diffMap;
+  AffineValueMap::difference(ub, lb, &diffMap);
+  if (auto constDiff = diffMap.getResult(0).dyn_cast<AffineConstantExpr>())
+    return constDiff.getValue();
+  return llvm::None;
+}
+
 /// Rewriting pattern that erases loops that are known not to iterate, replaces
 /// single-iteration loops with their bodies, and removes empty loops that
 /// iterate at least once and only return values defined outside of the loop.
@@ -730,15 +750,13 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    auto lb = op.getLowerBound().getDefiningOp<arith::ConstantOp>();
-    auto ub = op.getUpperBound().getDefiningOp<arith::ConstantOp>();
-    if (!lb || !ub)
+    Optional<int64_t> diff =
+        computeConstDiff(op.getLowerBound(), op.getUpperBound());
+    if (!diff)
       return failure();
 
     // If the loop is known to have 0 iterations, remove it.
-    llvm::APInt lbValue = lb.getValue().cast<IntegerAttr>().getValue();
-    llvm::APInt ubValue = ub.getValue().cast<IntegerAttr>().getValue();
-    if (lbValue.sge(ubValue)) {
+    if (*diff <= 0) {
       rewriter.replaceOp(op, op.getIterOperands());
       return success();
     }
@@ -750,7 +768,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
     // If the loop is known to have 1 iteration, inline its body and remove the
     // loop.
     llvm::APInt stepValue = step.getValue().cast<IntegerAttr>().getValue();
-    if ((lbValue + stepValue).sge(ubValue)) {
+    if (stepValue.sge(*diff)) {
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getNumIterOperands() + 1);
       blockArgs.push_back(op.getLowerBound());
@@ -1242,6 +1260,61 @@ void ForeachThreadOp::ensureTerminator(Region &region, OpBuilder &builder,
 
 PerformConcurrentlyOp ForeachThreadOp::getTerminator() {
   return cast<PerformConcurrentlyOp>(getBody()->getTerminator());
+}
+
+template <typename T>
+static FailureOr<SmallVector<T>> permute(const SmallVector<T> &vals,
+                                         ArrayRef<int64_t> perm) {
+  if (vals.size() != perm.size())
+    return failure();
+  SmallVector<T> result(vals.size());
+  SmallVector<bool> seen(vals.size());
+  for (auto [idx, val] : llvm::zip(perm, vals)) {
+    // Already seen, invalid thread_dim_mapping.
+    if (seen[idx])
+      return failure();
+    result[idx] = val;
+    seen[idx] = true;
+  }
+  // Some not seen, invalid thread_dim_mapping.
+  if (!llvm::all_of(seen, [](bool b) { return b; }))
+    return failure();
+  return result;
+}
+
+/// Helper to get apply the `thread_dim_mapping` permutation of a
+/// `foreachThreadOp` to `values`.
+template <typename T>
+static FailureOr<SmallVector<T>>
+getValuesPermutedByThreadMapping(scf::ForeachThreadOp foreachThreadOp,
+                                 const SmallVector<T> &values) {
+  // Apply mapping permutation if specified.
+  auto mapping = foreachThreadOp.getThreadDimMapping();
+  if (mapping && !mapping.empty()) {
+    auto maybePermuted = permute(values, extractFromI64ArrayAttr(mapping));
+    if (failed(maybePermuted))
+      return foreachThreadOp->emitError("invalid permutation");
+    return *maybePermuted;
+  }
+  return values;
+}
+
+/// Return the thread indices in the order specified by the thread_dim_mapping
+/// attribute. Return failure is thread_dim_mapping is not a valid permutation.
+FailureOr<SmallVector<Value>> ForeachThreadOp::getPermutedThreadIndices() {
+  SmallVector<Value> threadCountValues = this->getThreadIndices();
+  threadCountValues.resize(3, Value());
+  return getValuesPermutedByThreadMapping(*this, threadCountValues);
+}
+
+/// Return the number of threads in the order specified by the
+/// thread_dim_mapping attribute.
+/// Return failure is thread_dim_mapping is not a valid permutation.
+FailureOr<SmallVector<OpFoldResult>>
+ForeachThreadOp::getPermutedNumThreads(OpBuilder &b) {
+  SmallVector<OpFoldResult> threadCountValues = this->getNumThreads();
+  threadCountValues.resize(3, b.getIndexAttr(1));
+  return getValuesPermutedByThreadMapping(*this, threadCountValues);
 }
 
 ForeachThreadOp mlir::scf::getForeachThreadOpThreadIndexOwner(Value val) {

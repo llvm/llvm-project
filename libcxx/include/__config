@@ -24,6 +24,9 @@
 
 #ifdef __cplusplus
 
+// _LIBCPP_VERSION represents the version of libc++, which matches the version of LLVM.
+// Given a LLVM release LLVM XX.Y.ZZ (e.g. LLVM 16.0.1 == 16.0.01), _LIBCPP_VERSION is
+// defined to XXYZZ.
 #  define _LIBCPP_VERSION 16000
 
 #  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y

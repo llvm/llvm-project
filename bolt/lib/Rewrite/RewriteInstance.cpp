@@ -2838,6 +2838,11 @@ void RewriteInstance::processProfileData() {
     YAMLProfileWriter PW(opts::SaveProfile);
     PW.writeProfile(*this);
   }
+  if (opts::AggregateOnly &&
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
+    YAMLProfileWriter PW(opts::OutputFilename);
+    PW.writeProfile(*this);
+  }
 
   // Release memory used by profile reader.
   ProfileReader.reset();
@@ -5321,6 +5326,7 @@ void RewriteInstance::rewriteFile() {
       assert(llvm::all_of(Function->getLayout().getSplitFragments(),
                           HasNoAddress) &&
              "Some split fragments have an address while others do not");
+      (void)HasNoAddress;
       continue;
     }
 

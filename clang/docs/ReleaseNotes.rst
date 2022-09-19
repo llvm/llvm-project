@@ -151,6 +151,10 @@ Bug Fixes
   `Issue 57369 <https://github.com/llvm/llvm-project/issues/57369>`_
   `Issue 57643 <https://github.com/llvm/llvm-project/issues/57643>`_
   `Issue 57793 <https://github.com/llvm/llvm-project/issues/57793>`_
+- Respect constructor constraints during class template argument deduction (CTAD).
+  This is the suggested resolution to CWG DR2628.
+  `Issue 57646 <https://github.com/llvm/llvm-project/issues/57646>`_
+  `Issue 43829 <https://github.com/llvm/llvm-project/issues/43829>`_
 
 
 Improvements to Clang's diagnostics

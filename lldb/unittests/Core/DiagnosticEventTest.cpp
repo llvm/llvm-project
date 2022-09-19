@@ -18,7 +18,6 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
-#include "lldb/Utility/Reproducer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -33,7 +32,6 @@ namespace {
 class DiagnosticEventTest : public ::testing::Test {
 public:
   void SetUp() override {
-    llvm::cantFail(Reproducer::Initialize(ReproducerMode::Off, llvm::None));
     FileSystem::Initialize();
     HostInfo::Initialize();
     PlatformMacOSX::Initialize();
@@ -47,7 +45,6 @@ public:
     PlatformMacOSX::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
-    Reproducer::Terminate();
   }
 };
 } // namespace

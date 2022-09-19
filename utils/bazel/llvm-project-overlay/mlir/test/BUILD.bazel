@@ -236,6 +236,16 @@ gentbl_cc_library(
     ],
 )
 
+cc_library(
+    name = "TestTestDynDialect",
+    srcs = glob([
+        "lib/Dialect/TestDyn/*.cpp",
+    ]),
+    deps = [
+        "//mlir:IR",
+    ],
+)
+
 td_library(
     name = "TransformDialectTdFiles",
     srcs = glob(["lib/Dialect/Transform/*.td"]),

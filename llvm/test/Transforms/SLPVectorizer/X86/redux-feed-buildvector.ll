@@ -14,7 +14,7 @@ define void @test(double* nocapture readonly %arg, double* nocapture readonly %a
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x double*> [[TMP0]], <8 x double*> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, <8 x double*> [[SHUFFLE]], <8 x i64> <i64 1, i64 3, i64 5, i64 7, i64 9, i64 11, i64 13, i64 15>
 ; CHECK-NEXT:    [[GEP2_0:%.*]] = getelementptr inbounds double, double* [[ARG1:%.*]], i64 16
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> [[TMP1]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x double> undef)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> [[TMP1]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x double> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[GEP2_0]] to <8 x double>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x double>, <8 x double>* [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <8 x double> [[TMP4]], [[TMP2]]

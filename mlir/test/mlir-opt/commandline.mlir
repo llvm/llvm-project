@@ -34,6 +34,7 @@
 // CHECK-NEXT: spv
 // CHECK-NEXT: tensor
 // CHECK-NEXT: test
+// CHECK-NEXT: test_dyn
 // CHECK-NEXT: tosa
 // CHECK-NEXT: transform
 // CHECK-NEXT: vector

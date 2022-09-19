@@ -2445,6 +2445,8 @@ private:
                                       TInfo->getType(), TInfo, LocEnd, Ctor);
     Guide->setImplicit();
     Guide->setParams(Params);
+    if (Ctor && Ctor->getTrailingRequiresClause())
+      Guide->setTrailingRequiresClause(Ctor->getTrailingRequiresClause());
 
     for (auto *Param : Params)
       Param->setDeclContext(Guide);
@@ -6949,7 +6951,10 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                          // along with the other associated constraints after
                          // checking the template argument list.
                          /*IgnoreConstraints=*/true);
-      if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed) {
+      if (Result == TDK_AlreadyDiagnosed) {
+        if (ParamType.isNull())
+          return ExprError();
+      } else if (Result != TDK_Success) {
         Diag(Arg->getExprLoc(),
              diag::err_non_type_template_parm_type_deduction_failure)
             << Param->getDeclName() << Param->getType() << Arg->getType()
