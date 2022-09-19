@@ -920,11 +920,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // trap.  Otherwise the transform is invalid since it might cause a trap
   // to occur earlier than it otherwise would.
   if (!isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
-                                          DL, C, DT)) {
+                                          DL, C, nullptr, DT)) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
     return false;
   }
-
 
   // Make sure that nothing can observe cpyDest being written early. There are
   // a number of cases to consider:
