@@ -802,7 +802,7 @@ XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
     for (const auto &Sec : Sections)
       if (Sec.getSectionType() == SectType)
         return reinterpret_cast<uintptr_t>(&Sec);
-    return reinterpret_cast<uintptr_t>(0ul);
+    return uintptr_t(0);
   };
   if (is64Bit())
     DRI.p = GetSectionAddr(sections64());
