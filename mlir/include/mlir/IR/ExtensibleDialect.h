@@ -550,6 +550,30 @@ private:
   /// Owns the TypeID generated at runtime for operations.
   TypeIDAllocator typeIDAllocator;
 };
+
+//===----------------------------------------------------------------------===//
+// Dynamic dialect
+//===----------------------------------------------------------------------===//
+
+/// A dialect that can be defined at runtime. It can be extended with new
+/// operations, types, and attributes at runtime.
+class DynamicDialect : public SelfOwningTypeID, public ExtensibleDialect {
+public:
+  DynamicDialect(StringRef name, MLIRContext *ctx);
+
+  TypeID getTypeID() { return SelfOwningTypeID::getTypeID(); }
+
+  /// Check if the dialect is an extensible dialect.
+  static bool classof(const Dialect *dialect);
+
+  virtual Type parseType(DialectAsmParser &parser) const override;
+  virtual void printType(Type type, DialectAsmPrinter &printer) const override;
+
+  virtual Attribute parseAttribute(DialectAsmParser &parser,
+                                   Type type) const override;
+  virtual void printAttribute(Attribute attr,
+                              DialectAsmPrinter &printer) const override;
+};
 } // namespace mlir
 
 namespace llvm {
@@ -559,6 +583,15 @@ template <>
 struct isa_impl<mlir::ExtensibleDialect, mlir::Dialect> {
   static inline bool doit(const ::mlir::Dialect &dialect) {
     return mlir::ExtensibleDialect::classof(&dialect);
+  }
+};
+
+/// Provide isa functionality for DynamicDialect.
+/// This is to override the isa functionality for Dialect.
+template <>
+struct isa_impl<mlir::DynamicDialect, mlir::Dialect> {
+  static inline bool doit(const ::mlir::Dialect &dialect) {
+    return mlir::DynamicDialect::classof(&dialect);
   }
 };
 } // namespace llvm
