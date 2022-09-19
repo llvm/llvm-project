@@ -8149,9 +8149,15 @@ VPRecipeBase *VPRecipeBuilder::tryToOptimizeInductionPHI(
                                        *PSE.getSE(), *OrigLoop, Range);
 
   // Check if this is pointer induction. If so, build the recipe for it.
-  if (auto *II = Legal->getPointerInductionDescriptor(Phi))
-    return new VPWidenPointerInductionRecipe(Phi, Operands[0], *II,
-                                             *PSE.getSE());
+  if (auto *II = Legal->getPointerInductionDescriptor(Phi)) {
+    return new VPWidenPointerInductionRecipe(
+        Phi, Operands[0], *II, *PSE.getSE(),
+        LoopVectorizationPlanner::getDecisionAndClampRange(
+            [&](ElementCount VF) {
+              return !VF.isScalable() && CM.isScalarAfterVectorization(Phi, VF);
+            },
+            Range));
+  }
   return nullptr;
 }
 
@@ -9332,7 +9338,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
   PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0));
 
-  if (onlyScalarsGenerated(State.VF)) {
+  if (onlyScalarsGenerated()) {
     // This is the normalized GEP that starts counting at zero.
     Value *PtrInd = State.Builder.CreateSExtOrTrunc(
         CanonicalIV, IndDesc.getStep()->getType());
