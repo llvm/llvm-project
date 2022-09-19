@@ -1,4 +1,3 @@
-; RUN: opt -S -basic-aa -licm -verify-memoryssa %s -enable-new-pm=0 | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
 declare i32 @foo() readonly argmemonly nounwind

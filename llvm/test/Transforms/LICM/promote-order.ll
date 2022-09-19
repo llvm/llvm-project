@@ -1,4 +1,3 @@
-; RUN: opt -tbaa -basic-aa -licm -enable-new-pm=0 -S < %s | FileCheck %s
 ; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s
 
 ; LICM should keep the stores in their original order when it sinks/promotes them.
