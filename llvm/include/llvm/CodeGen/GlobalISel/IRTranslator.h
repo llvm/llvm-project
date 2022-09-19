@@ -34,6 +34,7 @@
 namespace llvm {
 
 class AllocaInst;
+class AssumptionCache;
 class BasicBlock;
 class CallInst;
 class CallLowering;
@@ -571,6 +572,7 @@ private:
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
   AAResults *AA;
+  AssumptionCache *AC;
   const TargetLibraryInfo *LibInfo;
   FunctionLoweringInfo FuncInfo;
 
