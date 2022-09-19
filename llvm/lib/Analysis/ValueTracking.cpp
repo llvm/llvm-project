@@ -4785,8 +4785,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
       return false;
     const DataLayout &DL = LI->getModule()->getDataLayout();
     return isDereferenceableAndAlignedPointer(
-        LI->getPointerOperand(), LI->getType(), LI->getAlign(), DL, CtxI, DT,
-        TLI);
+        LI->getPointerOperand(), LI->getType(), LI->getAlign(), DL, CtxI,
+        nullptr, // FIXME
+        DT, TLI);
   }
   case Instruction::Call: {
     auto *CI = dyn_cast<const CallInst>(Inst);
