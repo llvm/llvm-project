@@ -2611,8 +2611,10 @@ private:
       }
       if (Current->is(TT_BinaryOperator) || Current->is(tok::comma))
         return Current->getPrecedence();
-      if (Current->isOneOf(tok::period, tok::arrow))
+      if (Current->isOneOf(tok::period, tok::arrow) &&
+          Current->isNot(TT_TrailingReturnArrow)) {
         return PrecedenceArrowAndPeriod;
+      }
       if ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
           Current->isOneOf(Keywords.kw_extends, Keywords.kw_implements,
                            Keywords.kw_throws)) {
