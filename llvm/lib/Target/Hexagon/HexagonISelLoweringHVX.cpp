@@ -2239,7 +2239,7 @@ HexagonTargetLowering::WidenHvxLoad(SDValue Op, SelectionDAG &DAG) const {
                                    DAG.getUNDEF(LoadTy), LoadTy, MemOp,
                                    ISD::UNINDEXED, ISD::NON_EXTLOAD, false);
   SDValue Value = opCastElem(Load, ResTy.getVectorElementType(), DAG);
-  return DAG.getMergeValues({Value, Chain}, dl);
+  return DAG.getMergeValues({Value, Load.getValue(1)}, dl);
 }
 
 SDValue
