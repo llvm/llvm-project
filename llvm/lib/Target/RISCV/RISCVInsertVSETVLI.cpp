@@ -1128,8 +1128,10 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
   // Add the successors to the work list so we can propagate the changed exit
   // status.
   for (MachineBasicBlock *S : MBB.successors())
-    if (!BlockInfo[S->getNumber()].InQueue)
+    if (!BlockInfo[S->getNumber()].InQueue) {
+      BlockInfo[S->getNumber()].InQueue = true;
       WorkList.push(S);
+    }
 }
 
 // If we weren't able to prove a vsetvli was directly unneeded, it might still
