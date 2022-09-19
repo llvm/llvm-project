@@ -17,3 +17,10 @@ set(LIBCXX_CXX_ABI libcxxabi CACHE STRING "")
 set(LIBCXXABI_USE_LLVM_UNWINDER ON CACHE BOOL "")
 set(LIBUNWIND_ENABLE_SHARED ON CACHE BOOL "")
 set(LIBUNWIND_ENABLE_STATIC OFF CACHE BOOL "")
+
+# On AIX, both shared and static libraries are archived. As a result, both the static and the shared targets end
+# up with a `.a` suffix, which conflict. To workaround that, we set a different output name for the static
+# libraries, which we never actually build anyway. For more information, see https://gitlab.kitware.com/cmake/cmake/-/issues/19494.
+set(LIBCXX_STATIC_OUTPUT_NAME "c++-static" CACHE STRING "")
+set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi-static" CACHE STRING "")
+set(LIBUNWIND_STATIC_OUTPUT_NAME "unwind-static" CACHE STRING "")
