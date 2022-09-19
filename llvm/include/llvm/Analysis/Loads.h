@@ -71,6 +71,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
+                                 AssumptionCache *AC = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
 
@@ -96,6 +97,7 @@ bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
+                                 AssumptionCache *AC = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  const TargetLibraryInfo *TLI = nullptr);
 
