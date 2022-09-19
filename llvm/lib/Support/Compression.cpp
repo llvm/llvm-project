@@ -55,6 +55,17 @@ void compression::compress(Params P, ArrayRef<uint8_t> Input,
   }
 }
 
+Error compression::decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+                              uint8_t *Output, size_t UncompressedSize) {
+  switch (formatFor(T)) {
+  case compression::Format::Zlib:
+    return zlib::decompress(Input, Output, UncompressedSize);
+  case compression::Format::Zstd:
+    return zstd::decompress(Input, Output, UncompressedSize);
+  }
+  llvm_unreachable("");
+}
+
 Error compression::decompress(compression::Format F, ArrayRef<uint8_t> Input,
                               SmallVectorImpl<uint8_t> &Output,
                               size_t UncompressedSize) {
