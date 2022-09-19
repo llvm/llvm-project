@@ -8382,9 +8382,7 @@ void ScalarEvolution::forgetValue(Value *V) {
   forgetMemoizedResults(ToForget);
 }
 
-void ScalarEvolution::forgetLoopDispositions(const Loop *L) {
-  LoopDispositions.clear();
-}
+void ScalarEvolution::forgetLoopDispositions() { LoopDispositions.clear(); }
 
 /// Get the exact loop backedge taken count considering all loop exits. A
 /// computable result can only be returned for loops with all exiting blocks
