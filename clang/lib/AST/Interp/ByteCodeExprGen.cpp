@@ -613,9 +613,11 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
           return false;
       } else if (Optional<PrimType> T = classify(InitType)) {
         // Visit the primitive element like normal.
+        if (!this->emitDupPtr(Init))
+          return false;
         if (!this->visit(Init))
           return false;
-        if (!this->emitInitElem(*T, ElementIndex, Init))
+        if (!this->emitInitElemPop(*T, ElementIndex, Init))
           return false;
       } else {
         assert(false && "Unhandled type in array initializer initlist");
@@ -623,12 +625,13 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
 
       ++ElementIndex;
     }
-
-  } else {
-    assert(false && "Unknown expression for array initialization");
+    return true;
+  } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
+    return this->visitInitializer(DIE->getExpr());
   }
 
-  return true;
+  assert(false && "Unknown expression for array initialization");
+  return false;
 }
 
 template <class Emitter>
@@ -683,7 +686,10 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
       return this->visit(CE);
     }
+  } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
+    return this->visitInitializer(DIE->getExpr());
   }
+
   return false;
 }
 
