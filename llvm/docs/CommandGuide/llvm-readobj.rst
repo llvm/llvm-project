@@ -330,6 +330,10 @@ The following options are implemented only for the XCOFF file format.
 
   Display XCOFF Auxiliary header.
 
+.. option:: --exception-section
+
+  Display XCOFF exception section entries.
+
 EXIT STATUS
 -----------
 
