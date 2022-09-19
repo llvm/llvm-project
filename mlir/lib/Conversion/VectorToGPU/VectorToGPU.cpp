@@ -66,7 +66,7 @@ static void getXferIndices(OpBuilder &b, TransferOpType xferOp,
 // Return true if the contract op can be convert to MMA matmul.
 static bool contractSupportsMMAMatrixType(vector::ContractionOp contract,
                                           bool useNvGpu) {
-  if (llvm::size(contract.getMasks()) != 0)
+  if (!contract.getMasks().empty())
     return false;
 
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
