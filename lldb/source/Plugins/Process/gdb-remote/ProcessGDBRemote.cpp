@@ -510,16 +510,16 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   AddRemoteRegisters(registers, arch_to_use);
 }
 
-Status ProcessGDBRemote::WillLaunch(lldb_private::Module *module) {
+Status ProcessGDBRemote::DoWillLaunch(lldb_private::Module *module) {
   return WillLaunchOrAttach();
 }
 
-Status ProcessGDBRemote::WillAttachToProcessWithID(lldb::pid_t pid) {
+Status ProcessGDBRemote::DoWillAttachToProcessWithID(lldb::pid_t pid) {
   return WillLaunchOrAttach();
 }
 
-Status ProcessGDBRemote::WillAttachToProcessWithName(const char *process_name,
-                                                     bool wait_for_launch) {
+Status ProcessGDBRemote::DoWillAttachToProcessWithName(const char *process_name,
+                                                       bool wait_for_launch) {
   return WillLaunchOrAttach();
 }
 
