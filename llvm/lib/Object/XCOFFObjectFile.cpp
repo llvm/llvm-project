@@ -798,7 +798,7 @@ Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
 DataRefImpl
 XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
   DataRefImpl DRI;
-  auto GetSectionAddr = [&](const auto &Sections) {
+  auto GetSectionAddr = [&](const auto &Sections) -> uintptr_t {
     for (const auto &Sec : Sections)
       if (Sec.getSectionType() == SectType)
         return reinterpret_cast<uintptr_t>(&Sec);
