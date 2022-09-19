@@ -12,7 +12,8 @@ struct Ints {
   int a = 20;
   int b = 30;
   bool c = true;
-  // BoolPair bp = {true, false}; FIXME
+  BoolPair bp = {true, false};
+  int numbers[3] = {1,2,3};
 
   static const int five = 5;
   static constexpr int getFive() {
@@ -31,6 +32,13 @@ static_assert(ints.a == 20, "");
 static_assert(ints.b == 30, "");
 static_assert(ints.c, "");
 static_assert(ints.getTen() == 10, "");
+
+constexpr const BoolPair &BP = ints.bp;
+static_assert(BP.first, "");
+static_assert(!BP.second, "");
+static_assert(ints.bp.first, "");
+static_assert(!ints.bp.second, "");
+
 
 constexpr Ints ints2{-20, -30, false};
 static_assert(ints2.a == -20, "");
