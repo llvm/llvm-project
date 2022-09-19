@@ -173,7 +173,7 @@ BlockArgument Block::insertArgument(unsigned index, Type type, Location loc) {
 /// Insert one value to the given position of the argument list. The existing
 /// arguments are shifted. The block is expected not to have predecessors.
 BlockArgument Block::insertArgument(args_iterator it, Type type, Location loc) {
-  assert(llvm::empty(getPredecessors()) &&
+  assert(getPredecessors().empty() &&
          "cannot insert arguments to blocks with predecessors");
   return insertArgument(it->getArgNumber(), type, loc);
 }

@@ -886,7 +886,7 @@ void BinaryEmitter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
 void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   const BinaryFunction::CallSitesRange Sites =
       BF.getCallSites(FF.getFragmentNum());
-  if (llvm::empty(Sites))
+  if (Sites.empty())
     return;
 
   // Calculate callsite table size. Size of each callsite entry is:

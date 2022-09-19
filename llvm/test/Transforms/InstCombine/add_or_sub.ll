@@ -7,9 +7,7 @@ declare void @use2(i2)
 
 define i32 @add_or_sub_comb_i32_commuted1_nuw(i32 %x) {
 ; CHECK-LABEL: @add_or_sub_comb_i32_commuted1_nuw(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = and i32 [[TMP1]], [[X]]
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %sub = sub i32 0, %x
   %or = or i32 %sub, %x
@@ -20,7 +18,9 @@ define i32 @add_or_sub_comb_i32_commuted1_nuw(i32 %x) {
 define i8 @add_or_sub_comb_i8_commuted2_nsw(i8 %p) {
 ; CHECK-LABEL: @add_or_sub_comb_i8_commuted2_nsw(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
-; CHECK-NEXT:    ret i8 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[X]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = and i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %x = mul i8 %p, %p ; thwart complexity-based canonicalization
   %sub = sub i8 0, %x

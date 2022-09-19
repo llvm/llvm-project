@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains basic functions for compression/uncompression.
+// This file contains basic functions for compression/decompression.
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,11 +44,10 @@ void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
-Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
 
-Error uncompress(ArrayRef<uint8_t> Input,
-                 SmallVectorImpl<uint8_t> &UncompressedBuffer,
+Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
                  size_t UncompressedSize);
 
 } // End of namespace zlib
@@ -66,11 +65,10 @@ void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
-Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
 
-Error uncompress(ArrayRef<uint8_t> Input,
-                 SmallVectorImpl<uint8_t> &UncompressedBuffer,
+Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
                  size_t UncompressedSize);
 
 } // End of namespace zstd

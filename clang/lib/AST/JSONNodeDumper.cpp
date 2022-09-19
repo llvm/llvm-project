@@ -3,7 +3,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
 
@@ -681,6 +680,12 @@ void JSONNodeDumper::VisitTemplateTypeParmType(
   JOS.attribute("index", TTPT->getIndex());
   attributeOnlyIfTrue("isPack", TTPT->isParameterPack());
   JOS.attribute("decl", createBareDeclRef(TTPT->getDecl()));
+}
+
+void JSONNodeDumper::VisitSubstTemplateTypeParmType(
+    const SubstTemplateTypeParmType *STTPT) {
+  if (auto PackIndex = STTPT->getPackIndex())
+    JOS.attribute("pack_index", *PackIndex);
 }
 
 void JSONNodeDumper::VisitAutoType(const AutoType *AT) {

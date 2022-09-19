@@ -362,7 +362,6 @@ public:
   void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);
 
   /// Transform PtrToInt(IntToPtr(x)) to x.
-  bool matchCombineP2IToI2P(MachineInstr &MI, Register &Reg);
   void applyCombineP2IToI2P(MachineInstr &MI, Register &Reg);
 
   /// Transform G_ADD (G_PTRTOINT x), y -> G_PTRTOINT (G_PTR_ADD x, y)
@@ -389,11 +388,7 @@ public:
   void applyCombineExtOfExt(MachineInstr &MI,
                             std::tuple<Register, unsigned> &MatchInfo);
 
-  /// Transform fneg(fneg(x)) to x.
-  bool matchCombineFNegOfFNeg(MachineInstr &MI, Register &Reg);
-
-  /// Match fabs(fabs(x)) to fabs(x).
-  bool matchCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
+  /// Transform fabs(fabs(x)) to fabs(x).
   void applyCombineFAbsOfFAbs(MachineInstr &MI, Register &Src);
 
   /// Transform fabs(fneg(x)) to fabs(x).

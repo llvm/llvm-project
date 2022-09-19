@@ -24,7 +24,7 @@ define void @saddsat(i16* nocapture readonly %pSrc, i16 signext %offset, i16* no
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 15
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934576
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -16
 ; CHECK-NEXT:    [[CAST_VTC:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[CAST_VTC]]
 ; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr i16, i16* [[PSRC:%.*]], i64 [[N_VEC]]
@@ -119,7 +119,7 @@ define void @umin(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i32 [[TMP0]], 31
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934560
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -32
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[OFFSET:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <16 x i8> poison, i8 [[OFFSET]], i64 0
@@ -157,7 +157,7 @@ define void @umin(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_VEC9:%.*]] = and i64 [[TMP2]], 8589934584
+; CHECK-NEXT:    [[N_VEC9:%.*]] = and i64 [[TMP2]], -8
 ; CHECK-NEXT:    [[CAST_VTC:%.*]] = trunc i64 [[N_VEC9]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[CAST_VTC]]
 ; CHECK-NEXT:    [[IND_END12:%.*]] = getelementptr i8, i8* [[PSRC]], i64 [[N_VEC9]]

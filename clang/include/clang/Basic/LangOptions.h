@@ -113,7 +113,7 @@ public:
     /// Compiling a module header unit.
     CMK_HeaderUnit,
 
-    /// Compiling a C++ modules TS module interface unit.
+    /// Compiling a C++ modules interface unit.
     CMK_ModuleInterface,
   };
 
@@ -495,9 +495,14 @@ public:
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
 #include "clang/Basic/LangOptions.def"
 
-  /// Are we compiling a module interface (.cppm or module map)?
+  /// Are we compiling a module?
   bool isCompilingModule() const {
     return getCompilingModule() != CMK_None;
+  }
+
+  /// Are we compiling a standard c++ module interface?
+  bool isCompilingModuleInterface() const {
+    return getCompilingModule() == CMK_ModuleInterface;
   }
 
   /// Do we need to track the owning module for a local declaration?

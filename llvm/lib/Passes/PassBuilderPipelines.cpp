@@ -186,6 +186,10 @@ static cl::opt<bool> EnablePostPGOLoopRotation(
     "enable-post-pgo-loop-rotation", cl::init(true), cl::Hidden,
     cl::desc("Run the loop rotation transformation after PGO instrumentation"));
 
+static cl::opt<bool> EnableGlobalAnalyses(
+    "enable-global-analyses", cl::init(true), cl::Hidden,
+    cl::desc("Enable inter-procedural analyses"));
+
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
   LoopVectorization = true;
@@ -1898,7 +1902,8 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
   // Because the `AAManager` is a function analysis and `GlobalsAA` is a module
   // analysis, all that the `AAManager` can do is query for any *cached*
   // results from `GlobalsAA` through a readonly proxy.
-  AA.registerModuleAnalysis<GlobalsAA>();
+  if (EnableGlobalAnalyses)
+    AA.registerModuleAnalysis<GlobalsAA>();
 
   // Add target-specific alias analyses.
   if (TM)

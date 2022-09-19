@@ -37,9 +37,6 @@ func.func @transfer_read_1d(%A : memref<?x?xf32>, %base1 : index, %base2 : index
   return
 }
 
-#map0 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-#map1 = affine_map<(d0, d1) -> (6 * d0 + 2 * d1)>
-
 // Vector load with unit stride only on last dim.
 func.func @transfer_read_1d_unit_stride(%A : memref<?x?xf32>) {
   %c0 = arith.constant 0 : index
@@ -53,9 +50,9 @@ func.func @transfer_read_1d_unit_stride(%A : memref<?x?xf32>) {
   scf.for %arg2 = %c1 to %c5 step %c2 {
     scf.for %arg3 = %c0 to %c6 step %c3 {
       %0 = memref.subview %A[%arg2, %arg3] [1, 2] [1, 1]
-          : memref<?x?xf32> to memref<1x2xf32, #map0>
+          : memref<?x?xf32> to memref<1x2xf32, strided<[?, 1], offset: ?>>
       %1 = vector.transfer_read %0[%c0, %c0], %fm42 {in_bounds=[true]}
-          : memref<1x2xf32, #map0>, vector<2xf32>
+          : memref<1x2xf32, strided<[?, 1], offset: ?>>, vector<2xf32>
       vector.print %1 : vector<2xf32>
     }
   }
@@ -80,11 +77,11 @@ func.func @transfer_read_1d_non_static_unit_stride(%A : memref<?x?xf32>) {
 // Vector load where last dim has non-unit stride.
 func.func @transfer_read_1d_non_unit_stride(%A : memref<?x?xf32>) {
   %B = memref.reinterpret_cast %A to offset: [0], sizes: [4, 3], strides: [6, 2]
-      : memref<?x?xf32> to memref<4x3xf32, #map1>
+      : memref<?x?xf32> to memref<4x3xf32, strided<[6, 2]>>
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %fm42 = arith.constant -42.0: f32
-  %vec = vector.transfer_read %B[%c2, %c1], %fm42 {in_bounds=[false]} : memref<4x3xf32, #map1>, vector<3xf32>
+  %vec = vector.transfer_read %B[%c2, %c1], %fm42 {in_bounds=[false]} : memref<4x3xf32, strided<[6, 2]>>, vector<3xf32>
   vector.print %vec : vector<3xf32>
   return
 }

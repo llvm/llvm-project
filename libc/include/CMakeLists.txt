@@ -286,5 +286,5 @@ foreach(target IN LISTS all_install_header_targets)
   get_filename_component(nested_dir ${relative_path} DIRECTORY)
   install(FILES ${header_file}
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${nested_dir}
-          COMPONENT ${LIBC_COMPONENT})
+          COMPONENT libc-headers)
 endforeach()

@@ -2700,6 +2700,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_set_tpidr2
       : DefaultAttrsIntrinsic<[], [llvm_i64_ty],
                               [IntrNoMem, IntrHasSideEffects]>;
+
+  def int_aarch64_sme_za_enable
+      : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+  def int_aarch64_sme_za_disable
+      : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
   // Clamp
   //
 
