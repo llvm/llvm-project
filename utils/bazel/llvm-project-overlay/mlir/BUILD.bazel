@@ -7546,6 +7546,7 @@ cc_library(
         ":ArithmeticDialect",
         ":AsmParser",
         ":ControlFlowDialect",
+        ":GPUDialect",
         ":IR",
         ":LinalgDialect",
         ":LinalgTransformOpsIncGen",
