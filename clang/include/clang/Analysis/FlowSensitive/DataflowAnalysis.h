@@ -193,8 +193,8 @@ runDataflowAnalysis(
 /// example, a model may capture a type and its related functions.
 class DataflowModel : public Environment::ValueModel {
 public:
-  /// Return value indicates whether the model processed the `Stmt`.
-  virtual bool transfer(const Stmt *Stmt, Environment &Env) = 0;
+  /// Return value indicates whether the model processed the `Element`.
+  virtual bool transfer(const CFGElement *Element, Environment &Env) = 0;
 };
 
 } // namespace dataflow

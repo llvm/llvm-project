@@ -119,9 +119,7 @@ public:
   static NoopLattice initialElement() { return NoopLattice(); }
 
   void transfer(const CFGElement *E, NoopLattice &, Environment &Env) {
-    if (auto S = E->getAs<CFGStmt>()) {
-      M.transfer(S->getStmt(), Env);
-    }
+    M.transfer(E, Env);
   }
 
 private:
