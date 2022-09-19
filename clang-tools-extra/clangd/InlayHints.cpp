@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
+#include "SourceCode.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
@@ -192,8 +193,8 @@ class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
                    const Config &Cfg, llvm::Optional<Range> RestrictRange)
-      : Results(Results), AST(AST.getASTContext()), Cfg(Cfg),
-        RestrictRange(std::move(RestrictRange)),
+      : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
+        Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
         TypeHintPolicy(this->AST.getPrintingPolicy()),
@@ -227,8 +228,7 @@ public:
       return true;
     }
 
-    processCall(E->getParenOrBraceRange().getBegin(), E->getConstructor(),
-                {E->getArgs(), E->getNumArgs()});
+    processCall(E->getConstructor(), {E->getArgs(), E->getNumArgs()});
     return true;
   }
 
@@ -254,7 +254,7 @@ public:
     if (!Callee)
       return true;
 
-    processCall(E->getRParenLoc(), Callee, {E->getArgs(), E->getNumArgs()});
+    processCall(Callee, {E->getArgs(), E->getNumArgs()});
     return true;
   }
 
@@ -278,11 +278,11 @@ public:
     return true;
   }
 
-  void addReturnTypeHint(FunctionDecl *D, SourceLocation Loc) {
+  void addReturnTypeHint(FunctionDecl *D, SourceRange Range) {
     auto *AT = D->getReturnType()->getContainedAutoType();
     if (!AT || AT->getDeducedType().isNull())
       return;
-    addTypeHint(Loc, D->getReturnType(), /*Prefix=*/"-> ");
+    addTypeHint(Range, D->getReturnType(), /*Prefix=*/"-> ");
   }
 
   bool VisitVarDecl(VarDecl *D) {
@@ -375,19 +375,9 @@ public:
 private:
   using NameVec = SmallVector<StringRef, 8>;
 
-  // The purpose of Anchor is to deal with macros. It should be the call's
-  // opening or closing parenthesis or brace. (Always using the opening would
-  // make more sense but CallExpr only exposes the closing.) We heuristically
-  // assume that if this location does not come from a macro definition, then
-  // the entire argument list likely appears in the main file and can be hinted.
-  void processCall(SourceLocation Anchor, const FunctionDecl *Callee,
+  void processCall(const FunctionDecl *Callee,
                    llvm::ArrayRef<const Expr *> Args) {
     if (!Cfg.InlayHints.Parameters || Args.size() == 0 || !Callee)
-      return;
-
-    // If the anchor location comes from a macro definition, there's nowhere to
-    // put hints.
-    if (!AST.getSourceManager().getTopMacroCallerLoc(Anchor).isFileID())
       return;
 
     // The parameter name of a move or copy constructor is not very interesting.
@@ -637,25 +627,33 @@ private:
 #undef CHECK_KIND
     }
 
-    auto FileRange =
-        toHalfOpenFileRange(AST.getSourceManager(), AST.getLangOpts(), R);
-    if (!FileRange)
+    auto LSPRange = getHintRange(R);
+    if (!LSPRange)
       return;
-    Range LSPRange{
-        sourceLocToPosition(AST.getSourceManager(), FileRange->getBegin()),
-        sourceLocToPosition(AST.getSourceManager(), FileRange->getEnd())};
-    Position LSPPos = Side == HintSide::Left ? LSPRange.start : LSPRange.end;
+    Position LSPPos = Side == HintSide::Left ? LSPRange->start : LSPRange->end;
     if (RestrictRange &&
         (LSPPos < RestrictRange->start || !(LSPPos < RestrictRange->end)))
-      return;
-    // The hint may be in a file other than the main file (for example, a header
-    // file that was included after the preamble), do not show in that case.
-    if (!AST.getSourceManager().isWrittenInMainFile(FileRange->getBegin()))
       return;
     bool PadLeft = Prefix.consume_front(" ");
     bool PadRight = Suffix.consume_back(" ");
     Results.push_back(InlayHint{LSPPos, (Prefix + Label + Suffix).str(), Kind,
-                                PadLeft, PadRight, LSPRange});
+                                PadLeft, PadRight, *LSPRange});
+  }
+
+  // Get the range of the main file that *exactly* corresponds to R.
+  llvm::Optional<Range> getHintRange(SourceRange R) {
+    const auto &SM = AST.getSourceManager();
+    auto Spelled = Tokens.spelledForExpanded(Tokens.expandedTokens(R));
+    // TokenBuffer will return null if e.g. R corresponds to only part of a
+    // macro expansion.
+    if (!Spelled || Spelled->empty())
+      return llvm::None;
+    // Hint must be within the main file, not e.g. a non-preamble include.
+    if (SM.getFileID(Spelled->front().location()) != SM.getMainFileID() ||
+        SM.getFileID(Spelled->back().location()) != SM.getMainFileID())
+      return llvm::None;
+    return Range{sourceLocToPosition(SM, Spelled->front().location()),
+                 sourceLocToPosition(SM, Spelled->back().endLocation())};
   }
 
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
@@ -680,6 +678,7 @@ private:
 
   std::vector<InlayHint> &Results;
   ASTContext &AST;
+  const syntax::TokenBuffer &Tokens;
   const Config &Cfg;
   llvm::Optional<Range> RestrictRange;
   FileID MainFileID;
