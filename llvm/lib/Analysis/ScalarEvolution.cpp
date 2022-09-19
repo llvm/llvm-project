@@ -13968,6 +13968,24 @@ void ScalarEvolution::verify() const {
   };
   VerifyBECountUsers(/* Predicated */ false);
   VerifyBECountUsers(/* Predicated */ true);
+
+  // Verify intergity of loop disposition cache.
+  for (const auto &It : LoopDispositions) {
+    const SCEV *S = It.first;
+    auto &Values = It.second;
+    for (auto &V : Values) {
+      auto CachedDisposition = V.getInt();
+      const auto *Loop = V.getPointer();
+      const auto RecomputedDisposition = SE2.getLoopDisposition(S, Loop);
+      if (CachedDisposition != RecomputedDisposition) {
+        dbgs() << "Cached disposition of " << *S << " for loop " << *Loop
+               << " is incorrect: cached "
+               << loopDispositionToStr(CachedDisposition) << ", actual "
+               << loopDispositionToStr(RecomputedDisposition) << "\n";
+        std::abort();
+      }
+    }
+  }
 }
 
 bool ScalarEvolution::invalidate(
