@@ -387,6 +387,36 @@ DiagnosedSilenceableFailure transform::GetClosestIsolatedParentOp::apply(
 }
 
 //===----------------------------------------------------------------------===//
+// GetProducerOfOperand
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::GetProducerOfOperand::apply(transform::TransformResults &results,
+                                       transform::TransformState &state) {
+  int64_t operandNumber = getOperandNumber();
+  SmallVector<Operation *> producers;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    Operation *producer =
+        target->getNumOperands() <= operandNumber
+            ? nullptr
+            : target->getOperand(operandNumber).getDefiningOp();
+    if (!producer) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "could not find a producer for operand number: " << operandNumber
+          << " of " << *target;
+      diag.attachNote(target->getLoc()) << "target op";
+      results.set(getResult().cast<OpResult>(),
+                  SmallVector<mlir::Operation *>{});
+      return diag;
+    }
+    producers.push_back(producer);
+  }
+  results.set(getResult().cast<OpResult>(), producers);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // MergeHandlesOp
 //===----------------------------------------------------------------------===//
 
