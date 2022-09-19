@@ -1871,7 +1871,7 @@ private:
         std::string Brace;
         if (Token->BraceCount < 0) {
           assert(Token->BraceCount == -1);
-          Brace = "\n{";
+          Brace = Token->is(tok::comment) ? "\n{" : "{";
         } else {
           Brace = '\n' + std::string(Token->BraceCount, '}');
         }
