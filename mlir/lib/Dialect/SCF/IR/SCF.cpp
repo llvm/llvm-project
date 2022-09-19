@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -715,6 +717,24 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
   }
 };
 
+/// Util function that tries to compute a constant diff between u and l.
+/// Returns llvm::None when the difference between two AffineValueMap is
+/// dynamic.
+static Optional<int64_t> computeConstDiff(Value l, Value u) {
+  auto alb = l.getDefiningOp<AffineApplyOp>();
+  auto aub = u.getDefiningOp<AffineApplyOp>();
+  // ID map: (d0)->d0
+  auto id = AffineMap::getMultiDimIdentityMap(1, l.getContext());
+  auto lb = alb ? alb.getAffineValueMap() : AffineValueMap(id, l);
+  auto ub = aub ? aub.getAffineValueMap() : AffineValueMap(id, u);
+
+  AffineValueMap diffMap;
+  AffineValueMap::difference(ub, lb, &diffMap);
+  if (auto constDiff = diffMap.getResult(0).dyn_cast<AffineConstantExpr>())
+    return constDiff.getValue();
+  return llvm::None;
+}
+
 /// Rewriting pattern that erases loops that are known not to iterate, replaces
 /// single-iteration loops with their bodies, and removes empty loops that
 /// iterate at least once and only return values defined outside of the loop.
@@ -730,15 +750,13 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    auto lb = op.getLowerBound().getDefiningOp<arith::ConstantOp>();
-    auto ub = op.getUpperBound().getDefiningOp<arith::ConstantOp>();
-    if (!lb || !ub)
+    Optional<int64_t> diff =
+        computeConstDiff(op.getLowerBound(), op.getUpperBound());
+    if (!diff)
       return failure();
 
     // If the loop is known to have 0 iterations, remove it.
-    llvm::APInt lbValue = lb.getValue().cast<IntegerAttr>().getValue();
-    llvm::APInt ubValue = ub.getValue().cast<IntegerAttr>().getValue();
-    if (lbValue.sge(ubValue)) {
+    if (*diff <= 0) {
       rewriter.replaceOp(op, op.getIterOperands());
       return success();
     }
@@ -750,7 +768,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
     // If the loop is known to have 1 iteration, inline its body and remove the
     // loop.
     llvm::APInt stepValue = step.getValue().cast<IntegerAttr>().getValue();
-    if ((lbValue + stepValue).sge(ubValue)) {
+    if (stepValue.sge(*diff)) {
       SmallVector<Value, 4> blockArgs;
       blockArgs.reserve(op.getNumIterOperands() + 1);
       blockArgs.push_back(op.getLowerBound());
