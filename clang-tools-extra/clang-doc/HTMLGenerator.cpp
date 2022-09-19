@@ -361,13 +361,14 @@ genEnumsBlock(const std::vector<EnumInfo> &Enums,
 }
 
 static std::unique_ptr<TagNode>
-genEnumMembersBlock(const llvm::SmallVector<SmallString<16>, 4> &Members) {
+genEnumMembersBlock(const llvm::SmallVector<EnumValueInfo, 4> &Members) {
   if (Members.empty())
     return nullptr;
 
   auto List = std::make_unique<TagNode>(HTMLTag::TAG_UL);
   for (const auto &M : Members)
-    List->Children.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_LI, M));
+    List->Children.emplace_back(
+        std::make_unique<TagNode>(HTMLTag::TAG_LI, M.Name));
   return List;
 }
 
