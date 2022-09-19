@@ -307,6 +307,19 @@ void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
   DeviceOffloadKinds.push_back(OKind);
 }
 
+void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
+                                           const char *BoundArch,
+                                           unsigned OffloadKindMask) {
+  DeviceActions.push_back(&A);
+  DeviceToolChains.push_back(&TC);
+  DeviceBoundArchs.push_back(BoundArch);
+
+  // Add each active offloading kind from a mask.
+  for (OffloadKind OKind : {OFK_OpenMP, OFK_Cuda, OFK_HIP})
+    if (OKind & OffloadKindMask)
+      DeviceOffloadKinds.push_back(OKind);
+}
+
 OffloadAction::HostDependence::HostDependence(Action &A, const ToolChain &TC,
                                               const char *BoundArch,
                                               const DeviceDependences &DDeps)
