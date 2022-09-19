@@ -10234,10 +10234,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     }
   }
 
-  // Check the function attributes to see if implicit floats are allowed.
-  // FIXME: This check doesn't seem possibly correct -- what if the loop is
-  // an integer loop and the vector instructions selected are purely integer
-  // vector instructions?
+  // Check the function attributes to see if implicit floats or vectors are
+  // allowed.
   if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {
     reportVectorizationFailure(
         "Can't vectorize when the NoImplicitFloat attribute is used",
