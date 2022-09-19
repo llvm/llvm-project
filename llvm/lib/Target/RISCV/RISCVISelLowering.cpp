@@ -10041,12 +10041,11 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
 
   // And has a few special cases for zext.
   if (Opcode == ISD::AND) {
-    // Preserve (and X, 0xffff) when zext.h is supported.
-    if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp()) {
-      APInt NewMask = APInt(Mask.getBitWidth(), 0xffff);
-      if (IsLegalMask(NewMask))
-        return UseMask(NewMask);
-    }
+    // Preserve (and X, 0xffff), if zext.h exists use zext.h,
+    // otherwise use SLLI + SRLI.
+    APInt NewMask = APInt(Mask.getBitWidth(), 0xffff);
+    if (IsLegalMask(NewMask))
+      return UseMask(NewMask);
 
     // Try to preserve (and X, 0xffffffff), the (zext_inreg X, i32) pattern.
     if (VT == MVT::i64) {
