@@ -2114,9 +2114,9 @@ SDValue HexagonTargetLowering::LowerHvxFpExtend(SDValue Op,
 
 SDValue
 HexagonTargetLowering::LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
-  unsigned Opc = Op.getOpcode();
   // Catch invalid conversion ops (just in case).
-  assert(Opc == ISD::FP_TO_SINT || Opc == ISD::FP_TO_UINT);
+  assert(Op.getOpcode() == ISD::FP_TO_SINT ||
+         Op.getOpcode() == ISD::FP_TO_UINT);
 
   MVT ResTy = ty(Op);
   MVT FpTy = ty(Op.getOperand(0)).getVectorElementType();
