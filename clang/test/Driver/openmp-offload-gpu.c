@@ -258,7 +258,7 @@
 // CHECK-PHASES: 8: assembler, {7}, object, (device-openmp)
 // CHECK-PHASES: 9: offload, "device-openmp (nvptx64-nvidia-cuda)" {8}, object
 // CHECK-PHASES: 10: clang-offload-packager, {9}, image
-// CHECK-PHASES: 11: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, " (x86_64-unknown-linux-gnu)" {10}, ir
+// CHECK-PHASES: 11: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (x86_64-unknown-linux-gnu)" {10}, ir
 // CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
 // CHECK-PHASES: 13: assembler, {12}, object, (host-openmp)
 // CHECK-PHASES: 14: clang-linker-wrapper, {13}, image, (host-openmp)
