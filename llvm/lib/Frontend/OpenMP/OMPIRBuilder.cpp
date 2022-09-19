@@ -3251,7 +3251,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   unsigned TripMultiple = 0;
 
   bool UseUpperBound = false;
-  computeUnrollCount(L, TTI, DT, &LI, SE, EphValues, &ORE, TripCount,
+  computeUnrollCount(L, TTI, DT, &LI, &AC, SE, EphValues, &ORE, TripCount,
                      MaxTripCount, MaxOrZero, TripMultiple, LoopSize, UP, PP,
                      UseUpperBound);
   unsigned Factor = UP.Count;
