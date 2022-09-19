@@ -1110,7 +1110,7 @@ private:
           !Contexts.back().IsExpression && !Line.startsWith(TT_ObjCProperty) &&
           !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen) &&
           (!Tok->Previous ||
-           !Tok->Previous->isOneOf(tok::kw___attribute,
+           !Tok->Previous->isOneOf(tok::kw___attribute, TT_RequiresClause,
                                    TT_LeadingJavaAnnotation))) {
         Line.MightBeFunctionDecl = true;
       }
