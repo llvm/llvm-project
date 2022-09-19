@@ -68,7 +68,7 @@ struct ValidationOptions {
   }
 };
 
-std::unique_ptr<Pass> createTosaValidationPass(
+std::unique_ptr<OperationPass<ModuleOp>> createTosaValidationPass(
     ValidationOptions const &options = ValidationOptions());
 
 #define GEN_PASS_REGISTRATION

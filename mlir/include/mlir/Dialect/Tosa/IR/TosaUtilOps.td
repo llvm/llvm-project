@@ -79,4 +79,71 @@ def Tosa_YieldOp : Tosa_Op<"yield", [
   let assemblyFormat = "$inputs attr-dict `:` type($inputs)";
 }
 
+//===----------------------------------------------------------------------===//
+// Operator: variable
+//===----------------------------------------------------------------------===//
+def Tosa_VariableOp : Tosa_Op<"variable", []> {
+  let summary = "Defines a variable";
+
+  let description = [{
+    Defines a new TOSA variable. This is a mutable value.
+    Modifications are expressed using read/write semantics.
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$name,
+    TypeAttr:$type,
+    OptionalAttr<AnyAttr>:$initial_value
+  );
+
+  let assemblyFormat = [{
+    $name
+    attr-dict
+    custom<TypeOrAttr>($type, $initial_value)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable.write
+//===----------------------------------------------------------------------===//
+def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
+  let summary = "write_buffer operator";
+
+  let description = [{
+    Assigns a value to pseudo-buffer resource holding a mutable tensor.
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$name,
+    AnyType:$value
+  );
+
+  let assemblyFormat = [{
+    $name attr-dict `,` $value `:` type($value)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: variable.read
+//===----------------------------------------------------------------------===//
+def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
+  let summary = "read_buffer operator";
+
+  let description = [{
+    Reads the value from a pseudo-buffer resource holding a mutable tensor.
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$name
+  );
+
+  let results = (outs
+    AnyType:$value
+  );
+
+  let assemblyFormat = [{
+    $name attr-dict `:` type($value)
+  }];
+}
+
 #endif // TOSA_UTIL_OPS
