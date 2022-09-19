@@ -32,9 +32,7 @@ include "AVRRegisterInfo.td"
 
 include "AVRInstrInfo.td"
 
-def AVRInstrInfo : InstrInfo {
-  let useDeprecatedPositionallyEncodedOperands = true;
-}
+def AVRInstrInfo : InstrInfo;
 
 //===---------------------------------------------------------------------===//
 // Calling Conventions
