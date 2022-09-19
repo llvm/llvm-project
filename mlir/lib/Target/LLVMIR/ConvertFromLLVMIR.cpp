@@ -251,16 +251,9 @@ private:
 
 Location Importer::processDebugLoc(const llvm::DebugLoc &loc,
                                    llvm::Instruction *inst) {
-  if (!loc && inst) {
-    std::string s;
-    llvm::raw_string_ostream os(s);
-    os << "llvm-imported-inst-%";
-    inst->printAsOperand(os, /*PrintType=*/false);
-    return FileLineColLoc::get(context, os.str(), 0, 0);
-  }
-  if (!loc) {
+  if (!loc)
     return unknownLoc;
-  }
+
   // FIXME: Obtain the filename from DILocationInfo.
   return FileLineColLoc::get(context, "imported-bitcode", loc.getLine(),
                              loc.getCol());
