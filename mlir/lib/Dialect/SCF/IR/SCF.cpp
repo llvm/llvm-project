@@ -1244,6 +1244,61 @@ PerformConcurrentlyOp ForeachThreadOp::getTerminator() {
   return cast<PerformConcurrentlyOp>(getBody()->getTerminator());
 }
 
+template <typename T>
+static FailureOr<SmallVector<T>> permute(const SmallVector<T> &vals,
+                                         ArrayRef<int64_t> perm) {
+  if (vals.size() != perm.size())
+    return failure();
+  SmallVector<T> result(vals.size());
+  SmallVector<bool> seen(vals.size());
+  for (auto [idx, val] : llvm::zip(perm, vals)) {
+    // Already seen, invalid thread_dim_mapping.
+    if (seen[idx])
+      return failure();
+    result[idx] = val;
+    seen[idx] = true;
+  }
+  // Some not seen, invalid thread_dim_mapping.
+  if (!llvm::all_of(seen, [](bool b) { return b; }))
+    return failure();
+  return result;
+}
+
+/// Helper to get apply the `thread_dim_mapping` permutation of a
+/// `foreachThreadOp` to `values`.
+template <typename T>
+static FailureOr<SmallVector<T>>
+getValuesPermutedByThreadMapping(scf::ForeachThreadOp foreachThreadOp,
+                                 const SmallVector<T> &values) {
+  // Apply mapping permutation if specified.
+  auto mapping = foreachThreadOp.getThreadDimMapping();
+  if (mapping && !mapping.empty()) {
+    auto maybePermuted = permute(values, extractFromI64ArrayAttr(mapping));
+    if (failed(maybePermuted))
+      return foreachThreadOp->emitError("invalid permutation");
+    return *maybePermuted;
+  }
+  return values;
+}
+
+/// Return the thread indices in the order specified by the thread_dim_mapping
+/// attribute. Return failure is thread_dim_mapping is not a valid permutation.
+FailureOr<SmallVector<Value>> ForeachThreadOp::getPermutedThreadIndices() {
+  SmallVector<Value> threadCountValues = this->getThreadIndices();
+  threadCountValues.resize(3, Value());
+  return getValuesPermutedByThreadMapping(*this, threadCountValues);
+}
+
+/// Return the number of threads in the order specified by the
+/// thread_dim_mapping attribute.
+/// Return failure is thread_dim_mapping is not a valid permutation.
+FailureOr<SmallVector<OpFoldResult>>
+ForeachThreadOp::getPermutedNumThreads(OpBuilder &b) {
+  SmallVector<OpFoldResult> threadCountValues = this->getNumThreads();
+  threadCountValues.resize(3, b.getIndexAttr(1));
+  return getValuesPermutedByThreadMapping(*this, threadCountValues);
+}
+
 ForeachThreadOp mlir::scf::getForeachThreadOpThreadIndexOwner(Value val) {
   auto tidxArg = val.dyn_cast<BlockArgument>();
   if (!tidxArg)
