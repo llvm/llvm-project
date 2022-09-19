@@ -60,7 +60,6 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -265,12 +264,6 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    "async thread continue");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadDidExit,
                                    "async thread did exit");
-
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::GDBRemoteProvider &provider =
-        g->GetOrCreate<repro::GDBRemoteProvider>();
-    m_gdb_comm.SetPacketRecorder(provider.GetNewPacketRecorder());
-  }
 
   Log *log = GetLog(GDBRLog::Async);
 

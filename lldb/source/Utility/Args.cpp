@@ -687,20 +687,3 @@ void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
   if (!found_suffix)
     m_suffix = std::string(original_args);
 }
-
-void llvm::yaml::MappingTraits<Args::ArgEntry>::mapping(IO &io,
-                                                        Args::ArgEntry &v) {
-  MappingNormalization<NormalizedArgEntry, Args::ArgEntry> keys(io, v);
-  io.mapRequired("value", keys->value);
-  io.mapRequired("quote", keys->quote);
-}
-
-void llvm::yaml::MappingTraits<Args>::mapping(IO &io, Args &v) {
-  io.mapRequired("entries", v.m_entries);
-
-  // Recompute m_argv vector.
-  v.m_argv.clear();
-  for (auto &entry : v.m_entries)
-    v.m_argv.push_back(entry.data());
-  v.m_argv.push_back(nullptr);
-}

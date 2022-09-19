@@ -24,7 +24,6 @@ add_lldb_library(lldbCommands
   CommandObjectQuit.cpp
   CommandObjectRegexCommand.cpp
   CommandObjectRegister.cpp
-  CommandObjectReproducer.cpp
   CommandObjectScript.cpp
   CommandObjectSession.cpp
   CommandObjectSettings.cpp
