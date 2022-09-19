@@ -31,6 +31,19 @@
 // RUN: -fmodule-file=M.pcm -S -emit-llvm  -o - \
 // RUN: | FileCheck %s --check-prefix=CHECK-IMPL
 
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 N.cpp -S -emit-llvm \
+// RUN:   -o - | FileCheck %s --check-prefix=CHECK-N
+
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 O.cpp -S -emit-llvm \
+// RUN:   -o - | FileCheck %s --check-prefix=CHECK-O
+
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M-part.cpp -S -emit-llvm \
+// RUN:   -o - | FileCheck %s --check-prefix=CHECK-P
+
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M.cpp \
+// RUN:   -fmodule-file=N.pcm -fmodule-file=O.pcm -fmodule-file=M-part.pcm \
+// RUN:   -S -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-M
+
 //--- N-h.h
 
 struct Oink {
