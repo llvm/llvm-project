@@ -53,10 +53,17 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
       return FPBits(0x3f7f'6ad9U).get_val();
   }
 
-  auto ep = exp_eval(2.0f * (sign ? x : -x)); // exp(-2 * x)
-  double result = fputil::multiply_add(ep.mult_exp, ep.r, ep.mult_exp - 1.0) /
-                  (fputil::multiply_add(ep.mult_exp, ep.r, ep.mult_exp + 1.0));
-  return sign ? result : -result;
+  // Range reduction: e^(2x) = 2^(mid + hi) * e^lo
+  auto ep = exp_b_range_reduc<ExpBase>(2.0f * x); // exp(2 * x)
+  double r = ExpBase::powb_lo(ep.lo);
+  // tanh(x) = (exp(2x) - 1) / (exp(2x) + 1)
+#if defined(LIBC_TARGET_HAS_FMA)
+  return fputil::multiply_add(ep.mh, r, -1.0) /
+         fputil::multiply_add(ep.mh, r, 1.0);
+#else
+  double exp_x = ep.mh * r;
+  return (exp_x - 1.0) / (exp_x + 1.0);
+#endif // LIBC_TARGET_HAS_FMA
 }
 
 } // namespace __llvm_libc

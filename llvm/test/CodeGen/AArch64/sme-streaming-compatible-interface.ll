@@ -399,4 +399,35 @@ exit:
   ret void
 }
 
+define void @disable_tailcallopt() "aarch64_pstate_sm_compatible" nounwind {
+; CHECK-LABEL: disable_tailcallopt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    tbz x19, #0, .LBB9_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:  .LBB9_2:
+; CHECK-NEXT:    bl normal_callee
+; CHECK-NEXT:    tbz x19, #0, .LBB9_4
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:  .LBB9_4:
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+
+  tail call void @normal_callee();
+  ret void;
+}
+
+
 attributes #0 = { nounwind "target-features"="+sve" }

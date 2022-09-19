@@ -1404,7 +1404,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                                       m_Deferred(A)))))) {
     Value *Add =
         Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()), "",
-                          I.hasNoSignedWrap(), I.hasNoSignedWrap());
+                          I.hasNoUnsignedWrap(), I.hasNoSignedWrap());
     return BinaryOperator::CreateAnd(Add, A);
   }
 

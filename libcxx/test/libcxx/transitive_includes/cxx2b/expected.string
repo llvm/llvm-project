@@ -17,6 +17,5 @@ limits
 new
 stdexcept
 string_view
-tuple
 type_traits
 version

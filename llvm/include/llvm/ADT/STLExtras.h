@@ -252,6 +252,7 @@ void adl_swap(T &&lhs, T &&rhs) noexcept(
 
 /// Test whether \p RangeOrContainer is empty. Similar to C++17 std::empty.
 template <typename T>
+LLVM_DEPRECATED("Use x.empty() instead", "empty")
 constexpr bool empty(const T &RangeOrContainer) {
   return adl_begin(RangeOrContainer) == adl_end(RangeOrContainer);
 }
@@ -390,9 +391,9 @@ class filter_iterator_base
     : public iterator_adaptor_base<
           filter_iterator_base<WrappedIteratorT, PredicateT, IterTag>,
           WrappedIteratorT,
-          typename std::common_type<
-              IterTag, typename std::iterator_traits<
-                           WrappedIteratorT>::iterator_category>::type> {
+          std::common_type_t<IterTag,
+                             typename std::iterator_traits<
+                                 WrappedIteratorT>::iterator_category>> {
   using BaseT = typename filter_iterator_base::iterator_adaptor_base;
 
 protected:
@@ -618,9 +619,9 @@ template<typename... Iters> struct ZipTupleType {
 template <typename ZipType, typename... Iters>
 using zip_traits = iterator_facade_base<
     ZipType,
-    typename std::common_type<
+    std::common_type_t<
         std::bidirectional_iterator_tag,
-        typename std::iterator_traits<Iters>::iterator_category...>::type,
+        typename std::iterator_traits<Iters>::iterator_category...>,
     // ^ TODO: Implement random access methods.
     typename ZipTupleType<Iters...>::type,
     typename std::iterator_traits<

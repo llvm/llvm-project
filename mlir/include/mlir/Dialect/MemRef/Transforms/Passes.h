@@ -80,9 +80,9 @@ void populateSimplifyExtractStridedMetadataOpPatterns(
 ///   %d = arith.divsi %s, %c3 : index
 ///   %i = arith.remsi %d, %c5 : index
 ///   %sv = memref.subview %0[%i, 0, 0] [1, 4, 128] [1, 1, 1] :
-///     memref<5x4x128xf32> to memref<4x128xf32, #map0>
-///   memref.copy %1, %sv : memref<4x128xf32> to memref<4x128xf32, #map0>
-///   "some_use"(%sv) : (memref<4x128xf32, $map0>) -> ()
+///     memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1], offset: ?>>
+///   memref.copy %1, %sv : memref<4x128xf32> to memref<4x128xf32, strided<...>>
+///   "some_use"(%sv) : (memref<4x128xf32, strided<...>) -> ()
 /// }
 /// ```
 LogicalResult multiBuffer(memref::AllocOp allocOp, unsigned multiplier);

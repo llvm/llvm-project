@@ -1,7 +1,5 @@
 atomic
 climits
-cmath
-compare
 concepts
 cstddef
 cstdint
@@ -15,7 +13,6 @@ limits
 new
 ratio
 stdexcept
-tuple
 type_traits
 typeinfo
 version

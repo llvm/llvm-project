@@ -205,12 +205,10 @@ static void replaceIndexOpsByInductionVariables(LinalgOp linalgOp,
 template <typename LoopTy>
 static FailureOr<LinalgLoops> linalgOpToLoopsImpl(PatternRewriter &rewriter,
                                                   LinalgOp linalgOp) {
-  using LoadOpTy =
-      typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
-                                AffineLoadOp, memref::LoadOp>::type;
-  using StoreOpTy =
-      typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
-                                AffineStoreOp, memref::StoreOp>::type;
+  using LoadOpTy = std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
+                                      AffineLoadOp, memref::LoadOp>;
+  using StoreOpTy = std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
+                                       AffineStoreOp, memref::StoreOp>;
 
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (which is asserted in the inverse calculation).

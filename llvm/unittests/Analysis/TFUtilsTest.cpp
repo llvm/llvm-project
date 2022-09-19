@@ -57,7 +57,7 @@ TEST(TFUtilsTest, LoadAndExecuteTest) {
   }
   {
     auto ER = Evaluator.evaluate();
-    EXPECT_TRUE(ER.hasValue());
+    EXPECT_TRUE(ER.has_value());
     float Ret = *ER->getTensorValue<float>(0);
     EXPECT_EQ(static_cast<int64_t>(Ret), 80);
     EXPECT_EQ(ER->getUntypedTensorValue(0),
@@ -72,7 +72,7 @@ TEST(TFUtilsTest, LoadAndExecuteTest) {
   V[9] = 0;
   {
     auto ER = Evaluator.evaluate();
-    EXPECT_TRUE(ER.hasValue());
+    EXPECT_TRUE(ER.has_value());
     float Ret = *ER->getTensorValue<float>(0);
     EXPECT_EQ(static_cast<int64_t>(Ret), 80);
   }

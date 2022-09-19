@@ -30,8 +30,8 @@ def lit_test(
 
     native.py_test(
         name = name,
-        srcs = ["//llvm:lit"],
-        main = "//llvm:utils/lit/lit.py",
+        srcs = [Label("//llvm:lit")],
+        main = Label("//llvm:utils/lit/lit.py"),
         args = args + ["-v"] + ["$(execpath %s)" % src for src in srcs],
         data = data + srcs,
         legacy_create_init = False,

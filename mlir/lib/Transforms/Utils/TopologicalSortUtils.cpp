@@ -8,7 +8,6 @@
 
 #include "mlir/Transforms/TopologicalSortUtils.h"
 #include "mlir/IR/OpDefinition.h"
-#include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
 

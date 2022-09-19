@@ -140,3 +140,16 @@ define signext i32 @andi_srliw(i32 signext %0, ptr %1, i32 signext %2) {
   %6 = add i32 %4, %2
   ret i32 %6
 }
+
+define i32 @and_or(i32 signext %x) {
+; CHECK-LABEL: and_or:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ori a0, a0, 255
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srli a0, a0, 48
+; CHECK-NEXT:    ret
+entry:
+  %and = and i32 %x, 65280
+  %or = or i32 %and, 255
+  ret i32 %or
+}

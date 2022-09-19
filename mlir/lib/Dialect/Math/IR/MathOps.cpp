@@ -171,6 +171,24 @@ OpFoldResult math::CtPopOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// ErfOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::ErfOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(erf(a.convertToDouble()));
+        case 32:
+          return APFloat(erff(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // IPowIOp folder
 //===----------------------------------------------------------------------===//
 

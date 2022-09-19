@@ -372,6 +372,7 @@ def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
     %a = math.erf %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 

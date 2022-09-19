@@ -2,7 +2,6 @@
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "llvm/ADT/StringSwitch.h"
 using namespace clang;
 
 int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,

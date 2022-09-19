@@ -295,8 +295,20 @@ def note_missing_selector_name : Note<
 def note_force_empty_selector_name : Note<
   "or insert whitespace before ':' to use %0 as parameter name "
   "and have an empty entry in the selector">;
-def err_label_end_of_compound_statement : Error<
-  "label at end of compound statement: expected statement">;
+def err_switch_label_end_of_compound_statement : Error<
+  "label at end of switch compound statement: expected statement">;
+def ext_c_label_end_of_compound_statement : ExtWarn<
+  "label at end of compound statement is a C2x extension">,
+   InGroup<C2x>;
+def ext_cxx_label_end_of_compound_statement : ExtWarn<
+  "label at end of compound statement is a C++2b extension">,
+   InGroup<CXX2b>;
+def warn_c2x_compat_label_end_of_compound_statement : Warning<
+  "label at end of compound statement is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
+def warn_cxx20_compat_label_end_of_compound_statement : Warning<
+  "label at end of compound statement is incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
 def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<

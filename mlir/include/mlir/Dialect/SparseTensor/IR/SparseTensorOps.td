@@ -232,6 +232,35 @@ def SparseTensor_InsertOp : SparseTensor_Op<"insert", []>,
                        " type($tensor) `,` type($indices) `,` type($value)";
 }
 
+def SparseTensor_PushBackOp : SparseTensor_Op<"push_back", []>,
+    Arguments<(ins StridedMemRefRankOf<[Index], [1]>:$bufferSizes,
+               StridedMemRefRankOf<[AnyType], [1]>:$inBuffer,
+               AnyType:$value, IndexAttr:$idx)>,
+    Results<(outs StridedMemRefRankOf<[AnyType], [1]>:$outBuffer)>  {
+  string summary = "Pushes a value to the back of a given buffer";
+  string description = [{
+    Push `value` to the end of the given sparse tensor storage buffer
+    `inBuffer` and update the size of the buffer in `bufferSizes[idx]`. The
+    capacity of the buffer is recorded in the memref type of `inBuffer `. If the
+    current buffer is full, then `inBuffer.realloc` is called before pushing the
+    data to the buffer. This is similar to std::vector push_back.
+
+    The operation returns an SSA value for the memref. Referencing the memref
+    through the old SSA value after this operation is undefined behavior.
+
+    Example:
+
+    ```mlir
+    %r = sparse_tensor.push_back %bufferSizes, %buffer, %val {idx = 0 : index}
+      : memref<?xindex>, memref<?xf64>, f64 -> memref<?xf64>
+    ```
+  }];
+  let assemblyFormat = "$bufferSizes `,` $inBuffer `,` $value"
+                       " attr-dict `:` type($bufferSizes) `,`"
+                       " type($inBuffer) `,` type($value) `to`"
+                       " type($outBuffer)";
+}
+
 def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
     Arguments<(ins AnySparseTensor:$tensor)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$values,

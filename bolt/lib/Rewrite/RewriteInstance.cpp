@@ -1152,7 +1152,6 @@ void RewriteInstance::discoverFileObjects() {
                << Twine::utohexstr(Address) << ") does not have any section\n";
         continue;
       }
-      assert(Section && "section for functions must be registered");
 
       // Skip symbols from zero-sized sections.
       if (!Section->getSize())

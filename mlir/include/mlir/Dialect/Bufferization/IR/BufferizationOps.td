@@ -355,8 +355,8 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     Casts a tensor to a memref.
 
     ```mlir
-    // Result type is memref<4x?xf32, #map0, 42>
-    %12 = bufferization.to_memref %10 : memref<4x?xf32, #map0, 42>
+    // Result type is memref<4x?xf32, #layout, 42>
+    %12 = bufferization.to_memref %10 : memref<4x?xf32, #layout, 42>
     ```
 
     Note, that mutating the result of the `to_memref` operation leads to

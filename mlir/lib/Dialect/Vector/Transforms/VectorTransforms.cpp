@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
@@ -602,7 +603,7 @@ struct ContractOpToElementwise
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
     // TODO: implement masks
-    if (llvm::size(contractOp.getMasks()) != 0)
+    if (!contractOp.getMasks().empty())
       return failure();
 
     if (failed(filter(contractOp)))
@@ -1357,7 +1358,7 @@ LogicalResult
 ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
                                                  PatternRewriter &rew) const {
   // TODO: implement masks
-  if (llvm::size(op.getMasks()) != 0)
+  if (!op.getMasks().empty())
     return failure();
   if (vectorTransformOptions.vectorContractLowering !=
       vector::VectorContractLowering::Matmul)
@@ -1610,7 +1611,7 @@ private:
 LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
     vector::ContractionOp op, PatternRewriter &rewriter) const {
   // TODO: implement masks
-  if (llvm::size(op.getMasks()) != 0)
+  if (!op.getMasks().empty())
     return failure();
 
   if (vectorTransformOptions.vectorContractLowering !=
@@ -1644,7 +1645,7 @@ LogicalResult
 ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
                                             PatternRewriter &rewriter) const {
   // TODO: implement masks
-  if (llvm::size(op.getMasks()) != 0)
+  if (!op.getMasks().empty())
     return failure();
 
   if (failed(filter(op)))
@@ -1776,7 +1777,7 @@ LogicalResult
 ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
                                        PatternRewriter &rewriter) const {
   // TODO: implement masks.
-  if (llvm::size(op.getMasks()) != 0)
+  if (!op.getMasks().empty())
     return failure();
 
   if (failed(filter(op)))
@@ -2516,8 +2517,7 @@ public:
     if (!xferOp.hasOutOfBoundsDim())
       return failure();
 
-    if (xferOp.getVectorType().getRank() > 1 ||
-        llvm::size(xferOp.getIndices()) == 0)
+    if (xferOp.getVectorType().getRank() > 1 || xferOp.getIndices().empty())
       return failure();
 
     Location loc = xferOp->getLoc();
@@ -2631,22 +2631,29 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
                         targetType.getElementType());
 
     MemRefType resultMemrefType;
-    if (srcType.getLayout().getAffineMap().isIdentity()) {
+    MemRefLayoutAttrInterface layout = srcType.getLayout();
+    if (layout.isa<AffineMapAttr>() && layout.isIdentity()) {
       resultMemrefType = MemRefType::get(
           srcType.getShape().drop_back(dimsToDrop), srcType.getElementType(),
-          {}, srcType.getMemorySpaceAsInt());
+          nullptr, srcType.getMemorySpace());
     } else {
-      AffineMap map = srcType.getLayout().getAffineMap();
-      int numSymbols = map.getNumSymbols();
-      for (size_t i = 0; i < dimsToDrop; ++i) {
-        int dim = srcType.getRank() - i - 1;
-        map = map.replace(rewriter.getAffineDimExpr(dim),
-                          rewriter.getAffineConstantExpr(0),
-                          map.getNumDims() - 1, numSymbols);
+      MemRefLayoutAttrInterface updatedLayout;
+      if (auto strided = layout.dyn_cast<StridedLayoutAttr>()) {
+        auto strides = llvm::to_vector(strided.getStrides().drop_back(dimsToDrop));
+        updatedLayout = StridedLayoutAttr::get(strided.getContext(), strided.getOffset(), strides);
+      } else {
+        AffineMap map = srcType.getLayout().getAffineMap();
+        int numSymbols = map.getNumSymbols();
+        for (size_t i = 0; i < dimsToDrop; ++i) {
+          int dim = srcType.getRank() - i - 1;
+          map = map.replace(rewriter.getAffineDimExpr(dim),
+                            rewriter.getAffineConstantExpr(0),
+                            map.getNumDims() - 1, numSymbols);
+        }
       }
       resultMemrefType = MemRefType::get(
           srcType.getShape().drop_back(dimsToDrop), srcType.getElementType(),
-          map, srcType.getMemorySpaceAsInt());
+          updatedLayout, srcType.getMemorySpace());
     }
 
     auto loc = readOp.getLoc();
