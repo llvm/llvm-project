@@ -660,7 +660,7 @@ ReprocessLoop:
         // The loop disposition of all SCEV expressions that depend on any
         // hoisted values have also changed.
         if (SE)
-          SE->forgetLoopDispositions(L);
+          SE->forgetLoopDispositions();
       }
       if (!AllInvariant) continue;
 
