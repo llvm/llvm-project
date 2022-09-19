@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fvisibility hidden "-triple" "x86_64-apple-macos11.0" -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fvisibility hidden "-triple" "x86_64-apple-macos10.15" -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-OLD %s
+// RUN: %clang_cc1 -fvisibility=hidden "-triple" "x86_64-apple-macos11.0" -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fvisibility=hidden "-triple" "x86_64-apple-macos10.15" -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-OLD %s
 
 __attribute__((availability(macos,introduced=10.16)))
 void f0(void);
