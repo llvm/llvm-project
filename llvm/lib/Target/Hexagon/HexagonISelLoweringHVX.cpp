@@ -163,6 +163,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setIndexedLoadAction(ISD::POST_INC,  T, Legal);
     setIndexedStoreAction(ISD::POST_INC, T, Legal);
 
+    setOperationAction(ISD::ABS,            T, Legal);
     setOperationAction(ISD::AND,            T, Legal);
     setOperationAction(ISD::OR,             T, Legal);
     setOperationAction(ISD::XOR,            T, Legal);
@@ -257,6 +258,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::STORE,    T, Custom);
     setOperationAction(ISD::MLOAD,    T, Custom);
     setOperationAction(ISD::MSTORE,   T, Custom);
+    setOperationAction(ISD::ABS,      T, Custom);
     setOperationAction(ISD::CTLZ,     T, Custom);
     setOperationAction(ISD::CTTZ,     T, Custom);
     setOperationAction(ISD::CTPOP,    T, Custom);
@@ -2407,6 +2409,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
         if (ty(Op).getSizeInBits() == ty(Op.getOperand(0)).getSizeInBits())
           return opJoin(SplitVectorOp(Op, DAG), SDLoc(Op), DAG);
         break;
+      case ISD::ABS:
       case ISD::CTPOP:
       case ISD::CTLZ:
       case ISD::CTTZ:
