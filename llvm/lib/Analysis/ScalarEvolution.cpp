@@ -13976,6 +13976,9 @@ void ScalarEvolution::verify() const {
     for (auto &V : Values) {
       auto CachedDisposition = V.getInt();
       const auto *Loop = V.getPointer();
+      // TODO: Make sure LoopDispositions contains no invalid loops.
+      if (!ValidLoops.contains(Loop))
+        continue;
       const auto RecomputedDisposition = SE2.getLoopDisposition(S, Loop);
       if (CachedDisposition != RecomputedDisposition) {
         dbgs() << "Cached disposition of " << *S << " for loop " << *Loop
