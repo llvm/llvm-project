@@ -31,13 +31,9 @@ define i64 @var_cttz_i64(i64 %a) {
 }
 
 define i64 @var_cttz_i64u(i64 %a) {
-; NOBMI-LABEL: 'var_cttz_i64u'
-; NOBMI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cttz = call i64 @llvm.cttz.i64(i64 %a, i1 true)
-; NOBMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %cttz
-;
-; BMI-LABEL: 'var_cttz_i64u'
-; BMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cttz = call i64 @llvm.cttz.i64(i64 %a, i1 true)
-; BMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %cttz
+; CHECK-LABEL: 'var_cttz_i64u'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cttz = call i64 @llvm.cttz.i64(i64 %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i64 %cttz
 ;
   %cttz = call i64 @llvm.cttz.i64(i64 %a, i1 1)
   ret i64 %cttz
@@ -57,13 +53,9 @@ define i32 @var_cttz_i32(i32 %a) {
 }
 
 define i32 @var_cttz_i32u(i32 %a) {
-; NOBMI-LABEL: 'var_cttz_i32u'
-; NOBMI-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %cttz = call i32 @llvm.cttz.i32(i32 %a, i1 true)
-; NOBMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %cttz
-;
-; BMI-LABEL: 'var_cttz_i32u'
-; BMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cttz = call i32 @llvm.cttz.i32(i32 %a, i1 true)
-; BMI-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %cttz
+; CHECK-LABEL: 'var_cttz_i32u'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %cttz = call i32 @llvm.cttz.i32(i32 %a, i1 true)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 %cttz
 ;
   %cttz = call i32 @llvm.cttz.i32(i32 %a, i1 1)
   ret i32 %cttz
