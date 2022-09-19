@@ -1,7 +1,4 @@
 ; RUN: opt -S -loop-fusion < %s 2>&1 | FileCheck %s
-; XFAIL: *
-; REQUIRES: asserts
-; Fails due to incorrect cached loop disposition.
 
 ; Verify that LoopFusion can fuse two double-loop nests with guarded inner
 ; loops. Loops are in canonical form.
