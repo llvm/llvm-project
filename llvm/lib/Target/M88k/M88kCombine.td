@@ -83,10 +83,13 @@ def addsub_from_addicmp : GICombineRule<
 // with SrcB' and SrcC' derived from SrcB and SrcC, inserting a zero constant
 // value if necessary.
 def subsub_from_subicmp : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_SUB):$root,
-         [{ return matchSubSubFromSubICmp(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
+  (match (G_ICMP $icmp, $cc, $srcb, $srcc):$icmpmi,
+         (G_ZEXT $zext, $icmp),
+         (G_SUB $dst, $srca, $zext):$submi,
+         [{ return matchSubSubFromSubICmp(*${submi}, *${icmpmi}, MRI,
+                                          ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${submi}, ${matchinfo}); }])>;
 
 // Combine
 //  Dst = G_SUB SrcA, (G_ZEXT (G_ICMP Pred, SrcB, SrcC)
@@ -99,10 +102,11 @@ def subsub_from_subicmp : GICombineRule<
 // with SrcB' and SrcC' derived from SrcB and SrcC.
 def subadd_from_subicmp : GICombineRule<
   (defs root:$dst, build_fn_matchinfo:$matchinfo),
-  (match //(G_ICMP $icmp, $cc, $src2, $src3),
+  (match (G_ICMP $icmp, $cc, $srcb, $srcc):$icmpmi,
          (G_ZEXT $zext, $icmp),
-         (G_SUB $dst, $src1, $zext):$submi,
-         [{ return matchSubAddFromSubICmp(*${submi}, MRI, ${matchinfo}); }]),
+         (G_SUB $dst, $srca, $zext):$submi,
+         [{ return matchSubAddFromSubICmp(*${submi}, *${icmpmi}, MRI,
+                                          ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${submi}, ${matchinfo}); }])>;
 
 // Combine

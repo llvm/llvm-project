@@ -115,21 +115,18 @@ bool matchAddSubFromAddICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
 //  Dst, UnusedCarry = G_USUBE SrcA, Zero, Carry
 // with SrcB' and SrcC' derived from SrcB and SrcC, inserting a zero constant
 // value if necessary.
-bool matchSubSubFromSubICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
+bool matchSubSubFromSubICmp(MachineInstr &SubMI, MachineInstr &ICmpMI, MachineRegisterInfo &MRI,
                             BuildFnTy &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_SUB);
+  assert(SubMI.getOpcode() == TargetOpcode::G_SUB);
+  assert(ICmpMI.getOpcode() == TargetOpcode::G_ICMP);
 
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcRegA;
-  Register SrcRegB;
-  Register SrcRegC;
+  Register DstReg = SubMI.getOperand(0).getReg();
+  Register SrcRegA = SubMI.getOperand(1).getReg();
+  CmpInst::Predicate Pred =
+      static_cast<CmpInst::Predicate>(ICmpMI.getOperand(1).getPredicate());
+  Register SrcRegB = ICmpMI.getOperand(2).getReg();
+  Register SrcRegC = ICmpMI.getOperand(3).getReg();
   Register ZeroReg;
-  CmpInst::Predicate Pred;
-  if (!mi_match(
-          MI, MRI,
-          m_GSub(m_Reg(SrcRegA), m_GZExt(m_GICmp(m_Pred(Pred), m_Reg(SrcRegB),
-                                                 m_Reg(SrcRegC))))))
-    return false;
 
   switch (Pred) {
   case CmpInst::ICMP_UGT:
@@ -167,30 +164,27 @@ bool matchSubSubFromSubICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-// Match
+// Given a match
 //  Dst = G_SUB SrcA, (G_ZEXT (G_ICMP Pred, SrcB, SrcC)
-// with:
+// check:
 //  - Pred = signed >= and SrcC equals zero
 //  - Pred = signed <=  and SrcB equals zero
 // The returned MatchInfo transforms this sequence into
 //  Unused, Carry = G_UADDO SrcB', SrcC'
 //  Dst, UnusedCarry = G_USUBE SrcA, Zero, Carry
 // with SrcB' and SrcC' derived from SrcB and SrcC.
-bool matchSubAddFromSubICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             BuildFnTy &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_SUB);
+bool matchSubAddFromSubICmp(MachineInstr &SubMI, MachineInstr &ICmpMI,
+                            MachineRegisterInfo &MRI, BuildFnTy &MatchInfo) {
+  assert(SubMI.getOpcode() == TargetOpcode::G_SUB);
+  assert(ICmpMI.getOpcode() == TargetOpcode::G_ICMP);
 
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcRegA;
-  Register SrcRegB;
-  Register SrcRegC;
+  Register DstReg = SubMI.getOperand(0).getReg();
+  Register SrcRegA = SubMI.getOperand(1).getReg();
+  CmpInst::Predicate Pred =
+      static_cast<CmpInst::Predicate>(ICmpMI.getOperand(1).getPredicate());
+  Register SrcRegB = ICmpMI.getOperand(2).getReg();
+  Register SrcRegC = ICmpMI.getOperand(3).getReg();
   Register ZeroReg;
-  CmpInst::Predicate Pred;
-  if (!mi_match(
-          MI, MRI,
-          m_GSub(m_Reg(SrcRegA), m_GZExt(m_GICmp(m_Pred(Pred), m_Reg(SrcRegB),
-                                                 m_Reg(SrcRegC))))))
-    return false;
 
   switch (Pred) {
   case CmpInst::ICMP_SGE:
