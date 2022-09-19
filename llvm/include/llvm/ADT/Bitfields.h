@@ -96,7 +96,7 @@ template <typename T, unsigned Bits> struct BitPatterns {
   /// undefined operations over signed types (e.g. Bitwise shift operators).
   /// Moreover same size casting from unsigned to signed is well defined but not
   /// the other way around.
-  using Unsigned = typename std::make_unsigned<T>::type;
+  using Unsigned = std::make_unsigned_t<T>;
   static_assert(sizeof(Unsigned) == sizeof(T), "Types must have same size");
 
   static constexpr unsigned TypeBits = sizeof(Unsigned) * CHAR_BIT;
