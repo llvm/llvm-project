@@ -44,4 +44,21 @@ spv.module Physical64 OpenCL requires #spv.vce<v1.0, [Kernel, Addresses], []> {
     %13 = spv.CL.fma %arg0, %arg1, %arg2 : f32
     spv.Return
   }
+
+  spv.func @maxmin(%arg0 : f32, %arg1 : f32, %arg2 : i32, %arg3 : i32) "None" {
+    // CHECK: {{%.*}} = spv.CL.fmax {{%.*}}, {{%.*}} : f32
+    %1 = spv.CL.fmax %arg0, %arg1 : f32
+    // CHECK: {{%.*}} = spv.CL.s_max {{%.*}}, {{%.*}} : i32
+    %2 = spv.CL.s_max %arg2, %arg3 : i32
+    // CHECK: {{%.*}} = spv.CL.u_max {{%.*}}, {{%.*}} : i32
+    %3 = spv.CL.u_max %arg2, %arg3 : i32
+
+    // CHECK: {{%.*}} = spv.CL.fmin {{%.*}}, {{%.*}} : f32
+    %4 = spv.CL.fmin %arg0, %arg1 : f32
+    // CHECK: {{%.*}} = spv.CL.s_min {{%.*}}, {{%.*}} : i32
+    %5 = spv.CL.s_min %arg2, %arg3 : i32
+    // CHECK: {{%.*}} = spv.CL.u_min {{%.*}}, {{%.*}} : i32
+    %6 = spv.CL.u_min %arg2, %arg3 : i32
+    spv.Return
+  }
 }
