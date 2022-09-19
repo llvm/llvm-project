@@ -28,6 +28,14 @@ bool is_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress);
 // wait for signal to turn to success
 hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
                              hsa_signal_value_t success);
+hsa_status_t wait_for_signal_kernel(hsa_signal_t signal,
+                                    hsa_signal_value_t init,
+                                    hsa_signal_value_t success);
+hsa_status_t wait_for_signal_data(hsa_signal_t signal, hsa_signal_value_t init,
+                                  hsa_signal_value_t success);
+hsa_status_t wait_for_signal_active(hsa_signal_t signal,
+                                    hsa_signal_value_t init,
+                                    hsa_signal_value_t success);
 
 hsa_status_t impl_module_register_from_memory_to_place(
     void *module_bytes, size_t module_size, int DeviceId,

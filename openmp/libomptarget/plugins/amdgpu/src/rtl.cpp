@@ -1475,7 +1475,7 @@ public:
       return HSA_STATUS_SUCCESS;
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
-    hsa_status_t err = wait_for_signal(signal, init, success);
+    hsa_status_t err = wait_for_signal_data(signal, init, success);
     OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(signal););
 
     // Now that the operation is complete, copy data from PoolPtr
@@ -1552,7 +1552,7 @@ public:
   hsa_status_t waitToComplete() {
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
-    hsa_status_t err = wait_for_signal(signal, init, success);
+    hsa_status_t err = wait_for_signal_kernel(signal, init, success);
     OMPT_IF_TRACING_ENABLED(recordKernelTimingInNs(signal, agent););
     DeviceInfo().FreeSignalPool.push(signal);
     assert(ArgPool);
@@ -1716,7 +1716,6 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::waitForKernelCompletion() {
 void AMDGPUAsyncInfoQueueTy::waitForMapExiting() {
   if (!hasMapExitingInfo)
     return;
-
   for (auto &&s : mapExitingInfo)
     s.waitToComplete();
 }
