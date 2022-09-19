@@ -5321,6 +5321,7 @@ void RewriteInstance::rewriteFile() {
       assert(llvm::all_of(Function->getLayout().getSplitFragments(),
                           HasNoAddress) &&
              "Some split fragments have an address while others do not");
+      (void)HasNoAddress;
       continue;
     }
 
