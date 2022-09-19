@@ -483,7 +483,7 @@ SDValue
 HexagonTargetLowering::opJoin(const VectorPair &Ops, const SDLoc &dl,
                               SelectionDAG &DAG) const {
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, typeJoin(ty(Ops)),
-                     Ops.second, Ops.first);
+                     Ops.first, Ops.second);
 }
 
 HexagonTargetLowering::VectorPair
@@ -2096,37 +2096,37 @@ HexagonTargetLowering::LowerHvxConvertFpInt(SDValue Op, SelectionDAG &DAG)
   return SDValue();
 }
 
-SDValue
-HexagonTargetLowering::SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const {
+HexagonTargetLowering::VectorPair
+HexagonTargetLowering::SplitVectorOp(SDValue Op, SelectionDAG &DAG) const {
   assert(!Op.isMachineOpcode());
-  SmallVector<SDValue,2> OpsL, OpsH;
+  SmallVector<SDValue, 2> OpsL, OpsH;
   const SDLoc &dl(Op);
 
-  auto SplitVTNode = [&DAG,this] (const VTSDNode *N) {
+  auto SplitVTNode = [&DAG, this](const VTSDNode *N) {
     MVT Ty = typeSplit(N->getVT().getSimpleVT()).first;
     SDValue TV = DAG.getValueType(Ty);
     return std::make_pair(TV, TV);
   };
 
   for (SDValue A : Op.getNode()->ops()) {
-    VectorPair P = Subtarget.isHVXVectorType(ty(A), true)
-                    ? opSplit(A, dl, DAG)
-                    : std::make_pair(A, A);
+    auto [Lo, Hi] =
+        ty(A).isVector() ? opSplit(A, dl, DAG) : std::make_pair(A, A);
     // Special case for type operand.
-    if (Op.getOpcode() == ISD::SIGN_EXTEND_INREG) {
-      if (const auto *N = dyn_cast<const VTSDNode>(A.getNode()))
-        P = SplitVTNode(N);
+    switch (Op.getOpcode()) {
+      case ISD::SIGN_EXTEND_INREG:
+        if (const auto *N = dyn_cast<const VTSDNode>(A.getNode()))
+          std::tie(Lo, Hi) = SplitVTNode(N);
+      break;
     }
-    OpsL.push_back(P.first);
-    OpsH.push_back(P.second);
+    OpsL.push_back(Lo);
+    OpsH.push_back(Hi);
   }
 
   MVT ResTy = ty(Op);
   MVT HalfTy = typeSplit(ResTy).first;
   SDValue L = DAG.getNode(Op.getOpcode(), dl, HalfTy, OpsL);
   SDValue H = DAG.getNode(Op.getOpcode(), dl, HalfTy, OpsH);
-  SDValue S = DAG.getNode(ISD::CONCAT_VECTORS, dl, ResTy, L, H);
-  return S;
+  return {L, H};
 }
 
 SDValue
@@ -2261,7 +2261,7 @@ HexagonTargetLowering::WidenHvxStore(SDValue Op, SelectionDAG &DAG) const {
   assert(isPowerOf2_32(ValueLen));
 
   for (unsigned Len = ValueLen; Len < HwLen; ) {
-    Value = opJoin({DAG.getUNDEF(ty(Value)), Value}, dl, DAG);
+    Value = opJoin({Value, DAG.getUNDEF(ty(Value))}, dl, DAG);
     Len = ty(Value).getVectorNumElements(); // This is Len *= 2
   }
   assert(ty(Value).getVectorNumElements() == HwLen);  // Paranoia
@@ -2405,7 +2405,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::FP_TO_SINT:
       case ISD::FP_TO_UINT:
         if (ty(Op).getSizeInBits() == ty(Op.getOperand(0)).getSizeInBits())
-          return SplitHvxPairOp(Op, DAG);
+          return opJoin(SplitVectorOp(Op, DAG), SDLoc(Op), DAG);
         break;
       case ISD::CTPOP:
       case ISD::CTLZ:
@@ -2434,7 +2434,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::ZERO_EXTEND:
       case ISD::SIGN_EXTEND_INREG:
       case ISD::SPLAT_VECTOR:
-        return SplitHvxPairOp(Op, DAG);
+        return opJoin(SplitVectorOp(Op, DAG), SDLoc(Op), DAG);
     }
   }
 
