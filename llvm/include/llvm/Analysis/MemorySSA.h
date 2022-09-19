@@ -1245,31 +1245,24 @@ private:
     CurrentPair.first = *DefIterator;
     CurrentPair.second = Location;
     if (WalkingPhi && Location.Ptr) {
-      // Mark size as unknown, if the location is not guaranteed to be
-      // loop-invariant for any possible loop in the function. Setting the size
-      // to unknown guarantees that any memory accesses that access locations
-      // after the pointer are considered as clobbers, which is important to
-      // catch loop carried dependences.
-      if (!IsGuaranteedLoopInvariant(Location.Ptr))
-        CurrentPair.second =
-            Location.getWithNewSize(LocationSize::beforeOrAfterPointer());
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
 
       if (!Translator.PHITranslateValue(OriginalAccess->getBlock(),
-                                        DefIterator.getPhiArgBlock(), DT,
-                                        true)) {
-        Value *TransAddr = Translator.getAddr();
-        if (TransAddr != Location.Ptr) {
-          CurrentPair.second = CurrentPair.second.getWithNewPtr(TransAddr);
+                                        DefIterator.getPhiArgBlock(), DT, true))
+        if (Translator.getAddr() != CurrentPair.second.Ptr)
+          CurrentPair.second =
+              CurrentPair.second.getWithNewPtr(Translator.getAddr());
 
-          if (TransAddr &&
-              !IsGuaranteedLoopInvariant(TransAddr))
-            CurrentPair.second = CurrentPair.second.getWithNewSize(
-                LocationSize::beforeOrAfterPointer());
-        }
-      }
+      // Mark size as unknown, if the location is not guaranteed to be
+      // loop-invariant for any possible loop in the function. Setting the size
+      // to unknown guarantees that any memory accesses that access locations
+      // after the pointer are considered as clobbers, which is important to
+      // catch loop carried dependences.
+      if (!IsGuaranteedLoopInvariant(CurrentPair.second.Ptr))
+        CurrentPair.second = CurrentPair.second.getWithNewSize(
+            LocationSize::beforeOrAfterPointer());
     }
   }
 
