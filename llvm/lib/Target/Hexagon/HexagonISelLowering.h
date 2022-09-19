@@ -57,6 +57,8 @@ enum NodeType : unsigned {
   VASR,
   VLSR,
 
+  SSAT,        // Signed saturate.
+  USAT,        // Unsigned saturate.
   TSTBIT,
   INSERT,
   EXTRACTU,
@@ -405,6 +407,9 @@ private:
   TypePair typeSplit(MVT Ty) const;
   MVT typeExtElem(MVT VecTy, unsigned Factor) const;
   MVT typeTruncElem(MVT VecTy, unsigned Factor) const;
+  TypePair typeExtendToWider(MVT Ty0, MVT Ty1) const;
+  TypePair typeWidenToWider(MVT Ty0, MVT Ty1) const;
+  MVT typeLegalize(MVT Ty, SelectionDAG &DAG) const;
 
   SDValue opJoin(const VectorPair &Ops, const SDLoc &dl,
                  SelectionDAG &DAG) const;
@@ -453,6 +458,12 @@ private:
                               bool ZeroExt, SelectionDAG &DAG) const;
   SDValue compressHvxPred(SDValue VecQ, const SDLoc &dl, MVT ResTy,
                           SelectionDAG &DAG) const;
+  SDValue resizeToWidth(SDValue VecV, MVT ResTy, bool Signed, const SDLoc &dl,
+                        SelectionDAG &DAG) const;
+  VectorPair emitHvxAddWithOverflow(SDValue A, SDValue B, const SDLoc &dl,
+                                    bool Signed, SelectionDAG &DAG) const;
+  VectorPair emitHvxShiftRightRnd(SDValue Val, unsigned Amt, bool Signed,
+                                  SelectionDAG &DAG) const;
 
   SDValue LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxSplatVector(SDValue Op, SelectionDAG &DAG) const;
@@ -474,7 +485,10 @@ private:
   SDValue LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerHvxConvertFpInt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
 
   VectorPair SplitVectorOp(SDValue Op, SelectionDAG &DAG) const;
 
@@ -484,11 +498,15 @@ private:
   SDValue WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const;
+  SDValue WidenHvxFpIntConv(SDValue Op, SelectionDAG &DAG) const;
+  SDValue ExpandHvxResizeIntoSteps(SDValue Op, SelectionDAG &DAG) const;
+  SDValue EqualizeFpIntConversion(SDValue Op, SelectionDAG &DAG) const;
 
   std::pair<const TargetRegisterClass*, uint8_t>
   findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
       const override;
 
+  bool shouldSplitToHvx(MVT Ty, SelectionDAG &DAG) const;
   bool shouldWidenToHvx(MVT Ty, SelectionDAG &DAG) const;
   bool isHvxOperation(SDNode *N, SelectionDAG &DAG) const;
   SDValue LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const;
