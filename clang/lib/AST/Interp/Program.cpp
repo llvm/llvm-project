@@ -208,19 +208,6 @@ Function *Program::getFunction(const FunctionDecl *F) {
   return It == Funcs.end() ? nullptr : It->second.get();
 }
 
-llvm::Expected<Function *> Program::getOrCreateFunction(const FunctionDecl *F) {
-  if (Function *Func = getFunction(F)) {
-    return Func;
-  }
-
-  // Try to compile the function if it wasn't compiled yet.
-  if (const FunctionDecl *FD = F->getDefinition())
-    return ByteCodeStmtGen<ByteCodeEmitter>(Ctx, *this).compileFunc(FD);
-
-  // A relocation which traps if not resolved.
-  return nullptr;
-}
-
 Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Use the actual definition as a key.
   RD = RD->getDefinition();
