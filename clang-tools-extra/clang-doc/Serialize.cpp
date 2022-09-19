@@ -182,6 +182,13 @@ std::string ClangDocCommentVisitor::getCommandName(unsigned CommandID) const {
 
 // Serializing functions.
 
+std::string getSourceCode(const Decl *D, const SourceRange &R) {
+  return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
+                              D->getASTContext().getSourceManager(),
+                              D->getASTContext().getLangOpts())
+      .str();
+}
+
 template <typename T> static std::string serialize(T &I) {
   SmallString<2048> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
@@ -305,8 +312,15 @@ static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
 }
 
 static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
-  for (const EnumConstantDecl *E : D->enumerators())
-    I.Members.emplace_back(E->getNameAsString());
+  for (const EnumConstantDecl *E : D->enumerators()) {
+    std::string ValueExpr;
+    if (const Expr *InitExpr = E->getInitExpr())
+      ValueExpr = getSourceCode(D, InitExpr->getSourceRange());
+
+    SmallString<16> ValueStr;
+    E->getInitVal().toString(ValueStr);
+    I.Members.emplace_back(E->getNameAsString(), ValueStr, ValueExpr);
+  }
 }
 
 static void parseParameters(FunctionInfo &I, const FunctionDecl *D) {
@@ -331,10 +345,7 @@ static void parseParameters(FunctionInfo &I, const FunctionDecl *D) {
     }
 
     if (const Expr *DefaultArg = P->getDefaultArg()) {
-      FieldInfo->DefaultValue = Lexer::getSourceText(
-          CharSourceRange::getTokenRange(DefaultArg->getSourceRange()),
-          D->getASTContext().getSourceManager(),
-          D->getASTContext().getLangOpts());
+      FieldInfo->DefaultValue = getSourceCode(D, DefaultArg->getSourceRange());
     }
   }
 }
@@ -657,6 +668,8 @@ emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
     return {};
 
   Enum.Scoped = D->isScoped();
+  if (D->isFixed())
+    Enum.BaseType = TypeInfo(D->getIntegerType().getAsString());
   parseEnumerators(Enum, D);
 
   // Put in global namespace
