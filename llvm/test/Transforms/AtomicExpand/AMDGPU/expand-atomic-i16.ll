@@ -11,12 +11,30 @@ define i16 @test_atomicrmw_xchg_i16_global(i16 addrspace(1)* %ptr, i16 %value) {
   ret i16 %res
 }
 
+define i16 @test_atomicrmw_xchg_i16_global_align4(i16 addrspace(1)* %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_xchg_i16_global_align4(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg i16 addrspace(1)* [[PTR:%.*]], i16 [[VALUE:%.*]] seq_cst, align 4
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %res = atomicrmw xchg i16 addrspace(1)* %ptr, i16 %value seq_cst, align 4
+  ret i16 %res
+}
+
 define i16 @test_atomicrmw_add_i16_global(i16 addrspace(1)* %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_add_i16_global(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add i16 addrspace(1)* [[PTR:%.*]], i16 [[VALUE:%.*]] seq_cst, align 2
 ; CHECK-NEXT:    ret i16 [[RES]]
 ;
   %res = atomicrmw add i16 addrspace(1)* %ptr, i16 %value seq_cst
+  ret i16 %res
+}
+
+define i16 @test_atomicrmw_add_i16_global_align4(i16 addrspace(1)* %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_add_i16_global_align4(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add i16 addrspace(1)* [[PTR:%.*]], i16 [[VALUE:%.*]] seq_cst, align 4
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %res = atomicrmw add i16 addrspace(1)* %ptr, i16 %value seq_cst, align 4
   ret i16 %res
 }
 
