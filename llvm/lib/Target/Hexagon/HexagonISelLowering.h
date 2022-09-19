@@ -476,7 +476,8 @@ private:
   SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxConvertFpInt(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const;
+  VectorPair SplitVectorOp(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxStore(SDValue Op, SelectionDAG &DAG) const;
