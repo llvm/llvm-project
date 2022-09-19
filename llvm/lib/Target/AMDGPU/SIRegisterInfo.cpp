@@ -2696,7 +2696,7 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
     RC = MRI.getRegClass(Reg);
   else
     RC = getPhysRegClass(Reg);
-  return isSGPRClass(RC);
+  return RC ? isSGPRClass(RC) : false;
 }
 
 const TargetRegisterClass *
