@@ -109,6 +109,111 @@ func.func @store_i1(%dst: memref<4xi1, #spv.storage_class<StorageBuffer>>, %i: i
 
 // -----
 
+// Check for Kernel capability, that with proper compute and storage extensions, we don't need to
+// perform special tricks.
+
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0,
+      [
+        Kernel, Addresses, Int8, Int16, Int64, Float16, Float64], []>, #spv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @load_store_zero_rank_float
+func.func @load_store_zero_rank_float(%arg0: memref<f32, #spv.storage_class<CrossWorkgroup>>, %arg1: memref<f32, #spv.storage_class<CrossWorkgroup>>) {
+  //      CHECK: [[ARG0:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<f32, #spv.storage_class<CrossWorkgroup>> to !spv.ptr<f32, CrossWorkgroup>
+  //      CHECK: [[ARG1:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<f32, #spv.storage_class<CrossWorkgroup>> to !spv.ptr<f32, CrossWorkgroup>
+  //      CHECK: [[ZERO1:%.*]] = spv.Constant 0 : i32
+  //      CHECK: spv.PtrAccessChain [[ARG0]][
+  // CHECK-SAME: [[ZERO1]]
+  // CHECK-SAME: ] :
+  //      CHECK: spv.Load "CrossWorkgroup" %{{.*}} : f32
+  %0 = memref.load %arg0[] : memref<f32, #spv.storage_class<CrossWorkgroup>>
+  //      CHECK: [[ZERO2:%.*]] = spv.Constant 0 : i32
+  //      CHECK: spv.PtrAccessChain [[ARG1]][
+  // CHECK-SAME: [[ZERO2]]
+  // CHECK-SAME: ] :
+  //      CHECK: spv.Store "CrossWorkgroup" %{{.*}} : f32
+  memref.store %0, %arg1[] : memref<f32, #spv.storage_class<CrossWorkgroup>>
+  return
+}
+
+// CHECK-LABEL: @load_store_zero_rank_int
+func.func @load_store_zero_rank_int(%arg0: memref<i32, #spv.storage_class<CrossWorkgroup>>, %arg1: memref<i32, #spv.storage_class<CrossWorkgroup>>) {
+  //      CHECK: [[ARG0:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<i32, #spv.storage_class<CrossWorkgroup>> to  !spv.ptr<i32, CrossWorkgroup>
+  //      CHECK: [[ARG1:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<i32, #spv.storage_class<CrossWorkgroup>> to  !spv.ptr<i32, CrossWorkgroup>
+  //      CHECK: [[ZERO1:%.*]] = spv.Constant 0 : i32
+  //      CHECK: spv.PtrAccessChain [[ARG0]][
+  // CHECK-SAME: [[ZERO1]]
+  // CHECK-SAME: ] :
+  //      CHECK: spv.Load "CrossWorkgroup" %{{.*}} : i32
+  %0 = memref.load %arg0[] : memref<i32, #spv.storage_class<CrossWorkgroup>>
+  //      CHECK: [[ZERO2:%.*]] = spv.Constant 0 : i32
+  //      CHECK: spv.PtrAccessChain [[ARG1]][
+  // CHECK-SAME: [[ZERO2]]
+  // CHECK-SAME: ] :
+  //      CHECK: spv.Store "CrossWorkgroup" %{{.*}} : i32
+  memref.store %0, %arg1[] : memref<i32, #spv.storage_class<CrossWorkgroup>>
+  return
+}
+
+// CHECK-LABEL: func @load_store_unknown_dim
+func.func @load_store_unknown_dim(%i: index, %source: memref<?xi32, #spv.storage_class<CrossWorkgroup>>, %dest: memref<?xi32, #spv.storage_class<CrossWorkgroup>>) {
+  // CHECK: %[[SRC:.+]] = builtin.unrealized_conversion_cast {{.+}} : memref<?xi32, #spv.storage_class<CrossWorkgroup>> to !spv.ptr<i32, CrossWorkgroup>
+  // CHECK: %[[DST:.+]] = builtin.unrealized_conversion_cast {{.+}} : memref<?xi32, #spv.storage_class<CrossWorkgroup>> to !spv.ptr<i32, CrossWorkgroup>
+  // CHECK: %[[AC0:.+]] = spv.PtrAccessChain %[[SRC]]
+  // CHECK: spv.Load "CrossWorkgroup" %[[AC0]]
+  %0 = memref.load %source[%i] : memref<?xi32, #spv.storage_class<CrossWorkgroup>>
+  // CHECK: %[[AC1:.+]] = spv.PtrAccessChain %[[DST]]
+  // CHECK: spv.Store "CrossWorkgroup" %[[AC1]]
+  memref.store %0, %dest[%i]: memref<?xi32, #spv.storage_class<CrossWorkgroup>>
+  return
+}
+
+// CHECK-LABEL: func @load_i1
+//  CHECK-SAME: (%[[SRC:.+]]: memref<4xi1, #spv.storage_class<CrossWorkgroup>>, %[[IDX:.+]]: index)
+func.func @load_i1(%src: memref<4xi1, #spv.storage_class<CrossWorkgroup>>, %i : index) -> i1 {
+  // CHECK-DAG: %[[SRC_CAST:.+]] = builtin.unrealized_conversion_cast %[[SRC]] : memref<4xi1, #spv.storage_class<CrossWorkgroup>> to !spv.ptr<i8, CrossWorkgroup>
+  // CHECK-DAG: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
+  // CHECK: %[[ZERO_0:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ZERO_1:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
+  // CHECK: %[[MUL:.+]] = spv.IMul %[[ONE]], %[[IDX_CAST]] : i32
+  // CHECK: %[[ADD:.+]] = spv.IAdd %[[ZERO_1]], %[[MUL]] : i32
+  // CHECK: %[[ADDR:.+]] = spv.PtrAccessChain %[[SRC_CAST]][%[[ADD]]]
+  // CHECK: %[[VAL:.+]] = spv.Load "CrossWorkgroup" %[[ADDR]] : i8
+  // CHECK: %[[ONE_I8:.+]] = spv.Constant 1 : i8
+  // CHECK: %[[BOOL:.+]] = spv.IEqual %[[VAL]], %[[ONE_I8]] : i8
+  %0 = memref.load %src[%i] : memref<4xi1, #spv.storage_class<CrossWorkgroup>>
+  // CHECK: return %[[BOOL]]
+  return %0: i1
+}
+
+// CHECK-LABEL: func @store_i1
+//  CHECK-SAME: %[[DST:.+]]: memref<4xi1, #spv.storage_class<CrossWorkgroup>>,
+//  CHECK-SAME: %[[IDX:.+]]: index
+func.func @store_i1(%dst: memref<4xi1, #spv.storage_class<CrossWorkgroup>>, %i: index) {
+  %true = arith.constant true
+  // CHECK-DAG: %[[DST_CAST:.+]] = builtin.unrealized_conversion_cast %[[DST]] : memref<4xi1, #spv.storage_class<CrossWorkgroup>> to !spv.ptr<i8, CrossWorkgroup>
+  // CHECK-DAG: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
+  // CHECK: %[[ZERO_0:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ZERO_1:.+]] = spv.Constant 0 : i32
+  // CHECK: %[[ONE:.+]] = spv.Constant 1 : i32
+  // CHECK: %[[MUL:.+]] = spv.IMul %[[ONE]], %[[IDX_CAST]] : i32
+  // CHECK: %[[ADD:.+]] = spv.IAdd %[[ZERO_1]], %[[MUL]] : i32
+  // CHECK: %[[ADDR:.+]] = spv.PtrAccessChain %[[DST_CAST]][%[[ADD]]]
+  // CHECK: %[[ZERO_I8:.+]] = spv.Constant 0 : i8
+  // CHECK: %[[ONE_I8:.+]] = spv.Constant 1 : i8
+  // CHECK: %[[RES:.+]] = spv.Select %{{.+}}, %[[ONE_I8]], %[[ZERO_I8]] : i1, i8
+  // CHECK: spv.Store "CrossWorkgroup" %[[ADDR]], %[[RES]] : i8
+  memref.store %true, %dst[%i]: memref<4xi1, #spv.storage_class<CrossWorkgroup>>
+  return
+}
+
+} // end module
+
+// -----
+
 // Check that access chain indices are properly adjusted if non-32-bit types are
 // emulated via 32-bit types.
 // TODO: Test i64 types.
