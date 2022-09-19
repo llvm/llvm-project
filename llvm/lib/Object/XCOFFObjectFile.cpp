@@ -86,6 +86,9 @@ uint8_t XCOFFRelocation<AddressType>::getRelocatedLength() const {
   return (Info & XR_BIASED_LENGTH_MASK) + 1;
 }
 
+template struct ExceptionSectionEntry<support::ubig32_t>;
+template struct ExceptionSectionEntry<support::ubig64_t>;
+
 uintptr_t
 XCOFFObjectFile::getAdvancedSymbolEntryAddress(uintptr_t CurrentAddress,
                                                uint32_t Distance) {
@@ -392,6 +395,13 @@ uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
   return Result;
 }
 
+uint64_t XCOFFObjectFile::getSectionFileOffsetToRawData(DataRefImpl Sec) const {
+  if (is64Bit())
+    return toSection64(Sec)->FileOffsetToRawData;
+
+  return toSection32(Sec)->FileOffsetToRawData;
+}
+
 Expected<uintptr_t> XCOFFObjectFile::getLoaderSectionAddress() const {
   uint64_t OffsetToLoaderSection = 0;
   uint64_t SizeOfLoaderSection = 0;
@@ -427,6 +437,53 @@ Expected<uintptr_t> XCOFFObjectFile::getLoaderSectionAddress() const {
                        " goes past the end of the file");
 
   return LoderSectionStart;
+}
+
+Expected<uintptr_t> XCOFFObjectFile::getSectionFileOffsetToRawData(
+    XCOFF::SectionTypeFlags SectType) const {
+  DataRefImpl DRI = getSectionByType(SectType);
+
+  if (DRI.p == 0) // No section is not an error.
+    return 0;
+
+  uint64_t SectionOffset = getSectionFileOffsetToRawData(DRI);
+  uint64_t SizeOfSection = getSectionSize(DRI);
+
+  uintptr_t SectionStart = reinterpret_cast<uintptr_t>(base() + SectionOffset);
+  if (Error E = Binary::checkOffset(Data, SectionStart, SizeOfSection)) {
+    SmallString<32> UnknownType;
+    Twine(("<Unknown:") + Twine::utohexstr(SectType) + ">")
+        .toVector(UnknownType);
+    const char *SectionName = UnknownType.c_str();
+
+    switch (SectType) {
+#define ECASE(Value, String)                                                   \
+  case XCOFF::Value:                                                           \
+    SectionName = String;                                                      \
+    break
+
+      ECASE(STYP_PAD, "pad");
+      ECASE(STYP_DWARF, "dwarf");
+      ECASE(STYP_TEXT, "text");
+      ECASE(STYP_DATA, "data");
+      ECASE(STYP_BSS, "bss");
+      ECASE(STYP_EXCEPT, "expect");
+      ECASE(STYP_INFO, "info");
+      ECASE(STYP_TDATA, "tdata");
+      ECASE(STYP_TBSS, "tbss");
+      ECASE(STYP_LOADER, "loader");
+      ECASE(STYP_DEBUG, "debug");
+      ECASE(STYP_TYPCHK, "typchk");
+      ECASE(STYP_OVRFLO, "ovrflo");
+#undef ECASE
+    }
+    return createError(toString(std::move(E)) + ": " + SectionName +
+                       " section with offset 0x" +
+                       Twine::utohexstr(SectionOffset) + " and size 0x" +
+                       Twine::utohexstr(SizeOfSection) +
+                       " goes past the end of the file");
+  }
+  return SectionStart;
 }
 
 bool XCOFFObjectFile::isSectionCompressed(DataRefImpl Sec) const {
@@ -738,6 +795,22 @@ Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
   return DRI;
 }
 
+DataRefImpl
+XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
+  DataRefImpl DRI;
+  auto GetSectionAddr = [&](const auto &Sections) {
+    for (const auto &Sec : Sections)
+      if (Sec.getSectionType() == SectType)
+        return reinterpret_cast<uintptr_t>(&Sec);
+    return 0ul;
+  };
+  if (is64Bit())
+    DRI.p = GetSectionAddr(sections64());
+  else
+    DRI.p = GetSectionAddr(sections32());
+  return DRI;
+}
+
 Expected<StringRef>
 XCOFFObjectFile::getSymbolSectionName(XCOFFSymbolRef SymEntPtr) const {
   const int16_t SectionNum = SymEntPtr.getSectionNumber();
@@ -959,6 +1032,31 @@ Expected<ArrayRef<Reloc>> XCOFFObjectFile::relocations(const Shdr &Sec) const {
 
   return ArrayRef<Reloc>(StartReloc, StartReloc + NumRelocEntries);
 }
+
+template <typename ExceptEnt>
+Expected<ArrayRef<ExceptEnt>> XCOFFObjectFile::getExceptionEntries() const {
+  assert(is64Bit() && sizeof(ExceptEnt) == sizeof(ExceptionSectionEntry64) ||
+         !is64Bit() && sizeof(ExceptEnt) == sizeof(ExceptionSectionEntry32));
+
+  Expected<uintptr_t> ExceptionSectOrErr =
+      getSectionFileOffsetToRawData(XCOFF::STYP_EXCEPT);
+  if (!ExceptionSectOrErr)
+    return ExceptionSectOrErr.takeError();
+
+  DataRefImpl DRI = getSectionByType(XCOFF::STYP_EXCEPT);
+  if (DRI.p == 0)
+    return ArrayRef<ExceptEnt>();
+
+  ExceptEnt *ExceptEntStart =
+      reinterpret_cast<ExceptEnt *>(*ExceptionSectOrErr);
+  return ArrayRef<ExceptEnt>(
+      ExceptEntStart, ExceptEntStart + getSectionSize(DRI) / sizeof(ExceptEnt));
+}
+
+template Expected<ArrayRef<ExceptionSectionEntry32>>
+XCOFFObjectFile::getExceptionEntries() const;
+template Expected<ArrayRef<ExceptionSectionEntry64>>
+XCOFFObjectFile::getExceptionEntries() const;
 
 Expected<XCOFFStringTable>
 XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {

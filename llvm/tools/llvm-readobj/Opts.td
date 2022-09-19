@@ -88,6 +88,7 @@ def coff_tls_directory : FF<"coff-tls-directory", "Display TLS directory">, Grou
 // XCOFF specific options.
 def grp_xcoff : OptionGroup<"kind">, HelpText<"OPTIONS (XCOFF specific)">;
 def auxiliary_header : FF<"auxiliary-header" , "Display the auxiliary header">, Group<grp_xcoff>;
+def exception_section : FF<"exception-section" , "Display the exception section entries">, Group<grp_xcoff>;
 
 def help : FF<"help", "Display this help">;
 def version : FF<"version", "Display the version">;
