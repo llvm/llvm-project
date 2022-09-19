@@ -1573,7 +1573,7 @@ _LIBCPP_END_NAMESPACE_STD
 #endif // _LIBCPP_STD_VER > 14
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <chrono> // IGNORE-CYCLE due to <format>
+#  include <chrono>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
