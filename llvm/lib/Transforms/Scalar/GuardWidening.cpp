@@ -93,7 +93,7 @@ static Value *getCondition(Instruction *I) {
 }
 
 // Set the condition for \p I to \p NewCond. \p I can either be a guard or a
-// conditional branch.  
+// conditional branch.
 static void setCondition(Instruction *I, Value *NewCond) {
   if (IntrinsicInst *GI = dyn_cast<IntrinsicInst>(I)) {
     assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
@@ -261,7 +261,7 @@ class GuardWideningImpl {
   void widenGuard(Instruction *ToWiden, Value *NewCondition,
                   bool InvertCondition) {
     Value *Result;
-    
+
     widenCondCommon(getCondition(ToWiden), NewCondition, ToWiden, Result,
                     InvertCondition);
     if (isGuardAsWidenableBranch(ToWiden)) {
@@ -468,7 +468,7 @@ bool GuardWideningImpl::isAvailableAt(
   if (!Inst || DT.dominates(Inst, Loc) || Visited.count(Inst))
     return true;
 
-  if (!isSafeToSpeculativelyExecute(Inst, Loc, &DT) ||
+  if (!isSafeToSpeculativelyExecute(Inst, Loc, nullptr, &DT) ||
       Inst->mayReadFromMemory())
     return false;
 
@@ -488,7 +488,7 @@ void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) const {
   if (!Inst || DT.dominates(Inst, Loc))
     return;
 
-  assert(isSafeToSpeculativelyExecute(Inst, Loc, &DT) &&
+  assert(isSafeToSpeculativelyExecute(Inst, Loc, nullptr, &DT) &&
          !Inst->mayReadFromMemory() && "Should've checked with isAvailableAt!");
 
   for (Value *Op : Inst->operands())
