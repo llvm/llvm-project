@@ -56,7 +56,7 @@ struct ExpBase {
       0x1.ffffffffe5bc8p-2, 0x1.555555555cd67p-3, 0x1.5555c2a9b48b4p-5,
       0x1.11112a0e34bdbp-7};
 
-  static constexpr double powb_lo(double dx) {
+  static double powb_lo(double dx) {
     using fputil::multiply_add;
     double dx2 = dx * dx;
     double c0 = 1.0 + dx;
