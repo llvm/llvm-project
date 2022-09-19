@@ -11,6 +11,7 @@
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -117,8 +118,10 @@ public:
 
   static NoopLattice initialElement() { return NoopLattice(); }
 
-  void transfer(const Stmt *S, NoopLattice &, Environment &Env) {
-    M.transfer(S, Env);
+  void transfer(const CFGElement *E, NoopLattice &, Environment &Env) {
+    if (auto S = E->getAs<CFGStmt>()) {
+      M.transfer(S->getStmt(), Env);
+    }
   }
 
 private:
