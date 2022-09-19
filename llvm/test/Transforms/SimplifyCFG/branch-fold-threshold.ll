@@ -1,9 +1,9 @@
 ; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s --check-prefix=NORMAL
-; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -bonus-inst-threshold=3 | FileCheck %s --check-prefix=AGGRESSIVE
-; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -bonus-inst-threshold=6 | FileCheck %s --check-prefix=WAYAGGRESSIVE
+; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -bonus-inst-threshold=2 | FileCheck %s --check-prefix=AGGRESSIVE
+; RUN: opt %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -bonus-inst-threshold=4 | FileCheck %s --check-prefix=WAYAGGRESSIVE
 ; RUN: opt %s -passes=simplifycfg -S | FileCheck %s --check-prefix=NORMAL
-; RUN: opt %s -passes='simplifycfg<bonus-inst-threshold=3>' -S | FileCheck %s --check-prefix=AGGRESSIVE
-; RUN: opt %s -passes='simplifycfg<bonus-inst-threshold=6>' -S | FileCheck %s --check-prefix=WAYAGGRESSIVE
+; RUN: opt %s -passes='simplifycfg<bonus-inst-threshold=2>' -S | FileCheck %s --check-prefix=AGGRESSIVE
+; RUN: opt %s -passes='simplifycfg<bonus-inst-threshold=4>' -S | FileCheck %s --check-prefix=WAYAGGRESSIVE
 
 define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d, i32* %input) {
 ; NORMAL-LABEL: @foo(

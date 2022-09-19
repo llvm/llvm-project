@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include <cstdint>
@@ -165,26 +164,6 @@ bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 /// values, but instcombine orders them so it usually won't matter.
 bool EliminateDuplicatePHINodes(BasicBlock *BB);
 
-/// Class to track cost of simplify CFG transformations.
-class SimplifyCFGCostTracker {
-  /// Number of bonus instructions due to folding branches into predecessors.
-  /// E.g. folding
-  ///  if (cond1) return false;
-  ///  if (cond2) return false;
-  ///  return true;
-  /// into
-  ///  if (cond1 | cond2) return false;
-  ///  return true;
-  /// In this case cond2 is always executed whereas originally it may be
-  /// evicted due to early exit of cond1. 'cond2' is called bonus instructions
-  /// and such bonus instructions could accumulate for unrolled loops, therefore
-  /// use a value map to accumulate their costs across transformations.
-  ValueMap<BasicBlock *, unsigned> NumBonusInsts;
-
-public:
-  void updateNumBonusInsts(BasicBlock *Parent, unsigned InstCount);
-  unsigned getNumBonusInsts(BasicBlock *Parent);
-};
 /// This function is used to do simplification of a CFG.  For example, it
 /// adjusts branches to branches to eliminate the extra hop, it eliminates
 /// unreachable basic blocks, and does other peephole optimization of the CFG.
@@ -195,8 +174,7 @@ extern cl::opt<bool> RequireAndPreserveDomTree;
 bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                  DomTreeUpdater *DTU = nullptr,
                  const SimplifyCFGOptions &Options = {},
-                 ArrayRef<WeakVH> LoopHeaders = {},
-                 SimplifyCFGCostTracker *CostTracker = nullptr);
+                 ArrayRef<WeakVH> LoopHeaders = {});
 
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
@@ -206,8 +184,7 @@ bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the
 /// predecessor and use logical operations to pick the right destination.
-bool FoldBranchToCommonDest(BranchInst *BI, SimplifyCFGCostTracker &CostTracker,
-                            DomTreeUpdater *DTU = nullptr,
+bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
                             MemorySSAUpdater *MSSAU = nullptr,
                             const TargetTransformInfo *TTI = nullptr,
                             unsigned BonusInstThreshold = 1);
