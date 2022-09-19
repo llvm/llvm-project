@@ -1781,10 +1781,15 @@ example:
     function can return a pointer to a previously deallocated memory object.
 ``noimplicitfloat``
     Disallows implicit floating-point code. This inhibits optimizations that
-    use floating-point code and floating-point/SIMD/vector registers for
-    operations that are not nominally floating-point. LLVM instructions that
-    perform floating-point operations or require access to floating-point
-    registers may still cause floating-point code to be generated.
+    use floating-point code and floating-point registers for operations that are
+    not nominally floating-point. LLVM instructions that perform floating-point
+    operations or require access to floating-point registers may still cause
+    floating-point code to be generated.
+
+    Also inhibits optimizations that create SIMD/vector code and registers from
+    scalar code such as vectorization or memcpy/memset optimization. This
+    includes integer vectors. Vector instructions present in IR may still cause
+    vector code to be generated.
 ``noinline``
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
