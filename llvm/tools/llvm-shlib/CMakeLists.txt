@@ -63,6 +63,10 @@ if(LLVM_BUILD_LLVM_DYLIB)
 
   target_link_libraries(LLVM PRIVATE ${LIB_NAMES})
 
+  if(LLVM_ENABLE_THREADS AND NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
+    target_link_libraries(LLVM PUBLIC atomic)
+  endif()
+
   if (APPLE)
     set_property(TARGET LLVM APPEND_STRING PROPERTY
                 LINK_FLAGS

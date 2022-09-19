@@ -20,8 +20,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#include "llvm/ADT/SetVector.h"
-
 using namespace mlir;
 
 namespace {

@@ -12,7 +12,6 @@
 #include "InputElement.h"
 #include "WriterUtils.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "llvm/ADT/SetVector.h"
 
 #define DEBUG_TYPE "lld"
 

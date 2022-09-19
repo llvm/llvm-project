@@ -9,7 +9,6 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPU.h"
 #include "AMDGPUBaseInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"

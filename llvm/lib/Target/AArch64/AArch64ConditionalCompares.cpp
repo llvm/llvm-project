@@ -18,7 +18,6 @@
 
 #include "AArch64.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"

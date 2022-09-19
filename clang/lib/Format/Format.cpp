@@ -3273,13 +3273,13 @@ reformat(const FormatStyle &Style, StringRef Code,
 
     if (Style.InsertBraces) {
       Passes.emplace_back([&](const Environment &Env) {
-        return BracesInserter(Env, Expanded).process();
+        return BracesInserter(Env, Expanded).process(/*SkipAnnotation=*/true);
       });
     }
 
     if (Style.RemoveBracesLLVM) {
       Passes.emplace_back([&](const Environment &Env) {
-        return BracesRemover(Env, Expanded).process();
+        return BracesRemover(Env, Expanded).process(/*SkipAnnotation=*/true);
       });
     }
 
@@ -3305,7 +3305,7 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Style.isJavaScript() &&
       Style.JavaScriptQuotes != FormatStyle::JSQS_Leave) {
     Passes.emplace_back([&](const Environment &Env) {
-      return JavaScriptRequoter(Env, Expanded).process();
+      return JavaScriptRequoter(Env, Expanded).process(/*SkipAnnotation=*/true);
     });
   }
 

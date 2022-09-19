@@ -64,10 +64,10 @@ TEST(LinkGraphTest, Construction) {
   EXPECT_EQ(G.getTargetTriple().str(), "x86_64-apple-darwin");
   EXPECT_EQ(G.getPointerSize(), 8U);
   EXPECT_EQ(G.getEndianness(), support::little);
-  EXPECT_TRUE(llvm::empty(G.external_symbols()));
-  EXPECT_TRUE(llvm::empty(G.absolute_symbols()));
-  EXPECT_TRUE(llvm::empty(G.defined_symbols()));
-  EXPECT_TRUE(llvm::empty(G.blocks()));
+  EXPECT_TRUE(G.external_symbols().empty());
+  EXPECT_TRUE(G.absolute_symbols().empty());
+  EXPECT_TRUE(G.defined_symbols().empty());
+  EXPECT_TRUE(G.blocks().empty());
 }
 
 TEST(LinkGraphTest, AddressAccess) {

@@ -234,7 +234,7 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
       return error("Bad stri table: uncompress {0} -> {1} bytes is implausible",
                    R.rest().size(), UncompressedSize);
 
-    if (llvm::Error E = llvm::compression::zlib::uncompress(
+    if (llvm::Error E = llvm::compression::zlib::decompress(
             llvm::arrayRefFromStringRef(R.rest()), UncompressedStorage,
             UncompressedSize))
       return std::move(E);

@@ -42,7 +42,7 @@ define void @vdiv(double* %x, double* %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; CHECK:       vector.ph.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP3]], 2305843009213693950
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP3]], -2
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fdiv fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[BROADCAST_SPLAT10]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[BROADCAST_SPLAT12]]

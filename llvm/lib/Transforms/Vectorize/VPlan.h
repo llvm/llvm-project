@@ -2887,9 +2887,8 @@ public:
   template <typename BlockTy, typename T>
   static auto blocksOnly(const T &Range) {
     // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy =
-        typename std::conditional<std::is_const<BlockTy>::value,
-                                  const VPBlockBase, VPBlockBase>::type;
+    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
+                                      const VPBlockBase, VPBlockBase>;
 
     // We need to first create an iterator range over (const) BlocktTy & instead
     // of (const) BlockTy * for filter_range to work properly.

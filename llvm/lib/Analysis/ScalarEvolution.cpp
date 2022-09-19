@@ -69,7 +69,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -8383,9 +8382,7 @@ void ScalarEvolution::forgetValue(Value *V) {
   forgetMemoizedResults(ToForget);
 }
 
-void ScalarEvolution::forgetLoopDispositions(const Loop *L) {
-  LoopDispositions.clear();
-}
+void ScalarEvolution::forgetLoopDispositions() { LoopDispositions.clear(); }
 
 /// Get the exact loop backedge taken count considering all loop exits. A
 /// computable result can only be returned for loops with all exiting blocks
@@ -13971,6 +13968,27 @@ void ScalarEvolution::verify() const {
   };
   VerifyBECountUsers(/* Predicated */ false);
   VerifyBECountUsers(/* Predicated */ true);
+
+  // Verify intergity of loop disposition cache.
+  for (const auto &It : LoopDispositions) {
+    const SCEV *S = It.first;
+    auto &Values = It.second;
+    for (auto &V : Values) {
+      auto CachedDisposition = V.getInt();
+      const auto *Loop = V.getPointer();
+      // TODO: Make sure LoopDispositions contains no invalid loops.
+      if (!ValidLoops.contains(Loop))
+        continue;
+      const auto RecomputedDisposition = SE2.getLoopDisposition(S, Loop);
+      if (CachedDisposition != RecomputedDisposition) {
+        dbgs() << "Cached disposition of " << *S << " for loop " << *Loop
+               << " is incorrect: cached "
+               << loopDispositionToStr(CachedDisposition) << ", actual "
+               << loopDispositionToStr(RecomputedDisposition) << "\n";
+        std::abort();
+      }
+    }
+  }
 }
 
 bool ScalarEvolution::invalidate(

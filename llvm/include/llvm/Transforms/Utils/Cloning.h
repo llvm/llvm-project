@@ -260,10 +260,14 @@ public:
 /// and all varargs at the callsite will be passed to any calls to
 /// ForwardVarArgsTo. The caller of InlineFunction has to make sure any varargs
 /// are only used by ForwardVarArgsTo.
+///
+/// The callee's function attributes are merged into the callers' if
+/// MergeAttributes is set to true.
 InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true,
-                            Function *ForwardVarArgsTo = nullptr);
+                            Function *ForwardVarArgsTo = nullptr,
+                            bool MergeAttributes = false);
 
 /// Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p
 /// Blocks.

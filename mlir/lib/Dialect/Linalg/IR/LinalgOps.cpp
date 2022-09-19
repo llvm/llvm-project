@@ -32,7 +32,6 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"

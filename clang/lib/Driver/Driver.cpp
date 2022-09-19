@@ -2736,7 +2736,7 @@ class OffloadingActionBuilder final {
 
     /// Update the state to include the provided host action \a HostAction as a
     /// dependency of the current device action. By default it is inactive.
-    virtual ActionBuilderReturnCode addDeviceDepences(Action *HostAction) {
+    virtual ActionBuilderReturnCode addDeviceDependences(Action *HostAction) {
       return ABRT_Inactive;
     }
 
@@ -2824,7 +2824,7 @@ class OffloadingActionBuilder final {
                           Action::OffloadKind OFKind)
         : DeviceActionBuilder(C, Args, Inputs, OFKind) {}
 
-    ActionBuilderReturnCode addDeviceDepences(Action *HostAction) override {
+    ActionBuilderReturnCode addDeviceDependences(Action *HostAction) override {
       // While generating code for CUDA, we only depend on the host input action
       // to trigger the creation of all the CUDA device actions.
 
@@ -3603,7 +3603,7 @@ public:
       if (!SB->isValid())
         continue;
 
-      auto RetCode = SB->addDeviceDepences(HostAction);
+      auto RetCode = SB->addDeviceDependences(HostAction);
 
       // Host dependences for device actions are not compatible with that same
       // action being ignored.

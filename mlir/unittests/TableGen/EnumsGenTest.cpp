@@ -13,7 +13,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 
 #include "gmock/gmock.h"
 
