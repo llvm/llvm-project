@@ -1,7 +1,4 @@
 ; RUN: opt -S -loop-fusion < %s | FileCheck %s
-; XFAIL: *
-; REQUIRES: asserts
-; Fails due to incorrect cached loop disposition.
 ;
 ;    int A[1024][1024];
 ;    int B[1024][1024];
