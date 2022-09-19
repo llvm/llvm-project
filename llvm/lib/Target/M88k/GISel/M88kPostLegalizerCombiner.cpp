@@ -226,7 +226,7 @@ bool matchSubAddFromSubICmp(MachineInstr &MI, MachineRegisterInfo &MRI,
 // Match
 //  Unused, CarryBit = G_USUBU SrcB, SrcC
 //  Carry = G_ZEXT CarryBit
-//  Dst = G_UADD SrcA, Carry
+//  Dst = G_ADD SrcA, Carry
 // The returned MatchInfo transforms this sequence into
 //  Unused, Carry = G_USUBU SrcB, SrcC
 //  Dst, UnusedCarry = G_UADDE SrcA, Zero, Carry

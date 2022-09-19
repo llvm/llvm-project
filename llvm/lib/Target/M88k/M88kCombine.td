@@ -98,15 +98,17 @@ def subsub_from_subicmp : GICombineRule<
 //  Dst, UnusedCarry = G_USUBE SrcA, Zero, Carry
 // with SrcB' and SrcC' derived from SrcB and SrcC.
 def subadd_from_subicmp : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_SUB):$root,
-         [{ return matchSubAddFromSubICmp(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
+  (match //(G_ICMP $icmp, $cc, $src2, $src3),
+         (G_ZEXT $zext, $icmp),
+         (G_SUB $dst, $src1, $zext):$submi,
+         [{ return matchSubAddFromSubICmp(*${submi}, MRI, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${submi}, ${matchinfo}); }])>;
 
 // Combine
 //  Unused, CarryBit = G_USUBU SrcB, SrcC
 //  Carry = G_ZEXT CarryBit
-//  Dst = G_UADD SrcA, Carry
+//  Dst = G_ADD SrcA, Carry
 // into the instruction sequence
 //  Unused, Carry = G_USUBO SrcB, SrcC
 //  Dst, UnusedCarry = G_UADDE SrcA, Zero, Carry
