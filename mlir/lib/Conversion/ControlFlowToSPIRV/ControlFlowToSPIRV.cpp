@@ -19,7 +19,6 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "cf-to-spirv-pattern"

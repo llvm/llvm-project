@@ -970,6 +970,11 @@ private:
                                                const CXXConstructExpr *E,
                                                const LocationContext *LCtx);
 
+  static ProgramStateRef
+  removeStateTraitsUsedForArrayEvaluation(ProgramStateRef State,
+                                          const CXXConstructExpr *E,
+                                          const LocationContext *LCtx);
+
   /// Store the location of a C++ object corresponding to a statement
   /// until the statement is actually encountered. For example, if a DeclStmt
   /// has CXXConstructExpr as its initializer, the object would be considered

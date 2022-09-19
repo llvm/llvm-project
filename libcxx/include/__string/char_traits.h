@@ -14,15 +14,15 @@
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_first_of.h>
 #include <__algorithm/min.h>
+#include <__compare/ordering.h>
 #include <__config>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
-#include <compare>
+#include <__type_traits/is_constant_evaluated.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <cstring>
 #include <iosfwd>
-#include <type_traits>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #   include <cwchar> // for wmemcpy

@@ -19,6 +19,5 @@ new
 stdexcept
 string
 string_view
-tuple
 type_traits
 version

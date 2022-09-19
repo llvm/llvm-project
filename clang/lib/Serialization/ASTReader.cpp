@@ -1459,7 +1459,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
         return nullptr;
       }
       SmallVector<uint8_t, 0> Uncompressed;
-      if (llvm::Error E = llvm::compression::zlib::uncompress(
+      if (llvm::Error E = llvm::compression::zlib::decompress(
               llvm::arrayRefFromStringRef(Blob), Uncompressed, Record[0])) {
         Error("could not decompress embedded file contents: " +
               llvm::toString(std::move(E)));

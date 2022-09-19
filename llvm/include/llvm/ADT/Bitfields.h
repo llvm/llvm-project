@@ -96,7 +96,7 @@ template <typename T, unsigned Bits> struct BitPatterns {
   /// undefined operations over signed types (e.g. Bitwise shift operators).
   /// Moreover same size casting from unsigned to signed is well defined but not
   /// the other way around.
-  using Unsigned = typename std::make_unsigned<T>::type;
+  using Unsigned = std::make_unsigned_t<T>;
   static_assert(sizeof(Unsigned) == sizeof(T), "Types must have same size");
 
   static constexpr unsigned TypeBits = sizeof(Unsigned) * CHAR_BIT;
@@ -203,7 +203,7 @@ template <typename T> struct ResolveUnderlyingType<T, false> {
 template <> struct ResolveUnderlyingType<bool, false> {
   /// In case sizeof(bool) != 1, replace `void` by an additionnal
   /// std::conditional.
-  using type = std::conditional<sizeof(bool) == 1, uint8_t, void>::type;
+  using type = std::conditional_t<sizeof(bool) == 1, uint8_t, void>;
 };
 
 } // namespace bitfields_details

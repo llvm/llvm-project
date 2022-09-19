@@ -116,8 +116,8 @@ static void decompressAux(const InputSectionBase &sec, uint8_t *out,
   auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(sec.rawData.data());
   auto compressed = sec.rawData.slice(sizeof(typename ELFT::Chdr));
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
-                    ? compression::zlib::uncompress(compressed, out, size)
-                    : compression::zstd::uncompress(compressed, out, size))
+                    ? compression::zlib::decompress(compressed, out, size)
+                    : compression::zstd::decompress(compressed, out, size))
     fatal(toString(&sec) +
           ": decompress failed: " + llvm::toString(std::move(e)));
 }
@@ -1236,8 +1236,8 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
     auto compressed = rawData.slice(sizeof(typename ELFT::Chdr));
     size_t size = uncompressedSize;
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
-                      ? compression::zlib::uncompress(compressed, buf, size)
-                      : compression::zstd::uncompress(compressed, buf, size))
+                      ? compression::zlib::decompress(compressed, buf, size)
+                      : compression::zstd::decompress(compressed, buf, size))
       fatal(toString(this) +
             ": decompress failed: " + llvm::toString(std::move(e)));
     uint8_t *bufEnd = buf + size;

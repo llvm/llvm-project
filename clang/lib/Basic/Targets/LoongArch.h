@@ -55,6 +55,8 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
+
+  bool hasBitIntType() const override { return true; }
 };
 
 class LLVM_LIBRARY_VISIBILITY LoongArch32TargetInfo

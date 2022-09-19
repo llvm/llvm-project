@@ -4912,7 +4912,9 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(
   case AArch64::FMULv2f32:
   case AArch64::FMULv2f64:
   case AArch64::FMULv4f32:
-    return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath;
+    return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath ||
+           (Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
+            Inst.getFlag(MachineInstr::MIFlag::FmNsz));
   default:
     return false;
   }

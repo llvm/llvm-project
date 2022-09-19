@@ -337,4 +337,27 @@ entry:
 
 declare double @llvm.cos.f64(double)
 
+; Ensure that tail call optimization is disabled when the streaming mode
+; doesn't match.
+define void @disable_tailcallopt() nounwind {
+; CHECK-LABEL: disable_tailcallopt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    bl streaming_callee
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  tail call void @streaming_callee()
+  ret void;
+}
+
 attributes #0 = { nounwind "target-features"="+sve" }

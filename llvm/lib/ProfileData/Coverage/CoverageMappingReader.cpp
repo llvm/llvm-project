@@ -129,7 +129,7 @@ Error RawCoverageFilenamesReader::read(CovMapVersion Version) {
     // Read compressed filenames.
     StringRef CompressedFilenames = Data.substr(0, CompressedLen);
     Data = Data.substr(CompressedLen);
-    auto Err = compression::zlib::uncompress(
+    auto Err = compression::zlib::decompress(
         arrayRefFromStringRef(CompressedFilenames), StorageBuf,
         UncompressedLen);
     if (Err) {

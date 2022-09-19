@@ -762,17 +762,18 @@ void GIMatchTreeVRegDefPartitioner::emitPartitionResults(
 
 void GIMatchTreeVRegDefPartitioner::generatePartitionSelectorCode(
     raw_ostream &OS, StringRef Indent) const {
-  OS << Indent << "Partition = -1\n"
-     << Indent << "if (MIs.size() <= NewInstrID) MIs.resize(NewInstrID + 1);\n"
+  OS << Indent << "Partition = -1;\n"
+     << Indent << "if (MIs.size() <= " << NewInstrID << ") MIs.resize("
+     << (NewInstrID + 1) << ");\n"
      << Indent << "MIs[" << NewInstrID << "] = nullptr;\n"
-     << Indent << "if (MIs[" << InstrID << "].getOperand(" << OpIdx
-     << ").isReg()))\n"
+     << Indent << "if (MIs[" << InstrID << "]->getOperand(" << OpIdx
+     << ").isReg())\n"
      << Indent << "  MIs[" << NewInstrID << "] = MRI.getVRegDef(MIs[" << InstrID
-     << "].getOperand(" << OpIdx << ").getReg()));\n";
+     << "]->getOperand(" << OpIdx << ").getReg());\n";
 
   for (const auto &Pair : ResultToPartition)
     OS << Indent << "if (MIs[" << NewInstrID << "] "
-       << (Pair.first ? "==" : "!=")
+       << (Pair.first ? "!=" : "==")
        << " nullptr) Partition = " << Pair.second << ";\n";
 
   OS << Indent << "if (Partition == -1) return false;\n";

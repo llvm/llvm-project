@@ -15,7 +15,6 @@ limits
 new
 ratio
 stdexcept
-tuple
 type_traits
 typeinfo
 version

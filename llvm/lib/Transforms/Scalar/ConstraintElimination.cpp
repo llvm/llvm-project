@@ -256,29 +256,28 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     V = Op0;
   }
 
+  auto MergeResults = [&Preconditions, IsSigned](
+                          Value *A, Value *B,
+                          bool IsSignedB) -> SmallVector<DecompEntry, 4> {
+    auto ResA = decompose(A, Preconditions, IsSigned);
+    auto ResB = decompose(B, Preconditions, IsSignedB);
+    if (ResA.empty() || ResB.empty())
+      return {};
+    ResA[0].Coefficient += ResB[0].Coefficient;
+    append_range(ResA, drop_begin(ResB));
+    return ResA;
+  };
   Value *Op1;
   ConstantInt *CI;
-  if (match(V, m_NUWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
-      !CI->uge(MaxConstraintValue)) {
-    auto Res = decompose(Op0, Preconditions, IsSigned);
-    Res[0].Coefficient += int(CI->getZExtValue());
-    return Res;
+  if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
+    return MergeResults(Op0, Op1, IsSigned);
   }
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
       CanUseSExt(CI)) {
     Preconditions.emplace_back(
         CmpInst::ICMP_UGE, Op0,
         ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
-    auto Res = decompose(Op0, Preconditions, IsSigned);
-    Res[0].Coefficient += int(CI->getSExtValue());
-    return Res;
-  }
-  if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
-    auto Res = decompose(Op0, Preconditions, IsSigned);
-    auto D1 = decompose(Op1, Preconditions, IsSigned);
-    Res[0].Coefficient += D1[0].Coefficient;
-    append_range(Res, drop_begin(D1));
-    return Res;
+    return MergeResults(Op0, CI, true);
   }
 
   if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))) && CanUseSExt(CI))

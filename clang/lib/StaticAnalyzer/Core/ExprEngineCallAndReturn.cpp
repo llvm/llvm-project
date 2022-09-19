@@ -222,6 +222,26 @@ static unsigned getElementCountOfArrayBeingDestructed(
   return 0;
 }
 
+ProgramStateRef ExprEngine::removeStateTraitsUsedForArrayEvaluation(
+    ProgramStateRef State, const CXXConstructExpr *E,
+    const LocationContext *LCtx) {
+
+  assert(LCtx && "Location context must be provided!");
+
+  if (E) {
+    if (getPendingInitLoop(State, E, LCtx))
+      State = removePendingInitLoop(State, E, LCtx);
+
+    if (getIndexOfElementToConstruct(State, E, LCtx))
+      State = removeIndexOfElementToConstruct(State, E, LCtx);
+  }
+
+  if (getPendingArrayDestruction(State, LCtx))
+    State = removePendingArrayDestruction(State, LCtx);
+
+  return State;
+}
+
 /// The call exit is simulated with a sequence of nodes, which occur between
 /// CallExitBegin and CallExitEnd. The following operations occur between the
 /// two program points:
@@ -268,9 +288,6 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
       auto ThisVal = svalBuilder.getCXXThis(DtorDecl->getParent(), calleeCtx);
       state = state->killBinding(ThisVal);
-
-      if (!ShouldRepeatCall)
-        state = removePendingArrayDestruction(state, callerCtx);
     }
   }
 
@@ -304,14 +321,6 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       state = state->BindExpr(CCE, callerCtx, ThisV);
 
       ShouldRepeatCall = shouldRepeatCtorCall(state, CCE, callerCtx);
-
-      if (!ShouldRepeatCall) {
-        if (getIndexOfElementToConstruct(state, CCE, callerCtx))
-          state = removeIndexOfElementToConstruct(state, CCE, callerCtx);
-
-        if (getPendingInitLoop(state, CCE, callerCtx))
-          state = removePendingInitLoop(state, CCE, callerCtx);
-      }
     }
 
     if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
@@ -328,6 +337,11 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       state = addObjectUnderConstruction(state, CNE, calleeCtx->getParent(),
                                          AllocV);
     }
+  }
+
+  if (!ShouldRepeatCall) {
+    state = removeStateTraitsUsedForArrayEvaluation(
+        state, dyn_cast_or_null<CXXConstructExpr>(CE), callerCtx);
   }
 
   // Step 3: BindedRetNode -> CleanedNodes
@@ -1151,7 +1165,7 @@ bool ExprEngine::shouldInlineArrayConstruction(const ProgramStateRef State,
 
   // Check if we're inside an ArrayInitLoopExpr, and it's sufficiently small.
   if (auto Size = getPendingInitLoop(State, CE, LCtx))
-    return *Size <= AMgr.options.maxBlockVisitOnPath;
+    return shouldInlineArrayDestruction(*Size);
 
   return false;
 }
@@ -1246,7 +1260,12 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
     }
   }
 
-  // If we can't inline it, handle the return value and invalidate the regions.
+  // If we can't inline it, clean up the state traits used only if the function
+  // is inlined.
+  State = removeStateTraitsUsedForArrayEvaluation(
+      State, dyn_cast_or_null<CXXConstructExpr>(E), Call->getLocationContext());
+
+  // Also handle the return value and invalidate the regions.
   conservativeEvalCall(*Call, Bldr, Pred, State);
 }
 

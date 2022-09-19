@@ -1,6 +1,10 @@
 // RUN: llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
 // RUN:     -combiners=MyCombinerHelper -gicombiner-stop-after-build %s \
 // RUN:     -o %t.inc | FileCheck %s
+//
+// RUN: llvm-tblgen -I %p/../../../include -gen-global-isel-combiner \
+// RUN:     -combiners=MyCombinerHelper %s | \
+// RUN: FileCheck --check-prefix=CODE %s
 
 include "llvm/Target/Target.td"
 include "llvm/Target/GlobalISel/Combine.td"
@@ -140,3 +144,88 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CHECK-DAG:   Node[[N17]] -> Node[[N18]] [label="#0 MyTarget::SEXT"]
 // CHECK-DAG:   Node[[N17]] -> Node[[N19]] [label="#1 MyTarget::ZEXT"]
 // CHECK-LABEL: {{^}$}}
+
+
+// Check the generated source code.
+
+// CODE-LABEL: GenMyCombinerHelper::tryCombineAll
+
+// Check the first partition. The numbers correspond to the labels above.
+// CODE:      switch (MIs[0]->getOpcode()) {
+// CODE-NEXT:   case MyTarget::SUB: Partition = 0; break;
+// CODE-NEXT:   case MyTarget::MOV: Partition = 1; break;
+// CODE-NEXT:   case MyTarget::ADD: Partition = 2; break;
+// CODE-NEXT:   case MyTarget::TRUNC: Partition = 3; break;
+// CODE-NEXT: }
+
+// Check that the correct partition is choosen if operand 1 is a register.
+
+// CODE:       if (Partition == 0 /* MyTarget::SUB */) {
+// CODE-NEXT:    Partition = -1;
+// CODE-NEXT:    if (MIs.size() <= 1) MIs.resize(2);
+// CODE-NEXT:    MIs[1] = nullptr;
+// CODE-NEXT:    if (MIs[0]->getOperand(1).isReg())
+// CODE-NEXT:      MIs[1] = MRI.getVRegDef(MIs[0]->getOperand(1).getReg());
+// CODE-NEXT:    if (MIs[1] == nullptr) Partition = 1;
+// CODE-NEXT:    if (MIs[1] != nullptr) Partition = 0;
+
+
+// Check that the MUL opcode is tested.
+
+// CODE:         if (Partition == 0 /* true */) {
+// CODE-NEXT:      Partition = -1;
+// CODE-NEXT:      switch (MIs[1]->getOpcode()) {
+// CODE-NEXT:      case MyTarget::MUL: Partition = 0; break;
+// CODE-NEXT:      default: Partition = 1; break;
+// CODE-NEXT:      }
+
+// Check that action for MUL is executed.
+
+// CODE:          if (Partition == 0 /* MyTarget::MUL */) {
+// CODE-NEXT:       // Leaf name: Rule0
+// CODE-NEXT:        // Rule: Rule0
+// CODE-NEXT:        if (!RuleConfig->isRuleDisabled(0)) {
+// CODE-NEXT:          if (1
+// CODE-NEXT:) {
+// CODE-NEXT:            APPLY
+// CODE-NEXT:            return true;
+// CODE-NEXT:          }
+// CODE-NEXT:        }
+// CODE-NEXT:        llvm_unreachable("Combine rule elision was incorrect");
+// CODE-NEXT:        return false;
+// CODE-NEXT:     }
+ 
+// Check that the other rule involving SUB (Rule5) is run otherwise.
+
+// CODE-NEXT:      if (Partition == 1 /* * or nullptr */) {
+// CODE-NEXT:        // Leaf name: Rule5
+// CODE-NEXT:        // Rule: Rule5
+// CODE-NEXT:        if (!RuleConfig->isRuleDisabled(5)) {
+// CODE-NEXT:          if (1
+// CODE-NEXT:) {
+// CODE-NEXT:            APPLY
+// CODE-NEXT:            return true;
+// CODE-NEXT:          }
+// CODE-NEXT:        }
+// CODE-NEXT:        llvm_unreachable("Combine rule elision was incorrect");
+// CODE-NEXT:        return false;
+// CODE-NEXT:      }
+// CODE-NEXT:    }
+
+// Check that Rule5 is run if operand 1 is not MUL.
+
+// CODE-NEXT:    if (Partition == 1 /* false */) {
+// CODE-NEXT:      // Leaf name: Rule5
+// CODE-NEXT:      // Rule: Rule5
+// CODE-NEXT:      if (!RuleConfig->isRuleDisabled(5)) {
+// CODE-NEXT:        if (1
+// CODE-NEXT:) {
+// CODE-NEXT:          APPLY
+// CODE-NEXT:          return true;
+// CODE-NEXT:        }
+// CODE-NEXT:      }
+// CODE-NEXT:      llvm_unreachable("Combine rule elision was incorrect");
+// CODE-NEXT:      return false;
+// CODE-NEXT:    }
+// CODE-NEXT:  }
+

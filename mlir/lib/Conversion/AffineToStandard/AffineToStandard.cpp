@@ -46,7 +46,7 @@ using namespace mlir::vector;
 static Value buildMinMaxReductionSeq(Location loc,
                                      arith::CmpIPredicate predicate,
                                      ValueRange values, OpBuilder &builder) {
-  assert(!llvm::empty(values) && "empty min/max chain");
+  assert(!values.empty() && "empty min/max chain");
 
   auto valueIt = values.begin();
   Value value = *valueIt++;

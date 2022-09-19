@@ -26,10 +26,10 @@ namespace triviality {
 template <typename T, bool IsTriviallyCopyConstructible,
           bool IsTriviallyMoveConstructible>
 void TrivialityTester() {
-  static_assert(std::is_trivially_copy_constructible<T>::value ==
+  static_assert(llvm::is_trivially_copy_constructible<T>::value ==
                     IsTriviallyCopyConstructible,
                 "Mismatch in expected trivial copy construction!");
-  static_assert(std::is_trivially_move_constructible<T>::value ==
+  static_assert(llvm::is_trivially_move_constructible<T>::value ==
                     IsTriviallyMoveConstructible,
                 "Mismatch in expected trivial move construction!");
 

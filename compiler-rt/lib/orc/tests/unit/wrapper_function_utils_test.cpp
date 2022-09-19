@@ -66,6 +66,10 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromOutOfBandError) {
   EXPECT_TRUE(strcmp(R.getOutOfBandError(), TestString) == 0);
 }
 
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCCallCreateEmpty) {
+  EXPECT_TRUE(!!WrapperFunctionCall::Create<SPSArgList<>>(ExecutorAddr()));
+}
+
 static void voidNoop() {}
 
 static __orc_rt_CWrapperFunctionResult voidNoopWrapper(const char *ArgData,

@@ -16,12 +16,52 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "inline-order"
 
+enum class InlinePriorityMode : int { Size, Cost, OptRatio };
+
+static cl::opt<InlinePriorityMode> UseInlinePriority(
+    "inline-priority-mode", cl::init(InlinePriorityMode::Size), cl::Hidden,
+    cl::desc("Choose the priority mode to use in module inline"),
+    cl::values(clEnumValN(InlinePriorityMode::Size, "size",
+                          "Use callee size priority."),
+               clEnumValN(InlinePriorityMode::Cost, "cost",
+                          "Use inline cost priority.")));
+
 namespace {
+
+llvm::InlineCost getInlineCostWrapper(CallBase &CB,
+                                      FunctionAnalysisManager &FAM,
+                                      const InlineParams &Params) {
+  Function &Caller = *CB.getCaller();
+  ProfileSummaryInfo *PSI =
+      FAM.getResult<ModuleAnalysisManagerFunctionProxy>(Caller)
+          .getCachedResult<ProfileSummaryAnalysis>(
+              *CB.getParent()->getParent()->getParent());
+
+  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
+  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
+    return FAM.getResult<AssumptionAnalysis>(F);
+  };
+  auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
+    return FAM.getResult<BlockFrequencyAnalysis>(F);
+  };
+  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+    return FAM.getResult<TargetLibraryAnalysis>(F);
+  };
+
+  Function &Callee = *CB.getCalledFunction();
+  auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
+  bool RemarksEnabled =
+      Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
+          DEBUG_TYPE);
+  return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
+                       GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
+}
 
 class InlinePriority {
 public:
@@ -71,12 +111,12 @@ class CostPriority : public InlinePriority {
 
   PriorityT evaluate(const CallBase *CB) {
     auto IC = getInlineCost(CB);
-    int cost = 0;
+    int Cost = 0;
     if (IC.isVariable())
-      cost = IC.getCost();
+      Cost = IC.getCost();
     else
-      cost = IC.isNever() ? INT_MAX : INT_MIN;
-    return cost;
+      Cost = IC.isNever() ? INT_MAX : INT_MIN;
+    return Cost;
   }
 
   bool isMoreDesirable(const PriorityT &P1, const PriorityT &P2) const {
@@ -109,8 +149,6 @@ public:
 
 class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
   using T = std::pair<CallBase *, int>;
-  using reference = T &;
-  using const_reference = const T &;
 
   // A call site could become less desirable for inlining because of the size
   // growth from prior inlining into the callee. This method is used to lazily
@@ -158,14 +196,6 @@ public:
     return Result;
   }
 
-  const_reference front() override {
-    assert(size() > 0);
-    adjust();
-
-    CallBase *CB = Heap.front();
-    return *InlineHistoryMap.find(CB);
-  }
-
   void erase_if(function_ref<bool(T)> Pred) override {
     auto PredWrapper = [=](CallBase *CB) -> bool {
       return Pred(std::make_pair(CB, 0));
@@ -183,42 +213,9 @@ private:
 
 } // namespace
 
-static llvm::InlineCost getInlineCostWrapper(CallBase &CB,
-                                             FunctionAnalysisManager &FAM,
-                                             const InlineParams &Params) {
-  Function &Caller = *CB.getCaller();
-  ProfileSummaryInfo *PSI =
-      FAM.getResult<ModuleAnalysisManagerFunctionProxy>(Caller)
-          .getCachedResult<ProfileSummaryAnalysis>(
-              *CB.getParent()->getParent()->getParent());
-
-  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
-  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
-    return FAM.getResult<AssumptionAnalysis>(F);
-  };
-  auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
-    return FAM.getResult<BlockFrequencyAnalysis>(F);
-  };
-  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-
-  Function &Callee = *CB.getCalledFunction();
-  auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
-  bool RemarksEnabled =
-      Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
-          DEBUG_TYPE);
-  return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
-                       GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
-}
-
 std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>>
-llvm::getInlineOrder(InlinePriorityMode UseInlinePriority,
-                     FunctionAnalysisManager &FAM, const InlineParams &Params) {
+llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params) {
   switch (UseInlinePriority) {
-  case InlinePriorityMode::NoPriority:
-    return std::make_unique<DefaultInlineOrder<std::pair<CallBase *, int>>>();
-
   case InlinePriorityMode::Size:
     LLVM_DEBUG(dbgs() << "    Current used priority: Size priority ---- \n");
     return std::make_unique<PriorityInlineOrder>(

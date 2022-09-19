@@ -1,8 +1,6 @@
 algorithm
 bit
 climits
-cmath
-compare
 concepts
 cstddef
 cstdint
@@ -13,6 +11,5 @@ initializer_list
 iosfwd
 limits
 new
-tuple
 type_traits
 version
