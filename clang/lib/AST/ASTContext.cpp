@@ -4030,7 +4030,11 @@ QualType ASTContext::getScalableVectorType(QualType EltTy,
 /// the specified element type and size. VectorType must be a built-in type.
 QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
                                    VectorType::VectorKind VecKind) const {
-  assert(vecType->isBuiltinType());
+  assert(vecType->isBuiltinType() ||
+         (vecType->isBitIntType() &&
+          // Only support _BitInt elements with byte-sized power of 2 NumBits.
+          llvm::isPowerOf2_32(vecType->getAs<BitIntType>()->getNumBits()) &&
+          vecType->getAs<BitIntType>()->getNumBits() >= 8));
 
   // Check if we've already instantiated a vector of this type.
   llvm::FoldingSetNodeID ID;
@@ -4098,9 +4102,13 @@ ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
 
 /// getExtVectorType - Return the unique reference to an extended vector type of
 /// the specified element type and size. VectorType must be a built-in type.
-QualType
-ASTContext::getExtVectorType(QualType vecType, unsigned NumElts) const {
-  assert(vecType->isBuiltinType() || vecType->isDependentType());
+QualType ASTContext::getExtVectorType(QualType vecType,
+                                      unsigned NumElts) const {
+  assert(vecType->isBuiltinType() || vecType->isDependentType() ||
+         (vecType->isBitIntType() &&
+          // Only support _BitInt elements with byte-sized power of 2 NumBits.
+          llvm::isPowerOf2_32(vecType->getAs<BitIntType>()->getNumBits()) &&
+          vecType->getAs<BitIntType>()->getNumBits() >= 8));
 
   // Check if we've already instantiated a vector of this type.
   llvm::FoldingSetNodeID ID;
