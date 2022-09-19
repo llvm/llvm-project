@@ -100,11 +100,6 @@ public:
   /// Returns a function.
   Function *getFunction(const FunctionDecl *F);
 
-  /// Returns a pointer to a function if it exists and can be compiled.
-  /// If a function couldn't be compiled, an error is returned.
-  /// If a function was not yet defined, a null pointer is returned.
-  llvm::Expected<Function *> getOrCreateFunction(const FunctionDecl *F);
-
   /// Returns a record or creates one if it does not exist.
   Record *getOrCreateRecord(const RecordDecl *RD);
 
