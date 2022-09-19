@@ -293,7 +293,7 @@ struct CastAwayContractionLeadingOneDim
     if (oldAccType.getRank() < 2)
       return failure();
     // TODO: implement masks.
-    if (llvm::size(contractOp.getMasks()) != 0)
+    if (!contractOp.getMasks().empty())
       return failure();
     if (oldAccType.getShape()[0] != 1)
       return failure();
