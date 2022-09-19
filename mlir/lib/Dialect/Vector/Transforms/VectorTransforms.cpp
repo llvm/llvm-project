@@ -603,7 +603,7 @@ struct ContractOpToElementwise
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
     // TODO: implement masks
-    if (llvm::size(contractOp.getMasks()) != 0)
+    if (!contractOp.getMasks().empty())
       return failure();
 
     if (failed(filter(contractOp)))
@@ -1358,7 +1358,7 @@ LogicalResult
 ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
                                                  PatternRewriter &rew) const {
   // TODO: implement masks
-  if (llvm::size(op.getMasks()) != 0)
+  if (!op.getMasks().empty())
     return failure();
   if (vectorTransformOptions.vectorContractLowering !=
       vector::VectorContractLowering::Matmul)
@@ -1611,7 +1611,7 @@ private:
 LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
     vector::ContractionOp op, PatternRewriter &rewriter) const {
   // TODO: implement masks
-  if (llvm::size(op.getMasks()) != 0)
+  if (!op.getMasks().empty())
     return failure();
 
   if (vectorTransformOptions.vectorContractLowering !=
@@ -1645,7 +1645,7 @@ LogicalResult
 ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
                                             PatternRewriter &rewriter) const {
   // TODO: implement masks
-  if (llvm::size(op.getMasks()) != 0)
+  if (!op.getMasks().empty())
     return failure();
 
   if (failed(filter(op)))
@@ -1777,7 +1777,7 @@ LogicalResult
 ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
                                        PatternRewriter &rewriter) const {
   // TODO: implement masks.
-  if (llvm::size(op.getMasks()) != 0)
+  if (!op.getMasks().empty())
     return failure();
 
   if (failed(filter(op)))
@@ -2517,8 +2517,7 @@ public:
     if (!xferOp.hasOutOfBoundsDim())
       return failure();
 
-    if (xferOp.getVectorType().getRank() > 1 ||
-        llvm::size(xferOp.getIndices()) == 0)
+    if (xferOp.getVectorType().getRank() > 1 || xferOp.getIndices().empty())
       return failure();
 
     Location loc = xferOp->getLoc();

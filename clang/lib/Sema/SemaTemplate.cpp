@@ -1531,11 +1531,11 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
 
   CheckValidDeclSpecifiers();
 
-  if (TInfo->getType()->isUndeducedType()) {
-    Diag(D.getIdentifierLoc(),
-         diag::warn_cxx14_compat_template_nontype_parm_auto_type)
-      << QualType(TInfo->getType()->getContainedAutoType(), 0);
-  }
+  if (const auto *T = TInfo->getType()->getContainedDeducedType())
+    if (isa<AutoType>(T))
+      Diag(D.getIdentifierLoc(),
+           diag::warn_cxx14_compat_template_nontype_parm_auto_type)
+          << QualType(TInfo->getType()->getContainedAutoType(), 0);
 
   assert(S->isTemplateParamScope() &&
          "Non-type template parameter not in template parameter scope!");

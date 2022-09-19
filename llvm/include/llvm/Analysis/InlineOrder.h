@@ -18,9 +18,6 @@ class CallBase;
 
 template <typename T> class InlineOrder {
 public:
-  using reference = T &;
-  using const_reference = const T &;
-
   virtual ~InlineOrder() = default;
 
   virtual size_t size() = 0;
@@ -28,8 +25,6 @@ public:
   virtual void push(const T &Elt) = 0;
 
   virtual T pop() = 0;
-
-  virtual const_reference front() = 0;
 
   virtual void erase_if(function_ref<bool(T)> Pred) = 0;
 

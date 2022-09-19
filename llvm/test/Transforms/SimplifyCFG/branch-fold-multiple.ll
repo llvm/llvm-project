@@ -3,9 +3,12 @@
 
 %struct.S = type { [4 x i32] }
 
-; Check the second, third, and fourth basic blocks are folded into
-; the first basic block since each has one bonus intruction, which
-; does not exceed the default bouns instruction threshold of 1.
+; Check the second basic block is folded into the first basic block
+; since it has one bonus intruction. The third basic block is not
+; folded into the first basic block since the accumulated bonus
+; instructions will exceed the default threshold of 1. The fourth basic
+; block is foled into the third basic block since the accumulated
+; bonus instruction cost is 1.
 
 define i1 @test1(i32 %0, i32 %1, i32 %2, i32 %3) {
 ; CHECK-LABEL: @test1(
@@ -15,14 +18,18 @@ define i1 @test1(i32 %0, i32 %1, i32 %2, i32 %3) {
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[TMP1:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[CMP2_1:%.*]] = icmp sgt i32 [[MUL1]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP2]], i1 true, i1 [[CMP2_1]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[FOR_COND_1:%.*]]
+; CHECK:       for.cond.1:
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[TMP2:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[CMP2_2:%.*]] = icmp sgt i32 [[MUL2]], 0
-; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[OR_COND]], i1 true, i1 [[CMP2_2]]
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul i32 [[TMP3:%.*]], [[TMP3]]
 ; CHECK-NEXT:    [[CMP2_3:%.*]] = icmp sgt i32 [[MUL3]], 0
-; CHECK-NEXT:    [[OR_COND2:%.*]] = select i1 [[OR_COND1]], i1 true, i1 [[CMP2_3]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[OR_COND2]], i1 false, i1 true
-; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[CMP2_2]], i1 true, i1 [[CMP2_3]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[OR_COND1]], i1 false, i1 true
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[FOR_COND_1]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
   %mul0 = mul i32 %0, %0

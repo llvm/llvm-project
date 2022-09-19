@@ -851,7 +851,7 @@ def Vector_OuterProductOp :
       return getRhs().getType();
     }
     VectorType getOperandVectorTypeACC() {
-      return (llvm::size(getAcc()) == 0)
+      return getAcc().empty()
         ? VectorType()
         : (*getAcc().begin()).getType().cast<VectorType>();
     }

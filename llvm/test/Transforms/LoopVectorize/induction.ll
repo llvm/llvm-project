@@ -63,7 +63,7 @@ define void @multi_int_induction(i32* %A, i32 %N) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934590
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; IND-NEXT:    [[CAST_VTC:%.*]] = trunc i64 [[N_VEC]] to i32
 ; IND-NEXT:    [[IND_END:%.*]] = add i32 [[CAST_VTC]], 190
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -105,7 +105,7 @@ define void @multi_int_induction(i32* %A, i32 %N) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
 ; UNROLL-NEXT:    [[CAST_VTC:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NEXT:    [[IND_END:%.*]] = add i32 [[CAST_VTC]], 190
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -202,7 +202,7 @@ define void @multi_int_induction(i32* %A, i32 %N) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 7
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934584
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -8
 ; INTERLEAVE-NEXT:    [[CAST_VTC:%.*]] = trunc i64 [[N_VEC]] to i32
 ; INTERLEAVE-NEXT:    [[IND_END:%.*]] = add i32 [[CAST_VTC]], 190
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -979,7 +979,7 @@ define float @scalarize_induction_variable_02(float* %a, float* %b, i64 %n) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 4611686018427387902
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; IND-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 3
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
@@ -1039,7 +1039,7 @@ define float @scalarize_induction_variable_02(float* %a, float* %b, i64 %n) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 24
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 4611686018427387900
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
 ; UNROLL-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 3
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
@@ -1695,7 +1695,7 @@ define void @scalarize_induction_variable_04(i32* %a, %pair.i32* %p, i32 %n) {
 ; IND-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; IND-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934590
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IND:       vector.body:
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1757,7 +1757,7 @@ define void @scalarize_induction_variable_04(i32* %a, %pair.i32* %p, i32 %n) {
 ; UNROLL-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; UNROLL-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -2582,7 +2582,7 @@ define void @iv_vector_and_scalar_users(%pair.i16* %p, i32 %a, i32 %n) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934590
+; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -2
 ; IND-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
 ; IND-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2630,7 +2630,7 @@ define void @iv_vector_and_scalar_users(%pair.i16* %p, i32 %a, i32 %n) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 3
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934588
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -4
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i64 0
 ; UNROLL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
@@ -2754,7 +2754,7 @@ define void @iv_vector_and_scalar_users(%pair.i16* %p, i32 %a, i32 %n) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 7
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 8589934584
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], -8
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
@@ -3333,7 +3333,7 @@ define i32 @testoverflowcheck() {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp eq i8 [[DOTPR_I]], -1
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
-; IND-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP3]], 510
+; IND-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP3]], -2
 ; IND-NEXT:    [[CAST_VTC:%.*]] = trunc i32 [[N_VEC]] to i8
 ; IND-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[CAST_VTC]]
 ; IND-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 -1>, i32 [[C_PROMOTED_I]], i64 0
@@ -3375,7 +3375,7 @@ define i32 @testoverflowcheck() {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i8 [[DOTPR_I]], -4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
-; UNROLL-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP3]], 508
+; UNROLL-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP3]], -4
 ; UNROLL-NEXT:    [[CAST_VTC:%.*]] = trunc i32 [[N_VEC]] to i8
 ; UNROLL-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[CAST_VTC]]
 ; UNROLL-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 -1>, i32 [[C_PROMOTED_I]], i64 0
@@ -3469,7 +3469,7 @@ define i32 @testoverflowcheck() {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ugt i8 [[DOTPR_I]], -8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP3]], 504
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP3]], -8
 ; INTERLEAVE-NEXT:    [[CAST_VTC:%.*]] = trunc i32 [[N_VEC]] to i8
 ; INTERLEAVE-NEXT:    [[IND_END:%.*]] = add i8 [[DOTPR_I]], [[CAST_VTC]]
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> <i32 poison, i32 -1, i32 -1, i32 -1>, i32 [[C_PROMOTED_I]], i64 0
