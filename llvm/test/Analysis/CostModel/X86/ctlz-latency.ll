@@ -2,10 +2,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=-lzcnt,+sse2 | FileCheck %s -check-prefixes=NOLZCNT
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+sse2 | FileCheck %s -check-prefixes=LZCNT,SSE2
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+sse4.2 | FileCheck %s -check-prefixes=LZCNT,SSE42
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx | FileCheck %s -check-prefixes=LZCNT,AVX1
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx2 | FileCheck %s -check-prefixes=LZCNT,AVX2
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx512f | FileCheck %s -check-prefixes=LZCNT,AVX512
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx512vl,+avx512bw,+avx512dq | FileCheck %s -check-prefixes=LZCNT,AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx | FileCheck %s -check-prefixes=LZCNT,AVX,AVX1
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx2 | FileCheck %s -check-prefixes=LZCNT,AVX,AVX2
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx512f | FileCheck %s -check-prefixes=LZCNT,AVX512,AVX512F
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx512vl,+avx512bw,+avx512dq | FileCheck %s -check-prefixes=LZCNT,AVX512,AVX512BW
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=latency -mattr=+lzcnt,+avx512vl,+avx512bw,+avx512dq,+avx512cd | FileCheck %s -check-prefixes=LZCNT,AVX512CD
 
 ; Verify the cost of scalar leading zero count instructions.
@@ -138,103 +138,97 @@ declare <64 x i8> @llvm.ctlz.v64i8(<64 x i8>, i1)
 
 define <2 x i64> @var_ctlz_v2i64(<2 x i64> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v2i64'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v2i64'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v2i64'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v2i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v2i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v2i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v2i64'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
-; AVX-LABEL: 'var_ctlz_v2i64'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %ctlz
   %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 0)
   ret <2 x i64> %ctlz
 }
 
 define <2 x i64> @var_ctlz_v2i64u(<2 x i64> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v2i64u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v2i64u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v2i64u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v2i64u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v2i64u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v2i64u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v2i64u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <2 x i64> %ctlz
 ;
-; AVX-LABEL: 'var_ctlz_v2i64u'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %ctlz
   %ctlz = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 1)
   ret <2 x i64> %ctlz
 }
 
 define <4 x i64> @var_ctlz_v4i64(<4 x i64> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v4i64'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v4i64'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v4i64'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v4i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v4i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v4i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v4i64'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
   %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 0)
@@ -243,31 +237,31 @@ define <4 x i64> @var_ctlz_v4i64(<4 x i64> %a) {
 
 define <4 x i64> @var_ctlz_v4i64u(<4 x i64> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v4i64u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v4i64u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v4i64u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v4i64u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v4i64u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v4i64u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v4i64u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i64> %ctlz
 ;
   %ctlz = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 1)
@@ -276,31 +270,35 @@ define <4 x i64> @var_ctlz_v4i64u(<4 x i64> %a) {
 
 define <8 x i64> @var_ctlz_v8i64(<8 x i64> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v8i64'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v8i64'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v8i64'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v8i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v8i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
-; AVX512-LABEL: 'var_ctlz_v8i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
+; AVX512F-LABEL: 'var_ctlz_v8i64'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
+;
+; AVX512BW-LABEL: 'var_ctlz_v8i64'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v8i64'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
   %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 0)
@@ -309,31 +307,35 @@ define <8 x i64> @var_ctlz_v8i64(<8 x i64> %a) {
 
 define <8 x i64> @var_ctlz_v8i64u(<8 x i64> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v8i64u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v8i64u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v8i64u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v8i64u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v8i64u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
-; AVX512-LABEL: 'var_ctlz_v8i64u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
+; AVX512F-LABEL: 'var_ctlz_v8i64u'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
+;
+; AVX512BW-LABEL: 'var_ctlz_v8i64u'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v8i64u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %ctlz
 ;
   %ctlz = call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %a, i1 1)
@@ -342,103 +344,97 @@ define <8 x i64> @var_ctlz_v8i64u(<8 x i64> %a) {
 
 define <4 x i32> @var_ctlz_v4i32(<4 x i32> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v4i32'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v4i32'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v4i32'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v4i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v4i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v4i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v4i32'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
-; AVX-LABEL: 'var_ctlz_v4i32'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %ctlz
   %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 0)
   ret <4 x i32> %ctlz
 }
 
 define <4 x i32> @var_ctlz_v4i32u(<4 x i32> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v4i32u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v4i32u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v4i32u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v4i32u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v4i32u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v4i32u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v4i32u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <4 x i32> %ctlz
 ;
-; AVX-LABEL: 'var_ctlz_v4i32u'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %ctlz
   %ctlz = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 1)
   ret <4 x i32> %ctlz
 }
 
 define <8 x i32> @var_ctlz_v8i32(<8 x i32> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v8i32'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v8i32'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v8i32'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v8i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v8i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v8i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v8i32'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
   %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 0)
@@ -447,31 +443,31 @@ define <8 x i32> @var_ctlz_v8i32(<8 x i32> %a) {
 
 define <8 x i32> @var_ctlz_v8i32u(<8 x i32> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v8i32u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v8i32u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v8i32u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v8i32u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v8i32u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v8i32u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v8i32u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i32> %ctlz
 ;
   %ctlz = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 1)
@@ -480,31 +476,35 @@ define <8 x i32> @var_ctlz_v8i32u(<8 x i32> %a) {
 
 define <16 x i32> @var_ctlz_v16i32(<16 x i32> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v16i32'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v16i32'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v16i32'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v16i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v16i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
-; AVX512-LABEL: 'var_ctlz_v16i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
+; AVX512F-LABEL: 'var_ctlz_v16i32'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
+;
+; AVX512BW-LABEL: 'var_ctlz_v16i32'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v16i32'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
   %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 0)
@@ -513,31 +513,35 @@ define <16 x i32> @var_ctlz_v16i32(<16 x i32> %a) {
 
 define <16 x i32> @var_ctlz_v16i32u(<16 x i32> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v16i32u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v16i32u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v16i32u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v16i32u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v16i32u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
-; AVX512-LABEL: 'var_ctlz_v16i32u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
+; AVX512F-LABEL: 'var_ctlz_v16i32u'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
+;
+; AVX512BW-LABEL: 'var_ctlz_v16i32u'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v16i32u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i32> %ctlz
 ;
   %ctlz = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %a, i1 1)
@@ -546,103 +550,97 @@ define <16 x i32> @var_ctlz_v16i32u(<16 x i32> %a) {
 
 define <8 x i16> @var_ctlz_v8i16(<8 x i16> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v8i16'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v8i16'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v8i16'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v8i16'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v8i16'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v8i16'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v8i16'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
-; AVX-LABEL: 'var_ctlz_v8i16'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %ctlz
   %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 0)
   ret <8 x i16> %ctlz
 }
 
 define <8 x i16> @var_ctlz_v8i16u(<8 x i16> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v8i16u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v8i16u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v8i16u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v8i16u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v8i16u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v8i16u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v8i16u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i16> %ctlz
 ;
-; AVX-LABEL: 'var_ctlz_v8i16u'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %ctlz
   %ctlz = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 1)
   ret <8 x i16> %ctlz
 }
 
 define <16 x i16> @var_ctlz_v16i16(<16 x i16> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v16i16'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v16i16'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v16i16'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v16i16'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v16i16'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v16i16'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v16i16'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
   %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 0)
@@ -651,31 +649,31 @@ define <16 x i16> @var_ctlz_v16i16(<16 x i16> %a) {
 
 define <16 x i16> @var_ctlz_v16i16u(<16 x i16> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v16i16u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v16i16u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v16i16u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v16i16u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v16i16u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v16i16u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v16i16u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i16> %ctlz
 ;
   %ctlz = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 1)
@@ -684,31 +682,31 @@ define <16 x i16> @var_ctlz_v16i16u(<16 x i16> %a) {
 
 define <32 x i16> @var_ctlz_v32i16(<32 x i16> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v32i16'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v32i16'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v32i16'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v32i16'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v32i16'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v32i16'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v32i16'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
   %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 0)
@@ -717,31 +715,31 @@ define <32 x i16> @var_ctlz_v32i16(<32 x i16> %a) {
 
 define <32 x i16> @var_ctlz_v32i16u(<32 x i16> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v32i16u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v32i16u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v32i16u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v32i16u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v32i16u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v32i16u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v32i16u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i16> %ctlz
 ;
   %ctlz = call <32 x i16> @llvm.ctlz.v32i16(<32 x i16> %a, i1 1)
@@ -750,103 +748,89 @@ define <32 x i16> @var_ctlz_v32i16u(<32 x i16> %a) {
 
 define <16 x i8> @var_ctlz_v16i8(<16 x i8> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v16i8'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v16i8'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v16i8'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
-; AVX1-LABEL: 'var_ctlz_v16i8'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
-;
-; AVX2-LABEL: 'var_ctlz_v16i8'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
+; AVX-LABEL: 'var_ctlz_v16i8'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v16i8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v16i8'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
-; AVX-LABEL: 'var_ctlz_v16i8'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %ctlz
   %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 0)
   ret <16 x i8> %ctlz
 }
 
 define <16 x i8> @var_ctlz_v16i8u(<16 x i8> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v16i8u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v16i8u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v16i8u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
-; AVX1-LABEL: 'var_ctlz_v16i8u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
-;
-; AVX2-LABEL: 'var_ctlz_v16i8u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
+; AVX-LABEL: 'var_ctlz_v16i8u'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v16i8u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v16i8u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <16 x i8> %ctlz
 ;
-; AVX-LABEL: 'var_ctlz_v16i8u'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %ctlz
   %ctlz = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 1)
   ret <16 x i8> %ctlz
 }
 
 define <32 x i8> @var_ctlz_v32i8(<32 x i8> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v32i8'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 188 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v32i8'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 156 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v32i8'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v32i8'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v32i8'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v32i8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v32i8'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
   %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 0)
@@ -855,31 +839,31 @@ define <32 x i8> @var_ctlz_v32i8(<32 x i8> %a) {
 
 define <32 x i8> @var_ctlz_v32i8u(<32 x i8> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v32i8u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 188 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v32i8u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 156 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v32i8u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v32i8u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v32i8u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; AVX512-LABEL: 'var_ctlz_v32i8u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v32i8u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <32 x i8> %ctlz
 ;
   %ctlz = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 1)
@@ -888,31 +872,35 @@ define <32 x i8> @var_ctlz_v32i8u(<32 x i8> %a) {
 
 define <64 x i8> @var_ctlz_v64i8(<64 x i8> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v64i8'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 376 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 156 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v64i8'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 312 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 156 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v64i8'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v64i8'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v64i8'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
-; AVX512-LABEL: 'var_ctlz_v64i8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
+; AVX512F-LABEL: 'var_ctlz_v64i8'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
+;
+; AVX512BW-LABEL: 'var_ctlz_v64i8'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v64i8'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 false)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
   %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 0)
@@ -921,31 +909,35 @@ define <64 x i8> @var_ctlz_v64i8(<64 x i8> %a) {
 
 define <64 x i8> @var_ctlz_v64i8u(<64 x i8> %a) {
 ; NOLZCNT-LABEL: 'var_ctlz_v64i8u'
-; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 376 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
+; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 156 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
 ; NOLZCNT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; SSE2-LABEL: 'var_ctlz_v64i8u'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 312 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 156 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; SSE42-LABEL: 'var_ctlz_v64i8u'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; AVX1-LABEL: 'var_ctlz_v64i8u'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; AVX2-LABEL: 'var_ctlz_v64i8u'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
-; AVX512-LABEL: 'var_ctlz_v64i8u'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
+; AVX512F-LABEL: 'var_ctlz_v64i8u'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
+;
+; AVX512BW-LABEL: 'var_ctlz_v64i8u'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
 ; AVX512CD-LABEL: 'var_ctlz_v64i8u'
-; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
+; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 true)
 ; AVX512CD-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <64 x i8> %ctlz
 ;
   %ctlz = call <64 x i8> @llvm.ctlz.v64i8(<64 x i8> %a, i1 1)
