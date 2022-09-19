@@ -415,7 +415,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
     Optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
-    ASSERT_EQ(TreeNode->size(), 2);
+    ASSERT_EQ(TreeNode->size(), 2u);
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[2].path())));
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[3].path())));
     EXPECT_FALSE(TreeNode->lookup(sys::path::filename(Temps[0].path())));
@@ -435,7 +435,7 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
     Optional<llvm::cas::TreeProxy> TreeNode;
     ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
                       Succeeded());
-    ASSERT_EQ(TreeNode->size(), 2);
+    ASSERT_EQ(TreeNode->size(), 2u);
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[0].path())));
     EXPECT_TRUE(TreeNode->lookup(sys::path::filename(Temps[1].path())));
     EXPECT_FALSE(TreeNode->lookup(sys::path::filename(Temps[2].path())));
