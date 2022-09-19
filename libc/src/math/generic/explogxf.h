@@ -94,7 +94,7 @@ struct Exp10Base : public ExpBase {
                                        0x1.0470591dff149p1, 0x1.2bd7c0a9fbc4dp0,
                                        0x1.1429e74a98f43p-1};
 
-  static constexpr double powb_lo(double dx) {
+  static double powb_lo(double dx) {
     using fputil::multiply_add;
     double dx2 = dx * dx;
     // c0 = 1 + COEFFS[0] * dx
