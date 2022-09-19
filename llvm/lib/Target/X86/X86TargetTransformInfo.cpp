@@ -3817,9 +3817,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BITREVERSE, MVT::i64,     { 14 } },
     { ISD::BSWAP,      MVT::i64,     {  1 } },
     { ISD::CTLZ,       MVT::i64,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  1,  1,  1 } }, // BSR+XOR
     { ISD::CTTZ,       MVT::i64,     {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1 } }, // BSR
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  1,  1,  1 } }, // BSR
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  1 } },
     { ISD::ROTR,       MVT::i64,     {  1 } },
@@ -3840,15 +3840,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::i32,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i16,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i8,      {  4 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1,  1,  1,  1 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2,  2,  3,  3 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR
     { ISD::CTTZ,       MVT::i32,     {  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i16,     {  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i8,      {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1,  1,  1,  1 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2,  2,  1,  1 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  1 } }, // BSF
     { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
     { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
     { ISD::CTPOP,      MVT::i8,      {  7,  6, 13, 13 } },
