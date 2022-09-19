@@ -1684,6 +1684,24 @@ static LogicalResult foldInsertAfterInsertSlice(InsertSliceOp insertOp) {
   return success();
 }
 
+/// Folds round-trip extract/insert slice op pairs.
+/// Example:
+/// ```mlir
+/// %0 = tensor.extract_slice %val[0, 0, 0, 0] [1, 1, 2, 4] [1, 1, 1, 1]
+/// %1 = tensor.insert_slice %0 into %val[0, 0, 0, 0] [1, 1, 2, 4] [1, 1, 1, 1]
+/// ```
+/// can be folded into %val.
+static Value foldInsertAfterExtractSlice(InsertSliceOp insertOp) {
+  auto extractOp = insertOp.getSource().getDefiningOp<ExtractSliceOp>();
+
+  auto isSame = [](OpFoldResult a, OpFoldResult b) { return a == b; };
+  if (!extractOp || extractOp.getSource() != insertOp.getDest() ||
+      !extractOp.isSameAs(insertOp, isSame))
+    return nullptr;
+
+  return extractOp.getSource();
+}
+
 OpFoldResult InsertSliceOp::fold(ArrayRef<Attribute>) {
   if (getSourceType().hasStaticShape() && getType().hasStaticShape() &&
       getSourceType() == getType() &&
@@ -1691,6 +1709,8 @@ OpFoldResult InsertSliceOp::fold(ArrayRef<Attribute>) {
     return this->getSource();
   if (succeeded(foldInsertAfterInsertSlice(*this)))
     return getResult();
+  if (auto result = foldInsertAfterExtractSlice(*this))
+    return result;
   return OpFoldResult();
 }
 
