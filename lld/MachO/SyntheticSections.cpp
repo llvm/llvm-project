@@ -1832,19 +1832,12 @@ uint64_t InitOffsetsSection::getSize() const {
 }
 
 void InitOffsetsSection::writeTo(uint8_t *buf) const {
-  uint64_t textVA = 0;
-  for (const OutputSegment *oseg : outputSegments)
-    if (oseg->name == segment_names::text) {
-      textVA = oseg->addr;
-      break;
-    }
-
   // FIXME: Add function specified by -init when that argument is implemented.
   for (ConcatInputSection *isec : sections) {
     for (const Reloc &rel : isec->relocs) {
       const Symbol *referent = rel.referent.dyn_cast<Symbol *>();
       assert(referent && "section relocation should have been rejected");
-      uint64_t offset = referent->getVA() - textVA;
+      uint64_t offset = referent->getVA() - in.header->addr;
       // FIXME: Can we handle this gracefully?
       if (offset > UINT32_MAX)
         fatal(isec->getLocation(rel.offset) + ": offset to initializer " +

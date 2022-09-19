@@ -43,7 +43,7 @@ protected:
 class MigrateAction : public WrapperFrontendAction {
   std::string MigrateDir;
   std::string PlistOut;
-  bool EmitPremigrationARCErros;
+  bool EmitPremigrationARCErrors;
 protected:
   bool BeginInvocation(CompilerInstance &CI) override;
 

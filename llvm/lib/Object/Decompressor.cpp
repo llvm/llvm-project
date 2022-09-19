@@ -57,6 +57,6 @@ Error Decompressor::consumeCompressedZLibHeader(bool Is64Bit,
 
 Error Decompressor::decompress(MutableArrayRef<uint8_t> Buffer) {
   size_t Size = Buffer.size();
-  return compression::zlib::uncompress(arrayRefFromStringRef(SectionData),
+  return compression::zlib::decompress(arrayRefFromStringRef(SectionData),
                                        Buffer.data(), Size);
 }

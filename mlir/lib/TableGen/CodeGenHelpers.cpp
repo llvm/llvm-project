@@ -14,7 +14,6 @@
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Pattern.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TableGen/Record.h"

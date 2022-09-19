@@ -148,7 +148,7 @@ set(LIBC_INSTALL_TARGET)
 if(LLVM_LIBC_FULL_BUILD)
   set(LIBC_TARGET libc)
   set(LIBC_COMPONENT libc)
-  set(LIBC_INSTALL_DEPENDS "libc;libc-headers;libc-startup")
+  set(LIBC_INSTALL_DEPENDS "libc;install-libc-headers;libc-startup")
   set(LIBC_INSTALL_TARGET install-libc)
   set(LIBC_ARCHIVE_NAME c)
 else()
@@ -185,6 +185,15 @@ endif()
 
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)
+endif()
+
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_llvm_install_targets(
+    install-libc-headers
+    DEPENDS libc-headers
+    COMPONENT libc-headers
+  )
 endif()
 
 add_llvm_install_targets(

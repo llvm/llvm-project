@@ -1154,14 +1154,14 @@ impl::foldCastInterfaceOp(Operation *op, ArrayRef<Attribute> attrOperands,
 LogicalResult impl::verifyCastInterfaceOp(
     Operation *op, function_ref<bool(TypeRange, TypeRange)> areCastCompatible) {
   auto resultTypes = op->getResultTypes();
-  if (llvm::empty(resultTypes))
+  if (resultTypes.empty())
     return op->emitOpError()
            << "expected at least one result for cast operation";
 
   auto operandTypes = op->getOperandTypes();
   if (!areCastCompatible(operandTypes, resultTypes)) {
     InFlightDiagnostic diag = op->emitOpError("operand type");
-    if (llvm::empty(operandTypes))
+    if (operandTypes.empty())
       diag << "s []";
     else if (llvm::size(operandTypes) == 1)
       diag << " " << *operandTypes.begin();

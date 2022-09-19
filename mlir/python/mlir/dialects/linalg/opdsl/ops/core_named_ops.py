@@ -150,6 +150,20 @@ def quantized_batch_matmul(A=TensorDef(T1, Batch, S.M, S.K),
                        TypeFn.cast_signed(U, AZp)) * (TypeFn.cast_signed(
                            U, B[D.b, D.k, D.n]) - TypeFn.cast_signed(U, BZp))
 
+@linalg_structured_op
+def batch_reduce_matmul(A=TensorDef(T1, Batch, S.M, S.K),
+                        B=TensorDef(T2, Batch, S.K, S.N),
+                        C=TensorDef(U, S.M, S.N, output=True)):
+  """Performs a batch-reduce matrix multiplication of two 3D inputs.
+  The partial multiplication results are reduced into a 2D output.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.b, D.m, D.n, D.k)
+  implements(ContractionOpInterface)
+  C[D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k] * TypeFn.cast_signed(
+    U, B[D.b, D.k, D.n]))
 
 @linalg_structured_op
 def matvec(A=TensorDef(T1, S.M, S.N),

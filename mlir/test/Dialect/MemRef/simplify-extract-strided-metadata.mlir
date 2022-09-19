@@ -214,16 +214,15 @@ func.func @extract_strided_metadata_of_rank_reduced_subview_w_variable_strides(
 //   CHECK-DAG: %[[FINAL_OFFSET:.*]] = affine.apply #[[$OFFSETS_MAP]]()[%[[DYN_OFFSET0]], %[[DYN_OFFSET1]]]
 //
 //       CHECK: return %[[BASE]], %[[FINAL_OFFSET]], %[[C64]], %[[C64]], %[[C128]], %[[C1]]
-#map0 = affine_map<(d0, d1)[s0] -> (d0 * 128 + s0 + d1)>
 func.func @extract_strided_metadata_of_subview_w_variable_offset(
     %arg0: memref<384x128xf32>, %arg1 : index, %arg2 : index)
     -> (memref<f32>, index, index, index, index, index) {
 
   %subview = memref.subview %arg0[%arg1, %arg2] [64, 64] [1, 1] :
-    memref<384x128xf32> to memref<64x64xf32, #map0>
+    memref<384x128xf32> to memref<64x64xf32, strided<[128, 1], offset: ?>>
 
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
-    memref<64x64xf32, #map0> -> memref<f32>, index, index, index, index, index
+  memref<64x64xf32, strided<[128, 1], offset: ?>> -> memref<f32>, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
     memref<f32>, index, index, index, index, index

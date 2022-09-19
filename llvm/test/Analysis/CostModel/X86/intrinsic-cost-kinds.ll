@@ -258,7 +258,7 @@ define void @cttz(i32 %a, <16 x i32> %va) {
 
 define void @ctlz(i32 %a, <16 x i32> %va) {
 ; THRU-LABEL: 'ctlz'
-; THRU-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %va, i1 true)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
