@@ -114,7 +114,7 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
   }];
 
   let arguments = (ins
-    FlatSymbolRefAttr:$name,
+    SymbolNameAttr:$name,
     AnyType:$value
   );
 
@@ -134,7 +134,7 @@ def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   }];
 
   let arguments = (ins
-    FlatSymbolRefAttr:$name
+    SymbolNameAttr:$name
   );
 
   let results = (outs

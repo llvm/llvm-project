@@ -95,7 +95,6 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
     This pass validates if input TOSA operations match the specification for given
     criteria, e.g. TOSA profile.
   }];
-  let constructor = "createTosaValidationPass()";
 
   let options = [
       Option<"profile", "profile", "mlir::tosa::TosaProfileEnum",

@@ -99,9 +99,10 @@ static constexpr tosa_level_t TOSA_LEVEL_NONE = {0, 0, 0, 0};
 struct TosaValidation : public tosa::impl::TosaValidationBase<TosaValidation> {
 public:
   explicit TosaValidation() { populateConstantOperandChecks(); }
-  explicit TosaValidation(const ValidationOptions &options) : TosaValidation() {
+  explicit TosaValidation(const TosaValidationOptions &options)
+      : TosaValidation() {
     this->profile = options.profile;
-    this->StrictOperationSpecAlignment = options.strictOperationSpecAlignment;
+    this->StrictOperationSpecAlignment = options.StrictOperationSpecAlignment;
     this->level = options.level;
   }
   void runOnOperation() final;
@@ -409,7 +410,7 @@ private:
 
   SmallVector<std::function<LogicalResult(Operation *)>> const_checkers;
   tosa_level_t tosa_level;
-  std::unordered_map<std::string, mlir::Type> variables_map;
+  DenseMap<const mlir::StringAttr *, mlir::Type> variables_map;
 };
 
 LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
@@ -445,26 +446,17 @@ inline bool CompatibleTypes(const mlir::Type &type,
 
 bool TosaValidation::CheckVariable(Operation *op) {
   if (isa<mlir::tosa::VariableOp>(op)) {
-    auto name_attr = dyn_cast<mlir::StringAttr>(op->getAttr("name"));
-    if (!name_attr) {
-      op->emitOpError() << "Name attribute is not StringAttr";
-      return false;
-    }
-    std::string name = name_attr.getValue().str();
+    auto name_attr = cast<mlir::StringAttr>(op->getAttr("name"));
 
-    if (variables_map.count(name)) {
+    if (variables_map.count(&name_attr)) {
       op->emitOpError() << "name has already been declared";
       return false;
     }
 
-    auto type_attr = dyn_cast<mlir::TypeAttr>(op->getAttr("type"));
-    if (!type_attr) {
-      op->emitOpError() << "type attribute is not TypeAttr";
-      return false;
-    }
+    auto type_attr = cast<mlir::TypeAttr>(op->getAttr("type"));
     mlir::Type type = type_attr.getValue();
 
-    variables_map[name] = type;
+    variables_map[&name_attr] = type;
   }
 
   return true;
@@ -473,19 +465,14 @@ bool TosaValidation::CheckVariable(Operation *op) {
 bool TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    auto name_attr = dyn_cast<mlir::FlatSymbolRefAttr>(op->getAttr("name"));
-    if (!name_attr) {
-      op->emitOpError() << "name attribute is not FlatSymbolRefAttr";
-      return false;
-    }
-    std::string name = name_attr.getValue().str();
+    auto name_attr = cast<mlir::StringAttr>(op->getAttr("name"));
 
-    if (!variables_map.count(name)) {
+    if (!variables_map.count(&name_attr)) {
       op->emitOpError() << "name has not been declared";
       return false;
     }
 
-    auto var_type = variables_map[name];
+    auto var_type = variables_map[&name_attr];
 
     for (auto v : op->getOperands()) {
       auto type = v.getType();
@@ -542,8 +529,3 @@ void TosaValidation::runOnOperation() {
   });
 }
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::tosa::createTosaValidationPass(ValidationOptions const &options) {
-  return std::make_unique<TosaValidation>(options);
-}
