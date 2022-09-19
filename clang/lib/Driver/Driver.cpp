@@ -4401,7 +4401,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     Action *PackagerAction =
         C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
     DDep.add(*PackagerAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
-             nullptr, Action::OFK_None);
+             nullptr, C.getActiveOffloadKinds());
   }
 
   // If we are unable to embed a single device output into the host, we need to
