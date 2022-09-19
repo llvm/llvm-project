@@ -937,7 +937,7 @@ public:
   ///
   /// We don't have a way to invalidate per-loop dispositions. Clear and
   /// recompute is simpler.
-  void forgetLoopDispositions(const Loop *L);
+  void forgetLoopDispositions();
 
   /// Determine the minimum number of zero bits that S is guaranteed to end in
   /// (at every loop iteration).  It is, at the same time, the minimum number

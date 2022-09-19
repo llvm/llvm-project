@@ -317,7 +317,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
   }
 
   if (Changed && SE)
-    SE->forgetLoopDispositions(&L);
+    SE->forgetLoopDispositions();
   return Changed;
 }
 
