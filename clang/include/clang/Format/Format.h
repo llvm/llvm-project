@@ -872,6 +872,23 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackParameters;
 
+  /// If ``true``, clang-format will always break after a Json array `[`
+  /// otherwise it will scan until the closing `]` to determine if it should add
+  /// newlines between elements (prettier compatible).
+  ///
+  /// NOTE: This is currently only for formatting JSON.
+  /// \code
+  ///    true:                                  false:
+  ///    [                          vs.      [1, 2, 3, 4]
+  ///      1,
+  ///      2,
+  ///      3,
+  ///      4
+  ///    ]
+  /// \endcode
+  /// \version 16
+  bool BreakArrays;
+
   /// The style of wrapping parameters on the same line (bin-packed) or
   /// on one line each.
   enum BinPackStyle : int8_t {
@@ -3878,6 +3895,7 @@ struct FormatStyle {
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
+           BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
