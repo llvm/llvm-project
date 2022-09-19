@@ -136,9 +136,6 @@ template <typename LatticeT> struct DataflowAnalysisState {
   Environment Env;
 };
 
-// FIXME: Rename to `runDataflowAnalysis` after usages of the overload that
-// applies to `CFGStmt` have been replaced.
-//
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. The
 /// returned vector, if any, will have the same size as the number of CFG
@@ -149,7 +146,7 @@ template <typename LatticeT> struct DataflowAnalysisState {
 template <typename AnalysisT>
 llvm::Expected<std::vector<
     llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-runDataflowAnalysisOnCFG(
+runDataflowAnalysis(
     const ControlFlowContext &CFCtx, AnalysisT &Analysis,
     const Environment &InitEnv,
     std::function<void(const CFGElement &, const DataflowAnalysisState<
@@ -189,41 +186,6 @@ runDataflowAnalysisOnCFG(
                     });
                   });
   return BlockStates;
-}
-
-/// Deprecated. Use `runDataflowAnalysisOnCFG` instead.
-///
-/// Performs dataflow analysis and returns a mapping from basic block IDs to
-/// dataflow analysis states that model the respective basic blocks. The
-/// returned vector, if any, will have the same size as the number of CFG
-/// blocks, with indices corresponding to basic block IDs. Returns an error if
-/// the dataflow analysis cannot be performed successfully. Otherwise, calls
-/// `PostVisitStmt` on each statement with the final analysis results at that
-/// program point.
-template <typename AnalysisT>
-llvm::Expected<std::vector<
-    llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-runDataflowAnalysis(
-    const ControlFlowContext &CFCtx, AnalysisT &Analysis,
-    const Environment &InitEnv,
-    std::function<void(const CFGStmt &, const DataflowAnalysisState<
-                                            typename AnalysisT::Lattice> &)>
-        PostVisitStmt = nullptr) {
-  std::function<void(
-      const CFGElement &,
-      const DataflowAnalysisState<typename AnalysisT::Lattice> &)>
-      PostVisitCFG = nullptr;
-  if (PostVisitStmt) {
-    PostVisitCFG =
-        [&PostVisitStmt](
-            const CFGElement &Element,
-            const DataflowAnalysisState<typename AnalysisT::Lattice> &State) {
-          if (auto Stmt = Element.getAs<CFGStmt>()) {
-            PostVisitStmt(*Stmt, State);
-          }
-        };
-  }
-  return runDataflowAnalysisOnCFG(CFCtx, Analysis, InitEnv, PostVisitCFG);
 }
 
 /// Abstract base class for dataflow "models": reusable analysis components that
