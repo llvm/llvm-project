@@ -16,7 +16,6 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/YAMLTraits.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -567,17 +566,5 @@ bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
 bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 
 } // namespace lldb_private
-
-namespace llvm {
-namespace yaml {
-template <> struct ScalarTraits<lldb_private::ArchSpec> {
-  static void output(const lldb_private::ArchSpec &, void *, raw_ostream &);
-  static StringRef input(StringRef, void *, lldb_private::ArchSpec &);
-  static QuotingType mustQuote(StringRef S) { return QuotingType::Double; }
-};
-} // namespace yaml
-} // namespace llvm
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::ArchSpec)
 
 #endif // LLDB_UTILITY_ARCHSPEC_H
