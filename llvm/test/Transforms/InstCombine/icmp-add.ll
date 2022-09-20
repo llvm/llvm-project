@@ -1216,8 +1216,7 @@ define i1 @icmp_dec_assume_nonzero(i8 %x) {
 ; CHECK-LABEL: @icmp_dec_assume_nonzero(
 ; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
-; CHECK-NEXT:    [[I:%.*]] = add i8 [[X]], -1
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 7
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 8
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %z = icmp ne i8 %x, 0
@@ -1231,8 +1230,7 @@ define i1 @icmp_dec_sub_assume_nonzero(i8 %x) {
 ; CHECK-LABEL: @icmp_dec_sub_assume_nonzero(
 ; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
-; CHECK-NEXT:    [[I:%.*]] = add i8 [[X]], -1
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 11
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 12
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %z = icmp ne i8 %x, 0
@@ -1244,9 +1242,7 @@ define i1 @icmp_dec_sub_assume_nonzero(i8 %x) {
 
 define i1 @icmp_dec_nonzero(i16 %x) {
 ; CHECK-LABEL: @icmp_dec_nonzero(
-; CHECK-NEXT:    [[O:%.*]] = or i16 [[X:%.*]], 4
-; CHECK-NEXT:    [[I:%.*]] = add nsw i16 [[O]], -1
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i16 [[I]], 7
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i16 [[X:%.*]], 8
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %o = or i16 %x, 4
