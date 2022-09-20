@@ -8,3 +8,7 @@ test.array_of_attr_op
     b = [0, 1, -42, 42],
     // CHECK-SAME: [a, b, b, a]
     c = [a, b, b, a]
+
+// CHECK: test.array_of_attr_op
+// CHECK-SAME: a = [], b = [], c = []
+test.array_of_attr_op a = [], b = [], c = []

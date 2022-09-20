@@ -329,6 +329,18 @@ class AttrParameter<string type, string desc, string accessorType = "">
 class TypeParameter<string type, string desc, string accessorType = "">
  : AttrOrTypeParameter<type, desc, accessorType>;
 
+// An optional parameter.
+class OptionalParameter<string type, string desc = ""> :
+    AttrOrTypeParameter<type, desc> {
+  let defaultValue = cppStorageType # "()";
+}
+
+// A parameter with a default value.
+class DefaultValuedParameter<string type, string value, string desc = ""> :
+    AttrOrTypeParameter<type, desc> {
+  let defaultValue = value;
+}
+
 // For StringRefs, which require allocation.
 class StringRefParameter<string desc = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
@@ -350,6 +362,15 @@ class ArrayRefParameter<string arrayOf, string desc = ""> :
   let cppStorageType = "::llvm::SmallVector<" # arrayOf # ">";
 }
 
+// Regular array parameters cannot be parsed when empty. This optional array
+// parameter can be used with optional groups to be parsed when empty.
+class OptionalArrayRefParameter<string arrayOf, string desc = ""> :
+    OptionalParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
+  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+  let cppStorageType = "::llvm::SmallVector<" # arrayOf # ">";
+  let comparator = "::llvm::makeArrayRef($_lhs) == ::llvm::makeArrayRef($_rhs)";
+}
+
 // For classes which require allocation and have their own allocateInto method.
 class SelfAllocationParameter<string type, string desc> :
     AttrOrTypeParameter<type, desc> {
@@ -365,18 +386,6 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
       tmpFields.push_back($_self[i].allocateInto($_allocator));
     $_dst = $_allocator.copyInto(ArrayRef<}] # arrayOf # [{>(tmpFields));
   }];
-}
-
-// An optional parameter.
-class OptionalParameter<string type, string desc = ""> :
-    AttrOrTypeParameter<type, desc> {
-  let defaultValue = cppStorageType # "()";
-}
-
-// A parameter with a default value.
-class DefaultValuedParameter<string type, string value, string desc = ""> :
-    AttrOrTypeParameter<type, desc> {
-  let defaultValue = value;
 }
 
 // This is a special attribute parameter that represents the "self" type of the
@@ -406,9 +415,9 @@ class AttributeSelfTypeParameter<string desc,
 class ArrayOfAttr<Dialect dialect, string attrName, string attrMnemonic,
                   string eltName, list<Trait> traits = []>
     : AttrDef<dialect, attrName, traits> {
-  let parameters = (ins ArrayRefParameter<eltName>:$value);
+  let parameters = (ins OptionalArrayRefParameter<eltName>:$value);
   let mnemonic = attrMnemonic;
-  let assemblyFormat = "`[` $value `]`";
+  let assemblyFormat = "`[` (`]`) : ($value^ `]`)?";
 
   let returnType = "::llvm::ArrayRef<" # eltName # ">";
   let constBuilderCall = "$_builder.getAttr<" # attrName # "Attr>($0)";
