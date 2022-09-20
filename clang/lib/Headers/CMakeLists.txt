@@ -647,3 +647,5 @@ if (NOT LLVM_ENABLE_IDE)
                            DEPENDS utility-resource-headers
                            COMPONENT utility-resource-headers)
 endif()
+
+source_group("Clang Runtime Headers" FILES ${files})
