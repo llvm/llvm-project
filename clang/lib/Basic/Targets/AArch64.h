@@ -54,6 +54,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasLSE;
   bool HasFlagM;
   bool HasMOPS;
+  bool HasRCPC;
 
   llvm::AArch64::ArchKind ArchKind;
 
