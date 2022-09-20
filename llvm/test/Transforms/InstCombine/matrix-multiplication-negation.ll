@@ -4,9 +4,9 @@
 ; The result has the fewest vector elements between the result and the two operands so the negation can be moved there
 define <2 x double> @test_negation_move_to_result(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_negation_move_to_result(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <6 x double> [[A:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A_NEG]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
   %a.neg = fneg <6 x double> %a
   %res = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
@@ -17,20 +17,53 @@ define <2 x double> @test_negation_move_to_result(<6 x double> %a, <3 x double> 
 ; Fast flag should be preserved
 define <2 x double> @test_negation_move_to_result_with_fastflags(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_negation_move_to_result_with_fastflags(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <6 x double> [[A:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call fast <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A_NEG]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg fast <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
   %a.neg = fneg <6 x double> %a
   %res = tail call fast <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
   ret <2 x double> %res
 }
 
+define <2 x double> @test_negation_move_to_result_with_nnan_flag(<6 x double> %a, <3 x double> %b) {
+; CHECK-LABEL: @test_negation_move_to_result_with_nnan_flag(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+;
+  %a.neg = fneg <6 x double> %a
+  %res = tail call nnan <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
+  ret <2 x double> %res
+}
+
+define <2 x double> @test_negation_move_to_result_with_nsz_flag(<6 x double> %a, <3 x double> %b) {
+; CHECK-LABEL: @test_negation_move_to_result_with_nsz_flag(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nsz <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nsz <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+;
+  %a.neg = fneg <6 x double> %a
+  %res = tail call nsz <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
+  ret <2 x double> %res
+}
+
+define <2 x double> @test_negation_move_to_result_with_fastflag_on_negation(<6 x double> %a, <3 x double> %b) {
+; CHECK-LABEL: @test_negation_move_to_result_with_fastflag_on_negation(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+;
+  %a.neg = fneg fast<6 x double> %a
+  %res = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
+  ret <2 x double> %res
+}
+
 ; %b has the fewest vector elements between the result and the two operands so the negation can be moved there
 define <9 x double> @test_move_negation_to_second_operand(<27 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_move_negation_to_second_operand(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <27 x double> [[A:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A_NEG]], <3 x double> [[B:%.*]], i32 9, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A:%.*]], <3 x double> [[TMP1]], i32 9, i32 3, i32 1)
 ; CHECK-NEXT:    ret <9 x double> [[RES]]
 ;
   %a.neg = fneg <27 x double> %a
@@ -42,8 +75,8 @@ define <9 x double> @test_move_negation_to_second_operand(<27 x double> %a, <3 x
 ; Fast flag should be preserved
 define <9 x double> @test_move_negation_to_second_operand_with_fast_flags(<27 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_move_negation_to_second_operand_with_fast_flags(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <27 x double> [[A:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call fast <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A_NEG]], <3 x double> [[B:%.*]], i32 9, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A:%.*]], <3 x double> [[TMP1]], i32 9, i32 3, i32 1)
 ; CHECK-NEXT:    ret <9 x double> [[RES]]
 ;
   %a.neg = fneg <27 x double> %a
@@ -54,9 +87,9 @@ define <9 x double> @test_move_negation_to_second_operand_with_fast_flags(<27 x 
 ; The result has the fewest vector elements between the result and the two operands so the negation can be moved there
 define <2 x double> @test_negation_move_to_result_from_second_operand(<3 x double> %a, <6 x double> %b){
 ; CHECK-LABEL: @test_negation_move_to_result_from_second_operand(
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <6 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <2 x double> @llvm.matrix.multiply.v2f64.v3f64.v6f64(<3 x double> [[A:%.*]], <6 x double> [[B_NEG]], i32 1, i32 3, i32 2)
-; CHECK-NEXT:    ret <2 x double> [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.matrix.multiply.v2f64.v3f64.v6f64(<3 x double> [[A:%.*]], <6 x double> [[B:%.*]], i32 1, i32 3, i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
   %b.neg = fneg <6 x double> %b
   %res = tail call <2 x double> @llvm.matrix.multiply.v2f64.v3f64.v6f64(<3 x double> %a, <6 x double> %b.neg, i32 1, i32 3, i32 2)
@@ -66,8 +99,8 @@ define <2 x double> @test_negation_move_to_result_from_second_operand(<3 x doubl
 ; %a has the fewest vector elements between the result and the two operands so the negation can be moved there
 define <9 x double> @test_move_negation_to_first_operand(<3 x double> %a, <27 x double> %b) {
 ; CHECK-LABEL: @test_move_negation_to_first_operand(
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <27 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v3f64.v27f64(<3 x double> [[A:%.*]], <27 x double> [[B_NEG]], i32 1, i32 3, i32 9)
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v3f64.v27f64(<3 x double> [[TMP1]], <27 x double> [[B:%.*]], i32 1, i32 3, i32 9)
 ; CHECK-NEXT:    ret <9 x double> [[RES]]
 ;
   %b.neg = fneg <27 x double> %b
@@ -234,8 +267,8 @@ define <12 x double> @fneg_with_multiple_uses_2(<15 x double> %a, <20 x double> 
 ; negation should be moved to the second operand given it has the smallest operand count
 define <72 x double> @chain_of_matrix_mutliplies(<27 x double> %a, <3 x double> %b, <8 x double> %c) {
 ; CHECK-LABEL: @chain_of_matrix_mutliplies(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <27 x double> [[A:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A_NEG]], <3 x double> [[B:%.*]], i32 9, i32 3, i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <9 x double> @llvm.matrix.multiply.v9f64.v27f64.v3f64(<27 x double> [[A:%.*]], <3 x double> [[TMP1]], i32 9, i32 3, i32 1)
 ; CHECK-NEXT:    [[RES_2:%.*]] = tail call <72 x double> @llvm.matrix.multiply.v72f64.v9f64.v8f64(<9 x double> [[RES]], <8 x double> [[C:%.*]], i32 9, i32 1, i32 8)
 ; CHECK-NEXT:    ret <72 x double> [[RES_2]]
 ;
@@ -249,11 +282,11 @@ define <72 x double> @chain_of_matrix_mutliplies(<27 x double> %a, <3 x double> 
 ; second negation should be moved to the result of the second multipication
 define <6 x double> @chain_of_matrix_mutliplies_with_two_negations(<3 x double> %a, <5 x double> %b, <10 x double> %c) {
 ; CHECK-LABEL: @chain_of_matrix_mutliplies_with_two_negations(
-; CHECK-NEXT:    [[B_NEG:%.*]] = fneg <5 x double> [[B:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <15 x double> @llvm.matrix.multiply.v15f64.v3f64.v5f64(<3 x double> [[A:%.*]], <5 x double> [[B_NEG]], i32 3, i32 1, i32 5)
-; CHECK-NEXT:    [[RES_NEG:%.*]] = fneg <15 x double> [[RES]]
-; CHECK-NEXT:    [[RES_2:%.*]] = tail call <6 x double> @llvm.matrix.multiply.v6f64.v15f64.v10f64(<15 x double> [[RES_NEG]], <10 x double> [[C:%.*]], i32 3, i32 5, i32 2)
-; CHECK-NEXT:    ret <6 x double> [[RES_2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call <15 x double> @llvm.matrix.multiply.v15f64.v3f64.v5f64(<3 x double> [[TMP1]], <5 x double> [[B:%.*]], i32 3, i32 1, i32 5)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <6 x double> @llvm.matrix.multiply.v6f64.v15f64.v10f64(<15 x double> [[RES]], <10 x double> [[C:%.*]], i32 3, i32 5, i32 2)
+; CHECK-NEXT:    [[TMP3:%.*]] = fneg <6 x double> [[TMP2]]
+; CHECK-NEXT:    ret <6 x double> [[TMP3]]
 ;
   %b.neg = fneg <5 x double> %b
   %res = tail call <15 x double> @llvm.matrix.multiply.v15f64.v3f64.v5f64(<3 x double> %a, <5 x double> %b.neg, i32 3, i32 1, i32 5)
@@ -265,10 +298,10 @@ define <6 x double> @chain_of_matrix_mutliplies_with_two_negations(<3 x double> 
 ; negation should be propagated to the result of the second matrix multiplication
 define <6 x double> @chain_of_matrix_mutliplies_propagation(<15 x double> %a, <20 x double> %b, <8 x double> %c){
 ; CHECK-LABEL: @chain_of_matrix_mutliplies_propagation(
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg <15 x double> [[A:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = tail call <12 x double> @llvm.matrix.multiply.v12f64.v15f64.v20f64(<15 x double> [[A_NEG]], <20 x double> [[B:%.*]], i32 3, i32 5, i32 4)
-; CHECK-NEXT:    [[RES_2:%.*]] = tail call <6 x double> @llvm.matrix.multiply.v6f64.v12f64.v8f64(<12 x double> [[RES]], <8 x double> [[C:%.*]], i32 3, i32 4, i32 2)
-; CHECK-NEXT:    ret <6 x double> [[RES_2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <12 x double> @llvm.matrix.multiply.v12f64.v15f64.v20f64(<15 x double> [[A:%.*]], <20 x double> [[B:%.*]], i32 3, i32 5, i32 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <6 x double> @llvm.matrix.multiply.v6f64.v12f64.v8f64(<12 x double> [[TMP1]], <8 x double> [[C:%.*]], i32 3, i32 4, i32 2)
+; CHECK-NEXT:    [[TMP3:%.*]] = fneg <6 x double> [[TMP2]]
+; CHECK-NEXT:    ret <6 x double> [[TMP3]]
 ;
   %a.neg = fneg <15 x double> %a
   %res = tail call <12 x double> @llvm.matrix.multiply.v12f64.v15f64.v20f64(<15 x double> %a.neg, <20 x double> %b, i32 3, i32 5, i32 4)
