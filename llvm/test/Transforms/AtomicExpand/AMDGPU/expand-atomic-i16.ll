@@ -2,6 +2,8 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -atomic-expand %s | FileCheck %s
 ; RUN: opt -mtriple=r600-mesa-mesa3d -S -atomic-expand %s | FileCheck %s
 
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
+
 define i16 @test_atomicrmw_xchg_i16_global(i16 addrspace(1)* %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_i16_global(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i16 addrspace(1)* [[PTR:%.*]] to i64
@@ -449,6 +451,81 @@ define i16 @test_cmpxchg_i16_global(i16 addrspace(1)* %out, i16 %in, i16 %old) {
 ;
   %gep = getelementptr i16, i16 addrspace(1)* %out, i64 4
   %res = cmpxchg i16 addrspace(1)* %gep, i16 %old, i16 %in seq_cst seq_cst
+  %extract = extractvalue {i16, i1} %res, 0
+  ret i16 %extract
+}
+
+define i16 @test_atomicrmw_xchg_i16_local(i16 addrspace(3)* %ptr, i16 %value) {
+; CHECK-LABEL: @test_atomicrmw_xchg_i16_local(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i16 addrspace(3)* [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], -4
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = inttoptr i64 [[TMP2]] to i32 addrspace(3)*
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[VALUE:%.*]] to i32
+; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32 addrspace(3)* [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[VALOPERAND_SHIFTED]]
+; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg i32 addrspace(3)* [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    ret i16 [[EXTRACTED]]
+;
+  %res = atomicrmw xchg i16 addrspace(3)* %ptr, i16 %value seq_cst
+  ret i16 %res
+}
+
+define i16 @test_cmpxchg_i16_local(i16 addrspace(3)* %out, i16 %in, i16 %old) {
+; CHECK-LABEL: @test_cmpxchg_i16_local(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, i16 addrspace(3)* [[OUT:%.*]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i16 addrspace(3)* [[GEP]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], -4
+; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = inttoptr i64 [[TMP2]] to i32 addrspace(3)*
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[IN:%.*]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[OLD:%.*]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP6]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32 addrspace(3)* [[ALIGNEDADDR]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], [[INV_MASK]]
+; CHECK-NEXT:    br label [[PARTWORD_CMPXCHG_LOOP:%.*]]
+; CHECK:       partword.cmpxchg.loop:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP9]], [[TMP0:%.*]] ], [ [[TMP16:%.*]], [[PARTWORD_CMPXCHG_FAILURE:%.*]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i32 [[TMP10]], [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i32 [[TMP10]], [[TMP7]]
+; CHECK-NEXT:    [[TMP13:%.*]] = cmpxchg i32 addrspace(3)* [[ALIGNEDADDR]], i32 [[TMP12]], i32 [[TMP11]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { i32, i1 } [[TMP13]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { i32, i1 } [[TMP13]], 1
+; CHECK-NEXT:    br i1 [[TMP15]], label [[PARTWORD_CMPXCHG_END:%.*]], label [[PARTWORD_CMPXCHG_FAILURE]]
+; CHECK:       partword.cmpxchg.failure:
+; CHECK-NEXT:    [[TMP16]] = and i32 [[TMP14]], [[INV_MASK]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i32 [[TMP10]], [[TMP16]]
+; CHECK-NEXT:    br i1 [[TMP17]], label [[PARTWORD_CMPXCHG_LOOP]], label [[PARTWORD_CMPXCHG_END]]
+; CHECK:       partword.cmpxchg.end:
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP14]], [[SHIFTAMT]]
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; CHECK-NEXT:    [[TMP18:%.*]] = insertvalue { i16, i1 } undef, i16 [[EXTRACTED]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertvalue { i16, i1 } [[TMP18]], i1 [[TMP15]], 1
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractvalue { i16, i1 } [[TMP19]], 0
+; CHECK-NEXT:    ret i16 [[EXTRACT]]
+;
+  %gep = getelementptr i16, i16 addrspace(3)* %out, i64 4
+  %res = cmpxchg i16 addrspace(3)* %gep, i16 %old, i16 %in seq_cst seq_cst
   %extract = extractvalue {i16, i1} %res, 0
   ret i16 %extract
 }
