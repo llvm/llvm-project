@@ -34,13 +34,17 @@ template <typename T>
 static Error readInteger(StringRef Buffer, const char *Src, T &Val) {
   static_assert(std::is_integral<T>::value,
                 "Cannot call readInteger on non-integral type.");
-  assert(reinterpret_cast<uintptr_t>(Src) % alignof(T) == 0 &&
-         "Unaligned read of value from buffer!");
   // Don't read before the beginning or past the end of the file
   if (Src < Buffer.begin() || Src + sizeof(T) > Buffer.end())
     return parseFailed("Reading structure out of file bounds");
 
-  Val = *reinterpret_cast<const T *>(Src);
+  // The DXContainer offset table is comprised of uint32_t values but not padded
+  // to a 64-bit boundary. So Parts may start unaligned if there is an odd
+  // number of parts and part data itself is not required to be padded.
+  if (reinterpret_cast<uintptr_t>(Src) % alignof(T) != 0)
+    memcpy(reinterpret_cast<char *>(&Val), Src, sizeof(T));
+  else
+    Val = *reinterpret_cast<const T *>(Src);
   // DXContainer is always little endian
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(Val);
@@ -65,6 +69,17 @@ Error DXContainer::parseDXILHeader(uint32_t Offset) {
   return Error::success();
 }
 
+Error DXContainer::parseShaderFlags(uint32_t Offset) {
+  if (ShaderFlags)
+    return parseFailed("More than one SFI0 part is present in the file");
+  const char *Current = Data.getBuffer().data() + Offset;
+  uint64_t FlagValue = 0;
+  if (Error Err = readInteger(Data.getBuffer(), Current, FlagValue))
+    return Err;
+  ShaderFlags = FlagValue;
+  return Error::success();
+}
+
 Error DXContainer::parsePartOffsets() {
   const char *Current = Data.getBuffer().data() + sizeof(dxbc::Header);
   for (uint32_t Part = 0; Part < Header.PartCount; ++Part) {
@@ -86,6 +101,10 @@ Error DXContainer::parsePartOffsets() {
     switch (PT) {
     case dxbc::PartType::DXIL:
       if (Error Err = parseDXILHeader(PartOffset + sizeof(dxbc::PartHeader)))
+        return Err;
+      break;
+    case dxbc::PartType::SFI0:
+      if (Error Err = parseShaderFlags(PartOffset + sizeof(dxbc::PartHeader)))
         return Err;
       break;
     case dxbc::PartType::Unknown:
