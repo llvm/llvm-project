@@ -82,9 +82,7 @@ static bool isDereferenceableAndAlignedPointer(
       // As we recursed through GEPs to get here, we've incrementally checked
       // that each step advanced by a multiple of the alignment. If our base is
       // properly aligned, then the original offset accessed must also be.
-      Type *Ty = V->getType();
-      assert(Ty->isSized() && "must be sized");
-      APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
+      APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
       return isAligned(V, Offset, Alignment, DL);
     }
 
@@ -174,9 +172,7 @@ static bool isDereferenceableAndAlignedPointer(
         // checked that each step advanced by a multiple of the alignment. If
         // our base is properly aligned, then the original offset accessed
         // must also be.
-        Type *Ty = V->getType();
-        assert(Ty->isSized() && "must be sized");
-        APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
+        APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
         return isAligned(V, Offset, Alignment, DL);
       }
     }
