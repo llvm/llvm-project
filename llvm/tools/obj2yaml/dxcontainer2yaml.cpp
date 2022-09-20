@@ -60,6 +60,13 @@ dumpDXContainer(MemoryBufferRef Source) {
               DXIL->second, DXIL->second + DXIL->first.Bitcode.Size)};
       break;
     }
+    case dxbc::PartType::SFI0: {
+      Optional<uint64_t> Flags = Container.getShaderFlags();
+      // Omit the flags in the YAML if they are missing or zero.
+      if (Flags && *Flags > 0)
+        NewPart.Flags = DXContainerYAML::ShaderFlags(*Flags);
+      break;
+    }
     case dxbc::PartType::Unknown:
       break;
     }
