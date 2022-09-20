@@ -15,11 +15,6 @@ WaveActiveCountBits(bool bBit);
 
 
 // abs builtins
-__attribute__((clang_builtin_alias(__builtin_abs))) int abs(int In);
-__attribute__((clang_builtin_alias(__builtin_labs))) int64_t abs(int64_t In);
-__attribute__((clang_builtin_alias(__builtin_fabsf))) float abs(float In);
-__attribute__((clang_builtin_alias(__builtin_fabs))) double abs(double In);
-
 #ifdef __HLSL_ENABLE_16_BIT
 __attribute__((clang_builtin_alias(__builtin_elementwise_abs)))
 int16_t abs(int16_t);
