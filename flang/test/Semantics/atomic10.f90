@@ -1,5 +1,4 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! XFAIL: *
 ! This test checks for semantic errors in atomic_ref subroutine calls based on
 ! the interface defined in section 16.9.29 of the Fortran 2018 standard.
 
@@ -48,7 +47,13 @@ program test_atomic_ref
   call atomic_ref(val, non_scalar_coarray)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_ref'
+  call atomic_ref(val, non_scalar_coarray[1])
+
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_ref'
   call atomic_ref(val_logical, non_scalar_logical_coarray)
+
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_ref'
+  call atomic_ref(val_logical, non_scalar_logical_coarray[1])
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_ref'
   call atomic_ref(val, non_coarray)
@@ -71,10 +76,10 @@ program test_atomic_ref
   !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'LOGICAL(1)'
   call atomic_ref(val_logical, kind1_logical_coarray)
 
-  !ERROR: Actual argument for 'value=' must have same type as 'atom=', but is 'LOGICAL(8)'
+  !ERROR: 'value=' argument to 'atomic_ref' must have same type as 'atom=', but is 'LOGICAL(8)'
   call atomic_ref(val_logical, scalar_coarray)
 
-  !ERROR: Actual argument for 'value=' must have same type as 'atom=', but is 'INTEGER(8)'
+  !ERROR: 'value=' argument to 'atomic_ref' must have same type as 'atom=', but is 'INTEGER(8)'
   call atomic_ref(val, atom_logical)
 
   !ERROR: Actual argument for 'atom=' has bad type 'REAL(4)'
