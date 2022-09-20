@@ -6780,6 +6780,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       PHINode *ToFold = CanFoldTerminatingCondition->first;
       PHINode *ToHelpFold = CanFoldTerminatingCondition->second;
 
+      (void)ToFold;
       LLVM_DEBUG(dbgs() << "To fold phi-node:\n"
                         << *ToFold << "\n"
                         << "New term-cond phi-node:\n"
