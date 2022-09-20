@@ -1795,7 +1795,7 @@ static SPIRVType *getSampledImageType(const StructType *OpaqueType,
 
 namespace SPIRV {
 SPIRVType *lowerBuiltinType(const StructType *OpaqueType,
-                            AccessQualifier::AccessQualifier AccessQual,
+                            SPIRV::AccessQualifier::AccessQualifier AccessQual,
                             MachineIRBuilder &MIRBuilder,
                             SPIRVGlobalRegistry *GR) {
   assert(OpaqueType->hasName() &&
