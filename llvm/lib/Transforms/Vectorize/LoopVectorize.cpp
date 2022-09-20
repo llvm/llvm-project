@@ -477,11 +477,6 @@ public:
   /// complex control flow around the loops.
   virtual std::pair<BasicBlock *, Value *> createVectorizedLoopSkeleton();
 
-  /// Widen a single call instruction within the innermost loop.
-  void widenCallInstruction(CallInst &CI, VPValue *Def, VPUser &ArgOperands,
-                            VPTransformState &State,
-                            Intrinsic::ID VectorIntrinsicID);
-
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
   void fixVectorizedLoop(VPTransformState &State, VPlan &Plan);
 
