@@ -1914,12 +1914,11 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::QCAT:          return "HexagonISD::QCAT";
   case HexagonISD::QTRUE:         return "HexagonISD::QTRUE";
   case HexagonISD::QFALSE:        return "HexagonISD::QFALSE";
+  case HexagonISD::TL_EXTEND:     return "HexagonISD::TL_EXTEND";
+  case HexagonISD::TL_TRUNCATE:   return "HexagonISD::TL_TRUNCATE";
   case HexagonISD::TYPECAST:      return "HexagonISD::TYPECAST";
   case HexagonISD::VALIGN:        return "HexagonISD::VALIGN";
   case HexagonISD::VALIGNADDR:    return "HexagonISD::VALIGNADDR";
-  case HexagonISD::VPACKL:        return "HexagonISD::VPACKL";
-  case HexagonISD::VUNPACK:       return "HexagonISD::VUNPACK";
-  case HexagonISD::VUNPACKU:      return "HexagonISD::VUNPACKU";
   case HexagonISD::ISEL:          return "HexagonISD::ISEL";
   case HexagonISD::OP_END:        break;
   }
