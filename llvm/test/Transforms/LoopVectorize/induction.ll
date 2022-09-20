@@ -4576,8 +4576,7 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; IND:       vector.scevcheck:
-; IND-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
-; IND-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[TMP0]], 2147483648
+; IND-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
 ; IND-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -2
@@ -4586,14 +4585,14 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IND-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IND-NEXT:    [[SEXT:%.*]] = shl i64 [[INDEX]], 32
-; IND-NEXT:    [[TMP1:%.*]] = ashr exact i64 [[SEXT]], 32
-; IND-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP1]]
-; IND-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <2 x i32>*
-; IND-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP3]], align 4
+; IND-NEXT:    [[TMP0:%.*]] = ashr exact i64 [[SEXT]], 32
+; IND-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP0]]
+; IND-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to <2 x i32>*
+; IND-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP2]], align 4
 ; IND-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IND-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
-; IND-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IND-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
+; IND-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IND-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
 ; IND:       middle.block:
 ; IND-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[K]]
 ; IND-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -4604,8 +4603,8 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; IND-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; IND-NEXT:    [[TRUNC_IV:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; IND-NEXT:    [[SEXT1:%.*]] = shl i64 [[INDVARS_IV]], 32
-; IND-NEXT:    [[TMP5:%.*]] = ashr exact i64 [[SEXT1]], 32
-; IND-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP5]]
+; IND-NEXT:    [[TMP4:%.*]] = ashr exact i64 [[SEXT1]], 32
+; IND-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP4]]
 ; IND-NEXT:    store i32 [[TRUNC_IV]], i32* [[ARRAYIDX]], align 4
 ; IND-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; IND-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[K]]
@@ -4618,8 +4617,7 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; UNROLL:       vector.scevcheck:
-; UNROLL-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
-; UNROLL-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[TMP0]], 2147483648
+; UNROLL-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
 ; UNROLL-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -4
@@ -4629,17 +4627,17 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
 ; UNROLL-NEXT:    [[SEXT:%.*]] = shl i64 [[INDEX]], 32
-; UNROLL-NEXT:    [[TMP1:%.*]] = ashr exact i64 [[SEXT]], 32
-; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP1]]
-; UNROLL-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <2 x i32>*
-; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP3]], align 4
-; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[TMP2]], i64 2
-; UNROLL-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <2 x i32>*
-; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], <2 x i32>* [[TMP5]], align 4
+; UNROLL-NEXT:    [[TMP0:%.*]] = ashr exact i64 [[SEXT]], 32
+; UNROLL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP0]]
+; UNROLL-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to <2 x i32>*
+; UNROLL-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP2]], align 4
+; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 2
+; UNROLL-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP3]] to <2 x i32>*
+; UNROLL-NEXT:    store <2 x i32> [[STEP_ADD]], <2 x i32>* [[TMP4]], align 4
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 4, i32 4>
-; UNROLL-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNROLL-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
+; UNROLL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; UNROLL-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
 ; UNROLL:       middle.block:
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[K]]
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -4650,8 +4648,8 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; UNROLL-NEXT:    [[TRUNC_IV:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; UNROLL-NEXT:    [[SEXT2:%.*]] = shl i64 [[INDVARS_IV]], 32
-; UNROLL-NEXT:    [[TMP7:%.*]] = ashr exact i64 [[SEXT2]], 32
-; UNROLL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP7]]
+; UNROLL-NEXT:    [[TMP6:%.*]] = ashr exact i64 [[SEXT2]], 32
+; UNROLL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP6]]
 ; UNROLL-NEXT:    store i32 [[TRUNC_IV]], i32* [[ARRAYIDX]], align 4
 ; UNROLL-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; UNROLL-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[K]]
@@ -4715,8 +4713,7 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; INTERLEAVE:       vector.scevcheck:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
-; INTERLEAVE-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[TMP0]], 2147483648
+; INTERLEAVE-NEXT:    [[DOTNOT:%.*]] = icmp ult i64 [[K]], 2147483649
 ; INTERLEAVE-NEXT:    br i1 [[DOTNOT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -8
@@ -4726,17 +4723,17 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; INTERLEAVE-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; INTERLEAVE-NEXT:    [[SEXT:%.*]] = shl i64 [[INDEX]], 32
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = ashr exact i64 [[SEXT]], 32
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], <4 x i32>* [[TMP3]], align 4
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[TMP2]], i64 4
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <4 x i32>*
-; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], <4 x i32>* [[TMP5]], align 4
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = ashr exact i64 [[SEXT]], 32
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[TMP0]]
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to <4 x i32>*
+; INTERLEAVE-NEXT:    store <4 x i32> [[VEC_IND]], <4 x i32>* [[TMP2]], align 4
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[TMP1]], i64 4
+; INTERLEAVE-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP3]] to <4 x i32>*
+; INTERLEAVE-NEXT:    store <4 x i32> [[STEP_ADD]], <4 x i32>* [[TMP4]], align 4
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; INTERLEAVE-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8>
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; INTERLEAVE-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; INTERLEAVE-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
 ; INTERLEAVE:       middle.block:
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[K]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -4747,8 +4744,8 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; INTERLEAVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; INTERLEAVE-NEXT:    [[TRUNC_IV:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; INTERLEAVE-NEXT:    [[SEXT2:%.*]] = shl i64 [[INDVARS_IV]], 32
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = ashr exact i64 [[SEXT2]], 32
-; INTERLEAVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP7]]
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = ashr exact i64 [[SEXT2]], 32
+; INTERLEAVE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP6]]
 ; INTERLEAVE-NEXT:    store i32 [[TRUNC_IV]], i32* [[ARRAYIDX]], align 4
 ; INTERLEAVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; INTERLEAVE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[K]]
