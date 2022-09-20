@@ -213,10 +213,11 @@ CrossWindowsToolChain::CrossWindowsToolChain(const Driver &D,
                                              const llvm::opt::ArgList &Args)
     : Generic_GCC(D, T, Args) {}
 
-bool CrossWindowsToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
+ToolChain::UnwindTableLevel
+CrossWindowsToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   // FIXME: all non-x86 targets need unwind tables, however, LLVM currently does
   // not know how to emit them.
-  return getArch() == llvm::Triple::x86_64;
+  return getArch() == llvm::Triple::x86_64 ? UnwindTableLevel::Asynchronous : UnwindTableLevel::None;
 }
 
 bool CrossWindowsToolChain::isPICDefault() const {

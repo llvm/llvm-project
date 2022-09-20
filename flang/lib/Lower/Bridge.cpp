@@ -2188,9 +2188,15 @@ private:
   /// pointer assignment.)
   void genArrayAssignment(
       const Fortran::evaluate::Assignment &assign,
-      Fortran::lower::StatementContext &stmtCtx,
+      Fortran::lower::StatementContext &localStmtCtx,
       llvm::Optional<llvm::SmallVector<mlir::Value>> lbounds = llvm::None,
       llvm::Optional<llvm::SmallVector<mlir::Value>> ubounds = llvm::None) {
+
+    Fortran::lower::StatementContext &stmtCtx =
+        explicitIterationSpace()
+            ? explicitIterSpace.stmtContext()
+            : (implicitIterationSpace() ? implicitIterSpace.stmtContext()
+                                        : localStmtCtx);
     if (Fortran::lower::isWholeAllocatable(assign.lhs)) {
       // Assignment to allocatables may require the lhs to be
       // deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
@@ -2230,9 +2236,7 @@ private:
     // implied by the lhs array expression.
     Fortran::lower::createAnyMaskedArrayAssignment(
         *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
-        localSymbols,
-        explicitIterationSpace() ? explicitIterSpace.stmtContext()
-                                 : implicitIterSpace.stmtContext());
+        localSymbols, stmtCtx);
   }
 
 #if !defined(NDEBUG)

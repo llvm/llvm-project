@@ -440,7 +440,7 @@ void EmulateInstruction::Context::Dump(Stream &strm,
     break;
   }
 
-  switch (info_type) {
+  switch (GetInfoType()) {
   case eInfoTypeRegisterPlusOffset:
     strm.Printf(" (reg_plus_offset = %s%+" PRId64 ")",
                 info.RegisterPlusOffset.reg.name,

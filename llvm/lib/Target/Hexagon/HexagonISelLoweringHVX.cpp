@@ -2283,9 +2283,9 @@ HexagonTargetLowering::emitHvxShiftRightRnd(SDValue Val, unsigned Amt,
   unsigned ShRight = Signed ? ISD::SRA : ISD::SRL;
 
   SDValue Inp = DAG.getBitcast(IntTy, Val);
-  SDValue LowBits = DAG.getConstant((1u << (Amt - 1)) - 1, dl, IntTy);
+  SDValue LowBits = DAG.getConstant((1ull << (Amt - 1)) - 1, dl, IntTy);
 
-  SDValue AmtP1 = DAG.getConstant(1u << Amt, dl, IntTy);
+  SDValue AmtP1 = DAG.getConstant(1ull << Amt, dl, IntTy);
   SDValue And = DAG.getNode(ISD::AND, dl, IntTy, {Inp, AmtP1});
   SDValue Zero = getZero(dl, IntTy, DAG);
   SDValue Bit = DAG.getSetCC(dl, PredTy, And, Zero, ISD::SETNE);
@@ -2426,13 +2426,13 @@ HexagonTargetLowering::ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
 
   auto [ExpWidth, ExpBias, FracWidth] = getIEEEProperties(InpTy);
   unsigned ElemWidth = 1 + ExpWidth + FracWidth;
-  assert(1u << (ExpWidth - 1) == 1 + ExpBias);
+  assert((1ull << (ExpWidth - 1)) == (1 + ExpBias));
 
   SDValue Inp = DAG.getBitcast(ResTy, Op0);
   SDValue Zero = getZero(dl, ResTy, DAG);
   SDValue Neg = DAG.getSetCC(dl, PredTy, Inp, Zero, ISD::SETLT);
-  SDValue M80 = DAG.getConstant(1u << (ElemWidth - 1), dl, ResTy);
-  SDValue M7F = DAG.getConstant((1u << (ElemWidth - 1)) - 1, dl, ResTy);
+  SDValue M80 = DAG.getConstant(1ull << (ElemWidth - 1), dl, ResTy);
+  SDValue M7F = DAG.getConstant((1ull << (ElemWidth - 1)) - 1, dl, ResTy);
   SDValue One = DAG.getConstant(1, dl, ResTy);
   SDValue Exp00 = DAG.getNode(ISD::SHL, dl, ResTy, {Inp, One});
   SDValue Exp01 = DAG.getNode(ISD::SUB, dl, ResTy, {Exp00, M80});

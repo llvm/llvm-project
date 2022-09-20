@@ -450,16 +450,20 @@ bool MSVCToolChain::IsIntegratedAssemblerDefault() const {
   return true;
 }
 
-bool MSVCToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
+ToolChain::UnwindTableLevel
+MSVCToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   // Don't emit unwind tables by default for MachO targets.
   if (getTriple().isOSBinFormatMachO())
-    return false;
+    return UnwindTableLevel::None;
 
   // All non-x86_32 Windows targets require unwind tables. However, LLVM
   // doesn't know how to generate them for all targets, so only enable
   // the ones that are actually implemented.
-  return getArch() == llvm::Triple::x86_64 || getArch() == llvm::Triple::arm ||
-         getArch() == llvm::Triple::thumb || getArch() == llvm::Triple::aarch64;
+  if (getArch() == llvm::Triple::x86_64 || getArch() == llvm::Triple::arm ||
+      getArch() == llvm::Triple::thumb || getArch() == llvm::Triple::aarch64)
+    return UnwindTableLevel::Asynchronous;
+
+  return UnwindTableLevel::None;
 }
 
 bool MSVCToolChain::isPICDefault() const {

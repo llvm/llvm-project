@@ -391,36 +391,31 @@ public:
       }
     }
 
-    template <class _InputIterator>
-        _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-        vector(_InputIterator __first,
-               typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
-                                 is_constructible<
-                                    value_type,
-                                    typename iterator_traits<_InputIterator>::reference>::value,
-                                 _InputIterator>::type __last);
-    template <class _InputIterator>
-        _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-        vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
-               typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
-                                 is_constructible<
-                                    value_type,
-                                    typename iterator_traits<_InputIterator>::reference>::value>::type* = 0);
-    template <class _ForwardIterator>
-        _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-        vector(_ForwardIterator __first,
-               typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
-                                 is_constructible<
-                                    value_type,
-                                    typename iterator_traits<_ForwardIterator>::reference>::value,
-                                 _ForwardIterator>::type __last);
-    template <class _ForwardIterator>
-        _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-        vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a,
-               typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
-                                 is_constructible<
-                                    value_type,
-                                    typename iterator_traits<_ForwardIterator>::reference>::value>::type* = 0);
+  template <class _InputIterator,
+            __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+                              is_constructible<value_type, typename iterator_traits<_InputIterator>::reference>::value,
+                          int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(_InputIterator __first, _InputIterator __last);
+  template <class _InputIterator,
+            __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+                              is_constructible<value_type, typename iterator_traits<_InputIterator>::reference>::value,
+                          int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+  vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a);
+
+  template <
+      class _ForwardIterator,
+      __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
+                        is_constructible<value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
+                    int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector(_ForwardIterator __first, _ForwardIterator __last);
+
+  template <class _ForwardIterator,
+      __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
+                        is_constructible<value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
+                    int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+  vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a);
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
     ~vector()
@@ -466,26 +461,17 @@ public:
     vector& operator=(vector&& __x)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
 
-    template <class _InputIterator>
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-    typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
-            is_constructible<
-                 value_type,
-                 typename iterator_traits<_InputIterator>::reference>::value,
-            void
-        >::type
-        assign(_InputIterator __first, _InputIterator __last);
-    template <class _ForwardIterator>
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-        typename enable_if
-        <
-            __is_cpp17_forward_iterator<_ForwardIterator>::value &&
-            is_constructible<
-                 value_type,
-                 typename iterator_traits<_ForwardIterator>::reference>::value,
-            void
-        >::type
-        assign(_ForwardIterator __first, _ForwardIterator __last);
+  template <class _InputIterator,
+            __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+                              is_constructible<value_type, typename iterator_traits<_InputIterator>::reference>::value,
+                          int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void assign(_InputIterator __first, _InputIterator __last);
+  template <
+      class _ForwardIterator,
+      __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
+                        is_constructible<value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
+                    int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void assign(_ForwardIterator __first, _ForwardIterator __last);
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void assign(size_type __n, const_reference __u);
 
@@ -601,26 +587,20 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __position, size_type __n, const_reference __x);
 
-    template <class _InputIterator>
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-    typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
-            is_constructible<
-                 value_type,
-                 typename iterator_traits<_InputIterator>::reference>::value,
-            iterator
-        >::type
-        insert(const_iterator __position, _InputIterator __first, _InputIterator __last);
-    template <class _ForwardIterator>
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-        typename enable_if
-        <
-            __is_cpp17_forward_iterator<_ForwardIterator>::value &&
-            is_constructible<
-                 value_type,
-                 typename iterator_traits<_ForwardIterator>::reference>::value,
-            iterator
-        >::type
-        insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last);
+  template <class _InputIterator,
+            __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+                              is_constructible< value_type, typename iterator_traits<_InputIterator>::reference>::value,
+                          int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
+  insert(const_iterator __position, _InputIterator __first, _InputIterator __last);
+
+  template <
+      class _ForwardIterator,
+      __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
+                        is_constructible< value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
+                    int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
+  insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last);
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
@@ -692,14 +672,11 @@ private:
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(size_type __n);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
     void __construct_at_end(size_type __n, const_reference __x);
-    template <class _ForwardIterator>
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-        typename enable_if
-        <
-            __is_cpp17_forward_iterator<_ForwardIterator>::value,
-            void
-        >::type
-        __construct_at_end(_ForwardIterator __first, _ForwardIterator __last, size_type __n);
+
+  template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __construct_at_end(_ForwardIterator __first, _ForwardIterator __last, size_type __n);
+
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __append(size_type __n);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __append(size_type __n, const_reference __x);
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
@@ -1019,13 +996,8 @@ vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x)
 }
 
 template <class _Tp, class _Allocator>
-template <class _ForwardIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    __is_cpp17_forward_iterator<_ForwardIterator>::value,
-    void
->::type
+template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value, int> >
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last, size_type __n)
 {
   _ConstructTransaction __tx(*this, __n);
@@ -1112,14 +1084,11 @@ vector<_Tp, _Allocator>::vector(size_type __n, const value_type& __x)
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIterator>
+template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+                              is_constructible<_Tp, typename iterator_traits<_InputIterator>::reference>::value,
+                          int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
-vector<_Tp, _Allocator>::vector(_InputIterator __first,
-       typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
-                         is_constructible<
-                            value_type,
-                            typename iterator_traits<_InputIterator>::reference>::value,
-                          _InputIterator>::type __last)
+vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last)
 {
     std::__debug_db_insert_c(this);
     for (; __first != __last; ++__first)
@@ -1127,13 +1096,11 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first,
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIterator>
+template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+                              is_constructible<_Tp, typename iterator_traits<_InputIterator>::reference>::value,
+                          int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
-vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
-       typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
-                         is_constructible<
-                            value_type,
-                            typename iterator_traits<_InputIterator>::reference>::value>::type*)
+vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a)
     : __end_cap_(nullptr, __a)
 {
     std::__debug_db_insert_c(this);
@@ -1142,14 +1109,11 @@ vector<_Tp, _Allocator>::vector(_InputIterator __first, _InputIterator __last, c
 }
 
 template <class _Tp, class _Allocator>
-template <class _ForwardIterator>
+template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
+                        is_constructible<_Tp, typename iterator_traits<_ForwardIterator>::reference>::value,
+                    int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
-vector<_Tp, _Allocator>::vector(_ForwardIterator __first,
-                                typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
-                                is_constructible<
-                                   value_type,
-                                   typename iterator_traits<_ForwardIterator>::reference>::value,
-                                                   _ForwardIterator>::type __last)
+vector<_Tp, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __last)
 {
     std::__debug_db_insert_c(this);
     size_type __n = static_cast<size_type>(std::distance(__first, __last));
@@ -1161,13 +1125,11 @@ vector<_Tp, _Allocator>::vector(_ForwardIterator __first,
 }
 
 template <class _Tp, class _Allocator>
-template <class _ForwardIterator>
+template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
+                        is_constructible<_Tp, typename iterator_traits<_ForwardIterator>::reference>::value,
+                    int> >
 _LIBCPP_CONSTEXPR_SINCE_CXX20
-vector<_Tp, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a,
-                                typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
-                                is_constructible<
-                                   value_type,
-                                   typename iterator_traits<_ForwardIterator>::reference>::value>::type*)
+vector<_Tp, _Allocator>::vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a)
     : __end_cap_(nullptr, __a)
 {
     std::__debug_db_insert_c(this);
@@ -1336,13 +1298,10 @@ vector<_Tp, _Allocator>::operator=(const vector& __x)
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
-    is_constructible<
-       _Tp,
-       typename iterator_traits<_InputIterator>::reference>::value,
-    void
->::type
+template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+                              is_constructible<_Tp, typename iterator_traits<_InputIterator>::reference>::value,
+                          int> >
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
 {
     clear();
@@ -1351,16 +1310,10 @@ vector<_Tp, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
 }
 
 template <class _Tp, class _Allocator>
-template <class _ForwardIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    __is_cpp17_forward_iterator<_ForwardIterator>::value &&
-    is_constructible<
-       _Tp,
-       typename iterator_traits<_ForwardIterator>::reference>::value,
-    void
->::type
+template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
+                        is_constructible<_Tp, typename iterator_traits<_ForwardIterator>::reference>::value,
+                    int> >
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::assign(_ForwardIterator __first, _ForwardIterator __last)
 {
     size_type __new_size = static_cast<size_type>(std::distance(__first, __last));
@@ -1812,13 +1765,10 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
-    is_constructible<
-       _Tp,
-       typename iterator_traits<_InputIterator>::reference>::value,
-    typename vector<_Tp, _Allocator>::iterator
->::type
+template <class _InputIterator, __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+                              is_constructible<_Tp, typename iterator_traits<_InputIterator>::reference>::value,
+                          int> >
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, _InputIterator __first, _InputIterator __last)
 {
     _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(std::addressof(__position)) == this,
@@ -1860,16 +1810,10 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, _InputIterator __firs
 }
 
 template <class _Tp, class _Allocator>
-template <class _ForwardIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    __is_cpp17_forward_iterator<_ForwardIterator>::value &&
-    is_constructible<
-       _Tp,
-       typename iterator_traits<_ForwardIterator>::reference>::value,
-    typename vector<_Tp, _Allocator>::iterator
->::type
+template <class _ForwardIterator, __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
+                        is_constructible<_Tp, typename iterator_traits<_ForwardIterator>::reference>::value,
+                    int> >
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last)
 {
     _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(std::addressof(__position)) == this,

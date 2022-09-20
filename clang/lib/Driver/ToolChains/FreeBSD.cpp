@@ -473,7 +473,10 @@ llvm::ExceptionHandling FreeBSD::GetExceptionModel(const ArgList &Args) const {
 
 bool FreeBSD::HasNativeLLVMSupport() const { return true; }
 
-bool FreeBSD::IsUnwindTablesDefault(const ArgList &Args) const { return true; }
+ToolChain::UnwindTableLevel
+FreeBSD::getDefaultUnwindTableLevel(const ArgList &Args) const {
+  return UnwindTableLevel::Asynchronous;
+}
 
 bool FreeBSD::isPIEDefault(const llvm::opt::ArgList &Args) const {
   return getSanitizerArgs(Args).requiresPIE();
