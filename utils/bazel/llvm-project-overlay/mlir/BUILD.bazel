@@ -6421,6 +6421,7 @@ cc_binary(
         "//llvm:Support",
         "//mlir/test:TestAffine",
         "//mlir/test:TestAnalysis",
+        "//mlir/test:TestArithmetic",
         "//mlir/test:TestDLTI",
         "//mlir/test:TestDialect",
         "//mlir/test:TestFunc",
