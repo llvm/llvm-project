@@ -13,9 +13,6 @@ set (CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
 )
 
-find_package (Python3 COMPONENTS Interpreter Development)
-find_package (PythonLibs REQUIRED)
-
 include_directories (${OMPD_INCLUDE_PATH})
 include_directories (${LIBOMP_INCLUDE_DIR})
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/python-module/ompd/__init__.py
