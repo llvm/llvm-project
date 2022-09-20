@@ -73,8 +73,8 @@ public:
   /// Order matches the order within the text.
   std::vector<size_t> points(llvm::StringRef Name = "") const;
   /// Returns the mapping of all names of points marked in the text to their
-  /// position. Unnamed points are mapped to the empty string. Order of points
-  /// for each name matches the order within the text.
+  /// position. Unnamed points are mapped to the empty string. The positions are
+  /// sorted.
   const llvm::StringMap<llvm::SmallVector<size_t, 1>> &all_points() const;
 
   /// Returns the location of the range marked by [[ ]] (or $name[[ ]]).
@@ -84,8 +84,8 @@ public:
   /// They are ordered by start position within the text.
   std::vector<Range> ranges(llvm::StringRef Name = "") const;
   /// Returns the mapping of all names of ranges marked in the text to their
-  /// location. Unnamed ranges are mapped to the empty string. Order of ranges
-  /// for each name matches the order of start positions within the text.
+  /// location. Unnamed ranges are mapped to the empty string. The ranges are
+  /// sorted by their start position.
   const llvm::StringMap<llvm::SmallVector<Range, 1>> &all_ranges() const;
 
 private:
