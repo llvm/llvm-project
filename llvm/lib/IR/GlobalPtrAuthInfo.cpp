@@ -146,7 +146,7 @@ Constant *GlobalPtrAuthInfo::create(Module &M, Constant *Pointer,
 
   auto Result = ConstantExpr::getBitCast(GV, Pointer->getType());
 
-  assert(analyze(Result).hasValue() && "invalid ptrauth constant");
+  assert(analyze(Result).has_value() && "invalid ptrauth constant");
 
   return Result;
 }

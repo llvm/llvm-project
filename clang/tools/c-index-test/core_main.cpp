@@ -484,7 +484,7 @@ static int printStoreFileRecord(StringRef storePath, StringRef filePath,
     return 1;
   }
 
-  if (!lineStart.hasValue())
+  if (!lineStart)
     return printStoreRecord(store, recName, filePath, OS);
 
   indexstore::IndexRecordReader Reader(store, recName, error);
@@ -1001,7 +1001,7 @@ bool deconstructPathAndRange(StringRef input,
     errs() << "couldn't convert to integer: " << end << '\n';
     return true;
   }
-  lineCount = num-lineStart.getValue();
+  lineCount = num - *lineStart;
   return false;
 }
 

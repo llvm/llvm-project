@@ -995,7 +995,7 @@ static bool produceIndexDataForModuleFile(serialization::ModuleFile &Mod,
   // get rebuilt along with their index data).
   auto IsUptodateOpt =
       ParentUnitWriter.isUnitUpToDateForOutputFile(Mod.FileName, None, Error);
-  if (!IsUptodateOpt.hasValue()) {
+  if (!IsUptodateOpt) {
     unsigned DiagID = Diag.getCustomDiagID(DiagnosticsEngine::Error,
                                            "failed file status check: %0");
     Diag.Report(DiagID) << Error;

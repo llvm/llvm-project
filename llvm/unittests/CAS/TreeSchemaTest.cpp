@@ -262,7 +262,7 @@ TEST(TreeSchemaTest, walkFileTreeRecursively) {
         auto ExpectedEntry = RemainingEntries.front();
         RemainingEntries = RemainingEntries.drop_front();
         EXPECT_EQ(ExpectedEntry.first, Entry.getName());
-        EXPECT_EQ(ExpectedEntry.second, Tree.hasValue());
+        EXPECT_EQ(ExpectedEntry.second, Tree.has_value());
         return Error::success();
       });
   EXPECT_THAT_ERROR(std::move(E), Succeeded());

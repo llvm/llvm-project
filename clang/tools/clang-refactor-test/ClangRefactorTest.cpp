@@ -840,8 +840,8 @@ int listRefactoringActions(CXTranslationUnit TU) {
                 "<file:line:column-line:column> format\n";
       return 1;
     }
-    auto Begin = SelectionRange.getValue().Begin;
-    auto End = SelectionRange.getValue().End;
+    auto Begin = SelectionRange->Begin;
+    auto End = SelectionRange->End;
     CXFile File = clang_getFile(TU, Begin.FileName.c_str());
     Range =
         clang_getRange(clang_getLocation(TU, File, Begin.Line, Begin.Column),
@@ -1172,7 +1172,7 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
              "format\n";
       return 1;
     }
-    Ranges.push_back(ParsedLineRange.getValue());
+    Ranges.push_back(*ParsedLineRange);
   }
   for (const auto &Range : opts::initiateAndPerform::AtLocations) {
     if (!StringRef(Range).contains(':')) {
@@ -1205,7 +1205,7 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
                 "the selection specifier in the source\n";
       return 1;
     }
-    SelectionRanges.push_back(ParsedRange.getValue());
+    SelectionRanges.push_back(*ParsedRange);
   }
   if (Ranges.empty() && SelectionRanges.empty()) {
     errs() << "error: -in or -at options must be specified at least once!";
@@ -1242,8 +1242,8 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
                           Location.Line, Column);
     CXSourceRange Range;
     if (SelectionRange) {
-      auto Begin = SelectionRange.getValue().Begin;
-      auto End = SelectionRange.getValue().End;
+      auto Begin = SelectionRange->Begin;
+      auto End = SelectionRange->End;
       CXFile File = clang_getFile(TU, Begin.FileName.c_str());
       Range =
           clang_getRange(clang_getLocation(TU, File, Begin.Line, Begin.Column),
@@ -1259,21 +1259,20 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
     if (const char *Reason = clang_getCString(FailureReason))
       ReasonString = Reason;
     clang_disposeString(FailureReason);
-    if (InitiationFailureReason.hasValue() &&
-        InitiationFailureReason.getValue() != ReasonString) {
+    if (InitiationFailureReason && *InitiationFailureReason != ReasonString) {
       errs() << "error: inconsistent results in a single action range!\n";
       return true;
     }
     InitiationFailureReason = std::move(ReasonString);
     if (Err == CXError_RefactoringActionUnavailable) {
-      if (Initiated.hasValue() && Initiated.getValue()) {
+      if (Initiated && *Initiated) {
         errs() << "error: inconsistent results in a single action range!\n";
         return true;
       }
       Initiated = false;
     } else if (Err != CXError_Success)
       return true;
-    else if (Initiated.hasValue() && !Initiated.getValue()) {
+    else if (Initiated && !*Initiated) {
       errs() << "error: inconsistent results in a single action range!\n";
       return true;
     } else
@@ -1301,9 +1300,9 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
                ? SelectionRange ? rangeToString(Range)
                                 : locationToString(clang_getRangeStart(Range))
                : "<unknown>");
-      if (!LocationCandidateInformation.hasValue())
+      if (!LocationCandidateInformation)
         LocationCandidateInformation = LocationString;
-      else if (LocationCandidateInformation.getValue() != LocationString) {
+      else if (*LocationCandidateInformation != LocationString) {
         errs() << "error: inconsistent results in a single action range!\n";
         return true;
       }
@@ -1335,11 +1334,10 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
       return 1;
   }
 
-  if (!Initiated.getValue()) {
+  if (!*Initiated) {
     errs() << "Failed to initiate the refactoring action";
-    if (InitiationFailureReason.hasValue() &&
-        !InitiationFailureReason.getValue().empty())
-      errs() << " (" << InitiationFailureReason.getValue() << ')';
+    if (InitiationFailureReason && !InitiationFailureReason->empty())
+      errs() << " (" << *InitiationFailureReason << ')';
     errs() << "!\n";
     return 1;
   }
@@ -1347,7 +1345,7 @@ int initiateAndPerformAction(CXTranslationUnit TU, ArrayRef<const char *> Args,
     outs() << "Initiated the '" << opts::initiateAndPerform::ActionName
            << "' action";
     if (!opts::initiateAndPerform::LocationAgnostic)
-      outs() << ' ' << LocationCandidateInformation.getValue();
+      outs() << ' ' << *LocationCandidateInformation;
     outs() << "\n";
   }
   return 0;

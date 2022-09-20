@@ -113,17 +113,17 @@ static bool isConditionValid(const Expr *E, ASTContext &Context,
                              Optional<llvm::FoldingSetNodeID> &MatchedLHSNodeID,
                              RHSValueSet &RHSValues) {
   auto Equals = matchBinOp(E, BO_EQ);
-  if (!Equals.hasValue()) {
+  if (!Equals) {
     auto LogicalOr = matchBinOp(E, BO_LOr);
-    if (!LogicalOr.hasValue())
+    if (!LogicalOr)
       return false;
-    return isConditionValid(LogicalOr.getValue().first, Context,
+    return isConditionValid(LogicalOr->first, Context,
                             MatchedLHSNodeID, RHSValues) &&
-           isConditionValid(LogicalOr.getValue().second, Context,
+           isConditionValid(LogicalOr->second, Context,
                             MatchedLHSNodeID, RHSValues);
   }
-  const Expr *LHS = Equals.getValue().first;
-  const Expr *RHS = Equals.getValue().second;
+  const Expr *LHS = Equals->first;
+  const Expr *RHS = Equals->second;
   if (!LHS->getType()->isIntegralOrEnumerationType() ||
       !RHS->getType()->isIntegralOrEnumerationType())
     return false;
@@ -140,8 +140,8 @@ static bool isConditionValid(const Expr *E, ASTContext &Context,
   // LHS must be identical to the other LHS expressions.
   llvm::FoldingSetNodeID LHSNodeID;
   LHS->Profile(LHSNodeID, Context, /*Canonical=*/false);
-  if (MatchedLHSNodeID.hasValue()) {
-    if (MatchedLHSNodeID.getValue() != LHSNodeID)
+  if (MatchedLHSNodeID) {
+    if (*MatchedLHSNodeID != LHSNodeID)
       return false;
   } else
     MatchedLHSNodeID = std::move(LHSNodeID);
@@ -220,28 +220,28 @@ RefactoringOperationResult clang::tooling::initiateIfSwitchConversionOperation(
 /// Returns the first LHS expression in the if's condition.
 const Expr *getConditionFirstLHS(const Expr *E) {
   auto Equals = matchBinOp(E, BO_EQ);
-  if (!Equals.hasValue()) {
+  if (!Equals) {
     auto LogicalOr = matchBinOp(E, BO_LOr);
-    if (!LogicalOr.hasValue())
+    if (!LogicalOr)
       return nullptr;
-    return getConditionFirstLHS(LogicalOr.getValue().first);
+    return getConditionFirstLHS(LogicalOr->first);
   }
-  return Equals.getValue().first;
+  return Equals->first;
 }
 
 /// Gathers all of the RHS operands of the == expressions in the if's condition.
 void gatherCaseValues(const Expr *E,
                       SmallVectorImpl<const Expr *> &CaseValues) {
   auto Equals = matchBinOp(E, BO_EQ);
-  if (Equals.hasValue()) {
-    CaseValues.push_back(Equals.getValue().second);
+  if (Equals) {
+    CaseValues.push_back(Equals->second);
     return;
   }
   auto LogicalOr = matchBinOp(E, BO_LOr);
-  if (!LogicalOr.hasValue())
+  if (!LogicalOr)
     return;
-  gatherCaseValues(LogicalOr.getValue().first, CaseValues);
-  gatherCaseValues(LogicalOr.getValue().second, CaseValues);
+  gatherCaseValues(LogicalOr->first, CaseValues);
+  gatherCaseValues(LogicalOr->second, CaseValues);
 }
 
 /// Return true iff the given body should be terminated with a 'break' statement

@@ -57,7 +57,7 @@ bool isNewNameValid(const OldSymbolName &NewName,
                     const LangOptions &LangOpts) {
   assert(!Operation.symbols().empty());
   return isNewNameValid(NewName,
-                        Operation.symbols().front().ObjCSelector.hasValue(),
+                        Operation.symbols().front().ObjCSelector.has_value(),
                         IDs, LangOpts);
 }
 

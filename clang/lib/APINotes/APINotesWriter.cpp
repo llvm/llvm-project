@@ -590,11 +590,11 @@ namespace {
 
       uint8_t payload = 0;
       if (auto swiftImportAsNonGeneric = info.getSwiftImportAsNonGeneric()) {
-        payload |= (0x01 << 1) | swiftImportAsNonGeneric.getValue();
+        payload |= (0x01 << 1) | *swiftImportAsNonGeneric;
       }
       payload <<= 2;
       if (auto swiftObjCMembers = info.getSwiftObjCMembers()) {
-        payload |= (0x01 << 1) | swiftObjCMembers.getValue();
+        payload |= (0x01 << 1) | *swiftObjCMembers;
       }
       payload <<= 3;
       if (auto nullable = info.getDefaultNullability()) {
@@ -631,7 +631,7 @@ namespace {
       uint8_t flags = 0;
       if (Optional<bool> value = info.getSwiftImportAsAccessors()) {
         flags |= 1 << 0;
-        flags |= value.getValue() << 1;
+        flags |= *value << 1;
       }
       out << flags;
     }
@@ -725,7 +725,7 @@ namespace {
     }
     payload <<= 3;
     if (auto retainCountConvention = info.getRetainCountConvention()) {
-      payload |= static_cast<uint8_t>(retainCountConvention.getValue()) + 1;
+      payload |= static_cast<uint8_t>(*retainCountConvention) + 1;
     }
     writer.write<uint8_t>(payload);
   }
@@ -752,7 +752,7 @@ namespace {
     payload |= info.NullabilityAudited;
     payload <<= 3;
     if (auto retainCountConvention = info.getRetainCountConvention()) {
-      payload |= static_cast<uint8_t>(retainCountConvention.getValue()) + 1;
+      payload |= static_cast<uint8_t>(*retainCountConvention) + 1;
     }
     writer.write<uint8_t>(payload);
 
@@ -1084,14 +1084,14 @@ namespace {
 
       uint8_t payload = 0;
       if (auto enumExtensibility = info.EnumExtensibility) {
-        payload |= static_cast<uint8_t>(enumExtensibility.getValue()) + 1;
+        payload |= static_cast<uint8_t>(*enumExtensibility) + 1;
         assert((payload < (1 << 2)) && "must fit in two bits");
       }
 
       payload <<= 2;
       if (Optional<bool> value = info.isFlagEnum()) {
         payload |= 1 << 0;
-        payload |= value.getValue() << 1;
+        payload |= *value << 1;
       }
 
       writer.write<uint8_t>(payload);

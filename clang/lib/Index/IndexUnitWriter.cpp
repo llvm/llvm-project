@@ -251,7 +251,7 @@ Optional<bool> IndexUnitWriter::isUnitUpToDateForOutputFile(StringRef FilePath,
     return false;
   }
 
-  if (!TimeCompareFilePath.hasValue())
+  if (!TimeCompareFilePath)
     return true;
 
   llvm::sys::fs::file_status CompareStat;

@@ -1075,7 +1075,7 @@ namespace {
                 t.Name + ")");
             continue;
           }
-          switch (t.EnumConvenienceKind.getValue()) {
+          switch (*t.EnumConvenienceKind) {
           case EnumConvenienceAliasKind::None:
             tagInfo.EnumExtensibility = EnumExtensibilityKind::None;
             tagInfo.setFlagEnum(false);

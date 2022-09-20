@@ -235,7 +235,7 @@ static void handleAPINotedRetainCountConvention(
     Optional<api_notes::RetainCountConventionKind> convention) {
   if (!convention)
     return;
-  switch (convention.getValue()) {
+  switch (*convention) {
   case api_notes::RetainCountConventionKind::None:
     if (isa<FunctionDecl>(D)) {
       handleAPINotedRetainCountAttribute<CFUnknownTransferAttr>(
@@ -644,7 +644,7 @@ static void ProcessAPINotes(Sema &S, TagDecl *D,
     handleAPINotedAttribute<EnumExtensibilityAttr>(S, D, shouldAddAttribute,
                                                    metadata, [&] {
       EnumExtensibilityAttr::Kind kind;
-      switch (extensibility.getValue()) {
+      switch (*extensibility) {
       case EnumExtensibilityKind::None:
         llvm_unreachable("remove only");
       case EnumExtensibilityKind::Open:
@@ -661,7 +661,7 @@ static void ProcessAPINotes(Sema &S, TagDecl *D,
   }
 
   if (auto flagEnum = info.isFlagEnum()) {
-    handleAPINotedAttribute<FlagEnumAttr>(S, D, flagEnum.getValue(), metadata,
+    handleAPINotedAttribute<FlagEnumAttr>(S, D, *flagEnum, metadata,
                                           [&] {
       return new (S.Context) FlagEnumAttr(S.Context, getDummyAttrInfo());
     });
@@ -798,7 +798,7 @@ static void ProcessVersionedAPINotes(
 
   maybeAttachUnversionedSwiftName(S, D, Info);
 
-  unsigned Selected = Info.getSelected().getValueOr(Info.size());
+  unsigned Selected = Info.getSelected().value_or(Info.size());
 
   VersionTuple Version;
   SpecificInfo InfoSlice;
