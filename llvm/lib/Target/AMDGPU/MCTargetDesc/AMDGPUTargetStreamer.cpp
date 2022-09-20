@@ -437,12 +437,14 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
   PRINT_FIELD(OS, ".amdhsa_float_denorm_mode_16_64", KD,
               compute_pgm_rsrc1,
               amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64);
-  PRINT_FIELD(OS, ".amdhsa_dx10_clamp", KD,
-              compute_pgm_rsrc1,
-              amdhsa::COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP);
-  PRINT_FIELD(OS, ".amdhsa_ieee_mode", KD,
-              compute_pgm_rsrc1,
-              amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE);
+  if (IVersion.Major < 12) {
+    PRINT_FIELD(OS, ".amdhsa_dx10_clamp", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_WG_RR_EN);
+    PRINT_FIELD(OS, ".amdhsa_ieee_mode", KD,
+                compute_pgm_rsrc1,
+                amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_DISABLE_PERF);
+  }
   if (IVersion.Major >= 9)
     PRINT_FIELD(OS, ".amdhsa_fp16_overflow", KD,
                 compute_pgm_rsrc1,
