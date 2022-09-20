@@ -22,18 +22,6 @@ class VOP2e <bits<6> op, VOPProfile P> : Enc32 {
   let Inst{31}    = 0x0; //encoding
 }
 
-class VOP2e_T16 <bits<6> op, VOPProfile P> : Enc32 {
-  bits<9> vdst;
-  bits<10> src0;
-  bits<9> src1;
-
-  let Inst{8-0}   = !if(P.HasSrc0, src0{9-1}, 0);
-  let Inst{16-9}  = !if(P.HasSrc1, src1{8-1}, 0);
-  let Inst{24-17} = !if(P.EmitDst, vdst{8-1}, 0);
-  let Inst{30-25} = op;
-  let Inst{31}    = 0x0; //encoding
-}
-
 class VOP2_MADKe <bits<6> op, VOPProfile P> : Enc64 {
   bits<8>  vdst;
   bits<9>  src0;
@@ -777,18 +765,6 @@ def :  divergent_i64_BinOp <and, V_AND_B32_e64>;
 def :  divergent_i64_BinOp <or,  V_OR_B32_e64>;
 def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 
-// TODO-GFX11_16BIT Temporary profile because functions to set these fields are TBD
-class add16P<VOPProfile P> :  VOPProfile<P.ArgVT> {
-  let DstRC = VOPDstOperandT16F128;
-  let DstRC64 = VOPDstOperandT16;
-  let Src0RC32 = VSrcT_f16_F128;
-  let Src1RC32 = VGPRSrc_16_F128;
-  let Src0RC64 = VSrcT_f16;
-  let Src1RC64 = VSrcT_f16;
-  field Operand Src0Mod = TFP16InputMods;
-  field Operand Src1Mod = TFP16InputMods;
-  let HasOpSel = 0;
-}
 
 let SubtargetPredicate = Has16BitInsts in {
 let isReMaterializable = 1 in {
@@ -801,23 +777,9 @@ defm V_LSHLREV_B16 : VOP2Inst <"v_lshlrev_b16", VOP_I16_I16_I16, clshl_rev_16>;
 defm V_LSHRREV_B16 : VOP2Inst <"v_lshrrev_b16", VOP_I16_I16_I16, clshr_rev_16>;
 defm V_ASHRREV_I16 : VOP2Inst <"v_ashrrev_i16", VOP_I16_I16_I16, cashr_rev_16>;
 
-
 let isCommutable = 1 in {
 let FPDPRounding = 1 in {
-// TODO-GFX11 VOP2_to_VOP3_Profile enables opsel on the vop3 forms, but we
-// need a mechanism to enable opsel on gfx11 but disable on gfx10-
-// may be moot when we natively support 16bit registers
-/*defm V_ADD_F16 : VOP2Inst <"v_add_f16", VOP2_to_VOP3_Profile<VOP_F16_F16_F16, VOP3_OPSEL>, any_fadd>;*/
-/*defm V_SUB_F16 : VOP2Inst <"v_sub_f16", VOP2_to_VOP3_Profile<VOP_F16_F16_F16, VOP3_OPSEL>, any_fsub>;*/
-/*defm V_SUBREV_F16 : VOP2Inst <"v_subrev_f16", VOP2_to_VOP3_Profile<VOP_F16_F16_F16, VOP3_OPSEL>, null_frag, "v_sub_f16">;*/
-/*defm V_MUL_F16 : VOP2Inst <"v_mul_f16", VOP2_to_VOP3_Profile<VOP_F16_F16_F16, VOP3_OPSEL>, any_fmul>;*/
-let SubtargetPredicate =  NotHasTrue16BitInsts in {
 defm V_ADD_F16 : VOP2Inst <"v_add_f16", VOP_F16_F16_F16, any_fadd>;
-}
-let SubtargetPredicate = HasTrue16BitInsts in {
-defm V_ADD_F16_T16 : VOP2Inst <"v_add_f16_t16", add16P<VOP_F16_F16_F16>, any_fadd>;
-}
-
 defm V_SUB_F16 : VOP2Inst <"v_sub_f16", VOP_F16_F16_F16, any_fsub>;
 defm V_SUBREV_F16 : VOP2Inst <"v_subrev_f16", VOP_F16_F16_F16, null_frag, "v_sub_f16">;
 defm V_MUL_F16 : VOP2Inst <"v_mul_f16", VOP_F16_F16_F16, any_fmul>;
@@ -1175,12 +1137,6 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
       VOP2_Real<!cast<VOP2_Pseudo>(NAME#"_e32"), SIEncodingFamily.GFX11>,
       VOP2e<op{5-0}, !cast<VOP2_Pseudo>(NAME#"_e32").Pfl>;
   }
-  multiclass VOP2_Real_e32_T16_gfx11<bits<6> op, string asmName> {
-    defvar ps = !cast<VOP2_Pseudo>(NAME#"_e32");
-    def _e32_gfx11 :
-      VOP2_Real<ps, SIEncodingFamily.GFX11, asmName>,
-      VOP2e_T16<op{5-0}, ps.Pfl>;
-  }
   multiclass VOP2Only_Real_e32_gfx11<bits<6> op> {
     let IsSingle = 1 in
       defm NAME: VOP2_Real_e32_gfx11<op>;
@@ -1196,28 +1152,9 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
       let DecoderNamespace = "DPPGFX11";
     }
   }
-  // TODO-GFX11_16BIT still using fake16 encoding
-  multiclass VOP2_Real_dpp_T16_gfx11<bits<6> op, string asmName> {
-    defvar ps = !cast<VOP2_Pseudo>(NAME#"_e32");
-    foreach _ = BoolToList<ps.Pfl.HasExtDPP>.ret in
-    def _dpp_gfx11 : VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp"),
-        SIEncodingFamily.GFX11> {
-      let AsmString = asmName # ps.Pfl.AsmDPP16;
-      let DecoderNamespace = "DPPGFX11";
-    }
-  }
   multiclass VOP2_Real_dpp8_gfx11<bits<6> op> {
     foreach _ = BoolToList<!cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp8_gfx11 : VOP2_DPP8<op, !cast<VOP2_Pseudo>(NAME#"_e32")> {
-      let DecoderNamespace = "DPP8GFX11";
-    }
-  }
-  // TODO-GFX11_16BIT still using fake16 encoding
-  multiclass VOP2_Real_dpp8_T16_gfx11<bits<6> op, string asmName> {
-    defvar ps = !cast<VOP2_Pseudo>(NAME#"_e32");
-    foreach _ = BoolToList<ps.Pfl.HasExtDPP>.ret in
-    def _dpp8_gfx11 : VOP2_DPP8<op, ps> {
-      let AsmString = asmName # ps.Pfl.AsmDPP8;
       let DecoderNamespace = "DPP8GFX11";
     }
   }
@@ -1331,9 +1268,6 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
 multiclass VOP2_Realtriple_e64_gfx11<bits<6> op> {
   defm NAME : VOP3_Realtriple_gfx11<{0, 1, 0, 0, op{5-0}}, /*isSingle=*/ 0, NAME> ;
 }
-multiclass VOP2_Realtriple_T16_e64_gfx11<bits<6> op, string asmName, string opName> {
-  defm NAME : VOP3_Realtriple_T16_gfx11<{0, 1, 0, 0, op{5-0}}, asmName, opName> ;
-}
 multiclass VOP2_Realtriple_e64_with_name_gfx11<bits<6> op, string opName,
                                                string asmName> {
   defm NAME : VOP3_Realtriple_with_name_gfx11<{0, 1, 0, 0, op{5-0}}, opName, asmName> ;
@@ -1360,16 +1294,8 @@ multiclass VOP2Only_Real_gfx11<bits<6> op> :
 multiclass VOP2_Real_NO_VOP3_gfx11<bits<6> op> :
   VOP2_Real_e32_gfx11<op>, VOP2_Real_dpp_gfx11<op>, VOP2_Real_dpp8_gfx11<op>;
 
-multiclass VOP2_Real_T16_NO_VOP3_gfx11<bits<6> op, string asmName>
-    : VOP2_Real_e32_T16_gfx11<op, asmName>,
-      VOP2_Real_dpp_T16_gfx11<op, asmName>,
-      VOP2_Real_dpp8_T16_gfx11<op, asmName>;
-
 multiclass VOP2_Real_FULL_gfx11<bits<6> op> :
   VOP2_Realtriple_e64_gfx11<op>, VOP2_Real_NO_VOP3_gfx11<op>;
-
-multiclass VOP2_Real_T16_FULL_gfx11<bits<6> op, string asmName, string opName = NAME> :
-  VOP2_Realtriple_T16_e64_gfx11<op, asmName, opName>, VOP2_Real_T16_NO_VOP3_gfx11<op, asmName>;
 
 multiclass VOP2_Real_NO_VOP3_with_name_gfx11<bits<6> op, string opName,
                                            string asmName, bit isSingle = 0> :
@@ -1411,9 +1337,6 @@ defm V_SUBREV_CO_CI_U32 :
 defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11<0x02f,
   "V_CVT_PKRTZ_F16_F32", "v_cvt_pk_rtz_f16_f32">;
 defm V_PK_FMAC_F16     : VOP2Only_Real_gfx11<0x03c>;
-
-// TODO-GFX11 True16 disabled till spilling is fixed
-// defm V_ADD_F16_T16         : VOP2_Real_T16_FULL_gfx11<0x032, "v_add_f16">;
 
 // VOP3 only.
 defm V_CNDMASK_B16        : VOP3Only_Realtriple_gfx11<0x25d>;

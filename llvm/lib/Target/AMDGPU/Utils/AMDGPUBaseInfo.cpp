@@ -1991,8 +1991,6 @@ unsigned getRegBitWidth(unsigned RCID) {
   switch (RCID) {
   case AMDGPU::VGPR_LO16RegClassID:
   case AMDGPU::VGPR_HI16RegClassID:
-  case AMDGPU::VGPR_16RegClassID:
-  case AMDGPU::VGPR_16_F128RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:
   case AMDGPU::AGPR_LO16RegClassID:
     return 16;

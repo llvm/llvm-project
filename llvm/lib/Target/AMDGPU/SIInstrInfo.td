@@ -348,10 +348,6 @@ class isPackedType<ValueType SrcVT> {
                 !eq(SrcVT.Value, v8f32.Value));
 }
 
-class is16BitType<ValueType SrcVT> {
-  bit ret = !or(!eq(SrcVT.Value, i16.Value),
-                !eq(SrcVT.Value, f16.Value));
-}
 
 //===----------------------------------------------------------------------===//
 // PatFrags for global memory operations
@@ -1329,10 +1325,6 @@ class FPVCSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
 }
 
 def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
-def TFP16InputModsMatchClass : FPInputModsMatchClass<16> {
-  let Name = "RegOrImmWithTFP16InputMods";
-  let PredicateMethod = "isRegOrImmWithTFP16InputMods";
-}
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
@@ -1350,7 +1342,6 @@ class FPInputMods <FPInputModsMatchClass matchClass> : InputMods <matchClass> {
 }
 
 def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
-def TFP16InputMods : FPInputMods<TFP16InputModsMatchClass>;
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
 def FP64InputMods : FPInputMods<FP64InputModsMatchClass>;
 
@@ -2319,16 +2310,6 @@ class getHasSDWA <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
             );
 }
 
-// Used when HasModifiers is fixed
-class getHas16BitOperand <ValueType DstVT = i32, ValueType Src0VT = i32,
-                 ValueType Src1VT = i32, ValueType Src2VT = i32> {
-  bit ret = !if(!or(is16BitType<Src0VT>.ret,
-                    is16BitType<Src1VT>.ret,
-                    is16BitType<Src2VT>.ret,
-                    is16BitType<DstVT>.ret),
-                1, 0);
-}
-
 class getHasDPP <int NumSrcArgs> {
   bit ret = !if(!eq(NumSrcArgs, 3),
                 0, // NumSrcArgs == 3 - No DPP for VOP3
@@ -2421,7 +2402,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field RegisterClass Src0DPP = getVregSrcForVT<Src0VT>.ret;
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
-  // TODO-GFX11 Choose Src{0,1}VOP3DPP operand class when real 16bit regs exist
   field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
   field RegisterOperand Src1VOP3DPP = VGPRSrc_32;
   field RegisterOperand Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT>.ret;
@@ -2466,11 +2446,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field bit HasHigh = 0;
 
   field bit IsPacked = isPackedType<Src0VT>.ret;
-  // TODO-GFX11 likely should wait till enabling 16 bit registers
-  /*field bit HasOpSel = !if(!or(getHas16BitOperand<DstVT, Src0VT, Src1VT, */
-                       /*Src2VT>.ret, IsPacked), 1, 0);*/
   field bit HasOpSel = IsPacked;
-  // TODO-GFX11 opsel + omod should be allowed
   field bit HasOMod = !if(HasOpSel, 0, isFloatType<DstVT>.ret);
   field bit HasSDWAOMod = isFloatType<DstVT>.ret;
 
@@ -2553,6 +2529,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPR_32:$vsrc1X);
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
   field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
+
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string Asm64 = getAsm64<HasDst, NumSrcArgs, HasIntClamp, HasModifiers, HasOMod, DstVT>.ret;

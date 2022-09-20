@@ -119,11 +119,11 @@ static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
 // We reserve a fixed number of VGPR slots in the scoring tables for
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
-  SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
-  AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 256,  // Maximum programmable SGPRs across all targets.
-  NUM_EXTRA_VGPRS = 1,     // A reserved slot for DS.
-  EXTRA_VGPR_LDS = 0,      // An artificial register to track LDS writes.
+  SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
+  AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
+  SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
+  NUM_EXTRA_VGPRS = 1,    // A reserved slot for DS.
+  EXTRA_VGPR_LDS = 0,     // An artificial register to track LDS writes.
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
 };
 
@@ -475,29 +475,27 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   RegInterval Result;
 
   unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST));
-  const TargetRegisterClass *RC = TII->getOpRegClass(*MI, OpNo);
-  unsigned Size = TRI->getRegSizeInBits(*RC);
 
-  // VGPRs are tracked every 16 bits, SGPRs by 32 bits
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.VGPR0);
+    assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
     Result.first = Reg - Encoding.VGPR0;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-    assert(Size % 16 == 0);
-    Result.second = Result.first + (Size / 16);
   } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.SGPR0);
-    Result.first = ((Reg - Encoding.SGPR0) >> 1) + NUM_ALL_VGPRS;
-    assert(Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
-    Result.second = Result.first + divideCeil(Size, 32);
+    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
+    Result.first = Reg - Encoding.SGPR0 + NUM_ALL_VGPRS;
+    assert(Result.first >= NUM_ALL_VGPRS &&
+           Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
   }
   // TODO: Handle TTMP
   // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
   else
     return {-1, -1};
 
+  const TargetRegisterClass *RC = TII->getOpRegClass(*MI, OpNo);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+  Result.second = Result.first + ((Size + 16) / 32);
 
   return Result;
 }
@@ -1784,13 +1782,13 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
   unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
-  assert(NumVGPRsMax + AGPR_OFFSET <= SQ_MAX_PGM_VGPRS);
+  assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
   RegisterEncoding Encoding = {};
-  Encoding.VGPR0 = TRI->getEncodingValue(AMDGPU::VGPR0); // 0b1000000000
+  Encoding.VGPR0 = TRI->getEncodingValue(AMDGPU::VGPR0);
   Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
-  Encoding.SGPR0 = TRI->getEncodingValue(AMDGPU::SGPR0); // 0b0000000000
+  Encoding.SGPR0 = TRI->getEncodingValue(AMDGPU::SGPR0);
   Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
 
   TrackedWaitcntSet.clear();
