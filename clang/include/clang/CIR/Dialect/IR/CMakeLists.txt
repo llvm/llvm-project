@@ -15,7 +15,6 @@ add_public_tablegen_target(MLIRCIROpsIncGen)
 add_dependencies(mlir-headers MLIRCIROpsIncGen)
 
 # Equivalent to add_mlir_doc
-add_clang_mlir_doc(CIRDialect CIRDialect Dialects/ -gen-dialect-doc)
 add_clang_mlir_doc(CIROps CIROps Dialects/ -gen-op-doc)
 add_clang_mlir_doc(CIRAttrs CIRAttrs Dialects/ -gen-attrdef-doc)
 add_clang_mlir_doc(CIRTypes CIRTypes Dialects/ -gen-typedef-doc)
