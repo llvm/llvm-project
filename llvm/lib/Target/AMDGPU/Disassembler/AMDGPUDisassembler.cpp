@@ -1768,10 +1768,10 @@ bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
 //===----------------------------------------------------------------------===//
 // AMDGPU specific symbol handling
 //===----------------------------------------------------------------------===//
+#define GET_FIELD(MASK) (AMDHSA_BITS_GET(FourByteBuffer, MASK))
 #define PRINT_DIRECTIVE(DIRECTIVE, MASK)                                       \
   do {                                                                         \
-    KdStream << Indent << DIRECTIVE " "                                        \
-             << ((FourByteBuffer & MASK) >> (MASK##_SHIFT)) << '\n';           \
+    KdStream << Indent << DIRECTIVE " " << GET_FIELD(MASK) << '\n';            \
   } while (0)
 
 // NOLINTNEXTLINE(readability-identifier-naming)
@@ -1786,8 +1786,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // simply calculate the inverse of what the assembler does.
 
   uint32_t GranulatedWorkitemVGPRCount =
-      (FourByteBuffer & COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT) >>
-      COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT_SHIFT;
+      GET_FIELD(COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT);
 
   uint32_t NextFreeVGPR = (GranulatedWorkitemVGPRCount + 1) *
                           AMDGPU::IsaInfo::getVGPREncodingGranule(&STI);
@@ -1814,8 +1813,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // The disassembler cannot recover the original values of those 3 directives.
 
   uint32_t GranulatedWavefrontSGPRCount =
-      (FourByteBuffer & COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT) >>
-      COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT_SHIFT;
+      GET_FIELD(COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT);
 
   if (isGFX10Plus() && GranulatedWavefrontSGPRCount)
     return MCDisassembler::Fail;
@@ -1925,7 +1923,17 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
   return MCDisassembler::Success;
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
+MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
+    uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
+  using namespace amdhsa;
+  if (!isGFX10Plus() && FourByteBuffer) {
+    return MCDisassembler::Fail;
+  }
+  return MCDisassembler::Success;
+}
 #undef PRINT_DIRECTIVE
+#undef GET_FIELD
 
 MCDisassembler::DecodeStatus
 AMDGPUDisassembler::decodeKernelDescriptorDirective(
@@ -1993,30 +2001,16 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
     return MCDisassembler::Success;
 
   case amdhsa::COMPUTE_PGM_RSRC3_OFFSET:
-    // COMPUTE_PGM_RSRC3
-    //  - Only set for GFX10, GFX6-9 have this to be 0.
-    //  - Currently no directives directly control this.
     FourByteBuffer = DE.getU32(Cursor);
-    if (!isGFX10Plus() && FourByteBuffer) {
-      return MCDisassembler::Fail;
-    }
-    return MCDisassembler::Success;
+    return decodeCOMPUTE_PGM_RSRC3(FourByteBuffer, KdStream);
 
   case amdhsa::COMPUTE_PGM_RSRC1_OFFSET:
     FourByteBuffer = DE.getU32(Cursor);
-    if (decodeCOMPUTE_PGM_RSRC1(FourByteBuffer, KdStream) ==
-        MCDisassembler::Fail) {
-      return MCDisassembler::Fail;
-    }
-    return MCDisassembler::Success;
+    return decodeCOMPUTE_PGM_RSRC1(FourByteBuffer, KdStream);
 
   case amdhsa::COMPUTE_PGM_RSRC2_OFFSET:
     FourByteBuffer = DE.getU32(Cursor);
-    if (decodeCOMPUTE_PGM_RSRC2(FourByteBuffer, KdStream) ==
-        MCDisassembler::Fail) {
-      return MCDisassembler::Fail;
-    }
-    return MCDisassembler::Success;
+    return decodeCOMPUTE_PGM_RSRC2(FourByteBuffer, KdStream);
 
   case amdhsa::KERNEL_CODE_PROPERTIES_OFFSET:
     using namespace amdhsa;
