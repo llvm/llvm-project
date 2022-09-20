@@ -222,13 +222,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool
 __mul_overflowed(_Tp __a, _Tp __b, _Tp& __r)
 {
     static_assert(is_unsigned<_Tp>::value, "");
-#if !defined(_LIBCPP_COMPILER_MSVC)
     return __builtin_mul_overflow(__a, __b, &__r);
-#else
-    bool __did = __b && (numeric_limits<_Tp>::max() / __b) < __a;
-    __r = __a * __b;
-    return __did;
-#endif
 }
 
 template <typename _Tp, typename _Up>
