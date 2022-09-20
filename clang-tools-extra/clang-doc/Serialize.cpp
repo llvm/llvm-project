@@ -224,10 +224,33 @@ static SymbolID getUSRForDecl(const Decl *D) {
   return hashUSR(USR);
 }
 
-static RecordDecl *getDeclForType(const QualType &T) {
+static TagDecl *getTagDeclForType(const QualType &T) {
+  if (const TagDecl *D = T->getAsTagDecl())
+    return D->getDefinition();
+  return nullptr;
+}
+
+static RecordDecl *getRecordDeclForType(const QualType &T) {
   if (const RecordDecl *D = T->getAsRecordDecl())
     return D->getDefinition();
   return nullptr;
+}
+
+TypeInfo getTypeInfoForType(const QualType &T) {
+  const TagDecl *TD = getTagDeclForType(T);
+  if (!TD)
+    return TypeInfo(Reference(T.getAsString()));
+
+  InfoType IT;
+  if (dyn_cast<EnumDecl>(TD)) {
+    IT = InfoType::IT_enum;
+  } else if (dyn_cast<RecordDecl>(TD)) {
+    IT = InfoType::IT_record;
+  } else {
+    IT = InfoType::IT_default;
+  }
+  return TypeInfo(Reference(getUSRForDecl(TD), TD->getNameAsString(), IT,
+                            getInfoRelativePath(TD)));
 }
 
 static bool isPublic(const clang::AccessSpecifier AS,
@@ -286,28 +309,14 @@ static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
   for (const FieldDecl *F : D->fields()) {
     if (!shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, F))
       continue;
-    if (const auto *T = getDeclForType(F->getTypeSourceInfo()->getType())) {
-      // Use getAccessUnsafe so that we just get the default AS_none if it's not
-      // valid, as opposed to an assert.
-      if (const auto *N = dyn_cast<EnumDecl>(T)) {
-        I.Members.emplace_back(
-            getUSRForDecl(T), N->getNameAsString(), InfoType::IT_enum,
-            getInfoRelativePath(N), F->getNameAsString(),
-            getFinalAccessSpecifier(Access, N->getAccessUnsafe()));
-        continue;
-      } else if (const auto *N = dyn_cast<RecordDecl>(T)) {
-        I.Members.emplace_back(
-            getUSRForDecl(T), N->getNameAsString(), InfoType::IT_record,
-            getInfoRelativePath(N), F->getNameAsString(),
-            getFinalAccessSpecifier(Access, N->getAccessUnsafe()));
-        continue;
-      }
-    }
 
-    auto& member = I.Members.emplace_back(
-        F->getTypeSourceInfo()->getType().getAsString(), F->getNameAsString(),
+    // Use getAccessUnsafe so that we just get the default AS_none if it's not
+    // valid, as opposed to an assert.
+    MemberTypeInfo &NewMember = I.Members.emplace_back(
+        getTypeInfoForType(F->getTypeSourceInfo()->getType()),
+        F->getNameAsString(),
         getFinalAccessSpecifier(Access, F->getAccessUnsafe()));
-    populateMemberTypeInfo(member, F);
+    populateMemberTypeInfo(NewMember, F);
   }
 }
 
@@ -325,27 +334,11 @@ static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
 
 static void parseParameters(FunctionInfo &I, const FunctionDecl *D) {
   for (const ParmVarDecl *P : D->parameters()) {
-    FieldTypeInfo *FieldInfo = nullptr;
-    if (const auto *T = getDeclForType(P->getOriginalType())) {
-      if (const auto *N = dyn_cast<EnumDecl>(T)) {
-        FieldInfo = &I.Params.emplace_back(
-            getUSRForDecl(N), N->getNameAsString(), InfoType::IT_enum,
-            getInfoRelativePath(N), P->getNameAsString());
-      } else if (const auto *N = dyn_cast<RecordDecl>(T)) {
-        FieldInfo = &I.Params.emplace_back(
-            getUSRForDecl(N), N->getNameAsString(), InfoType::IT_record,
-            getInfoRelativePath(N), P->getNameAsString());
-      }
-      // Otherwise fall through to the default case below.
-    }
-
-    if (!FieldInfo) {
-      FieldInfo = &I.Params.emplace_back(P->getOriginalType().getAsString(),
-                                         P->getNameAsString());
-    }
+    FieldTypeInfo &FieldInfo = I.Params.emplace_back(
+        getTypeInfoForType(P->getOriginalType()), P->getNameAsString());
 
     if (const Expr *DefaultArg = P->getDefaultArg()) {
-      FieldInfo->DefaultValue = getSourceCode(D, DefaultArg->getSourceRange());
+      FieldInfo.DefaultValue = getSourceCode(D, DefaultArg->getSourceRange());
     }
   }
 }
@@ -363,14 +356,14 @@ static void parseBases(RecordInfo &I, const CXXRecordDecl *D) {
       const TemplateDecl *D = Ty->getTemplateName().getAsTemplateDecl();
       I.Parents.emplace_back(getUSRForDecl(D), B.getType().getAsString(),
                              InfoType::IT_record);
-    } else if (const RecordDecl *P = getDeclForType(B.getType()))
+    } else if (const RecordDecl *P = getRecordDeclForType(B.getType()))
       I.Parents.emplace_back(getUSRForDecl(P), P->getNameAsString(),
                              InfoType::IT_record, getInfoRelativePath(P));
     else
       I.Parents.emplace_back(B.getType().getAsString());
   }
   for (const CXXBaseSpecifier &B : D->vbases()) {
-    if (const auto *P = getDeclForType(B.getType()))
+    if (const RecordDecl *P = getRecordDeclForType(B.getType()))
       I.VirtualParents.emplace_back(getUSRForDecl(P), P->getNameAsString(),
                                     InfoType::IT_record,
                                     getInfoRelativePath(P));
@@ -444,16 +437,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
                                  bool &IsInAnonymousNamespace) {
   populateSymbolInfo(I, D, FC, LineNumber, Filename, IsFileInRootDir,
                      IsInAnonymousNamespace);
-  if (const auto *T = getDeclForType(D->getReturnType())) {
-    if (isa<EnumDecl>(T))
-      I.ReturnType = TypeInfo(getUSRForDecl(T), T->getNameAsString(),
-                              InfoType::IT_enum, getInfoRelativePath(T));
-    else if (isa<RecordDecl>(T))
-      I.ReturnType = TypeInfo(getUSRForDecl(T), T->getNameAsString(),
-                              InfoType::IT_record, getInfoRelativePath(T));
-  } else {
-    I.ReturnType = TypeInfo(D->getReturnType().getAsString());
-  }
+  I.ReturnType = getTypeInfoForType(D->getReturnType());
   parseParameters(I, D);
 }
 

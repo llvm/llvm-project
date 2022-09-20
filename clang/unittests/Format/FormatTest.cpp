@@ -25388,6 +25388,12 @@ TEST_F(FormatTest, InsertBraces) {
                "} while (0);",
                Style);
 
+  Style.RemoveBracesLLVM = true;
+  verifyFormat("if (a) //\n"
+               "  return b;",
+               Style);
+  Style.RemoveBracesLLVM = false;
+
   Style.ColumnLimit = 15;
 
   verifyFormat("#define A     \\\n"
