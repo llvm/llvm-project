@@ -71,6 +71,13 @@ void fAFfp64markForResult(double res) {
 
 #pragma clang optimize on
 
+int fAFisMemoryOpInstruction(char *InstructionString) {
+  if(strstr(InstructionString, "load")!=NULL ||
+      strstr(InstructionString, "alloca")!=NULL)
+    return 1;
+  return 0;
+}
+
 void fAFCopyCGNodePointerArray(CGNode ***Dest, CGNode ***Src, uint64_t SrcLength) {
   for (uint64_t i = 0, j = 0; i < SrcLength; ++i, ++j) {
     (*Dest)[j] = (*Src)[i];
@@ -344,10 +351,15 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
           printf("#fAd: Out of memory error!");
           exit(EXIT_FAILURE);
         }
-        strcpy(AFItemPointer->AFString, AFofWRTNode_String);
         if(strlen(AFofWRTNode_String) != 0)
+          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
+        else
+          strcat(AFItemPointer->AFString, "1.0");
+        if(strlen(StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring) != 0) {
           strcat(AFItemPointer->AFString, "*");
-        strcat(AFItemPointer->AFString, StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring);
+          strcat(AFItemPointer->AFString,
+                 StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring);
+        }
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -445,10 +457,15 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
           printf("#fAd: Out of memory error!");
           exit(EXIT_FAILURE);
         }
-        strcpy(AFItemPointer->AFString, AFofWRTNode_String);
         if(strlen(AFofWRTNode_String) != 0)
+          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
+        else
+          strcat(AFItemPointer->AFString, "1.0");
+        if(strlen(StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring) != 0) {
           strcat(AFItemPointer->AFString, "*");
-        strcat(AFItemPointer->AFString, StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring);
+          strcat(AFItemPointer->AFString,
+                 StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring);
+        }
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -543,10 +560,15 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
           printf("#fAd: Out of memory error!");
           exit(EXIT_FAILURE);
         }
-        strcpy(AFItemPointer->AFString, AFofWRTNode_String);
         if(strlen(AFofWRTNode_String) != 0)
+          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
+        else
+          strcat(AFItemPointer->AFString, "1.0");
+        if(strlen(StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTYstring) != 0) {
           strcat(AFItemPointer->AFString, "*");
-        strcat(AFItemPointer->AFString, StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTYstring);
+          strcat(AFItemPointer->AFString,
+                 StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTYstring);
+        }
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -862,10 +884,15 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           printf("#fAd: Out of memory error!");
           exit(EXIT_FAILURE);
         }
-        strcpy(AFItemPointer->AFString, AFofWRTNode_String);
         if(strlen(AFofWRTNode_String) != 0)
+          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
+        else
+          strcat(AFItemPointer->AFString, "1.0");
+        if(strlen(StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring) != 0) {
           strcat(AFItemPointer->AFString, "*");
-        strcat(AFItemPointer->AFString, StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring);
+          strcat(AFItemPointer->AFString,
+                 StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring);
+        }
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -965,10 +992,15 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           printf("#fAd: Out of memory error!");
           exit(EXIT_FAILURE);
         }
-        strcpy(AFItemPointer->AFString, AFofWRTNode_String);
         if(strlen(AFofWRTNode_String) != 0)
+          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
+        else
+          strcat(AFItemPointer->AFString, "1.0");
+        if(strlen(StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring) != 0) {
           strcat(AFItemPointer->AFString, "*");
-        strcat(AFItemPointer->AFString, StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring);
+          strcat(AFItemPointer->AFString,
+                 StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring);
+        }
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -1065,10 +1097,15 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           printf("#fAd: Out of memory error!");
           exit(EXIT_FAILURE);
         }
-        strcpy(AFItemPointer->AFString, AFofWRTNode_String);
         if(strlen(AFofWRTNode_String) != 0)
+          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
+        else
+          strcat(AFItemPointer->AFString, "1.0");
+        if(StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTYstring) {
           strcat(AFItemPointer->AFString, "*");
-        strcat(AFItemPointer->AFString, StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTYstring);
+          strcat(AFItemPointer->AFString,
+                 StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTYstring);
+        }
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -1199,7 +1236,8 @@ void fAFStoreAFs() {
   fprintf(FP, "\t\"FP32\": [\n");
   int I = 0;
   while ((uint64_t)I < AFResult->FloatAFRecords) {
-    if (fprintf(FP,
+    if (fAFisMemoryOpInstruction(AFResult->FloatAFItemPointer[I].WRTInstructionString) &&
+        fprintf(FP,
                 "\t\t{\n"
                 "\t\t\t\"Result Instruction\": \"%s\",\n"
                 "\t\t\t\"Result Node ID\":%d,\n"
@@ -1207,7 +1245,7 @@ void fAFStoreAFs() {
                 "\t\t\t\"WRT Node ID\":%d,\n"
                 "\t\t\t\"AF\": %0.7f,\n"
                 "\t\t\t\"Amplified Relative Error\": %0.7f,\n"
-                "\t\t\t\"AF String\": \"%s\"\n",
+                "\t\t\t\"AF String\": \"%s\",\n",
                 AFResult->FloatAFItemPointer[I].ResultInstructionString,
                 AFResult->FloatAFItemPointer[I].ResultNodeID,
                 AFResult->FloatAFItemPointer[I].WRTInstructionString,
@@ -1225,12 +1263,12 @@ void fAFStoreAFs() {
       }
       fprintf(FP, "]\n");
       RecordsStored++;
-    }
 
-    if (RecordsStored != AFResult->FloatAFRecords)
-      fprintf(FP, "\t\t},\n");
-    else
-      fprintf(FP, "\t\t}\n");
+      if (RecordsStored != AFResult->FloatAFRecords)
+        fprintf(FP, "\t\t},\n");
+      else
+        fprintf(FP, "\t\t}\n");
+    }
     I++;
   }
   fprintf(FP, "\t],\n");
@@ -1240,7 +1278,8 @@ void fAFStoreAFs() {
   fprintf(FP, "\t\"FP64\": [\n");
   I = 0;
   while ((uint64_t)I < AFResult->DoubleAFRecords) {
-    if (fprintf(FP,
+    if (fAFisMemoryOpInstruction(AFResult->DoubleAFItemPointer[I].WRTInstructionString) &&
+        fprintf(FP,
                 "\t\t{\n"
                 "\t\t\t\"Result Instruction\": \"%s\",\n"
                 "\t\t\t\"Result Node ID\":%d,\n"
@@ -1266,12 +1305,12 @@ void fAFStoreAFs() {
       }
       fprintf(FP, "]\n");
       RecordsStored++;
-    }
 
-    if (RecordsStored != AFResult->DoubleAFRecords)
-      fprintf(FP, "\t\t},\n");
-    else
-      fprintf(FP, "\t\t}\n");
+      if (RecordsStored != AFResult->DoubleAFRecords)
+        fprintf(FP, "\t\t},\n");
+      else
+        fprintf(FP, "\t\t}\n");
+    }
     I++;
   }
   fprintf(FP, "\t]\n");

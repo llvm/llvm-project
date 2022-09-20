@@ -343,7 +343,8 @@ double *rk4vec ( double t0, int m, double u0[], double dt,
   for ( i = 0; i < m; i++ )
   {
     u[i] = u0[i] + dt * ( f0[i] + 2.0 * f1[i] + 2.0 * f2[i] + f3[i] ) / 6.0;
-    fAFfp64markForResult(u[i]);
+//    fAFfp64markForResult(u[i]);
+    printf("Result = %lf\n", u[i]);
   }
 
   /*

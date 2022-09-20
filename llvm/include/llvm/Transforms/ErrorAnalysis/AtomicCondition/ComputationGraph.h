@@ -21,6 +21,8 @@ typedef struct CGNode {
   struct CGNode *RightNode;
   int Height;
   int RootNode;
+  char *FileName;
+  int LineNumber;
   struct CGNode *Next;
 } CGNode;
 
@@ -47,6 +49,12 @@ typedef struct ComputationGraph {
   PhiNode *PhiNodesListHead;
   uint64_t PhiNodesListSize;
 } ComputationGraph;
+
+/*----------------------------------------------------------------------------*/
+/* Constants                                                                  */
+/*----------------------------------------------------------------------------*/
+#define LOG_DIRECTORY_NAME ".fAF_logs"
+#define BASIC_BLOCK_EXECUTION_CHAIN_SIZE 1000000
 
 /*----------------------------------------------------------------------------*/
 /* Globals                                                                    */
@@ -103,7 +111,6 @@ void fCGprintStringArray(char **ArrayToPrint) {
 
 void fCGInitialize() {
   ComputationGraph *CGObject = NULL;
-  int64_t Size = 1000000;
 
   // Allocating the graph itself
   if(( CGObject = (ComputationGraph*)malloc(sizeof(ComputationGraph))) == NULL) {
@@ -111,40 +118,22 @@ void fCGInitialize() {
     exit(EXIT_FAILURE);
   }
 
-  // Allocate memory to the Nodes linked list
-  if( (CGObject->NodesLinkedListHead =
-           (CGNode *)malloc((size_t)((int64_t)sizeof(CGNode) * Size))) == NULL) {
-    printf("#CG: graph out of memory error!");
-    exit(EXIT_FAILURE);
-  }
   CGObject->LinkedListSize=0;
-
-  // Allocate memory to the Instruction Node Map
-  if( (CGObject->InstructionNodeMapHead =
-           (InstructionNodePair *)malloc((size_t)((int64_t)sizeof(InstructionNodePair) * Size))) == NULL) {
-    printf("#CG: graph out of memory error!");
-    exit(EXIT_FAILURE);
-  }
 
   // Allocate memory to the Basic Block Execution Chain
   if( (CGObject->BasicBlockExecutionChainTail =
-           (char **)malloc((size_t)((int64_t)sizeof(char*) * Size))) == NULL) {
+           (char **)malloc((size_t)((int64_t)sizeof(char*) *
+                                    BASIC_BLOCK_EXECUTION_CHAIN_SIZE))) == NULL) {
     printf("#CG: graph out of memory error!");
     exit(EXIT_FAILURE);
   }
   // The first pointer will never be assigned and will remain NULL acting as a
   // boundary/terminator for anything traversing the chain in reverse.
   char **BasicBlockPointer = CGObject->BasicBlockExecutionChainTail;
-  for (int Index = 0; Index < Size; ++Index, BasicBlockPointer++) {
+  for (int Index = 0; Index < BASIC_BLOCK_EXECUTION_CHAIN_SIZE; ++Index, BasicBlockPointer++) {
     *BasicBlockPointer = NULL;
   }
 
-  // Allocate memory to the Phi Nodes List
-  if( (CGObject->PhiNodesListHead =
-           (PhiNode *)malloc((size_t)((int64_t)sizeof(PhiNode) * Size))) == NULL) {
-    printf("#CG: graph out of memory error!");
-    exit(EXIT_FAILURE);
-  }
   CGObject->PhiNodesListSize=0;
 
   CG = CGObject;
@@ -433,7 +422,9 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
   return ResolvedValue;
 }
 
-void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char *RightOpInstructionString, enum NodeKind NK){
+void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString,
+                   char *RightOpInstructionString, enum NodeKind NK,
+                   char *FileName, int LineNumber){
 #if FAF_DEBUG
   printf("Creating New Node in Computation graph\n");
   printf("\tInstruction String: %s\n", InstructionString);
@@ -452,7 +443,7 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
   InstructionNodePair *CurrPair = NULL;
   InstructionNodePair *PrevPair = NULL;
 
-  // Allocating memory for new CGNode and new InstructionNodePair
+  // Allocating memory for new CGNode, FileName and new InstructionNodePair
   if((Node = (CGNode *)malloc(sizeof(CGNode))) == NULL) {
     printf("#fAC: AC table out of memory error!");
     exit(EXIT_FAILURE);
@@ -464,6 +455,8 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
   Node->RightNode = NULL;
   Node->Height = 0;
   Node->RootNode = 1;
+  Node->FileName = FileName;
+  Node->LineNumber = LineNumber;
   Node->Next = NULL;
 
   if((NewPair = (InstructionNodePair *)malloc(sizeof(InstructionNodePair))) == NULL) {
@@ -676,9 +669,9 @@ void fCGcreateNode(char *InstructionString, char *LeftOpInstructionString, char 
 }
 
 void fCGStoreCG() {
-#if FAF_DEBUG
+//#if FAF_DEBUG
   // Create a directory if not present
-  char *DirectoryName = (char *)malloc(strlen(LOG_DIRECTORY_NAME) * sizeof(char));
+  char *DirectoryName = (char *)malloc((strlen(LOG_DIRECTORY_NAME)+1) * sizeof(char));
   strcpy(DirectoryName, LOG_DIRECTORY_NAME);
   fAFcreateLogDirectory(DirectoryName);
 
@@ -715,18 +708,22 @@ void fCGStoreCG() {
             "\t\t{\n"
             "\t\t\t\"NodeId\":%d,\n"
             "\t\t\t\"Instruction\":\"%s\",\n"
-            "\t\t\t\"NodeKind\": %d,\n"
+            "\t\t\t\"Node Kind\": %d,\n"
             "\t\t\t\"Height\": %d,\n"
-            "\t\t\t\"RootNode\": %d,\n"
-            "\t\t\t\"LeftNode\": %d,\n"
-            "\t\t\t\"RightNode\": %d\n",
+            "\t\t\t\"Root Node\": %d,\n"
+            "\t\t\t\"Left Node\": %d,\n"
+            "\t\t\t\"Right Node\": %d,\n"
+            "\t\t\t\"File Name\":\"%s\",\n"
+            "\t\t\t\"Line Number\": %d\n",
             CurrentNode->NodeId,
             CurrentNode->InstructionString,
             CurrentNode->Kind,
             CurrentNode->Height,
             CurrentNode->RootNode,
             (CurrentNode->LeftNode!=NULL?CurrentNode->LeftNode->NodeId:-1),
-            (CurrentNode->RightNode!=NULL?CurrentNode->RightNode->NodeId:-1));
+            (CurrentNode->RightNode!=NULL?CurrentNode->RightNode->NodeId:-1),
+            CurrentNode->FileName,
+            CurrentNode->LineNumber);
 
     if (CurrentNode->Next!=NULL)
       fprintf(FP, "\t\t},\n");
@@ -741,7 +738,7 @@ void fCGStoreCG() {
   fclose(FP);
 
   printf("\nComputation Graph written to file: %s\n", FileName);
-#endif
+//#endif
 }
 
 void fCGDotGraph() {

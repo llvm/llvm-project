@@ -84,11 +84,13 @@ public:
 
   /// Function based functions
   static bool isUnwantedFunction(const Function *Func);
+  static bool isFunctionOfInterest(const Function *Func);
 
   // Utility Functions
   Value *createBBNameGlobalString(BasicBlock *BB);
   Value *createRegisterNameGlobalString(Instruction *Inst);
   Value *createInstructionGlobalString(Instruction *Inst);
+  Value *createStringRefGlobalString(StringRef StringObj, Instruction *Inst);
   std::string getInstructionAsString(Instruction *Inst);
   static bool isInstructionOfInterest(Instruction *Inst);
 };
