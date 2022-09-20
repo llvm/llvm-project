@@ -1732,24 +1732,34 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     return nullptr;
 
   DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(&unit);
-  // Only compile units can be split into two parts.
-  if (!dwarf_cu)
+  // Only compile units can be split into two parts and we should only
+  // look for a DWO file if there is a valid DWO ID.
+  if (!dwarf_cu || !dwarf_cu->GetDWOId().has_value())
     return nullptr;
 
   const char *dwo_name = GetDWOName(*dwarf_cu, cu_die);
-  if (!dwo_name)
+  if (!dwo_name) {
+    unit.SetDwoError(Status("missing DWO name in skeleton DIE 0x%8.8" PRIx32,
+                            cu_die.GetOffset()));
     return nullptr;
+  }
 
   if (std::shared_ptr<SymbolFileDWARFDwo> dwp_sp = GetDwpSymbolFile())
     return dwp_sp;
 
+  const char *comp_dir = nullptr;
   FileSpec dwo_file(dwo_name);
   FileSystem::Instance().Resolve(dwo_file);
   if (dwo_file.IsRelative()) {
-    const char *comp_dir =
-        cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir, nullptr);
-    if (!comp_dir)
+    comp_dir = cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir,
+                                                nullptr);
+    if (!comp_dir) {
+      unit.SetDwoError(
+          Status("unable to locate relative .dwo debug file \"%s\" for "
+                 "skeleton DIE 0x%8.8" PRIx32 " without valid DW_AT_comp_dir "
+                 "attribute", dwo_name, cu_die.GetOffset()));
       return nullptr;
+    }
 
     dwo_file.SetFile(comp_dir, FileSpec::Style::native);
     if (dwo_file.IsRelative()) {
@@ -1764,6 +1774,11 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   }
 
   if (!FileSystem::Instance().Exists(dwo_file)) {
+    unit.SetDwoError(
+        Status("unable to locate .dwo debug file \"%s\" for skeleton DIE "
+               "0x%8.8" PRIx32, dwo_file.GetPath().c_str(),
+               cu_die.GetOffset()));
+
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
           "unable to locate separate debug file (dwo, dwp). Debugging will be "
@@ -1779,8 +1794,12 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
       GetObjectFile()->GetModule(), &dwo_file, file_offset,
       FileSystem::Instance().GetByteSize(dwo_file), dwo_file_data_sp,
       dwo_file_data_offset);
-  if (dwo_obj_file == nullptr)
+  if (dwo_obj_file == nullptr) {
+    unit.SetDwoError(
+          Status("unable to load object file for .dwo debug file \"%s\" for "
+                 "unit DIE 0x%8.8" PRIx32, dwo_name, cu_die.GetOffset()));
     return nullptr;
+  }
 
   return std::make_shared<SymbolFileDWARFDwo>(*this, dwo_obj_file,
                                               dwarf_cu->GetID());
@@ -4131,6 +4150,14 @@ Status SymbolFileDWARF::GetFrameVariableError(StackFrame &frame) {
   DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(cu);
   if (!dwarf_cu)
     return Status();
+
+  // Check if we have a skeleton compile unit that had issues trying to load
+  // its .dwo/.dwp file. First pares the Unit DIE to make sure we see any .dwo
+  // related errors.
+  dwarf_cu->ExtractUnitDIEIfNeeded();
+  const Status &dwo_error = dwarf_cu->GetDwoError();
+  if (dwo_error.Fail())
+    return dwo_error;
 
   // Don't return an error for assembly files as they typically don't have
   // varaible information.
