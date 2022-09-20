@@ -23,6 +23,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/TraceGDBRemotePackets.h"
+#include "lldb/Utility/UUID.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
 #endif

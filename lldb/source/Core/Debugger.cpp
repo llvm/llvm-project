@@ -48,8 +48,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Reproducer.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -300,11 +298,6 @@ void Debugger::SetPrompt(llvm::StringRef p) {
   if (str.length())
     new_prompt = str;
   GetCommandInterpreter().UpdatePrompt(new_prompt);
-}
-
-llvm::StringRef Debugger::GetReproducerPath() const {
-  auto &r = repro::Reproducer::Instance();
-  return r.GetReproducerPath().GetPathAsConstString().AsCString();
 }
 
 const FormatEntity::Entry *Debugger::GetThreadFormat() const {
@@ -924,42 +917,12 @@ Status Debugger::SetInputString(const char *data) {
     return result;
   }
 
-  return SetInputFile(
-      (FileSP)std::make_shared<NativeFile>(commands_file, true));
+  SetInputFile((FileSP)std::make_shared<NativeFile>(commands_file, true));
+  return result;
 }
 
-Status Debugger::SetInputFile(FileSP file_sp) {
-  Status error;
-  repro::DataRecorder *recorder = nullptr;
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator())
-    recorder = g->GetOrCreate<repro::CommandProvider>().GetNewRecorder();
-
-  static std::unique_ptr<repro::MultiLoader<repro::CommandProvider>> loader =
-      repro::MultiLoader<repro::CommandProvider>::Create(
-          repro::Reproducer::Instance().GetLoader());
-  if (loader) {
-    llvm::Optional<std::string> nextfile = loader->GetNextFile();
-    FILE *fh = nextfile ? FileSystem::Instance().Fopen(nextfile->c_str(), "r")
-                        : nullptr;
-    // FIXME Jonas Devlieghere: shouldn't this error be propagated out to the
-    // reproducer somehow if fh is NULL?
-    if (fh) {
-      file_sp = std::make_shared<NativeFile>(fh, true);
-    }
-  }
-
-  if (!file_sp || !file_sp->IsValid()) {
-    error.SetErrorString("invalid file");
-    return error;
-  }
-
-  SetInputFile(file_sp, recorder);
-  return error;
-}
-
-void Debugger::SetInputFile(FileSP file_sp, repro::DataRecorder *recorder) {
+void Debugger::SetInputFile(FileSP file_sp) {
   assert(file_sp && file_sp->IsValid());
-  m_input_recorder = recorder;
   m_input_file_sp = std::move(file_sp);
   // Save away the terminal state if that is relevant, so that we can restore
   // it in RestoreInputState.

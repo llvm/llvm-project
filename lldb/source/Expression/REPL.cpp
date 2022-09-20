@@ -79,7 +79,7 @@ lldb::IOHandlerSP REPL::GetIOHandler() {
         true,                  // Multi-line
         true,                  // The REPL prompt is always colored
         1,                     // Line number
-        *this, nullptr);
+        *this);
 
     // Don't exit if CTRL+C is pressed
     static_cast<IOHandlerEditline *>(m_io_handler_sp.get())
