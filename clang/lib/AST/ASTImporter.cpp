@@ -4870,13 +4870,14 @@ ExpectedDecl ASTNodeImporter::VisitUsingEnumDecl(UsingEnumDecl *D) {
   Error Err = Error::success();
   auto ToUsingLoc = importChecked(Err, D->getUsingLoc());
   auto ToEnumLoc = importChecked(Err, D->getEnumLoc());
-  auto ToEnumDecl = importChecked(Err, D->getEnumDecl());
+  auto ToNameLoc = importChecked(Err, D->getLocation());
+  auto *ToEnumType = importChecked(Err, D->getEnumType());
   if (Err)
     return std::move(Err);
 
   UsingEnumDecl *ToUsingEnum;
   if (GetImportedOrCreateDecl(ToUsingEnum, D, Importer.getToContext(), DC,
-                              ToUsingLoc, ToEnumLoc, Loc, ToEnumDecl))
+                              ToUsingLoc, ToEnumLoc, ToNameLoc, ToEnumType))
     return ToUsingEnum;
 
   ToUsingEnum->setLexicalDeclContext(LexicalDC);
