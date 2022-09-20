@@ -264,10 +264,10 @@ public:
 /// The callee's function attributes are merged into the callers' if
 /// MergeAttributes is set to true.
 InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                            bool MergeAttributes = false,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true,
-                            Function *ForwardVarArgsTo = nullptr,
-                            bool MergeAttributes = false);
+                            Function *ForwardVarArgsTo = nullptr);
 
 /// Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p
 /// Blocks.
