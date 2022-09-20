@@ -11,8 +11,9 @@
 #define LENGTH 128
 
 void foo() {
+  const int device_id = omp_get_default_device();
   float *A;
-#pragma omp allocate(A) allocator(llvm_omp_target_shared_mem_alloc)
+  A = (float *)omp_target_alloc(sizeof(float), device_id);
 
   float *A_dev = NULL;
 #pragma omp target has_device_addr(A [FROM:LENGTH]) map(A_dev)
