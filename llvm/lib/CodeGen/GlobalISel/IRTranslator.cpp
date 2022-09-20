@@ -1313,7 +1313,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
   if (!(Flags & MachineMemOperand::MODereferenceable)) {
     if (isDereferenceableAndAlignedPointer(Ptr, LI.getType(), LI.getAlign(),
-                                           *DL, &LI, nullptr, LibInfo))
+                                           *DL, &LI, nullptr, nullptr, LibInfo))
       Flags |= MachineMemOperand::MODereferenceable;
   }
 
