@@ -1884,6 +1884,9 @@ int GCNHazardRecognizer::checkNSAtoVMEMHazard(MachineInstr *MI) {
 int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
   int FPAtomicToDenormModeWaitStates = 3;
 
+  if (!ST.hasFPAtomicToDenormModeHazard())
+    return 0;
+
   if (MI->getOpcode() != AMDGPU::S_DENORM_MODE)
     return 0;
 
