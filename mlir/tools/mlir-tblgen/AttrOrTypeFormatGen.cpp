@@ -656,10 +656,10 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
 
 void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
                                        MethodBody &os) {
-  ArrayRef<FormatElement *> elements =
-      el->getThenElements().drop_front(el->getParseStart());
+  ArrayRef<FormatElement *> thenElements =
+      el->getThenElements(/*parseable=*/true);
 
-  FormatElement *first = elements.front();
+  FormatElement *first = thenElements.front();
   const auto guardOn = [&](auto params) {
     os << "if (!(";
     llvm::interleave(
@@ -687,12 +687,12 @@ void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
   }
   os.indent();
 
-  // Generate the parsers for the rest of the elements.
-  for (FormatElement *element : el->getElseElements())
+  // Generate the parsers for the rest of the thenElements.
+  for (FormatElement *element : el->getElseElements(/*parseable=*/true))
     genElementParser(element, ctx, os);
   os.unindent() << "} else {\n";
   os.indent();
-  for (FormatElement *element : elements.drop_front())
+  for (FormatElement *element : thenElements.drop_front())
     genElementParser(element, ctx, os);
   os.unindent() << "}\n";
 }
@@ -781,12 +781,16 @@ void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
 
 /// Generate code to guard printing on the presence of any optional parameters.
 template <typename ParameterRange>
-static void guardOnAny(FmtContext &ctx, MethodBody &os,
-                       ParameterRange &&params) {
+static void guardOnAny(FmtContext &ctx, MethodBody &os, ParameterRange &&params,
+                       bool inverted = false) {
   os << "if (";
+  if (inverted)
+    os << "!(";
   llvm::interleave(
       params, os,
       [&](ParameterElement *param) { param->genPrintGuard(ctx, os); }, " || ");
+  if (inverted)
+    os << ")";
   os << ") {\n";
   os.indent();
 }
@@ -860,12 +864,12 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                         MethodBody &os) {
   FormatElement *anchor = el->getAnchor();
   if (auto *param = dyn_cast<ParameterElement>(anchor)) {
-    guardOnAny(ctx, os, llvm::makeArrayRef(param));
+    guardOnAny(ctx, os, llvm::makeArrayRef(param), el->isInverted());
   } else if (auto *params = dyn_cast<ParamsDirective>(anchor)) {
-    guardOnAny(ctx, os, params->getParams());
+    guardOnAny(ctx, os, params->getParams(), el->isInverted());
   } else {
     auto *strct = cast<StructDirective>(anchor);
-    guardOnAny(ctx, os, strct->getParams());
+    guardOnAny(ctx, os, strct->getParams(), el->isInverted());
   }
   // Generate the printer for the contained elements.
   {

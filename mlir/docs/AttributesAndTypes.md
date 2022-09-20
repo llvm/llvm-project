@@ -660,8 +660,9 @@ set to `llvm::None` and `Attribute` will be set to `nullptr`.
 
 Only optional parameters or directives that only capture optional parameters can
 be used in optional groups. An optional group is a set of elements optionally
-printed based on the presence of an anchor. Suppose parameter `a` is an
-`IntegerAttr`.
+printed based on the presence of an anchor. The group in which the anchor is
+placed is printed if it is present, otherwise the other one is printed. Suppose
+parameter `a` is an `IntegerAttr`.
 
 ```
 ( `(` $a^ `)` ) : (`x`)?

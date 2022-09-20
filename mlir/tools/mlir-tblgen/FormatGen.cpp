@@ -321,35 +321,42 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
   // Parse the child elements for this optional group.
   std::vector<FormatElement *> thenElements, elseElements;
   FormatElement *anchor = nullptr;
-  do {
-    FailureOr<FormatElement *> element = parseElement(TopLevelContext);
-    if (failed(element))
-      return failure();
-    // Check for an anchor.
-    if (curToken.is(FormatToken::caret)) {
-      if (anchor)
-        return emitError(curToken.getLoc(), "only one element can be marked as "
-                                            "the anchor of an optional group");
-      anchor = *element;
-      consumeToken();
-    }
-    thenElements.push_back(*element);
-  } while (!curToken.is(FormatToken::r_paren));
-  consumeToken();
-
-  // Parse the `else` elements of this optional group.
-  if (curToken.is(FormatToken::colon)) {
-    consumeToken();
-    if (failed(
-            parseToken(FormatToken::l_paren,
-                       "expected '(' to start else branch of optional group")))
-      return failure();
+  auto parseChildElements =
+      [this, &anchor](std::vector<FormatElement *> &elements) -> LogicalResult {
     do {
       FailureOr<FormatElement *> element = parseElement(TopLevelContext);
       if (failed(element))
         return failure();
-      elseElements.push_back(*element);
+      // Check for an anchor.
+      if (curToken.is(FormatToken::caret)) {
+        if (anchor) {
+          return emitError(curToken.getLoc(),
+                           "only one element can be marked as the anchor of an "
+                           "optional group");
+        }
+        anchor = *element;
+        consumeToken();
+      }
+      elements.push_back(*element);
     } while (!curToken.is(FormatToken::r_paren));
+    return success();
+  };
+
+  // Parse the 'then' elements. If the anchor was found in this group, then the
+  // optional is not inverted.
+  if (failed(parseChildElements(thenElements)))
+    return failure();
+  consumeToken();
+  bool inverted = !anchor;
+
+  // Parse the `else` elements of this optional group.
+  if (curToken.is(FormatToken::colon)) {
+    consumeToken();
+    if (failed(parseToken(
+            FormatToken::l_paren,
+            "expected '(' to start else branch of optional group")) ||
+        failed(parseChildElements(elseElements)))
+      return failure();
     consumeToken();
   }
   if (failed(parseToken(FormatToken::question,
@@ -367,17 +374,21 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
 
   // Get the first parsable element. It must be an element that can be
   // optionally-parsed.
-  auto parseBegin = llvm::find_if_not(thenElements, [](FormatElement *element) {
+  auto isWhitespace = [](FormatElement *element) {
     return isa<WhitespaceElement>(element);
-  });
-  if (!isa<LiteralElement, VariableElement>(*parseBegin)) {
+  };
+  auto thenParseBegin = llvm::find_if_not(thenElements, isWhitespace);
+  auto elseParseBegin = llvm::find_if_not(elseElements, isWhitespace);
+  unsigned thenParseStart = std::distance(thenElements.begin(), thenParseBegin);
+  unsigned elseParseStart = std::distance(elseElements.begin(), elseParseBegin);
+
+  if (!isa<LiteralElement, VariableElement>(*thenParseBegin)) {
     return emitError(loc, "first parsable element of an optional group must be "
                           "a literal or variable");
   }
-
-  unsigned parseStart = std::distance(thenElements.begin(), parseBegin);
   return create<OptionalElement>(std::move(thenElements),
-                                 std::move(elseElements), anchor, parseStart);
+                                 std::move(elseElements), thenParseStart,
+                                 elseParseStart, anchor, inverted);
 }
 
 FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,

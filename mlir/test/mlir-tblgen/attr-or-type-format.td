@@ -571,3 +571,39 @@ def TypeL : TestType<"TestN"> {
   let mnemonic = "type_l";
   let assemblyFormat = [{ custom<Foo>($a, "1") }];
 }
+
+// TYPE-LABEL: ::mlir::Type TestOType::parse
+// TYPE: if (odsParser.parseOptionalQuestion())
+// TYPE: _result_a =
+// TYPE: else
+
+// TYPE-LABEL: void TestOType::print
+// TYPE: if (!((getA())))
+// TYPE: odsPrinter << ' ' << "?"
+// TYPE: else
+// TYPE: odsPrinter.printStrippedAttrOrType(getA())
+
+def TypeM : TestType<"TestO"> {
+  let parameters = (ins OptionalParameter<"int">:$a);
+  let mnemonic = "type_m";
+  let assemblyFormat = "(`?`) : ($a^)?";
+}
+
+// TYPE-LABEL: ::mlir::Type TestPType::parse
+// TYPE: if (odsParser.parseOptionalQuestion())
+// TYPE: bool _seen_a
+// TYPE: bool _seen_b
+// TYPE: _loop_body(_paramKey))
+// TYPE: else {
+// TYPE-NEXT: }
+
+// TYPE-LABEL: void TestPType::print
+// TYPE: if (!((getA()) || (getB())))
+// TYPE-NEXT: odsPrinter << "?"
+
+def TypeN : TestType<"TestP"> {
+  let parameters = (ins OptionalParameter<"int">:$a,
+                        OptionalParameter<"int">:$b);
+  let mnemonic = "type_n";
+  let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
+}
