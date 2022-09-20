@@ -1048,24 +1048,42 @@ class InstrInfo {
   bit guessInstructionProperties = true;
 
   // TableGen's instruction encoder generator has support for matching operands
-  // to bit-field variables both by name and by position. While matching by
-  // name is preferred, this is currently not possible for complex operands,
-  // and some targets still reply on the positional encoding rules. When
-  // generating a decoder for such targets, the positional encoding rules must
-  // be used by the decoder generator as well.
+  // to bit-field variables both by name and by position. Support for matching
+  // by position is DEPRECATED, and WILL BE REMOVED. Positional matching is
+  // confusing to use, and makes it very easy to accidentally write buggy
+  // instruction definitions.
   //
-  // This option is temporary; it will go away once the TableGen decoder
-  // generator has better support for complex operands and targets have
-  // migrated away from using positionally encoded operands.
+  // In previous versions of LLVM, the ability to match operands by position was
+  // enabled unconditionally. It is now controllable by this option -- and
+  // disabled by default. The previous behavior can be restored by setting this
+  // option to true.
+  //
+  // This option is temporary, and will go away once all in-tree targets have
+  // migrated.
+  //
+  // TODO: clean up and remove these options.
+  bit useDeprecatedPositionallyEncodedOperands = false;
+
+  // If positional encoding rules are used for the encoder generator, they may
+  // also need to be used by the decoder generator -- if so, enable this
+  // variable.
+  //
+  // This option is a no-op unless useDeprecatedPositionallyEncodedOperands is
+  // true.
+  //
+  // This option is temporary, and will go away once all in-tree targets have
+  // migrated.
   bit decodePositionallyEncodedOperands = false;
 
   // When set, this indicates that there will be no overlap between those
   // operands that are matched by ordering (positional operands) and those
   // matched by name.
   //
-  // This option is temporary; it will go away once the TableGen decoder
-  // generator has better support for complex operands and targets have
-  // migrated away from using positionally encoded operands.
+  // This is a no-op unless useDeprecatedPositionallyEncodedOperands is true
+  // (though it does modify the "would've used positional operand XXX" error.)
+  //
+  // This option is temporary, and will go away once all in-tree targets have
+  // migrated.
   bit noNamedPositionallyEncodedOperands = false;
 }
 

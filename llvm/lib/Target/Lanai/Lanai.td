@@ -21,7 +21,9 @@ include "LanaiRegisterInfo.td"
 include "LanaiCallingConv.td"
 include "LanaiInstrInfo.td"
 
-def LanaiInstrInfo : InstrInfo;
+def LanaiInstrInfo : InstrInfo {
+  let useDeprecatedPositionallyEncodedOperands = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Lanai processors supported.
