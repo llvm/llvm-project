@@ -22,7 +22,7 @@ def StdC : StandardSpec<"stdc"> {
       [], // Enumerations
       []
   >;
-  
+
   HeaderSpec CType = HeaderSpec<
       "ctype.h",
       [], // Macros
@@ -188,7 +188,7 @@ def StdC : StandardSpec<"stdc"> {
           >,
       ]
   >;
- 
+
   HeaderSpec String = HeaderSpec<
       "string.h",
       [
@@ -201,7 +201,7 @@ def StdC : StandardSpec<"stdc"> {
       [
           FunctionSpec<
               "memcpy",
-              RetValSpec<VoidPtr>, 
+              RetValSpec<VoidPtr>,
               [ArgSpec<VoidRestrictedPtr>,
                ArgSpec<ConstVoidRestrictedPtr>,
                ArgSpec<SizeTType>]
@@ -228,24 +228,24 @@ def StdC : StandardSpec<"stdc"> {
           >,
           FunctionSpec<
               "strcpy",
-              RetValSpec<CharPtr>, 
+              RetValSpec<CharPtr>,
               [ArgSpec<CharRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>]
           >,
           FunctionSpec<
               "strncpy",
-              RetValSpec<CharPtr>, 
+              RetValSpec<CharPtr>,
               [ArgSpec<CharRestrictedPtr>,
                ArgSpec<ConstCharRestrictedPtr>,
                ArgSpec<SizeTType>]
           >,
           FunctionSpec<
               "strcat",
-              RetValSpec<CharPtr>, 
+              RetValSpec<CharPtr>,
               [ArgSpec<CharRestrictedPtr>, ArgSpec<ConstCharRestrictedPtr>]
           >,
           FunctionSpec<
               "strncat",
-              RetValSpec<CharPtr>, 
+              RetValSpec<CharPtr>,
               [ArgSpec<CharPtr>, ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
           >,
           FunctionSpec<
@@ -265,7 +265,7 @@ def StdC : StandardSpec<"stdc"> {
           >,
           FunctionSpec<
               "strxfrm",
-              RetValSpec<SizeTType>, 
+              RetValSpec<SizeTType>,
               [ArgSpec<CharRestrictedPtr>,
                ArgSpec<ConstCharRestrictedPtr>,
                ArgSpec<SizeTType>]
@@ -479,11 +479,11 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"coshf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"sinhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"tanhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
-          
+
           FunctionSpec<"acosf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"asinf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"atanf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
-          
+
           FunctionSpec<"atanhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
       ]
   >;
