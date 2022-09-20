@@ -109,6 +109,11 @@ Optional<std::string> lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr,
   return llvm::join(llvm::reverse(commentLines), "\n");
 }
 
+bool lsp::contains(SMRange range, SMLoc loc) {
+  return range.Start.getPointer() <= loc.getPointer() &&
+         loc.getPointer() < range.End.getPointer();
+}
+
 //===----------------------------------------------------------------------===//
 // SourceMgrInclude
 //===----------------------------------------------------------------------===//

@@ -62,14 +62,6 @@ static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMRange range,
   return lsp::Location(getURIFromLoc(mgr, range, uri), lsp::Range(mgr, range));
 }
 
-/// Returns true if the given range contains the given source location. Note
-/// that this has different behavior than SMRange because it is inclusive of the
-/// end location.
-static bool contains(SMRange range, SMLoc loc) {
-  return range.Start.getPointer() <= loc.getPointer() &&
-         loc.getPointer() <= range.End.getPointer();
-}
-
 /// Convert the given MLIR diagnostic to the LSP form.
 static Optional<lsp::Diagnostic>
 getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr, const ast::Diagnostic &diag,
@@ -1188,7 +1180,8 @@ void PDLDocument::getInlayHints(const lsp::URIForFile &uri,
     SMRange loc = node->getLoc();
 
     // Check that the location of this node is within the input range.
-    if (!contains(rangeLoc, loc.Start) && !contains(rangeLoc, loc.End))
+    if (!lsp::contains(rangeLoc, loc.Start) &&
+        !lsp::contains(rangeLoc, loc.End))
       return;
 
     // Handle hints for various types of nodes.
