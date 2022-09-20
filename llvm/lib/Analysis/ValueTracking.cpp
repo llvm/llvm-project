@@ -4718,15 +4718,17 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
 
 bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
                                         const Instruction *CtxI,
+                                        AssumptionCache *AC,
                                         const DominatorTree *DT,
                                         const TargetLibraryInfo *TLI) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                DT, TLI);
+                                                AC, DT, TLI);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
-    const DominatorTree *DT, const TargetLibraryInfo *TLI) {
+    AssumptionCache *AC, const DominatorTree *DT,
+    const TargetLibraryInfo *TLI) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -4784,10 +4786,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     if (mustSuppressSpeculation(*LI))
       return false;
     const DataLayout &DL = LI->getModule()->getDataLayout();
-    return isDereferenceableAndAlignedPointer(
-        LI->getPointerOperand(), LI->getType(), LI->getAlign(), DL, CtxI,
-        nullptr, // FIXME
-        DT, TLI);
+    return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
+                                              LI->getType(), LI->getAlign(), DL,
+                                              CtxI, AC, DT, TLI);
   }
   case Instruction::Call: {
     auto *CI = dyn_cast<const CallInst>(Inst);

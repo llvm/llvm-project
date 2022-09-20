@@ -1736,7 +1736,8 @@ static bool isSafeToExecuteUnconditionally(
     const Loop *CurLoop, const LoopSafetyInfo *SafetyInfo,
     OptimizationRemarkEmitter *ORE, const Instruction *CtxI,
     bool AllowSpeculation) {
-  if (AllowSpeculation && isSafeToSpeculativelyExecute(&Inst, CtxI, DT, TLI))
+  if (AllowSpeculation &&
+      isSafeToSpeculativelyExecute(&Inst, CtxI, nullptr, DT, TLI))
     return true;
 
   bool GuaranteedToExecute =
