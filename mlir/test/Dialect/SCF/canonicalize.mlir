@@ -722,14 +722,13 @@ func.func @replace_single_iteration_loop_non_unit_step() {
 
 // -----
 
-#map = affine_map<(d0) -> (d0 + 1)>
 // CHECK-LABEL: func @replace_single_iteration_const_diff(
 //  CHECK-SAME: %[[A0:.*]]: index)
 func.func @replace_single_iteration_const_diff(%arg0 : index) {
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 2
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
-  %5 = affine.apply #map(%arg0)
+  %5 = arith.addi %arg0, %c1 : index
   // CHECK-NOT: scf.for
   scf.for %arg2 = %arg0 to %5 step %c1 {
     // CHECK-NEXT: %[[MUL:.*]] = arith.muli %[[A0]], %[[CST]]
