@@ -1233,7 +1233,7 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
           listen_socket.Listen("localhost:0", backlog).ToError())
     return error;
 
-  Socket *accept_socket;
+  Socket *accept_socket = nullptr;
   std::future<Status> accept_status = std::async(
       std::launch::async, [&] { return listen_socket.Accept(accept_socket); });
 

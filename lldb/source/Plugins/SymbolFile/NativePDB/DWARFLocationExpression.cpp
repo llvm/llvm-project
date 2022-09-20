@@ -129,7 +129,7 @@ static DWARFExpression MakeLocationExpressionInternal(lldb::ModuleSP module,
 }
 
 static bool MakeRegisterBasedLocationExpressionInternal(
-    Stream &stream, llvm::codeview::RegisterId reg, RegisterKind register_kind,
+    Stream &stream, llvm::codeview::RegisterId reg, RegisterKind &register_kind,
     llvm::Optional<int32_t> relative_offset, lldb::ModuleSP module) {
   uint32_t reg_num = GetRegisterNumber(module->GetArchitecture().GetMachine(),
                                        reg, register_kind);

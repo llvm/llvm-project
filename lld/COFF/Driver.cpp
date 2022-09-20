@@ -1922,6 +1922,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->lldmapFile = getMapFile(args, OPT_lldmap, OPT_lldmap_file);
   config->mapFile = getMapFile(args, OPT_map, OPT_map_file);
 
+  if (config->mapFile != "" && args.hasArg(OPT_map_info)) {
+    for (auto *arg : args.filtered(OPT_map_info)) {
+      std::string s = StringRef(arg->getValue()).lower();
+      if (s == "exports")
+        config->mapInfo = true;
+      else
+        error("unknown option: /mapinfo:" + s);
+    }
+  }
+
   if (config->lldmapFile != "" && config->lldmapFile == config->mapFile) {
     warn("/lldmap and /map have the same output file '" + config->mapFile +
          "'.\n>>> ignoring /lldmap");

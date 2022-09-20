@@ -693,11 +693,12 @@ static PartwordMaskValues createMaskInstrs(IRBuilder<> &Builder, Instruction *I,
 
   assert(ValueSize < MinWordSize);
 
-  Type *WordPtrType =
-      PMV.WordType->getPointerTo(Addr->getType()->getPointerAddressSpace());
+  PointerType *PtrTy = cast<PointerType>(Addr->getType());
+  Type *WordPtrType = PMV.WordType->getPointerTo(PtrTy->getAddressSpace());
 
   // TODO: we could skip some of this if AddrAlign >= MinWordSize.
-  Value *AddrInt = Builder.CreatePtrToInt(Addr, DL.getIntPtrType(Ctx));
+  Value *AddrInt = Builder.CreatePtrToInt(
+      Addr, DL.getIntPtrType(Ctx, PtrTy->getAddressSpace()));
   PMV.AlignedAddr = Builder.CreateIntToPtr(
       Builder.CreateAnd(AddrInt, ~(uint64_t)(MinWordSize - 1)), WordPtrType,
       "AlignedAddr");

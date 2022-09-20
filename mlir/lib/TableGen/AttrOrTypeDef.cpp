@@ -277,9 +277,7 @@ StringRef AttrOrTypeParameter::getSyntax() const {
 }
 
 bool AttrOrTypeParameter::isOptional() const {
-  // Parameters with default values are automatically optional.
-  return getDefValue<llvm::BitInit>("isOptional").value_or(false) ||
-         getDefaultValue();
+  return getDefaultValue().has_value();
 }
 
 Optional<StringRef> AttrOrTypeParameter::getDefaultValue() const {

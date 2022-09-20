@@ -287,6 +287,7 @@ def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;
 def map : F<"map">;
 def map_file : P_priv<"map">;
+def map_info : P<"mapinfo", "Include the specified information in a map file">;
 def show_timing : F<"time">;
 def summary : F<"summary">;
 

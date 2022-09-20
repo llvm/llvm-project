@@ -110,6 +110,10 @@ void populateInlineConstantOperandsPatterns(RewritePatternSet &patterns);
 /// Patterns that are used to bubble up extract slice op above linalg op.
 void populateBubbleUpExtractSliceOpPatterns(RewritePatternSet &patterns);
 
+/// Adds patterns that waps tensor.extract_slice(linalg.fill(%cst, %init)) into
+/// linalg.fill(%cst, tensor.extract_slice(%init)).
+void populateSwapExtractSliceWithFillPatterns(RewritePatternSet &patterns);
+
 /// Return true if two `linalg.generic` operations with producer/consumer
 /// relationship through `fusedOperand` can be fused using elementwise op
 /// fusion.

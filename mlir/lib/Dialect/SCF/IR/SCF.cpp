@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -721,17 +719,21 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
 /// Returns llvm::None when the difference between two AffineValueMap is
 /// dynamic.
 static Optional<int64_t> computeConstDiff(Value l, Value u) {
-  auto alb = l.getDefiningOp<AffineApplyOp>();
-  auto aub = u.getDefiningOp<AffineApplyOp>();
-  // ID map: (d0)->d0
-  auto id = AffineMap::getMultiDimIdentityMap(1, l.getContext());
-  auto lb = alb ? alb.getAffineValueMap() : AffineValueMap(id, l);
-  auto ub = aub ? aub.getAffineValueMap() : AffineValueMap(id, u);
+  auto clb = l.getDefiningOp<arith::ConstantOp>();
+  auto cub = u.getDefiningOp<arith::ConstantOp>();
+  if (cub && clb) {
+    llvm::APInt lbValue = clb.getValue().cast<IntegerAttr>().getValue();
+    llvm::APInt ubValue = cub.getValue().cast<IntegerAttr>().getValue();
+    return (ubValue - lbValue).getSExtValue();
+  }
 
-  AffineValueMap diffMap;
-  AffineValueMap::difference(ub, lb, &diffMap);
-  if (auto constDiff = diffMap.getResult(0).dyn_cast<AffineConstantExpr>())
-    return constDiff.getValue();
+  // Else a simple pattern match for x + c or c + x
+  llvm::APInt diff;
+  if (matchPattern(
+          u, m_Op<arith::AddIOp>(matchers::m_Val(l), m_ConstantInt(&diff))) ||
+      matchPattern(
+          u, m_Op<arith::AddIOp>(m_ConstantInt(&diff), matchers::m_Val(l))))
+    return diff.getSExtValue();
   return llvm::None;
 }
 

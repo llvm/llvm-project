@@ -158,6 +158,8 @@ struct Reference {
 // A base struct for TypeInfos
 struct TypeInfo {
   TypeInfo() = default;
+  TypeInfo(const Reference &R) : Type(R) {}
+
   TypeInfo(SymbolID Type, StringRef Field, InfoType IT)
       : Type(Type, Field, IT) {}
   TypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path)
@@ -173,6 +175,9 @@ struct TypeInfo {
 // Info for field types.
 struct FieldTypeInfo : public TypeInfo {
   FieldTypeInfo() = default;
+  FieldTypeInfo(const TypeInfo &TI, StringRef Name = StringRef(),
+                StringRef DefaultValue = StringRef())
+      : TypeInfo(TI), Name(Name), DefaultValue(DefaultValue) {}
   FieldTypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path,
                 llvm::StringRef Name)
       : TypeInfo(Type, Field, IT, Path), Name(Name) {}
@@ -196,6 +201,8 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
+  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access)
+      : FieldTypeInfo(TI, Name), Access(Access) {}
   MemberTypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path,
                  llvm::StringRef Name, AccessSpecifier Access)
       : FieldTypeInfo(Type, Field, IT, Path, Name), Access(Access) {}
