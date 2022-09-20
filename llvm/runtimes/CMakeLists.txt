@@ -366,7 +366,7 @@ endfunction()
 if(runtimes)
   # Create a runtimes target that uses this file as its top-level CMake file.
   # The runtimes target is a configuration of all the runtime libraries
-  # together in a single CMake invocaiton.
+  # together in a single CMake invocation.
   set(extra_deps "")
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     if(TARGET opt)
