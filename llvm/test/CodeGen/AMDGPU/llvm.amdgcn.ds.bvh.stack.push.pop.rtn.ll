@@ -12,7 +12,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push4_pop1(i32 %addr, i32 %data0, <4 x 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_push4_pop1_rtn_b32 v1, v0, v1, v[2:5]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    exp prim v1, off, off, off done
+; CHECK-NEXT:    export prim v1, off, off, off done
 ; CHECK-NEXT:    s_endpgm
   %pair = call { i32, i32 } @llvm.amdgcn.ds.bvh.stack.push4.pop1.rtn(i32 %addr, i32 %data0, <4 x i32> %data1, i32 0)
   %vdst = extractvalue { i32, i32 } %pair, 0
@@ -26,7 +26,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push4_pop1_1(i32 %addr, i32 %data0, <4 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_push4_pop1_rtn_b32 v1, v0, v1, v[2:5] offset:1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    exp prim v1, off, off, off done
+; CHECK-NEXT:    export prim v1, off, off, off done
 ; CHECK-NEXT:    s_endpgm
   %pair = call { i32, i32 } @llvm.amdgcn.ds.bvh.stack.push4.pop1.rtn(i32 %addr, i32 %data0, <4 x i32> %data1, i32 1)
   %vdst = extractvalue { i32, i32 } %pair, 0
@@ -40,7 +40,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push8_pop1(i32 %addr, i32 %data0, <8 x 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_push8_pop1_rtn_b32 v1, v0, v1, v[2:9]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    exp prim v1, off, off, off done
+; CHECK-NEXT:    export prim v1, off, off, off done
 ; CHECK-NEXT:    s_endpgm
   %pair = call { i32, i32 } @llvm.amdgcn.ds.bvh.stack.push8.pop1.rtn(i32 %addr, i32 %data0, <8 x i32> %data1, i32 0)
   %vdst = extractvalue { i32, i32 } %pair, 0
@@ -54,7 +54,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push8_pop1_1(i32 %addr, i32 %data0, <8 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_push8_pop1_rtn_b32 v1, v0, v1, v[2:9] offset:1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    exp prim v1, off, off, off done
+; CHECK-NEXT:    export prim v1, off, off, off done
 ; CHECK-NEXT:    s_endpgm
   %pair = call { i32, i32 } @llvm.amdgcn.ds.bvh.stack.push8.pop1.rtn(i32 %addr, i32 %data0, <8 x i32> %data1, i32 1)
   %vdst = extractvalue { i32, i32 } %pair, 0
@@ -68,7 +68,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push8_pop2(i32 %addr, i32 %data0, <8 x 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_push8_pop2_rtn_b64 v[1:2], v0, v1, v[2:9]
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    exp prim v1, off, off, off done
+; CHECK-NEXT:    export prim v1, off, off, off done
 ; CHECK-NEXT:    s_endpgm
   %pair = call { i64, i32 } @llvm.amdgcn.ds.bvh.stack.push8.pop2.rtn(i32 %addr, i32 %data0, <8 x i32> %data1, i32 0)
   %vdst = extractvalue { i64, i32 } %pair, 0
@@ -85,7 +85,7 @@ define amdgpu_gs void @test_ds_bvh_stack_push8_pop2_1(i32 %addr, i32 %data0, <8 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ds_bvh_stack_push8_pop2_rtn_b64 v[1:2], v0, v1, v[2:9] offset:1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    exp prim v1, off, off, off done
+; CHECK-NEXT:    export prim v1, off, off, off done
 ; CHECK-NEXT:    s_endpgm
   %pair = call { i64, i32 } @llvm.amdgcn.ds.bvh.stack.push8.pop2.rtn(i32 %addr, i32 %data0, <8 x i32> %data1, i32 1)
   %vdst = extractvalue { i64, i32 } %pair, 0
