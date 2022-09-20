@@ -141,6 +141,15 @@ static bool checkArgCountAtMost(Sema &S, CallExpr *Call, unsigned MaxArgCount) {
          << Call->getSourceRange();
 }
 
+/// Checks that a call expression's argument count is in the desired range. This
+/// is useful when doing custom type-checking on a variadic function. Returns
+/// true on error.
+static bool checkArgCountRange(Sema &S, CallExpr *Call, unsigned MinArgCount,
+                               unsigned MaxArgCount) {
+  return checkArgCountAtLeast(S, Call, MinArgCount) ||
+         checkArgCountAtMost(S, Call, MaxArgCount);
+}
+
 /// Checks that a call expression's argument count is the desired number.
 /// This is useful when doing custom type-checking.  Returns true on error.
 static bool checkArgCount(Sema &S, CallExpr *Call, unsigned DesiredArgCount) {
@@ -7963,17 +7972,15 @@ bool Sema::SemaBuiltinAllocaWithAlign(CallExpr *TheCall) {
 /// Handle __builtin_assume_aligned. This is declared
 /// as (const void*, size_t, ...) and can take one optional constant int arg.
 bool Sema::SemaBuiltinAssumeAligned(CallExpr *TheCall) {
-  if (checkArgCountAtMost(*this, TheCall, 3))
+  if (checkArgCountRange(*this, TheCall, 2, 3))
     return true;
 
   unsigned NumArgs = TheCall->getNumArgs();
   Expr *FirstArg = TheCall->getArg(0);
-  if (auto *CE = dyn_cast<CastExpr>(FirstArg))
-    FirstArg = CE->getSubExprAsWritten();
 
   {
     ExprResult FirstArgResult =
-        DefaultFunctionArrayLvalueConversion(FirstArg, /*Diagnose=*/false);
+        DefaultFunctionArrayLvalueConversion(FirstArg);
     if (FirstArgResult.isInvalid())
       return true;
     TheCall->setArg(0, FirstArgResult.get());
