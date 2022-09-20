@@ -126,47 +126,8 @@ static Optional<std::string> getDocumentationFor(llvm::SourceMgr &sourceMgr,
     return doc->str();
 
   // If the decl doesn't yet have documentation, try to extract it from the
-  // source file. This is a heuristic, and isn't intended to cover every case,
-  // but should cover the most common. We essentially look for a comment
-  // preceding the decl, and if we find one, use that as the documentation.
-  SMLoc startLoc = decl->getLoc().Start;
-  if (!startLoc.isValid())
-    return llvm::None;
-  int bufferId = sourceMgr.FindBufferContainingLoc(startLoc);
-  if (bufferId == 0)
-    return llvm::None;
-  const char *bufferStart =
-      sourceMgr.getMemoryBuffer(bufferId)->getBufferStart();
-  StringRef buffer(bufferStart, startLoc.getPointer() - bufferStart);
-
-  // Pop the last line from the buffer string.
-  auto popLastLine = [&]() -> Optional<StringRef> {
-    size_t newlineOffset = buffer.find_last_of("\n");
-    if (newlineOffset == StringRef::npos)
-      return llvm::None;
-    StringRef lastLine = buffer.drop_front(newlineOffset).trim();
-    buffer = buffer.take_front(newlineOffset);
-    return lastLine;
-  };
-
-  // Try to pop the current line, which contains the decl.
-  if (!popLastLine())
-    return llvm::None;
-
-  // Try to parse a comment string from the source file.
-  SmallVector<StringRef> commentLines;
-  while (Optional<StringRef> line = popLastLine()) {
-    // Check for a comment at the beginning of the line.
-    if (!line->startswith("//"))
-      break;
-
-    // Extract the document string from the comment.
-    commentLines.push_back(line->drop_while([](char c) { return c == '/'; }));
-  }
-
-  if (commentLines.empty())
-    return llvm::None;
-  return llvm::join(llvm::reverse(commentLines), "\n");
+  // source file.
+  return lsp::extractSourceDocComment(sourceMgr, decl->getLoc().Start);
 }
 
 //===----------------------------------------------------------------------===//
