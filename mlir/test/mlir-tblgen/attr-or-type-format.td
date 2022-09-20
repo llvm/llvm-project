@@ -421,11 +421,11 @@ def TypeD : TestType<"TestF"> {
 // TYPE: ::mlir::Type TestGType::parse(::mlir::AsmParser &odsParser) {
 // TYPE:   if (::mlir::failed(_result_a))
 // TYPE:     return {};
-// TYPE:   if (::mlir::succeeded(_result_a) && *_result_a)
+// TYPE:   if (::mlir::succeeded(_result_a) && !((*_result_a) == int()))
 // TYPE:     if (odsParser.parseComma())
 // TYPE:       return {};
 
-// TYPE: if ((getA()))
+// TYPE: if (!(getA() == int()))
 // TYPE:   odsPrinter.printStrippedAttrOrType(getA());
 // TYPE: odsPrinter << ", ";
 // TYPE: odsPrinter.printStrippedAttrOrType(getB());
@@ -445,7 +445,7 @@ def TypeE : TestType<"TestG"> {
 // TYPE:     return {};
 
 // TYPE: void TestHType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getA())) {
+// TYPE:   if (!(getA() == int())) {
 // TYPE:     odsPrinter << "a = ";
 // TYPE:     odsPrinter.printStrippedAttrOrType(getA());
 // TYPE:     odsPrinter << ", ";
@@ -488,9 +488,9 @@ def TypeG : TestType<"TestI"> {
 // TYPE:     return {};
 
 // TYPE: void TestJType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getB())) {
+// TYPE:   if (!(getB() == int())) {
 // TYPE:     odsPrinter << "(";
-// TYPE:     if ((getB()))
+// TYPE:     if (!(getB() == int()))
 // TYPE:       odsPrinter.printStrippedAttrOrType(getB());
 // TYPE:     odsPrinter << ")";
 // TYPE:   } else {
@@ -508,7 +508,7 @@ def TypeH : TestType<"TestJ"> {
 // TYPE:   _result_a.value_or(10)
 
 // TYPE: void TestKType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getA() && !(getA() == 10)))
+// TYPE:   if (!(getA() == 10))
 
 def TypeI : TestType<"TestK"> {
   let parameters = (ins DefaultValuedParameter<"int", "10">:$a);
@@ -578,7 +578,7 @@ def TypeL : TestType<"TestN"> {
 // TYPE: else
 
 // TYPE-LABEL: void TestOType::print
-// TYPE: if (!((getA())))
+// TYPE: if (!(!(getA() == int())))
 // TYPE: odsPrinter << ' ' << "?"
 // TYPE: else
 // TYPE: odsPrinter.printStrippedAttrOrType(getA())
@@ -598,7 +598,7 @@ def TypeM : TestType<"TestO"> {
 // TYPE-NEXT: }
 
 // TYPE-LABEL: void TestPType::print
-// TYPE: if (!((getA()) || (getB())))
+// TYPE: if (!(!(getA() == int()) || !(getB() == int())))
 // TYPE-NEXT: odsPrinter << "?"
 
 def TypeN : TestType<"TestP"> {

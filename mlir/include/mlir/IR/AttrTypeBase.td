@@ -299,7 +299,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   string cppAccessorType = !if(!empty(accessorType), type, accessorType);
   // The C++ storage type of of this parameter if it is a reference, e.g.
   // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
-  string cppStorageType = ?;
+  string cppStorageType = cppType;
   // The C++ code to convert from the storage type to the parameter type.
   string convertFromStorage = "$_self";
   // One-line human-readable description of the argument.
@@ -315,10 +315,6 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // operator of `AsmPrinter` as necessary to print your type. Or you can
   // provide a custom printer.
   string printer = ?;
-  // Mark a parameter as optional. The C++ type of parameters marked as optional
-  // must be default constructible and be contextually convertible to `bool`.
-  // Any `Optional<T>` and any attribute type satisfies these requirements.
-  bit isOptional = 0;
   // Provide a default value for the parameter. Parameters with default values
   // are considered optional. If a value was not parsed for the parameter, it
   // will be set to the default value. Parameters equal to their default values
@@ -374,13 +370,12 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
 // An optional parameter.
 class OptionalParameter<string type, string desc = ""> :
     AttrOrTypeParameter<type, desc> {
-  let isOptional = 1;
+  let defaultValue = cppStorageType # "()";
 }
 
 // A parameter with a default value.
 class DefaultValuedParameter<string type, string value, string desc = ""> :
     AttrOrTypeParameter<type, desc> {
-  let isOptional = 1;
   let defaultValue = value;
 }
 

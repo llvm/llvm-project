@@ -286,19 +286,17 @@ def TestTypeSpaces : Test_Type<"TestTypeSpaceS"> {
 }
 
 class DefaultValuedAPFloat<string value>
-    : DefaultValuedParameter<"llvm::Optional<llvm::APFloat>",
-                             "llvm::Optional<llvm::APFloat>(" # value # ")"> {
-  let comparator = "$_lhs->bitwiseIsEqual(*$_rhs)";
-  let parser = [{ [&]() -> mlir::FailureOr<llvm::Optional<llvm::APFloat>> {
+    : DefaultValuedParameter<"llvm::APFloat", "llvm::APFloat(" # value # ")"> {
+  let comparator = "$_lhs.bitwiseIsEqual($_rhs)";
+  let parser = [{ [&]() -> mlir::FailureOr<llvm::APFloat> {
     mlir::FloatAttr attr;
     auto result = $_parser.parseOptionalAttribute(attr);
     if (result.has_value() && mlir::succeeded(*result))
-      return {attr.getValue()};
+      return attr.getValue();
     if (!result.has_value())
-      return llvm::Optional<llvm::APFloat>();
+      return llvm::APFloat(}] # value # [{);
     return mlir::failure();
   }() }];
-  let printer = "$_printer << *$_self";
 }
 
 def TestTypeAPFloat : Test_Type<"TestTypeAPFloat"> {
