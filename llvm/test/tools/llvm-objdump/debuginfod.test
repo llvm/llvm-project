@@ -61,6 +61,23 @@ RUN:   --debuginfod %t/stripped 2> %t.err | \
 RUN:   FileCheck %s --check-prefix=NOTFOUND
 RUN: count 0 < %t.err
 
+# Use debuginfod to look up build IDs.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source \
+RUN:   --build-id 1512f769114c011387393822af15dd660c080295 | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# Produce an error if malformed (not a hex string).
+RUN: not env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source --build-id foo \
+RUN:   2> %t.err
+RUN: FileCheck %s --check-prefix=MALFORMEDERROR --input-file %t.err
+MALFORMEDERROR: error: --build-id: expected a build ID, but got 'foo'
+
+# Produce an error if not found.
+RUN: not env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --source --build-id abc \
+RUN:   2> %t.err
+RUN: FileCheck %s --check-prefix=NOTFOUNDERROR --input-file %t.err
+NOTFOUNDERROR: error: --build-id: could not find build ID 'abc'
+
 # Use debuginfod to recover symbols.
 RUN: llvm-strip --strip-sections %t/stripped
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-objdump -d --debuginfod \
