@@ -220,13 +220,25 @@ void SPIRVRegularizer::visitCallScalToVec(CallInst *CI, StringRef MangledName,
   }
   assert(NewF);
 
+  // This produces an instruction sequence that implements a splat of
+  // CI->getOperand(1) to a vector Arg0Ty. However, we use InsertElementInst
+  // and ShuffleVectorInst to generate the same code as the SPIR-V translator.
+  // For instance (transcoding/OpMin.ll), this call
+  //   call spir_func <2 x i32> @_Z3minDv2_ii(<2 x i32> <i32 1, i32 10>, i32 5)
+  // is translated to
+  //    %8 = OpUndef %v2uint
+  //   %14 = OpConstantComposite %v2uint %uint_1 %uint_10
+  //   ...
+  //   %10 = OpCompositeInsert %v2uint %uint_5 %8 0
+  //   %11 = OpVectorShuffle %v2uint %10 %8 0 0
+  // %call = OpExtInst %v2uint %1 s_min %14 %11
   auto ConstInt = ConstantInt::get(IntegerType::get(CI->getContext(), 32), 0);
-  UndefValue *UndefVal = UndefValue::get(Arg0Ty);
+  PoisonValue *PVal = PoisonValue::get(Arg0Ty);
   Instruction *Inst =
-      InsertElementInst::Create(UndefVal, CI->getOperand(1), ConstInt, "", CI);
+      InsertElementInst::Create(PVal, CI->getOperand(1), ConstInt, "", CI);
   ElementCount VecElemCount = cast<VectorType>(Arg0Ty)->getElementCount();
   Constant *ConstVec = ConstantVector::getSplat(VecElemCount, ConstInt);
-  Value *NewVec = new ShuffleVectorInst(Inst, UndefVal, ConstVec, "", CI);
+  Value *NewVec = new ShuffleVectorInst(Inst, PVal, ConstVec, "", CI);
   CI->setOperand(1, NewVec);
   CI->replaceUsesOfWith(OldF, NewF);
   CI->mutateFunctionType(NewF->getFunctionType());
