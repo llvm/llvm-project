@@ -395,11 +395,9 @@ public:
     // If there is no throttler, this dummy request is always satisfied.
     if (!Throttler)
       return;
-    Tracer.emplace("PreambleThrottled");
     ID = Throttler->acquire(Filename, [&] {
       Satisfied.store(true, std::memory_order_release);
       CV.notify_all();
-      Tracer.reset();
     });
   }
 
@@ -414,7 +412,6 @@ public:
   }
 
 private:
-  llvm::Optional<trace::Span> Tracer;
   PreambleThrottler::RequestID ID;
   PreambleThrottler *Throttler;
   std::atomic<bool> Satisfied = {false};
