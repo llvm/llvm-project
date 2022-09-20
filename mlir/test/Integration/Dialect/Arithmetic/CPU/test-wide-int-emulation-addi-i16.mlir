@@ -29,8 +29,8 @@ func.func @check_addi(%lhs : i16, %rhs : i16) -> () {
 func.func @entry() {
   %cst0 = arith.constant 0 : i16
   %cst1 = arith.constant 1 : i16
-  %cst_1 = arith.constant -1 : i16
-  %cst_3 = arith.constant -3 : i16
+  %cst_n1 = arith.constant -1 : i16
+  %cst_n3 = arith.constant -3 : i16
 
   %cst13 = arith.constant 13 : i16
   %cst37 = arith.constant 37 : i16
@@ -47,11 +47,11 @@ func.func @entry() {
   // CHECK-NEXT: 2
   func.call @check_addi(%cst1, %cst1) : (i16, i16) -> ()
   // CHECK-NEXT: 0
-  func.call @check_addi(%cst1, %cst_1) : (i16, i16) -> ()
+  func.call @check_addi(%cst1, %cst_n1) : (i16, i16) -> ()
   // CHECK-NEXT: -2
-  func.call @check_addi(%cst_1, %cst_1) : (i16, i16) -> ()
+  func.call @check_addi(%cst_n1, %cst_n1) : (i16, i16) -> ()
   // CHECK-NEXT: -2
-  func.call @check_addi(%cst1, %cst_3) : (i16, i16) -> ()
+  func.call @check_addi(%cst1, %cst_n3) : (i16, i16) -> ()
 
   // CHECK-NEXT: 26
   func.call @check_addi(%cst13, %cst13) : (i16, i16) -> ()
@@ -61,13 +61,13 @@ func.func @entry() {
   func.call @check_addi(%cst37, %cst42) : (i16, i16) -> ()
 
   // CHECK-NEXT: 255
-  func.call @check_addi(%cst_1, %cst256) : (i16, i16) -> ()
+  func.call @check_addi(%cst_n1, %cst256) : (i16, i16) -> ()
   // CHECK-NEXT: 269
   func.call @check_addi(%cst256, %cst13) : (i16, i16) -> ()
   // CHECK-NEXT: 293
   func.call @check_addi(%cst256, %cst37) : (i16, i16) -> ()
   // CHECK-NEXT: 253
-  func.call @check_addi(%cst256, %cst_3) : (i16, i16) -> ()
+  func.call @check_addi(%cst256, %cst_n3) : (i16, i16) -> ()
 
   // CHECK-NEXT: -32756
   func.call @check_addi(%cst13, %cst_i16_max) : (i16, i16) -> ()
