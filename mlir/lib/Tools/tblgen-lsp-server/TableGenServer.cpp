@@ -471,6 +471,17 @@ void TableGenTextFile::getLocationsOf(const lsp::URIForFile &uri,
   if (!symbol)
     return;
 
+  // If this symbol is a record value and the def position is already the def of
+  // the symbol, check to see if the value has a base definition. This allows
+  // for a "go-to-def" on a "let" to resolve the definition in the base class.
+  auto *valSym = dyn_cast<TableGenRecordValSymbol>(symbol);
+  if (valSym && lsp::contains(valSym->defLoc, posLoc)) {
+    if (auto *val = getBaseValue(valSym->record, valSym->getValue()).second) {
+      locations.push_back(getLocationFromLoc(sourceMgr, val->getLoc(), uri));
+      return;
+    }
+  }
+
   locations.push_back(getLocationFromLoc(sourceMgr, symbol->defLoc, uri));
 }
 

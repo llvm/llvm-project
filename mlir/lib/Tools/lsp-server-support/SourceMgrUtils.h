@@ -33,6 +33,11 @@ SMRange convertTokenLocToRange(SMLoc loc);
 Optional<std::string> extractSourceDocComment(llvm::SourceMgr &sourceMgr,
                                               SMLoc loc);
 
+/// Returns true if the given range contains the given source location. Note
+/// that this has different behavior than SMRange because it is inclusive of the
+/// end location.
+bool contains(SMRange range, SMLoc loc);
+
 //===----------------------------------------------------------------------===//
 // SourceMgrInclude
 //===----------------------------------------------------------------------===//
