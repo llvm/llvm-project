@@ -1,5 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  BOLTRewrite
   ${LLVM_TARGETS_TO_BUILD}
   )
 
