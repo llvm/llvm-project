@@ -16,11 +16,11 @@ from __future__ import print_function
 
 import argparse
 import collections
+import distutils.spawn
 import json
 import os
 import re
 import shlex
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -167,7 +167,7 @@ def config():
   args = common.parse_commandline_args(parser)
   infer_dependent_args(args)
 
-  if not shutil.which(args.clang):
+  if not distutils.spawn.find_executable(args.clang):
     print('Please specify --llvm-bin or --clang', file=sys.stderr)
     sys.exit(1)
 
@@ -183,7 +183,7 @@ def config():
     common.warn('Could not determine clang builtins directory, some tests '
                 'might not update correctly.')
 
-  if not shutil.which(args.opt):
+  if not distutils.spawn.find_executable(args.opt):
     # Many uses of this tool will not need an opt binary, because it's only
     # needed for updating a test that runs clang | opt | FileCheck. So we
     # defer this error message until we find that opt is actually needed.
