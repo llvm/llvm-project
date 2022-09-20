@@ -78,13 +78,11 @@ static bool isDereferenceableAndAlignedPointer(
                                                           CheckForFreed));
   if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
       !CheckForFreed)
-    if (!CheckForNonNull || isKnownNonZero(V, DL, 0, nullptr, CtxI, DT)) {
+    if (!CheckForNonNull || isKnownNonZero(V, DL, 0, AC, CtxI, DT)) {
       // As we recursed through GEPs to get here, we've incrementally checked
       // that each step advanced by a multiple of the alignment. If our base is
       // properly aligned, then the original offset accessed must also be.
-      Type *Ty = V->getType();
-      assert(Ty->isSized() && "must be sized");
-      APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
+      APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
       return isAligned(V, Offset, Alignment, DL);
     }
 
@@ -169,14 +167,12 @@ static bool isDereferenceableAndAlignedPointer(
     if (getObjectSize(V, ObjSize, DL, TLI, Opts)) {
       APInt KnownDerefBytes(Size.getBitWidth(), ObjSize);
       if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-          isKnownNonZero(V, DL, 0, nullptr, CtxI, DT) && !V->canBeFreed()) {
+          isKnownNonZero(V, DL, 0, AC, CtxI, DT) && !V->canBeFreed()) {
         // As we recursed through GEPs to get here, we've incrementally
         // checked that each step advanced by a multiple of the alignment. If
         // our base is properly aligned, then the original offset accessed
         // must also be.
-        Type *Ty = V->getType();
-        assert(Ty->isSized() && "must be sized");
-        APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
+        APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
         return isAligned(V, Offset, Alignment, DL);
       }
     }

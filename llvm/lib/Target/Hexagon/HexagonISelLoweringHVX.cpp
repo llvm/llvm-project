@@ -2520,7 +2520,7 @@ HexagonTargetLowering::ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const {
   auto [Frac, Ovf] = emitHvxShiftRightRnd(Frac0, ExpWidth + 1, false, DAG);
   if (Signed) {
     SDValue IsNeg = DAG.getSetCC(dl, PredTy, Op0, Zero, ISD::SETLT);
-    SDValue M80 = DAG.getConstant(1 << (ElemWidth - 1), dl, InpTy);
+    SDValue M80 = DAG.getConstant(1ull << (ElemWidth - 1), dl, InpTy);
     SDValue Sign = DAG.getNode(ISD::VSELECT, dl, InpTy, {IsNeg, M80, Zero});
     Frac = DAG.getNode(ISD::OR, dl, InpTy, {Sign, Frac});
   }

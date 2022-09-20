@@ -971,10 +971,6 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty],
                 [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
 
-  class AdvSIMD_ManyVec_PredLoad_Intrinsic
-    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty, LLVMPointerToElt<0>],
-                [IntrReadMem, IntrArgMemOnly]>;
-
   class AdvSIMD_1Vec_PredLoad_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
@@ -1568,10 +1564,6 @@ def int_aarch64_sve_tuple_set : AdvSIMD_SVE_Set_Vector_Tuple;
 //
 
 def int_aarch64_sve_ld1   : AdvSIMD_1Vec_PredLoad_Intrinsic;
-
-def int_aarch64_sve_ld2 : AdvSIMD_ManyVec_PredLoad_Intrinsic;
-def int_aarch64_sve_ld3 : AdvSIMD_ManyVec_PredLoad_Intrinsic;
-def int_aarch64_sve_ld4 : AdvSIMD_ManyVec_PredLoad_Intrinsic;
 
 def int_aarch64_sve_ld2_sret : AdvSIMD_2Vec_PredLoad_Intrinsic;
 def int_aarch64_sve_ld3_sret : AdvSIMD_3Vec_PredLoad_Intrinsic;

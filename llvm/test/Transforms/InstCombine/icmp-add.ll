@@ -1209,3 +1209,75 @@ define i1 @icmp_add_add_C_extra_use2(i32 %a, i32 %b) {
   %cmp = icmp ult i32 %add2, %a
   ret i1 %cmp
 }
+
+; PR57635 - fold ULT->ULE pre-decrement of a non-zero inputs
+
+define i1 @icmp_dec_assume_nonzero(i8 %x) {
+; CHECK-LABEL: @icmp_dec_assume_nonzero(
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 7
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %z = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %z)
+  %i = add i8 %x, -1
+  %c = icmp ult i8 %i, 7
+  ret i1 %c
+}
+
+define i1 @icmp_dec_sub_assume_nonzero(i8 %x) {
+; CHECK-LABEL: @icmp_dec_sub_assume_nonzero(
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 11
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %z = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %z)
+  %i = sub i8 %x, 1
+  %c = icmp ult i8 %i, 11
+  ret i1 %c
+}
+
+define i1 @icmp_dec_nonzero(i16 %x) {
+; CHECK-LABEL: @icmp_dec_nonzero(
+; CHECK-NEXT:    [[O:%.*]] = or i16 [[X:%.*]], 4
+; CHECK-NEXT:    [[I:%.*]] = add nsw i16 [[O]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i16 [[I]], 7
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %o = or i16 %x, 4
+  %i = add i16 %o, -1
+  %c = icmp ult i16 %i, 7
+  ret i1 %c
+}
+
+define <2 x i1> @icmp_dec_nonzero_vec(<2 x i32> %x) {
+; CHECK-LABEL: @icmp_dec_nonzero_vec(
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i32> [[X:%.*]], <i32 8, i32 8>
+; CHECK-NEXT:    [[I:%.*]] = add nsw <2 x i32> [[O]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> [[I]], <i32 15, i32 17>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %o = or <2 x i32> %x, <i32 8, i32 8>
+  %i = add <2 x i32> %o, <i32 -1, i32 -1>
+  %c = icmp ult <2 x i32> %i, <i32 15, i32 17>
+  ret <2 x i1> %c
+}
+
+; Negative test
+define i1 @icmp_dec_notnonzero(i8 %x) {
+; CHECK-LABEL: @icmp_dec_notnonzero(
+; CHECK-NEXT:    [[I:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 11
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %i = add i8 %x, -1
+  %c = icmp ult i8 %i, 11
+  ret i1 %c
+}
+
+declare void @llvm.assume(i1)
