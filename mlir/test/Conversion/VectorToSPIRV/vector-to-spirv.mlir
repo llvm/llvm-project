@@ -33,6 +33,90 @@ func.func @cl_fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<
   return %0 : vector<1xf32>
 }
 
+// CHECK-LABEL: func @cl_reduction_maxf
+//  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
+//       CHECK:   %[[S0:.+]] = spv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
+//       CHECK:   %[[S1:.+]] = spv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
+//       CHECK:   %[[S2:.+]] = spv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
+//       CHECK:   %[[MAX0:.+]] = spv.CL.fmax %[[S0]], %[[S1]]
+//       CHECK:   %[[MAX1:.+]] = spv.CL.fmax %[[MAX0]], %[[S2]]
+//       CHECK:   %[[MAX2:.+]] = spv.CL.fmax %[[MAX1]], %[[S]]
+//       CHECK:   return %[[MAX2]]
+func.func @cl_reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <maxf>, %v, %s : vector<3xf32> into f32
+  return %reduce : f32
+}
+
+// CHECK-LABEL: func @cl_reduction_minf
+//  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
+//       CHECK:   %[[S0:.+]] = spv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
+//       CHECK:   %[[S1:.+]] = spv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
+//       CHECK:   %[[S2:.+]] = spv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
+//       CHECK:   %[[MIN0:.+]] = spv.CL.fmin %[[S0]], %[[S1]]
+//       CHECK:   %[[MIN1:.+]] = spv.CL.fmin %[[MIN0]], %[[S2]]
+//       CHECK:   %[[MIN2:.+]] = spv.CL.fmin %[[MIN1]], %[[S]]
+//       CHECK:   return %[[MIN2]]
+func.func @cl_reduction_minf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minf>, %v, %s : vector<3xf32> into f32
+  return %reduce : f32
+}
+
+// CHECK-LABEL: func @cl_reduction_maxsi
+//  CHECK-SAME: (%[[V:.+]]: vector<3xi32>, %[[S:.+]]: i32)
+//       CHECK:   %[[S0:.+]] = spv.CompositeExtract %[[V]][0 : i32] : vector<3xi32>
+//       CHECK:   %[[S1:.+]] = spv.CompositeExtract %[[V]][1 : i32] : vector<3xi32>
+//       CHECK:   %[[S2:.+]] = spv.CompositeExtract %[[V]][2 : i32] : vector<3xi32>
+//       CHECK:   %[[MAX0:.+]] = spv.CL.s_max %[[S0]], %[[S1]]
+//       CHECK:   %[[MAX1:.+]] = spv.CL.s_max %[[MAX0]], %[[S2]]
+//       CHECK:   %[[MAX2:.+]] = spv.CL.s_max %[[MAX1]], %[[S]]
+//       CHECK:   return %[[MAX2]]
+func.func @cl_reduction_maxsi(%v : vector<3xi32>, %s: i32) -> i32 {
+  %reduce = vector.reduction <maxsi>, %v, %s : vector<3xi32> into i32
+  return %reduce : i32
+}
+
+// CHECK-LABEL: func @cl_reduction_minsi
+//  CHECK-SAME: (%[[V:.+]]: vector<3xi32>, %[[S:.+]]: i32)
+//       CHECK:   %[[S0:.+]] = spv.CompositeExtract %[[V]][0 : i32] : vector<3xi32>
+//       CHECK:   %[[S1:.+]] = spv.CompositeExtract %[[V]][1 : i32] : vector<3xi32>
+//       CHECK:   %[[S2:.+]] = spv.CompositeExtract %[[V]][2 : i32] : vector<3xi32>
+//       CHECK:   %[[MIN0:.+]] = spv.CL.s_min %[[S0]], %[[S1]]
+//       CHECK:   %[[MIN1:.+]] = spv.CL.s_min %[[MIN0]], %[[S2]]
+//       CHECK:   %[[MIN2:.+]] = spv.CL.s_min %[[MIN1]], %[[S]]
+//       CHECK:   return %[[MIN2]]
+func.func @cl_reduction_minsi(%v : vector<3xi32>, %s: i32) -> i32 {
+  %reduce = vector.reduction <minsi>, %v, %s : vector<3xi32> into i32
+  return %reduce : i32
+}
+
+// CHECK-LABEL: func @cl_reduction_maxui
+//  CHECK-SAME: (%[[V:.+]]: vector<3xi32>, %[[S:.+]]: i32)
+//       CHECK:   %[[S0:.+]] = spv.CompositeExtract %[[V]][0 : i32] : vector<3xi32>
+//       CHECK:   %[[S1:.+]] = spv.CompositeExtract %[[V]][1 : i32] : vector<3xi32>
+//       CHECK:   %[[S2:.+]] = spv.CompositeExtract %[[V]][2 : i32] : vector<3xi32>
+//       CHECK:   %[[MAX0:.+]] = spv.CL.u_max %[[S0]], %[[S1]]
+//       CHECK:   %[[MAX1:.+]] = spv.CL.u_max %[[MAX0]], %[[S2]]
+//       CHECK:   %[[MAX2:.+]] = spv.CL.u_max %[[MAX1]], %[[S]]
+//       CHECK:   return %[[MAX2]]
+func.func @cl_reduction_maxui(%v : vector<3xi32>, %s: i32) -> i32 {
+  %reduce = vector.reduction <maxui>, %v, %s : vector<3xi32> into i32
+  return %reduce : i32
+}
+
+// CHECK-LABEL: func @cl_reduction_minui
+//  CHECK-SAME: (%[[V:.+]]: vector<3xi32>, %[[S:.+]]: i32)
+//       CHECK:   %[[S0:.+]] = spv.CompositeExtract %[[V]][0 : i32] : vector<3xi32>
+//       CHECK:   %[[S1:.+]] = spv.CompositeExtract %[[V]][1 : i32] : vector<3xi32>
+//       CHECK:   %[[S2:.+]] = spv.CompositeExtract %[[V]][2 : i32] : vector<3xi32>
+//       CHECK:   %[[MIN0:.+]] = spv.CL.u_min %[[S0]], %[[S1]]
+//       CHECK:   %[[MIN1:.+]] = spv.CL.u_min %[[MIN0]], %[[S2]]
+//       CHECK:   %[[MIN2:.+]] = spv.CL.u_min %[[MIN1]], %[[S]]
+//       CHECK:   return %[[MIN2]]
+func.func @cl_reduction_minui(%v : vector<3xi32>, %s: i32) -> i32 {
+  %reduce = vector.reduction <minui>, %v, %s : vector<3xi32> into i32
+  return %reduce : i32
+}
+
 } // end module
 
 // -----
