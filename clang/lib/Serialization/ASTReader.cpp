@@ -4227,10 +4227,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
           ReadASTCore(FileName, Type, ImportLoc,
                       /*ImportedBy=*/nullptr, Loaded, 0, 0, ASTFileSignature(),
                       ClientLoadCapabilities)) {
-    ModuleMgr.removeModules(ModuleMgr.begin() + NumModules,
-                            PP.getLangOpts().Modules
-                                ? &PP.getHeaderSearchInfo().getModuleMap()
-                                : nullptr);
+    ModuleMgr.removeModules(ModuleMgr.begin() + NumModules);
 
     // If we find that any modules are unusable, the global index is going
     // to be out-of-date. Just remove it.
