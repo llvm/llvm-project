@@ -40,6 +40,22 @@ namespace llvm::RISCV {
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCV
 
+static unsigned getLastNonGlueOrChainOpIdx(const SDNode *Node) {
+  assert(Node->getNumOperands() > 0 && "Node with no operands");
+  unsigned LastOpIdx = Node->getNumOperands() - 1;
+  if (Node->getOperand(LastOpIdx).getValueType() == MVT::Glue)
+    --LastOpIdx;
+  if (Node->getOperand(LastOpIdx).getValueType() == MVT::Other)
+    --LastOpIdx;
+  return LastOpIdx;
+}
+
+static unsigned getVecPolicyOpIdx(const SDNode *Node, const MCInstrDesc &MCID) {
+  assert(RISCVII::hasVecPolicyOp(MCID.TSFlags));
+  (void)MCID;
+  return getLastNonGlueOrChainOpIdx(Node);
+}
+
 void RISCVDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
@@ -2562,14 +2578,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   bool IsTA = true;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
-    // The last operand of the pseudo is the policy op, but we might have a
-    // Glue operand last. We might also have a chain.
-    TailPolicyOpIdx = N->getNumOperands() - 1;
-    if (N->getOperand(*TailPolicyOpIdx).getValueType() == MVT::Glue)
-      (*TailPolicyOpIdx)--;
-    if (N->getOperand(*TailPolicyOpIdx).getValueType() == MVT::Other)
-      (*TailPolicyOpIdx)--;
-
+    TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
     if (!(N->getConstantOperandVal(*TailPolicyOpIdx) &
           RISCVII::TAIL_AGNOSTIC)) {
       // Keep the true-masked instruction when there is no unmasked TU
