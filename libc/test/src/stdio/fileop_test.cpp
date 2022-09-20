@@ -12,6 +12,7 @@
 #include "src/stdio/ferror.h"
 #include "src/stdio/fflush.h"
 #include "src/stdio/fopen.h"
+#include "src/stdio/fputs.h"
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
@@ -67,8 +68,37 @@ TEST(LlvmLibcFILETest, SimpleFileOperations) {
   errno = 0;
 
   __llvm_libc::clearerr(file);
+
+  // Should be an error to puts.
+  ASSERT_EQ(EOF, __llvm_libc::fputs(CONTENT, file));
+  ASSERT_NE(__llvm_libc::ferror(file), 0);
+  ASSERT_NE(errno, 0);
+  errno = 0;
+
+  __llvm_libc::clearerr(file);
   ASSERT_EQ(__llvm_libc::ferror(file), 0);
 
+  ASSERT_EQ(__llvm_libc::fclose(file), 0);
+
+  // Now try puts.
+  file = __llvm_libc::fopen(FILENAME, "w");
+  ASSERT_FALSE(file == nullptr);
+  // fputs returns a negative value on error (EOF) or any non-negative value on
+  // success. This assert checks that the return value is non-negative.
+  ASSERT_GE(__llvm_libc::fputs(CONTENT, file), 0);
+
+  __llvm_libc::clearerr(file);
+  ASSERT_EQ(__llvm_libc::ferror(file), 0);
+
+  ASSERT_EQ(0, __llvm_libc::fclose(file));
+
+  file = __llvm_libc::fopen(FILENAME, "r");
+  ASSERT_FALSE(file == nullptr);
+
+  ASSERT_EQ(__llvm_libc::fread(read_data, 1, sizeof(CONTENT) - 1, file),
+            sizeof(CONTENT) - 1);
+  read_data[sizeof(CONTENT) - 1] = '\0';
+  ASSERT_STREQ(read_data, CONTENT);
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
 }
 
