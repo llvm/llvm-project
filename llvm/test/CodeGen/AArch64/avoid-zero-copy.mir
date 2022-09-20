@@ -7,12 +7,11 @@
   define i32 @foo() nounwind {
   ; ASM-LABEL: foo:
   ; ASM:       // %bb.0:
-  ; ASM-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+  ; ASM-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
   ; ASM-NEXT:    mov w0, wzr
-  ; ASM-NEXT:    mov w19, wzr
   ; ASM-NEXT:    bl bar
-  ; ASM-NEXT:    mov w0, w19
-  ; ASM-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+  ; ASM-NEXT:    mov w0, wzr
+  ; ASM-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
   ; ASM-NEXT:    ret
     call i32 @bar(i32 0)
     ret i32 0
@@ -24,11 +23,10 @@ body: |
   bb.0 (%ir-block.0):
     ; CHECK-LABEL: name: foo
     ; CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: renamable $w19 = COPY $wzr
     ; CHECK-NEXT: $w0 = COPY $wzr
     ; CHECK-NEXT: BL @bar, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
     ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: $w0 = COPY killed renamable $w19
+    ; CHECK-NEXT: $w0 = COPY $wzr
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     renamable $w19 = COPY $wzr
