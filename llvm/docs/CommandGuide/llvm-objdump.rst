@@ -125,6 +125,11 @@ OPTIONS
   Specify the target architecture when disassembling. Use :option:`--version`
   for a list of available targets.
 
+.. option:: --build-id=<string>
+
+  Look up the object using the given build ID, specified as a hexadecimal
+  string. The found object is handled as if it were an input filename.
+
 .. option:: -C, --demangle
 
   Demangle symbol names in the output.
