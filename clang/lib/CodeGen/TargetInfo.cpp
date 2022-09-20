@@ -1771,23 +1771,22 @@ bool X86_32ABIInfo::shouldAggregateUseDirect(QualType Ty, CCState &State,
 }
 
 bool X86_32ABIInfo::shouldPrimitiveUseInReg(QualType Ty, CCState &State) const {
+  bool IsPtrOrInt = (getContext().getTypeSize(Ty) <= 32) &&
+                    (Ty->isIntegralOrEnumerationType() || Ty->isPointerType() ||
+                     Ty->isReferenceType());
+
+  if (!IsPtrOrInt && (State.CC == llvm::CallingConv::X86_FastCall ||
+                      State.CC == llvm::CallingConv::X86_VectorCall))
+    return false;
+
   if (!updateFreeRegs(Ty, State))
     return false;
 
-  if (IsMCUABI)
+  if (!IsPtrOrInt && State.CC == llvm::CallingConv::X86_RegCall)
     return false;
 
-  if (State.CC == llvm::CallingConv::X86_FastCall ||
-      State.CC == llvm::CallingConv::X86_VectorCall ||
-      State.CC == llvm::CallingConv::X86_RegCall) {
-    if (getContext().getTypeSize(Ty) > 32)
-      return false;
-
-    return (Ty->isIntegralOrEnumerationType() || Ty->isPointerType() ||
-        Ty->isReferenceType());
-  }
-
-  return true;
+  // Return true to apply inreg to all legal parameters except for MCU targets.
+  return !IsMCUABI;
 }
 
 void X86_32ABIInfo::runVectorCallFirstPass(CGFunctionInfo &FI, CCState &State) const {

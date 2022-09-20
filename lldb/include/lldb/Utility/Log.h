@@ -166,7 +166,7 @@ public:
     // output will be discarded.
     Log *GetLog(MaskType mask) {
       Log *log = log_ptr.load(std::memory_order_relaxed);
-      if (log && log->GetMask().AnySet(mask))
+      if (log && ((log->GetMask() & mask) != 0))
         return log;
       return nullptr;
     }
@@ -243,7 +243,7 @@ public:
 
   const Flags GetOptions() const;
 
-  const Flags GetMask() const;
+  MaskType GetMask() const;
 
   bool GetVerbose() const;
 
@@ -276,9 +276,9 @@ private:
   }
 
   void Enable(const std::shared_ptr<LogHandler> &handler_sp, uint32_t options,
-              uint32_t flags);
+              MaskType flags);
 
-  void Disable(uint32_t flags);
+  void Disable(MaskType flags);
 
   bool Dump(llvm::raw_ostream &stream);
 
@@ -291,8 +291,9 @@ private:
 
   static void ListCategories(llvm::raw_ostream &stream,
                              const ChannelMap::value_type &entry);
-  static uint32_t GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
-                           llvm::ArrayRef<const char *> categories);
+  static Log::MaskType GetFlags(llvm::raw_ostream &stream,
+                                const ChannelMap::value_type &entry,
+                                llvm::ArrayRef<const char *> categories);
 
   Log(const Log &) = delete;
   void operator=(const Log &) = delete;

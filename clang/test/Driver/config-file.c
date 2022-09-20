@@ -68,11 +68,11 @@
 
 //--- User directory is searched first.
 //
-// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir=%S/Inputs/config2 --config config-4 -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-PRECEDENCE
+// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir=%S/Inputs/config2 --config config-4.cfg -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-PRECEDENCE
 // CHECK-PRECEDENCE: Configuration file: {{.*}}Inputs{{.}}config2{{.}}config-4.cfg
 // CHECK-PRECEDENCE: -Wall
 
 
 //--- Duplicate --config options are allowed if the value is the same
-// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir=%S/Inputs/config2 --config config-4 --config config-4 -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-SAME-CONFIG
+// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir=%S/Inputs/config2 --config config-4.cfg --config config-4.cfg -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-SAME-CONFIG
 // CHECK-SAME-CONFIG: Configuration file: {{.*}}Inputs{{.}}config2{{.}}config-4.cfg
