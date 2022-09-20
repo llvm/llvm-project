@@ -383,7 +383,7 @@ def POSIX : StandardSpec<"POSIX"> {
         >,
     ]
   >;
-  
+
   HeaderSpec StdLib = HeaderSpec<
     "stdlib.h",
     [], // Macros
