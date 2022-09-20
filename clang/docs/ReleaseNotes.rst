@@ -158,6 +158,8 @@ Bug Fixes
 - Fixed a crash in C++20 mode in Clang and Clangd when compile source
   with compilation errors.
   `Issue 53628 <https://github.com/llvm/llvm-project/issues/53628>`_
+- The template arguments of a variable template being accessed as a
+  member will now be represented in the AST.
 
 
 Improvements to Clang's diagnostics

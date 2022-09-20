@@ -63,6 +63,53 @@ func.func @xhash(%i : i16) -> (i16) {
 }
 
 //===----------------------------------------------------------------------===//
+// Test arith.addi
+//===----------------------------------------------------------------------===//
+
+// Ops in this function will be emulated using i8 ops.
+func.func @emulate_addi(%lhs : i16, %rhs : i16) -> (i16) {
+  %res = arith.addi %lhs, %rhs : i16
+  return %res : i16
+}
+
+// Performs both wide and emulated `arith.muli`, and checks that the results
+// match.
+func.func @check_addi(%lhs : i16, %rhs : i16) -> () {
+  %wide = arith.addi %lhs, %rhs : i16
+  %emulated = func.call @emulate_addi(%lhs, %rhs) : (i16, i16) -> (i16)
+  func.call @check_results(%lhs, %rhs, %wide, %emulated) : (i16, i16, i16, i16) -> ()
+  return
+}
+
+// Checks that `arith.addi` is emulated properly by sampling the input space.
+// In total, this test function checks 500 * 500 = 250k input pairs.
+func.func @test_addi() -> () {
+  %idx0 = arith.constant 0 : index
+  %idx1 = arith.constant 1 : index
+  %idx500 = arith.constant 500 : index
+
+  %cst0 = arith.constant 0 : i16
+  %cst1 = arith.constant 1 : i16
+
+  scf.for %lhs_idx = %idx0 to %idx500 step %idx1 iter_args(%lhs = %cst0) -> (i16) {
+    %arg_lhs = func.call @xhash(%lhs) : (i16) -> (i16)
+
+    scf.for %rhs_idx = %idx0 to %idx500 step %idx1 iter_args(%rhs = %cst0) -> (i16) {
+        %arg_rhs = func.call @xhash(%rhs) : (i16) -> (i16)
+        func.call @check_addi(%arg_lhs, %arg_rhs) : (i16, i16) -> ()
+
+        %rhs_next = arith.addi %rhs, %cst1 : i16
+        scf.yield %rhs_next : i16
+    }
+
+    %lhs_next = arith.addi %lhs, %cst1 : i16
+    scf.yield %lhs_next : i16
+  }
+
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // Test arith.muli
 //===----------------------------------------------------------------------===//
 
@@ -161,6 +208,7 @@ func.func @test_shrui() -> () {
 //===----------------------------------------------------------------------===//
 
 func.func @entry() {
+  func.call @test_addi() : () -> ()
   func.call @test_muli() : () -> ()
   func.call @test_shrui() : () -> ()
   return

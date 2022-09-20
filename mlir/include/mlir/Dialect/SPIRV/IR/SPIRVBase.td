@@ -4221,6 +4221,9 @@ def SPV_OC_OpConvertUToF                : I32EnumAttrCase<"OpConvertUToF", 112>;
 def SPV_OC_OpUConvert                   : I32EnumAttrCase<"OpUConvert", 113>;
 def SPV_OC_OpSConvert                   : I32EnumAttrCase<"OpSConvert", 114>;
 def SPV_OC_OpFConvert                   : I32EnumAttrCase<"OpFConvert", 115>;
+def SPV_OC_OpPtrCastToGeneric           : I32EnumAttrCase<"OpPtrCastToGeneric", 121>;
+def SPV_OC_OpGenericCastToPtr           : I32EnumAttrCase<"OpGenericCastToPtr", 122>;
+def SPV_OC_OpGenericCastToPtrExplicit   : I32EnumAttrCase<"OpGenericCastToPtrExplicit", 123>;
 def SPV_OC_OpBitcast                    : I32EnumAttrCase<"OpBitcast", 124>;
 def SPV_OC_OpSNegate                    : I32EnumAttrCase<"OpSNegate", 126>;
 def SPV_OC_OpFNegate                    : I32EnumAttrCase<"OpFNegate", 127>;
@@ -4372,7 +4375,8 @@ def SPV_OpcodeAttr :
       SPV_OC_OpCompositeInsert, SPV_OC_OpTranspose, SPV_OC_OpImageDrefGather,
       SPV_OC_OpImage, SPV_OC_OpImageQuerySize, SPV_OC_OpConvertFToU,
       SPV_OC_OpConvertFToS, SPV_OC_OpConvertSToF, SPV_OC_OpConvertUToF,
-      SPV_OC_OpUConvert, SPV_OC_OpSConvert, SPV_OC_OpFConvert, SPV_OC_OpBitcast,
+      SPV_OC_OpUConvert, SPV_OC_OpSConvert, SPV_OC_OpFConvert, SPV_OC_OpPtrCastToGeneric, 
+      SPV_OC_OpGenericCastToPtr, SPV_OC_OpGenericCastToPtrExplicit, SPV_OC_OpBitcast,
       SPV_OC_OpSNegate, SPV_OC_OpFNegate, SPV_OC_OpIAdd, SPV_OC_OpFAdd,
       SPV_OC_OpISub, SPV_OC_OpFSub, SPV_OC_OpIMul, SPV_OC_OpFMul, SPV_OC_OpUDiv,
       SPV_OC_OpSDiv, SPV_OC_OpFDiv, SPV_OC_OpUMod, SPV_OC_OpSRem, SPV_OC_OpSMod,

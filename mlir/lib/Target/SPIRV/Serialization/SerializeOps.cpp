@@ -667,6 +667,32 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
 
   return success();
 }
+template <>
+LogicalResult Serializer::processOp<spirv::GenericCastToPtrExplicitOp>(
+    spirv::GenericCastToPtrExplicitOp op) {
+  SmallVector<uint32_t, 4> operands;
+  Type resultTy;
+  Location loc = op->getLoc();
+  uint32_t resultTypeID = 0;
+  uint32_t resultID = 0;
+  resultTy = op->getResult(0).getType();
+  if (failed(processType(loc, resultTy, resultTypeID)))
+    return failure();
+  operands.push_back(resultTypeID);
+
+  resultID = getNextID();
+  operands.push_back(resultID);
+  valueIDMap[op->getResult(0)] = resultID;
+
+  for (Value operand : op->getOperands())
+    operands.push_back(getValueID(operand));
+  spirv::StorageClass resultStorage =
+      resultTy.cast<spirv::PointerType>().getStorageClass();
+  operands.push_back(static_cast<uint32_t>(resultStorage));
+  encodeInstructionInto(functionBody, spirv::Opcode::OpGenericCastToPtrExplicit,
+                        operands);
+  return success();
+}
 
 // Pull in auto-generated Serializer::dispatchToAutogenSerialization() and
 // various Serializer::processOp<...>() specializations.
