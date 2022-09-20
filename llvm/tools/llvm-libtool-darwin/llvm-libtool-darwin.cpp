@@ -101,6 +101,8 @@ static cl::opt<bool> WarningsAsErrors("warnings_as_errors",
                                       cl::cat(LibtoolCategory),
                                       cl::init(false));
 
+static cl::opt<std::string> IgnoredSyslibRoot("syslibroot", cl::Hidden);
+
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
     "/usr/lib",
