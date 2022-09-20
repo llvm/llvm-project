@@ -224,7 +224,7 @@ class DWARFUnit {
   const DWARFSection *AddrOffsetSection;
   DWARFUnit *SU;
   Optional<uint64_t> AddrOffsetSectionBase;
-  bool isLittleEndian;
+  bool IsLittleEndian;
   bool IsDWO;
   const DWARFUnitVector &UnitVector;
 
@@ -307,6 +307,7 @@ public:
 
   virtual ~DWARFUnit();
 
+  bool isLittleEndian() const { return IsLittleEndian; }
   bool isDWOUnit() const { return IsDWO; }
   DWARFContext& getContext() const { return Context; }
   const DWARFSection &getInfoSection() const { return InfoSection; }
