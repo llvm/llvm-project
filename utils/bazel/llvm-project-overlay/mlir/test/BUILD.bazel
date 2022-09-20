@@ -620,6 +620,23 @@ cc_library(
 )
 
 cc_library(
+    name = "TestArithmetic",
+    srcs = glob(["lib/Dialect/Arithmetic/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//mlir:ArithmeticDialect",
+        "//mlir:ArithmeticTransforms",
+        "//mlir:FuncDialect",
+        "//mlir:LLVMDialect",
+        "//mlir:MathDialect",
+        "//mlir:Pass",
+        "//mlir:Transforms",
+        "//mlir:VectorDialect",
+    ],
+)
+
+cc_library(
     name = "TestShapeDialect",
     srcs = [
         "lib/Dialect/Shape/TestShapeFunctions.cpp",
