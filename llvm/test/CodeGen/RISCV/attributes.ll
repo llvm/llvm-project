@@ -84,6 +84,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zicbom %s -o - | FileCheck --check-prefix=RV64ZICBOM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicboz %s -o - | FileCheck --check-prefix=RV64ZICBOZ %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicbop %s -o - | FileCheck --check-prefix=RV64ZICBOP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zawrs %s -o - | FileCheck --check-prefix=RV64ZAWRS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ztso %s -o - | FileCheck --check-prefix=RV64ZTSO %s
 
 ; RV32M: .attribute 5, "rv32i2p0_m2p0"
@@ -170,6 +171,7 @@
 ; RV64COMBINEINTOZKS: .attribute 5, "rv64i2p0_zbkb1p0_zbkc1p0_zbkx1p0_zks1p0_zksed1p0_zksh1p0"
 ; RV64ZICBOM: .attribute 5, "rv64i2p0_zicbom1p0"
 ; RV64ZICBOZ: .attribute 5, "rv64i2p0_zicboz1p0"
+; RV64ZAWRS: .attribute 5, "rv64i2p0_zawrs1p0"
 ; RV64ZICBOP: .attribute 5, "rv64i2p0_zicbop1p0"
 ; RV64ZTSO: .attribute 5, "rv64i2p0_ztso0p1"
 
