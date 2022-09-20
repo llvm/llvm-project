@@ -107,6 +107,14 @@
 // RUN:             | FileCheck -check-prefix=CI %s
 // RUN: %clang -### -c %s -gsce -target x86_64-unknown-linux 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOCI %s
+// RUN: %clang -### %s -g -flto=thin -target x86_64-scei-ps4 2>&1 \
+// RUN:             | FileCheck -check-prefix=SNLDTLTOGARANGE %s
+// RUN: %clang -### %s -g -flto=full -target x86_64-scei-ps4 2>&1 \
+// RUN:             | FileCheck -check-prefix=SNLDFLTOGARANGE %s
+// RUN: %clang -### %s -g -flto -target x86_64-scei-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=LLDGARANGE %s
+// RUN: %clang -### %s -g -target x86_64-scei-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=LDGARANGE %s
 
 // On the AIX, -g defaults to -gdbx and limited debug info.
 // RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff 2>&1 \
@@ -365,6 +373,13 @@
 // NOPUB-NOT: -ggnu-pubnames
 // NOPUB-NOT: -gpubnames
 //
+
+// LDGARANGE: {{".*ld.*"}} {{.*}}
+// LDGARANGE-NOT: "-generate-arange-section"
+// LLDGARANGE: {{".*lld.*"}} {{.*}} "-generate-arange-section"
+// SNLDTLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-thin-debug-options=-generate-arange-section"
+// SNLDFLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-debug-options=-generate-arange-section"
+
 // PUB: -gpubnames
 //
 // RNGBSE: -fdebug-ranges-base-address

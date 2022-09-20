@@ -41,7 +41,7 @@
 // CHECK: "-pie"
 // CHECK: "--build-id"
 // CHECK: "--hash-style=gnu"
-// CHECK-AARCH64: "--fix-cortex-a53-843419"
+// CHECK-AARCH64: "--execute-only" "--fix-cortex-a53-843419"
 // CHECK: "-dynamic-linker" "ld.so.1"
 // CHECK-RISCV64: "-X"
 // CHECK: Scrt1.o

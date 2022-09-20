@@ -6,10 +6,10 @@
 // RUN: %clang --target=x86_64-scei-ps5 -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK-PS5,CHECK-PS5-LIB %s
 // RUN: %clang --target=x86_64-scei-ps5 -flto -fjmc %s -### 2>&1 | FileCheck --check-prefixes=CHECK-PS5-LTO,CHECK-PS5-LIB %s
 
-// CHECK-PS4-NOT: "-enable-jmc-instrument"
+// CHECK-PS4-NOT: -enable-jmc-instrument
 
-// CHECK-PS4-THIN-LTO: "-lto-thin-debug-options=-enable-jmc-instrument"
-// CHECK-PS4-FULL-LTO: "-lto-debug-options=-enable-jmc-instrument"
+// CHECK-PS4-THIN-LTO: -lto-thin-debug-options=-enable-jmc-instrument
+// CHECK-PS4-FULL-LTO: -lto-debug-options=-enable-jmc-instrument
 
 // CHECK-PS5-NOT: "-enable-jmc-instrument"
 

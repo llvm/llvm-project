@@ -272,6 +272,8 @@ struct VectorInsertStridedSliceOpConvert final
   }
 };
 
+template <class SPVFMaxOp, class SPVFMinOp, class SPVUMaxOp, class SPVUMinOp,
+          class SPVSMaxOp, class SPVSMinOp>
 struct VectorReductionPattern final
     : public OpConversionPattern<vector::ReductionOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -317,18 +319,18 @@ struct VectorReductionPattern final
 
 #define INT_OR_FLOAT_CASE(kind, fop)                                           \
   case vector::CombiningKind::kind:                                            \
-    result = rewriter.create<spirv::fop>(loc, resultType, result, next);       \
+    result = rewriter.create<fop>(loc, resultType, result, next);              \
     break
 
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
         INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
 
-        INT_OR_FLOAT_CASE(MAXF, GLFMaxOp);
-        INT_OR_FLOAT_CASE(MINF, GLFMinOp);
-        INT_OR_FLOAT_CASE(MINUI, GLUMinOp);
-        INT_OR_FLOAT_CASE(MINSI, GLSMinOp);
-        INT_OR_FLOAT_CASE(MAXUI, GLUMaxOp);
-        INT_OR_FLOAT_CASE(MAXSI, GLSMaxOp);
+        INT_OR_FLOAT_CASE(MAXF, SPVFMaxOp);
+        INT_OR_FLOAT_CASE(MINF, SPVFMinOp);
+        INT_OR_FLOAT_CASE(MINUI, SPVUMinOp);
+        INT_OR_FLOAT_CASE(MINSI, SPVSMinOp);
+        INT_OR_FLOAT_CASE(MAXUI, SPVUMaxOp);
+        INT_OR_FLOAT_CASE(MAXSI, SPVSMaxOp);
 
       case vector::CombiningKind::AND:
       case vector::CombiningKind::OR:
@@ -403,15 +405,23 @@ struct VectorShuffleOpConvert final
 };
 
 } // namespace
+#define CL_MAX_MIN_OPS                                                         \
+  spirv::CLFMaxOp, spirv::CLFMinOp, spirv::CLUMaxOp, spirv::CLUMinOp,          \
+      spirv::CLSMaxOp, spirv::CLSMinOp
+
+#define GL_MAX_MIN_OPS                                                         \
+  spirv::GLFMaxOp, spirv::GLFMinOp, spirv::GLUMaxOp, spirv::GLUMinOp,          \
+      spirv::GLSMaxOp, spirv::GLSMinOp
 
 void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                          RewritePatternSet &patterns) {
-  patterns.add<VectorBitcastConvert, VectorBroadcastConvert,
-               VectorExtractElementOpConvert, VectorExtractOpConvert,
-               VectorExtractStridedSliceOpConvert,
-               VectorFmaOpConvert<spirv::GLFmaOp>,
-               VectorFmaOpConvert<spirv::CLFmaOp>, VectorInsertElementOpConvert,
-               VectorInsertOpConvert, VectorReductionPattern,
-               VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
-               VectorSplatPattern>(typeConverter, patterns.getContext());
+  patterns.add<
+      VectorBitcastConvert, VectorBroadcastConvert,
+      VectorExtractElementOpConvert, VectorExtractOpConvert,
+      VectorExtractStridedSliceOpConvert, VectorFmaOpConvert<spirv::GLFmaOp>,
+      VectorFmaOpConvert<spirv::CLFmaOp>, VectorInsertElementOpConvert,
+      VectorInsertOpConvert, VectorReductionPattern<GL_MAX_MIN_OPS>,
+      VectorReductionPattern<CL_MAX_MIN_OPS>, VectorInsertStridedSliceOpConvert,
+      VectorShuffleOpConvert, VectorSplatPattern>(typeConverter,
+                                                  patterns.getContext());
 }
