@@ -38,6 +38,8 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  void writeTableJumpHeader(uint8_t *buf) const override;
+  void writeTableJump(uint8_t *buf, const uint64_t symbol) const override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -86,6 +88,9 @@ static uint32_t rtype(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2) {
 }
 static uint32_t utype(uint32_t op, uint32_t rd, uint32_t imm) {
   return op | (rd << 7) | (imm << 12);
+}
+static uint16_t tbljumptype(uint8_t imm) {
+  return 0b10 | (imm << 2) | (0b101 << 13);
 }
 
 // Extract bits v[begin:end], where range is inclusive, and begin must be < 63.
@@ -246,6 +251,20 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 12, itype(ADDI, 0, 0, 0));
 }
 
+void RISCV::writeTableJumpHeader(uint8_t *buf) const {
+  if (config->is64)
+    write64le(buf, mainPart->dynamic->getVA());
+  else
+    write32le(buf, mainPart->dynamic->getVA());
+}
+
+void RISCV::writeTableJump(uint8_t *buf, const uint64_t address) const {
+  if (config->is64)
+    write64le(buf, address);
+  else
+    write32le(buf, address);
+}
+
 RelType RISCV::getDynRel(RelType type) const {
   return type == target->symbolicRel ? type
                                      : static_cast<RelType>(R_RISCV_NONE);
@@ -340,6 +359,9 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_RVC_JUMP: {
+    if (config->zce_tbljal && (read16le(loc) & 0xfc03) == 0xa002)
+      return;
+
     checkInt(loc, val, 12, rel);
     checkAlignment(loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE003;
@@ -606,10 +628,25 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0x2001); // c.jal
     remove = 6;
-  } else if (isInt<21>(displace)) {
-    sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
-    sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
-    remove = 4;
+  } else {
+    if (isInt<21>(displace)) {
+      sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
+      sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
+      remove = 4;
+    }
+
+    int tblEntryIndex = -1;
+    if (config->zce_tbljal) {
+      if (rd == 0)
+        tblEntryIndex = in.riscvTableJumpSection->getEntryZero(*r.sym);
+      else if (rd == X_RA)
+        tblEntryIndex = in.riscvTableJumpSection->getEntryRa(*r.sym);
+
+      if (tblEntryIndex >= 0) {
+        sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
+        remove = 6;
+      }
+    }
   }
 }
 
@@ -828,10 +865,23 @@ void elf::riscvFinalizeRelax(int passes) {
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;
-          case R_RISCV_RVC_JUMP:
+          case R_RISCV_RVC_JUMP: {
+            const uint32_t rd =
+                extractBits(read32le(old.data() + r.offset + 4), 11, 7);
+            int tblEntryIndex = -1;
+            if (config->zce_tbljal && rd == 0)
+              tblEntryIndex = in.riscvTableJumpSection->getEntryZero(*r.sym);
+            else if (config->zce_tbljal && rd == X_RA)
+              tblEntryIndex = in.riscvTableJumpSection->getEntryRa(*r.sym);
+
             skip = 2;
-            write16le(p, aux.writes[writesIdx++]);
+            if (config->zce_tbljal && tblEntryIndex >= 0) {
+              write16le(p, tbljumptype(tblEntryIndex));
+            } else {
+              write16le(p, aux.writes[writesIdx++]);
+            }
             break;
+          }
           case R_RISCV_JAL:
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);

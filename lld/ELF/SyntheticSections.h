@@ -31,6 +31,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Threading.h"
+#include <map>
 
 namespace lld::elf {
 class Defined;
@@ -366,6 +367,50 @@ public:
 
 private:
   SmallVector<const Symbol *, 0> entries;
+};
+
+class TableJumpSection final : public SyntheticSection {
+public:
+  TableJumpSection();
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+  bool isNeeded() const override;
+  void finalizeContents() override;
+
+  void addEntryZero(const Symbol &symbol);
+  int getEntryZero(const Symbol &symbol);
+  void addEntryRa(const Symbol &symbol);
+  int getEntryRa(const Symbol &symbol);
+  void scanTableJumpEntrys(const InputSection &sec) const;
+
+  // Flag to force TableJump to be in output if we have relocations
+  // that relies on its address.
+  bool hasTableJumpOffRel = false;
+
+protected:
+  uint64_t size = 0;
+
+private:
+  void addEntry(const Symbol &symbol, std::map<std::string, int> &entriesList);
+  uint32_t getEntry(const Symbol &symbol,
+                    std::vector<std::pair<std::string, int>> &entriesList);
+  void writeEntries(uint8_t *buf,
+                    std::vector<std::pair<std::string, int>> &entriesList);
+  void padUntil(uint8_t *buf, const uint8_t index);
+
+  const size_t xlen = config->is64 ? 64 : 32;
+
+  std::map<std::string, int> entriesZero;
+  std::vector<std::pair<std::string, int>> finalizedEntriesZero;
+  std::map<std::string, int> entriesRa;
+  std::vector<std::pair<std::string, int>> finalizedEntriesRa;
+
+  // TODO: Make use of these in cost function.
+  const size_t maxSizeZero = 64;
+  const size_t maxSizeRa = 192;
+
+  const size_t startZero = 0;
+  const size_t startRa = 64;
 };
 
 // The IgotPltSection is a Got associated with the PltSection for GNU Ifunc
@@ -1346,6 +1391,7 @@ struct InStruct {
   std::unique_ptr<RelroPaddingSection> relroPadding;
   std::unique_ptr<SyntheticSection> armCmseSGSection;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
+  std::unique_ptr<TableJumpSection> riscvTableJumpSection;
   std::unique_ptr<SyntheticSection> mipsAbiFlags;
   std::unique_ptr<MipsGotSection> mipsGot;
   std::unique_ptr<SyntheticSection> mipsOptions;

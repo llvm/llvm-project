@@ -454,6 +454,15 @@ template <class ELFT> void elf::createSyntheticSections() {
     add(*in.ppc64LongBranchTarget);
   }
 
+  if (config->emachine == EM_RISCV && config->zce_tbljal) {
+    in.riscvTableJumpSection = std::make_unique<TableJumpSection>();
+    add(*in.riscvTableJumpSection);
+
+    symtab->addSymbol(Defined{
+        /*file=*/nullptr, ".tbljalentries", STB_WEAK, STT_NOTYPE, STT_NOTYPE,
+        /*value=*/0, /*size=*/0, in.riscvTableJumpSection.get()});
+  }
+
   in.gotPlt = std::make_unique<GotPltSection>();
   add(*in.gotPlt);
   in.igotPlt = std::make_unique<IgotPltSection>();
@@ -1647,6 +1656,15 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (config->emachine == EM_HEXAGON)
     hexagonTLSSymbolUpdate(outputSections);
 
+  // scan all R_RISCV_CALL/R_RISCV_CALL_PLT for RISCV Zcmt Jump table.
+  if (in.riscvTableJumpSection) {
+    for (InputSectionBase *inputSection : inputSections) {
+      in.riscvTableJumpSection->scanTableJumpEntrys(
+          cast<InputSection>(*inputSection));
+    }
+    in.riscvTableJumpSection->finalizeContents();
+  }
+
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
     bool changed = target->needsThunks ? tc.createThunks(pass, outputSections)
@@ -2105,6 +2123,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     finalizeSynthetic(in.mipsGot.get());
     finalizeSynthetic(in.igotPlt.get());
     finalizeSynthetic(in.gotPlt.get());
+    finalizeSynthetic(in.riscvTableJumpSection.get());
     finalizeSynthetic(in.relaIplt.get());
     finalizeSynthetic(in.relaPlt.get());
     finalizeSynthetic(in.plt.get());
@@ -2900,8 +2919,11 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
   parallel::TaskGroup tg;
   for (OutputSection *sec : outputSections)
-    if (sec->flags & SHF_ALLOC)
+    if (sec->flags & SHF_ALLOC) {
       sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
+      if (config->emachine == EM_RISCV && config->zce_tbljal)
+        in.riscvTableJumpSection->writeTo(Out::bufferStart + sec->offset);
+    }
 }
 
 static void fillTrap(uint8_t *i, uint8_t *end) {
