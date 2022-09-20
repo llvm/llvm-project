@@ -7247,10 +7247,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
 
     // The condition was potentially zero extended before, but we want a sign
     // extended boolean.
-    if (MaskTy.getSizeInBits() <= DstTy.getScalarSizeInBits() &&
-        MaskTy != LLT::scalar(1)) {
+    if (MaskTy != LLT::scalar(1))
       MaskElt = MIRBuilder.buildSExtInReg(MaskTy, MaskElt, 1).getReg(0);
-    }
 
     // Continue the sign extension (or truncate) to match the data type.
     MaskElt = MIRBuilder.buildSExtOrTrunc(DstTy.getElementType(),
