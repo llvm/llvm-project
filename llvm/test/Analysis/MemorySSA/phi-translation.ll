@@ -424,6 +424,48 @@ exit:
   ret void
 }
 
+define i32 @phi_with_constant_values(i1 %cmp) {
+; CHECK-LABEL: define i32 @phi_with_constant_values
+; CHECK-LABEL: lhs:
+; CHECK:       ; 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT:  store i16 1, i16* %s1.ptr, align 2
+
+; CHECK-LABEL: rhs:
+; CHECK:       ; 2 = MemoryDef(liveOnEntry)
+; CHECK-NEXT:  store i16 1, i16* %s2.ptr, align 2
+
+; CHECK-LABEL: merge:
+; CHECK:       ; 3 = MemoryPhi({lhs,1},{rhs,2})
+; CHECK-NEXT   %storemerge2 = phi i32 [ 2, %lhs ], [ 3, %rhs ]
+; TODO: Here the defining access could be liveOnEntry. Since all incoming
+; values of phi node can be phi translated.
+; CHECK:       ; MemoryUse(3)
+; CHECK-NEXT:    %lv = load i16, i16* %arrayidx, align 2
+
+entry:
+  br i1 %cmp, label %lhs, label %rhs
+
+lhs:
+  %s1.ptr = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 0
+  store i16 1, i16* %s1.ptr, align 2
+  br label %merge
+
+rhs:
+  %s2.ptr = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 1
+  store i16 1, i16* %s2.ptr, align 2
+  br label %merge
+
+merge:                                         ; preds = %for.body, %entry
+  %storemerge2 = phi i32 [ 2, %lhs ], [ 3, %rhs ]
+  %idxprom1 = zext i32 %storemerge2 to i64
+  %arrayidx = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 %idxprom1
+  %lv = load i16, i16* %arrayidx, align 2
+  br label %end
+
+end:                                          ; preds = %for.body
+  ret i32 0
+}
+
 ; CHECK-LABEL: define void @use_clobbered_by_def_in_loop()
 define void @use_clobbered_by_def_in_loop() {
 entry:
