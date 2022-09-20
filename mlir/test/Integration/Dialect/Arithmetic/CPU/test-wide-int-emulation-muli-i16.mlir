@@ -29,8 +29,8 @@ func.func @check_muli(%lhs : i16, %rhs : i16) -> () {
 func.func @entry() {
   %cst0 = arith.constant 0 : i16
   %cst1 = arith.constant 1 : i16
-  %cst_1 = arith.constant -1 : i16
-  %cst_3 = arith.constant -3 : i16
+  %cst_n1 = arith.constant -1 : i16
+  %cst_n3 = arith.constant -3 : i16
 
   %cst13 = arith.constant 13 : i16
   %cst37 = arith.constant 37 : i16
@@ -47,11 +47,11 @@ func.func @entry() {
   // CHECK-NEXT: 1
   func.call @check_muli(%cst1, %cst1) : (i16, i16) -> ()
   // CHECK-NEXT: -1
-  func.call @check_muli(%cst1, %cst_1) : (i16, i16) -> ()
+  func.call @check_muli(%cst1, %cst_n1) : (i16, i16) -> ()
   // CHECK-NEXT: 1
-  func.call @check_muli(%cst_1, %cst_1) : (i16, i16) -> ()
+  func.call @check_muli(%cst_n1, %cst_n1) : (i16, i16) -> ()
   // CHECK-NEXT: -3
-  func.call @check_muli(%cst1, %cst_3) : (i16, i16) -> ()
+  func.call @check_muli(%cst1, %cst_n3) : (i16, i16) -> ()
 
   // CHECK-NEXT: 169
   func.call @check_muli(%cst13, %cst13) : (i16, i16) -> ()
@@ -61,13 +61,13 @@ func.func @entry() {
   func.call @check_muli(%cst37, %cst42) : (i16, i16) -> ()
 
   // CHECK-NEXT: -256
-  func.call @check_muli(%cst_1, %cst256) : (i16, i16) -> ()
+  func.call @check_muli(%cst_n1, %cst256) : (i16, i16) -> ()
   // CHECK-NEXT: 3328
   func.call @check_muli(%cst256, %cst13) : (i16, i16) -> ()
   // CHECK-NEXT: 9472
   func.call @check_muli(%cst256, %cst37) : (i16, i16) -> ()
   // CHECK-NEXT: -768
-  func.call @check_muli(%cst256, %cst_3) : (i16, i16) -> ()
+  func.call @check_muli(%cst256, %cst_n3) : (i16, i16) -> ()
 
   // CHECK-NEXT: 32755
   func.call @check_muli(%cst13, %cst_i16_max) : (i16, i16) -> ()
