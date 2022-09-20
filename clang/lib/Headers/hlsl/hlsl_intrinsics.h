@@ -13,6 +13,13 @@ __attribute__((availability(shadermodel, introduced = 6.0)))
 __attribute__((clang_builtin_alias(__builtin_hlsl_wave_active_count_bits))) uint
 WaveActiveCountBits(bool bBit);
 
+
+// abs builtins
+__attribute__((clang_builtin_alias(__builtin_abs))) int abs(int In);
+__attribute__((clang_builtin_alias(__builtin_labs))) int64_t abs(int64_t In);
+__attribute__((clang_builtin_alias(__builtin_fabsf))) float abs(float In);
+__attribute__((clang_builtin_alias(__builtin_fabs))) double abs(double In);
+
 #ifdef __HLSL_ENABLE_16_BIT
 __attribute__((clang_builtin_alias(__builtin_elementwise_abs)))
 int16_t abs(int16_t);
@@ -30,6 +37,7 @@ half3 abs(half3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_abs)))
 half4 abs(half4);
 #endif
+
 
 __attribute__((clang_builtin_alias(__builtin_elementwise_abs))) int abs(int);
 __attribute__((clang_builtin_alias(__builtin_elementwise_abs))) int2 abs(int2);
@@ -59,5 +67,14 @@ __attribute__((clang_builtin_alias(__builtin_elementwise_abs)))
 double3 abs(double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_abs)))
 double4 abs(double4);
+
+// sqrt builtins
+__attribute__((clang_builtin_alias(__builtin_sqrt))) double sqrt(double In);
+__attribute__((clang_builtin_alias(__builtin_sqrtf))) float sqrt(float In);
+
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_sqrtf16))) half sqrt(half In);
+#endif
+
 
 #endif //_HLSL_HLSL_INTRINSICS_H_
