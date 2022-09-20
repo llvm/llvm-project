@@ -883,13 +883,18 @@ specified just by referencing the configuration file. They may be used, for
 example, to collect options required to tune compilation for particular
 target, such as ``-L``, ``-I``, ``-l``, ``--sysroot``, codegen options, etc.
 
-The command line option ``--config`` can be used to specify configuration
-file in a Clang invocation. For example:
+Configuration files can be either specified on the command line or loaded
+from default locations. If both variants are present, the default configuration
+files are loaded first.
+
+The command line option ``--config`` can be used to specify explicit
+configuration files in a Clang invocation. If the option is used multiple times,
+all specified files are loaded, in order. For example:
 
 ::
 
     clang --config /home/user/cfgs/testing.txt
-    clang --config debug.cfg
+    clang --config debug.cfg --config runtimes.cfg
 
 If the provided argument contains a directory separator, it is considered as
 a file path, and options are read from that file. Otherwise the argument is
@@ -904,14 +909,15 @@ clang build using CMake parameters, ``CLANG_CONFIG_FILE_USER_DIR`` and
 ``CLANG_CONFIG_FILE_SYSTEM_DIR`` respectively. The first file found is used.
 It is an error if the required file cannot be found.
 
-If no explicit configuration file is specified, Clang searches for a default
-configuration file following the rules described in the next paragraphs.
-To disable this behavior, ``--no-default-config`` flag can be used.
+The default configuration files are searched for in the same directories
+following the rules described in the next paragraphs. Loading default
+configuration files can be disabled entirely via passing
+the ``--no-default-config`` flag.
 
-Another way to specify a configuration file is to encode it in executable name.
-For example, if the Clang executable is named ``armv7l-clang`` (it may be a
-symbolic link to ``clang``), then Clang will search for file ``armv7l.cfg``
-in the directory where Clang resides.
+The name of the default configuration file is deduced from the clang executable
+name.  For example, if the Clang executable is named ``armv7l-clang`` (it may
+be a symbolic link to ``clang``), then Clang will search for file
+``armv7l.cfg`` in the directory where Clang resides.
 
 If a driver mode is specified in invocation, Clang tries to find a file specific
 for the specified mode. For example, if the executable file is named
