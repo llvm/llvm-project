@@ -19,16 +19,16 @@ define protected amdgpu_kernel void @test(i8 addrspace(1)* nocapture %ptr.coerce
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    ds_read_u8 v1, v0 offset:1
+; GCN-NEXT:    v_mov_b32_e32 v1, 2
+; GCN-NEXT:    ds_write_b8 v0, v1
 ; GCN-NEXT:    ds_read_u8 v2, v0 offset:2
+; GCN-NEXT:    ds_read_u16 v3, v0
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v3, 2
-; GCN-NEXT:    ds_write_b8 v0, v3
-; GCN-NEXT:    ds_write_b8 v0, v3 offset:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    ds_write_b8 v0, v1 offset:5
 ; GCN-NEXT:    ds_write_b8 v0, v2 offset:6
-; GCN-NEXT:    v_mov_b32_e32 v1, 1
+; GCN-NEXT:    ds_write_b16 v0, v3 offset:4
+; GCN-NEXT:    v_cmp_eq_u16_sdwa s[2:3], v3, v1 src0_sel:BYTE_0 src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
 ; GCN-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
 ; CHECK-LABEL: @test(
