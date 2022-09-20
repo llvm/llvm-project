@@ -735,9 +735,11 @@ public:
                             Value *A, Value *B, Instruction &Outer,
                             SelectPatternFlavor SPF2, Value *C);
   Instruction *foldSelectInstWithICmp(SelectInst &SI, ICmpInst *ICI);
-  Instruction *foldSelectValueEquivalence(SelectInst &SI, ICmpInst &ICI);
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
+  Instruction *foldSelectValueEquivalence(SelectInst &Sel,
+                                          ICmpInst::Predicate Pred,
+                                          Value *CmpLHS, Value *CmpRHS);
 
   Value *insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                          bool isSigned, bool Inside);

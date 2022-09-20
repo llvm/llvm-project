@@ -1262,27 +1262,23 @@ bool InstCombinerImpl::replaceInInstruction(Value *V, Value *Old, Value *New,
 ///
 /// We can't replace %sel with %add unless we strip away the flags.
 /// TODO: Wrapping flags could be preserved in some cases with better analysis.
-Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
-                                                          ICmpInst &Cmp) {
-  if (!Cmp.isEquality())
+Instruction *InstCombinerImpl::foldSelectValueEquivalence(
+    SelectInst &Sel, ICmpInst::Predicate Pred, Value *CmpLHS, Value *CmpRHS) {
+  if (!ICmpInst::isEquality(Pred))
     return nullptr;
 
   // Canonicalize the pattern to ICMP_EQ by swapping the select operands.
   Value *TrueVal = Sel.getTrueValue(), *FalseVal = Sel.getFalseValue();
   bool Swapped = false;
-  if (Cmp.getPredicate() == ICmpInst::ICMP_NE) {
+  if (Pred == ICmpInst::ICMP_NE) {
     std::swap(TrueVal, FalseVal);
     Swapped = true;
   }
 
   // In X == Y ? f(X) : Z, try to evaluate f(Y) and replace the operand.
   // Make sure Y cannot be undef though, as we might pick different values for
-  // undef in the icmp and in f(Y). Additionally, take care to avoid replacing
-  // X == Y ? X : Z with X == Y ? Y : Z, as that would lead to an infinite
-  // replacement cycle.
-  Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
-  if (TrueVal != CmpLHS &&
-      isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT)) {
+  // undef in the icmp and in f(Y).
+  if (isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT)) {
     if (Value *V = simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, SQ,
                                           /* AllowRefinement */ true))
       // Require either the replacement or the simplification result to be a
@@ -1299,7 +1295,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // profitability is not clear for other cases.
     // FIXME: Support vectors.
     if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()) &&
-        !Cmp.getType()->isVectorTy())
+        !CmpLHS->getType()->isVectorTy())
       if (replaceInInstruction(TrueVal, CmpLHS, CmpRHS))
         return &Sel;
   }
@@ -1680,7 +1676,8 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
-  if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI))
+  if (Instruction *NewSel = foldSelectValueEquivalence(
+          SI, ICI->getPredicate(), ICI->getOperand(0), ICI->getOperand(1)))
     return NewSel;
 
   if (Value *V =
@@ -3376,21 +3373,15 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
 
-  // If the type of select is not an integer type or if the condition and
-  // the selection type are not both scalar nor both vector types, there is no
-  // point in attempting to match these patterns.
   Type *CondType = CondVal->getType();
-  if (!isa<Constant>(CondVal) && SelType->isIntOrIntVectorTy() &&
-      CondType->isVectorTy() == SelType->isVectorTy()) {
-    if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal,
-                                          ConstantInt::getTrue(CondType), SQ,
-                                          /* AllowRefinement */ true))
-      return replaceOperand(SI, 1, S);
+  if (!isa<Constant>(CondVal)) {
+    if (Instruction *I = foldSelectValueEquivalence(
+            SI, ICmpInst::ICMP_EQ, CondVal, ConstantInt::getTrue(CondType)))
+      return I;
 
-    if (Value *S = simplifyWithOpReplaced(FalseVal, CondVal,
-                                          ConstantInt::getFalse(CondType), SQ,
-                                          /* AllowRefinement */ true))
-      return replaceOperand(SI, 2, S);
+    if (Instruction *I = foldSelectValueEquivalence(
+            SI, ICmpInst::ICMP_NE, CondVal, ConstantInt::getFalse(CondType)))
+      return I;
   }
 
   if (Instruction *R = foldSelectOfBools(SI))

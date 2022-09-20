@@ -3709,9 +3709,8 @@ define i32 @src_select_xxory_eq0_xorxy_y(i32 %x, i32 %y) {
 
 define i32 @sequence_select_with_same_cond_false(i1 %c1, i1 %c2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_false(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 23, i32 45
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 666, i32 [[S1]]
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 789, i32 [[S2]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 666, i32 45
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1:%.*]], i32 789, i32 [[S2]]
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
   %s1 = select i1 %c1, i32 23, i32 45
@@ -3722,9 +3721,8 @@ define i32 @sequence_select_with_same_cond_false(i1 %c1, i1 %c2){
 
 define i32 @sequence_select_with_same_cond_true(i1 %c1, i1 %c2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_true(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], i32 45, i32 23
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 [[S1]], i32 666
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], i32 [[S2]], i32 789
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], i32 45, i32 666
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1:%.*]], i32 [[S2]], i32 789
 ; CHECK-NEXT:    ret i32 [[S3]]
 ;
   %s1 = select i1 %c1, i32 45, i32 23
@@ -3735,9 +3733,8 @@ define i32 @sequence_select_with_same_cond_true(i1 %c1, i1 %c2){
 
 define double @sequence_select_with_same_cond_double(double %a, i1 %c1, i1 %c2, double %r1, double %r2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_double(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], double 1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], double [[S1]], double 2.000000e+00
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], double [[S2]], double 3.000000e+00
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], double 1.000000e+00, double 2.000000e+00
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1:%.*]], double [[S2]], double 3.000000e+00
 ; CHECK-NEXT:    ret double [[S3]]
 ;
   %s1 = select i1 %c1, double 1.0, double 0.0
