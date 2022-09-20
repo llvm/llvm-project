@@ -1179,6 +1179,10 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *def) {
     COFFSymbolRef ref = d->getCOFFSymbol();
     sym.Type = ref.getType();
     sym.StorageClass = ref.getStorageClass();
+  } else if (def->kind() == Symbol::DefinedImportThunkKind) {
+    sym.Type = (IMAGE_SYM_DTYPE_FUNCTION << SCT_COMPLEX_TYPE_SHIFT) |
+               IMAGE_SYM_TYPE_NULL;
+    sym.StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
   } else {
     sym.Type = IMAGE_SYM_TYPE_NULL;
     sym.StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
@@ -1225,6 +1229,14 @@ void Writer::createSymbolAndStringTable() {
 
         if (Optional<coff_symbol16> sym = createSymbol(d))
           outputSymtab.push_back(*sym);
+
+        if (auto *dthunk = dyn_cast<DefinedImportThunk>(d)) {
+          if (!dthunk->wrappedSym->writtenToSymtab) {
+            dthunk->wrappedSym->writtenToSymtab = true;
+            if (Optional<coff_symbol16> sym = createSymbol(dthunk->wrappedSym))
+              outputSymtab.push_back(*sym);
+          }
+        }
       }
     }
   }
