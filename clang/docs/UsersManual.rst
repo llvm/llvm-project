@@ -881,9 +881,9 @@ Configuration files
 Configuration files group command-line options and allow all of them to be
 specified just by referencing the configuration file. They may be used, for
 example, to collect options required to tune compilation for particular
-target, such as -L, -I, -l, --sysroot, codegen options, etc.
+target, such as ``-L``, ``-I``, ``-l``, ``--sysroot``, codegen options, etc.
 
-The command line option `--config` can be used to specify configuration
+The command line option ``--config`` can be used to specify configuration
 file in a Clang invocation. For example:
 
 ::
@@ -900,39 +900,39 @@ treated as a file name and is searched for sequentially in the directories:
     - the directory where Clang executable resides.
 
 Both user and system directories for configuration files are specified during
-clang build using CMake parameters, CLANG_CONFIG_FILE_USER_DIR and
-CLANG_CONFIG_FILE_SYSTEM_DIR respectively. The first file found is used. It is
-an error if the required file cannot be found.
+clang build using CMake parameters, ``CLANG_CONFIG_FILE_USER_DIR`` and
+``CLANG_CONFIG_FILE_SYSTEM_DIR`` respectively. The first file found is used.
+It is an error if the required file cannot be found.
 
 If no explicit configuration file is specified, Clang searches for a default
 configuration file following the rules described in the next paragraphs.
-To disable this behavior, `--no-default-config` flag can be used.
+To disable this behavior, ``--no-default-config`` flag can be used.
 
 Another way to specify a configuration file is to encode it in executable name.
-For example, if the Clang executable is named `armv7l-clang` (it may be a
-symbolic link to `clang`), then Clang will search for file `armv7l.cfg` in the
-directory where Clang resides.
+For example, if the Clang executable is named ``armv7l-clang`` (it may be a
+symbolic link to ``clang``), then Clang will search for file ``armv7l.cfg``
+in the directory where Clang resides.
 
 If a driver mode is specified in invocation, Clang tries to find a file specific
 for the specified mode. For example, if the executable file is named
-`x86_64-clang-cl`, Clang first looks for `x86_64-cl.cfg` and if it is not found,
-looks for `x86_64.cfg`.
+``x86_64-clang-cl``, Clang first looks for ``x86_64-clang-cl.cfg`` and if it is
+not found, looks for ``x86_64.cfg``.
 
 If the command line contains options that effectively change target architecture
-(these are -m32, -EL, and some others) and the configuration file starts with an
-architecture name, Clang tries to load the configuration file for the effective
-architecture. For example, invocation:
+(these are ``-m32``, ``-EL``, and some others) and the configuration file starts
+with an architecture name, Clang tries to load the configuration file for the
+effective architecture. For example, invocation:
 
 ::
 
     x86_64-clang -m32 abc.c
 
-causes Clang search for a file `i368.cfg` first, and if no such file is found,
-Clang looks for the file `x86_64.cfg`.
+causes Clang search for a file ``i368.cfg`` first, and if no such file is found,
+Clang looks for the file ``x86_64.cfg``.
 
 The configuration file consists of command-line options specified on one or
 more lines. Lines composed of whitespace characters only are ignored as well as
-lines in which the first non-blank character is `#`. Long options may be split
+lines in which the first non-blank character is ``#``. Long options may be split
 between several lines by a trailing backslash. Here is example of a
 configuration file:
 
@@ -948,19 +948,19 @@ configuration file:
     # other config files may be included
     @linux.options
 
-Files included by `@file` directives in configuration files are resolved
+Files included by ``@file`` directives in configuration files are resolved
 relative to the including file. For example, if a configuration file
-`~/.llvm/target.cfg` contains the directive `@os/linux.opts`, the file
-`linux.opts` is searched for in the directory `~/.llvm/os`.
+``~/.llvm/target.cfg`` contains the directive ``@os/linux.opts``, the file
+``linux.opts`` is searched for in the directory ``~/.llvm/os``.
 
-To generate paths relative to the configuration file, the `<CFGDIR>` token may
+To generate paths relative to the configuration file, the ``<CFGDIR>`` token may
 be used. This will expand to the absolute path of the directory containing the
 configuration file.
 
 In cases where a configuration file is deployed alongside SDK contents, the
-SDK directory can remain fully portable by using `<CFGDIR>` prefixed paths.
+SDK directory can remain fully portable by using ``<CFGDIR>`` prefixed paths.
 In this way, the user may only need to specify a root configuration file with
-`--config` to establish every aspect of the SDK with the compiler:
+``--config`` to establish every aspect of the SDK with the compiler:
 
 ::
 
