@@ -2662,6 +2662,51 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
 
+  // If the type of select is not an integer type or if the condition and
+  // the selection type are not both scalar nor both vector types, there is no
+  // point in attempting to match these patterns.
+  if (!isa<Constant>(CondVal) && SelType->isIntOrIntVectorTy() &&
+      CondVal->getType()->isVectorTy() == SelType->isVectorTy()) {
+    auto *One = ConstantInt::get(SelType, 1);
+    auto *Zero = ConstantInt::get(SelType, 0);
+    auto *AllOnes = ConstantInt::get(SelType, -1, /*isSigned*/ true);
+
+    // select a, a, b -> select a, 1, b
+    // select a, zext(a), b -> select a, 1, b
+    if (match(TrueVal, m_ZExtOrSelf(m_Specific(CondVal))))
+      return replaceOperand(SI, 1, One);
+
+    // select a, sext(a), b -> select a, -1, b
+    if (match(TrueVal, m_SExt(m_Specific(CondVal))))
+      return replaceOperand(SI, 1, AllOnes);
+
+    // select a, b, a -> select a, b, 0
+    // select a, b, zext(a) -> select a, b, 0
+    // select a, b, sext(a) -> select a, b, 0
+    if (match(FalseVal, m_ZExtOrSExtOrSelf(m_Specific(CondVal))))
+      return replaceOperand(SI, 2, Zero);
+
+    Value *NotCond;
+
+    // select a, !a, b -> select !a, b, 0
+    // select a, sext(!a), b -> select !a, b, 0
+    // select a, zext(!a), b -> select !a, b, 0
+    if (match(TrueVal, m_ZExtOrSExtOrSelf(m_CombineAnd(
+                           m_Value(NotCond), m_Not(m_Specific(CondVal))))))
+      return SelectInst::Create(NotCond, FalseVal, Zero);
+
+    // select a, b, !a -> select !a, 1, b
+    // select a, b, zext(!a) -> select !a, 1, b
+    if (match(FalseVal, m_ZExtOrSelf(m_CombineAnd(m_Value(NotCond),
+                                                  m_Not(m_Specific(CondVal))))))
+      return SelectInst::Create(NotCond, One, TrueVal);
+
+    // select a, b, sext(!a) -> select !a, -1, b
+    if (match(FalseVal, m_SExt(m_CombineAnd(m_Value(NotCond),
+                                            m_Not(m_Specific(CondVal))))))
+      return SelectInst::Create(NotCond, AllOnes, TrueVal);
+  }
+
   // Avoid potential infinite loops by checking for non-constant condition.
   // TODO: Can we assert instead by improving canonicalizeSelectToShuffle()?
   //       Scalar select must have simplified?
@@ -2710,20 +2755,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
       return SelectInst::Create(NotCond, One, TrueVal);
     }
-
-    // select a, a, b -> select a, true, b
-    if (CondVal == TrueVal)
-      return replaceOperand(SI, 1, One);
-    // select a, b, a -> select a, b, false
-    if (CondVal == FalseVal)
-      return replaceOperand(SI, 2, Zero);
-
-    // select a, !a, b -> select !a, b, false
-    if (match(TrueVal, m_Not(m_Specific(CondVal))))
-      return SelectInst::Create(TrueVal, FalseVal, Zero);
-    // select a, b, !a -> select !a, true, b
-    if (match(FalseVal, m_Not(m_Specific(CondVal))))
-      return SelectInst::Create(FalseVal, One, TrueVal);
 
     Value *A, *B;
 
