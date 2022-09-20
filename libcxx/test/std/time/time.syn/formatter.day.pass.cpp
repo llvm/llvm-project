@@ -39,60 +39,60 @@ static void test_no_chrono_specs() {
   using namespace std::literals::chrono_literals;
 
   // Valid day
-  check.template operator()<"{}">(SV("01"), 1d);
-  check.template operator()<"{:*^4}">(SV("*01*"), 1d);
-  check.template operator()<"{:*>3}">(SV("*01"), 1d);
+  check(SV("01"), SV("{}"), 1d);
+  check(SV("*01*"), SV("{:*^4}"), 1d);
+  check(SV("*01"), SV("{:*>3}"), 1d);
 
   // Invalid day
-  check.template operator()<"{}">(SV("00 is not a valid day"), 0d);
-  check.template operator()<"{:*^23}">(SV("*00 is not a valid day*"), 0d);
+  check(SV("00 is not a valid day"), SV("{}"), 0d);
+  check(SV("*00 is not a valid day*"), SV("{:*^23}"), 0d);
 }
 
 template <class CharT>
 static void test_valid_values() {
   using namespace std::literals::chrono_literals;
 
-  constexpr string_literal fmt{"{:%%d='%d'%t%%Od='%Od'%t%%e='%e'%t%%Oe='%Oe'%n}"};
-  constexpr string_literal lfmt{"{:L%%d='%d'%t%%Od='%Od'%t%%e='%e'%t%%Oe='%Oe'%n}"};
+  constexpr std::basic_string_view<CharT> fmt  = SV("{:%%d='%d'%t%%Od='%Od'%t%%e='%e'%t%%Oe='%Oe'%n}");
+  constexpr std::basic_string_view<CharT> lfmt = SV("{:L%%d='%d'%t%%Od='%Od'%t%%e='%e'%t%%Oe='%Oe'%n}");
 
   const std::locale loc(LOCALE_ja_JP_UTF_8);
   std::locale::global(std::locale(LOCALE_fr_FR_UTF_8));
 
   // Non localized output using C-locale
-  check.template operator()<fmt>(SV("%d='00'\t%Od='00'\t%e=' 0'\t%Oe=' 0'\n"), 0d);
-  check.template operator()<fmt>(SV("%d='01'\t%Od='01'\t%e=' 1'\t%Oe=' 1'\n"), 1d);
-  check.template operator()<fmt>(SV("%d='31'\t%Od='31'\t%e='31'\t%Oe='31'\n"), 31d);
+  check(SV("%d='00'\t%Od='00'\t%e=' 0'\t%Oe=' 0'\n"), fmt, 0d);
+  check(SV("%d='01'\t%Od='01'\t%e=' 1'\t%Oe=' 1'\n"), fmt, 1d);
+  check(SV("%d='31'\t%Od='31'\t%e='31'\t%Oe='31'\n"), fmt, 31d);
 #if defined(_AIX)
-  check.template operator()<fmt>(SV("%d='55'\t%Od='55'\t%e='55'\t%Oe='55'\n"), 255d);
+  check(SV("%d='55'\t%Od='55'\t%e='55'\t%Oe='55'\n"), fmt, 255d);
 #else
-  check.template operator()<fmt>(SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), 255d);
+  check(SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), fmt, 255d);
 #endif
 
   // Use the global locale (fr_FR)
-  check.template operator()<lfmt>(SV("%d='00'\t%Od='00'\t%e=' 0'\t%Oe=' 0'\n"), 0d);
-  check.template operator()<lfmt>(SV("%d='01'\t%Od='01'\t%e=' 1'\t%Oe=' 1'\n"), 1d);
-  check.template operator()<lfmt>(SV("%d='31'\t%Od='31'\t%e='31'\t%Oe='31'\n"), 31d);
+  check(SV("%d='00'\t%Od='00'\t%e=' 0'\t%Oe=' 0'\n"), lfmt, 0d);
+  check(SV("%d='01'\t%Od='01'\t%e=' 1'\t%Oe=' 1'\n"), lfmt, 1d);
+  check(SV("%d='31'\t%Od='31'\t%e='31'\t%Oe='31'\n"), lfmt, 31d);
 #if defined(_AIX)
-  check.template operator()<lfmt>(SV("%d='55'\t%Od='55'\t%e='55'\t%Oe='55'\n"), 255d);
+  check(SV("%d='55'\t%Od='55'\t%e='55'\t%Oe='55'\n"), lfmt, 255d);
 #else
-  check.template operator()<lfmt>(SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), 255d);
+  check(SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), lfmt, 255d);
 #endif
 
   // Use supplied locale (ja_JP). This locale has a different alternate on some platforms.
 #if defined(__APPLE__) || defined(_AIX)
-  lcheck.template operator()<lfmt>(loc, SV("%d='00'\t%Od='00'\t%e=' 0'\t%Oe=' 0'\n"), 0d);
-  lcheck.template operator()<lfmt>(loc, SV("%d='01'\t%Od='01'\t%e=' 1'\t%Oe=' 1'\n"), 1d);
-  lcheck.template operator()<lfmt>(loc, SV("%d='31'\t%Od='31'\t%e='31'\t%Oe='31'\n"), 31d);
+  check(loc, SV("%d='00'\t%Od='00'\t%e=' 0'\t%Oe=' 0'\n"), lfmt, 0d);
+  check(loc, SV("%d='01'\t%Od='01'\t%e=' 1'\t%Oe=' 1'\n"), lfmt, 1d);
+  check(loc, SV("%d='31'\t%Od='31'\t%e='31'\t%Oe='31'\n"), lfmt, 31d);
 #  if defined(_AIX)
-  check.template operator()<fmt>(SV("%d='55'\t%Od='55'\t%e='55'\t%Oe='55'\n"), 255d);
+  check(SV("%d='55'\t%Od='55'\t%e='55'\t%Oe='55'\n"), fmt, 255d);
 #  else
-  check.template operator()<fmt>(SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), 255d);
+  check(SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), fmt, 255d);
 #  endif
 #else  // defined(__APPLE__) || defined(_AIX)
-  lcheck.template operator()<lfmt>(loc, SV("%d='00'\t%Od='〇'\t%e=' 0'\t%Oe='〇'\n"), 0d);
-  lcheck.template operator()<lfmt>(loc, SV("%d='01'\t%Od='一'\t%e=' 1'\t%Oe='一'\n"), 1d);
-  lcheck.template operator()<lfmt>(loc, SV("%d='31'\t%Od='三十一'\t%e='31'\t%Oe='三十一'\n"), 31d);
-  lcheck.template operator()<lfmt>(loc, SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), 255d);
+  check(loc, SV("%d='00'\t%Od='〇'\t%e=' 0'\t%Oe='〇'\n"), lfmt, 0d);
+  check(loc, SV("%d='01'\t%Od='一'\t%e=' 1'\t%Oe='一'\n"), lfmt, 1d);
+  check(loc, SV("%d='31'\t%Od='三十一'\t%e='31'\t%Oe='三十一'\n"), lfmt, 31d);
+  check(loc, SV("%d='255'\t%Od='255'\t%e='255'\t%Oe='255'\n"), lfmt, 255d);
 #endif // defined(__APPLE__) || defined(_AIX)
 
   std::locale::global(std::locale::classic());

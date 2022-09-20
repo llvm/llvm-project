@@ -9,10 +9,22 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
+using ::testing::ResultOf;
+using ::testing::UnorderedElementsAre;
 
 namespace {
+MATCHER_P2(pair, first_matcher, second_matcher, "") {
+  return testing::ExplainMatchResult(
+      AllOf(ResultOf([](const auto &entry) { return entry.getKey(); },
+                     first_matcher),
+            ResultOf([](const auto &entry) { return entry.getValue(); },
+                     second_matcher)),
+      arg, result_listener);
+}
+
 llvm::Annotations::Range range(size_t Begin, size_t End) {
   llvm::Annotations::Range R;
   R.Begin = Begin;
@@ -42,6 +54,17 @@ TEST(AnnotationsTest, Points) {
   EXPECT_THAT(llvm::Annotations("ab^^^cd").points(), ElementsAre(2u, 2u, 2u));
 }
 
+TEST(AnnotationsTest, AllPoints) {
+  // Multiple points.
+  EXPECT_THAT(llvm::Annotations("0$p1^123$p2^456$p1^$p1^78^9").all_points(),
+              UnorderedElementsAre(pair("", ElementsAre(9u)),
+                                   pair("p1", ElementsAre(1u, 7u, 7u)),
+                                   pair("p2", ElementsAre(4u))));
+
+  // No points.
+  EXPECT_THAT(llvm::Annotations("ab[[cd]]").all_points(), IsEmpty());
+}
+
 TEST(AnnotationsTest, Ranges) {
   // A single range.
   EXPECT_EQ(llvm::Annotations("[[a]]bc").range(), range(0, 1));
@@ -59,6 +82,20 @@ TEST(AnnotationsTest, Ranges) {
 
   // No ranges.
   EXPECT_THAT(llvm::Annotations("ab^c^defef").ranges(), IsEmpty());
+}
+
+TEST(AnnotationsTest, AllRanges) {
+  // Multiple ranges.
+  EXPECT_THAT(
+      llvm::Annotations("[[]]01$outer[[2[[[[$inner[[3]]]]]]456]]7$outer[[89]]")
+          .all_ranges(),
+      UnorderedElementsAre(
+          pair("", ElementsAre(range(0, 0), range(3, 4), range(3, 4))),
+          pair("outer", ElementsAre(range(2, 7), range(8, 10))),
+          pair("inner", ElementsAre(range(3, 4)))));
+
+  // No ranges.
+  EXPECT_THAT(llvm::Annotations("ab^c^defef").all_ranges(), IsEmpty());
 }
 
 TEST(AnnotationsTest, Nested) {

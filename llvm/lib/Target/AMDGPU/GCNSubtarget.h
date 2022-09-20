@@ -1042,6 +1042,10 @@ public:
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
 
+  bool hasFPAtomicToDenormModeHazard() const {
+    return getGeneration() == GFX10;
+  }
+
   bool hasVOP3DPP() const { return getGeneration() >= GFX11; }
 
   bool hasLdsDirect() const { return getGeneration() >= GFX11; }

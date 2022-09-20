@@ -167,6 +167,7 @@ public:
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
 
   MCOperand decodeOperand_VGPR_32(unsigned Val) const;
+  MCOperand decodeOperand_VGPR_32_Lo128(unsigned Val) const;
   MCOperand decodeOperand_VRegOrLds_32(unsigned Val) const;
 
   MCOperand decodeOperand_VS_32(unsigned Val) const;

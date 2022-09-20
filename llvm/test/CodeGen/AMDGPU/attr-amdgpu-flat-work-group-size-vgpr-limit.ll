@@ -536,10 +536,10 @@ define internal void @use256vgprs() {
 ; GFX10WGP-WAVE64: NumVgprs: 256
 ; GFX10CU-WAVE32: NumVgprs: 256
 ; GFX10CU-WAVE64: NumVgprs: 256
-; GFX11WGP-WAVE32: NumVgprs: 128
-; GFX11WGP-WAVE64: NumVgprs: 128
-; GFX11CU-WAVE32: NumVgprs: 128
-; GFX11CU-WAVE64: NumVgprs: 128
+; GFX11WGP-WAVE32: NumVgprs: 256
+; GFX11WGP-WAVE64: NumVgprs: 256
+; GFX11CU-WAVE32: NumVgprs: 256
+; GFX11CU-WAVE64: NumVgprs: 256
 define amdgpu_kernel void @f256() #256 {
   call void @use256vgprs()
   ret void
@@ -555,8 +555,8 @@ attributes #256 = { nounwind "amdgpu-flat-work-group-size"="256,256" }
 ; GFX10WGP-WAVE64: NumVgprs: 256
 ; GFX10CU-WAVE32: NumVgprs: 128
 ; GFX10CU-WAVE64: NumVgprs: 128
-; GFX11WGP-WAVE32: NumVgprs: 128
-; GFX11WGP-WAVE64: NumVgprs: 128
+; GFX11WGP-WAVE32: NumVgprs: 256
+; GFX11WGP-WAVE64: NumVgprs: 256
 ; GFX11CU-WAVE32: NumVgprs: 128
 ; GFX11CU-WAVE64: NumVgprs: 128
 define amdgpu_kernel void @f512() #512 {

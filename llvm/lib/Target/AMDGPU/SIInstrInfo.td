@@ -1400,7 +1400,17 @@ def FPVRegInputModsMatchClass : AsmOperandClass {
   let PredicateMethod = "isVRegWithInputMods";
 }
 
+def FPT16VRegInputModsMatchClass : AsmOperandClass {
+  let Name = "T16VRegWithFPInputMods";
+  let ParserMethod = "parseRegWithFPInputMods";
+  let PredicateMethod = "isT16VRegWithInputMods";
+}
+
 def FPVRegInputMods : InputMods <FPVRegInputModsMatchClass> {
+  let PrintMethod = "printOperandAndFPInputMods";
+}
+
+def FPT16VRegInputMods : InputMods <FPT16VRegInputModsMatchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
 }
 
@@ -1430,6 +1440,16 @@ def IntVRegInputModsMatchClass : AsmOperandClass {
   let Name = "VRegWithIntInputMods";
   let ParserMethod = "parseRegWithIntInputMods";
   let PredicateMethod = "isVRegWithInputMods";
+}
+
+def IntT16VRegInputModsMatchClass : AsmOperandClass {
+  let Name = "T16VRegWithIntInputMods";
+  let ParserMethod = "parseRegWithIntInputMods";
+  let PredicateMethod = "isT16VRegWithInputMods";
+}
+
+def IntT16VRegInputMods : InputMods <IntT16VRegInputModsMatchClass> {
+  let PrintMethod = "printOperandAndIntInputMods";
 }
 
 def IntVRegInputMods : InputMods <IntVRegInputModsMatchClass> {
@@ -1598,6 +1618,14 @@ class getVALUDstForVT<ValueType VT> {
                               VOPDstS64orS32)))); // else VT == i1
 }
 
+class getVALUDstForVT_t16<ValueType VT> {
+  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
+                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
+                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
+                              !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32_Lo128>,
+                              VOPDstS64orS32)))); // else VT == i1
+}
+
 // Returns the register class to use for the destination of VOP[12C]
 // instructions with SDWA extension
 class getSDWADstForVT<ValueType VT> {
@@ -1608,7 +1636,7 @@ class getSDWADstForVT<ValueType VT> {
 
 // Returns the register class to use for source 0 of VOP[12C]
 // instructions for the given VT.
-class getVOPSrc0ForVT<ValueType VT> {
+class getVOPSrc0ForVT<ValueType VT, bit IsTrue16> {
   bit isFP = isFloatType<VT>.ret;
 
   RegisterOperand ret =
@@ -1616,7 +1644,10 @@ class getVOPSrc0ForVT<ValueType VT> {
       !if(!eq(VT.Size, 64),
          VSrc_f64,
          !if(!eq(VT.Value, f16.Value),
-            VSrc_f16,
+            !if(IsTrue16,
+              VSrcT_f16_Lo128,
+              VSrc_f16
+            ),
             !if(!eq(VT.Value, v2f16.Value),
                VSrc_v2f16,
                !if(!eq(VT.Value, v4f16.Value),
@@ -1629,7 +1660,10 @@ class getVOPSrc0ForVT<ValueType VT> {
        !if(!eq(VT.Size, 64),
           VSrc_b64,
           !if(!eq(VT.Value, i16.Value),
-             VSrc_b16,
+            !if(IsTrue16,
+              VSrcT_b16_Lo128,
+              VSrc_b16
+            ),
              !if(!eq(VT.Value, v2i16.Value),
                 VSrc_v2b16,
                 VSrc_b32
@@ -1650,6 +1684,15 @@ class getVregSrcForVT<ValueType VT> {
                           !if(!eq(VT.Size, 64), VReg_64,
                             !if(!eq(VT.Size, 48), VReg_64,
                               VGPR_32))));
+}
+
+class getVregSrcForVT_t16<ValueType VT> {
+  RegisterClass ret = !if(!eq(VT.Size, 128), VReg_128,
+                        !if(!eq(VT.Size, 96), VReg_96,
+                          !if(!eq(VT.Size, 64), VReg_64,
+                            !if(!eq(VT.Size, 48), VReg_64,
+                              !if(!eq(VT.Size, 16), VGPR_32_Lo128,
+                                  VGPR_32)))));
 }
 
 class getSDWASrcForVT <ValueType VT> {
@@ -1757,6 +1800,16 @@ class getOpSelMod <ValueType VT> {
 class getSrcModDPP <ValueType VT> {
   bit isFP = isFloatType<VT>.ret;
   Operand ret = !if(isFP, FPVRegInputMods, IntVRegInputMods);
+}
+
+class getSrcModDPP_t16 <ValueType VT> {
+  bit isFP = isFloatType<VT>.ret;
+  Operand ret =
+      !if (isFP,
+           !if (!eq(VT.Value, f16.Value), FPT16VRegInputMods,
+                FPVRegInputMods),
+           !if (!eq(VT.Value, i16.Value), IntT16VRegInputMods,
+                IntVRegInputMods));
 }
 
 // Return type of input modifiers operand for specified input operand for DPP
@@ -2382,6 +2435,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field list<ValueType> ArgVT = _ArgVT;
   field bit EnableF32SrcMods = _EnableF32SrcMods;
   field bit EnableClamp = _EnableClamp;
+  field bit IsTrue16 = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];
@@ -2392,7 +2446,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field RegisterOperand DstRC64 = DstRC;
   field RegisterOperand DstRCVOP3DPP = DstRC64;
   field RegisterOperand DstRCSDWA = getSDWADstForVT<DstVT>.ret;
-  field RegisterOperand Src0RC32 = getVOPSrc0ForVT<Src0VT>.ret;
+  field RegisterOperand Src0RC32 = getVOPSrc0ForVT<Src0VT, IsTrue16>.ret;
   field RegisterOperand Src1RC32 = RegisterOperand<getVregSrcForVT<Src1VT>.ret>;
   field RegisterOperand Src0RC64 = getVOP3SrcForVT<Src0VT>.ret;
   field RegisterOperand Src1RC64 = getVOP3SrcForVT<Src1VT>.ret;
@@ -2411,6 +2465,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field Operand Src0ModDPP = getSrcModDPP<Src0VT>.ret;
   field Operand Src1ModDPP = getSrcModDPP<Src1VT>.ret;
   field Operand Src2ModDPP = getSrcModDPP<Src2VT>.ret;
+  field Operand Src0ModVOP3DPP = getSrcModDPP<Src0VT>.ret;
+  field Operand Src1ModVOP3DPP = getSrcModDPP<Src1VT>.ret;
   field Operand Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, EnableF32SrcMods>.ret;
   field Operand Src0ModSDWA = getSrcModSDWA<Src0VT>.ret;
   field Operand Src1ModSDWA = getSrcModSDWA<Src1VT>.ret;
@@ -2513,7 +2569,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
                                  Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
   field dag InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
-                  Src0ModDPP, Src1ModDPP, Src2ModVOP3DPP, HasOpSel, IsVOP3P>.ret;
+                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel, IsVOP3P>.ret;
   field dag InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, DstRCVOP3DPP, NumSrcArgs>.ret;
   field dag InsVOP3DPP16 = getInsVOP3DPP16<InsVOP3Base, DstRCVOP3DPP, NumSrcArgs>.ret;
   field dag InsVOP3DPP8 = getInsVOP3DPP8<InsVOP3Base, DstRCVOP3DPP, NumSrcArgs>.ret;
@@ -2569,7 +2625,25 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
 class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.NoPattern> : VOPProfile <p.ArgVT> {
   let NeedPatGen = mode;
 }
-def VOP_F16_F16 : VOPProfile <[f16, f16, untyped, untyped]>;
+
+// VOPC_Profile_t16, VOPC_NoSdst_Profile_t16, VOPC_Class_Profile_t16,
+// VOPC_Class_NoSdst_Profile_t16, and  VOP_MAC_F16_t16 do not inherit from this
+// class, so copy changes to this class in those profiles
+class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
+  let IsTrue16 = 1;
+  // Most DstVT are 16-bit, but not all
+  let DstRC = getVALUDstForVT_t16<DstVT>.ret;
+  let DstRC64 = getVALUDstForVT<DstVT>.ret;
+  let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
+  let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
+  let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
+  let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
+  let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
+  let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
+  let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
+}
+
+def VOP_F16_F16 : VOPProfile<[f16, f16, untyped, untyped]>;
 def VOP_F16_I16 : VOPProfile <[f16, i16, untyped, untyped]>;
 def VOP_I16_F16 : VOPProfile <[i16, f16, untyped, untyped]>;
 def VOP_I16_I16 : VOPProfile <[i16, i16, untyped, untyped]>;
