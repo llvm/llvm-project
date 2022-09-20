@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # Make a DLL that exports exportfn1.
 # RUN: yaml2obj %p/Inputs/export.yaml -o %basename_t-exp.obj
 # RUN: lld-link /out:%basename_t-exp.dll /dll %basename_t-exp.obj /export:exportfn1 /implib:%basename_t-exp.lib
