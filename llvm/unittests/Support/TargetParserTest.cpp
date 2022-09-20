@@ -1112,6 +1112,24 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
                              AArch64::AEK_FP16FML | AArch64::AEK_SHA3,
                          "8.5-A"),
+        ARMCPUTestParams("apple-a15", "armv8.5-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_FP | AArch64::AEK_SIMD |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
+                             AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                             AArch64::AEK_BF16 | AArch64::AEK_I8MM,
+                         "8.5-A"),
+        ARMCPUTestParams("apple-a16", "armv8.5-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_FP | AArch64::AEK_SIMD |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
+                             AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                             AArch64::AEK_BF16 | AArch64::AEK_I8MM,
+                         "8.5-A"),
         ARMCPUTestParams("apple-m1", "armv8.5-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
                              AArch64::AEK_FP | AArch64::AEK_SIMD |
@@ -1119,6 +1137,15 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_RDM | AArch64::AEK_RCPC |
                              AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
                              AArch64::AEK_FP16FML | AArch64::AEK_SHA3,
+                         "8.5-A"),
+        ARMCPUTestParams("apple-m2", "armv8.5-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_FP | AArch64::AEK_SIMD |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
+                             AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                             AArch64::AEK_BF16 | AArch64::AEK_I8MM,
                          "8.5-A"),
         ARMCPUTestParams("apple-s4", "armv8.3-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
@@ -1257,7 +1284,7 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_LSE | AArch64::AEK_RDM,
                          "8.2-A")));
 
-static constexpr unsigned NumAArch64CPUArchs = 54;
+static constexpr unsigned NumAArch64CPUArchs = 57;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
