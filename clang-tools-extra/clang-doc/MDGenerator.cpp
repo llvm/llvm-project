@@ -136,7 +136,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   llvm::raw_string_ostream Members(Buffer);
   if (!I.Members.empty())
     for (const auto &N : I.Members)
-      Members << "| " << N << " |\n";
+      Members << "| " << N.Name << " |\n";
   writeLine(Members.str(), OS);
   if (I.DefLoc)
     writeFileDefinition(CDCtx, *I.DefLoc, OS);
