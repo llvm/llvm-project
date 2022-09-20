@@ -60,13 +60,14 @@ void Log::ListCategories(llvm::raw_ostream &stream,
                   });
 }
 
-uint32_t Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
-                         llvm::ArrayRef<const char *> categories) {
+Log::MaskType Log::GetFlags(llvm::raw_ostream &stream,
+                            const ChannelMap::value_type &entry,
+                            llvm::ArrayRef<const char *> categories) {
   bool list_categories = false;
-  uint32_t flags = 0;
+  Log::MaskType flags = 0;
   for (const char *category : categories) {
     if (llvm::StringRef("all").equals_insensitive(category)) {
-      flags |= UINT32_MAX;
+      flags |= std::numeric_limits<Log::MaskType>::max();
       continue;
     }
     if (llvm::StringRef("default").equals_insensitive(category)) {
@@ -91,7 +92,7 @@ uint32_t Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &
 }
 
 void Log::Enable(const std::shared_ptr<LogHandler> &handler_sp,
-                 uint32_t options, uint32_t flags) {
+                 uint32_t options, Log::MaskType flags) {
   llvm::sys::ScopedWriter lock(m_mutex);
 
   MaskType mask = m_mask.fetch_or(flags, std::memory_order_relaxed);
@@ -102,7 +103,7 @@ void Log::Enable(const std::shared_ptr<LogHandler> &handler_sp,
   }
 }
 
-void Log::Disable(uint32_t flags) {
+void Log::Disable(Log::MaskType flags) {
   llvm::sys::ScopedWriter lock(m_mutex);
 
   MaskType mask = m_mask.fetch_and(~flags, std::memory_order_relaxed);
@@ -126,7 +127,7 @@ const Flags Log::GetOptions() const {
   return m_options.load(std::memory_order_relaxed);
 }
 
-const Flags Log::GetMask() const {
+Log::MaskType Log::GetMask() const {
   return m_mask.load(std::memory_order_relaxed);
 }
 
@@ -203,7 +204,7 @@ void Log::Register(llvm::StringRef name, Channel &channel) {
 void Log::Unregister(llvm::StringRef name) {
   auto iter = g_channel_map->find(name);
   assert(iter != g_channel_map->end());
-  iter->second.Disable(UINT32_MAX);
+  iter->second.Disable(std::numeric_limits<MaskType>::max());
   g_channel_map->erase(iter);
 }
 
@@ -216,7 +217,7 @@ bool Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
     error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
     return false;
   }
-  uint32_t flags = categories.empty()
+  MaskType flags = categories.empty()
                        ? iter->second.m_channel.default_flags
                        : GetFlags(error_stream, *iter, categories);
   iter->second.Enable(log_handler_sp, log_options, flags);
@@ -231,8 +232,8 @@ bool Log::DisableLogChannel(llvm::StringRef channel,
     error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
     return false;
   }
-  uint32_t flags = categories.empty()
-                       ? UINT32_MAX
+  MaskType flags = categories.empty()
+                       ? std::numeric_limits<MaskType>::max()
                        : GetFlags(error_stream, *iter, categories);
   iter->second.Disable(flags);
   return true;
@@ -267,7 +268,7 @@ bool Log::ListChannelCategories(llvm::StringRef channel,
 
 void Log::DisableAllLogChannels() {
   for (auto &entry : *g_channel_map)
-    entry.second.Disable(UINT32_MAX);
+    entry.second.Disable(std::numeric_limits<MaskType>::max());
 }
 
 void Log::ForEachChannelCategory(

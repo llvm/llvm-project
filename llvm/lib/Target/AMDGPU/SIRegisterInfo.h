@@ -163,7 +163,7 @@ public:
 
   // Pseudo regs are not allowed
   unsigned getHWRegIndex(MCRegister Reg) const {
-    return getEncodingValue(Reg) >> 1 & 0xff;
+    return getEncodingValue(Reg) & 0xff;
   }
 
   LLVM_READONLY

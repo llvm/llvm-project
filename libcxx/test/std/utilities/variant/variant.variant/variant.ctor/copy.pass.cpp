@@ -15,7 +15,7 @@
 
 // template <class ...Types> class variant;
 
-// variant(variant const&); // constexpr in C++20
+// constexpr variant(variant const&);
 
 #include <cassert>
 #include <type_traits>
@@ -120,7 +120,6 @@ void test_copy_ctor_sfinae() {
   }
 
   // Make sure we properly propagate triviality (see P0602R4).
-#if TEST_STD_VER > 17
   {
     using V = std::variant<int, long>;
     static_assert(std::is_trivially_copy_constructible<V>::value, "");
@@ -138,7 +137,6 @@ void test_copy_ctor_sfinae() {
     using V = std::variant<int, TCopyNTMove>;
     static_assert(std::is_trivially_copy_constructible<V>::value, "");
   }
-#endif // > C++17
 }
 
 void test_copy_ctor_basic() {
@@ -170,7 +168,6 @@ void test_copy_ctor_basic() {
   }
 
   // Make sure we properly propagate triviality, which implies constexpr-ness (see P0602R4).
-#if TEST_STD_VER > 17
   {
     constexpr std::variant<int> v(std::in_place_index<0>, 42);
     static_assert(v.index() == 0, "");
@@ -213,7 +210,6 @@ void test_copy_ctor_basic() {
     static_assert(v2.index() == 1, "");
     static_assert(std::get<1>(v2).value == 42, "");
   }
-#endif // > C++17
 }
 
 void test_copy_ctor_valueless_by_exception() {
@@ -237,7 +233,6 @@ constexpr bool test_constexpr_copy_ctor_imp(std::variant<long, void*, const int>
 
 void test_constexpr_copy_ctor() {
   // Make sure we properly propagate triviality, which implies constexpr-ness (see P0602R4).
-#if TEST_STD_VER > 17
   using V = std::variant<long, void*, const int>;
 #ifdef TEST_WORKAROUND_MSVC_BROKEN_IS_TRIVIALLY_COPYABLE
   static_assert(std::is_trivially_destructible<V>::value, "");
@@ -251,7 +246,6 @@ void test_constexpr_copy_ctor() {
   static_assert(test_constexpr_copy_ctor_imp<0>(V(42l)), "");
   static_assert(test_constexpr_copy_ctor_imp<1>(V(nullptr)), "");
   static_assert(test_constexpr_copy_ctor_imp<2>(V(101)), "");
-#endif // > C++17
 }
 
 int main(int, char**) {

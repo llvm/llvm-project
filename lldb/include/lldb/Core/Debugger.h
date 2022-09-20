@@ -152,11 +152,7 @@ public:
 
   Status SetInputString(const char *data);
 
-  // This method will setup data recorder if reproducer enabled.
-  // On reply mode this method should take instructions from reproducer file.
-  Status SetInputFile(lldb::FileSP file);
-
-  void SetInputFile(lldb::FileSP file, repro::DataRecorder *recorder);
+  void SetInputFile(lldb::FileSP file);
 
   void SetOutputFile(lldb::FileSP file);
 
@@ -293,8 +289,6 @@ public:
 
   void SetPrompt(llvm::StringRef p);
   void SetPrompt(const char *) = delete;
-
-  llvm::StringRef GetReproducerPath() const;
 
   bool GetUseExternalEditor() const;
 

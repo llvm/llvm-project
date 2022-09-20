@@ -26,7 +26,7 @@ define dso_local void @_Z4testP1S(%struct.S* %p) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32*> [[TMP6]], i32* [[ARRAYIDX34]], i32 5
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32*> [[TMP7]], i32* [[ARRAYIDX41]], i32 6
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32*> [[TMP8]], i32* [[ARRAYIDX48]], i32 7
-; CHECK-NEXT:    [[TMP10:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP9]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+; CHECK-NEXT:    [[TMP10:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP9]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <8 x i32> [[TMP10]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[ARRAYIDX2]] to <8 x i32>*
 ; CHECK-NEXT:    store <8 x i32> [[TMP11]], <8 x i32>* [[TMP12]], align 4

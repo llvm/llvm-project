@@ -408,6 +408,31 @@ private:
   StringRef path;
 };
 
+class LCDyldEnv final : public LoadCommand {
+public:
+  explicit LCDyldEnv(StringRef name) : name(name) {}
+
+  uint32_t getSize() const override {
+    return alignTo(sizeof(dyld_env_command) + name.size() + 1,
+                   target->wordSize);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<dyld_env_command *>(buf);
+    buf += sizeof(dyld_env_command);
+
+    c->cmd = LC_DYLD_ENVIRONMENT;
+    c->cmdsize = getSize();
+    c->name = sizeof(dyld_env_command);
+
+    memcpy(buf, name.data(), name.size());
+    buf[name.size()] = '\0';
+  }
+
+private:
+  StringRef name;
+};
+
 class LCMinVersion final : public LoadCommand {
 public:
   explicit LCMinVersion(const PlatformInfo &platformInfo)
@@ -821,6 +846,9 @@ template <class LP> void Writer::createLoadCommands() {
       in.header->addLoadCommand(
           make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->installName));
   }
+
+  for (const auto &dyldEnv : config->dyldEnvs)
+    in.header->addLoadCommand(make<LCDyldEnv>(dyldEnv));
 
   if (functionStartsSection)
     in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));

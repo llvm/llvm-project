@@ -50,7 +50,11 @@ bool isCheckLikeMethod(llvm::SmallDenseSet<const CXXMethodDecl *> &CheckDecls,
   return CheckDecls.contains(&D);
 }
 
-bool ChromiumCheckModel::transfer(const Stmt *Stmt, Environment &Env) {
+bool ChromiumCheckModel::transfer(const CFGElement *Element, Environment &Env) {
+  auto CS = Element->getAs<CFGStmt>();
+  if (!CS)
+    return false;
+  auto Stmt = CS->getStmt();
   if (const auto *Call = dyn_cast<CallExpr>(Stmt)) {
     if (const auto *M = dyn_cast<CXXMethodDecl>(Call->getDirectCallee())) {
       if (isCheckLikeMethod(CheckDecls, *M)) {

@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -71,6 +72,9 @@ public:
 
   /// Returns the options controlling the SPIR-V type converter.
   const SPIRVConversionOptions &getOptions() const { return options; }
+
+  /// Checks if the SPIR-V capability inquired is supported.
+  bool allows(spirv::Capability capability);
 
 private:
   spirv::TargetEnv targetEnv;
@@ -151,10 +155,19 @@ Value linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 
 // TODO: This method assumes that the `baseType` is a MemRefType with AffineMap
 // that has static strides. Extend to handle dynamic strides.
-spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
-                                   MemRefType baseType, Value basePtr,
-                                   ValueRange indices, Location loc,
-                                   OpBuilder &builder);
+Value getElementPtr(SPIRVTypeConverter &typeConverter, MemRefType baseType,
+                    Value basePtr, ValueRange indices, Location loc,
+                    OpBuilder &builder);
+
+// GetElementPtr implementation for Kernel/OpenCL flavored SPIR-V.
+Value getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
+                          MemRefType baseType, Value basePtr,
+                          ValueRange indices, Location loc, OpBuilder &builder);
+
+// GetElementPtr implementation for Vulkan/Shader flavored SPIR-V.
+Value getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
+                          MemRefType baseType, Value basePtr,
+                          ValueRange indices, Location loc, OpBuilder &builder);
 
 } // namespace spirv
 } // namespace mlir

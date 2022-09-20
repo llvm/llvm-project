@@ -198,10 +198,9 @@ define void @fp_iv_loop2(float* noalias nocapture %A, i32 %N) {
 ; AUTO_VEC-NEXT:    br i1 [[CMP4]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; AUTO_VEC:       for.body.preheader:
 ; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext i32 [[N]] to i64
-; AUTO_VEC-NEXT:    [[TMP0:%.*]] = add nsw i64 [[ZEXT]], -1
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[ZEXT]], 7
-; AUTO_VEC-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; AUTO_VEC-NEXT:    br i1 [[TMP1]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[N]], 8
+; AUTO_VEC-NEXT:    br i1 [[TMP0]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; AUTO_VEC:       for.body.preheader.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[ZEXT]], 4294967288
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]

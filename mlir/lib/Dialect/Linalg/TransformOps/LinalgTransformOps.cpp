@@ -11,6 +11,7 @@
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -1163,6 +1164,175 @@ void transform::TileOp::getEffects(
   producesHandle(getTiledLinalgOp(), effects);
   producesHandle(getLoops(), effects);
   modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// MapNestedForeachThreadToGpuThreads
+//===----------------------------------------------------------------------===//
+
+/// Searches `scf.foreach_thread` ops nested under `target` and maps each such
+/// op to GPU threads. Mapping is one-to-one and the induction variables of
+/// `scf.foreach_thread` are rewritten to gpu.thread_id according to the
+/// thread_dim_apping attribute. Sibling `scf.foreach_thread` are supported in
+/// which case, the union of the number of threads is computed and may result in
+/// predication. Dynamic, `scf.foreach_thread` trip counts are currently not
+/// supported. Dynamic block dim sizes are currently not supported.
+static FailureOr<SmallVector<OpFoldResult>> rewriteOneForeachThreadToGpuThreads(
+    RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
+    const SmallVector<int64_t> &globalBlockDims, bool syncAfterDistribute) {
+  if (foreachThreadOp.getNumResults() > 0)
+    return foreachThreadOp->emitError(
+        "only bufferized scf.foreach_thread lowers to gpu.thread");
+  if (foreachThreadOp.getNumThreads().size() > 3)
+    return foreachThreadOp->emitError(
+        "scf.foreach_thread with rank > 3 does not lower to gpu.thread");
+
+  auto potentialBlockDim = foreachThreadOp.getPermutedNumThreads(rewriter);
+  if (failed(potentialBlockDim) ||
+      llvm::any_of(*potentialBlockDim, [](OpFoldResult ofr) {
+        return !getConstantIntValue(ofr).has_value();
+      }))
+    return foreachThreadOp->emitError("unsupported dynamic blockdim size");
+
+  SmallVector<int64_t> blockDim =
+      llvm::to_vector(llvm::map_range(*potentialBlockDim, [](OpFoldResult ofr) {
+        return getConstantIntValue(ofr).value();
+      }));
+
+  // Step 1. Create the gpu.thread ops
+  Location loc = foreachThreadOp.getLoc();
+  IndexType indexType = rewriter.getIndexType();
+
+  SmallVector<gpu::Dimension> gpuDims{gpu::Dimension::x, gpu::Dimension::y,
+                                      gpu::Dimension::z};
+  SmallVector<Value> threadOps;
+  for (int64_t idx : llvm::seq<int64_t>(0, blockDim.size())) {
+    threadOps.push_back(
+        rewriter.create<gpu::ThreadIdOp>(loc, indexType, gpuDims[idx]));
+  }
+  // Step 2. Maybe create conditionals to predicate the region.
+  Value predicate;
+  for (auto [threadId, blockDim, globalBlockDim] :
+       llvm::zip(threadOps, blockDim, globalBlockDims)) {
+    if (blockDim > globalBlockDim) {
+      return foreachThreadOp.emitOpError("blockDim size overflow: ")
+             << blockDim << " > " << globalBlockDim;
+    }
+    if (blockDim == globalBlockDim)
+      continue;
+    Value tmpPredicate = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ult, threadId,
+        rewriter.create<arith::ConstantIndexOp>(loc, blockDim));
+    predicate =
+        predicate ? rewriter.create<arith::AndIOp>(loc, predicate, tmpPredicate)
+                  : tmpPredicate;
+  }
+
+  // Step 3. Move the body of foreachThreadOp.
+  // Erase the terminator first, it will not be used.
+  rewriter.eraseOp(foreachThreadOp.getTerminator());
+  Block *targetBlock;
+  Block::iterator insertionPoint;
+  if (predicate) {
+    // Step 3.a. If predicated, move at the beginning.
+    auto ifOp =
+        rewriter.create<scf::IfOp>(loc, predicate, /*withElseRegion=*/false);
+    targetBlock = ifOp.thenBlock();
+    insertionPoint = ifOp.thenBlock()->begin();
+  } else {
+    // Step 3.a. Otherwise, move inline just before foreachThreadOp.
+    targetBlock = foreachThreadOp->getBlock();
+    insertionPoint = Block::iterator(foreachThreadOp);
+  }
+  Block &sourceBlock = foreachThreadOp.getRegion().front();
+  targetBlock->getOperations().splice(insertionPoint,
+                                      sourceBlock.getOperations());
+
+  // Step 4. RAUW thread indices to thread ops.
+  SmallVector<Value> threadIndices =
+      *foreachThreadOp.getPermutedThreadIndices();
+  for (auto it : llvm::zip(threadIndices, threadOps)) {
+    Value val = std::get<0>(it);
+    if (!val)
+      continue;
+    for (Operation *user : llvm::make_early_inc_range(val.getUsers())) {
+      rewriter.updateRootInPlace(
+          user, [&]() { user->replaceUsesOfWith(val, std::get<1>(it)); });
+    }
+  }
+
+  // Step 5. syncthreads.
+  // TODO: Need warpsync
+  if (syncAfterDistribute)
+    rewriter.create<gpu::BarrierOp>(loc);
+
+  // Step 6. Erase old op.
+  rewriter.eraseOp(foreachThreadOp);
+
+  return *potentialBlockDim;
+}
+
+mlir::WalkResult mlir::linalg::rewriteMapNestedForeachThreadToGpuThreads(
+    RewriterBase &rewriter, Operation *target,
+    const SmallVector<int64_t> &blockDim, bool syncAfterDistribute) {
+  auto walkResult = target->walk([&](scf::ForeachThreadOp foreachThreadOp) {
+    rewriter.setInsertionPoint(foreachThreadOp);
+    if (failed(rewriteOneForeachThreadToGpuThreads(rewriter, foreachThreadOp,
+                                                   blockDim, true)))
+      return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  return walkResult;
+}
+
+// Alter blockDim of the given kernel
+static LogicalResult alterGpuLaunchBlockDim(SimpleRewriter &rewriter,
+                                            gpu::LaunchOp gpuLaunch,
+                                            SmallVector<int64_t> blockDim) {
+  gpu::KernelDim3 currentBlockdim = gpuLaunch.getBlockSizeOperandValues();
+  if (blockDim[0] < 1 || blockDim[1] < 1 || blockDim[2] < 1) {
+    gpuLaunch->emitError() << "Given blockDim(" << blockDim[0] << ","
+                           << blockDim[1] << "," << blockDim[2]
+                           << ") is invalid";
+    return failure();
+  }
+  rewriter.setInsertionPointAfterValue(currentBlockdim.x);
+  auto createBlockDimValue = [&](int64_t dim) {
+    return rewriter.create<arith::ConstantIndexOp>(currentBlockdim.x.getLoc(),
+                                                   dim);
+  };
+  gpuLaunch.blockSizeXMutable().assign(createBlockDimValue(blockDim[0]));
+  gpuLaunch.blockSizeYMutable().assign(createBlockDimValue(blockDim[1]));
+  gpuLaunch.blockSizeZMutable().assign(createBlockDimValue(blockDim[2]));
+  return success();
+}
+
+DiagnosedSilenceableFailure
+transform::MapNestedForeachThreadToGpuThreads::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+
+  gpu::LaunchOp gpuLaunch = dyn_cast<gpu::LaunchOp>(target);
+  if (!gpuLaunch) {
+    target->emitError("Given target is not gpu.launch");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  SmallVector<int64_t> blockDim = extractFromI64ArrayAttr(getBlockDim());
+  blockDim.resize(/*size=*/3, /*value=*/1);
+  SimpleRewriter rewriter(getContext());
+  rewriter.setInsertionPoint(target);
+  auto walkResult = mlir::linalg::rewriteMapNestedForeachThreadToGpuThreads(
+      rewriter, target, blockDim, true);
+  if (walkResult.wasInterrupted())
+    return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+
+  LogicalResult result = alterGpuLaunchBlockDim(rewriter, gpuLaunch, blockDim);
+  if (failed(result))
+    return DiagnosedSilenceableFailure::definiteFailure();
+
+  results.assign({target});
+  return DiagnosedSilenceableFailure(success());
 }
 
 //===----------------------------------------------------------------------===//

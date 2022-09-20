@@ -315,9 +315,9 @@ static InlineResult inlineCallIfPossible(
 
   // Try to inline the function.  Get the list of static allocas that were
   // inlined.
-  InlineResult IR = InlineFunction(CB, IFI, &AAR, InsertLifetime,
-                                   /*ForwardVarArgsTo=*/nullptr,
-                                   /*MergeAttributes=*/true);
+  InlineResult IR =
+      InlineFunction(CB, IFI,
+                     /*MergeAttributes=*/true, &AAR, InsertLifetime);
   if (!IR.isSuccess())
     return IR;
 
@@ -915,10 +915,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 
       InlineResult IR =
-          InlineFunction(*CB, IFI, &FAM.getResult<AAManager>(*CB->getCaller()),
-                         /*InsertLifetime=*/true,
-                         /*ForwardVarArgsTo=*/nullptr,
-                         /*MergeAttributes=*/true);
+          InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
+                         &FAM.getResult<AAManager>(*CB->getCaller()));
       if (!IR.isSuccess()) {
         Advice->recordUnsuccessfulInlining(IR);
         continue;

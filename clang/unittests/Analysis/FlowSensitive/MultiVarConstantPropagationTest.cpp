@@ -19,6 +19,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
@@ -132,8 +133,12 @@ public:
     return ConstantPropagationLattice::bottom();
   }
 
-  void transfer(const Stmt *S, ConstantPropagationLattice &Vars,
+  void transfer(const CFGElement *E, ConstantPropagationLattice &Vars,
                 Environment &Env) {
+    auto CS = E->getAs<CFGStmt>();
+    if (!CS)
+      return;
+    auto S = CS->getStmt();
     auto matcher =
         stmt(anyOf(declStmt(hasSingleDecl(
                        varDecl(decl().bind(kVar), hasType(isInteger()),

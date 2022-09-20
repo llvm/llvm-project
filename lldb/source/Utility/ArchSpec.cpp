@@ -1469,15 +1469,3 @@ void ArchSpec::DumpTriple(llvm::raw_ostream &s) const {
   if (!environ_str.empty())
     s << "-" << environ_str;
 }
-
-void llvm::yaml::ScalarTraits<ArchSpec>::output(const ArchSpec &Val, void *,
-                                                raw_ostream &Out) {
-  Val.DumpTriple(Out);
-}
-
-llvm::StringRef
-llvm::yaml::ScalarTraits<ArchSpec>::input(llvm::StringRef Scalar, void *,
-                                          ArchSpec &Val) {
-  Val = ArchSpec(Scalar);
-  return {};
-}

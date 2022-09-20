@@ -25,7 +25,7 @@ class VOPDe<bits<4> opX, bits<5> opY> : Enc64 {
   let Inst{31-26} = 0x32; // encoding
   let Inst{40-32} = src0Y;
   let Inst{48-41} = vsrc1Y;
-  let Inst{55-49} = vdstY{7 - 1};
+  let Inst{55-49} = vdstY{7-1};
   let Inst{63-56} = vdstX;
 }
 
@@ -45,7 +45,7 @@ class VOPD_MADKe<bits<4> opX, bits<5> opY> : Enc96 {
   let Inst{31-26} = 0x32; // encoding
   let Inst{40-32} = src0Y;
   let Inst{48-41} = vsrc1Y;
-  let Inst{55-49} = vdstY{7 - 1};
+  let Inst{55-49} = vdstY{7-1};
   let Inst{63-56} = vdstX;
   let Inst{95-64} = imm;
 }

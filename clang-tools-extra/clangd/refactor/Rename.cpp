@@ -181,8 +181,15 @@ enum class ReasonToReject {
 
 llvm::Optional<ReasonToReject> renameable(const NamedDecl &RenameDecl,
                                           StringRef MainFilePath,
-                                          const SymbolIndex *Index) {
+                                          const SymbolIndex *Index,
+                                          const RenameOptions& Opts) {
   trace::Span Tracer("Renameable");
+  if (!Opts.RenameVirtual) {
+    if (const auto *S = llvm::dyn_cast<CXXMethodDecl>(&RenameDecl)) {
+      if (S->isVirtual())
+        return ReasonToReject::UnsupportedSymbol;
+    }
+  }
   // Filter out symbols that are unsupported in both rename modes.
   if (llvm::isa<NamespaceDecl>(&RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
@@ -746,7 +753,8 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   if (Invalid)
     return makeError(std::move(*Invalid));
 
-  auto Reject = renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index);
+  auto Reject =
+      renameable(RenameDecl, RInputs.MainFilePath, RInputs.Index, Opts);
   if (Reject)
     return makeError(*Reject);
 

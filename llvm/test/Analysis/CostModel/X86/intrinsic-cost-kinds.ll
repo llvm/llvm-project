@@ -238,17 +238,17 @@ define void @cttz(i32 %a, <16 x i32> %va) {
 ;
 ; LATE-LABEL: 'cttz'
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.cttz.i32(i32 %a, i1 false)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v = call <16 x i32> @llvm.cttz.v16i32(<16 x i32> %va, i1 false)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 124 for instruction: %v = call <16 x i32> @llvm.cttz.v16i32(<16 x i32> %va, i1 false)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'cttz'
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.cttz.i32(i32 %a, i1 false)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v = call <16 x i32> @llvm.cttz.v16i32(<16 x i32> %va, i1 false)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v = call <16 x i32> @llvm.cttz.v16i32(<16 x i32> %va, i1 false)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'cttz'
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.cttz.i32(i32 %a, i1 false)
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v = call <16 x i32> @llvm.cttz.v16i32(<16 x i32> %va, i1 false)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %v = call <16 x i32> @llvm.cttz.v16i32(<16 x i32> %va, i1 false)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s = call i32 @llvm.cttz.i32(i32 %a, i1 false)
@@ -263,18 +263,18 @@ define void @ctlz(i32 %a, <16 x i32> %va) {
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'ctlz'
-; LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %va, i1 true)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: %v = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %va, i1 true)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'ctlz'
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %va, i1 true)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 152 for instruction: %v = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %va, i1 true)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'ctlz'
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %v = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %va, i1 true)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v = call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %va, i1 true)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s = call i32 @llvm.ctlz.i32(i32 %a, i1 true)

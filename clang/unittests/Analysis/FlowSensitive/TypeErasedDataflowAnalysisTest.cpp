@@ -111,7 +111,7 @@ public:
 
   static NonConvergingLattice initialElement() { return {0}; }
 
-  void transfer(const Stmt *S, NonConvergingLattice &E, Environment &Env) {
+  void transfer(const CFGElement *, NonConvergingLattice &E, Environment &) {
     ++E.State;
   }
 };
@@ -162,7 +162,11 @@ public:
 
   static FunctionCallLattice initialElement() { return {}; }
 
-  void transfer(const Stmt *S, FunctionCallLattice &E, Environment &Env) {
+  void transfer(const CFGElement *Elt, FunctionCallLattice &E, Environment &) {
+    auto CS = Elt->getAs<CFGStmt>();
+    if (!CS)
+      return;
+    auto S = CS->getStmt();
     if (auto *C = dyn_cast<CallExpr>(S)) {
       if (auto *F = dyn_cast<FunctionDecl>(C->getCalleeDecl())) {
         E.CalledFunctions.insert(F->getNameInfo().getAsString());
@@ -314,7 +318,11 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const Stmt *S, NoopLattice &, Environment &Env) {
+  void transfer(const CFGElement *Elt, NoopLattice &, Environment &Env) {
+    auto CS = Elt->getAs<CFGStmt>();
+    if (!CS)
+      return;
+    auto S = CS->getStmt();
     auto SpecialBoolRecordDecl = recordDecl(hasName("SpecialBool"));
     auto HasSpecialBoolType = hasType(SpecialBoolRecordDecl);
 
@@ -466,7 +474,11 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const Stmt *S, NoopLattice &, Environment &Env) {
+  void transfer(const CFGElement *Elt, NoopLattice &, Environment &Env) {
+    auto CS = Elt->getAs<CFGStmt>();
+    if (!CS)
+      return;
+    auto S = CS->getStmt();
     auto OptionalIntRecordDecl = recordDecl(hasName("OptionalInt"));
     auto HasOptionalIntType = hasType(OptionalIntRecordDecl);
 
