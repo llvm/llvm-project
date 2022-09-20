@@ -115,8 +115,7 @@ define void @atomic8_add_monotonic(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] monotonic monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] monotonic monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -135,8 +134,7 @@ define void @atomic8_sub_monotonic(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] monotonic monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] monotonic monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -155,8 +153,7 @@ define void @atomic8_and_monotonic(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] monotonic monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 0 monotonic monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -175,8 +172,7 @@ define void @atomic8_or_monotonic(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] monotonic monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] monotonic monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -195,8 +191,7 @@ define void @atomic8_xor_monotonic(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] monotonic monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] monotonic monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -215,11 +210,9 @@ define void @atomic8_nand_monotonic(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] monotonic monotonic, align 1, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 -1 monotonic monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -255,8 +248,7 @@ define void @atomic8_add_acquire(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acquire acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] acquire acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -275,8 +267,7 @@ define void @atomic8_sub_acquire(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acquire acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] acquire acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -295,8 +286,7 @@ define void @atomic8_and_acquire(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acquire acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 0 acquire acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -315,8 +305,7 @@ define void @atomic8_or_acquire(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acquire acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] acquire acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -335,8 +324,7 @@ define void @atomic8_xor_acquire(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acquire acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] acquire acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -355,11 +343,9 @@ define void @atomic8_nand_acquire(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acquire acquire, align 1, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 -1 acquire acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -395,8 +381,7 @@ define void @atomic8_add_release(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] release monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] release monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -415,8 +400,7 @@ define void @atomic8_sub_release(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] release monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] release monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -435,8 +419,7 @@ define void @atomic8_and_release(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] release monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 0 release monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -455,8 +438,7 @@ define void @atomic8_or_release(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] release monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] release monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -475,8 +457,7 @@ define void @atomic8_xor_release(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] release monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] release monotonic, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -495,11 +476,9 @@ define void @atomic8_nand_release(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] release monotonic, align 1, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 -1 release monotonic, align 1, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -535,8 +514,7 @@ define void @atomic8_add_acq_rel(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acq_rel acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] acq_rel acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -555,8 +533,7 @@ define void @atomic8_sub_acq_rel(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acq_rel acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] acq_rel acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -575,8 +552,7 @@ define void @atomic8_and_acq_rel(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acq_rel acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 0 acq_rel acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -595,8 +571,7 @@ define void @atomic8_or_acq_rel(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acq_rel acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] acq_rel acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -615,8 +590,7 @@ define void @atomic8_xor_acq_rel(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acq_rel acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] acq_rel acquire, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -635,11 +609,9 @@ define void @atomic8_nand_acq_rel(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] acq_rel acquire, align 1, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 -1 acq_rel acquire, align 1, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -675,8 +647,7 @@ define void @atomic8_add_seq_cst(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] seq_cst seq_cst, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] seq_cst seq_cst, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -695,8 +666,7 @@ define void @atomic8_sub_seq_cst(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] seq_cst seq_cst, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] seq_cst seq_cst, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -715,8 +685,7 @@ define void @atomic8_and_seq_cst(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] seq_cst seq_cst, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 0 seq_cst seq_cst, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -735,8 +704,7 @@ define void @atomic8_or_seq_cst(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] seq_cst seq_cst, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] seq_cst seq_cst, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -755,8 +723,7 @@ define void @atomic8_xor_seq_cst(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] seq_cst seq_cst, align 1, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[LOADED]] seq_cst seq_cst, align 1, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -775,11 +742,9 @@ define void @atomic8_nand_seq_cst(i8* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i8 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 [[NEW]] seq_cst seq_cst, align 1, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i8* [[A]], i8 [[LOADED]], i8 -1 seq_cst seq_cst, align 1, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i8, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -978,8 +943,7 @@ define void @atomic16_add_monotonic(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] monotonic monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] monotonic monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -998,8 +962,7 @@ define void @atomic16_sub_monotonic(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] monotonic monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] monotonic monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1018,8 +981,7 @@ define void @atomic16_and_monotonic(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] monotonic monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 0 monotonic monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1038,8 +1000,7 @@ define void @atomic16_or_monotonic(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] monotonic monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] monotonic monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1058,8 +1019,7 @@ define void @atomic16_xor_monotonic(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] monotonic monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] monotonic monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1078,11 +1038,9 @@ define void @atomic16_nand_monotonic(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] monotonic monotonic, align 2, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 -1 monotonic monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -1118,8 +1076,7 @@ define void @atomic16_add_acquire(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acquire acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] acquire acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1138,8 +1095,7 @@ define void @atomic16_sub_acquire(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acquire acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] acquire acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1158,8 +1114,7 @@ define void @atomic16_and_acquire(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acquire acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 0 acquire acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1178,8 +1133,7 @@ define void @atomic16_or_acquire(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acquire acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] acquire acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1198,8 +1152,7 @@ define void @atomic16_xor_acquire(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acquire acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] acquire acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1218,11 +1171,9 @@ define void @atomic16_nand_acquire(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acquire acquire, align 2, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 -1 acquire acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -1258,8 +1209,7 @@ define void @atomic16_add_release(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] release monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] release monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1278,8 +1228,7 @@ define void @atomic16_sub_release(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] release monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] release monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1298,8 +1247,7 @@ define void @atomic16_and_release(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] release monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 0 release monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1318,8 +1266,7 @@ define void @atomic16_or_release(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] release monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] release monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1338,8 +1285,7 @@ define void @atomic16_xor_release(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] release monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] release monotonic, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1358,11 +1304,9 @@ define void @atomic16_nand_release(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] release monotonic, align 2, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 -1 release monotonic, align 2, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -1398,8 +1342,7 @@ define void @atomic16_add_acq_rel(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acq_rel acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] acq_rel acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1418,8 +1361,7 @@ define void @atomic16_sub_acq_rel(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acq_rel acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] acq_rel acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1438,8 +1380,7 @@ define void @atomic16_and_acq_rel(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acq_rel acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 0 acq_rel acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1458,8 +1399,7 @@ define void @atomic16_or_acq_rel(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acq_rel acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] acq_rel acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1478,8 +1418,7 @@ define void @atomic16_xor_acq_rel(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acq_rel acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] acq_rel acquire, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1498,11 +1437,9 @@ define void @atomic16_nand_acq_rel(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] acq_rel acquire, align 2, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 -1 acq_rel acquire, align 2, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -1538,8 +1475,7 @@ define void @atomic16_add_seq_cst(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] seq_cst seq_cst, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] seq_cst seq_cst, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1558,8 +1494,7 @@ define void @atomic16_sub_seq_cst(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] seq_cst seq_cst, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] seq_cst seq_cst, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1578,8 +1513,7 @@ define void @atomic16_and_seq_cst(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] seq_cst seq_cst, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 0 seq_cst seq_cst, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1598,8 +1532,7 @@ define void @atomic16_or_seq_cst(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] seq_cst seq_cst, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] seq_cst seq_cst, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1618,8 +1551,7 @@ define void @atomic16_xor_seq_cst(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] seq_cst seq_cst, align 2, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[LOADED]] seq_cst seq_cst, align 2, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1638,11 +1570,9 @@ define void @atomic16_nand_seq_cst(i16* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i16 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 [[NEW]] seq_cst seq_cst, align 2, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i16* [[A]], i16 [[LOADED]], i16 -1 seq_cst seq_cst, align 2, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i16, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -1841,8 +1771,7 @@ define void @atomic32_add_monotonic(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] monotonic monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1861,8 +1790,7 @@ define void @atomic32_sub_monotonic(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] monotonic monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1881,8 +1809,7 @@ define void @atomic32_and_monotonic(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 0 monotonic monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1901,8 +1828,7 @@ define void @atomic32_or_monotonic(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] monotonic monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1921,8 +1847,7 @@ define void @atomic32_xor_monotonic(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] monotonic monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -1941,11 +1866,9 @@ define void @atomic32_nand_monotonic(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] monotonic monotonic, align 4, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 -1 monotonic monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -1981,8 +1904,7 @@ define void @atomic32_add_acquire(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acquire acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] acquire acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2001,8 +1923,7 @@ define void @atomic32_sub_acquire(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acquire acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] acquire acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2021,8 +1942,7 @@ define void @atomic32_and_acquire(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acquire acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 0 acquire acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2041,8 +1961,7 @@ define void @atomic32_or_acquire(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acquire acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] acquire acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2061,8 +1980,7 @@ define void @atomic32_xor_acquire(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acquire acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] acquire acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2081,11 +1999,9 @@ define void @atomic32_nand_acquire(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acquire acquire, align 4, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 -1 acquire acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -2121,8 +2037,7 @@ define void @atomic32_add_release(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] release monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] release monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2141,8 +2056,7 @@ define void @atomic32_sub_release(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] release monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] release monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2161,8 +2075,7 @@ define void @atomic32_and_release(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] release monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 0 release monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2181,8 +2094,7 @@ define void @atomic32_or_release(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] release monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] release monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2201,8 +2113,7 @@ define void @atomic32_xor_release(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] release monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] release monotonic, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2221,11 +2132,9 @@ define void @atomic32_nand_release(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] release monotonic, align 4, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 -1 release monotonic, align 4, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -2261,8 +2170,7 @@ define void @atomic32_add_acq_rel(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acq_rel acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] acq_rel acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2281,8 +2189,7 @@ define void @atomic32_sub_acq_rel(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acq_rel acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] acq_rel acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2301,8 +2208,7 @@ define void @atomic32_and_acq_rel(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acq_rel acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 0 acq_rel acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2321,8 +2227,7 @@ define void @atomic32_or_acq_rel(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acq_rel acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] acq_rel acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2341,8 +2246,7 @@ define void @atomic32_xor_acq_rel(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acq_rel acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] acq_rel acquire, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2361,11 +2265,9 @@ define void @atomic32_nand_acq_rel(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] acq_rel acquire, align 4, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 -1 acq_rel acquire, align 4, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -2401,8 +2303,7 @@ define void @atomic32_add_seq_cst(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] seq_cst seq_cst, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2421,8 +2322,7 @@ define void @atomic32_sub_seq_cst(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] seq_cst seq_cst, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2441,8 +2341,7 @@ define void @atomic32_and_seq_cst(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 0 seq_cst seq_cst, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2461,8 +2360,7 @@ define void @atomic32_or_seq_cst(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] seq_cst seq_cst, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2481,8 +2379,7 @@ define void @atomic32_xor_seq_cst(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[LOADED]] seq_cst seq_cst, align 4, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2501,11 +2398,9 @@ define void @atomic32_nand_seq_cst(i32* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i32* [[A]], i32 [[LOADED]], i32 -1 seq_cst seq_cst, align 4, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -2726,8 +2621,7 @@ define void @atomic64_add_monotonic(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] monotonic monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] monotonic monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2746,8 +2640,7 @@ define void @atomic64_sub_monotonic(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] monotonic monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] monotonic monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2766,8 +2659,7 @@ define void @atomic64_and_monotonic(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] monotonic monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 0 monotonic monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2786,8 +2678,7 @@ define void @atomic64_or_monotonic(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] monotonic monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] monotonic monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2806,8 +2697,7 @@ define void @atomic64_xor_monotonic(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] monotonic monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] monotonic monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2826,11 +2716,9 @@ define void @atomic64_nand_monotonic(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] monotonic monotonic, align 8, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 -1 monotonic monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -2866,8 +2754,7 @@ define void @atomic64_add_acquire(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acquire acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] acquire acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2886,8 +2773,7 @@ define void @atomic64_sub_acquire(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acquire acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] acquire acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2906,8 +2792,7 @@ define void @atomic64_and_acquire(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acquire acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 0 acquire acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2926,8 +2811,7 @@ define void @atomic64_or_acquire(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acquire acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] acquire acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2946,8 +2830,7 @@ define void @atomic64_xor_acquire(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acquire acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] acquire acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -2966,11 +2849,9 @@ define void @atomic64_nand_acquire(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acquire acquire, align 8, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 -1 acquire acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -3006,8 +2887,7 @@ define void @atomic64_add_release(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] release monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] release monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3026,8 +2906,7 @@ define void @atomic64_sub_release(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] release monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] release monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3046,8 +2925,7 @@ define void @atomic64_and_release(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] release monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 0 release monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3066,8 +2944,7 @@ define void @atomic64_or_release(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] release monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] release monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3086,8 +2963,7 @@ define void @atomic64_xor_release(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] release monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] release monotonic, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3106,11 +2982,9 @@ define void @atomic64_nand_release(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] release monotonic, align 8, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 -1 release monotonic, align 8, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -3146,8 +3020,7 @@ define void @atomic64_add_acq_rel(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acq_rel acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] acq_rel acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3166,8 +3039,7 @@ define void @atomic64_sub_acq_rel(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acq_rel acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] acq_rel acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3186,8 +3058,7 @@ define void @atomic64_and_acq_rel(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acq_rel acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 0 acq_rel acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3206,8 +3077,7 @@ define void @atomic64_or_acq_rel(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acq_rel acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] acq_rel acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3226,8 +3096,7 @@ define void @atomic64_xor_acq_rel(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acq_rel acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] acq_rel acquire, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3246,11 +3115,9 @@ define void @atomic64_nand_acq_rel(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] acq_rel acquire, align 8, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 -1 acq_rel acquire, align 8, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -3286,8 +3153,7 @@ define void @atomic64_add_seq_cst(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] seq_cst seq_cst, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3306,8 +3172,7 @@ define void @atomic64_sub_seq_cst(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] seq_cst seq_cst, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3326,8 +3191,7 @@ define void @atomic64_and_seq_cst(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 0 seq_cst seq_cst, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3346,8 +3210,7 @@ define void @atomic64_or_seq_cst(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] seq_cst seq_cst, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3366,8 +3229,7 @@ define void @atomic64_xor_seq_cst(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[LOADED]] seq_cst seq_cst, align 8, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3386,11 +3248,9 @@ define void @atomic64_nand_seq_cst(i64* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i64 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i64 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 [[NEW]] seq_cst seq_cst, align 8, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i64* [[A]], i64 [[LOADED]], i64 -1 seq_cst seq_cst, align 8, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i64, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -3644,8 +3504,7 @@ define void @atomic128_add_monotonic(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] monotonic monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] monotonic monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3664,8 +3523,7 @@ define void @atomic128_sub_monotonic(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] monotonic monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] monotonic monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3684,8 +3542,7 @@ define void @atomic128_and_monotonic(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] monotonic monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 0 monotonic monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3704,8 +3561,7 @@ define void @atomic128_or_monotonic(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] monotonic monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] monotonic monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3724,8 +3580,7 @@ define void @atomic128_xor_monotonic(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] monotonic monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] monotonic monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3744,11 +3599,9 @@ define void @atomic128_nand_monotonic(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] monotonic monotonic, align 16, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 -1 monotonic monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -3784,8 +3637,7 @@ define void @atomic128_add_acquire(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acquire acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] acquire acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3804,8 +3656,7 @@ define void @atomic128_sub_acquire(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acquire acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] acquire acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3824,8 +3675,7 @@ define void @atomic128_and_acquire(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acquire acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 0 acquire acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3844,8 +3694,7 @@ define void @atomic128_or_acquire(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acquire acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] acquire acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3864,8 +3713,7 @@ define void @atomic128_xor_acquire(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acquire acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] acquire acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3884,11 +3732,9 @@ define void @atomic128_nand_acquire(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acquire acquire, align 16, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 -1 acquire acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -3924,8 +3770,7 @@ define void @atomic128_add_release(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] release monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] release monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3944,8 +3789,7 @@ define void @atomic128_sub_release(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] release monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] release monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3964,8 +3808,7 @@ define void @atomic128_and_release(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] release monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 0 release monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -3984,8 +3827,7 @@ define void @atomic128_or_release(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] release monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] release monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4004,8 +3846,7 @@ define void @atomic128_xor_release(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] release monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] release monotonic, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4024,11 +3865,9 @@ define void @atomic128_nand_release(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] release monotonic, align 16, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 -1 release monotonic, align 16, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -4064,8 +3903,7 @@ define void @atomic128_add_acq_rel(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acq_rel acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] acq_rel acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4084,8 +3922,7 @@ define void @atomic128_sub_acq_rel(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acq_rel acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] acq_rel acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4104,8 +3941,7 @@ define void @atomic128_and_acq_rel(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acq_rel acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 0 acq_rel acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4124,8 +3960,7 @@ define void @atomic128_or_acq_rel(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acq_rel acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] acq_rel acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4144,8 +3979,7 @@ define void @atomic128_xor_acq_rel(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acq_rel acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] acq_rel acquire, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4164,11 +3998,9 @@ define void @atomic128_nand_acq_rel(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] acq_rel acquire, align 16, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 -1 acq_rel acquire, align 16, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
@@ -4204,8 +4036,7 @@ define void @atomic128_add_seq_cst(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = add i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] seq_cst seq_cst, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] seq_cst seq_cst, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4224,8 +4055,7 @@ define void @atomic128_sub_seq_cst(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = sub i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] seq_cst seq_cst, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] seq_cst seq_cst, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4244,8 +4074,7 @@ define void @atomic128_and_seq_cst(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] seq_cst seq_cst, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 0 seq_cst seq_cst, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4264,8 +4093,7 @@ define void @atomic128_or_seq_cst(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = or i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] seq_cst seq_cst, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] seq_cst seq_cst, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4284,8 +4112,7 @@ define void @atomic128_xor_seq_cst(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] seq_cst seq_cst, align 16, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[LOADED]] seq_cst seq_cst, align 16, !pcsections !0
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
@@ -4304,11 +4131,9 @@ define void @atomic128_nand_seq_cst(i128* %a) nounwind uwtable {
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]], !pcsections !0
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ], !pcsections !0
-; CHECK-NEXT:    [[TMP1:%.*]] = and i128 [[LOADED]], 0, !pcsections !0
-; CHECK-NEXT:    [[NEW:%.*]] = xor i128 [[TMP1]], -1, !pcsections !0
-; CHECK-NEXT:    [[TMP2:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 [[NEW]] seq_cst seq_cst, align 16, !pcsections !0
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1, !pcsections !0
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP2]], 0, !pcsections !0
+; CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg i128* [[A]], i128 [[LOADED]], i128 -1 seq_cst seq_cst, align 16, !pcsections !0
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP1]], 1, !pcsections !0
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP1]], 0, !pcsections !0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]], !pcsections !0
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    ret void
