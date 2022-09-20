@@ -1171,6 +1171,138 @@ bool GotPltSection::isNeeded() const {
   return !entries.empty() || hasGotPltOffRel;
 }
 
+TableJumpSection::TableJumpSection()
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_RISCV_ATTRIBUTES,
+                       config->wordsize, ".tbljalentries") {}
+
+void TableJumpSection::addEntryZero(const Symbol &symbol) {
+  addEntry(symbol, entriesZero);
+}
+
+int TableJumpSection::getEntryZero(const Symbol &symbol) {
+  uint32_t index = getEntry(symbol, finalizedEntriesZero);
+  return index < maxSizeZero ? (int)(startZero + index) : -1;
+}
+
+void TableJumpSection::addEntryRa(const Symbol &symbol) {
+  addEntry(symbol, entriesRa);
+}
+
+int TableJumpSection::getEntryRa(const Symbol &symbol) {
+  uint32_t index = getEntry(symbol, finalizedEntriesRa);
+  return index < maxSizeRa ? (int)(startRa + index) : -1;
+}
+
+void TableJumpSection::addEntry(const Symbol &symbol,
+                                std::map<std::string, int> &entriesList) {
+  if (entriesList.count(symbol.getName().str()) == 0) {
+    entriesList[symbol.getName().str()] = 1;
+  } else {
+    entriesList[symbol.getName().str()] += 1;
+  }
+}
+
+uint32_t TableJumpSection::getEntry(
+    const Symbol &symbol,
+    std::vector<std::pair<std::string, int>> &entriesList) {
+  // Prevent adding duplicate entries
+  uint32_t i = 0;
+  for (; i < entriesList.size(); ++i) {
+    // If this is a duplicate addition, do not add it and return the address
+    // offset of the original entry.
+    if (symbol.getName().compare(entriesList[i].first) == 0) {
+      return i;
+    }
+  }
+  return i;
+}
+
+void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
+  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+    switch (r.type) {
+    // auipc + jalr pair
+    case R_RISCV_CALL:
+    case R_RISCV_CALL_PLT: {
+      const auto jalr = sec.data()[r.offset + 4];
+      const uint8_t rd = (jalr & ((1ULL << (11 + 1)) - 1)) >> 7;
+      if (rd == 0)
+        in.riscvTableJumpSection->addEntryZero(*r.sym);
+      else if (rd == 1)
+        in.riscvTableJumpSection->addEntryRa(*r.sym);
+      else
+        return; // Unknown link register, do not modify.
+    }
+    }
+  }
+}
+
+void TableJumpSection::finalizeContents() {
+  auto cmp = [](const std::pair<std::string, int> &p1,
+                const std::pair<std::string, int> &p2) {
+    return p1.second > p2.second;
+  };
+
+  std::copy(entriesZero.begin(), entriesZero.end(),
+            std::back_inserter(finalizedEntriesZero));
+  std::sort(finalizedEntriesZero.begin(), finalizedEntriesZero.end(), cmp);
+  std::copy(entriesRa.begin(), entriesRa.end(),
+            std::back_inserter(finalizedEntriesRa));
+  std::sort(finalizedEntriesRa.begin(), finalizedEntriesRa.end(), cmp);
+}
+
+size_t TableJumpSection::getSize() const {
+  if (size == 0)
+    return 256 * xlen; // TODO: This is the maximum size shrink this. This is
+                       // being caused by getSize being called to allocate space
+                       // for the section before the tbljal optimisation is
+                       // performed to add entries to the table.
+  if (!entriesRa.empty()) {
+    return (startRa + entriesRa.size()) * xlen;
+  }
+  return (startZero + entriesZero.size()) * xlen;
+}
+
+void TableJumpSection::writeTo(uint8_t *buf) {
+  target->writeTableJumpHeader(buf);
+  writeEntries(buf + startZero, finalizedEntriesZero);
+  padUntil(buf + ((startZero + finalizedEntriesZero.size()) * xlen),
+           startRa * xlen);
+  writeEntries(buf + startRa, finalizedEntriesRa);
+}
+
+void TableJumpSection::padUntil(uint8_t *buf, const uint8_t address) {
+  for (size_t i = 0; i < address; ++i) {
+    if (config->is64)
+      write64le(buf, 0);
+    else
+      write32le(buf, 0);
+  }
+}
+
+void TableJumpSection::writeEntries(
+    uint8_t *buf, std::vector<std::pair<std::string, int>> &entriesList) {
+  for (const auto &symbolName : entriesList) {
+    // Use the symbol from in.symTab to ensure we have the final adjusted
+    // symbol.
+    for (const auto &symbol : in.symTab->getSymbols()) {
+      if (symbol.sym->getName() != symbolName.first)
+        continue;
+      // Only process defined symbols.
+      auto *definedSymbol = dyn_cast<Defined>(symbol.sym);
+      if (!definedSymbol)
+        continue;
+      target->writeTableJump(buf, definedSymbol->getVA());
+      buf += config->wordsize;
+    }
+  }
+}
+
+bool TableJumpSection::isNeeded() const {
+  // TODO: Make this function correctly. Currently discards section with
+  // entries.
+  return getSize() != 0;
+}
+
 static StringRef getIgotPltName() {
   // On ARM the IgotPltSection is part of the GotSection.
   if (config->emachine == EM_ARM)
