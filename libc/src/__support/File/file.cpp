@@ -131,7 +131,7 @@ size_t File::write_unlocked_fbf(const uint8_t *data, size_t len) {
 size_t File::write_unlocked_lbf(const uint8_t *data, size_t len) {
   constexpr uint8_t NEWLINE_CHAR = '\n';
   size_t last_newline = len;
-  for (size_t i = len; i > 1; --i) {
+  for (size_t i = len; i >= 1; --i) {
     if (data[i - 1] == NEWLINE_CHAR) {
       last_newline = i - 1;
       break;
