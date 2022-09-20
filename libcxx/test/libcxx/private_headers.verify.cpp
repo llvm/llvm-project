@@ -326,6 +326,7 @@ END-SCRIPT
 #include <__format/format_args.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_args.h'}}
 #include <__format/format_context.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_context.h'}}
 #include <__format/format_error.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_error.h'}}
+#include <__format/format_functions.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_functions.h'}}
 #include <__format/format_fwd.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_fwd.h'}}
 #include <__format/format_parse_context.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_parse_context.h'}}
 #include <__format/format_string.h> // expected-error@*:* {{use of private header from outside its module: '__format/format_string.h'}}

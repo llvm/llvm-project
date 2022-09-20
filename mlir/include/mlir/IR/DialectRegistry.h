@@ -26,6 +26,8 @@ class Dialect;
 
 using DialectAllocatorFunction = std::function<Dialect *(MLIRContext *)>;
 using DialectAllocatorFunctionRef = function_ref<Dialect *(MLIRContext *)>;
+using DynamicDialectPopulationFunction =
+    std::function<void(MLIRContext *, DynamicDialect *)>;
 
 //===----------------------------------------------------------------------===//
 // DialectExtension
@@ -135,8 +137,15 @@ public:
   void insert(TypeID typeID, StringRef name,
               const DialectAllocatorFunction &ctor);
 
-  /// Return an allocation function for constructing the dialect identified by
-  /// its namespace, or nullptr if the namespace is not in this registry.
+  /// Add a new dynamic dialect constructor in the registry. The constructor
+  /// provides as argument the created dynamic dialect, and is expected to
+  /// register the dialect types, attributes, and ops, using the
+  /// methods defined in ExtensibleDialect such as registerDynamicOperation.
+  void insertDynamic(StringRef name,
+                     const DynamicDialectPopulationFunction &ctor);
+
+  /// Return an allocation function for constructing the dialect identified
+  /// by its namespace, or nullptr if the namespace is not in this registry.
   DialectAllocatorFunctionRef getDialectAllocator(StringRef name) const;
 
   // Register all dialects available in the current registry with the registry

@@ -11,6 +11,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -40,6 +41,7 @@ public:
   }
 
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
+  bool shouldShrinkTrue16(MachineInstr &MI) const;
   bool isKImmOperand(const MachineOperand &Src) const;
   bool isKUImmOperand(const MachineOperand &Src) const;
   bool isKImmOrKUImmOperand(const MachineOperand &Src, bool &IsUnsigned) const;
@@ -138,6 +140,23 @@ bool SIShrinkInstructions::foldImmediates(MachineInstr &MI,
   }
 
   return false;
+}
+
+/// Do not shrink the instruction if its registers are not expressible in the
+/// shrunk encoding.
+bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
+  for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isReg()) {
+      Register Reg = MO.getReg();
+      assert(!Reg.isVirtual() && "Prior checks should ensure we only shrink "
+                                 "True16 Instructions post-RA");
+      if (AMDGPU::VGPR_32RegClass.contains(Reg) &&
+          !AMDGPU::VGPR_32_Lo128RegClass.contains(Reg))
+        return false;
+    }
+  }
+  return true;
 }
 
 bool SIShrinkInstructions::isKImmOperand(const MachineOperand &Src) const {
@@ -391,7 +410,8 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = AMDGPU::V_FMAAK_F16;
+      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_t16
+                                          : AMDGPU::V_FMAAK_F16;
       break;
     }
   }
@@ -419,12 +439,16 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = AMDGPU::V_FMAMK_F16;
+      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
+                                          : AMDGPU::V_FMAMK_F16;
       break;
     }
   }
 
   if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END)
+    return;
+
+  if (AMDGPU::isTrue16Inst(NewOpcode) && !shouldShrinkTrue16(MI))
     return;
 
   if (Swap) {
@@ -962,6 +986,10 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       if (ST->hasVOP3Literal() &&
           !MF.getProperties().hasProperty(
               MachineFunctionProperties::Property::NoVRegs))
+        continue;
+
+      if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&
+          !shouldShrinkTrue16(MI))
         continue;
 
       // We can shrink this instruction

@@ -307,7 +307,8 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32), [[C1]](s32), [[C1]](s32)
     ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %w0(s32), [[C]]
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ZEXT]](s32)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ZEXT]], 1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[SEXT_INREG]](s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s1>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s1>) = G_INSERT_VECTOR_ELT [[DEF]], [[TRUNC]](s1), [[C2]](s64)

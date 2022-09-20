@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
@@ -453,6 +454,41 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                              "' has already been registered");
 
   return dialect.get();
+}
+
+DynamicDialect *MLIRContext::getOrLoadDynamicDialect(
+    StringRef dialectNamespace, function_ref<void(DynamicDialect *)> ctor) {
+  auto &impl = getImpl();
+  // Get the correct insertion position sorted by namespace.
+  auto dialectIt = impl.loadedDialects.find(dialectNamespace);
+
+  if (dialectIt != impl.loadedDialects.end()) {
+    if (auto dynDialect = dyn_cast<DynamicDialect>(dialectIt->second.get()))
+      return dynDialect;
+    llvm::report_fatal_error("a dialect with namespace '" + dialectNamespace +
+                             "' has already been registered");
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "Load new dynamic dialect in Context "
+                          << dialectNamespace << "\n");
+#ifndef NDEBUG
+  if (impl.multiThreadedExecutionContext != 0)
+    llvm::report_fatal_error(
+        "Loading a dynamic dialect (" + dialectNamespace +
+        ") while in a multi-threaded execution context (maybe "
+        "the PassManager): this can indicate a "
+        "missing `dependentDialects` in a pass for example.");
+#endif
+
+  auto name = StringAttr::get(this, dialectNamespace);
+  auto *dialect = new DynamicDialect(name, this);
+  (void)getOrLoadDialect(name, dialect->getTypeID(), [dialect, ctor]() {
+    ctor(dialect);
+    return std::unique_ptr<DynamicDialect>(dialect);
+  });
+  // This is the same result as `getOrLoadDialect` (if it didn't failed),
+  // since it has the same TypeID, and TypeIDs are unique.
+  return dialect;
 }
 
 void MLIRContext::loadAllAvailableDialects() {

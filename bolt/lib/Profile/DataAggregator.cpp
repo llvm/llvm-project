@@ -78,6 +78,8 @@ MaxSamples("max-samples",
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
+extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
+
 cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
@@ -610,7 +612,8 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     convertBranchData(Function);
   }
 
-  if (opts::AggregateOnly) {
+  if (opts::AggregateOnly &&
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata) {
     if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
       report_error("cannot create output data file", EC);
   }

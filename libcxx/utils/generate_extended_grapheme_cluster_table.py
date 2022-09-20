@@ -117,8 +117,6 @@ inline constexpr uint32_t __entries[{size}] = {{
 
 /// Returns the extended grapheme cluster bondary property of a code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __property __get_property(const char32_t __code_point) noexcept {{
-  // TODO FMT use std::ranges::upper_bound.
-
   // The algorithm searches for the upper bound of the range and, when found,
   // steps back one entry. This algorithm is used since the code point can be
   // anywhere in the range. After a lower bound is found the next step is to
@@ -135,7 +133,7 @@ inline constexpr uint32_t __entries[{size}] = {{
   // size. Then the upper bound for code point 3 will return the entry after
   // 0x1810. After moving to the previous entry the algorithm arrives at the
   // correct entry.
-  ptrdiff_t __i = std::upper_bound(__entries, std::end(__entries), (__code_point << 11) | 0x7ffu) - __entries;
+  ptrdiff_t __i = std::ranges::upper_bound(__entries, (__code_point << 11) | 0x7ffu) - __entries;
   if (__i == 0)
     return __property::__none;
 
@@ -212,7 +210,7 @@ MSVC_FORMAT_UCD_TABLES_HPP_TEMPLATE = """
 #ifndef _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
 #define _LIBCPP___FORMAT_EXTENDED_GRAPHEME_CLUSTER_TABLE_H
 
-#include <__algorithm/upper_bound.h>
+#include <__algorithm/ranges_upper_bound.h>
 #include <__config>
 #include <__iterator/access.h>
 #include <cstddef>

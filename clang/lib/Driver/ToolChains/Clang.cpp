@@ -3529,12 +3529,14 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                          options::OPT_disable_llvm_passes,
                                          options::OPT_fnative_half_type,
                                          options::OPT_hlsl_entrypoint};
-
+  if (!types::isHLSL(InputType))
+    return;
   for (const auto &Arg : ForwardedArguments)
     if (const auto *A = Args.getLastArg(Arg))
       A->renderAsInput(Args, CmdArgs);
   // Add the default headers if dxc_no_stdinc is not set.
-  if (!Args.hasArg(options::OPT_dxc_no_stdinc))
+  if (!Args.hasArg(options::OPT_dxc_no_stdinc) &&
+      !Args.hasArg(options::OPT_nostdinc))
     CmdArgs.push_back("-finclude-default-header");
 }
 
@@ -5461,17 +5463,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
   // complicated ways.
   auto SanitizeArgs = TC.getSanitizerArgs(Args);
-  bool AsyncUnwindTables = Args.hasFlag(
-      options::OPT_fasynchronous_unwind_tables,
-      options::OPT_fno_asynchronous_unwind_tables,
-      (TC.IsUnwindTablesDefault(Args) || SanitizeArgs.needsUnwindTables()) &&
-          !Freestanding);
-  bool UnwindTables = Args.hasFlag(options::OPT_funwind_tables,
-                                   options::OPT_fno_unwind_tables, false);
-  if (AsyncUnwindTables)
-    CmdArgs.push_back("-funwind-tables=2");
-  else if (UnwindTables)
+  auto UnwindTables = TC.getDefaultUnwindTableLevel(Args);
+
+  if (Args.hasFlag(options::OPT_fasynchronous_unwind_tables,
+                   options::OPT_fno_asynchronous_unwind_tables,
+                   SanitizeArgs.needsUnwindTables()) &&
+      !Freestanding)
+    UnwindTables = ToolChain::UnwindTableLevel::Asynchronous;
+  else if (Args.hasFlag(options::OPT_funwind_tables,
+                        options::OPT_fno_unwind_tables, false))
+    UnwindTables = ToolChain::UnwindTableLevel::Synchronous;
+  else if (Args.hasFlag(options::OPT_fno_unwind_tables,
+                   options::OPT_fno_asynchronous_unwind_tables,
+                   options::OPT_funwind_tables, false) || Freestanding)
+    UnwindTables = ToolChain::UnwindTableLevel::None;
+
+
+  if (UnwindTables == ToolChain::UnwindTableLevel::Synchronous)
     CmdArgs.push_back("-funwind-tables=1");
+  else if (UnwindTables == ToolChain::UnwindTableLevel::Asynchronous)
+    CmdArgs.push_back("-funwind-tables=2");
 
   // Prepare `-aux-target-cpu` and `-aux-target-feature` unless
   // `--gpu-use-aux-triple-only` is specified.
@@ -6380,8 +6391,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   RenderOpenCLOptions(Args, CmdArgs, InputType);
 
   // Forward hlsl options to -cc1
-  if (C.getDriver().IsDXCMode())
-    RenderHLSLOptions(Args, CmdArgs, InputType);
+  RenderHLSLOptions(Args, CmdArgs, InputType);
 
   if (IsHIP) {
     if (Args.hasFlag(options::OPT_fhip_new_launch_api,
@@ -7293,7 +7303,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-faddrsig");
 
   if ((Triple.isOSBinFormatELF() || Triple.isOSBinFormatMachO()) &&
-      (EH || AsyncUnwindTables || UnwindTables ||
+      (EH || UnwindTables != ToolChain::UnwindTableLevel::None ||
        DebugInfoKind != codegenoptions::NoDebugInfo))
     CmdArgs.push_back("-D__GCC_HAVE_DWARF2_CFI_ASM=1");
 

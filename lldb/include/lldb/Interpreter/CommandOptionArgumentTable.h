@@ -124,67 +124,6 @@ static constexpr OptionEnumValueElement g_log_handler_type[] = {
     },
 };
 
-static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
-    {
-        eReproducerProviderCommands,
-        "commands",
-        "Command Interpreter Commands",
-    },
-    {
-        eReproducerProviderFiles,
-        "files",
-        "Files",
-    },
-    {
-        eReproducerProviderSymbolFiles,
-        "symbol-files",
-        "Symbol Files",
-    },
-    {
-        eReproducerProviderGDB,
-        "gdb",
-        "GDB Remote Packets",
-    },
-    {
-        eReproducerProviderProcessInfo,
-        "processes",
-        "Process Info",
-    },
-    {
-        eReproducerProviderVersion,
-        "version",
-        "Version",
-    },
-    {
-        eReproducerProviderWorkingDirectory,
-        "cwd",
-        "Working Directory",
-    },
-    {
-        eReproducerProviderHomeDirectory,
-        "home",
-        "Home Directory",
-    },
-    {
-        eReproducerProviderNone,
-        "none",
-        "None",
-    },
-};
-
-static constexpr OptionEnumValueElement g_reproducer_signaltype[] = {
-    {
-        eReproducerCrashSigill,
-        "SIGILL",
-        "Illegal instruction",
-    },
-    {
-        eReproducerCrashSigsegv,
-        "SIGSEGV",
-        "Segmentation fault",
-    },
-};
-
 static constexpr OptionEnumValueElement g_script_synchro_type[] = {
     {
         eScriptedCommandSynchronicitySynchronous,
@@ -318,8 +257,6 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeConnectURL, "process-connect-url", CommandCompletions::eNoCompletion, {}, { nullptr, false }, "A URL-style specification for a remote connection." },
     { lldb::eArgTypeTargetID, "target-id", CommandCompletions::eNoCompletion, {}, { nullptr, false }, "The index ID for an lldb Target." },
     { lldb::eArgTypeStopHookID, "stop-hook-id", CommandCompletions::eNoCompletion, {}, { nullptr, false }, "The ID you receive when you create a stop-hook." },
-    { lldb::eArgTypeReproducerProvider, "reproducer-provider", CommandCompletions::eNoCompletion, g_reproducer_provider_type, { nullptr, false }, "The reproducer provider." },
-    { lldb::eArgTypeReproducerSignal, "reproducer-signal", CommandCompletions::eNoCompletion, g_reproducer_signaltype, { nullptr, false }, "The signal used to emulate a reproducer crash." },
     // clang-format on
 };
 

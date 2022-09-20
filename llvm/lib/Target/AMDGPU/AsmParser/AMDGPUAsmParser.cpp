@@ -343,6 +343,7 @@ public:
   }
 
   bool isVRegWithInputMods() const;
+  bool isT16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
   bool isSDWAFP16Operand() const;
@@ -522,6 +523,10 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
+  bool isVCSrcTB16_Lo128() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32_Lo128RegClassID, MVT::i16);
+  }
+
   bool isVCSrcB16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i16);
   }
@@ -538,6 +543,10 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::f64);
   }
 
+  bool isVCSrcTF16_Lo128() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32_Lo128RegClassID, MVT::f16);
+  }
+
   bool isVCSrcF16() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::f16);
   }
@@ -552,6 +561,10 @@ public:
 
   bool isVSrcB64() const {
     return isVCSrcF64() || isLiteralImm(MVT::i64);
+  }
+
+  bool isVSrcTB16_Lo128() const {
+    return isVCSrcTB16_Lo128() || isLiteralImm(MVT::i16);
   }
 
   bool isVSrcB16() const {
@@ -584,6 +597,10 @@ public:
 
   bool isVSrcF64() const {
     return isVCSrcF64() || isLiteralImm(MVT::f64);
+  }
+
+  bool isVSrcTF16_Lo128() const {
+    return isVCSrcTF16_Lo128() || isLiteralImm(MVT::f16);
   }
 
   bool isVSrcF16() const {
@@ -2047,6 +2064,10 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
          // GFX90A allows DPP on 64-bit operands.
          (isRegClass(AMDGPU::VReg_64RegClassID) &&
           AsmParser->getFeatureBits()[AMDGPU::Feature64BitDPP]);
+}
+
+bool AMDGPUOperand::isT16VRegWithInputMods() const {
+  return isRegClass(AMDGPU::VGPR_32_Lo128RegClassID);
 }
 
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
@@ -8329,19 +8350,16 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
   // we don't allow modifiers for this operand in assembler so src2_modifiers
   // should be 0.
   if (Opc == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
-      Opc == AMDGPU::V_MAC_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_MAC_F32_e64_vi ||
+      Opc == AMDGPU::V_MAC_F32_e64_gfx10 || Opc == AMDGPU::V_MAC_F32_e64_vi ||
       Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx6_gfx7 ||
       Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_MAC_F16_e64_vi ||
-      Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
+      Opc == AMDGPU::V_MAC_F16_e64_vi || Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
       Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
-      Opc == AMDGPU::V_FMAC_F32_e64_vi ||
+      Opc == AMDGPU::V_FMAC_F32_e64_gfx11 || Opc == AMDGPU::V_FMAC_F32_e64_vi ||
       Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
       Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
       Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-      Opc == AMDGPU::V_FMAC_F16_e64_gfx11) {
+      Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11) {
     auto it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2

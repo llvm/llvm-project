@@ -157,7 +157,7 @@ define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 1 x i64> @llvm.masked.load.nxv1i64.p0(ptr [[TMP7]], i32 8, <vscale x 1 x i1> [[ACTIVE_LANE_MASK]], <vscale x 1 x i64> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], <vscale x 1 x i64> [[WIDE_MASKED_LOAD]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> [[TMP8]], i32 8, <vscale x 1 x i1> [[ACTIVE_LANE_MASK]], <vscale x 1 x i64> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr> [[TMP8]], i32 8, <vscale x 1 x i1> [[ACTIVE_LANE_MASK]], <vscale x 1 x i64> poison)
 ; CHECK-NEXT:    [[TMP9]] = add <vscale x 1 x i64> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 1 x i1> [[ACTIVE_LANE_MASK]], <vscale x 1 x i64> [[TMP9]], <vscale x 1 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()

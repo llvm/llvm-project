@@ -66,7 +66,8 @@ public:
   bool HasNativeLLVMSupport() const override;
 
   bool IsIntegratedAssemblerDefault() const override;
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPICDefault() const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefaultForced() const override;

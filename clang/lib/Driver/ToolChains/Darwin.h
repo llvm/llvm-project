@@ -254,7 +254,8 @@ public:
 
   bool UseObjCMixedDispatch() const override { return true; }
 
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
 
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;

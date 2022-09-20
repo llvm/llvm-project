@@ -164,13 +164,14 @@ tensor::ExtractSliceFromCollapseHelper::emitLoopNestBody(
     }
   }
 
-  auto extractParams = helper.getExtractSliceParams(multiIndices);
+  SmallVector<Range> extractParams =
+      helper.getExtractSliceParams(builder.getContext(), multiIndices);
 
   Value subTileResult = builder.create<tensor::ExtractSliceOp>(
       loc, collapseShapeOp.getSrc(), extractParams);
 
   SmallVector<Range> insertParams =
-      helper.getInsertSliceParams(tileInductionVars);
+      helper.getInsertSliceParams(builder.getContext(), tileInductionVars);
 
   // Collapse the dimensions of the source slice back down.
   Value collapsedResult = builder.create<tensor::CollapseShapeOp>(

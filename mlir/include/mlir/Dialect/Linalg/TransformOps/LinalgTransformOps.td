@@ -748,6 +748,104 @@ def TileToForeachThreadOp :
   }];
 }
 
+def MapNestedForeachThreadToGpuThreads : 
+  Op<Transform_Dialect, "structured.map_nested_foreach_thread_to_gpu_threads",
+    [FunctionalStyleTransformOpTrait, 
+     MemoryEffectsOpInterface,
+     TransformEachOpTrait,
+     TransformOpInterface]> {
+  let description = [{
+      Target the gpu_launch op and rewrite all scf.foreach_thread
+      to distributed gpu.thread_id attribute.
+
+      The operation searches `scf.foreach_thread` ops nested under `target` 
+      and maps each such op to GPU threads. Mapping is one-to-one and the 
+      induction variables of `scf.foreach_thread` are rewritten to 
+      gpu.thread_id according to the thread_dim_apping attribute. 
+      
+      Sibling `scf.foreach_thread` are supported in which case, the union of 
+      the number of threads is computed and may result in predication.
+
+      Multiple scf.foreach_thread are supported per function in which case, the
+      max of all the threads is computed and taken for the global gpu.thread_id.
+      If necessary, scf.foreach_thread that do not use the whole thread range 
+      result in predicated computations.
+
+      Dynamic, `scf.foreach_thread` trip counts are currently not supported. 
+      Dynamic block dim sizes are currently not supported.
+
+      Only **bufferized** scf.foreach_thread are currently supported.
+      Only scf.foreach_thread distributed to **at most 3 dimensions** are 
+      currently supported.
+    
+      Barriers are inserted after each scf.foreach_thread op for now.
+
+      The operation alters the block size of the given gpu_launch using 
+      blockDim argument.
+
+      Return modes:
+      =============
+      This operation ignores non-gpu_launch ops and drops them in the return.
+
+      If any scf.foreach_thread with tensors is found, the transform definitely 
+      fails.    
+
+      If all the scf.foreach_thread operations contained within the LaunchOp 
+      referred to by the `target` PDLOperation lower to GPU properly, the 
+      transform succeeds. Otherwise the transform definitely fails.
+      
+      The returned handle points to the same LaunchOp operand, consuming it and
+      producing a new SSA value to satisfy chaining and linearity of the IR 
+      properties.
+
+      Example:
+      ========
+
+      ```
+      gpu.launch blocks(%bx, %by, %bz) in (%x = %0, %y = %1, %z = %2)
+                 threads(%tx, %ty, %tz) in (%tx = %3, %ty = %4, %tz = %5) {
+        scf.foreach_thread (%i, %j) in (7, 9) {
+          ... // body 1
+        } {thread_dim_mapping = [1, 0, 2]}
+        scf.foreach_thread (%i) in (12) {
+          ... // body 2
+        }
+        gpu.terminator
+      }
+      ```
+      is translated to:
+
+      ```
+      %bdimX = arith.constant 12 : index
+      %bdimY = arith.constant 9 : index
+      gpu.launch blocks(%bx, %by, %bz) in (%x = %0, %y = %1, %z = %2)
+             threads(%tx, %ty, %tz) in (%tx = %bdimX, %ty = %bdimY, %tz = %5) {
+        if (threadIdx.x < 9 && threadIdx.y < 7) {
+          ... // body 1
+        }
+        gpu.barrier
+        if (threadIdx.y < 1) {
+          ... // body 2
+        }
+        gpu.barrier
+        gpu.terminator
+      }      
+      ```
+    }];
+
+  let arguments = (ins PDL_Operation:$target,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$blockDim);
+  let results = (outs PDL_Operation:$result);
+
+  let assemblyFormat = "$target attr-dict";
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformEachOpTrait, TransformOpInterface]> {

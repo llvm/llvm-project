@@ -1,6 +1,0 @@
-breakpoint set -f simple.c -l 4
-run
-bt
-cont
-reproducer status
-reproducer generate

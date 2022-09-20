@@ -553,6 +553,15 @@ def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types
   let Size = 32;
   let Weight = 1;
 }
+
+// Identical to VGPR_32 except it only contains the low 128 (Lo128) registers.
+def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
+                            (add (sequence "VGPR%u", 0, 127))> {
+  let AllocationPriority = 0;
+  let GeneratePressureSet = 0;
+  let Size = 32;
+  let Weight = 1;
+}
 } // End HasVGPR = 1
 
 // VGPR 64-bit registers
@@ -885,6 +894,13 @@ def VS_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   let HasSGPR = 1;
 }
 
+def VS_32_Lo128 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+                          (add VGPR_32_Lo128, SReg_32, LDS_DIRECT_CLASS)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+}
+
 def VS_64 : SIRegisterClass<"AMDGPU", [i64, f64, v2f32], 32, (add VReg_64, SReg_64)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
@@ -933,6 +949,25 @@ class RegImmMatcher<string name> : AsmOperandClass {
   let Name = name;
   let RenderMethod = "addRegOrImmOperands";
 }
+
+// For VOP1,2,C True16 instructions. Uses first 128 32-bit VGPRs only
+multiclass SIRegOperand16 <string rc, string MatchName, string opType,
+                           string rc_suffix = "_32"> {
+  let OperandNamespace = "AMDGPU" in {
+    def _b16_Lo128 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix#"_Lo128")> {
+      let OperandType = opType#"_INT16";
+      let ParserMatchClass = RegImmMatcher<MatchName#"B16_Lo128">;
+      let DecoderMethod = "decodeOperand_VSrc16";
+    }
+
+    def _f16_Lo128 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix#"_Lo128")> {
+      let OperandType = opType#"_FP16";
+      let ParserMatchClass = RegImmMatcher<MatchName#"F16_Lo128">;
+      let DecoderMethod = "decodeOperand_" # rc # "_16";
+    }
+  }
+}
+
 
 multiclass SIRegOperand32 <string rc, string MatchName, string opType,
                            string rc_suffix = "_32"> {
@@ -1053,6 +1088,7 @@ defm SCSrc : RegInlineOperand<"SReg", "SCSrc"> ;
 //===----------------------------------------------------------------------===//
 
 defm VSrc : RegImmOperand<"VS", "VSrc">;
+defm VSrcT : SIRegOperand16<"VS", "VSrcT", "OPERAND_REG_IMM">;
 
 def VSrc_128 : RegisterOperand<VReg_128> {
   let DecoderMethod = "DecodeVS_128RegisterClass";
@@ -1062,6 +1098,17 @@ def VSrc_128 : RegisterOperand<VReg_128> {
 //  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use
 //  with FMAMK/FMAAK
 //===----------------------------------------------------------------------===//
+
+multiclass SIRegOperand16_Deferred <string rc, string MatchName, string opType,
+                           string rc_suffix = "_32"> {
+  let OperandNamespace = "AMDGPU" in {
+    def _f16_Lo128_Deferred : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix#"_Lo128")> {
+      let OperandType = opType#"_FP16_DEFERRED";
+      let ParserMatchClass = RegImmMatcher<MatchName#"F16_Lo128">;
+      let DecoderMethod = "decodeOperand_" # rc # "_16_Deferred";
+    }
+  }
+}
 
 multiclass SIRegOperand32_Deferred <string rc, string MatchName, string opType,
                            string rc_suffix = "_32"> {
@@ -1081,6 +1128,7 @@ multiclass SIRegOperand32_Deferred <string rc, string MatchName, string opType,
 }
 
 defm VSrc : SIRegOperand32_Deferred<"VS", "VSrc", "OPERAND_REG_IMM">;
+defm VSrcT : SIRegOperand16_Deferred<"VS", "VSrcT", "OPERAND_REG_IMM">;
 
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
@@ -1113,6 +1161,9 @@ def VRegSrc_256 : RegisterOperand<VReg_256> {
 def VGPRSrc_32 : RegisterOperand<VGPR_32> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
+def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
 
 //===----------------------------------------------------------------------===//
 //  ASrc_* Operands with an AccVGPR
@@ -1128,6 +1179,7 @@ def ARegSrc_32 : RegisterOperand<AGPR_32> {
 //===----------------------------------------------------------------------===//
 
 defm VCSrc : RegInlineOperand<"VS", "VCSrc">;
+defm VCSrcT : SIRegOperand16<"VS", "VCSrcT", "OPERAND_REG_INLINE_C">;
 
 //===----------------------------------------------------------------------===//
 //  VISrc_* Operands with a VGPR or an inline constant

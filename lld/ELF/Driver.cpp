@@ -1347,8 +1347,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
   // Parse -mllvm options.
-  for (auto *arg : args.filtered(OPT_mllvm))
+  for (auto *arg : args.filtered(OPT_mllvm)) {
     parseClangOption(arg->getValue(), arg->getSpelling());
+    config->mllvmOpts.emplace_back(arg->getValue());
+  }
 
   // --threads= takes a positive integer and provides the default value for
   // --thinlto-jobs=.

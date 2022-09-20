@@ -16,7 +16,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -32,7 +31,6 @@ namespace {
 class ExecutionContextTest : public ::testing::Test {
 public:
   void SetUp() override {
-    llvm::cantFail(Reproducer::Initialize(ReproducerMode::Off, llvm::None));
     FileSystem::Initialize();
     HostInfo::Initialize();
     platform_linux::PlatformLinux::Initialize();
@@ -41,7 +39,6 @@ public:
     platform_linux::PlatformLinux::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
-    Reproducer::Terminate();
   }
 };
 

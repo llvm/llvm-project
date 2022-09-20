@@ -14,6 +14,7 @@ if(MLIR_INCLUDE_TESTS)
   set(test_libs
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
+    MLIRArithmeticTestPasses
     MLIRDLTITestPasses
     MLIRFuncTestPasses
     MLIRGPUTestPasses
@@ -27,6 +28,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTensorTestPasses
     MLIRTestAnalysis
     MLIRTestDialect
+    MLIRTestDynDialect
     MLIRTestIR
     MLIRTestPass
     MLIRTestPDLL

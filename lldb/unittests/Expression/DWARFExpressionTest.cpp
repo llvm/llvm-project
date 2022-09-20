@@ -10,12 +10,11 @@
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
-#include "lldb/Core/Value.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Testing/Support/Error.h"
@@ -81,7 +80,6 @@ static Scalar GetScalar(unsigned bits, uint64_t value, bool sign) {
 class DWARFExpressionMockProcessTest : public ::testing::Test {
 public:
   void SetUp() override {
-    llvm::cantFail(repro::Reproducer::Initialize(repro::ReproducerMode::Off, {}));
     FileSystem::Initialize();
     HostInfo::Initialize();
     platform_linux::PlatformLinux::Initialize();
@@ -90,7 +88,6 @@ public:
     platform_linux::PlatformLinux::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
-    repro::Reproducer::Terminate();
   }
 };
 

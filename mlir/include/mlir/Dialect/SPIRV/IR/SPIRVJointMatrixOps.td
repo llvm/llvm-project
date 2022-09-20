@@ -104,10 +104,10 @@ def SPV_INTELJointMatrixLoadOp : SPV_IntelVendorOp<"JointMatrixLoad", []> {
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$scope,
-    SPV_MatrixLayoutAttr:$layout,
     SPV_AnyPtr:$pointer,
     SPV_Integer:$stride,
+    SPV_MatrixLayoutAttr:$layout,
+    SPV_ScopeAttr:$scope,
     OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment
   );
@@ -169,10 +169,10 @@ def SPV_INTELJointMatrixMadOp : SPV_IntelVendorOp<"JointMatrixMad",
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$scope,
     SPV_AnyJointMatrix:$a,
     SPV_AnyJointMatrix:$b,
-    SPV_AnyJointMatrix:$c
+    SPV_AnyJointMatrix:$c,
+    SPV_ScopeAttr:$scope
   );
 
   let results = (outs
@@ -231,11 +231,11 @@ def SPV_INTELJointMatrixStoreOp : SPV_IntelVendorOp<"JointMatrixStore", []> {
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$scope,
-    SPV_MatrixLayoutAttr:$layout,
     SPV_AnyPtr:$pointer,
     SPV_AnyJointMatrix:$object,
     SPV_Integer:$stride,
+    SPV_MatrixLayoutAttr:$layout,
+    SPV_ScopeAttr:$scope,
     OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment
   );
