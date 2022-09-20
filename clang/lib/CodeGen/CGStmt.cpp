@@ -53,31 +53,6 @@ void CodeGenFunction::EmitStopPoint(const Stmt *S) {
   }
 }
 
-Address CodeGenFunction::getAddressFromDeclStmt(const ForStmt &FStmt) {
-  const Stmt *InitStmt = FStmt.getInit();
-  const DeclStmt &InitDeclStmt = cast<DeclStmt>(*InitStmt);
-  const Decl *InitDecl = InitDeclStmt.getSingleDecl();
-  if (!hasAddrOfLocalVar(cast<VarDecl>(InitDecl)))
-    EmitAutoVarDecl(cast<VarDecl>(*InitDecl));
-  return GetAddrOfLocalVar(cast<VarDecl>(InitDecl));
-}
-
-Address CodeGenFunction::getAddressFromExpr(const ForStmt &FStmt) {
-  assert(CGM.checkInitExpr(FStmt) && "Check for init expr failed");
-  const Stmt *InitStmt = FStmt.getInit();
-  const Expr *InitExpr = cast<Expr>(InitStmt);
-  const Expr *InitExprLHS = cast<BinaryOperator>(InitExpr)->getLHS();
-  const VarDecl *InitDecl =
-      cast<VarDecl>(cast<DeclRefExpr>(InitExprLHS)->getDecl());
-  if (!hasAddrOfLocalVar(InitDecl))
-    EmitAutoVarDecl(*InitDecl);
-  Address IvAddr = GetAddrOfLocalVar(InitDecl);
-  llvm::Value *InitVal =
-      EmitScalarExpr(cast<BinaryOperator>(InitExpr)->getRHS());
-  Builder.CreateStore(InitVal, IvAddr);
-  return IvAddr;
-}
-
 llvm::Value *CodeGenFunction::applyNoLoopInc(const Expr *Inc,
                                              const VarDecl *IVDecl,
                                              llvm::Value *CurrVal) {
@@ -95,16 +70,14 @@ llvm::Value *CodeGenFunction::applyNoLoopInc(const Expr *Inc,
 
 std::pair<const VarDecl *, Address>
 CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
-  Address IvAddr = Address::invalid();
-  const VarDecl *LoopVD = CGM.checkDeclStmt(FStmt);
-  if (LoopVD != nullptr)
-    IvAddr = getAddressFromDeclStmt(FStmt);
-  else {
-    LoopVD = CGM.checkInitExpr(FStmt);
-    assert(LoopVD != nullptr &&
-           "Cannot generate reduction kernel with a null loop var");
-    IvAddr = getAddressFromExpr(FStmt);
-  }
+  const CodeGenModule::NoLoopIntermediateStmts &Directives =
+      CGM.getXteamRedStmts(&FStmt);
+  assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
+         "Appropriate directive not found");
+  const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
+  std::pair<const VarDecl *, Address> IVPair = EmitNoLoopIV(LD);
+  const VarDecl *LoopVD = IVPair.first;
+  Address IvAddr = IVPair.second;
 
   // Generate idx = workgroup_id * workgroup_size + workitem_id
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
@@ -122,10 +95,10 @@ CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
   llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
 
   // Check the loop increment
-  assert(CGM.checkLoopStep(FStmt.getInc(), LoopVD) && "Loop incr check failed");
+  assert(CGM.checkLoopStep(LD.getInc(), LoopVD) && "Loop incr check failed");
 
   // Handle stride
-  GlobalGpuThreadId = applyNoLoopInc(FStmt.getInc(), LoopVD, GlobalGpuThreadId);
+  GlobalGpuThreadId = applyNoLoopInc(LD.getInc(), LoopVD, GlobalGpuThreadId);
 
   // Generate my_index = my_index + myid. Note that my_index was already
   // initialized
@@ -137,9 +110,26 @@ CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
   return std::make_pair(LoopVD, IvAddr);
 }
 
+void CodeGenFunction::EmitXteamRedUpdates(const ForStmt &FStmt) {
+  const CodeGenModule::NoLoopIntermediateStmts &Directives =
+      CGM.getXteamRedStmts(&FStmt);
+  assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
+         "Appropriate directive not found");
+  const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
+  // Emit updates of the original loop indices
+  for (const Expr *UE : LD.updates())
+    EmitIgnoredExpr(UE);
+}
+
 void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
                                       const VarDecl *LoopVD,
                                       const Address &NoLoopIvAddr) {
+  const CodeGenModule::NoLoopIntermediateStmts &Directives =
+      CGM.getXteamRedStmts(&FStmt);
+  assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
+         "Appropriate directive not found");
+  const OMPLoopDirective &LD = *(cast<OMPLoopDirective>(Directives.back()));
+
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
   llvm::Value *BlockSize = RT.getXteamRedBlockSize(*this);
   llvm::Value *NumBlocks = RT.getGPUNumBlocks(*this);
@@ -147,10 +137,10 @@ void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
   llvm::Value *Prod = Builder.CreateMul(BlockSize, NumBlocks);
 
   // Check the loop increment
-  assert(CGM.checkLoopStep(FStmt.getInc(), LoopVD) && "Loop incr check failed");
+  assert(CGM.checkLoopStep(LD.getInc(), LoopVD) && "Loop incr check failed");
 
   // Handle stride
-  Prod = applyNoLoopInc(FStmt.getInc(), LoopVD, Prod);
+  Prod = applyNoLoopInc(LD.getInc(), LoopVD, Prod);
 
   // *iv = *iv + prod
   llvm::Value *ProdRes =
@@ -158,6 +148,47 @@ void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
   llvm::Value *NoLoopInc =
       Builder.CreateAdd(ProdRes, Builder.CreateLoad(NoLoopIvAddr));
   Builder.CreateStore(NoLoopInc, NoLoopIvAddr);
+}
+
+std::pair<const VarDecl *, Address>
+CodeGenFunction::EmitNoLoopIV(const OMPLoopDirective &LD) {
+  // Emit the original loop indices
+  for (const Expr *CE : LD.counters()) {
+    const auto *CEDecl = cast<VarDecl>(cast<DeclRefExpr>(CE)->getDecl());
+    if (!hasAddrOfLocalVar(CEDecl))
+      EmitVarDecl(*CEDecl);
+  }
+
+  // Emit the preinits
+  const DeclStmt *PreInits = cast_or_null<DeclStmt>(LD.getPreInits());
+  if (PreInits) {
+    for (const auto *I : PreInits->decls()) {
+      EmitVarDecl(cast<VarDecl>(*I));
+    }
+  }
+
+  // Emit the inits of original loop indices
+  for (const Expr *CIE : LD.inits()) {
+    EmitIgnoredExpr(CIE);
+  }
+
+  // Emit the lower and upper bounds
+  const auto *LBDecl =
+      cast<VarDecl>(cast<DeclRefExpr>(LD.getLowerBoundVariable())->getDecl());
+  EmitVarDecl(*LBDecl);
+  const auto *UBDecl =
+      cast<VarDecl>(cast<DeclRefExpr>(LD.getUpperBoundVariable())->getDecl());
+  EmitVarDecl(*UBDecl);
+
+  // Emit the iteration variable of the loop
+  const auto *IVDecl =
+      cast<VarDecl>(cast<DeclRefExpr>(LD.getIterationVariable())->getDecl());
+  EmitVarDecl(*IVDecl);
+
+  // Emit init of the iteration variable
+  EmitIgnoredExpr(LD.getInit());
+
+  return std::make_pair(IVDecl, GetAddrOfLocalVar(IVDecl));
 }
 
 void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
@@ -169,43 +200,10 @@ void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
     assert(isa<OMPLoopDirective>(D) && "Unexpected directive");
     const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
 
-    // Emit the original loop indices
-    for (const Expr *CE : LD.counters()) {
-      const auto *CEDecl = cast<VarDecl>(cast<DeclRefExpr>(CE)->getDecl());
-      if (!hasAddrOfLocalVar(CEDecl))
-        EmitVarDecl(*CEDecl);
-    }
+    auto IVPair = EmitNoLoopIV(LD);
+    const VarDecl *IVDecl = IVPair.first;
+    Address IvAddr = IVPair.second;
 
-    // Emit the preinits
-    const DeclStmt *PreInits = cast_or_null<DeclStmt>(LD.getPreInits());
-    if (PreInits) {
-      for (const auto *I : PreInits->decls()) {
-        EmitVarDecl(cast<VarDecl>(*I));
-      }
-    }
-
-    // Emit the inits of original loop indices
-    for (const Expr *CIE : LD.inits()) {
-      EmitIgnoredExpr(CIE);
-    }
-
-    // Emit the lower and upper bounds
-    const auto *LBDecl =
-        cast<VarDecl>(cast<DeclRefExpr>(LD.getLowerBoundVariable())->getDecl());
-    EmitVarDecl(*LBDecl);
-    const auto *UBDecl =
-        cast<VarDecl>(cast<DeclRefExpr>(LD.getUpperBoundVariable())->getDecl());
-    EmitVarDecl(*UBDecl);
-
-    // Emit the iteration variable of the collapsed loop
-    const auto *IVDecl =
-        cast<VarDecl>(cast<DeclRefExpr>(LD.getIterationVariable())->getDecl());
-    EmitVarDecl(*IVDecl);
-
-    // Emit init of the iteration variable
-    EmitIgnoredExpr(LD.getInit());
-
-    Address IvAddr = GetAddrOfLocalVar(IVDecl);
     // Generate myid = workgroup_id * workgroup_size + workitem_id
     auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
 
@@ -267,16 +265,19 @@ void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
   // the intermediate statements
   const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts =
       CGM.getNoLoopStmts(S);
-  if (!IntermediateStmts.empty()) {
+  assert(IntermediateStmts.size() > 0 &&
+         "At least top-level directive must be present");
+  if (IntermediateStmts.size() > 1) {
     // For now, we support at most one level of nesting
-    assert(IntermediateStmts.size() == 1);
-    const OMPExecutableDirective *NoLoopDir = IntermediateStmts[0];
+    assert(IntermediateStmts.size() == 2);
+    const OMPExecutableDirective *NoLoopDir = IntermediateStmts.back();
     OMPPrivateScope PrivateScope(*this);
     EmitOMPPrivateClause(*NoLoopDir, PrivateScope);
     (void)PrivateScope.Privatize();
     S = NoLoopDir->getAssociatedStmt();
     emitNoLoopCodeForDirective(*NoLoopDir);
   } else {
+    assert((IntermediateStmts.back() == &D) && "Cached directive not the same");
     emitNoLoopCodeForDirective(D);
   }
 }
@@ -294,50 +295,138 @@ void CodeGenFunction::EmitXteamRedKernel(
   const ForStmt *CapturedForStmt = CGM.getSingleForStmt(S);
   assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
 
-  const Stmt *BodyStmt = CapturedForStmt->getBody();
-  if (BodyStmt->getStmtClass() == Stmt::CompoundStmtClass) {
-    const CompoundStmt &CompStmt = cast<CompoundStmt>(*BodyStmt);
-    assert(CompStmt.size() == 1 &&
-           "Can't handle multiple reduction statements");
-    BodyStmt = CompStmt.body_front();
-  }
+  // This is the top level ForStmt for which Xteam reduction code is being
+  // generated
+  CGM.setCurrentXteamRedStmt(CapturedForStmt);
 
-  assert(BodyStmt->getStmtClass() == Stmt::CompoundAssignOperatorClass &&
-         "Expected a compound assignment stmt");
+  EmitXteamLocalAggregator(CapturedForStmt);
 
-  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
-
-  // Create a local aggregator variable and initialize it to 0
-  const Expr *LHS = cast<BinaryOperator>(cast<Expr>(BodyStmt))->getLHS();
-  llvm::AllocaInst *XteamRedInst =
-      Builder.CreateAlloca(ConvertTypeForMem(LHS->getType()));
-  llvm::Value *InitVal;
-
-  // Currently, we handle float and double reduction types
-  llvm::Type *LHSType = ConvertTypeForMem(LHS->getType());
-  assert((LHSType->isFloatTy() || LHSType->isDoubleTy()) && "Unhandled type");
-  InitVal = llvm::ConstantFP::getZero(LHSType);
-
-  Address XteamRedAddr(XteamRedInst, LHSType,
-                       getContext().getTypeAlignInChars(LHS->getType()));
-  Builder.CreateStore(InitVal, XteamRedAddr);
-  // Done local var init to 0
-
-  CodeGenModule::XteamRedKernelMetadata MD;
-  MD.XteamRedStmt = BodyStmt;
-  MD.XteamRedLocalAddr = XteamRedAddr;
-  CGM.setXteamRedKernelMetadata(CapturedForStmt, MD);
-
+  // Now emit the modified loop. If there is a statement in the loop with a
+  // reduction, the reduction variable will be replaced with the local
+  // aggregator variable.
   EmitStmt(CapturedForStmt);
 
-  // Emit __kmpc_xteam_sum(*xteam_red_local_addr, red_var_addr)
-  // TODO The following must use the intermediate directive, if present
-  const DeclRefExpr *LHSDecl = cast<DeclRefExpr>(LHS);
-  assert(LHSDecl);
-  Address RedVarAddr = EmitLValue(LHSDecl).getAddress(*this);
-  // Pass in RedVarAddr.getPointer to kmpc_xteam_sum
-  RT.getXteamRedSum(*this, Builder.CreateLoad(XteamRedAddr),
-                    RedVarAddr.getPointer());
+  // Now emit the calls to xteam_sum, one for each reduction variable
+  EmitXteamRedSum(CapturedForStmt);
+
+  // Xteam codegen done
+  CGM.setCurrentXteamRedStmt(nullptr);
+}
+
+/// If the provided For Stmt has metadata for reduction variables, emit
+/// an initializer for each of them
+void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
+  const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
+  for (const auto &RedVarInfo : RedVarMap) {
+    const Expr *RedVarExpr = RedVarInfo.second.first;
+    llvm::Type *RedVarType = ConvertTypeForMem(RedVarExpr->getType());
+    assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy()) &&
+           "Unhandled type");
+    llvm::AllocaInst *XteamRedInst = Builder.CreateAlloca(RedVarType);
+    llvm::Value *InitVal = llvm::ConstantFP::getZero(RedVarType);
+    Address XteamRedVarAddr(
+        XteamRedInst, RedVarType,
+        getContext().getTypeAlignInChars(RedVarExpr->getType()));
+    Builder.CreateStore(InitVal, XteamRedVarAddr);
+
+    // Update the map with the local aggregator address
+    CGM.updateXteamRedVarMap(FStmt, RedVarInfo.first, RedVarExpr,
+                             XteamRedVarAddr);
+  }
+}
+
+// Emit __kmpc_xteam_sum(*xteam_red_local_addr, red_var_addr) for each reduction
+// in the helper map for the given For Stmt
+void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt) {
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
+  const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
+  for (const auto &RedVarInfo : RedVarMap) {
+    const Expr *OrigRedVarExpr = RedVarInfo.second.first;
+    const DeclRefExpr *DRE = cast<DeclRefExpr>(OrigRedVarExpr);
+    Address OrigRedVarAddr = EmitLValue(DRE).getAddress(*this);
+    // Pass in OrigRedVarAddr.getPointer to kmpc_xteam_sum
+    RT.getXteamRedSum(*this, Builder.CreateLoad(RedVarInfo.second.second),
+                      OrigRedVarAddr.getPointer());
+  }
+}
+
+// Emit reduction into local aggregator for a statement within the reduced loop
+// where applicable
+bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
+  if (CGM.getCurrentXteamRedStmt() == nullptr)
+    return false;
+  if (!isa<BinaryOperator>(S))
+    return false;
+
+  auto getRedVarDecl =
+      [](const Expr *E,
+         const CodeGenModule::XteamRedVarMap &RVM) -> const VarDecl * {
+    if (!isa<DeclRefExpr>(E))
+      return nullptr;
+    const ValueDecl *ValDecl = cast<DeclRefExpr>(E)->getDecl();
+    if (!isa<VarDecl>(ValDecl))
+      return nullptr;
+    const VarDecl *VD = cast<VarDecl>(ValDecl);
+    if (RVM.find(VD) == RVM.end())
+      return nullptr;
+    return VD;
+  };
+
+  const BinaryOperator *RedBO = cast<BinaryOperator>(S);
+  const CodeGenModule::XteamRedVarMap &RedVarMap =
+      CGM.getXteamRedVarMap(CGM.getCurrentXteamRedStmt());
+
+  // Is a reduction variable the lhs?
+  const VarDecl *RedVarDecl =
+      getRedVarDecl(RedBO->getLHS()->IgnoreImpCasts(), RedVarMap);
+  if (RedVarDecl == nullptr)
+    return false;
+
+  // For now, we handle only sum reduction
+  assert(
+      (RedBO->getOpcode() == BO_AddAssign || RedBO->getOpcode() == BO_Assign) &&
+      "Unexpected operator during Xteam CodeGen");
+
+  auto isRedVarExpr = [](const Expr *E, const VarDecl *RedVarDecl) {
+    if (!isa<DeclRefExpr>(E))
+      return false;
+    const ValueDecl *ValDecl = cast<DeclRefExpr>(E)->getDecl();
+    if (!isa<VarDecl>(ValDecl))
+      return false;
+    const VarDecl *VD = cast<VarDecl>(ValDecl);
+    return VD == RedVarDecl;
+  };
+
+  // Extract the rhs for the reduction.
+  const Expr *RedRHSExpr = nullptr;
+  auto OpcRedBO = RedBO->getOpcode();
+  if (OpcRedBO == BO_AddAssign) {
+    RedRHSExpr = RedBO->getRHS()->IgnoreImpCasts();
+  } else {
+    const Expr *L1RhsExpr = RedBO->getRHS();
+    assert(isa<BinaryOperator>(L1RhsExpr) &&
+           "Expected rhs to be a binary operator");
+    const BinaryOperator *L2BO = cast<BinaryOperator>(L1RhsExpr);
+    auto OpcL2BO = L2BO->getOpcode();
+    assert(OpcL2BO == BO_Add && "Unexpected operator");
+    // If the redvar is lhs, use the rhs in the generated reduction statement
+    // and vice-versa.
+    if (isRedVarExpr(L2BO->getLHS()->IgnoreImpCasts(), RedVarDecl))
+      RedRHSExpr = L2BO->getRHS();
+    else if (isRedVarExpr(L2BO->getRHS()->IgnoreImpCasts(), RedVarDecl))
+      RedRHSExpr = L2BO->getLHS();
+    else
+      llvm_unreachable("Unhandled add expression during xteam reduction");
+  }
+  assert(RedRHSExpr != nullptr && "Did not find a valid reduction rhs");
+  llvm::Value *RHSValue = EmitScalarExpr(RedRHSExpr);
+  Address XteamRedLocalAddr = RedVarMap.find(RedVarDecl)->second.second;
+  // Compute *xteam_red_local_addr + rhs_value
+  llvm::Value *RedRHS =
+      Builder.CreateFAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSValue);
+  // *xteam_red_local_addr = *xteam_red_local_addr + rhs_value
+  Builder.CreateStore(RedRHS, XteamRedLocalAddr);
+  return true;
 }
 
 void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
@@ -408,7 +497,8 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     llvm::BasicBlock *incoming = Builder.GetInsertBlock();
     assert(incoming && "expression emission must have an insertion point");
 
-    EmitIgnoredExpr(cast<Expr>(S));
+    if (!EmitXteamRedStmt(S))
+      EmitIgnoredExpr(cast<Expr>(S));
 
     llvm::BasicBlock *outgoing = Builder.GetInsertBlock();
     assert(outgoing && "expression emission cleared block!");
@@ -1310,7 +1400,14 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   Address XteamRedIvAddr = Address::invalid();
   const VarDecl *LoopVar = nullptr;
+  const OMPLoopDirective *XteamLD = nullptr;
   if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
+    const CodeGenModule::NoLoopIntermediateStmts &Directives =
+        CGM.getXteamRedStmts(&S);
+    assert(Directives.size() > 0 && isa<OMPLoopDirective>(Directives.back()) &&
+           "Appropriate directive not found");
+    XteamLD = cast<OMPLoopDirective>(Directives.back());
+
     std::pair<const VarDecl *, Address> LoopVarInfo =
         EmitXteamRedStartingIndex(S);
     LoopVar = LoopVarInfo.first;
@@ -1321,6 +1418,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       EmitStmt(S.getInit());
   }
 
+  const Expr *CondExpr = XteamLD ? XteamLD->getCond() : S.getCond();
+
   // Start the loop with a block that tests the condition.
   // If there's an increment, the continue scope will be overwritten
   // later.
@@ -1330,7 +1429,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   Expr::EvalResult Result;
   bool CondIsConstInt =
-      !S.getCond() || S.getCond()->EvaluateAsInt(Result, getContext());
+      !CondExpr || CondExpr->EvaluateAsInt(Result, getContext());
 
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
@@ -1355,7 +1454,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     Continue = getJumpDestInCurrentScope("for.inc");
   BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
 
-  if (S.getCond()) {
+  if (CondExpr) {
     // If the for statement has a condition scope, emit the local variable
     // declaration.
     if (S.getConditionVariable()) {
@@ -1378,9 +1477,9 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
     // C99 6.8.5p2/p4: The first substatement is executed if the expression
     // compares unequal to 0.  The condition must be a scalar type.
-    llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+    llvm::Value *BoolCondVal = EvaluateExprAsBool(CondExpr);
     llvm::MDNode *Weights =
-        createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
+        createProfileWeightsForLoop(CondExpr, getProfileCount(S.getBody()));
     if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
@@ -1399,27 +1498,17 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   }
   incrementProfileCounter(&S);
 
-  const Stmt *XteamRedStmt = nullptr;
-  Address XteamRedLocalAddr = Address::invalid();
   {
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
     RunCleanupsScope BodyScope(*this);
+
     if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
-      const CodeGenModule::XteamRedKernelMetadata &XteamRedKernelMD =
-          CGM.getXteamRedKernelMetadata(&S);
-      XteamRedStmt = XteamRedKernelMD.XteamRedStmt;
-      XteamRedLocalAddr = XteamRedKernelMD.XteamRedLocalAddr;
-      const Expr *RHS =
-          cast<BinaryOperator>(cast<Expr>(XteamRedStmt))->getRHS();
-      llvm::Value *RHSValue = EmitScalarExpr(RHS);
-      // Compute *xteam_red_local_addr + rhs_value
-      llvm::Value *RedRHS =
-          Builder.CreateFAdd(RHSValue, Builder.CreateLoad(XteamRedLocalAddr));
-      // *xteam_red_local_addr = *xteam_red_local_addr + rhs_value
-      Builder.CreateStore(RedRHS, XteamRedLocalAddr);
-    } else
+      EmitXteamRedUpdates(S);
+      EmitOMPNoLoopBody(*XteamLD);
+    } else {
       EmitStmt(S.getBody());
+    }
   }
 
   if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {

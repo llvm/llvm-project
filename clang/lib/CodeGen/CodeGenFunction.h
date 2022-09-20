@@ -3244,6 +3244,12 @@ public:
                           const CodeGenModule::NoLoopIntermediateStmts &,
                           SourceLocation Loc);
 
+  /// Used in No-Loop and Xteam codegen to emit the loop iteration and the
+  /// associated variables. Returns the loop iteration variable and its address.
+  std::pair<const VarDecl *, Address> EmitNoLoopIV(const OMPLoopDirective &LD);
+
+  void EmitXteamRedUpdates(const ForStmt &FStmt);
+
   /// EmitSimpleStmt - Try to emit a "simple" statement which does not
   /// necessarily require an insertion point or debug information; typically
   /// because the statement amounts to a jump or a container of other
@@ -4870,14 +4876,15 @@ private:
   llvm::Value *EmitX86CpuInit();
   llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
 
-  Address getAddressFromDeclStmt(const ForStmt &FStmt);
-  Address getAddressFromExpr(const ForStmt &FStmt);
   llvm::Value *applyNoLoopInc(const Expr *Inc, const VarDecl *IVDecl,
                               llvm::Value *CurrVal);
   std::pair<const VarDecl *, Address>
   EmitXteamRedStartingIndex(const ForStmt &FStmt);
   void EmitXteamRedInc(const ForStmt &FStmt, const VarDecl *LoopVar,
                        const Address &NoLoopIvAddr);
+  void EmitXteamLocalAggregator(const ForStmt *FStmt);
+  void EmitXteamRedSum(const ForStmt *FStmt);
+  bool EmitXteamRedStmt(const Stmt *S);
 };
 
 

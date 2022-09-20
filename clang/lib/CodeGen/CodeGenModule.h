@@ -299,20 +299,17 @@ public:
 
   typedef std::vector<Structor> CtorList;
 
-  /// Nested OpenMP constructs that may use no-loop codegen
+  /// Top-level and nested OpenMP directives that may use no-loop codegen.
   using NoLoopIntermediateStmts =
       llvm::SmallVector<const OMPExecutableDirective *, 3>;
-  /// Map top-level construct to the intermediate ones for no-loop codegen
+  /// Map construct statement to the intermediate ones for no-loop codegen
   using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
 
-  /// Kernel specific metadata used for communicating between CodeGen phases
-  /// while generating an optimized reduction kernel
-  struct XteamRedKernelMetadata {
-    const Stmt *XteamRedStmt = nullptr;
-    Address XteamRedLocalAddr = Address::invalid();
-  };
-  using XteamRedKernelInfo =
-      std::pair<NoLoopIntermediateStmts, XteamRedKernelMetadata>;
+  /// Map a reduction variable to the corresponding reduction expression and the
+  /// corresponding Xteam local aggregator var
+  using XteamRedVarMap =
+      llvm::DenseMap<const VarDecl *, std::pair<const Expr *, Address>>;
+  using XteamRedKernelInfo = std::pair<NoLoopIntermediateStmts, XteamRedVarMap>;
   using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
 
 private:
@@ -356,6 +353,9 @@ private:
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
+
+  /// Statement for which Xteam reduction code is being generated currently
+  const Stmt *CurrentXteamRedStmt = nullptr;
 
   NoLoopKernelMap NoLoopKernels;
   XteamRedKernelMap XteamRedKernels;
@@ -1569,15 +1569,13 @@ public:
   const ForStmt *getSingleForStmt(const Stmt *S);
 
   /// Does the loop init qualify for a NoLoop kernel?
-  const VarDecl *checkDeclStmt(const ForStmt &FStmt);
-  const VarDecl *checkInitExpr(const ForStmt &FStmt);
-  const VarDecl *checkLoopInit(const ForStmt &FStmt);
+  const VarDecl *checkLoopInit(const OMPLoopDirective &LD);
 
   /// Does the loop increment qualify for a NoLoop kernel?
   bool checkLoopStep(const Expr *Inc, const VarDecl *VD);
 
   /// Does the loop condition qualify for a NoLoop kernel?
-  bool checkLoopStop(const ForStmt &FStmt);
+  bool checkLoopStop(const OMPLoopDirective &, const ForStmt &);
 
   /// If the step is a binary expression, extract and return the step.
   /// If the step is a unary expression, return nullptr.
@@ -1604,22 +1602,40 @@ public:
     return NoLoopKernels.find(S) != NoLoopKernels.end();
   }
 
+  /// If we are able to generate a Xteam reduction kernel for this directive,
+  /// return true, otherwise return false. If successful, metadata for the
+  /// reduction variables are created for subsequent codegen phases to work on.
   bool checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
 
+  /// Given a ForStmt for which Xteam codegen will be done, return the
+  /// intermediate statements for a split directive.
   const NoLoopIntermediateStmts &getXteamRedStmts(const Stmt *S) {
     assert(isXteamRedKernel(S));
     return XteamRedKernels.find(S)->second.first;
   }
 
-  const XteamRedKernelMetadata &getXteamRedKernelMetadata(const Stmt *S) {
+  /// Given a ForStmt for which Xteam codegen will be done, return the
+  /// corresponding metadata
+  XteamRedVarMap &getXteamRedVarMap(const Stmt *S) {
     assert(isXteamRedKernel(S));
     return XteamRedKernels.find(S)->second.second;
   }
 
-  void setXteamRedKernelMetadata(const Stmt *S,
-                                 const XteamRedKernelMetadata &MD) {
+  /// Set provided metadata for the provided ForStmt
+  void setXteamRedVarMap(const Stmt *S, XteamRedVarMap VM) {
     assert(isXteamRedKernel(S));
-    XteamRedKernels.find(S)->second.second = MD;
+    XteamRedKernels.find(S)->second.second = VM;
+  }
+
+  /// Given a ForStmt for which Xteam codegen will be done, update the metadata.
+  /// \p VD is the reduction variable for which metadata is updated.
+  void updateXteamRedVarMap(const Stmt *S, const VarDecl *VD, const Expr *RVE,
+                            Address AggVarAddr) {
+    assert(isXteamRedKernel(S));
+    XteamRedVarMap &RVM = getXteamRedVarMap(S);
+    assert(RVM.find(VD) != RVM.end());
+    RVM.find(VD)->second.first = RVE;
+    RVM.find(VD)->second.second = AggVarAddr;
   }
 
   /// Erase spec-red related metadata for the input statement
@@ -1628,6 +1644,9 @@ public:
   bool isXteamRedKernel(const Stmt *S) {
     return XteamRedKernels.find(S) != XteamRedKernels.end();
   }
+
+  void setCurrentXteamRedStmt(const Stmt *S) { CurrentXteamRedStmt = S; }
+  const Stmt *getCurrentXteamRedStmt() { return CurrentXteamRedStmt; }
 
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
@@ -1825,10 +1844,11 @@ private:
                                                StringRef Suffix);
 
   /// Top level checker for no-loop on the for statement
-  bool isForStmtNoLoopConforming(const Stmt *);
+  bool isForStmtNoLoopConforming(const OMPExecutableDirective &, const Stmt *);
 
   /// Top level checker for xteam reduction of the loop
-  bool isForStmtXteamRedConforming(const Stmt *);
+  bool isForStmtXteamRedConforming(const OMPExecutableDirective &, const Stmt *,
+                                   const XteamRedVarMap &);
 
   /// Used for a target construct
   bool checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
@@ -1841,8 +1861,9 @@ private:
   /// reduction codegen?
   bool areCombinedClausesXteamRedCompatible(const OMPExecutableDirective &D);
 
-  /// Is the reduction clause compatible with xteam reduction codegen?
-  bool canHandleReductionClause(const OMPExecutableDirective &D);
+  /// Collect the reduction variables that may satisfy Xteam criteria
+  std::pair<bool, CodeGenModule::XteamRedVarMap>
+  collectXteamRedVars(const OMPExecutableDirective &D);
 
   /// Populate the map used for no-loop codegen
   void setNoLoopKernel(const Stmt *S,

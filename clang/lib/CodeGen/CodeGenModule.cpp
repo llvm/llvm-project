@@ -7151,6 +7151,84 @@ private:
   bool UnsupportedStep;
 };
 
+/// Ensure xteam reduction codegen can handle the statements in the kernel loop.
+/// The visitor will reject any assignment statement if it finds a reduction
+/// variable as the lhs of an assignment statement but not of the following
+/// form: red_var += <expr> red_var = red_var + <expr> red_var = <expr> +
+/// red_var
+class XteamRedExprChecker final : public ConstStmtVisitor<XteamRedExprChecker> {
+public:
+  XteamRedExprChecker(const CodeGenModule::XteamRedVarMap &RVM)
+      : RedMap{RVM}, IsSupported{true} {}
+  XteamRedExprChecker() = delete;
+
+  bool isSupported() const { return IsSupported; }
+
+  void VisitStmt(const Stmt *S) {
+    if (!S)
+      return;
+    if (isa<BinaryOperator>(S)) {
+      const BinaryOperator *BinOpExpr = cast<BinaryOperator>(S);
+      // Even though we filtered out everything except the sum reduction
+      // operator, we need to make sure the reduction assignment uses
+      // either += or a pattern Codegen can handle. For + reduction op,
+      // Codegen currently handles red-var += <expr>,
+      // red-var = red-var + <expr> and red-var = <expr> + red-var.
+      // We punt on anything more complex.
+
+      auto isExprXteamRedVar = [this](Expr *E) {
+        if (!isa<DeclRefExpr>(E))
+          return false;
+        auto *Decl = cast<DeclRefExpr>(E)->getDecl();
+        if (!isa<VarDecl>(Decl))
+          return false;
+        auto *VD = cast<VarDecl>(Decl);
+        if (RedMap.find(VD) != RedMap.end())
+          return true;
+        return false;
+      };
+
+      Expr *LHS = BinOpExpr->getLHS()->IgnoreImpCasts();
+      if (isExprXteamRedVar(LHS)) {
+        auto BinOpExprOp = BinOpExpr->getOpcode();
+        if (BinOpExprOp != BO_Assign && BinOpExprOp != BO_AddAssign &&
+            BinOpExprOp != BO_Add) {
+          IsSupported = false;
+          return;
+        }
+        // We only need to further examine the assignment case.
+        // If += or +, Codegen will extract the rhs.
+        if (BinOpExpr->getOpcode() == BO_Assign) {
+          Expr *RHS = BinOpExpr->getRHS()->IgnoreImpCasts();
+          if (!isa<BinaryOperator>(RHS)) {
+            IsSupported = false;
+            return;
+          }
+          BinaryOperator *BinOpRHS = cast<BinaryOperator>(RHS);
+          if (BinOpRHS->getOpcode() != BO_Add) {
+            IsSupported = false;
+            return;
+          }
+          Expr *LHSBinOpRHS = BinOpRHS->getLHS()->IgnoreImpCasts();
+          Expr *RHSBinOpRHS = BinOpRHS->getRHS()->IgnoreImpCasts();
+          if (!isExprXteamRedVar(LHSBinOpRHS) &&
+              !isExprXteamRedVar(RHSBinOpRHS)) {
+            IsSupported = false;
+            return;
+          }
+        }
+      }
+    }
+    for (const Stmt *Child : S->children())
+      if (Child)
+        Visit(Child);
+  }
+
+private:
+  const CodeGenModule::XteamRedVarMap &RedMap;
+  bool IsSupported;
+};
+
 } // namespace
 
 const ForStmt *CodeGenModule::getSingleForStmt(const Stmt *S) {
@@ -7172,46 +7250,28 @@ const ForStmt *CodeGenModule::getSingleForStmt(const Stmt *S) {
   return nullptr;
 }
 
-const VarDecl *CodeGenModule::checkDeclStmt(const ForStmt &FStmt) {
-  const Stmt *InitStmt = FStmt.getInit();
-  // We require an explicit init in the construct
-  if (!InitStmt)
+const VarDecl *CodeGenModule::checkLoopInit(const OMPLoopDirective &LD) {
+  const Expr *IVExpr = LD.getIterationVariable();
+  if (!isa<DeclRefExpr>(IVExpr))
     return nullptr;
-  if (InitStmt->getStmtClass() != Stmt::DeclStmtClass)
+  const ValueDecl *ValD = cast<DeclRefExpr>(IVExpr)->getDecl();
+  if (!isa<VarDecl>(ValD))
     return nullptr;
-  const DeclStmt &InitDeclStmt = cast<DeclStmt>(*InitStmt);
-  if (!InitDeclStmt.isSingleDecl())
+  const VarDecl *VD = cast<VarDecl>(ValD);
+  if (!VD->getType()->isIntegerType())
     return nullptr;
-  const Decl *InitDecl = InitDeclStmt.getSingleDecl();
-  if (InitDecl == nullptr || InitDecl->getKind() != Decl::Var)
-    return nullptr;
-  if (!cast<VarDecl>(InitDecl)->getType()->isIntegerType())
-    return nullptr;
-  return cast<VarDecl>(InitDecl);
+  return VD;
 }
 
-const VarDecl *CodeGenModule::checkInitExpr(const ForStmt &FStmt) {
-  const Stmt *InitStmt = FStmt.getInit();
-  // We require an explicit init in the construct
-  if (!InitStmt)
-    return nullptr;
-  if (!isa<BinaryOperator>(InitStmt))
-    return nullptr;
-  if (cast<BinaryOperator>(InitStmt)->getOpcode() != BO_Assign)
-    return nullptr;
-  const Expr *InitExprLHS = cast<BinaryOperator>(InitStmt)->getLHS();
-  if (!isa<DeclRefExpr>(InitExprLHS))
-    return nullptr;
-  if (!cast<DeclRefExpr>(InitExprLHS)->getType()->isIntegerType())
-    return nullptr;
-  return cast<VarDecl>(cast<DeclRefExpr>(InitExprLHS)->getDecl());
-}
-
-const VarDecl *CodeGenModule::checkLoopInit(const ForStmt &FStmt) {
-  const VarDecl *LoopInit = checkDeclStmt(FStmt);
-  if (LoopInit != nullptr)
-    return LoopInit;
-  return checkInitExpr(FStmt);
+bool CodeGenModule::checkLoopStop(const OMPLoopDirective &LD,
+                                  const ForStmt &FStmt) {
+  // We don't handle a condition variable for NoLoop
+  if (FStmt.getConditionVariable() != nullptr)
+    return false;
+  // Make sure the loop condition is valid
+  if (LD.getCond() == nullptr)
+    return false;
+  return true;
 }
 
 // Return true if the step is either a unary increment of the provided loop
@@ -7354,18 +7414,8 @@ const Expr *CodeGenModule::getBinaryExprStep(const Expr *Inc,
   llvm_unreachable("Unexpected operator type in step computation");
 }
 
-bool CodeGenModule::checkLoopStop(const ForStmt &FStmt) {
-  const Expr *Cond = FStmt.getCond();
-  if (!isa<BinaryOperator>(Cond))
-    return false;
-  BinaryOperator::Opcode CondOp = cast<BinaryOperator>(Cond)->getOpcode();
-  if (CondOp != BO_LT && CondOp != BO_GT && CondOp != BO_LE &&
-      CondOp != BO_GE && CondOp != BO_EQ && CondOp != BO_NE)
-    return false;
-  return true;
-}
-
-bool CodeGenModule::isForStmtNoLoopConforming(const Stmt *OMPStmt) {
+bool CodeGenModule::isForStmtNoLoopConforming(const OMPExecutableDirective &D,
+                                              const Stmt *OMPStmt) {
   NoLoopChecker Checker;
   Checker.Visit(OMPStmt);
   if (Checker.isRejectNoLoop())
@@ -7377,39 +7427,31 @@ bool CodeGenModule::isForStmtNoLoopConforming(const Stmt *OMPStmt) {
   if (FStmt == nullptr)
     return false;
 
-  const VarDecl *VD = checkLoopInit(*FStmt);
+  assert(isa<OMPLoopDirective>(D) && "Expected a loop directive");
+  const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
+
+  // Ensure loop init and condition are supported
+  const VarDecl *VD = checkLoopInit(LD);
   if (VD == nullptr)
     return false;
 
-  if (!checkLoopStep(FStmt->getInc(), VD) || !checkLoopStop(*FStmt))
+  if (!checkLoopStep(LD.getInc(), VD) || !checkLoopStop(LD, *FStmt))
     return false;
 
   return true;
 }
 
-bool CodeGenModule::isForStmtXteamRedConforming(const Stmt *OMPStmt) {
-  if (!isForStmtNoLoopConforming(OMPStmt))
+bool CodeGenModule::isForStmtXteamRedConforming(const OMPExecutableDirective &D,
+                                                const Stmt *OMPStmt,
+                                                const XteamRedVarMap &RVM) {
+  if (!isForStmtNoLoopConforming(D, OMPStmt))
     return false;
+  // The above check ensures that there is only one statement corresponding to
+  // the directive
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
-  const Stmt *BodyStmt = FStmt->getBody();
-  if (BodyStmt->getStmtClass() == Stmt::CompoundStmtClass) {
-    const CompoundStmt &CompStmt = cast<CompoundStmt>(*BodyStmt);
-    // Handle only one statement in the loop for now
-    if (CompStmt.size() != 1)
-      return false;
-    BodyStmt = CompStmt.body_front();
-  }
-  // Handle only sum reduction for now
-  if (BodyStmt->getStmtClass() != Stmt::CompoundAssignOperatorClass)
-    return false;
-  const CompoundAssignOperator *BodyAssignStmt =
-      cast<CompoundAssignOperator>(BodyStmt);
-  if (BodyAssignStmt->getOpcode() != BO_AddAssign)
-    return false;
-  // Make sure the reduction target is a scalar
-  if (!isa<DeclRefExpr>(BodyAssignStmt->getLHS()))
-    return false;
-  return true;
+  XteamRedExprChecker Chk(RVM);
+  Chk.Visit(FStmt);
+  return Chk.isSupported();
 }
 
 bool CodeGenModule::isScheduleNoLoopCompatible(const OMPLoopDirective &LD) {
@@ -7480,7 +7522,6 @@ bool CodeGenModule::areCombinedClausesXteamRedCompatible(
       D.hasClausesOfKind<OMPDefaultClause>() ||
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPSharedClause>() ||
-      D.hasClausesOfKind<OMPCollapseClause>() ||
       D.hasClausesOfKind<OMPDistScheduleClause>() ||
       D.hasClausesOfKind<OMPLastprivateClause>() ||
       D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
@@ -7493,28 +7534,49 @@ bool CodeGenModule::areCombinedClausesXteamRedCompatible(
   return isScheduleNoLoopCompatible(cast<OMPLoopDirective>(D));
 }
 
-bool CodeGenModule::canHandleReductionClause(const OMPExecutableDirective &D) {
-  bool hasReductionClause = false;
+/// Given a directive, collect metadata for the reduction variables for Xteam
+/// reduction, if applicable
+std::pair<bool, CodeGenModule::XteamRedVarMap>
+CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
+  XteamRedVarMap VarMap;
+  Address InitAddr = Address::invalid();
+  // Either we emit Xteam code for all reduction variables or none at all
   for (const auto *C : D.getClausesOfKind<OMPReductionClause>()) {
-    // We don't handle multiple reduction clauses today
-    if (hasReductionClause)
-      return false;
-    hasReductionClause = true;
-
-    if (C->reduction_ops().empty())
-      return false;
-
-    const Expr *Ops = *C->reduction_ops().begin();
-    if (!isa<BinaryOperator>(Ops))
-      return false;
-    const Expr *OpsLHS = cast<BinaryOperator>(Ops)->getLHS();
-    llvm::Type *LHSType = getTypes().ConvertTypeForMem(OpsLHS->getType());
-    if (!LHSType->isFloatTy() && !LHSType->isDoubleTy())
-      return false;
+    for (const Expr *Ref : C->varlists()) {
+      llvm::Type *RefType = getTypes().ConvertTypeForMem(Ref->getType());
+      // TODO support more data types
+      if (!RefType->isFloatTy() && !RefType->isDoubleTy())
+        return std::make_pair(false, VarMap);
+      // Only scalar variables supported today
+      if (!isa<DeclRefExpr>(Ref))
+        return std::make_pair(false, VarMap);
+      const ValueDecl *ValDecl = cast<DeclRefExpr>(Ref)->getDecl();
+      if (!isa<VarDecl>(ValDecl))
+        return std::make_pair(false, VarMap);
+      const VarDecl *VD = cast<VarDecl>(ValDecl);
+      // Address of the local var will be populated later
+      VarMap.insert(std::make_pair(VD, std::make_pair(Ref, InitAddr)));
+    }
+    // Now make sure that we support all the operators. Today, only sum
+    for (const Expr *Ref : C->reduction_ops()) {
+      if (!isa<BinaryOperator>(Ref))
+        return std::make_pair(false, VarMap);
+      auto BinExpr = cast<BinaryOperator>(Ref);
+      if (BinExpr->getOpcode() != BO_Assign)
+        return std::make_pair(false, VarMap);
+      auto BinExprRhs = BinExpr->getRHS()->IgnoreImpCasts();
+      if (!isa<BinaryOperator>(BinExprRhs) ||
+          cast<BinaryOperator>(BinExprRhs)->getOpcode() != BO_Add)
+        return std::make_pair(false, VarMap);
+    }
   }
-  if (hasReductionClause)
-    return true;
-  return false;
+  if (VarMap.size() == 0)
+    return std::make_pair(false, VarMap);
+  // TODO support multiple reduction operations in the same loop with the new
+  // DeviceRTL APIs.
+  if (VarMap.size() > 1)
+    return std::make_pair(false, VarMap);
+  return std::make_pair(true, VarMap);
 }
 
 // If a no-loop kernel is found, then a non-empty map is returned,
@@ -7570,11 +7632,13 @@ bool CodeGenModule::checkAndSetNoLoopTargetConstruct(
     return false;
 
   // Make sure codegen can handle it
-  if (!isForStmtNoLoopConforming(AssocStmt))
+  if (!isForStmtNoLoopConforming(*AssocDir, AssocStmt))
     return false;
 
   assert(NoLoopOutermostStmt != AssocStmt);
   NoLoopIntermediateStmts IntermediateStmts;
+  // Push top-level and nested directives
+  IntermediateStmts.push_back(&D);
   IntermediateStmts.push_back(AssocDir);
   setNoLoopKernel(NoLoopOutermostStmt, IntermediateStmts);
 
@@ -7607,10 +7671,12 @@ bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
     // Handle combined construct
     if (!areCombinedClausesNoLoopCompatible(D))
       return false;
-    if (!isForStmtNoLoopConforming(AssocStmt))
+    if (!isForStmtNoLoopConforming(D, AssocStmt))
       return false;
 
     NoLoopIntermediateStmts IntermediateStmts;
+    // Push top-level directive
+    IntermediateStmts.push_back(&D);
     setNoLoopKernel(AssocStmt, IntermediateStmts);
 
     // All checks passed
@@ -7638,19 +7704,25 @@ bool CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   // later
   if (!areCombinedClausesXteamRedCompatible(D))
     return false;
-  if (!canHandleReductionClause(D))
-    return false;
-  if (!isForStmtXteamRedConforming(AssocStmt))
+
+  std::pair<bool, CodeGenModule::XteamRedVarMap> RedVarMapPair =
+      collectXteamRedVars(D);
+  if (!RedVarMapPair.first)
     return false;
 
-  // We don't yet handle intermediate statements but will soon, so keep it ready
+  if (!isForStmtXteamRedConforming(D, AssocStmt, RedVarMapPair.second))
+    return false;
+
+  // We don't yet handle intermediate statements, so the top-level is the only
+  // directive to be pushed.
   NoLoopIntermediateStmts IntermediateStmts;
-  XteamRedKernelMetadata XteamRedKernelMD;
+  IntermediateStmts.push_back(&D);
   // Create a map from the ForStmt, the corresponding info will be populated
   // later
   const ForStmt *FStmt = getSingleForStmt(AssocStmt);
   assert(FStmt && "For stmt cannot be null");
-  setXteamRedKernel(FStmt, std::make_pair(IntermediateStmts, XteamRedKernelMD));
+  setXteamRedKernel(FStmt,
+                    std::make_pair(IntermediateStmts, RedVarMapPair.second));
 
   // All checks passed
   return true;
