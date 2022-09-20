@@ -13,7 +13,7 @@
 #include <__chrono/day.h>
 #include <__chrono/statically_widen.h>
 #include <__config>
-#include <format>
+#include <__format/format_functions.h>
 #include <ostream>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
