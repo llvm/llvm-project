@@ -21,8 +21,8 @@ func.func @emulate_constant(%first : i16) {
 
   %cst0 = arith.constant 0 : i16
   %cst1 = arith.constant 1 : i16
-  %cst_1 = arith.constant -1 : i16
-  %cst_3 = arith.constant -3 : i16
+  %cst_n1 = arith.constant -1 : i16
+  %cst_n3 = arith.constant -3 : i16
 
   %cst13 = arith.constant 13 : i16
   %cst256 = arith.constant 256 : i16
@@ -36,9 +36,9 @@ func.func @emulate_constant(%first : i16) {
   vector.print %cst1 : i16
 
   // EMULATED-NEXT: ( -1, -1 )
-  vector.print %cst_1 : i16
+  vector.print %cst_n1 : i16
   // EMULATED-NEXT: ( -3, -1 )
-  vector.print %cst_3 : i16
+  vector.print %cst_n3 : i16
 
   // EMULATED-NEXT: ( 13, 0 )
   vector.print %cst13 : i16

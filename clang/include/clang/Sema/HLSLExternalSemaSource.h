@@ -22,7 +22,7 @@ class Sema;
 
 class HLSLExternalSemaSource : public ExternalSemaSource {
   Sema *SemaPtr = nullptr;
-  NamespaceDecl *HLSLNamespace;
+  NamespaceDecl *HLSLNamespace = nullptr;
   CXXRecordDecl *ResourceDecl;
 
   using CompletionFunction = std::function<void(CXXRecordDecl *)>;

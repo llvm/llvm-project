@@ -59,13 +59,27 @@ b0:
 
 define dllexport i32 @f1(<4 x i32>* %a, <4 x i8> %v1, <4 x i32> %v2) {
 ; CHECK-LABEL: @f1(
-; CHECK-NEXT:    [[PTR:%.*]] = bitcast <4 x i32>* [[A:%.*]] to <4 x i8>*
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[V2:%.*]], <4 x i32>* [[A:%.*]], i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[PTR:%.*]] = bitcast <4 x i32>* [[A]] to <4 x i8>*
 ; CHECK-NEXT:    call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> [[V1:%.*]], <4 x i8>* [[PTR]], i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    ret i32 0
 ;
   tail call void @llvm.masked.store.v4i32.p0(<4 x i32> %v2, <4 x i32>* %a, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   %ptr = bitcast <4 x i32>* %a to <4 x i8>*
   tail call void @llvm.masked.store.v4i8.p0(<4 x i8> %v1, <4 x i8>* %ptr, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret i32 0
+}
+
+define dllexport i32 @f2(<4 x i32>* %a, <4 x i8> %v1, <4 x i32> %v2, <4 x i1> %mask) {
+; CHECK-LABEL: @f2(
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> [[V2:%.*]], <4 x i32>* [[A:%.*]], i32 1, <4 x i1> [[MASK:%.*]])
+; CHECK-NEXT:    [[PTR:%.*]] = bitcast <4 x i32>* [[A]] to <4 x i8>*
+; CHECK-NEXT:    call void @llvm.masked.store.v4i8.p0v4i8(<4 x i8> [[V1:%.*]], <4 x i8>* [[PTR]], i32 1, <4 x i1> [[MASK]])
+; CHECK-NEXT:    ret i32 0
+;
+  tail call void @llvm.masked.store.v4i32.p0(<4 x i32> %v2, <4 x i32>* %a, i32 1, <4 x i1> %mask)
+  %ptr = bitcast <4 x i32>* %a to <4 x i8>*
+  tail call void @llvm.masked.store.v4i8.p0(<4 x i8> %v1, <4 x i8>* %ptr, i32 1, <4 x i1> %mask)
   ret i32 0
 }
 
