@@ -298,3 +298,16 @@ contains
     real :: x
   end
 end
+
+module m8
+  interface
+    pure elemental module subroutine s1
+    end subroutine
+  end interface
+end module
+submodule(m8) sm8
+ contains
+  !Ensure no spurious error about mismatching attributes
+  module procedure s1
+  end procedure
+end submodule
