@@ -196,22 +196,6 @@ def ErrnoAPI : PublicAPI<"errno.h"> {
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
   let Types = ["off_t", "size_t"];
   let Macros = [
-    SimpleMacroDef<"PROT_NONE", "0">,
-    SimpleMacroDef<"PROT_READ", "1">,
-    SimpleMacroDef<"PROT_WRITE", "2">,
-    SimpleMacroDef<"PROT_EXEC", "4">,
-
-    SimpleMacroDef<"MAP_FIXED", "1">,
-    SimpleMacroDef<"MAP_PRIVATE", "2">,
-    SimpleMacroDef<"MAP_SHARED", "4">,
-
-    SimpleMacroDef<"MAP_FAILED", "((void*)-1)">,
-
-    // TODO: The value of 0x20 is good for x86_64, but has to be extended
-    // in some manner to accommodate other machine architectures.
-    SimpleMacroDef<"MAP_ANONYMOUS", "0x20">
-
-    // TODO: Add other MAP_* macros used by Linux.
   ];
 
 }
