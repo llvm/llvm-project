@@ -7389,6 +7389,13 @@ private:
       SmallVector<OMPClauseMappableExprCommon::MappableExprComponentListRef, 4>>
       DevPointersMap;
 
+  /// Map between device addr declarations and their expression components.
+  /// The key value for declarations in 'this' is null.
+  llvm::DenseMap<
+      const ValueDecl *,
+      SmallVector<OMPClauseMappableExprCommon::MappableExprComponentListRef, 4>>
+      HasDevAddrsMap;
+
   /// Map between lambda declarations and their map type.
   llvm::DenseMap<const ValueDecl *, const OMPMapClause *> LambdasMap;
 
@@ -8819,6 +8826,10 @@ public:
     for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
       for (auto L : C->component_lists())
         DevPointersMap[std::get<0>(L)].push_back(std::get<1>(L));
+    // Extract device addr clause information.
+    for (const auto *C : Dir.getClausesOfKind<OMPHasDeviceAddrClause>())
+      for (auto L : C->component_lists())
+        HasDevAddrsMap[std::get<0>(L)].push_back(std::get<1>(L));
     // Extract map information.
     for (const auto *C : Dir.getClausesOfKind<OMPMapClause>()) {
       if (C->getMapType() != OMPC_MAP_to)
@@ -9065,6 +9076,30 @@ public:
       CombinedInfo.Mappers.push_back(nullptr);
       return;
     }
+    if (VD && HasDevAddrsMap.count(VD)) {
+      auto I = HasDevAddrsMap.find(VD);
+      CombinedInfo.Exprs.push_back(VD);
+      Expr *E = nullptr;
+      for (auto &MCL : I->second) {
+        E = MCL.begin()->getAssociatedExpression();
+        break;
+      }
+      llvm::Value *Ptr = nullptr;
+      if (E->isGLValue())
+        Ptr = CGF.EmitLValue(E).getPointer(CGF);
+      else
+        Ptr = CGF.EmitScalarExpr(E);
+      CombinedInfo.BasePointers.emplace_back(Ptr, VD);
+      CombinedInfo.Pointers.push_back(Ptr);
+      CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+          CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
+          /*isSigned=*/true));
+      CombinedInfo.Types.push_back(
+          (Cap->capturesVariable() ? OMP_MAP_TO : OMP_MAP_LITERAL) |
+          OMP_MAP_TARGET_PARAM);
+      CombinedInfo.Mappers.push_back(nullptr);
+      return;
+    }
 
     using MapData =
         std::tuple<OMPClauseMappableExprCommon::MappableExprComponentListRef,
@@ -9073,14 +9108,19 @@ public:
     SmallVector<MapData, 4> DeclComponentLists;
     // For member fields list in is_device_ptr, store it in
     // DeclComponentLists for generating components info.
+    static const OpenMPMapModifierKind Unknown = OMPC_MAP_MODIFIER_unknown;
     auto It = DevPointersMap.find(VD);
     if (It != DevPointersMap.end())
-      for (const auto &MCL : It->second) {
-        static const OpenMPMapModifierKind Unknown = OMPC_MAP_MODIFIER_unknown;
+      for (const auto &MCL : It->second)
         DeclComponentLists.emplace_back(MCL, OMPC_MAP_to, Unknown,
                                         /*IsImpicit = */ true, nullptr,
                                         nullptr);
-      }
+    auto I = HasDevAddrsMap.find(VD);
+    if (I != HasDevAddrsMap.end())
+      for (const auto &MCL : I->second)
+        DeclComponentLists.emplace_back(MCL, OMPC_MAP_tofrom, Unknown,
+                                        /*IsImpicit = */ true, nullptr,
+                                        nullptr);
     assert(CurDir.is<const OMPExecutableDirective *>() &&
            "Expect a executable directive");
     const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
