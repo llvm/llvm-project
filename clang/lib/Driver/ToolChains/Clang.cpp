@@ -5469,13 +5469,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   auto SanitizeArgs = TC.getSanitizerArgs(Args);
   auto UnwindTables = TC.getDefaultUnwindTableLevel(Args);
 
+  const bool HasSyncUnwindTables = Args.hasFlag(
+      options::OPT_funwind_tables, options::OPT_fno_unwind_tables, false);
   if (Args.hasFlag(options::OPT_fasynchronous_unwind_tables,
                    options::OPT_fno_asynchronous_unwind_tables,
                    SanitizeArgs.needsUnwindTables()) &&
       !Freestanding)
     UnwindTables = ToolChain::UnwindTableLevel::Asynchronous;
-  else if (Args.hasFlag(options::OPT_funwind_tables,
-                        options::OPT_fno_unwind_tables, false))
+  else if (HasSyncUnwindTables)
     UnwindTables = ToolChain::UnwindTableLevel::Synchronous;
   else if (Args.hasFlag(options::OPT_fno_unwind_tables,
                    options::OPT_fno_asynchronous_unwind_tables,
