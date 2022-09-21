@@ -12443,7 +12443,7 @@ algorithm <gc>`.
 
 .. _gc_statepoint:
 
-'llvm.experimental.gc.statepoint' Intrinsic
+'``llvm.experimental.gc.statepoint``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12539,7 +12539,7 @@ pointer' argument of the statepoint in a location statically reachable
 from the statepoint.  Instead, the explicitly relocated value (from a
 ``gc.relocate``) must be used.
 
-'llvm.experimental.gc.result' Intrinsic
+'``llvm.experimental.gc.result``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12579,7 +12579,7 @@ A ``gc.result`` is modeled as a 'readnone' pure function.  It has no
 side effects since it is just a projection of the return value of the
 previous call represented by the ``gc.statepoint``.
 
-'llvm.experimental.gc.relocate' Intrinsic
+'``llvm.experimental.gc.relocate``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12639,7 +12639,7 @@ done during the actual call modeled by the ``gc.statepoint``.
 
 .. _gc.get.pointer.base:
 
-'llvm.experimental.gc.get.pointer.base' Intrinsic
+'``llvm.experimental.gc.get.pointer.base``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12677,7 +12677,7 @@ explicit statepoint model.
 The return pointer type must be the same as the type of the parameter.
 
 
-'llvm.experimental.gc.get.pointer.offset' Intrinsic
+'``llvm.experimental.gc.get.pointer.offset``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
