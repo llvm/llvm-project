@@ -1933,6 +1933,8 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
       continue;
     if (isa<VectorType>(Ty))
       continue;
+    if (!DL.typeSizeEqualsStoreSize(Ty))
+      continue;
     // Create Vector with size of V, and each element of type Ty
     VectorType *V = CandidateTys[0];
     uint64_t ElementSize = DL.getTypeStoreSizeInBits(Ty).getFixedSize();
