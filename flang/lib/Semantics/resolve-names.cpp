@@ -3664,6 +3664,7 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
       currScope().erase(symbol->name());
       newDetails.set_result(*currScope().CopySymbol(details.result()));
     }
+    newSymbol.attrs() |= symbol->attrs();
   }
   return true;
 }
