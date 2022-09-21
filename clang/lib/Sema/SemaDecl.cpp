@@ -11896,6 +11896,7 @@ void Sema::CheckHLSLEntryPoint(FunctionDecl *FD) {
   for (const auto *Param : FD->parameters()) {
     if (!Param->hasAttr<HLSLAnnotationAttr>()) {
       // FIXME: Handle struct parameters where annotations are on struct fields.
+      // See: https://github.com/llvm/llvm-project/issues/57875
       Diag(FD->getLocation(), diag::err_hlsl_missing_semantic_annotation);
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();

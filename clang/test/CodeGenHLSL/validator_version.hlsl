@@ -1,6 +1,7 @@
 // RUN: %clang -cc1 -S -triple dxil-pc-shadermodel6.3-library -S -emit-llvm -xhlsl -validator-version 1.1 -o - %s | FileCheck %s
 
 // FIXME:The following line should work once SPIR-V support for HLSL is added.
+// See: https://github.com/llvm/llvm-project/issues/57877
 // DISABLED: %clang -cc1 -S -triple spirv32 -S -emit-llvm -xhlsl -validator-version 1.1 -o - %s | FileCheck %s --check-prefix=NOT_DXIL
 
 // CHECK:!dx.valver = !{![[valver:[0-9]+]]}

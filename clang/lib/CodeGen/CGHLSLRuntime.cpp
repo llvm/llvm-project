@@ -143,6 +143,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   IRBuilder<> B(BB);
   llvm::SmallVector<Value *> Args;
   // FIXME: support struct parameters where semantics are on members.
+  // See: https://github.com/llvm/llvm-project/issues/57874
   for (const auto *Param : FD->parameters()) {
     Args.push_back(emitInputSemantic(B, *Param));
   }
@@ -150,6 +151,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args);
   (void)CI;
   // FIXME: Handle codegen for return type semantics.
+  // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();
 }
 
