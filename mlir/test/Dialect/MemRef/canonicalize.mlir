@@ -824,3 +824,16 @@ func.func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
 // CHECK-SAME:     %[[ARG1:.+]]: index
 //      CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][0, 0] [1, %[[ARG1]]] [1, 1]
 // CHECK-SAME:       memref<8x?xf32> to memref<?xf32, strided<[1], offset: ?>>
+
+// ----
+
+// CHECK-LABEL: func @memref_realloc_dead
+// CHECK-SAME: %[[SRC:[0-9a-z]+]]: memref<2xf32>
+// CHECK-NOT: memref.realloc
+// CHECK: return %[[SRC]]
+func.func @memref_realloc_dead(%src : memref<2xf32>, %v : f32) -> memref<2xf32>{
+  %0 = memref.realloc %src : memref<2xf32> to memref<4xf32>
+  %i2 = arith.constant 2 : index
+  memref.store %v, %0[%i2] : memref<4xf32>
+  return %src : memref<2xf32>
+}
