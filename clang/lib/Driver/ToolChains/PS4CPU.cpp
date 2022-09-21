@@ -159,17 +159,32 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool IsPS5 = TC.getTriple().isPS5();
   assert(IsPS4 || IsPS5);
 
+  ArgStringList DbgOpts;
+
   // This tells LTO to perform JustMyCode instrumentation.
-  if (UseLTO && UseJMC) {
-    if (IsPS4 && D.getLTOMode() == LTOK_Thin) {
-      CmdArgs.push_back("-lto-thin-debug-options=-enable-jmc-instrument");
-    } else if (IsPS4 && D.getLTOMode() == LTOK_Full) {
-      CmdArgs.push_back("-lto-debug-options=-enable-jmc-instrument");
-    } else if (IsPS5) {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-jmc-instrument");
-    } else
-      llvm_unreachable("new LTO mode?");
+  if (UseLTO && UseJMC)
+    DbgOpts.push_back("-enable-jmc-instrument");
+
+  // We default to creating the arange section, but LTO does not. Enable it
+  // here.
+  if (UseLTO)
+    DbgOpts.push_back("-generate-arange-section");
+
+  if (UseLTO) {
+    if (IsPS4) {
+      StringRef F = (D.getLTOMode() == LTOK_Thin) ?
+                      "-lto-thin-debug-options=" : "-lto-debug-options=";
+      F = makeArgString(Args, F.data(), DbgOpts.front(), "");
+      DbgOpts.erase(DbgOpts.begin());
+      for (auto X : DbgOpts)
+        F = makeArgString(Args, F.data(), " ", X);
+      CmdArgs.push_back(F.data());
+    } else {
+      for (auto D : DbgOpts) {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back(D);
+      }
+    }
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))

@@ -2638,8 +2638,8 @@ void MemoryUse::deleteMe(DerivedUser *Self) {
   delete static_cast<MemoryUse *>(Self);
 }
 
-bool upward_defs_iterator::IsGuaranteedLoopInvariant(Value *Ptr) const {
-  auto IsGuaranteedLoopInvariantBase = [](Value *Ptr) {
+bool upward_defs_iterator::IsGuaranteedLoopInvariant(const Value *Ptr) const {
+  auto IsGuaranteedLoopInvariantBase = [](const Value *Ptr) {
     Ptr = Ptr->stripPointerCasts();
     if (!isa<Instruction>(Ptr))
       return true;

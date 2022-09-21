@@ -386,23 +386,6 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-    - label: "Legacy LLVM_ENABLE_PROJECTS build"
-      command: "libcxx/utils/ci/run-buildbot legacy-project-build"
-      artifact_paths:
-        - "**/test-results.xml"
-        - "**/*.abilist"
-      env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
-      agents:
-        queue: "libcxx-builders"
-        os: "linux"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
-      timeout_in_minutes: 120
-
   # Tests with various build configurations.
   - label: "Static libraries"
     command: "libcxx/utils/ci/run-buildbot generic-static"

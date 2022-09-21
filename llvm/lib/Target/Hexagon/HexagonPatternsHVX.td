@@ -879,3 +879,53 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
   def: Pat<(VecQ32 (setone HVF32:$Vt, HVF32:$Vu)),
            (V6_pred_not (V6_veqw HvxVR:$Vt, HvxVR:$Vu))>;
 }
+
+let Predicates = [UseHVXV60] in {
+  // V60 doesn't have vabsb or byte shifts.
+  // Do the "mask = x >> width-1; abs = (x + mask) ^ mask" trick.
+  // v31:30.h = vsxt(Inp.b)             ; generate masks in odd bytes in
+  //                                    ; interleaved half-words
+  // v29:28.b = vshuffoe(v31.b,v30.b)   ; collect odd/even bytes, masks = v29
+  // v27.b    = vadd(Inp.b,v29.b)       ; x + masks
+  // Abs      = vxor(v27,v29)           ;   ^ masks
+  def: Pat<(VecI8 (abs HVI8:$Vs)),
+    (V6_vxor HvxVR:$Vs,
+      (V6_vaddb HvxVR:$Vs,
+        (HiVec
+          (V6_vshufoeb
+            (HiVec (V6_vsb HvxVR:$Vs)),
+            (LoVec (V6_vsb HvxVR:$Vs))))))>;
+}
+
+let Predicates = [UseHVXV62], AddedComplexity = 20 in {
+  def: Pat<(VecI8 (abs HVI8:$Vs)), (V6_vabsb HvxVR:$Vs)>;
+}
+
+def: Pat<(VecI16 (abs HVI16:$Vs)), (V6_vabsh HvxVR:$Vs)>;
+def: Pat<(VecI32 (abs HVI32:$Vs)), (V6_vabsw HvxVR:$Vs)>;
+
+// If a node takes an MVT type as a parameter, the argument must be
+// a name of a member of MVT.
+multiclass Saturates<ValueType HvxTy_i8, ValueType HvxTy_i16> {
+  def: Pat<(VecI8 (ssat HWI16:$Vss, HvxTy_i8)),
+           (V6_vpackhb_sat (HiVec $Vss), (LoVec $Vss))>;
+  def: Pat<(VecI8 (ssat (concat_vectors HWI32:$Vss, HWI32:$Vtt), HvxTy_i8)),
+           (V6_vpackhb_sat (V6_vpackwh_sat (HiVec $Vtt), (LoVec $Vtt)),
+                           (V6_vpackwh_sat (HiVec $Vss), (LoVec $Vss)))>;
+  def: Pat<(VecI16 (ssat HWI32:$Vss, HvxTy_i16)),
+           (V6_vpackwh_sat (HiVec $Vss), (LoVec $Vss))>;
+
+  def: Pat<(VecI8 (usat HWI16:$Vss, HvxTy_i8)),
+           (V6_vpackhub_sat (HiVec $Vss), (LoVec $Vss))>;
+  def: Pat<(VecI8 (usat (concat_vectors HWI32:$Vss, HWI32:$Vtt), HvxTy_i8)),
+           (V6_vpackhub_sat (V6_vpackwuh_sat (HiVec $Vtt), (LoVec $Vtt)),
+                            (V6_vpackwuh_sat (HiVec $Vss), (LoVec $Vss)))>;
+  def: Pat<(VecI16 (usat HWI32:$Vss, HvxTy_i16)),
+           (V6_vpackwuh_sat (HiVec $Vss), (LoVec $Vss))>;
+}
+let Predicates = [UseHVX64B] in {
+  defm: Saturates<v64i8, v32i16>;
+}
+let Predicates = [UseHVX128B] in {
+  defm: Saturates<v128i8, v64i16>;
+}

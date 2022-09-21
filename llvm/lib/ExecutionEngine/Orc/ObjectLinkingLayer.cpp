@@ -67,7 +67,7 @@ private:
 
   static bool hasMachOInitSection(LinkGraph &G) {
     for (auto &Sec : G.sections())
-      if (Sec.getName() == "__DATA,__obj_selrefs" ||
+      if (Sec.getName() == "__DATA,__objc_selrefs" ||
           Sec.getName() == "__DATA,__objc_classlist" ||
           Sec.getName() == "__TEXT,__swift5_protos" ||
           Sec.getName() == "__TEXT,__swift5_proto" ||

@@ -149,6 +149,8 @@ def : PatFprFpr<fsub, FSUB_D, FPR64>;
 def : PatFprFpr<fmul, FMUL_D, FPR64>;
 def : PatFprFpr<fdiv, FDIV_D, FPR64>;
 def : PatFprFpr<fcopysign, FCOPYSIGN_D, FPR64>;
+def : PatFprFpr<fmaxnum_ieee, FMAX_D, FPR64>;
+def : PatFprFpr<fminnum_ieee, FMIN_D, FPR64>;
 def : PatFpr<fneg, FNEG_D, FPR64>;
 def : PatFpr<fabs, FABS_D, FPR64>;
 def : PatFpr<fsqrt, FSQRT_D, FPR64>;
@@ -159,6 +161,8 @@ def : Pat<(fcopysign FPR64:$fj, FPR32:$fk),
           (FCOPYSIGN_D FPR64:$fj, (FCVT_D_S FPR32:$fk))>;
 def : Pat<(fcopysign FPR32:$fj, FPR64:$fk),
           (FCOPYSIGN_S FPR32:$fj, (FCVT_S_D FPR64:$fk))>;
+
+def : Pat<(fcanonicalize FPR64:$fj), (FMAX_D $fj, $fj)>;
 
 /// Setcc
 

@@ -33,8 +33,7 @@ public:
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
   static void printRegOperand(unsigned RegNo, raw_ostream &O,
-                              const MCRegisterInfo &MRI,
-                              const MCSubtargetInfo &STI);
+                              const MCRegisterInfo &MRI);
 
 private:
   void printU4ImmOperand(const MCInst *MI, unsigned OpNo,

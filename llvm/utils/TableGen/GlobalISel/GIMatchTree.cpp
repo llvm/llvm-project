@@ -580,6 +580,10 @@ void GIMatchTreeOpcodePartitioner::applyForPartition(
     }
   }
   for (auto &Leaf : NewLeaves) {
+    // Skip any leaves that don't care about this instruction.
+    if (!Leaf.getInstrInfo(InstrID))
+      continue;
+
     for (unsigned OpIdx : ReferencedOperands.set_bits()) {
       Leaf.declareOperand(InstrID, OpIdx);
     }
@@ -697,8 +701,10 @@ void GIMatchTreeVRegDefPartitioner::repartition(
   for (const auto &Leaf : enumerate(Leaves)) {
     GIMatchTreeInstrInfo *InstrInfo = Leaf.value().getInstrInfo(InstrID);
     if (!InstrInfo)
-      for (auto &Partition : Partitions)
+      for (auto &Partition : Partitions) {
+        Partition.second.resize(Leaf.index() + 1);
         Partition.second.set(Leaf.index());
+      }
   }
 }
 

@@ -128,13 +128,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v16f64, TRI->getVGPRClassForBitWidth(1024));
 
   if (Subtarget->has16BitInsts()) {
-    if (Subtarget->hasTrue16BitInsts()) {
-      addRegisterClass(MVT::i16, &AMDGPU::VGPR_16RegClass);
-      addRegisterClass(MVT::f16, &AMDGPU::VGPR_16RegClass);
-    } else {
-      addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
-      addRegisterClass(MVT::f16, &AMDGPU::SReg_32RegClass);
-    }
+    addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
+    addRegisterClass(MVT::f16, &AMDGPU::SReg_32RegClass);
 
     // Unless there are also VOP3P operations, not operations are really legal.
     addRegisterClass(MVT::v2i16, &AMDGPU::SReg_32RegClass);

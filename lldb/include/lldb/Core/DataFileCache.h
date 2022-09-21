@@ -16,6 +16,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Caching.h"
+#include "llvm/Support/MemoryBuffer.h"
+
 #include <mutex>
 
 namespace lldb_private {

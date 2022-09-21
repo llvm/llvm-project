@@ -11,7 +11,6 @@ add_llvm_library(LLVMBOLTPasses
   CallGraphWalker.cpp
   DataflowAnalysis.cpp
   DataflowInfoManager.cpp
-  ExtTSPReorderAlgorithm.cpp
   FrameAnalysis.cpp
   FrameOptimizer.cpp
   HFSort.cpp
@@ -53,6 +52,7 @@ add_llvm_library(LLVMBOLTPasses
   AsmPrinter
   MC
   Support
+  TransformUtils
   )
 
 target_link_libraries(LLVMBOLTPasses

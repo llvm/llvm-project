@@ -372,6 +372,30 @@ if (auto extensibleDialect = llvm::dyn_cast<ExtensibleDialect>(dialect)) {
 }
 ```
 
+### Defining a dynamic dialect
+
+Dynamic dialects are extensible dialects that can be defined at runtime. They
+are only populated with dynamic operations, types, and attributes. They can be
+registered in a `DialectRegistry` with `insertDynamic`.
+
+```c++
+auto populateDialect = [](MLIRContext *ctx, DynamicDialect* dialect) {
+  // Code that will be ran when the dynamic dialect is created and loaded.
+  // For instance, this is where we register the dynamic operations, types, and
+  // attributes of the dialect.
+  ...
+}
+
+registry.insertDynamic("dialectName", populateDialect);
+```
+
+Once a dynamic dialect is registered in the `MLIRContext`, it can be retrieved
+with `getOrLoadDialect`.
+
+```c++
+Dialect *dialect = ctx->getOrLoadDialect("dialectName");
+```
+
 ### Defining an operation at runtime
 
 The `DynamicOpDefinition` class represents the definition of an operation

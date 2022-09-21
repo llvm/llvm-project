@@ -19,6 +19,10 @@ void __vectorcall v4(int a, struct Large b, int c) {}
 // X86: define dso_local x86_vectorcallcc void @"\01v4@@28"(i32 inreg noundef %a, %struct.Large* noundef byval(%struct.Large) align 4 %b, i32 inreg noundef %c)
 // X64: define dso_local x86_vectorcallcc void @"\01v4@@40"(i32 noundef %a, %struct.Large* noundef %b, i32 noundef %c)
 
+void __vectorcall v5(long long a, int b, int c) {}
+// X86: define dso_local x86_vectorcallcc void @"\01v5@@16"(i64 noundef %a, i32 inreg noundef %b, i32 inreg noundef %c)
+// X64: define dso_local x86_vectorcallcc void @"\01v5@@24"(i64 noundef %a, i32 noundef %b, i32 noundef %c)
+
 struct HFA2 { double x, y; };
 struct HFA4 { double w, x, y, z; };
 struct HFA5 { double v, w, x, y, z; };

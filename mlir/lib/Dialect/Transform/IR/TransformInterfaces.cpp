@@ -196,6 +196,7 @@ DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
   LLVM_DEBUG(DBGS() << "applying: " << transform << "\n");
   auto printOnFailureRAII = llvm::make_scope_exit([this] {
+    (void)this;
     DEBUG_WITH_TYPE(DEBUG_PRINT_AFTER_ALL, {
       DBGS() << "Top-level payload:\n";
       getTopLevel()->print(llvm::dbgs(),
