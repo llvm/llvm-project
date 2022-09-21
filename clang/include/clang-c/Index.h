@@ -4925,6 +4925,11 @@ CINDEX_LINKAGE unsigned clang_CXXField_isMutable(CXCursor C);
 CINDEX_LINKAGE unsigned clang_CXXMethod_isDefaulted(CXCursor C);
 
 /**
+ * Determine if a C++ method is declared '= delete'.
+ */
+CINDEX_LINKAGE unsigned clang_CXXMethod_isDeleted(CXCursor C);
+
+/**
  * Determine if a C++ member function or member function template is
  * pure virtual.
  */
