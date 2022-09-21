@@ -992,3 +992,37 @@ func.func @atomic_yield_type_mismatch(%I: memref<10xf32>, %i : index) {
   }
   return
 }
+
+// -----
+
+#map0 = affine_map<(d0) -> (d0 floordiv 8, d0 mod 8)>
+func.func @memref_realloc_layout(%src : memref<256xf32, #map0>) -> memref<?xf32>{
+  // expected-error@+1 {{unsupported layout}}
+  %0 = memref.realloc %src : memref<256xf32, #map0> to memref<?xf32>
+  return %0 : memref<?xf32>
+}
+
+// -----
+
+func.func @memref_realloc_sizes_1(%src : memref<2xf32>) -> memref<?xf32>{
+  // expected-error@+1 {{missing dimension operand}}
+  %0 = memref.realloc %src : memref<2xf32> to memref<?xf32>
+  return %0 : memref<?xf32>
+}
+
+// -----
+
+func.func @memref_realloc_sizes_2(%src : memref<?xf32>, %d : index)
+  -> memref<4xf32>{
+  // expected-error@+1 {{unnecessary dimension operand}}
+  %0 = memref.realloc %src(%d) : memref<?xf32> to memref<4xf32>
+  return %0 : memref<4xf32>
+}
+
+// -----
+
+func.func @memref_realloc_type(%src : memref<256xf32>) -> memref<?xi32>{
+  // expected-error@+1 {{different element types}}
+  %0 = memref.realloc %src : memref<256xf32> to memref<?xi32>
+  return %0 : memref<?xi32>
+}

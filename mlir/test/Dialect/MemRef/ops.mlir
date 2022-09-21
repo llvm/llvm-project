@@ -347,3 +347,30 @@ func.func @extract_strided_metadata(%memref : memref<10x?xf32>)
 
   return %m2: memref<?x?xf32, strided<[?, ?], offset: ?>>
 }
+
+// -----
+
+// CHECK-LABEL: func @memref_realloc_ss
+func.func @memref_realloc_ss(%src : memref<2xf32>) -> memref<4xf32>{
+  %0 = memref.realloc %src : memref<2xf32> to memref<4xf32>
+  return %0 : memref<4xf32>
+}
+
+// CHECK-LABEL: func @memref_realloc_sd
+func.func @memref_realloc_sd(%src : memref<2xf32>, %d : index) -> memref<?xf32>{
+  %0 = memref.realloc %src(%d) : memref<2xf32> to memref<?xf32>
+  return %0 : memref<?xf32>
+}
+
+// CHECK-LABEL: func @memref_realloc_ds
+func.func @memref_realloc_ds(%src : memref<?xf32>) -> memref<4xf32>{
+  %0 = memref.realloc %src: memref<?xf32> to memref<4xf32>
+  return %0 : memref<4xf32>
+}
+
+// CHECK-LABEL: func @memref_realloc_dd
+func.func @memref_realloc_dd(%src : memref<?xf32>, %d: index)
+  -> memref<?xf32>{
+  %0 = memref.realloc %src(%d) : memref<?xf32> to memref<?xf32>
+  return %0 : memref<?xf32>
+}
