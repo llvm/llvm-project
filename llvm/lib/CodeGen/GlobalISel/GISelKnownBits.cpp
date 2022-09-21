@@ -39,8 +39,7 @@ Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
     return computeKnownAlignment(MI->getOperand(1).getReg(), Depth);
   case TargetOpcode::G_ASSERT_ALIGN: {
     // TODO: Min with source
-    int64_t LogAlign = MI->getOperand(2).getImm();
-    return Align(1ull << LogAlign);
+    return Align(std::max(1LL, MI->getOperand(2).getImm()));
   }
   case TargetOpcode::G_FRAME_INDEX: {
     int FrameIdx = MI->getOperand(1).getIndex();
@@ -472,9 +471,10 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_ASSERT_ALIGN: {
-    int64_t LogOfAlign = MI.getOperand(2).getImm();
-    if (LogOfAlign == 0)
+    int64_t Align = MI.getOperand(2).getImm();
+    if (Align == 0)
       break;
+    int64_t LogOfAlign = Log2_64(Align);
 
     // TODO: Should use maximum with source
     // If a node is guaranteed to be aligned, set low zero bits accordingly as
