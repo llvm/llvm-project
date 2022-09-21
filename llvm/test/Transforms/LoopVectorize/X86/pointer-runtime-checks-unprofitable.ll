@@ -59,7 +59,7 @@ define void @test(double* nocapture %A, double* nocapture %B, double* nocapture 
 ; CHECK-NEXT:  1  for   {{.+}} = or i1
 ; CHECK-NEXT: Total cost of runtime checks: 35
 
-; CHECK: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (16 < 70)
+; CHECK: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (16 < 24)
 ;
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT: entry:
