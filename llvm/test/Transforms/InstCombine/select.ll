@@ -1458,6 +1458,19 @@ define i32 @PR27817_nsw(i32 %x) {
   ret i32 %sel
 }
 
+define <2 x i32> @PR27817_nsw_vec(<2 x i32> %x) {
+; CHECK-LABEL: @PR27817_nsw_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> <i32 -2147483648, i32 -2147483648>, <2 x i32> [[SUB]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %cmp = icmp eq <2 x i32> %x, <i32 -2147483648, i32 -2147483648>
+  %sub = sub nsw <2 x i32> zeroinitializer, %x
+  %sel = select <2 x i1> %cmp, <2 x i32> <i32 -2147483648, i32 -2147483648>, <2 x i32> %sub
+  ret <2 x i32> %sel
+}
+
 define i32 @select_icmp_slt0_xor(i32 %x) {
 ; CHECK-LABEL: @select_icmp_slt0_xor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], -2147483648
@@ -2767,6 +2780,45 @@ define i8 @select_replacement_add_eq(i8 %x, i8 %y) {
   %add = add i8 %x, 1
   %sel = select i1 %cmp, i8 %add, i8 %y
   ret i8 %sel
+}
+
+define <2 x i8> @select_replacement_add_eq_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @select_replacement_add_eq_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 1, i8 1>
+  %add = add <2 x i8> %x, <i8 1, i8 1>
+  %sel = select <2 x i1> %cmp, <2 x i8> %add, <2 x i8> %y
+  ret <2 x i8> %sel
+}
+
+define <2 x i8> @select_replacement_add_eq_vec_nonuniform(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @select_replacement_add_eq_vec_nonuniform(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 2>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 3, i8 4>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 1, i8 2>
+  %add = add <2 x i8> %x, <i8 3, i8 4>
+  %sel = select <2 x i1> %cmp, <2 x i8> %add, <2 x i8> %y
+  ret <2 x i8> %sel
+}
+
+define <2 x i8> @select_replacement_add_eq_vec_poison(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @select_replacement_add_eq_vec_poison(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 poison>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 1, i8 poison>
+  %add = add <2 x i8> %x, <i8 1, i8 1>
+  %sel = select <2 x i1> %cmp, <2 x i8> %add, <2 x i8> %y
+  ret <2 x i8> %sel
 }
 
 define i8 @select_replacement_add_ne(i8 %x, i8 %y) {

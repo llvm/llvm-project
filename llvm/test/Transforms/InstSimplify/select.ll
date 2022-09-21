@@ -986,6 +986,32 @@ define i32 @select_neutral_add_lhs(i32 %x, i32 %y) {
   ret i32 %sel
 }
 
+define <2 x i32> @select_neutral_add_rhs_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @select_neutral_add_rhs_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[Y:%.*]], zeroinitializer
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[ADD]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %cmp = icmp ne <2 x i32> %y, zeroinitializer
+  %add = add <2 x i32> %x, %y
+  %sel = select <2 x i1> %cmp, <2 x i32> %add, <2 x i32> %x
+  ret <2 x i32> %sel
+}
+
+define <2 x i32> @select_neutral_add_lhs_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @select_neutral_add_lhs_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[Y:%.*]], zeroinitializer
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[ADD]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %cmp = icmp ne <2 x i32> %y, zeroinitializer
+  %add = add <2 x i32> %y, %x
+  %sel = select <2 x i1> %cmp, <2 x i32> %add, <2 x i32> %x
+  ret <2 x i32> %sel
+}
+
 define i32 @select_neutral_sub_rhs(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_neutral_sub_rhs(
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
