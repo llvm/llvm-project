@@ -531,7 +531,7 @@ static void printFrameIndex(raw_ostream& OS, int FrameIndex, bool IsFixed,
 void MachineOperand::printSubRegIdx(raw_ostream &OS, uint64_t Index,
                                     const TargetRegisterInfo *TRI) {
   OS << "%subreg.";
-  if (TRI)
+  if (TRI && Index != 0 && Index < TRI->getNumSubRegIndices())
     OS << TRI->getSubRegIndexName(Index);
   else
     OS << Index;
