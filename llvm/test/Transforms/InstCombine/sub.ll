@@ -2068,3 +2068,52 @@ define i8 @mul_sub_common_factor_use(i8 %x, i8 %y) {
   %a = sub i8 %m, %x
   ret i8 %a
 }
+
+define i5 @demand_low_bits_uses(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_low_bits_uses(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 96
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[Y:%.*]], [[M]]
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[A]] to i5
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %m = and i8 %x, 96 ; 0x60
+  %a = sub i8 %y, %m
+  call void @use8(i8 %a)
+  %r = trunc i8 %a to i5
+  ret i5 %r
+}
+
+; negative test - demands one more bit
+
+define i6 @demand_low_bits_uses_extra_bit(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_low_bits_uses_extra_bit(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 96
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[Y:%.*]], [[M]]
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[A]] to i6
+; CHECK-NEXT:    ret i6 [[R]]
+;
+  %m = and i8 %x, 96 ; 0x60
+  %a = sub i8 %y, %m
+  call void @use8(i8 %a)
+  %r = trunc i8 %a to i6
+  ret i6 %r
+}
+
+define i8 @demand_low_bits_uses_commute(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @demand_low_bits_uses_commute(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[M]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[S]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = and i8 %x, -64 ; 0xC0
+  %a = sub i8 %m, %y
+  call void @use8(i8 %a)
+  %s = sub i8 %a, %z
+  %r = shl i8 %s, 2
+  ret i8 %r
+}
