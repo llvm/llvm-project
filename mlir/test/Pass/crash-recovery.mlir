@@ -22,12 +22,12 @@ module @inner_mod1 {
 
 // REPRO: module @inner_mod1
 // REPRO: module @foo {
-// REPRO: pipeline: "builtin.module(test-module-pass,test-pass-crash)"
+// REPRO: pipeline: "builtin.module(builtin.module(test-module-pass,test-pass-crash))"
 
 // REPRO_LOCAL: module @inner_mod1
 // REPRO_LOCAL: module @foo {
-// REPRO_LOCAL: pipeline: "builtin.module(test-pass-crash)"
+// REPRO_LOCAL: pipeline: "builtin.module(builtin.module(test-pass-crash))"
 
 // REPRO_LOCAL_DYNAMIC: module @inner_mod1
 // REPRO_LOCAL_DYNAMIC: module @foo {
-// REPRO_LOCAL_DYNAMIC: pipeline: "builtin.module(test-pass-crash)"
+// REPRO_LOCAL_DYNAMIC: pipeline: "builtin.module(builtin.module(test-pass-crash))"
