@@ -1255,29 +1255,10 @@ multiclass VOP2_Real_dpp<GFXGen Gen, bits<6> op> {
   def _dpp#Gen.Suffix : VOP2_DPP16_Gen<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp"), Gen>;
 }
 
-// TODO-GFX11_16BIT still using fake16 encoding
-multiclass VOP2_Real_dpp_T16<GFXGen Gen, bits<6> op, string asmName> {
-  defvar ps = !cast<VOP2_Pseudo>(NAME#"_e32");
-  foreach _ = BoolToList<ps.Pfl.HasExtDPP>.ret in
-  def _dpp#Gen.Suffix : VOP2_DPP16_Gen<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp"), Gen> {
-    let AsmString = asmName # ps.Pfl.AsmDPP16;
-  }
-}
-
 multiclass VOP2_Real_dpp8<GFXGen Gen, bits<6> op> {
   foreach _ = BoolToList<!cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
   def _dpp8#Gen.Suffix : VOP2_DPP8_Gen<op, !cast<VOP2_Pseudo>(NAME#"_e32"), Gen>;
 }
-
-// TODO-GFX11_16BIT still using fake16 encoding
-multiclass VOP2_Real_dpp8_T16<GFXGen Gen, bits<6> op, string asmName> {
-  defvar ps = !cast<VOP2_Pseudo>(NAME#"_e32");
-  foreach _ = BoolToList<ps.Pfl.HasExtDPP>.ret in
-  def _dpp8#Gen.Suffix : VOP2_DPP8_Gen<op, ps, Gen> {
-    let AsmString = asmName # ps.Pfl.AsmDPP8;
-  }
-}
-
 
 //===------------------------- VOP2 (with name) -------------------------===//
 multiclass VOP2_Real_e32_with_name<GFXGen Gen, bits<6> op, string opName,
