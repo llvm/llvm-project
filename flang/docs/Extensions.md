@@ -415,3 +415,25 @@ end
   to some forms of input in this situation.)
   For sequential formatted output, RECL= serves as a limit on record lengths
   that raises an error when it is exceeded.
+
+* When a `DATA` statement in a `BLOCK` construct could be construed as
+  either initializing a host-associated object or declaring a new local
+  initialized object, f18 interprets the standard's classification of
+  a `DATA` statement as being a "declaration" rather than a "specification"
+  construct, and notes that the `BLOCK` construct is defined as localizing
+  names that have specifications in the `BLOCK` construct.
+  So this example will elicit an error about multiple initialization:
+```
+subroutine subr
+  integer n = 1
+  block
+    data n/2/
+  end block
+end subroutine
+```
+
+  Other Fortran compilers disagree with each other in their interpretations
+  of this example.
+  The precedent among the most commonly used compilers
+  agrees with f18's interpretation: a `DATA` statement without any other
+  specification of the name refers to the host-associated object.
