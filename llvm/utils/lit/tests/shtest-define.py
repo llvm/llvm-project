@@ -165,4 +165,4 @@
 # Make sure we didn't forget to run something.
 #
 # RUN: %{lit} --show-tests %{my-inputs} > %t.tests.expected.txt
-# RUN: diff -u %t.tests.expected.txt %t.tests.actual.txt
+# RUN: diff -u -w %t.tests.expected.txt %t.tests.actual.txt
