@@ -299,6 +299,16 @@ private:
       }
     };
 
+    // Target indices used for wasm-specific locations.
+    struct WasmLoc {
+      int Index; // One of TargetIndex values defined in WebAssembly.h
+      int64_t Offset;
+      bool operator==(const WasmLoc &Other) const {
+        return Index == Other.Index && Offset == Other.Offset;
+      }
+      bool operator!=(const WasmLoc &Other) const { return !(*this == Other); }
+    };
+
     /// Identity of the variable at this location.
     const DebugVariable Var;
 
@@ -313,7 +323,8 @@ private:
       InvalidKind = 0,
       RegisterKind,
       SpillLocKind,
-      ImmediateKind
+      ImmediateKind,
+      WasmLocKind
     };
 
     enum class EntryValueLocKind {
@@ -332,6 +343,7 @@ private:
       int64_t Immediate;
       const ConstantFP *FPImm;
       const ConstantInt *CImm;
+      WasmLoc WasmLocation;
       MachineLocValue() : Hash(0) {}
     };
 
@@ -348,6 +360,8 @@ private:
         switch (Kind) {
         case MachineLocKind::SpillLocKind:
           return Value.SpillLocation == Other.Value.SpillLocation;
+        case MachineLocKind::WasmLocKind:
+          return Value.WasmLocation == Other.Value.WasmLocation;
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
           return Value.Hash == Other.Value.Hash;
@@ -366,6 +380,11 @@ private:
                      Other.Kind, Other.Value.SpillLocation.SpillBase,
                      Other.Value.SpillLocation.SpillOffset.getFixed(),
                      Other.Value.SpillLocation.SpillOffset.getScalable());
+        case MachineLocKind::WasmLocKind:
+          return std::make_tuple(Kind, Value.WasmLocation.Index,
+                                 Value.WasmLocation.Offset) <
+                 std::make_tuple(Other.Kind, Other.Value.WasmLocation.Index,
+                                 Other.Value.WasmLocation.Offset);
         case MachineLocKind::RegisterKind:
         case MachineLocKind::ImmediateKind:
           return std::tie(Kind, Value.Hash) <
@@ -429,6 +448,9 @@ private:
       } else if (Op.isCImm()) {
         Kind = MachineLocKind::ImmediateKind;
         Loc.CImm = Op.getCImm();
+      } else if (Op.isTargetIndex()) {
+        Kind = MachineLocKind::WasmLocKind;
+        Loc.WasmLocation = {Op.getIndex(), Op.getOffset()};
       } else
         llvm_unreachable("Invalid Op kind for MachineLoc.");
       return {Kind, Loc};
@@ -562,6 +584,10 @@ private:
           MOs.push_back(Orig);
           break;
         }
+        case MachineLocKind::WasmLocKind: {
+          MOs.push_back(Orig);
+          break;
+        }
         case MachineLocKind::InvalidKind:
           llvm_unreachable("Tried to produce DBG_VALUE for invalid VarLoc");
         }
@@ -654,8 +680,9 @@ private:
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    // TRI can be null.
-    void dump(const TargetRegisterInfo *TRI, raw_ostream &Out = dbgs()) const {
+    // TRI and TII can be null.
+    void dump(const TargetRegisterInfo *TRI, const TargetInstrInfo *TII,
+              raw_ostream &Out = dbgs()) const {
       Out << "VarLoc(";
       for (const MachineLoc &MLoc : Locs) {
         if (Locs.begin() != &MLoc)
@@ -674,6 +701,22 @@ private:
         case MachineLocKind::ImmediateKind:
           Out << MLoc.Value.Immediate;
           break;
+        case MachineLocKind::WasmLocKind: {
+          if (TII) {
+            auto Indices = TII->getSerializableTargetIndices();
+            auto Found =
+                find_if(Indices, [&](const std::pair<int, const char *> &I) {
+                  return I.first == MLoc.Value.WasmLocation.Index;
+                });
+            assert(Found != Indices.end());
+            Out << Found->second;
+            if (MLoc.Value.WasmLocation.Offset > 0)
+              Out << " + " << MLoc.Value.WasmLocation.Offset;
+          } else {
+            Out << "WasmLoc";
+          }
+          break;
+        }
         case MachineLocKind::InvalidKind:
           llvm_unreachable("Invalid VarLoc in dump method");
         }
@@ -1201,7 +1244,7 @@ void VarLocBasedLDV::printVarLocInMBB(const MachineFunction &MF,
     for (const VarLoc &VL : VarLocs) {
       Out << " Var: " << VL.Var.getVariable()->getName();
       Out << " MI: ";
-      VL.dump(TRI, Out);
+      VL.dump(TRI, TII, Out);
     }
   }
   Out << "\n";
@@ -1339,7 +1382,7 @@ void VarLocBasedLDV::transferDebugValue(const MachineInstr &MI,
 
   if (all_of(MI.debug_operands(), [](const MachineOperand &MO) {
         return (MO.isReg() && MO.getReg()) || MO.isImm() || MO.isFPImm() ||
-               MO.isCImm();
+               MO.isCImm() || MO.isTargetIndex();
       })) {
     // Use normal VarLoc constructor for registers and immediates.
     VarLoc VL(MI);
@@ -1452,7 +1495,7 @@ void VarLocBasedLDV::insertTransferDebugPair(
     ProcessVarLoc(VL);
     LLVM_DEBUG({
       dbgs() << "Creating VarLoc for register copy:";
-      VL.dump(TRI);
+      VL.dump(TRI, TII);
     });
     return;
   }
@@ -1465,7 +1508,7 @@ void VarLocBasedLDV::insertTransferDebugPair(
     ProcessVarLoc(VL);
     LLVM_DEBUG({
       dbgs() << "Creating VarLoc for spill:";
-      VL.dump(TRI);
+      VL.dump(TRI, TII);
     });
     return;
   }
@@ -1478,7 +1521,7 @@ void VarLocBasedLDV::insertTransferDebugPair(
     ProcessVarLoc(VL);
     LLVM_DEBUG({
       dbgs() << "Creating VarLoc for restore:";
-      VL.dump(TRI);
+      VL.dump(TRI, TII);
     });
     return;
   }
@@ -1816,7 +1859,7 @@ bool VarLocBasedLDV::transferTerminator(MachineBasicBlock *CurMBB,
     for (VarLoc &VL : VarLocs) {
       // Copy OpenRanges to OutLocs, if not already present.
       dbgs() << "Add to OutLocs in MBB #" << CurMBB->getNumber() << ":  ";
-      VL.dump(TRI);
+      VL.dump(TRI, TII);
     }
   });
   VarLocSet &VLS = getVarLocsInMBB(CurMBB, OutLocs);
@@ -2056,10 +2099,14 @@ bool VarLocBasedLDV::isEntryValueCandidate(
 /// Collect all register defines (including aliases) for the given instruction.
 static void collectRegDefs(const MachineInstr &MI, DefinedRegsSet &Regs,
                            const TargetRegisterInfo *TRI) {
-  for (const MachineOperand &MO : MI.operands())
-    if (MO.isReg() && MO.isDef() && MO.getReg())
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isReg() && MO.isDef() && MO.getReg() &&
+        Register::isPhysicalRegister(MO.getReg())) {
+      Regs.insert(MO.getReg());
       for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid(); ++AI)
         Regs.insert(*AI);
+    }
+  }
 }
 
 /// This routine records the entry values of function parameters. The values
@@ -2100,7 +2147,7 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
                                   TargetPassConfig *TPC, unsigned InputBBLimit,
                                   unsigned InputDbgValLimit) {
   (void)DomTree;
-  LLVM_DEBUG(dbgs() << "\nDebug Range Extension\n");
+  LLVM_DEBUG(dbgs() << "\nDebug Range Extension: " << MF.getName() << "\n");
 
   if (!MF.getFunction().getSubprogram())
     // VarLocBaseLDV will already have removed all DBG_VALUEs.
