@@ -333,7 +333,7 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
 
   // Move the region from the module op into the SPIR-V module.
   Region &spvModuleRegion = spvModule.getRegion();
-  rewriter.inlineRegionBefore(moduleOp.body(), spvModuleRegion,
+  rewriter.inlineRegionBefore(moduleOp.getBodyRegion(), spvModuleRegion,
                               spvModuleRegion.begin());
   // The spv.module build method adds a block. Remove that.
   rewriter.eraseBlock(&spvModuleRegion.back());
