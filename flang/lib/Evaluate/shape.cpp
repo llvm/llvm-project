@@ -1021,6 +1021,16 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
   return Shape(static_cast<std::size_t>(call.Rank()), MaybeExtentExpr{});
 }
 
+void GetShapeHelper::AccumulateExtent(
+    ExtentExpr &result, ExtentExpr &&n) const {
+  result = std::move(result) + std::move(n);
+  if (context_) {
+    // Fold during expression creation to avoid creating an expression so
+    // large we can't evalute it without overflowing the stack.
+    result = Fold(*context_, std::move(result));
+  }
+}
+
 // Check conformance of the passed shapes.
 std::optional<bool> CheckConformance(parser::ContextualMessages &messages,
     const Shape &left, const Shape &right, CheckConformanceFlags::Flags flags,

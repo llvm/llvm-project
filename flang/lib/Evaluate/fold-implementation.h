@@ -1539,17 +1539,19 @@ auto ApplyElementwise(FoldingContext &context,
                   std::move(resultLength), std::move(*left), std::move(*right));
             }
           }
-        } else if (IsExpandableScalar(rightExpr)) {
+        } else if (IsExpandableScalar(rightExpr, context, *leftShape)) {
           return MapOperation(context, std::move(f), *leftShape,
               std::move(resultLength), std::move(*left), rightExpr);
         }
       }
     }
-  } else if (rightExpr.Rank() > 0 && IsExpandableScalar(leftExpr)) {
-    if (std::optional<Shape> shape{GetShape(context, rightExpr)}) {
-      if (auto right{AsFlatArrayConstructor(rightExpr)}) {
-        return MapOperation(context, std::move(f), *shape,
-            std::move(resultLength), leftExpr, std::move(*right));
+  } else if (rightExpr.Rank() > 0) {
+    if (std::optional<Shape> rightShape{GetShape(context, rightExpr)}) {
+      if (IsExpandableScalar(leftExpr, context, *rightShape)) {
+        if (auto right{AsFlatArrayConstructor(rightExpr)}) {
+          return MapOperation(context, std::move(f), *rightShape,
+              std::move(resultLength), leftExpr, std::move(*right));
+        }
       }
     }
   }
