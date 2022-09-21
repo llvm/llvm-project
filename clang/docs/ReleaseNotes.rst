@@ -162,6 +162,7 @@ Bug Fixes
   `Issue 53628 <https://github.com/llvm/llvm-project/issues/53628>`_
 - The template arguments of a variable template being accessed as a
   member will now be represented in the AST.
+- Fix incorrect handling of inline builtins with asm labels.
 
 
 Improvements to Clang's diagnostics
