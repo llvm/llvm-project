@@ -3647,10 +3647,16 @@ IdentifierInfo *TemplateTypeParmType::getIdentifier() const {
 }
 
 SubstTemplateTypeParmType::SubstTemplateTypeParmType(
-    const TemplateTypeParmType *Param, QualType Canon,
+    const TemplateTypeParmType *Param, QualType Replacement,
     Optional<unsigned> PackIndex)
-    : Type(SubstTemplateTypeParm, Canon, Canon->getDependence()),
+    : Type(SubstTemplateTypeParm, Replacement.getCanonicalType(),
+           Replacement->getDependence()),
       Replaced(Param) {
+  SubstTemplateTypeParmTypeBits.HasNonCanonicalUnderlyingType =
+      Replacement != getCanonicalTypeInternal();
+  if (SubstTemplateTypeParmTypeBits.HasNonCanonicalUnderlyingType)
+    *getTrailingObjects<QualType>() = Replacement;
+
   SubstTemplateTypeParmTypeBits.PackIndex = PackIndex ? *PackIndex + 1 : 0;
 }
 

@@ -4775,9 +4775,6 @@ QualType
 ASTContext::getSubstTemplateTypeParmType(const TemplateTypeParmType *Parm,
                                          QualType Replacement,
                                          Optional<unsigned> PackIndex) const {
-  assert(Replacement.isCanonical()
-         && "replacement types must always be canonical");
-
   llvm::FoldingSetNodeID ID;
   SubstTemplateTypeParmType::Profile(ID, Parm, Replacement, PackIndex);
   void *InsertPos = nullptr;
@@ -4785,8 +4782,11 @@ ASTContext::getSubstTemplateTypeParmType(const TemplateTypeParmType *Parm,
     = SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!SubstParm) {
-    SubstParm = new (*this, TypeAlignment)
-        SubstTemplateTypeParmType(Parm, Replacement, PackIndex);
+    void *Mem = Allocate(SubstTemplateTypeParmType::totalSizeToAlloc<QualType>(
+                             !Replacement.isCanonical()),
+                         TypeAlignment);
+    SubstParm =
+        new (Mem) SubstTemplateTypeParmType(Parm, Replacement, PackIndex);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
