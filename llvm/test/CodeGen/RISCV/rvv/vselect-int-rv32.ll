@@ -666,8 +666,7 @@ define <vscale x 1 x i64> @vmerge_xv_nxv1i64(<vscale x 1 x i64> %va, i64 %b, <vs
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vlse64.v v9, (a0), zero
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
@@ -707,8 +706,7 @@ define <vscale x 2 x i64> @vmerge_xv_nxv2i64(<vscale x 2 x i64> %va, i64 %b, <vs
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
-; CHECK-NEXT:    vlse64.v v10, (a0), zero
-; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i64> poison, i64 %b, i32 0
@@ -748,8 +746,7 @@ define <vscale x 4 x i64> @vmerge_xv_nxv4i64(<vscale x 4 x i64> %va, i64 %b, <vs
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vlse64.v v12, (a0), zero
-; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
+; CHECK-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i64> poison, i64 %b, i32 0
@@ -789,8 +786,7 @@ define <vscale x 8 x i64> @vmerge_xv_nxv8i64(<vscale x 8 x i64> %va, i64 %b, <vs
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    addi a0, sp, 8
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
-; CHECK-NEXT:    vlse64.v v16, (a0), zero
-; CHECK-NEXT:    vmerge.vvm v8, v8, v16, v0
+; CHECK-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
