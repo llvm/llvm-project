@@ -12640,7 +12640,7 @@ done during the actual call modeled by the ``gc.statepoint``.
 .. _gc.get.pointer.base:
 
 '``llvm.experimental.gc.get.pointer.base``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -12678,7 +12678,7 @@ The return pointer type must be the same as the type of the parameter.
 
 
 '``llvm.experimental.gc.get.pointer.offset``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
