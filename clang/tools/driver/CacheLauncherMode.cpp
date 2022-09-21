@@ -173,6 +173,13 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
     }
     Args.append({"-greproducible"});
 
+    if (llvm::sys::Process::GetEnv("CLANG_CACHE_REDACT_TIME_MACROS")) {
+      // Remove use of these macros to get reproducible outputs. This can
+      // accompany CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS to avoid fatal errors
+      // when the source uses these macros.
+      Args.append({"-Wno-builtin-macro-redefined", "-D__DATE__=\"redacted\"",
+                   "-D__TIMESTAMP__=\"redacted\"", "-D__TIME__=\"redacted\""});
+    }
     if (llvm::sys::Process::GetEnv("CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS")) {
       // Run the compilation twice, without replaying, to check that we get the
       // same compilation artifacts for the same key. If they are not the same
