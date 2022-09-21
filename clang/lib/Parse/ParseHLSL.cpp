@@ -73,7 +73,6 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
 
   // FIXME: support attribute on cbuffer/tbuffer.
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
-    SourceLocation Loc = Tok.getLocation();
     // FIXME: support attribute on constants inside cbuffer/tbuffer.
     ParsedAttributes Attrs(AttrFactory);
 
