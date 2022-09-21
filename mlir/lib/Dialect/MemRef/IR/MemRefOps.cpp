@@ -1801,9 +1801,9 @@ computeExpandedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
   return StridedLayoutAttr::get(srcType.getContext(), srcOffset, resultStrides);
 }
 
-static FailureOr<MemRefType>
-computeExpandedType(MemRefType srcType, ArrayRef<int64_t> resultShape,
-                    ArrayRef<ReassociationIndices> reassociation) {
+FailureOr<MemRefType> ExpandShapeOp::computeExpandedType(
+    MemRefType srcType, ArrayRef<int64_t> resultShape,
+    ArrayRef<ReassociationIndices> reassociation) {
   if (srcType.getLayout().isIdentity()) {
     // If the source is contiguous (i.e., no layout map specified), so is the
     // result.
@@ -1827,7 +1827,7 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
   // Only ranked memref source values are supported.
   auto srcType = src.getType().cast<MemRefType>();
   FailureOr<MemRefType> resultType =
-      computeExpandedType(srcType, resultShape, reassociation);
+      ExpandShapeOp::computeExpandedType(srcType, resultShape, reassociation);
   // Failure of this assertion usually indicates a problem with the source
   // type, e.g., could not get strides/offset.
   assert(succeeded(resultType) && "could not compute layout");
@@ -1846,7 +1846,7 @@ LogicalResult ExpandShapeOp::verify() {
     return failure();
 
   // Compute expected result type (including layout map).
-  FailureOr<MemRefType> expectedResultType = computeExpandedType(
+  FailureOr<MemRefType> expectedResultType = ExpandShapeOp::computeExpandedType(
       srcType, resultType.getShape(), getReassociationIndices());
   if (failed(expectedResultType))
     return emitOpError("invalid source layout map");
@@ -1943,9 +1943,8 @@ bool CollapseShapeOp::isGuaranteedCollapsible(
                                              /*strict=*/true));
 }
 
-static MemRefType
-computeCollapsedType(MemRefType srcType,
-                     ArrayRef<ReassociationIndices> reassociation) {
+MemRefType CollapseShapeOp::computeCollapsedType(
+    MemRefType srcType, ArrayRef<ReassociationIndices> reassociation) {
   SmallVector<int64_t> resultShape;
   resultShape.reserve(reassociation.size());
   for (const ReassociationIndices &group : reassociation) {
@@ -1979,7 +1978,8 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<NamedAttribute> attrs) {
   auto srcType = src.getType().cast<MemRefType>();
-  MemRefType resultType = computeCollapsedType(srcType, reassociation);
+  MemRefType resultType =
+      CollapseShapeOp::computeCollapsedType(srcType, reassociation);
   build(b, result, resultType, src, attrs);
   result.addAttribute(::mlir::getReassociationAttrName(),
                       getReassociationIndicesAttribute(b, reassociation));
@@ -2039,9 +2039,9 @@ public:
     if (!CastOp::canFoldIntoConsumerOp(cast))
       return failure();
 
-    Type newResultType =
-        computeCollapsedType(cast.getOperand().getType().cast<MemRefType>(),
-                             op.getReassociationIndices());
+    Type newResultType = CollapseShapeOp::computeCollapsedType(
+        cast.getOperand().getType().cast<MemRefType>(),
+        op.getReassociationIndices());
 
     if (newResultType == op.getResultType()) {
       rewriter.updateRootInPlace(
