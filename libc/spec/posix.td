@@ -201,6 +201,13 @@ def POSIX : StandardSpec<"POSIX"> {
       [], // Enumerations
       [
         FunctionSpec<
+            "madvise",
+            RetValSpec<IntType>,
+            [ArgSpec<VoidPtr>,
+             ArgSpec<SizeTType>,
+             ArgSpec<IntType>]
+        >,
+        FunctionSpec<
             "mmap",
             RetValSpec<VoidPtr>,
             [ArgSpec<VoidPtr>,
@@ -221,6 +228,13 @@ def POSIX : StandardSpec<"POSIX"> {
             "munmap",
             RetValSpec<IntType>,
             [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+            "posix_madvise",
+            RetValSpec<IntType>,
+            [ArgSpec<VoidPtr>,
+             ArgSpec<SizeTType>,
+             ArgSpec<IntType>]
         >,
       ]
   >;

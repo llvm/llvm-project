@@ -99,9 +99,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
 
     # sys/mman.h entrypoints
+    libc.src.sys.mman.madvise
     libc.src.sys.mman.mmap
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
+    libc.src.sys.mman.posix_madvise
 
     # sys/resource.h entrypoints
     libc.src.sys.resource.getrlimit
