@@ -8181,21 +8181,37 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallVector<int> InsertMask(NumElts, UndefMaskElem);
       for (unsigned I = 0; I < NumElts; I++) {
         if (Mask[I] != UndefMaskElem)
-          InsertMask[Offset + I] = NumElts + I;
+          InsertMask[Offset + I] = I;
       }
-      if (Offset != 0 ||
-          !isUndefVector(FirstInsert->getOperand(0), InsertMask)) {
-        for (unsigned I = 0; I < NumElts; I++) {
-          if (InsertMask[I] == UndefMaskElem)
-            InsertMask[I] = I;
-        }
-
-        V = Builder.CreateShuffleVector(
-            FirstInsert->getOperand(0), V, InsertMask,
-            cast<Instruction>(E->Scalars.back())->getName());
-        if (auto *I = dyn_cast<Instruction>(V)) {
-          GatherShuffleSeq.insert(I);
-          CSEBlocks.insert(I->getParent());
+      bool IsFirstUndef = isUndefVector(FirstInsert->getOperand(0), InsertMask);
+      if ((!IsIdentity || Offset != 0 || !IsFirstUndef) &&
+          NumElts != NumScalars) {
+        if (IsFirstUndef) {
+          if (!ShuffleVectorInst::isIdentityMask(InsertMask)) {
+            V = Builder.CreateShuffleVector(
+                V, InsertMask, cast<Instruction>(E->Scalars.back())->getName());
+            if (auto *I = dyn_cast<Instruction>(V)) {
+              GatherShuffleSeq.insert(I);
+              CSEBlocks.insert(I->getParent());
+            }
+            // Create freeze for undef values.
+            if (!isa<PoisonValue>(FirstInsert->getOperand(0)))
+              V = Builder.CreateFreeze(V);
+          }
+        } else {
+          for (unsigned I = 0; I < NumElts; I++) {
+            if (InsertMask[I] == UndefMaskElem)
+              InsertMask[I] = I;
+            else
+              InsertMask[I] += NumElts;
+          }
+          V = Builder.CreateShuffleVector(
+              FirstInsert->getOperand(0), V, InsertMask,
+              cast<Instruction>(E->Scalars.back())->getName());
+          if (auto *I = dyn_cast<Instruction>(V)) {
+            GatherShuffleSeq.insert(I);
+            CSEBlocks.insert(I->getParent());
+          }
         }
       }
 
