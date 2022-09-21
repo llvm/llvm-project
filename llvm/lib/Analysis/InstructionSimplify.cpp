@@ -4082,8 +4082,6 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                      const SimplifyQuery &Q,
                                      bool AllowRefinement,
                                      unsigned MaxRecurse) {
-  assert(!Op->getType()->isVectorTy() && "This is not safe for vectors");
-
   // Trivial replacement.
   if (V == Op)
     return RepOp;
@@ -4095,6 +4093,14 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   auto *I = dyn_cast<Instruction>(V);
   if (!I || !is_contained(I->operands(), Op))
     return nullptr;
+
+  if (Op->getType()->isVectorTy()) {
+    // For vector types, the simplification must hold per-lane, so forbid
+    // potentially cross-lane operations like shufflevector.
+    assert(I->getType()->isVectorTy() && "Vector type mismatch");
+    if (isa<ShuffleVectorInst>(I) || isa<CallBase>(I))
+      return nullptr;
+  }
 
   // Replace Op with RepOp in instruction operands.
   SmallVector<Value *, 8> NewOps(I->getNumOperands());
@@ -4325,9 +4331,7 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   // If we have a scalar equality comparison, then we know the value in one of
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
-  // Note that the equivalence/replacement opportunity does not hold for vectors
-  // because each element of a vector select is chosen independently.
-  if (Pred == ICmpInst::ICMP_EQ && !CondVal->getType()->isVectorTy()) {
+  if (Pred == ICmpInst::ICMP_EQ) {
     if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
                                /* AllowRefinement */ false,
                                MaxRecurse) == TrueVal ||

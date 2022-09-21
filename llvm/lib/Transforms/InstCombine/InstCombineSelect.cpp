@@ -1164,10 +1164,7 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
 /// TODO: Wrapping flags could be preserved in some cases with better analysis.
 Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
                                                           ICmpInst &Cmp) {
-  // Value equivalence substitution requires an all-or-nothing replacement.
-  // It does not make sense for a vector compare where each lane is chosen
-  // independently.
-  if (!Cmp.isEquality() || Cmp.getType()->isVectorTy())
+  if (!Cmp.isEquality())
     return nullptr;
 
   // Canonicalize the pattern to ICMP_EQ by swapping the select operands.
@@ -1197,7 +1194,9 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // undefined behavior). Only do this if CmpRHS is a constant, as
     // profitability is not clear for other cases.
     // FIXME: The replacement could be performed recursively.
-    if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()))
+    // FIXME: Support vectors.
+    if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()) &&
+        !Cmp.getType()->isVectorTy())
       if (auto *I = dyn_cast<Instruction>(TrueVal))
         if (I->hasOneUse() && isSafeToSpeculativelyExecute(I))
           for (Use &U : I->operands())
@@ -2795,14 +2794,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return BinaryOperator::CreateAnd(FalseVal, Builder.CreateOr(C, TrueVal));
     }
 
-    if (!SelType->isVectorTy()) {
-      if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal, One, SQ,
-                                            /* AllowRefinement */ true))
-        return replaceOperand(SI, 1, S);
-      if (Value *S = simplifyWithOpReplaced(FalseVal, CondVal, Zero, SQ,
-                                            /* AllowRefinement */ true))
-        return replaceOperand(SI, 2, S);
-    }
+    if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal, One, SQ,
+                                          /* AllowRefinement */ true))
+      return replaceOperand(SI, 1, S);
+    if (Value *S = simplifyWithOpReplaced(FalseVal, CondVal, Zero, SQ,
+                                          /* AllowRefinement */ true))
+      return replaceOperand(SI, 2, S);
 
     if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {
       Use *Y = nullptr;

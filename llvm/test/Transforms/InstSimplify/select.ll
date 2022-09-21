@@ -988,10 +988,8 @@ define i32 @select_neutral_add_lhs(i32 %x, i32 %y) {
 
 define <2 x i32> @select_neutral_add_rhs_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @select_neutral_add_rhs_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[Y:%.*]], zeroinitializer
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[ADD]], <2 x i32> [[X]]
-; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
 ;
   %cmp = icmp ne <2 x i32> %y, zeroinitializer
   %add = add <2 x i32> %x, %y
@@ -1001,10 +999,8 @@ define <2 x i32> @select_neutral_add_rhs_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @select_neutral_add_lhs_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @select_neutral_add_lhs_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[Y:%.*]], zeroinitializer
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[ADD]], <2 x i32> [[X]]
-; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
 ;
   %cmp = icmp ne <2 x i32> %y, zeroinitializer
   %add = add <2 x i32> %y, %x
@@ -1047,6 +1043,7 @@ define i32 @select_ctpop_zero(i32 %x) {
   ret i32 %sel
 }
 
+; FIXME: This is safe to fold.
 define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @select_ctpop_zero_vec(
 ; CHECK-NEXT:    [[T0:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
@@ -1060,6 +1057,7 @@ define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
   ret <2 x i32> %sel
 }
 
+; Negative test: Cannot fold due to cross-lane intrinsic.
 define <2 x i32> @select_vector_reverse(<2 x i32> %x) {
 ; CHECK-LABEL: @select_vector_reverse(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
