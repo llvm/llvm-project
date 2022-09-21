@@ -1195,7 +1195,6 @@ define void @splatconstant_funnel_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <
 ;
 ; Variable Unary Funnel Shifts (Rotates)
 ;
-; TODO - Add constant and uniform-constant tests
 
 define void @var_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> %a512, i64 %c64, <2 x i64> %c128, <4 x i64> %c256, <8 x i64> %c512) {
 ; SSE-LABEL: 'var_rotate_i64'
