@@ -132,6 +132,14 @@ namespace llvm {
     /// function.
     PerFunctionState *BlockAddressPFS;
 
+    // References to dso_local_equivalent. The key is the global's ValID, the
+    // value is a placeholder value that will be replaced. Note there are two
+    // maps for tracking ValIDs that are GlobalNames and ValIDs that are
+    // GlobalIDs. These are needed because "operator<" doesn't discriminate
+    // between the two.
+    std::map<ValID, GlobalValue *> ForwardRefDSOLocalEquivalentNames;
+    std::map<ValID, GlobalValue *> ForwardRefDSOLocalEquivalentIDs;
+
     // Attribute builder reference information.
     std::map<Value*, std::vector<unsigned> > ForwardRefAttrGroups;
     std::map<unsigned, AttrBuilder> NumberedAttrBuilders;
