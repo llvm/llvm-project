@@ -174,6 +174,7 @@ void GenericDetails::set_specific(Symbol &specific) {
   CHECK(!derivedType_);
   specific_ = &specific;
 }
+void GenericDetails::clear_specific() { specific_ = nullptr; }
 void GenericDetails::set_derivedType(Symbol &derivedType) {
   CHECK(!specific_);
   CHECK(!derivedType_);
