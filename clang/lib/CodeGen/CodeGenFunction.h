@@ -3620,8 +3620,15 @@ public:
       const OMPTargetTeamsDistributeParallelForSimdDirective &S);
   void EmitOMPTargetTeamsDistributeSimdDirective(
       const OMPTargetTeamsDistributeSimdDirective &S);
-  void EmitOMPGenericLoopDirective(const OMPGenericLoopDirective &S);
+  void EmitOMPGenericLoopDirective(const OMPLoopDirective &S);
+  void EmitOMPParallelGenericLoopDirective(
+      const OMPLoopDirective &S);
+  void EmitOMPTargetParallelGenericLoopDirective(
+      const OMPTargetParallelGenericLoopDirective &S);
+  void EmitOMPTargetTeamsGenericLoopDirective(
+      const OMPTargetTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
+  void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
 
   /// Emit device code for the target directive.
   static void EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
@@ -3663,6 +3670,10 @@ public:
   static void EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
       const OMPTargetTeamsDistributeParallelForDirective &S);
+
+  /// Emit device code for the target teams loop directive.
+  static void EmitOMPTargetTeamsGenericLoopDeviceFunction(CodeGenModule &CGM,
+      StringRef ParentName, const OMPTargetTeamsGenericLoopDirective &S);
 
   /// Emit the Stmt \p S and return its topmost canonical loop, if any.
   /// TODO: The \p Depth paramter is not yet implemented and must be 1. In the

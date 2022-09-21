@@ -7749,7 +7749,8 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::checkAndSetNoLoopTargetConstruct(
   if (AssocDir->getDirectiveKind() !=
           llvm::omp::Directive::OMPD_teams_distribute_parallel_for &&
       AssocDir->getDirectiveKind() !=
-          llvm::omp::Directive::OMPD_teams_distribute_parallel_for_simd)
+          llvm::omp::Directive::OMPD_teams_distribute_parallel_for_simd &&
+      AssocDir->getDirectiveKind() != llvm::omp::Directive::OMPD_teams_loop)
     return NxUnsupportedNestedSplitDirective;
 
   assert(AssocDir->hasAssociatedStmt());
@@ -7785,6 +7786,7 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
       D.getDirectiveKind() !=
           llvm::omp::Directive::
               OMPD_target_teams_distribute_parallel_for_simd &&
+      D.getDirectiveKind() != llvm::omp::Directive::OMPD_target_teams_loop &&
       D.getDirectiveKind() != llvm::omp::Directive::OMPD_target)
     return NxUnsupportedDirective;
 

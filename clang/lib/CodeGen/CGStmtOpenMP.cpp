@@ -1615,7 +1615,13 @@ static void emitCommonOMPParallelDirective(
     CodeGenFunction &CGF, const OMPExecutableDirective &S,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen,
     const CodeGenBoundParametersTy &CodeGenBoundParameters) {
-  const CapturedStmt *CS = S.getCapturedStmt(OMPD_parallel);
+  // Captured statement is in teams region for target_teams_loop because
+  // we are only pretending to be like a target_teams_distribute_parallel_for
+  const CapturedStmt *CS =
+      S.getDirectiveKind() == OMPD_target_teams_loop ||
+      S.getDirectiveKind() == OMPD_teams_loop
+          ? S.getCapturedStmt(OMPD_teams)
+          : S.getCapturedStmt(OMPD_parallel);
   llvm::Value *NumThreads = nullptr;
   llvm::Function *OutlinedFn =
       CGF.CGM.getOpenMPRuntime().emitParallelOutlinedFunction(
@@ -8010,14 +8016,113 @@ void CodeGenFunction::EmitOMPTargetUpdateDirective(
   CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(*this, S, IfCond, Device);
 }
 
+/// A 'loop' construct is supposed to be a work distribution construct by
+/// default unless its binding region is the innermost enclosing parallel
+/// region. For now, we are defaulting to work sharing as an experiment to
+/// determine how best to implement 'loop' and its combined forms  especially
+/// as part of the 'target teams loop' directive). Note that this code is
+/// equivalent to how 'for' is implemented (when not using OpenMPIRBuilder).
 void CodeGenFunction::EmitOMPGenericLoopDirective(
-    const OMPGenericLoopDirective &S) {
-  // Unimplemented, just inline the underlying statement for now.
-  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+    const OMPLoopDirective &S) {
+  bool HasLastprivates = false;
+  auto &&CodeGen = [this, &S, &HasLastprivates]
+                   (CodeGenFunction &CGF, PrePostActionTy &) {
+    HasLastprivates = emitWorksharingDirective(CGF, S, false);
   };
-  OMPLexicalScope Scope(*this, S, OMPD_unknown);
-  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_loop, CodeGen);
+  {
+    auto LPCRegion =
+        CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+    OMPLexicalScope Scope(*this, S, OMPD_unknown);
+    CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_loop, CodeGen,
+                                                false);
+  }
+  // Emit an implicit barrier at the end.
+  if (!HasLastprivates)
+    CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(), OMPD_loop);
+  // Check for outer lastprivate conditional update.
+  checkForLastprivateConditionalUpdate(*this, S);
+}
+
+/// Equivalent to 'parallel for' except for handling of clauses that don't
+/// apply to 'parallel loop'.
+void CodeGenFunction::EmitOMPParallelGenericLoopDirective(
+    const OMPLoopDirective &S) {
+  // Emit directive as a combined directive that consists of two implicit
+  // directives: 'parallel' with 'loop' directive.
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    emitOMPCopyinClause(CGF, S);
+    (void)emitWorksharingDirective(CGF, S, /*HasCancel=*/false);
+  };
+  {
+    auto LPCRegion =
+        CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+    emitCommonOMPParallelDirective(*this, S, OMPD_loop, CodeGen,
+                                   emitEmptyBoundParameters);
+  }
+  // Check for outer lastprivate conditional update.
+  checkForLastprivateConditionalUpdate(*this, S);
+}
+
+/// Emit code for 'teams loop'
+void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
+    const OMPTeamsGenericLoopDirective &S) {
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    // FIXME: Should be able to emit with generic loop code, but it doesn't
+    // work right now.
+    CGF.EmitOMPGenericLoopDirective(S);
+  };
+  emitCommonOMPTeamsDirective(*this, S, OMPD_loop, CodeGen);
+  emitPostUpdateForReductionClause(*this, S,
+                                   [](CodeGenFunction &) { return nullptr; });
+}
+
+/// Emit code for 'target parallel loop'
+void CodeGenFunction::EmitOMPTargetParallelGenericLoopDirective(
+    const OMPTargetParallelGenericLoopDirective &S) {
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    CGF.EmitOMPParallelGenericLoopDirective(S);
+  };
+  emitCommonOMPTargetDirective(*this, S, CodeGen);
+}
+
+static void emitTargetTeamsGenericLoopRegion(
+    CodeGenFunction &CGF, const OMPTargetTeamsGenericLoopDirective &S,
+    PrePostActionTy &Action) {
+  Action.Enter(CGF);
+  // For now, emit as two combined directives: 'parallel' and 'loop'.
+  // Eventually, 'distribute' will be added so that 'target teams loop'
+  // fully emulates 'target teams distribute parallel for'.
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    CGF.EmitOMPParallelGenericLoopDirective(S);
+  };
+  emitCommonOMPTeamsDirective(CGF, S, OMPD_loop, CodeGen);
+}
+
+/// Emit code for 'target teams loop'
+void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDirective(
+    const OMPTargetTeamsGenericLoopDirective &S) {
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    emitTargetTeamsGenericLoopRegion(CGF, S, Action);
+  };
+  emitCommonOMPTargetDirective(*this, S, CodeGen);
+}
+
+void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDeviceFunction(
+    CodeGenModule &CGM, StringRef ParentName,
+    const OMPTargetTeamsGenericLoopDirective &S) {
+  // Emit SPMD target parallel loop region as a standalone region.
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    emitTargetTeamsGenericLoopRegion(CGF, S, Action);
+  };
+  llvm::Function *Fn;
+  llvm::Constant *Addr;
+  // Emit target region as a standalone region.
+  CGM.getOpenMPRuntime().emitTargetOutlinedFunction(
+      S, ParentName, Fn, Addr, /*IsOffloadEntry=*/true, CodeGen);
+  assert(Fn && Addr &&
+         "Target device function emission failed for 'target teams loop'.");
 }
 
 void CodeGenFunction::EmitSimpleOMPExecutableDirective(

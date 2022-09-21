@@ -517,7 +517,11 @@ bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_teams_distribute_parallel_for_simd ||
          DKind == OMPD_teams_distribute_parallel_for ||
          DKind == OMPD_target_teams_distribute_parallel_for ||
-         DKind == OMPD_target_teams_distribute_parallel_for_simd;
+         DKind == OMPD_target_teams_distribute_parallel_for_simd ||
+         DKind == OMPD_parallel_loop ||
+         DKind == OMPD_teams_loop ||
+         DKind == OMPD_target_parallel_loop ||
+         DKind == OMPD_target_teams_loop;
 }
 
 bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
@@ -546,7 +550,8 @@ bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_parallel_master_taskloop_simd ||
          DKind == OMPD_parallel_masked_taskloop ||
          DKind == OMPD_parallel_masked_taskloop_simd ||
-         DKind == OMPD_parallel_loop || DKind == OMPD_target_parallel_loop;
+         DKind == OMPD_parallel_loop || DKind == OMPD_target_parallel_loop ||
+         DKind == OMPD_teams_loop;
 }
 
 bool clang::isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind) {
