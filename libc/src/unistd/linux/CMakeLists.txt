@@ -117,6 +117,54 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  geteuid
+  SRCS
+    geteuid.cpp
+  HDRS
+    ../geteuid.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  getpid
+  SRCS
+    getpid.cpp
+  HDRS
+    ../getpid.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  getppid
+  SRCS
+    getppid.cpp
+  HDRS
+    ../getppid.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  getuid
+  SRCS
+    getuid.cpp
+  HDRS
+    ../getuid.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
   link
   SRCS
     link.cpp

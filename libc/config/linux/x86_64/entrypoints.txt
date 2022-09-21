@@ -132,6 +132,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fchdir
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
+    libc.src.unistd.geteuid
+    libc.src.unistd.getpid
+    libc.src.unistd.getppid
+    libc.src.unistd.getuid
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
