@@ -4223,16 +4223,33 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(CodeGenFunction &CGF,
                                                 llvm::Value *SumPtr) {
   // TODO handle more types
   llvm::Type *SumType = Val->getType();
-  assert((SumType->isFloatTy() || SumType->isDoubleTy()) && "Unhandled type");
+  assert((SumType->isFloatTy() || SumType->isDoubleTy() ||
+          SumType->isIntegerTy()) &&
+         "Unhandled type");
   llvm::Value *Args[] = {Val, SumPtr};
   if (SumType->isFloatTy()) {
     return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                                    CGM.getModule(), OMPRTL___kmpc_xteam_sum_f),
                                Args);
-  } else if (SumType->isDoubleTy()) {
+  }
+  if (SumType->isDoubleTy()) {
     return CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                                    CGM.getModule(), OMPRTL___kmpc_xteam_sum_d),
                                Args);
+  }
+  if (SumType->isIntegerTy()) {
+    if (SumType->getPrimitiveSizeInBits() == 32) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteam_sum_ui),
+          Args);
+    }
+    if (SumType->getPrimitiveSizeInBits() == 64) {
+      return CGF.EmitRuntimeCall(
+          OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
+                                                OMPRTL___kmpc_xteam_sum_ul),
+          Args);
+    }
   }
   llvm_unreachable("No support for other types currently.");
 }

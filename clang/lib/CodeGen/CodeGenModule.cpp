@@ -7545,7 +7545,11 @@ CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
     for (const Expr *Ref : C->varlists()) {
       llvm::Type *RefType = getTypes().ConvertTypeForMem(Ref->getType());
       // TODO support more data types
-      if (!RefType->isFloatTy() && !RefType->isDoubleTy())
+      if (!RefType->isFloatTy() && !RefType->isDoubleTy() &&
+          !RefType->isIntegerTy())
+        return std::make_pair(false, VarMap);
+      if (RefType->isIntegerTy() && RefType->getPrimitiveSizeInBits() != 32 &&
+          RefType->getPrimitiveSizeInBits() != 64)
         return std::make_pair(false, VarMap);
       // Only scalar variables supported today
       if (!isa<DeclRefExpr>(Ref))

@@ -320,10 +320,17 @@ void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
   for (const auto &RedVarInfo : RedVarMap) {
     const Expr *RedVarExpr = RedVarInfo.second.first;
     llvm::Type *RedVarType = ConvertTypeForMem(RedVarExpr->getType());
-    assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy()) &&
+    assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
+            RedVarType->isIntegerTy()) &&
            "Unhandled type");
     llvm::AllocaInst *XteamRedInst = Builder.CreateAlloca(RedVarType);
-    llvm::Value *InitVal = llvm::ConstantFP::getZero(RedVarType);
+    llvm::Value *InitVal = nullptr;
+    if (RedVarType->isFloatTy() || RedVarType->isDoubleTy())
+      InitVal = llvm::ConstantFP::getZero(RedVarType);
+    else if (RedVarType->isIntegerTy())
+      InitVal = llvm::ConstantInt::get(RedVarType, 0);
+    else
+      llvm_unreachable("Unhandled type");
     Address XteamRedVarAddr(
         XteamRedInst, RedVarType,
         getContext().getTypeAlignInChars(RedVarExpr->getType()));
@@ -422,8 +429,17 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   llvm::Value *RHSValue = EmitScalarExpr(RedRHSExpr);
   Address XteamRedLocalAddr = RedVarMap.find(RedVarDecl)->second.second;
   // Compute *xteam_red_local_addr + rhs_value
-  llvm::Value *RedRHS =
-      Builder.CreateFAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSValue);
+  llvm::Value *RedRHS = nullptr;
+  llvm::Type *RedVarType = ConvertTypeForMem(RedVarDecl->getType());
+  if (RedVarType->isFloatTy() || RedVarType->isDoubleTy())
+    RedRHS =
+        Builder.CreateFAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSValue);
+  else if (RedVarType->isIntegerTy())
+    RedRHS =
+        Builder.CreateAdd(Builder.CreateLoad(XteamRedLocalAddr),
+                          Builder.CreateIntCast(RHSValue, RedVarType, false));
+  else
+    llvm_unreachable("Unhandled type");
   // *xteam_red_local_addr = *xteam_red_local_addr + rhs_value
   Builder.CreateStore(RedRHS, XteamRedLocalAddr);
   return true;

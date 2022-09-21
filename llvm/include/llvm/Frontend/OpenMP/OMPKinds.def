@@ -495,6 +495,10 @@ __OMP_RTL(__kmpc_xteam_sum_f, false, Void, Float, FloatPtr)
 
 __OMP_RTL(__kmpc_xteam_sum_d, false, Void, Double, DoublePtr)
 
+__OMP_RTL(__kmpc_xteam_sum_ui, false, Void, Int32, Int32Ptr)
+
+__OMP_RTL(__kmpc_xteam_sum_ul, false, Void, Int64, Int64Ptr)
+
 __OMP_RTL(__last, false, Void, )
 
 #undef __OMP_RTL
