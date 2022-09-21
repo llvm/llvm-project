@@ -17,7 +17,6 @@
 //   Zbm - 0.93 *experimental
 //   Zbp - 0.93 *experimental
 //   Zbr - 0.93 *experimental
-//   Zbt - 0.93 *experimental
 //
 // The experimental extensions appeared in an earlier draft of the Bitmanip
 // extensions. They are not ratified and subject to change.
@@ -39,10 +38,6 @@ def riscv_clzw   : SDNode<"RISCVISD::CLZW",   SDT_RISCVIntUnaryOpW>;
 def riscv_ctzw   : SDNode<"RISCVISD::CTZW",   SDT_RISCVIntUnaryOpW>;
 def riscv_rolw   : SDNode<"RISCVISD::ROLW",   SDT_RISCVIntBinOpW>;
 def riscv_rorw   : SDNode<"RISCVISD::RORW",   SDT_RISCVIntBinOpW>;
-def riscv_fslw   : SDNode<"RISCVISD::FSLW",   SDT_RISCVIntShiftDOpW>;
-def riscv_fsrw   : SDNode<"RISCVISD::FSRW",   SDT_RISCVIntShiftDOpW>;
-def riscv_fsl    : SDNode<"RISCVISD::FSL",    SDTIntShiftDOp>;
-def riscv_fsr    : SDNode<"RISCVISD::FSR",    SDTIntShiftDOp>;
 def riscv_grev   : SDNode<"RISCVISD::GREV",   SDTIntBinOp>;
 def riscv_grevw  : SDNode<"RISCVISD::GREVW",  SDT_RISCVIntBinOpW>;
 def riscv_gorc   : SDNode<"RISCVISD::GORC",   SDTIntBinOp>;
@@ -315,46 +310,6 @@ class RVBTernaryR<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode,
     : RVInstR4<funct2, funct3, opcode, (outs GPR:$rd),
                (ins GPR:$rs1, GPR:$rs2, GPR:$rs3), opcodestr, argstr>;
 
-// Currently used by FSRI only
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBTernaryImm6<bits<3> funct3, RISCVOpcode opcode,
-                     string opcodestr, string argstr>
-    : RVInst<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt),
-             opcodestr, argstr, [], InstFormatR4> {
-  bits<5> rs3;
-  bits<6> shamt;
-  bits<5> rs1;
-  bits<5> rd;
-
-  let Inst{31-27} = rs3;
-  let Inst{26} = 1;
-  let Inst{25-20} = shamt;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
-}
-
-// Currently used by FSRIW only
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBTernaryImm5<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode,
-                     string opcodestr, string argstr>
-    : RVInst<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs3, uimm5:$shamt),
-             opcodestr, argstr, [], InstFormatR4> {
-  bits<5> rs3;
-  bits<5> shamt;
-  bits<5> rs1;
-  bits<5> rd;
-
-  let Inst{31-27} = rs3;
-  let Inst{26-25} = funct2;
-  let Inst{24-20} = shamt;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
-}
-
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -482,32 +437,6 @@ let Predicates = [HasStdExtZbpOrZbkx] in {
 def XPERM4 : ALU_rr<0b0010100, 0b010, "xperm4">, Sched<[]>;
 def XPERM8 : ALU_rr<0b0010100, 0b100, "xperm8">, Sched<[]>;
 } // Predicates = [HasStdExtZbpOrZbkx]
-
-let Predicates = [HasStdExtZbt] in {
-def CMIX : RVBTernaryR<0b11, 0b001, OPC_OP, "cmix", "$rd, $rs2, $rs1, $rs3">,
-           Sched<[WriteCMix, ReadCMix, ReadCMix, ReadCMix]>;
-def CMOV : RVBTernaryR<0b11, 0b101, OPC_OP, "cmov", "$rd, $rs2, $rs1, $rs3">,
-           Sched<[WriteCMov, ReadCMov, ReadCMov, ReadCMov]>;
-def FSL  : RVBTernaryR<0b10, 0b001, OPC_OP, "fsl", "$rd, $rs1, $rs3, $rs2">,
-           Sched<[WriteFSReg, ReadFSReg, ReadFSReg, ReadFSReg]>;
-def FSR  : RVBTernaryR<0b10, 0b101, OPC_OP, "fsr", "$rd, $rs1, $rs3, $rs2">,
-           Sched<[WriteFSReg, ReadFSReg, ReadFSReg, ReadFSReg]>;
-def FSRI : RVBTernaryImm6<0b101, OPC_OP_IMM, "fsri",
-                          "$rd, $rs1, $rs3, $shamt">,
-           Sched<[WriteFSRImm, ReadFSRImm, ReadFSRImm]>;
-} // Predicates = [HasStdExtZbt]
-
-let Predicates = [HasStdExtZbt, IsRV64] in {
-def FSLW  : RVBTernaryR<0b10, 0b001, OPC_OP_32,
-                        "fslw", "$rd, $rs1, $rs3, $rs2">,
-            Sched<[WriteFSReg32, ReadFSReg32, ReadFSReg32, ReadFSReg32]>;
-def FSRW  : RVBTernaryR<0b10, 0b101, OPC_OP_32, "fsrw",
-                        "$rd, $rs1, $rs3, $rs2">,
-            Sched<[WriteFSReg32, ReadFSReg32, ReadFSReg32, ReadFSReg32]>;
-def FSRIW : RVBTernaryImm5<0b10, 0b101, OPC_OP_IMM_32,
-                           "fsriw", "$rd, $rs1, $rs3, $shamt">,
-            Sched<[WriteFSRImm32, ReadFSRImm32, ReadFSRImm32]>;
-} // Predicates = [HasStdExtZbt, IsRV64]
 
 let Predicates = [HasStdExtZbb] in {
 def CLZ  : RVBUnary<0b0110000, 0b00000, 0b001, OPC_OP_IMM, "clz">,
@@ -980,55 +909,6 @@ let Predicates = [HasStdExtZbp, IsRV64] in {
 // We treat rev8 as a separate instruction, so match it directly.
 def : Pat<(i64 (riscv_grev GPR:$rs1, 56)), (REV8_RV64 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp, IsRV64]
-
-let Predicates = [HasStdExtZbt] in {
-def : Pat<(or (and (not GPR:$rs2), GPR:$rs3), (and GPR:$rs2, GPR:$rs1)),
-          (CMIX GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(xor (and (xor GPR:$rs1, GPR:$rs3), GPR:$rs2), GPR:$rs3),
-          (CMIX GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-
-def : Pat<(select (XLenVT (setne GPR:$rs2, 0)), GPR:$rs1, GPR:$rs3),
-          (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(select (XLenVT (seteq GPR:$rs2, 0)), GPR:$rs3, GPR:$rs1),
-          (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(select (XLenVT (setne GPR:$x, simm12_plus1:$y)), GPR:$rs1, GPR:$rs3),
-          (CMOV GPR:$rs1, (ADDI GPR:$x, (NegImm simm12_plus1:$y)), GPR:$rs3)>;
-def : Pat<(select (XLenVT (seteq GPR:$x, simm12_plus1:$y)), GPR:$rs3, GPR:$rs1),
-          (CMOV GPR:$rs1, (ADDI GPR:$x, (NegImm simm12_plus1:$y)), GPR:$rs3)>;
-def : Pat<(select (XLenVT (setne GPR:$x, GPR:$y)), GPR:$rs1, GPR:$rs3),
-          (CMOV GPR:$rs1, (XOR GPR:$x, GPR:$y), GPR:$rs3)>;
-def : Pat<(select (XLenVT (seteq GPR:$x, GPR:$y)), GPR:$rs3, GPR:$rs1),
-          (CMOV GPR:$rs1, (XOR GPR:$x, GPR:$y), GPR:$rs3)>;
-
-def : Pat<(select GPR:$rs2, GPR:$rs1, GPR:$rs3),
-          (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-} // Predicates = [HasStdExtZbt]
-
-let Predicates = [HasStdExtZbt] in {
-def : Pat<(riscv_fsl GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSL GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(riscv_fsr GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSR GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(riscv_fsr GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt),
-          (FSRI GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt)>;
-// We can use FSRI for FSL by immediate if we subtract the immediate from
-// XLen and swap the operands.
-def : Pat<(riscv_fsl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
-          (FSRI GPR:$rs1, GPR:$rs3, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
-} // Predicates = [HasStdExtZbt]
-
-let Predicates = [HasStdExtZbt, IsRV64] in {
-def : Pat<(riscv_fslw GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSLW GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(riscv_fsrw GPR:$rs1, GPR:$rs3, GPR:$rs2),
-          (FSRW GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(riscv_fsrw GPR:$rs1, GPR:$rs3, uimm5:$shamt),
-          (FSRIW GPR:$rs1, GPR:$rs3, uimm5:$shamt)>;
-// We can use FSRIW for FSLW by immediate if we subtract the immediate from
-// 32 and swap the operands.
-def : Pat<(riscv_fslw GPR:$rs3, GPR:$rs1, uimm5:$shamt),
-          (FSRIW GPR:$rs1, GPR:$rs3, (ImmSubFrom32 uimm5:$shamt))>;
-} // Predicates = [HasStdExtZbt, IsRV64]
 
 let Predicates = [HasStdExtZbb] in {
 def : PatGpr<ctlz, CLZ>;
