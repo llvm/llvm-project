@@ -1932,17 +1932,14 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
    %assert_align2:_(s64) = G_ASSERT_ALIGN %val, 2
    %copy_assert_align2:_(s64) = COPY %assert_align2
 
-   %assert_align3:_(s64) = G_ASSERT_ALIGN %val, 3
-   %copy_assert_align3:_(s64) = COPY %assert_align3
+   %assert_align4:_(s64) = G_ASSERT_ALIGN %val, 4
+   %copy_assert_align4:_(s64) = COPY %assert_align4
 
    %assert_align8:_(s64) = G_ASSERT_ALIGN %val, 8
    %copy_assert_align8:_(s64) = COPY %assert_align8
 
-   %assert_maxalign:_(s64) = G_ASSERT_ALIGN %val, 30
-   %copy_assert_maxalign:_(s64) = COPY %assert_maxalign
-
-   %assert_ptr_align5:_(p1) = G_ASSERT_ALIGN %ptrval, 5
-   %copy_assert_ptr_align5:_(p1) = COPY %assert_ptr_align5
+   %assert_align16:_(s64) = G_ASSERT_ALIGN %val, 16
+   %copy_assert_maxalign:_(s64) = COPY %assert_align16
 )MIR";
   setUp(MIRString);
   if (!TM)
@@ -1959,18 +1956,23 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
   auto CheckBits = [&](unsigned NumBits, unsigned Idx) {
     Res = GetKB(Idx);
     EXPECT_EQ(64u, Res.getBitWidth());
-    EXPECT_EQ(NumBits, Res.Zero.countTrailingOnes());
+    EXPECT_EQ(NumBits - 1, Res.Zero.countTrailingOnes());
     EXPECT_EQ(64u, Res.One.countTrailingZeros());
-    EXPECT_EQ(Align(1ull << NumBits), Info.computeKnownAlignment(Copies[Idx]));
+    EXPECT_EQ(Align(1ull << (NumBits - 1)), Info.computeKnownAlignment(Copies[Idx]));
   };
 
-  CheckBits(0, Copies.size() - 7);
-  CheckBits(1, Copies.size() - 6);
-  CheckBits(2, Copies.size() - 5);
-  CheckBits(3, Copies.size() - 4);
-  CheckBits(8, Copies.size() - 3);
-  CheckBits(30, Copies.size() - 2);
-  CheckBits(5, Copies.size() - 1);
+  const unsigned NumSetupCopies = 5;
+  // Check zero align specially.
+  Res = GetKB(NumSetupCopies);
+  EXPECT_EQ(0u, Res.Zero.countTrailingOnes());
+  EXPECT_EQ(64u, Res.One.countTrailingZeros());
+  EXPECT_EQ(Align(1), Info.computeKnownAlignment(Copies[5]));
+
+  CheckBits(1, NumSetupCopies + 1);
+  CheckBits(2, NumSetupCopies + 2);
+  CheckBits(3, NumSetupCopies + 3);
+  CheckBits(4, NumSetupCopies + 4);
+  CheckBits(5, NumSetupCopies + 5);
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsUADDO) {
