@@ -612,6 +612,9 @@ defaultInitializeAtRuntime(Fortran::lower::AbstractConverter &converter,
 static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
                                 const Fortran::lower::pft::Variable &var,
                                 Fortran::lower::SymMap &symMap) {
+  if (!var.hasSymbol())
+    return;
+
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   if (Fortran::semantics::IsDummy(sym) &&
       Fortran::semantics::IsIntentOut(sym) &&
@@ -619,6 +622,11 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
     if (auto symbox = symMap.lookupSymbol(sym)) {
       fir::ExtendedValue extVal = symbox.toExtendedValue();
       if (auto mutBox = extVal.getBoxOf<fir::MutableBoxValue>()) {
+        // The dummy argument is not passed in the ENTRY so it should not be
+        // deallocated.
+        if (mlir::Operation *op = mutBox->getAddr().getDefiningOp())
+          if (mlir::isa<fir::AllocaOp>(op))
+            return;
         mlir::Location loc = converter.getCurrentLocation();
         if (Fortran::semantics::IsOptional(sym)) {
           fir::FirOpBuilder &builder = converter.getFirOpBuilder();
