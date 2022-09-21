@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Transforms/TransformUtils.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -17,29 +17,101 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
-/// Adds each corresponding pair of offsets in `offsets1` and `offsets2` and
-/// returns the results.
-static SmallVector<OpFoldResult> mergeOffsets(Location loc,
-                                              ArrayRef<OpFoldResult> offsets1,
-                                              ArrayRef<OpFoldResult> offsets2,
-                                              OpBuilder &builder) {
-  SmallVector<OpFoldResult> foldedOffsets;
-  assert(offsets1.size() == offsets2.size());
-  foldedOffsets.reserve(offsets1.size());
-
-  AffineExpr dim1, dim2;
-  bindDims(builder.getContext(), dim1, dim2);
-
-  for (const auto &pair : llvm::zip(offsets1, offsets2)) {
-    auto offset0 =
-        getValueOrCreateConstantIndexOp(builder, loc, std::get<0>(pair));
-    auto offset1 =
-        getValueOrCreateConstantIndexOp(builder, loc, std::get<1>(pair));
-    auto foldedOffset =
-        makeComposedAffineApply(builder, loc, dim1 + dim2, {offset0, offset1});
-    foldedOffsets.push_back(foldedOffset.getResult());
+/// Creates AffineExpr from `ofr`: if the OpFoldResult is a Value, creates a
+/// AffineSymbolExpr and appends it to `symbols`; otherwise creates a
+/// AffineConstantExpr.
+static AffineExpr getAffineExpr(OpFoldResult ofr,
+                                SmallVector<OpFoldResult> &symbols) {
+  if (auto attr = ofr.dyn_cast<Attribute>()) {
+    return getAffineConstantExpr(attr.cast<IntegerAttr>().getInt(),
+                                 attr.getContext());
   }
-  return foldedOffsets;
+  Value v = ofr.get<Value>();
+  AffineExpr expr = getAffineSymbolExpr(symbols.size(), v.getContext());
+  symbols.push_back(v);
+  return expr;
+}
+
+/// Builds the AffineExpr incrementally for arithmetic operations.
+static AffineExpr add(AffineExpr expr, OpFoldResult ofr,
+                      SmallVector<OpFoldResult> &symbols) {
+  return expr + getAffineExpr(ofr, symbols);
+}
+static AffineExpr mul(OpFoldResult lhs, OpFoldResult rhs,
+                      SmallVector<OpFoldResult> &symbols) {
+  return getAffineExpr(lhs, symbols) * getAffineExpr(rhs, symbols);
+}
+
+/// Converts an AffineExpr to OpFoldResult by generating an `affine.apply`
+/// op and fold it.
+static OpFoldResult getOpFoldResult(OpBuilder &builder, Location loc,
+                                    AffineExpr expr,
+                                    SmallVector<OpFoldResult> &symbols) {
+  AffineMap m = AffineMap::get(0, symbols.size(), expr);
+  return makeComposedFoldedAffineApply(builder, loc, m, symbols);
+}
+
+LogicalResult tensor::mergeOffsetsSizesAndStrides(
+    OpBuilder &builder, Location loc, ArrayRef<OpFoldResult> producerOffsets,
+    ArrayRef<OpFoldResult> producerSizes,
+    ArrayRef<OpFoldResult> producerStrides,
+    const llvm::SmallBitVector &droppedProducerDims,
+    ArrayRef<OpFoldResult> consumerOffsets,
+    ArrayRef<OpFoldResult> consumerSizes,
+    ArrayRef<OpFoldResult> consumerStrides,
+    SmallVector<OpFoldResult> &combinedOffsets,
+    SmallVector<OpFoldResult> &combinedSizes,
+    SmallVector<OpFoldResult> &combinedStrides) {
+  combinedOffsets.resize(producerOffsets.size());
+  combinedSizes.resize(producerOffsets.size());
+  combinedStrides.resize(producerOffsets.size());
+  unsigned consumerPos = 0;
+  for (auto i : llvm::seq<unsigned>(0, producerOffsets.size())) {
+    if (droppedProducerDims.test(i)) {
+      // For dropped dims, get the values from the producer.
+      combinedOffsets[i] = producerOffsets[i];
+      combinedSizes[i] = producerSizes[i];
+      combinedStrides[i] = producerStrides[i];
+      continue;
+    }
+    SmallVector<OpFoldResult> offsetSymbols, strideSymbols;
+    // The combined offset is computed as
+    //    producer_offset + consumer_offset * producer_strides.
+    combinedOffsets[i] =
+        getOpFoldResult(builder, loc,
+                        add(mul(consumerOffsets[consumerPos],
+                                producerStrides[i], offsetSymbols),
+                            producerOffsets[i], offsetSymbols),
+                        offsetSymbols);
+    combinedSizes[i] = consumerSizes[consumerPos];
+    // The combined stride is computed as
+    //    consumer_stride * producer_stride.
+    combinedStrides[i] = getOpFoldResult(
+        builder, loc,
+        mul(consumerStrides[consumerPos], producerStrides[i], strideSymbols),
+        strideSymbols);
+    consumerPos++;
+  }
+  return success();
+}
+
+LogicalResult tensor::mergeOffsetsSizesAndStrides(
+    OpBuilder &builder, Location loc, OffsetSizeAndStrideOpInterface producer,
+    OffsetSizeAndStrideOpInterface consumer,
+    const llvm::SmallBitVector &droppedProducerDims,
+    SmallVector<OpFoldResult> &combinedOffsets,
+    SmallVector<OpFoldResult> &combinedSizes,
+    SmallVector<OpFoldResult> &combinedStrides) {
+  SmallVector<OpFoldResult> consumerOffsets = consumer.getMixedOffsets();
+  SmallVector<OpFoldResult> consumerSizes = consumer.getMixedSizes();
+  SmallVector<OpFoldResult> consumerStrides = consumer.getMixedStrides();
+  SmallVector<OpFoldResult> producerOffsets = producer.getMixedOffsets();
+  SmallVector<OpFoldResult> producerSizes = producer.getMixedSizes();
+  SmallVector<OpFoldResult> producerStrides = producer.getMixedStrides();
+  return tensor::mergeOffsetsSizesAndStrides(
+      builder, loc, producerOffsets, producerSizes, producerStrides,
+      droppedProducerDims, consumerOffsets, consumerSizes, consumerStrides,
+      combinedOffsets, combinedSizes, combinedStrides);
 }
 
 namespace {
@@ -53,24 +125,15 @@ struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
     if (!prevOp)
       return failure();
 
-    if (!prevOp.hasUnitStride() || !nextOp.hasUnitStride())
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    if (failed(mergeOffsetsSizesAndStrides(rewriter, nextOp.getLoc(), prevOp,
+                                           nextOp, prevOp.getDroppedDims(),
+                                           newOffsets, newSizes, newStrides)))
       return failure();
 
-    auto prevResultType = prevOp.getType().cast<ShapedType>();
-    if (prevOp.getSourceType().getRank() != prevResultType.getRank())
-      return rewriter.notifyMatchFailure(
-          prevOp, "rank-reducing producder case unimplemented");
-
-    Location loc = nextOp.getLoc();
-
-    SmallVector<OpFoldResult> prevOffsets = prevOp.getMixedOffsets();
-    SmallVector<OpFoldResult> nextOffsets = nextOp.getMixedOffsets();
-    SmallVector<OpFoldResult> foldedOffsets =
-        mergeOffsets(loc, prevOffsets, nextOffsets, rewriter);
-
-    rewriter.replaceOpWithNewOp<ExtractSliceOp>(
-        nextOp, nextOp.getType(), prevOp.getSource(), foldedOffsets,
-        nextOp.getMixedSizes(), nextOp.getMixedStrides());
+    rewriter.replaceOpWithNewOp<ExtractSliceOp>(nextOp, nextOp.getType(),
+                                                prevOp.getSource(), newOffsets,
+                                                newSizes, newStrides);
     return success();
   }
 };
