@@ -23,6 +23,14 @@ add_header(
 )
 
 add_header(
+  sys_mman_macros
+  HDR
+    sys-mman-macros.h
+  DEPENDS
+    .linux.sys_mman_macros
+)
+
+add_header(
   sys_resource_macros
   HDR
     sys-resource-macros.h
