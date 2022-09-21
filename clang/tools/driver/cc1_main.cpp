@@ -450,7 +450,10 @@ createBinaryOutputFile(CompilerInstance &Clang, StringRef OutputPath) {
                       .setTextWithCRLF(false)
                       .setDiscardOnSignal(true)
                       .setAtomicWrite(true)
-                      .setImplyCreateDirectories(false));
+                      // To avoid failures that would not happen in uncached
+                      // builds, always create the parent directory. See comment
+                      // in replayCachedResult.
+                      .setImplyCreateDirectories(true));
   if (!O)
     return O.takeError();
 
@@ -759,6 +762,14 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
       // The output may be always generated but not needed with this invocation,
       // like the serialized diagnostics file.
       return Error::success(); // continue
+
+    // Always create parent directory of outputs, since it is hard to precisely
+    // match which outputs rely on creating parents and the order outputs are
+    // replayed in, in case a previous output would create the parent
+    // (e.g. a .pcm and .diag file in the same directory).
+    StringRef ParentPath = llvm::sys::path::parent_path(Path);
+    if (!ParentPath.empty())
+      llvm::sys::fs::create_directories(ParentPath);
 
     Optional<StringRef> Contents;
     SmallString<50> ContentsStorage;
