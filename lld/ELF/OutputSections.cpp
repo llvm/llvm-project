@@ -24,6 +24,9 @@
 #if LLVM_ENABLE_ZLIB
 #include <zlib.h>
 #endif
+#if LLVM_ENABLE_ZSTD
+#include <zstd.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -331,25 +334,60 @@ template <class ELFT> void OutputSection::maybeCompress() {
   llvm::TimeTraceScope timeScope("Compress debug sections");
   compressed.uncompressedSize = size;
   auto buf = std::make_unique<uint8_t[]>(size);
-  if (config->compressDebugSections == DebugCompressionType::Zstd) {
-    {
-      parallel::TaskGroup tg;
-      writeTo<ELFT>(buf.get(), tg);
-    }
-    compressed.shards = std::make_unique<SmallVector<uint8_t, 0>[]>(1);
-    compression::zstd::compress(makeArrayRef(buf.get(), size),
-                                compressed.shards[0]);
-    size = sizeof(Elf_Chdr) + compressed.shards[0].size();
-    flags |= SHF_COMPRESSED;
-    return;
-  }
-
-#if LLVM_ENABLE_ZLIB
   // Write uncompressed data to a temporary zero-initialized buffer.
   {
     parallel::TaskGroup tg;
     writeTo<ELFT>(buf.get(), tg);
   }
+
+#if LLVM_ENABLE_ZSTD
+  // Use ZSTD's streaming compression API which permits parallel workers working
+  // on the stream. See http://facebook.github.io/zstd/zstd_manual.html
+  // "Streaming compression - HowTo".
+  if (config->compressDebugSections == DebugCompressionType::Zstd) {
+    // Allocate a buffer of half of the input size, and grow it by 1.5x if
+    // insufficient.
+    compressed.shards = std::make_unique<SmallVector<uint8_t, 0>[]>(1);
+    SmallVector<uint8_t, 0> &out = compressed.shards[0];
+    out.resize_for_overwrite(std::max<size_t>(size / 2, 32));
+    size_t pos = 0;
+
+    ZSTD_CCtx *cctx = ZSTD_createCCtx();
+    size_t ret = ZSTD_CCtx_setParameter(
+        cctx, ZSTD_c_nbWorkers, parallel::strategy.compute_thread_count());
+    if (ZSTD_isError(ret))
+      fatal(Twine("ZSTD_CCtx_setParameter: ") + ZSTD_getErrorName(ret));
+    ZSTD_outBuffer zob = {out.data(), out.size(), 0};
+    ZSTD_EndDirective directive = ZSTD_e_continue;
+    const size_t blockSize = ZSTD_CStreamInSize();
+    do {
+      const size_t n = std::min(size - pos, blockSize);
+      if (n == size - pos)
+        directive = ZSTD_e_end;
+      ZSTD_inBuffer zib = {buf.get() + pos, n, 0};
+      size_t bytesRemaining = 0;
+      while (zib.pos != zib.size ||
+             (directive == ZSTD_e_end && bytesRemaining != 0)) {
+        if (zob.pos == zob.size) {
+          out.resize_for_overwrite(out.size() * 3 / 2);
+          zob.dst = out.data();
+          zob.size = out.size();
+        }
+        bytesRemaining = ZSTD_compressStream2(cctx, &zob, &zib, directive);
+        assert(!ZSTD_isError(bytesRemaining));
+      }
+      pos += n;
+    } while (directive != ZSTD_e_end);
+    out.resize(zob.pos);
+    ZSTD_freeCCtx(cctx);
+
+    size = sizeof(Elf_Chdr) + out.size();
+    flags |= SHF_COMPRESSED;
+    return;
+  }
+#endif
+
+#if LLVM_ENABLE_ZLIB
   // We chose 1 (Z_BEST_SPEED) as the default compression level because it is
   // the fastest. If -O2 is given, we use level 6 to compress debug info more by
   // ~15%. We found that level 7 to 9 doesn't make much difference (~1% more
