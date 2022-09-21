@@ -402,43 +402,6 @@ uint64_t XCOFFObjectFile::getSectionFileOffsetToRawData(DataRefImpl Sec) const {
   return toSection32(Sec)->FileOffsetToRawData;
 }
 
-Expected<uintptr_t> XCOFFObjectFile::getLoaderSectionAddress() const {
-  uint64_t OffsetToLoaderSection = 0;
-  uint64_t SizeOfLoaderSection = 0;
-
-  if (is64Bit()) {
-    for (const auto &Sec64 : sections64())
-      if (Sec64.getSectionType() == XCOFF::STYP_LOADER) {
-        OffsetToLoaderSection = Sec64.FileOffsetToRawData;
-        SizeOfLoaderSection = Sec64.SectionSize;
-        break;
-      }
-  } else {
-    for (const auto &Sec32 : sections32())
-      if (Sec32.getSectionType() == XCOFF::STYP_LOADER) {
-        OffsetToLoaderSection = Sec32.FileOffsetToRawData;
-        SizeOfLoaderSection = Sec32.SectionSize;
-        break;
-      }
-  }
-
-  // No loader section is not an error.
-  if (!SizeOfLoaderSection)
-    return 0;
-
-  uintptr_t LoderSectionStart =
-      reinterpret_cast<uintptr_t>(base() + OffsetToLoaderSection);
-  if (Error E =
-          Binary::checkOffset(Data, LoderSectionStart, SizeOfLoaderSection))
-    return createError(toString(std::move(E)) +
-                       ": loader section with offset 0x" +
-                       Twine::utohexstr(OffsetToLoaderSection) +
-                       " and size 0x" + Twine::utohexstr(SizeOfLoaderSection) +
-                       " goes past the end of the file");
-
-  return LoderSectionStart;
-}
-
 Expected<uintptr_t> XCOFFObjectFile::getSectionFileOffsetToRawData(
     XCOFF::SectionTypeFlags SectType) const {
   DataRefImpl DRI = getSectionByType(SectType);
@@ -1095,7 +1058,8 @@ XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {
 // This function returns the import file table. Each entry in the import file
 // table consists of: "path_name\0base_name\0archive_member_name\0".
 Expected<StringRef> XCOFFObjectFile::getImportFileTable() const {
-  Expected<uintptr_t> LoaderSectionAddrOrError = getLoaderSectionAddress();
+  Expected<uintptr_t> LoaderSectionAddrOrError =
+      getSectionFileOffsetToRawData(XCOFF::STYP_LOADER);
   if (!LoaderSectionAddrOrError)
     return LoaderSectionAddrOrError.takeError();
 
