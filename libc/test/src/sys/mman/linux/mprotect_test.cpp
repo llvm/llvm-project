@@ -1,0 +1,62 @@
+//===-- Unittests for mprotect --------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "include/signal.h"
+#include "src/sys/mman/mmap.h"
+#include "src/sys/mman/mprotect.h"
+#include "src/sys/mman/munmap.h"
+#include "test/ErrnoSetterMatcher.h"
+#include "utils/UnitTest/Test.h"
+
+#include <errno.h>
+#include <sys/mman.h>
+
+using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
+using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+
+TEST(LlvmLibcMProtectTest, NoError) {
+  size_t alloc_size = 128;
+  errno = 0;
+  void *addr = __llvm_libc::mmap(nullptr, alloc_size, PROT_READ,
+                                 MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  EXPECT_EQ(0, errno);
+  EXPECT_NE(addr, MAP_FAILED);
+
+  int *array = reinterpret_cast<int *>(addr);
+  // Reading from the memory should not crash the test.
+  // Since we used the MAP_ANONYMOUS flag, the contents of the newly
+  // allocated memory should be initialized to zero.
+  EXPECT_EQ(array[0], 0);
+
+  // By setting the memory protection to read and write, we should be able to
+  // modify that memory.
+  EXPECT_THAT(__llvm_libc::mprotect(addr, alloc_size, PROT_READ | PROT_WRITE),
+              Succeeds());
+  array[0] = 1;
+  EXPECT_EQ(array[0], 1);
+
+  EXPECT_THAT(__llvm_libc::munmap(addr, alloc_size), Succeeds());
+}
+
+TEST(LlvmLibcMProtectTest, Error_InvalidWrite) {
+  // attempting to write to a read-only protected part of memory should cause a
+  // segfault.
+  EXPECT_DEATH(
+      [] {
+        size_t alloc_size = 128;
+        void *addr =
+            __llvm_libc::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
+                              MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+        __llvm_libc::mprotect(addr, alloc_size, PROT_READ);
+
+        (reinterpret_cast<char *>(addr))[0] = 'A';
+      },
+      WITH_SIGNAL(SIGSEGV));
+  // Reading from a write only segment may succeed on some platforms, so there's
+  // no test to check that.
+}

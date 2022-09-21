@@ -15,3 +15,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.munmap
 )
+
+add_entrypoint_object(
+  mprotect
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mprotect
+)
