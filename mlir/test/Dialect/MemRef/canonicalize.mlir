@@ -127,6 +127,43 @@ func.func @multiple_reducing_dims_all_dynamic(%arg0 : memref<?x?x?xf32, strided<
 //       CHECK:   %[[REDUCED2:.+]] = memref.subview %[[REDUCED1]][0, 0] [1, %{{.+}}] [1, 1]
 //  CHECK-SAME:       : memref<1x?xf32, strided<[?, ?], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
 
+// -----
+
+func.func @subview_negative_stride1(%arg0 : memref<?xf32>) -> memref<?xf32, strided<[?], offset: ?>>
+{
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant -1 : index
+  %1 = memref.dim %arg0, %c0 : memref<?xf32>
+  %2 = arith.addi %1, %c1 : index
+  %3 = memref.subview %arg0[%2] [%1] [%c1] : memref<?xf32> to memref<?xf32, strided<[?], offset: ?>>
+  return %3 : memref<?xf32, strided<[?], offset: ?>>
+}
+//       CHECK: func @subview_negative_stride1
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>)
+//       CHECK:   %[[C1:.*]] = arith.constant 0
+//       CHECK:   %[[C2:.*]] = arith.constant -1
+//       CHECK:   %[[DIM1:.*]] = memref.dim %[[ARG0]], %[[C1]] : memref<?xf32>
+//       CHECK:   %[[DIM2:.*]] = arith.addi %[[DIM1]], %[[C2]] : index
+//       CHECK:   %[[RES1:.*]] = memref.subview %[[ARG0]][%[[DIM2]]] [%[[DIM1]]] [-1] : memref<?xf32> to memref<?xf32, strided<[-1], offset: ?>>
+//       CHECK:   %[[RES2:.*]] = memref.cast %[[RES1]] : memref<?xf32, strided<[-1], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
+//       CHECK:   return %[[RES2]] : memref<?xf32, strided<[?], offset: ?>>
+
+// -----
+
+func.func @subview_negative_stride2(%arg0 : memref<7xf32>) -> memref<?xf32, strided<[?], offset: ?>>
+{
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant -1 : index
+  %1 = memref.dim %arg0, %c0 : memref<7xf32>
+  %2 = arith.addi %1, %c1 : index
+  %3 = memref.subview %arg0[%2] [%1] [%c1] : memref<7xf32> to memref<?xf32, strided<[?], offset: ?>>
+  return %3 : memref<?xf32, strided<[?], offset: ?>>
+}
+//       CHECK: func @subview_negative_stride2
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<7xf32>)
+//       CHECK:   %[[RES1:.*]] = memref.subview %[[ARG0]][6] [7] [-1] : memref<7xf32> to memref<7xf32, strided<[-1], offset: 6>>
+//       CHECK:   %[[RES2:.*]] = memref.cast %[[RES1]] : memref<7xf32, strided<[-1], offset: 6>> to memref<?xf32, strided<[?], offset: ?>>
+//       CHECK:   return %[[RES2]] : memref<?xf32, strided<[?], offset: ?>>
 
 // -----
 

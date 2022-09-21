@@ -16,3 +16,7 @@ func.func private @f6() -> memref<?x?xf32, strided<[42, 1], offset: 0>>
 func.func private @f7() -> memref<f32, strided<[]>>
 // CHECK: memref<f32, strided<[], offset: ?>>
 func.func private @f8() -> memref<f32, strided<[], offset: ?>>
+// CHECK: memref<?xf32, strided<[-1], offset: ?>>
+func.func private @f9() -> memref<?xf32, strided<[-1], offset: ?>>
+// CHECK: memref<f32, strided<[], offset: -1>>
+func.func private @f10() -> memref<f32, strided<[], offset: -1>>
