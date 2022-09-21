@@ -173,6 +173,8 @@ public:
     }
   }
 
+  bool InModuleFile() const { return GetFoldingContext().inModuleFile(); }
+
   // Make a placeholder symbol for a Name that otherwise wouldn't have one.
   // It is not in any scope and always has MiscDetails.
   void MakePlaceholder(const parser::Name &, MiscDetails::Kind);
@@ -4835,7 +4837,8 @@ bool DeclarationVisitor::Pre(const parser::DataComponentDefStmt &x) {
   set_allowForwardReferenceToDerivedType(false);
   if (derivedTypeInfo_.sequence) { // C740
     if (const auto *declType{GetDeclTypeSpec()}) {
-      if (!declType->AsIntrinsic() && !declType->IsSequenceType()) {
+      if (!declType->AsIntrinsic() && !declType->IsSequenceType() &&
+          !InModuleFile()) {
         if (GetAttrs().test(Attr::POINTER) &&
             context().IsEnabled(common::LanguageFeature::PointerInSeqType)) {
           if (context().ShouldWarn(common::LanguageFeature::PointerInSeqType)) {
@@ -6635,7 +6638,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       ApplyImplicitRules(*symbol);
     }
     if (checkIndexUseInOwnBounds_ &&
-        *checkIndexUseInOwnBounds_ == name.source) {
+        *checkIndexUseInOwnBounds_ == name.source && !InModuleFile()) {
       Say(name,
           "Implied DO index '%s' uses an object of the same name in its bounds expressions"_port_en_US,
           name.source);
