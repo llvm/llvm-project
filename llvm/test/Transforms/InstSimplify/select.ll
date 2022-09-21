@@ -1046,7 +1046,36 @@ define i32 @select_ctpop_zero(i32 %x) {
   %sel = select i1 %t0, i32 0, i32 %t1
   ret i32 %sel
 }
+
+define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
+; CHECK-LABEL: @select_ctpop_zero_vec(
+; CHECK-NEXT:    [[T0:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[T1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X]])
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[T0]], <2 x i32> zeroinitializer, <2 x i32> [[T1]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %t0 = icmp eq <2 x i32> %x, zeroinitializer
+  %t1 = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x)
+  %sel = select <2 x i1> %t0, <2 x i32> zeroinitializer, <2 x i32> %t1
+  ret <2 x i32> %sel
+}
+
+define <2 x i32> @select_vector_reverse(<2 x i32> %x) {
+; CHECK-LABEL: @select_vector_reverse(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[REV:%.*]] = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> [[X]])
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> zeroinitializer, <2 x i32> [[REV]]
+; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+;
+  %cmp = icmp eq <2 x i32> %x, zeroinitializer
+  %rev = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> %x)
+  %sel = select <2 x i1> %cmp, <2 x i32> zeroinitializer, <2 x i32> %rev
+  ret <2 x i32> %sel
+}
+
 declare i32 @llvm.ctpop.i32(i32)
+declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
+declare <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32>)
 
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @vec_select_no_equivalence(
