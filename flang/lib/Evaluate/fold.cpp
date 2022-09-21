@@ -72,7 +72,11 @@ Expr<SomeDerived> FoldOperation(
   for (auto &&[symbol, value] : std::move(structure)) {
     auto expr{Fold(context, std::move(value.value()))};
     if (IsPointer(symbol)) {
-      if (IsProcedure(symbol)) {
+      if (IsNullPointer(expr)) {
+        // Handle x%c when x designates a named constant of derived
+        // type and %c is NULL() in that constant.
+        expr = Expr<SomeType>{NullPointer{}};
+      } else if (IsProcedure(symbol)) {
         isConstant &= IsInitialProcedureTarget(expr);
       } else {
         isConstant &= IsInitialDataTarget(expr);
