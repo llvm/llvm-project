@@ -13,23 +13,100 @@
 
 namespace mlir {
 
-/// Lowering for AllocOp and AllocaOp.
-struct AllocLikeOpLLVMLowering : public ConvertToLLVMPattern {
+/// Lowering for memory allocation ops.
+struct AllocationOpLLVMLowering : public ConvertToLLVMPattern {
   using ConvertToLLVMPattern::createIndexConstant;
   using ConvertToLLVMPattern::getIndexType;
   using ConvertToLLVMPattern::getVoidPtrType;
 
-  explicit AllocLikeOpLLVMLowering(StringRef opName,
-                                   LLVMTypeConverter &converter)
+  explicit AllocationOpLLVMLowering(StringRef opName,
+                                    LLVMTypeConverter &converter)
       : ConvertToLLVMPattern(opName, &converter.getContext(), converter) {}
 
 protected:
-  // Returns 'input' aligned up to 'alignment'. Computes
-  // bumped = input + alignement - 1
-  // aligned = bumped - bumped % alignment
+  /// Computes the aligned value for 'input' as follows:
+  ///   bumped = input + alignement - 1
+  ///   aligned = bumped - bumped % alignment
   static Value createAligned(ConversionPatternRewriter &rewriter, Location loc,
                              Value input, Value alignment);
 
+  static MemRefType getMemRefResultType(Operation *op) {
+    return op->getResult(0).getType().cast<MemRefType>();
+  }
+
+  /// Computes the alignment for the given memory allocation op.
+  template <typename OpType>
+  Value getAlignment(ConversionPatternRewriter &rewriter, Location loc,
+                     OpType op) const {
+    MemRefType memRefType = op.getType();
+    Value alignment;
+    if (auto alignmentAttr = op.getAlignment()) {
+      alignment = createIndexConstant(rewriter, loc, *alignmentAttr);
+    } else if (!memRefType.getElementType().isSignlessIntOrIndexOrFloat()) {
+      // In the case where no alignment is specified, we may want to override
+      // `malloc's` behavior. `malloc` typically aligns at the size of the
+      // biggest scalar on a target HW. For non-scalars, use the natural
+      // alignment of the LLVM type given by the LLVM DataLayout.
+      alignment = getSizeInBytes(loc, memRefType.getElementType(), rewriter);
+    }
+    return alignment;
+  }
+
+  /// Computes the alignment for aligned_alloc used to allocate the buffer for
+  /// the memory allocation op.
+  ///
+  /// Aligned_alloc requires the allocation size to be a power of two, and the
+  /// allocation size to be a multiple of the alignment.
+  template <typename OpType>
+  int64_t alignedAllocationGetAlignment(ConversionPatternRewriter &rewriter,
+                                        Location loc, OpType op,
+                                        const DataLayout *defaultLayout) const {
+    if (Optional<uint64_t> alignment = op.getAlignment())
+      return *alignment;
+
+    // Whenever we don't have alignment set, we will use an alignment
+    // consistent with the element type; since the allocation size has to be a
+    // power of two, we will bump to the next power of two if it isn't.
+    unsigned eltSizeBytes =
+        getMemRefEltSizeInBytes(op.getType(), op, defaultLayout);
+    return std::max(kMinAlignedAllocAlignment,
+                    llvm::PowerOf2Ceil(eltSizeBytes));
+  }
+
+  /// Allocates a memory buffer using an allocation method that doesn't
+  /// guarantee alignment. Returns the pointer and its aligned value.
+  std::tuple<Value, Value>
+  allocateBufferManuallyAlign(ConversionPatternRewriter &rewriter, Location loc,
+                              Value sizeBytes, Operation *op,
+                              Value alignment) const;
+
+  /// Allocates a memory buffer using an aligned allocation method.
+  Value allocateBufferAutoAlign(ConversionPatternRewriter &rewriter,
+                                Location loc, Value sizeBytes, Operation *op,
+                                const DataLayout *defaultLayout,
+                                int64_t alignment) const;
+
+private:
+  /// Computes the byte size for the MemRef element type.
+  unsigned getMemRefEltSizeInBytes(MemRefType memRefType, Operation *op,
+                                   const DataLayout *defaultLayout) const;
+
+  /// Returns true if the memref size in bytes is known to be a multiple of
+  /// factor.
+  bool isMemRefSizeMultipleOf(MemRefType type, uint64_t factor, Operation *op,
+                              const DataLayout *defaultLayout) const;
+
+  /// The minimum alignment to use with aligned_alloc (has to be a power of 2).
+  static constexpr uint64_t kMinAlignedAllocAlignment = 16UL;
+};
+
+/// Lowering for AllocOp and AllocaOp.
+struct AllocLikeOpLLVMLowering : public AllocationOpLLVMLowering {
+  explicit AllocLikeOpLLVMLowering(StringRef opName,
+                                   LLVMTypeConverter &converter)
+      : AllocationOpLLVMLowering(opName, converter) {}
+
+protected:
   /// Allocates the underlying buffer. Returns the allocated pointer and the
   /// aligned pointer.
   virtual std::tuple<Value, Value>
@@ -37,10 +114,6 @@ protected:
                  Value sizeBytes, Operation *op) const = 0;
 
 private:
-  static MemRefType getMemRefResultType(Operation *op) {
-    return op->getResult(0).getType().cast<MemRefType>();
-  }
-
   // An `alloc` is converted into a definition of a memref descriptor value and
   // a call to `malloc` to allocate the underlying data buffer.  The memref
   // descriptor is of the LLVM structure type where:
