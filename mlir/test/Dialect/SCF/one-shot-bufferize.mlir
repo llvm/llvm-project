@@ -858,3 +858,21 @@ func.func @non_tensor_for_arg(%A : tensor<?xf32> {bufferization.writable = true}
   }
   return %r1#1 : tensor<?xf32>
 }
+
+// -----
+
+// This is a regression test. Just check that the IR bufferizes.
+  
+// CHECK-LABEL: func @buffer_type_of_collapse_shape
+func.func @buffer_type_of_collapse_shape(%arg0: tensor<f64>) {
+  %true = arith.constant true
+  %0 = scf.while (%arg1 = %arg0) : (tensor<f64>) -> (tensor<f64>) {
+    scf.condition(%true) %arg1 : tensor<f64>
+  } do {
+  ^bb0(%_: tensor<f64>):
+    %3 = bufferization.alloc_tensor() : tensor<1xf64>
+    %16 = tensor.collapse_shape %3 [] : tensor<1xf64> into tensor<f64>
+    scf.yield %16 : tensor<f64>
+  }
+  return
+}
