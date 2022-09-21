@@ -215,31 +215,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     return error(ForwardRefBlockAddresses.begin()->first.Loc,
                  "expected function name in blockaddress");
 
-  // If there are entries in ForwardRefDSOLocalEquivalents at this point, they
-  // are references after the function was defined.  Resolve those now.
-  for (auto &Iter : ForwardRefDSOLocalEquivalents) {
-    GlobalValue *GV = nullptr;
-    const ValID &GVRef = Iter.first;
-    if (GVRef.Kind == ValID::t_GlobalName)
-      GV = M->getNamedValue(GVRef.StrVal);
-    else if (GVRef.UIntVal < NumberedVals.size())
-      GV = dyn_cast<GlobalValue>(NumberedVals[GVRef.UIntVal]);
-
-    if (!GV)
-      return error(GVRef.Loc, "unknown function '" + GVRef.StrVal +
-                                  "' referenced by dso_local_equivalent");
-
-    if (!GV->getValueType()->isFunctionTy())
-      return error(GVRef.Loc,
-                   "expected a function, alias to function, or ifunc "
-                   "in dso_local_equivalent");
-
-    auto *Equiv = DSOLocalEquivalent::get(GV);
-    Iter.second->replaceAllUsesWith(Equiv);
-    Iter.second->eraseFromParent();
-  }
-  ForwardRefDSOLocalEquivalents.clear();
-
   for (const auto &NT : NumberedTypes)
     if (NT.second.second.isValid())
       return error(NT.second.second,
@@ -3453,21 +3428,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       GV = M->getNamedValue(Fn.StrVal);
     }
 
-    if (!GV) {
-      // Make a placeholder global variable as a placeholder for this reference.
-      GlobalValue *&FwdRef = ForwardRefDSOLocalEquivalents
-                                 .try_emplace(std::move(Fn), nullptr)
-                                 .first->second;
-      if (!FwdRef) {
-        FwdRef = new GlobalVariable(*M, Type::getInt8Ty(Context), false,
-                                    GlobalValue::InternalLinkage, nullptr, "",
-                                    nullptr, GlobalValue::NotThreadLocal);
-      }
-
-      ID.ConstantVal = FwdRef;
-      ID.Kind = ValID::t_Constant;
-      return false;
-    }
+    assert(GV && "Could not find a corresponding global variable");
 
     if (!GV->getValueType()->isFunctionTy())
       return error(Fn.Loc, "expected a function, alias to function, or ifunc "
