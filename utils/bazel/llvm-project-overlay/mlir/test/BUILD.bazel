@@ -611,6 +611,7 @@ cc_library(
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:MathDialect",
+        "//mlir:MemRefDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
