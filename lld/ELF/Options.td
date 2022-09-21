@@ -542,7 +542,7 @@ def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
 def: Joined<["-", "--"], "Ttext-segment=">, Alias<Ttext_segment>;
 def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>, HelpText<"Alias for --undefined">;
-def: Flag<["-"], "V">, Alias<version>, HelpText<"Alias for --version">;
+def: Flag<["-"], "V">, Alias<v>, HelpText<"Alias for -v">;
 
 // LTO-related options.
 def lto_aa_pipeline: JJ<"lto-aa-pipeline=">,
