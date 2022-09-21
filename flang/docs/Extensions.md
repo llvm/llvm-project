@@ -314,6 +314,9 @@ end
 * VMS listing control directives (`%LIST`, `%NOLIST`, `%EJECT`)
 * Continuation lines on `INCLUDE` lines
 * `NULL()` actual argument corresponding to an `ALLOCATABLE` dummy data object
+* User (non-intrinsic) `ELEMENTAL` procedures may not be passed as actual
+  arguments, in accordance with the standard; some Fortran compilers
+  permit such usage.
 
 ## Preprocessing behavior
 
