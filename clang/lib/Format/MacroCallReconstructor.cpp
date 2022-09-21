@@ -35,9 +35,8 @@ void forEachToken(const UnwrappedLine &Line, const T &Call,
   for (const auto &N : Line.Tokens) {
     Call(N.Tok, Parent, First);
     First = false;
-    for (const auto &Child : N.Children) {
+    for (const auto &Child : N.Children)
       forEachToken(Child, Call, N.Tok);
-    }
   }
 }
 
@@ -61,7 +60,8 @@ void MacroCallReconstructor::addLine(const UnwrappedLine &Line) {
 
 UnwrappedLine MacroCallReconstructor::takeResult() && {
   finalize();
-  assert(Result.Tokens.size() == 1 && Result.Tokens.front()->Children.size() == 1);
+  assert(Result.Tokens.size() == 1 &&
+         Result.Tokens.front()->Children.size() == 1);
   UnwrappedLine Final =
       createUnwrappedLine(*Result.Tokens.front()->Children.front(), Level);
   assert(!Final.Tokens.empty());
@@ -194,9 +194,8 @@ FormatToken *MacroCallReconstructor::getParentInResult(FormatToken *Parent) {
   FormatToken *Mapped = SpelledParentToReconstructedParent.lookup(Parent);
   if (!Mapped)
     return Parent;
-  for (; Mapped; Mapped = SpelledParentToReconstructedParent.lookup(Parent)) {
+  for (; Mapped; Mapped = SpelledParentToReconstructedParent.lookup(Parent))
     Parent = Mapped;
-  }
   // If we use a different token than the parent in the expanded token stream
   // as parent, mark it as a special parent, so the formatting code knows it
   // needs to have its children formatted.
@@ -216,9 +215,8 @@ void MacroCallReconstructor::reconstruct(FormatToken *Token) {
     // If the order of tokens in the expanded token stream is not the
     // same as the order of tokens in the reconstructed stream, we need
     // to reconstruct tokens that arrive later in the stream.
-    if (Token->MacroCtx->Role != MR_Hidden) {
+    if (Token->MacroCtx->Role != MR_Hidden)
       reconstructActiveCallUntil(Token);
-    }
   }
   assert(!ActiveExpansions.empty());
   if (ActiveExpansions.back().SpelledI != ActiveExpansions.back().SpelledE) {
@@ -334,9 +332,8 @@ void MacroCallReconstructor::endReconstruction(FormatToken *Token) {
       bool PreviousLevel =
           Token->MacroCtx &&
           (ActiveExpansions.size() < Token->MacroCtx->ExpandedFrom.size());
-      if (!ClosingParen && !TrailingComment && !PreviousLevel) {
+      if (!ClosingParen && !TrailingComment && !PreviousLevel)
         llvm::dbgs() << "At token: " << Token->TokenText << "\n";
-      }
       // In addition to the following cases, we can also run into this
       // when a macro call had more arguments than expected; in that case,
       // the comma and the remaining tokens in the macro call will potentially
@@ -392,9 +389,8 @@ bool MacroCallReconstructor::processNextReconstructed() {
   ++ActiveExpansions.back().SpelledI;
   if (Token->MacroCtx) {
     // Skip tokens that are not part of the macro call.
-    if (Token->MacroCtx->Role == MR_Hidden) {
+    if (Token->MacroCtx->Role == MR_Hidden)
       return false;
-    }
     // Skip tokens we already expanded during an inner reconstruction.
     // For example, given: #define ID(x) {x}
     // And the call: ID(ID(f))
@@ -403,9 +399,8 @@ bool MacroCallReconstructor::processNextReconstructed() {
     // ID({f}) -> {{f}}
     // We reconstruct f during the first reconstruction, and skip it during the
     // second reconstruction.
-    if (ActiveExpansions.size() < Token->MacroCtx->ExpandedFrom.size()) {
+    if (ActiveExpansions.size() < Token->MacroCtx->ExpandedFrom.size())
       return false;
-    }
   }
   // Tokens that do not have a macro context are tokens in that are part of the
   // macro call that have not taken part in expansion.
