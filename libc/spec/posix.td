@@ -16,6 +16,18 @@ def PThreadKeyT : NamedType<"pthread_key_t">;
 def PThreadKeyTPtr : PtrType<PThreadKeyT>;
 
 def InoT : NamedType<"ino_t">;
+def UidT : NamedType<"uid_t">;
+def GidT : NamedType<"gid_t">;
+def DevT : NamedType<"dev_t">;
+def BlkSizeT : NamedType<"blksize_t">;
+def BlkCntT : NamedType<"blkcnt_t">;
+def NLinkT : NamedType<"nlink_t">;
+def TimeSpec : NamedType<"struct timespec">;
+
+def StatType : NamedType<"struct stat">;
+def StatTypePtr : PtrType<StatType>;
+def RestrictedStatTypePtr : RestrictedPtrType<StatType>;
+
 def DIR : NamedType<"DIR">;
 def DIRPtr : PtrType<DIR>;
 def DIRRestrictedPtr : RestrictedPtrType<DIR>;
@@ -491,7 +503,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysStat = HeaderSpec<
     "sys/stat.h",
     [], // Macros
-    [ModeTType], // Types
+    [ModeTType, DevT, InoT, UidT, GidT, TimeSpec, BlkSizeT, BlkCntT, OffTType, NLinkT, StatType], // Types
     [], // Enumerations
     [
         FunctionSpec<
@@ -510,6 +522,16 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>, ArgSpec<IntType>]
         >,
         FunctionSpec<
+            "fstat",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>, ArgSpec<StatTypePtr>]
+        >,
+        FunctionSpec<
+            "lstat",
+            RetValSpec<IntType>,
+            [ArgSpec<ConstRestrictedCharPtr>, ArgSpec<RestrictedStatTypePtr>]
+        >,
+        FunctionSpec<
             "mkdir",
             RetValSpec<IntType>,
             [ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
@@ -518,6 +540,11 @@ def POSIX : StandardSpec<"POSIX"> {
             "mkdirat",
             RetValSpec<IntType>,
             [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
+        >,
+        FunctionSpec<
+            "stat",
+            RetValSpec<IntType>,
+            [ArgSpec<ConstRestrictedCharPtr>, ArgSpec<RestrictedStatTypePtr>]
         >,
     ]
   >;
