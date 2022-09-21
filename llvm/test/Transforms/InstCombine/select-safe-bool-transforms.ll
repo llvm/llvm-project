@@ -308,9 +308,7 @@ define <2 x i1> @land_lor_right1_vec(<2 x i1> %A, <2 x i1> %B) {
 }
 define <2 x i1> @land_lor_right2_vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @land_lor_right2_vec(
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[B:%.*]], <2 x i1> [[A:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[C]]
-; CHECK-NEXT:    ret <2 x i1> [[RES]]
+; CHECK-NEXT:    ret <2 x i1> [[A:%.*]]
 ;
   %c = select <2 x i1> %B, <2 x i1> %A, <2 x i1> zeroinitializer
   %res = select <2 x i1> %A, <2 x i1> <i1 true, i1 true>, <2 x i1> %c
