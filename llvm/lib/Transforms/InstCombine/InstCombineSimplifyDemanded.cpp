@@ -1080,6 +1080,18 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  case Instruction::Sub: {
+    unsigned NLZ = DemandedMask.countLeadingZeros();
+    APInt DemandedFromOps = APInt::getLowBitsSet(BitWidth, BitWidth - NLZ);
+
+    // If an operand subtracts zeros from every bit below the highest demanded
+    // bit, that operand doesn't change the result. Return the other side.
+    computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
+    if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
+      return I->getOperand(0);
+
+    break;
+  }
   case Instruction::AShr: {
     // Compute the Known bits to simplify things downstream.
     computeKnownBits(I, Known, Depth, CxtI);
