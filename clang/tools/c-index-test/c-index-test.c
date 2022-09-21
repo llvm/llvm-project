@@ -900,6 +900,8 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (mutable)");
     if (clang_CXXMethod_isDefaulted(Cursor))
       printf(" (defaulted)");
+    if (clang_CXXMethod_isDeleted(Cursor))
+      printf(" (deleted)");
     if (clang_CXXMethod_isStatic(Cursor))
       printf(" (static)");
     if (clang_CXXMethod_isVirtual(Cursor))

@@ -398,6 +398,8 @@ libclang
   the behavior of ``QualType::getUnqualifiedType`` for ``CXType``.
 - Introduced the new function ``clang_getNonReferenceType``, which mimics
   the behavior of ``QualType::getNonReferenceType`` for ``CXType``.
+- Introduced the new function ``clang_CXXMethod_isDeleted``, which queries
+  whether the method is declared ``= delete``.
 
 Static Analyzer
 ---------------
