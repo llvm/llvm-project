@@ -6340,14 +6340,17 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
 
       unsigned NumOfParts = TTI->getNumberOfParts(SrcVecTy);
 
+      SmallVector<int> InsertMask(NumElts, UndefMaskElem);
       unsigned OffsetBeg = *getInsertIndex(VL.front());
       unsigned OffsetEnd = OffsetBeg;
-      for (Value *V : VL.drop_front()) {
+      InsertMask[OffsetBeg] = 0;
+      for (auto [I, V] : enumerate(VL.drop_front())) {
         unsigned Idx = *getInsertIndex(V);
         if (OffsetBeg > Idx)
           OffsetBeg = Idx;
         else if (OffsetEnd < Idx)
           OffsetEnd = Idx;
+        InsertMask[Idx] = I + 1;
       }
       unsigned VecScalarsSz = PowerOf2Ceil(NumElts);
       if (NumOfParts > 0)
@@ -6412,8 +6415,6 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // initial vector or inserting a subvector.
       // TODO: Implement the analysis of the FirstInsert->getOperand(0)
       // subvector of ActualVecTy.
-      SmallVector<int> InsertMask(NumElts, UndefMaskElem);
-      copy(Mask, std::next(InsertMask.begin(), OffsetBeg));
       if (!isUndefVector(FirstInsert->getOperand(0), InsertMask) &&
           NumScalars != NumElts && !IsWholeSubvector) {
         if (InsertVecSz != VecSz) {
