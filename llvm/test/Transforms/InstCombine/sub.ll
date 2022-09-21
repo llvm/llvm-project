@@ -2074,7 +2074,7 @@ define i5 @demand_low_bits_uses(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 96
 ; CHECK-NEXT:    [[A:%.*]] = sub i8 [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[A]] to i5
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[Y]] to i5
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %m = and i8 %x, 96 ; 0x60
@@ -2100,6 +2100,8 @@ define i6 @demand_low_bits_uses_extra_bit(i8 %x, i8 %y) {
   %r = trunc i8 %a to i6
   ret i6 %r
 }
+
+; negative test - must be operand 1
 
 define i8 @demand_low_bits_uses_commute(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @demand_low_bits_uses_commute(
