@@ -1517,7 +1517,10 @@ enum DeclCode {
   /// A UnnamedGlobalConstantDecl record.
   DECL_UNNAMED_GLOBAL_CONSTANT,
 
-  DECL_LAST = DECL_UNNAMED_GLOBAL_CONSTANT
+  /// A HLSLBufferDecl record.
+  DECL_HLSL_BUFFER,
+
+  DECL_LAST = DECL_HLSL_BUFFER
 };
 
 /// Record codes for each kind of statement or expression.

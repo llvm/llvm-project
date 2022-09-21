@@ -2390,3 +2390,11 @@ void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {
   if (S->hasStoredFPFeatures())
     printFPOptions(S->getStoredFPFeatures());
 }
+
+void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
+  if (D->isCBuffer())
+    OS << " cbuffer";
+  else
+    OS << " tbuffer";
+  dumpName(D);
+}

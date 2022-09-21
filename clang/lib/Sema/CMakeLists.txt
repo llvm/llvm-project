@@ -45,6 +45,7 @@ add_clang_library(clangSema
   SemaExprMember.cpp
   SemaExprObjC.cpp
   SemaFixItUtils.cpp
+  SemaHLSL.cpp
   SemaInit.cpp
   SemaLambda.cpp
   SemaLookup.cpp
