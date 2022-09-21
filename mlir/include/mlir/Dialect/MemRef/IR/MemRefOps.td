@@ -1342,7 +1342,13 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape"> {
     OpBuilder<(ins "ArrayRef<int64_t>":$resultShape, "Value":$src,
                "ArrayRef<ReassociationIndices>":$reassociation)>
   ];
-  let extraClassDeclaration = commonExtraClassDeclaration;
+
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    static FailureOr<MemRefType> computeExpandedType(
+        MemRefType srcType, ArrayRef<int64_t> resultShape,
+        ArrayRef<ReassociationIndices> reassociation);
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -1389,6 +1395,7 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape"> {
     Note: This op currently assumes that the inner strides are of the
     source/result layout map are the faster-varying ones.
   }];
+
   let builders = [
     // Builders for a contracting reshape whose result type is computed from
     // `src` and `reassociation`.
@@ -1422,11 +1429,15 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape"> {
       build($_builder, $_state, resultType, src, reassociationMaps, attrs);
     }]>
   ];
+
   let extraClassDeclaration = commonExtraClassDeclaration # [{
     /// Return `true` if this source MemRef type is guaranteed to be collapsible
     /// according to the given reassociation indices. In the presence of dynamic
     /// strides this is usually not the case.
     static bool isGuaranteedCollapsible(
+        MemRefType srcType, ArrayRef<ReassociationIndices> reassociation);
+
+    static MemRefType computeCollapsedType(
         MemRefType srcType, ArrayRef<ReassociationIndices> reassociation);
   }];
 
