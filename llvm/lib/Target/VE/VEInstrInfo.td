@@ -1597,13 +1597,12 @@ def zero_f32 : OutPatFrag<(ops node:$expr),
                           (ANDrm $expr, !add(32, 64))>;
 
 // Small immediates.
-def : Pat<(i32 simm7:$val), (EXTRACT_SUBREG (ORim (LO7 $val), 0), sub_i32)>;
+def : Pat<(i32 simm7:$val), (l2i (ORim (LO7 $val), 0))>;
 def : Pat<(i64 simm7:$val), (ORim (LO7 $val), 0)>;
 // Medium immediates.
-def : Pat<(i32 simm32:$val),
-          (EXTRACT_SUBREG (LEAzii 0, 0, (LO32 $val)), sub_i32)>;
+def : Pat<(i32 simm32:$val), (l2i (LEAzii 0, 0, (LO32 $val)))>;
 def : Pat<(i64 simm32:$val), (LEAzii 0, 0, (LO32 $val))>;
-def : Pat<(i64 uimm32:$val), (ANDrm (LEAzii 0, 0, (LO32 $val)), !add(32, 64))>;
+def : Pat<(i64 uimm32:$val), (zero_f32 (LEAzii 0, 0, (LO32 $val)))>;
 // Arbitrary immediates.
 def : Pat<(i64 lozero:$val),
           (LEASLzii 0, 0, (HI32 imm:$val))>;
@@ -1704,20 +1703,16 @@ def : Pat<(i32 (and (trunc i64:$src), 0xffff)),
           (EXTRACT_SUBREG (ANDrm $src, !add(48, 64)), sub_i32)>;
 
 // Cast to i32
-def : Pat<(i32 (trunc i64:$src)),
-          (EXTRACT_SUBREG (ANDrm $src, !add(32, 64)), sub_i32)>;
+def : Pat<(i32 (trunc i64:$src)), (l2i (zero_f32 $src))>;
 def : Pat<(i32 (fp_to_sint f32:$src)), (CVTWSSXr RD_RZ, $src)>;
 def : Pat<(i32 (fp_to_sint f64:$src)), (CVTWDSXr RD_RZ, $src)>;
 def : Pat<(i32 (fp_to_sint f128:$src)), (CVTWDSXr RD_RZ, (CVTDQr $src))>;
 
 // Cast to i64
-def : Pat<(sext_inreg i64:$src, i32),
-          (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-            (ADDSWSXrm (EXTRACT_SUBREG $src, sub_i32), 0), sub_i32)>;
-def : Pat<(i64 (sext i32:$src)),
-          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADDSWSXrm $src, 0), sub_i32)>;
-def : Pat<(i64 (zext i32:$src)),
-          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADDSWZXrm $src, 0), sub_i32)>;
+def : Pat<(sext_inreg i64:$src, i32), (i2l (ADDSWSXrm (l2i $src), 0))>;
+def : Pat<(i64 (sext i32:$src)), (i2l (ADDSWSXrm $src, 0))>;
+def : Pat<(i64 (zext i32:$src)), (i2l (ADDSWZXrm $src, 0))>;
+def : Pat<(i64 (anyext i32:$sy)), (i2l $sy)>;
 def : Pat<(i64 (fp_to_sint f32:$src)), (CVTLDr RD_RZ, (CVTDSr $src))>;
 def : Pat<(i64 (fp_to_sint f64:$src)), (CVTLDr RD_RZ, $src)>;
 def : Pat<(i64 (fp_to_sint f128:$src)), (CVTLDr RD_RZ, (CVTDQr $src))>;
@@ -1729,9 +1724,6 @@ def : Pat<(f32 (sint_to_fp i64:$src)), (CVTSDr (CVTDLr i64:$src))>;
 def : Pat<(f128 (sint_to_fp i32:$src)), (CVTQDr (CVTDWr $src))>;
 def : Pat<(f128 (sint_to_fp i64:$src)), (CVTQDr (CVTDLr $src))>;
 
-def : Pat<(i64 (anyext i32:$sy)),
-          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $sy, sub_i32)>;
-
 
 // extload, sextload and zextload stuff
 multiclass EXT64m<SDPatternOperator from,
@@ -1740,17 +1732,13 @@ multiclass EXT64m<SDPatternOperator from,
                   RM tozri,
                   RM tozii> {
   def : Pat<(i64 (from ADDRrri:$addr)),
-            (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (torri MEMrri:$addr),
-                           sub_i32)>;
+            (i2l (torri MEMrri:$addr))>;
   def : Pat<(i64 (from ADDRrii:$addr)),
-            (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (torii MEMrii:$addr),
-                           sub_i32)>;
+            (i2l (torii MEMrii:$addr))>;
   def : Pat<(i64 (from ADDRzri:$addr)),
-            (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (tozri MEMzri:$addr),
-                           sub_i32)>;
+            (i2l (tozri MEMzri:$addr))>;
   def : Pat<(i64 (from ADDRzii:$addr)),
-            (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (tozii MEMzii:$addr),
-                           sub_i32)>;
+            (i2l (tozii MEMzii:$addr))>;
 }
 defm : EXT64m<sextloadi8, LD1BSXrri, LD1BSXrii, LD1BSXzri, LD1BSXzii>;
 defm : EXT64m<zextloadi8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
@@ -1783,13 +1771,13 @@ multiclass TRUNC64m<SDPatternOperator from,
                     RM tozri,
                     RM tozii> {
   def : Pat<(from i64:$src, ADDRrri:$addr),
-            (torri MEMrri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+            (torri MEMrri:$addr, (l2i $src))>;
   def : Pat<(from i64:$src, ADDRrii:$addr),
-            (torii MEMrii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+            (torii MEMrii:$addr, (l2i $src))>;
   def : Pat<(from i64:$src, ADDRzri:$addr),
-            (tozri MEMzri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+            (tozri MEMzri:$addr, (l2i $src))>;
   def : Pat<(from i64:$src, ADDRzii:$addr),
-            (tozii MEMzii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+            (tozii MEMzii:$addr, (l2i $src))>;
 }
 defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
@@ -1891,13 +1879,13 @@ multiclass TRATMSTm<SDPatternOperator from,
                   RM tozri,
                   RM tozii> {
   def : Pat<(from ADDRrri:$addr, (i32 (trunc i64:$src))),
-            (torri MEMrri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+            (torri MEMrri:$addr, (l2i $src))>;
   def : Pat<(from ADDRrii:$addr, (i32 (trunc i64:$src))),
-            (torii MEMrii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+            (torii MEMrii:$addr, (l2i $src))>;
   def : Pat<(from ADDRzri:$addr, (i32 (trunc i64:$src))),
-            (tozri MEMzri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+            (tozri MEMzri:$addr, (l2i $src))>;
   def : Pat<(from ADDRzii:$addr, (i32 (trunc i64:$src))),
-            (tozii MEMzii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+            (tozii MEMzii:$addr, (l2i $src))>;
 }
 defm : TRATMSTm<atomic_store_8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRATMSTm<atomic_store_16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
@@ -2273,12 +2261,8 @@ def : Pat<(f128 (select i32:$pred, f128:$t, f128:$f)),
 def : Pat<(f64 (bitconvert i64:$src)), (COPY_TO_REGCLASS $src, I64)>;
 def : Pat<(i64 (bitconvert f64:$src)), (COPY_TO_REGCLASS $src, I64)>;
 
-def : Pat<(i32 (bitconvert f32:$op)),
-          (EXTRACT_SUBREG (SRALri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-            $op, sub_f32), 32), sub_i32)>;
-def : Pat<(f32 (bitconvert i32:$op)),
-          (EXTRACT_SUBREG (SLLri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-            $op, sub_i32), 32), sub_f32)>;
+def : Pat<(i32 (bitconvert f32:$op)), (l2i (SRALri (f2l $op), 32))>;
+def : Pat<(f32 (bitconvert i32:$op)), (l2f (SLLri (i2l $op), 32))>;
 
 // Optimize code A generated by `(unsigned char)c << 5` to B.
 // A) sla.w.sx %s0, %s0, 5
@@ -2287,16 +2271,9 @@ def : Pat<(f32 (bitconvert i32:$op)),
 // B) sla.w.sx %s0, %s0, 5
 //    and %s0, %s0, (56)0
 
-def : Pat<(i32 (and i32:$val, 0xff)),
-          (EXTRACT_SUBREG
-              (ANDrm (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $val, sub_i32),
-                     !add(56, 64)), sub_i32)>;
-def : Pat<(i32 (and i32:$val, 0xffff)),
-          (EXTRACT_SUBREG
-              (ANDrm (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $val, sub_i32),
-                     !add(48, 64)), sub_i32)>;
-def : Pat<(i64 (and i64:$val, 0xffffffff)),
-          (ANDrm $val, !add(32, 64))>;
+def : Pat<(i32 (and i32:$val, 0xff)), (l2i (ANDrm (i2l $val), !add(56, 64)))>;
+def : Pat<(i32 (and i32:$val, 0xffff)), (l2i (ANDrm (i2l $val), !add(48, 64)))>;
+def : Pat<(i64 (and i64:$val, 0xffffffff)), (ANDrm $val, !add(32, 64))>;
 
 //===----------------------------------------------------------------------===//
 // Vector Instruction Pattern Stuff
