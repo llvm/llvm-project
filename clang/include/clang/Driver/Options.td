@@ -672,11 +672,12 @@ def A : JoinedOrSeparate<["-"], "A">, Flags<[RenderJoined]>, Group<gfortran_Grou
 def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<prefix>">,
     HelpText<"Search $prefix$file for executables, libraries, and data files. "
     "If $prefix is a directory, search $prefix/$file">;
+def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
+  HelpText<"Use GCC installation in the specified directory. The directory ends with path components like 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+  "Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation">;
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
-  HelpText<"Search for GCC installation in the specified directory on targets which commonly use GCC. "
-  "The directory usually contains 'lib{,32,64}/gcc{,-cross}/$triple' and 'include'. If specified, "
-  "sysroot is skipped for GCC detection. Note: executables (e.g. ld) used by the compiler are not "
-  "overridden by the selected GCC installation">;
+  HelpText<"Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+  "Clang will use the GCC installation with the largest version">;
 def CC : Flag<["-"], "CC">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
     HelpText<"Include comments from within macros in preprocessed output">,
     MarshallingInfoFlag<PreprocessorOutputOpts<"ShowMacroComments">>;
