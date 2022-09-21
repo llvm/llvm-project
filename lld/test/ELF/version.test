@@ -1,0 +1,9 @@
+## --version skips input file processing.
+# RUN: ld.lld --version %t/not-exist 2>&1 | FileCheck %s
+
+## -v/-V don't skip processing if there is any input.
+# RUN: ld.lld -v 2>&1 | FileCheck %s
+# RUN: not ld.lld -v %t/not-exist 2>&1 | FileCheck %s
+# RUN: ld.lld -V 2>&1 | FileCheck %s
+
+# CHECK: LLD {{.*}} (compatible with GNU linkers)
