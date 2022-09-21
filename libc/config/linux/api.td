@@ -269,7 +269,7 @@ def DirentAPI : PublicAPI<"dirent.h"> {
 }
 
 def UniStdAPI : PublicAPI<"unistd.h"> {
-  let Types = ["off_t", "size_t", "ssize_t"];
+  let Types = ["off_t", "pid_t", "size_t", "ssize_t", "uid_t"];
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
