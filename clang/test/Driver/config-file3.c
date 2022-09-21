@@ -34,18 +34,26 @@
 // RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir=%t/testdmode -c -### %s 2>&1 | FileCheck %s -check-prefix SYMLINK
 //
 // SYMLINK: Configuration file: {{.*}}/testdmode/qqq-clang-g++.cfg
+
+//--- File specified by --config is loaded after the one inferred from the executable.
 //
-//--- File specified by --config overrides config inferred from clang executable.
+// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --config i386-qqq.cfg -c -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-EXPLICIT
 //
-// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --config i386-qqq -c -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-EXPLICIT
-//
-// CHECK-EXPLICIT: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
+// CHECK-EXPLICIT: Configuration file: {{.*}}/testdmode/qqq-clang-g++.cfg
+// CHECK-EXPLICIT-NEXT: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
 
 //--- --no-default-config disables config search.
 //
 // RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir=%t/testdmode --no-default-config -c -### %s 2>&1 | FileCheck %s -check-prefix NO-DEFAULT-CONFIG
 //
 // NO-DEFAULT-CONFIG-NOT: Configuration file:
+
+//--- Explicit --config works with --no-default-config.
+//
+// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --no-default-config --config i386-qqq.cfg -c -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-EXPLICIT-NO-DEFAULT
+//
+// CHECK-EXPLICIT-NO-DEFAULT-NOT: Configuration file: {{.*}}/testdmode/qqq-clang-g++.cfg
+// CHECK-EXPLICIT-NO-DEFAULT: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
 
 //--- Invocation qqq-clang-g++ tries to find config file qqq.cfg if qqq-clang-g++.cfg is not found.
 //
@@ -77,27 +85,24 @@
 // RUN: ln -s %clang %t/testreload/x86_64-clang-g++
 // RUN: echo "-Wundefined-func-template" > %t/testreload/i386-clang-g++.cfg
 // RUN: echo "-Werror" > %t/testreload/i386.cfg
+// RUN: echo "-Wall" > %t/testreload/x86_64-clang-g++.cfg
 // RUN: %t/testreload/x86_64-clang-g++ --config-system-dir= --config-user-dir= -c -m32 -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD
 //
 // CHECK-RELOAD: Configuration file: {{.*}}/testreload/i386-clang-g++.cfg
 // CHECK-RELOAD: -Wundefined-func-template
 // CHECK-RELOAD-NOT: -Werror
+// CHECK-RELOAD-NOT: -Wall
 
-//--- If config file is specified by --config and its name does not start with architecture, it is used without reloading.
-//
-// RUN: %t/testreload/x86_64-clang-g++ --config-system-dir=%S/Inputs --config-user-dir= --config config-3 -c -m32 -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD1a
-//
-// CHECK-RELOAD1a: Configuration file: {{.*}}/Inputs/config-3.cfg
-//
-// RUN: %t/testreload/x86_64-clang-g++ --config-system-dir=%S/Inputs --config-user-dir= --config config-3 -c --target=i386 -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD1b
-//
-// CHECK-RELOAD1b: Configuration file: {{.*}}/Inputs/config-3.cfg
+//--- Same for -target in place of -m32.
+// RUN: %t/testreload/x86_64-clang-g++ --config-system-dir= --config-user-dir= -c -target i386 -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD
 
-//--- If config file is specified by --config and its name starts with architecture, it is reloaded.
+//--- `-target i386 -m64` should load the 64-bit config.
+// RUN: %t/testreload/x86_64-clang-g++ --config-system-dir= --config-user-dir= -c -target i386 -m64 -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD1a
 //
-// RUN: %t/testreload/x86_64-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --config x86_64-qqq -c -m32 -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD1c
-//
-// CHECK-RELOAD1c: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
+// CHECK-RELOAD1a: Configuration file: {{.*}}/testreload/x86_64-clang-g++.cfg
+// CHECK-RELOAD1a: -Wall
+// CHECK-RELOAD1a-NOT: -Werror
+// CHECK-RELOAD1a-NOT: -Wundefined-func-template
 
 //--- x86_64-clang-g++ tries to find config i386.cfg if i386-clang-g++.cfg is not found.
 //
@@ -107,4 +112,9 @@
 // CHECK-RELOAD1d: Configuration file: {{.*}}/testreload/i386.cfg
 // CHECK-RELOAD1d: -Werror
 // CHECK-RELOAD1d-NOT: -Wundefined-func-template
+// CHECK-RELOAD1d-NOT: -Wall
 
+//--- x86_64-clang-g++ uses x86_64-clang-g++.cfg if i386*.cfg are not found.
+//
+// RUN: rm %t/testreload/i386.cfg
+// RUN: %t/testreload/x86_64-clang-g++ --config-system-dir= --config-user-dir= -c -m32 -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-RELOAD1a

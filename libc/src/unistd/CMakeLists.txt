@@ -66,6 +66,34 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpid
+)
+
+add_entrypoint_object(
+  getppid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getppid
+)
+
+add_entrypoint_object(
+  geteuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.geteuid
+)
+
+add_entrypoint_object(
+  getuid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getuid
+)
+
+add_entrypoint_object(
   link
   ALIAS
   DEPENDS

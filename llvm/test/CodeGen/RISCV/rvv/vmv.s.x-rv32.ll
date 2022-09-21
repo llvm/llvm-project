@@ -244,11 +244,10 @@ define <vscale x 1 x i64> @intrinsic_vmv.s.x_x_nxv1i64(<vscale x 1 x i64> %0, i6
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vmseq.vi v0, v9, 0
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v9, (a0), zero
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    vmseq.vi v0, v10, 0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
@@ -265,11 +264,10 @@ define <vscale x 2 x i64> @intrinsic_vmv.s.x_x_nxv2i64(<vscale x 2 x i64> %0, i6
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vmseq.vi v0, v10, 0
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v10, (a0), zero
-; CHECK-NEXT:    vid.v v12
-; CHECK-NEXT:    vmseq.vi v0, v12, 0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
@@ -286,11 +284,10 @@ define <vscale x 4 x i64> @intrinsic_vmv.s.x_x_nxv4i64(<vscale x 4 x i64> %0, i6
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    vmseq.vi v0, v12, 0
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v12, (a0), zero
-; CHECK-NEXT:    vid.v v16
-; CHECK-NEXT:    vmseq.vi v0, v16, 0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
+; CHECK-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
@@ -307,11 +304,10 @@ define <vscale x 8 x i64> @intrinsic_vmv.s.x_x_nxv8i64(<vscale x 8 x i64> %0, i6
 ; CHECK-NEXT:    sw a1, 12(sp)
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    vmseq.vi v0, v16, 0
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v16, (a0), zero
-; CHECK-NEXT:    vid.v v24
-; CHECK-NEXT:    vmseq.vi v0, v24, 0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v16, v0
+; CHECK-NEXT:    vlse64.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:

@@ -687,7 +687,7 @@ static LogicalResult funcsToCoroutines(
     if (isAllowedToBlock(func) ||
         outlinedFunctions.find(func) == outlinedFunctions.end()) {
       for (Operation &op : func.getBody().getOps()) {
-        if (dyn_cast<AwaitOp>(op) || dyn_cast<AwaitAllOp>(op)) {
+        if (isa<AwaitOp, AwaitAllOp>(op)) {
           funcWorklist.push_back(func);
           break;
         }

@@ -183,7 +183,12 @@ public:
 
   struct Context {
     ContextType type = eContextInvalid;
+
+  private:
     enum InfoType info_type = eInfoTypeNoArgs;
+
+  public:
+    enum InfoType GetInfoType() const { return info_type; }
     union {
       struct RegisterPlusOffset {
         RegisterInfo reg;      // base register

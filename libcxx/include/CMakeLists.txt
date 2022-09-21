@@ -294,6 +294,7 @@ set(files
   __format/format_args.h
   __format/format_context.h
   __format/format_error.h
+  __format/format_functions.h
   __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
@@ -512,7 +513,6 @@ set(files
   __support/solaris/floatingpoint.h
   __support/solaris/wchar.h
   __support/solaris/xlocale.h
-  __support/win32/limits_msvc_win32.h
   __support/win32/locale_win32.h
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h

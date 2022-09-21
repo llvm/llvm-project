@@ -491,6 +491,9 @@ private:
       // we need to complete 'forward<$1>($0)'.
       return "($0)";
 
+    if (Snippet->empty())
+      return "";
+
     bool MayHaveArgList = Completion.Kind == CompletionItemKind::Function ||
                           Completion.Kind == CompletionItemKind::Method ||
                           Completion.Kind == CompletionItemKind::Constructor ||
@@ -529,8 +532,6 @@ private:
       return *Snippet;
 
     // Replace argument snippets with a simplified pattern.
-    if (Snippet->empty())
-      return "";
     if (MayHaveArgList) {
       // Functions snippets can be of 2 types:
       // - containing only function arguments, e.g.

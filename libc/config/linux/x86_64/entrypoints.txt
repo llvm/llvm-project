@@ -57,6 +57,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # string.h entrypoints that depend on malloc
     libc.src.string.strdup
     libc.src.string.strndup
+    libc.src.string.strerror
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -112,8 +113,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.chmod
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
+    libc.src.sys.stat.fstat
+    libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
+    libc.src.sys.stat.stat
 
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
@@ -128,6 +132,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fchdir
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
+    libc.src.unistd.geteuid
+    libc.src.unistd.getpid
+    libc.src.unistd.getppid
+    libc.src.unistd.getuid
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
@@ -177,6 +185,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.cosf
     libc.src.math.expf
+    libc.src.math.exp10f
     libc.src.math.exp2f
     libc.src.math.expm1f
     libc.src.math.fabs
@@ -322,6 +331,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ferror_unlocked
     libc.src.stdio.fflush
     libc.src.stdio.fopen
+    libc.src.stdio.fputs
     libc.src.stdio.fopencookie
     libc.src.stdio.fread
     libc.src.stdio.fread_unlocked
@@ -331,6 +341,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fwrite_unlocked
     libc.src.stdio.fprintf
     libc.src.stdio.printf
+    libc.src.stdio.puts
     libc.src.stdio.stderr
     libc.src.stdio.stdout
 

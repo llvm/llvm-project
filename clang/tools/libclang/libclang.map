@@ -409,6 +409,7 @@ LLVM_16 {
   global:
     clang_getUnqualifiedType;
     clang_getNonReferenceType;
+    clang_CXXMethod_isDeleted;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

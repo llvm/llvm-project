@@ -608,8 +608,7 @@ public:
 
   /// Set the serialized AST file for the top-level module of this module.
   void setASTFile(Optional<FileEntryRef> File) {
-    assert((!File || !getASTFile() || getASTFile() == File) &&
-           "file path changed");
+    assert((!getASTFile() || getASTFile() == File) && "file path changed");
     getTopLevelModule()->ASTFile = File;
   }
 

@@ -2284,3 +2284,51 @@ define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64
   %r2 = insertvalue { i64, i64 } %r1, i64 %t2, 1
   ret { i64, i64 } %r2
 }
+
+define i8 @mul_negpow2(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_negpow2(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, -2
+  %a = add i8 %m, %y
+  ret i8 %a
+}
+
+define <2 x i8> @mul_negpow2_commute_vec(<2 x i8> %x, <2 x i8> %p) {
+; CHECK-LABEL: @mul_negpow2_commute_vec(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i8> [[X:%.*]], <i8 -8, i8 -8>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[Y]], [[M]]
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %y = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
+  %m = mul <2 x i8> %x, <i8 -8, i8 -8>
+  %a = add <2 x i8> %y, %m
+  ret <2 x i8> %a
+}
+
+define i8 @mul_negpow2_use(i8 %x) {
+; CHECK-LABEL: @mul_negpow2_use(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -2
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], 42
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, -2
+  call void @use(i8 %m)
+  %a = add i8 %m, 42
+  ret i8 %a
+}
+
+define i8 @mul_not_negpow2(i8 %x) {
+; CHECK-LABEL: @mul_not_negpow2(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -3
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], 42
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, -3
+  %a = add i8 %m, 42
+  ret i8 %a
+}

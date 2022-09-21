@@ -77,14 +77,6 @@ enum NodeType : unsigned {
   // named RISC-V instructions.
   CLZW,
   CTZW,
-  // RV64IB/RV32IB funnel shifts, with the semantics of the named RISC-V
-  // instructions. Operand order is rs1, rs3, rs2/shamt.
-  FSR,
-  FSL,
-  // RV64IB funnel shifts, with the semantics of the named RISC-V instructions.
-  // Operand order is rs1, rs3, rs2/shamt.
-  FSRW,
-  FSLW,
   // FPR<->GPR transfer operations when the FPR is smaller than XLEN, needed as
   // XLEN is the only legal integer width.
   //
@@ -600,9 +592,6 @@ public:
   bool isLegalElementTypeForRVV(Type *ScalarTy) const;
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
-
-  SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
-                        SmallVectorImpl<SDNode *> &Created) const override;
 
   unsigned getJumpTableEncoding() const override;
 

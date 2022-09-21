@@ -17,6 +17,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Tooling/StandaloneExecution.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -157,6 +158,8 @@ struct Reference {
 // A base struct for TypeInfos
 struct TypeInfo {
   TypeInfo() = default;
+  TypeInfo(const Reference &R) : Type(R) {}
+
   TypeInfo(SymbolID Type, StringRef Field, InfoType IT)
       : Type(Type, Field, IT) {}
   TypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path)
@@ -172,6 +175,9 @@ struct TypeInfo {
 // Info for field types.
 struct FieldTypeInfo : public TypeInfo {
   FieldTypeInfo() = default;
+  FieldTypeInfo(const TypeInfo &TI, StringRef Name = StringRef(),
+                StringRef DefaultValue = StringRef())
+      : TypeInfo(TI), Name(Name), DefaultValue(DefaultValue) {}
   FieldTypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path,
                 llvm::StringRef Name)
       : TypeInfo(Type, Field, IT, Path), Name(Name) {}
@@ -195,6 +201,8 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
+  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access)
+      : FieldTypeInfo(TI, Name), Access(Access) {}
   MemberTypeInfo(SymbolID Type, StringRef Field, InfoType IT, StringRef Path,
                  llvm::StringRef Name, AccessSpecifier Access)
       : FieldTypeInfo(Type, Field, IT, Path, Name), Access(Access) {}
@@ -397,6 +405,30 @@ struct BaseRecordInfo : public RecordInfo {
   bool IsParent = false; // Indicates if this base is a direct parent
 };
 
+// Information for a single possible value of an enumeration.
+struct EnumValueInfo {
+  explicit EnumValueInfo(StringRef Name = StringRef(),
+                         StringRef Value = StringRef("0"),
+                         StringRef ValueExpr = StringRef())
+      : Name(Name), Value(Value), ValueExpr(ValueExpr) {}
+
+  bool operator==(const EnumValueInfo &Other) const {
+    return std::tie(Name, Value, ValueExpr) ==
+           std::tie(Other.Name, Other.Value, Other.ValueExpr);
+  }
+
+  SmallString<16> Name;
+
+  // The computed value of the enumeration constant. This could be the result of
+  // evaluating the ValueExpr, or it could be automatically generated according
+  // to C rules.
+  SmallString<16> Value;
+
+  // Stores the user-supplied initialization expression for this enumeration
+  // constant. This will be empty for implicit enumeration values.
+  SmallString<16> ValueExpr;
+};
+
 // TODO: Expand to allow for documenting templating.
 // Info for types.
 struct EnumInfo : public SymbolInfo {
@@ -405,9 +437,15 @@ struct EnumInfo : public SymbolInfo {
 
   void merge(EnumInfo &&I);
 
-  bool Scoped =
-      false; // Indicates whether this enum is scoped (e.g. enum class).
-  llvm::SmallVector<SmallString<16>, 4> Members; // List of enum members.
+  // Indicates whether this enum is scoped (e.g. enum class).
+  bool Scoped = false;
+
+  // Set to nonempty to the type when this is an explicitly typed enum. For
+  //   enum Foo : short { ... };
+  // this will be "short".
+  llvm::Optional<TypeInfo> BaseType;
+
+  llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
 };
 
 struct Index : public Reference {

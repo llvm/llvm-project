@@ -370,8 +370,8 @@ void CodeEmitterGen::emitInstructionBaseValues(
     // Start by filling in fixed values.
     APInt Value(BitWidth, 0);
     for (unsigned i = 0, e = BI->getNumBits(); i != e; ++i) {
-      if (BitInit *B = dyn_cast<BitInit>(BI->getBit(e - i - 1)))
-        Value |= APInt(BitWidth, (uint64_t)B->getValue()) << (e - i - 1);
+      if (auto *B = dyn_cast<BitInit>(BI->getBit(i)); B && B->getValue())
+        Value.setBit(i);
     }
     o << "    ";
     emitInstBits(o, Value);

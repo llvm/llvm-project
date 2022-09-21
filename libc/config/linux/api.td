@@ -153,6 +153,7 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IOFBF", "0">,
     SimpleMacroDef<"_IOLBF", "1">,
     SimpleMacroDef<"_IONBF", "2">,
+    SimpleMacroDef<"EOF", "-1">,
   ];
   let Types = ["size_t", "FILE", "cookie_io_functions_t"];
 }
@@ -268,7 +269,7 @@ def DirentAPI : PublicAPI<"dirent.h"> {
 }
 
 def UniStdAPI : PublicAPI<"unistd.h"> {
-  let Types = ["off_t", "size_t", "ssize_t"];
+  let Types = ["off_t", "pid_t", "size_t", "ssize_t", "uid_t"];
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
@@ -276,7 +277,8 @@ def SysResourceAPI : PublicAPI<"sys/resource.h"> {
 }
 
 def SysStatAPI : PublicAPI<"sys/stat.h"> {
-  let Types = ["mode_t"];
+  let Types = ["mode_t", "dev_t", "ino_t", "nlink_t", "uid_t", "gid_t", "off_t",
+               "struct timespec", "blksize_t", "blkcnt_t", "struct stat"];
 }
 
 def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {

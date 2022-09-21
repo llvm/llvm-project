@@ -142,53 +142,49 @@ bool TypeCategoryImpl::Get(lldb::LanguageType lang,
 }
 
 void TypeCategoryImpl::Clear(FormatCategoryItems items) {
-  if ((items & eFormatCategoryItemValue) == eFormatCategoryItemValue)
+  if (items & eFormatCategoryItemFormat) {
     GetTypeFormatsContainer()->Clear();
-  if ((items & eFormatCategoryItemRegexValue) == eFormatCategoryItemRegexValue)
     GetRegexTypeFormatsContainer()->Clear();
+  }
 
-  if ((items & eFormatCategoryItemSummary) == eFormatCategoryItemSummary)
+  if (items & eFormatCategoryItemSummary) {
     GetTypeSummariesContainer()->Clear();
-  if ((items & eFormatCategoryItemRegexSummary) ==
-      eFormatCategoryItemRegexSummary)
     GetRegexTypeSummariesContainer()->Clear();
+  }
 
-  if ((items & eFormatCategoryItemFilter) == eFormatCategoryItemFilter)
+  if (items & eFormatCategoryItemFilter) {
     GetTypeFiltersContainer()->Clear();
-  if ((items & eFormatCategoryItemRegexFilter) ==
-      eFormatCategoryItemRegexFilter)
     GetRegexTypeFiltersContainer()->Clear();
+  }
 
-  if ((items & eFormatCategoryItemSynth) == eFormatCategoryItemSynth)
+  if (items & eFormatCategoryItemSynth) {
     GetTypeSyntheticsContainer()->Clear();
-  if ((items & eFormatCategoryItemRegexSynth) == eFormatCategoryItemRegexSynth)
     GetRegexTypeSyntheticsContainer()->Clear();
+  }
 }
 
 bool TypeCategoryImpl::Delete(ConstString name, FormatCategoryItems items) {
   bool success = false;
 
-  if ((items & eFormatCategoryItemValue) == eFormatCategoryItemValue)
+  if (items & eFormatCategoryItemFormat) {
     success = GetTypeFormatsContainer()->Delete(name) || success;
-  if ((items & eFormatCategoryItemRegexValue) == eFormatCategoryItemRegexValue)
     success = GetRegexTypeFormatsContainer()->Delete(name) || success;
+  }
 
-  if ((items & eFormatCategoryItemSummary) == eFormatCategoryItemSummary)
+  if (items & eFormatCategoryItemSummary) {
     success = GetTypeSummariesContainer()->Delete(name) || success;
-  if ((items & eFormatCategoryItemRegexSummary) ==
-      eFormatCategoryItemRegexSummary)
     success = GetRegexTypeSummariesContainer()->Delete(name) || success;
+  }
 
-  if ((items & eFormatCategoryItemFilter) == eFormatCategoryItemFilter)
+  if (items & eFormatCategoryItemFilter) {
     success = GetTypeFiltersContainer()->Delete(name) || success;
-  if ((items & eFormatCategoryItemRegexFilter) ==
-      eFormatCategoryItemRegexFilter)
     success = GetRegexTypeFiltersContainer()->Delete(name) || success;
+  }
 
-  if ((items & eFormatCategoryItemSynth) == eFormatCategoryItemSynth)
+  if (items & eFormatCategoryItemSynth) {
     success = GetTypeSyntheticsContainer()->Delete(name) || success;
-  if ((items & eFormatCategoryItemRegexSynth) == eFormatCategoryItemRegexSynth)
     success = GetRegexTypeSyntheticsContainer()->Delete(name) || success;
+  }
 
   return success;
 }
@@ -196,27 +192,25 @@ bool TypeCategoryImpl::Delete(ConstString name, FormatCategoryItems items) {
 uint32_t TypeCategoryImpl::GetCount(FormatCategoryItems items) {
   uint32_t count = 0;
 
-  if ((items & eFormatCategoryItemValue) == eFormatCategoryItemValue)
+  if (items & eFormatCategoryItemFormat) {
     count += GetTypeFormatsContainer()->GetCount();
-  if ((items & eFormatCategoryItemRegexValue) == eFormatCategoryItemRegexValue)
     count += GetRegexTypeFormatsContainer()->GetCount();
+  }
 
-  if ((items & eFormatCategoryItemSummary) == eFormatCategoryItemSummary)
+  if (items & eFormatCategoryItemSummary) {
     count += GetTypeSummariesContainer()->GetCount();
-  if ((items & eFormatCategoryItemRegexSummary) ==
-      eFormatCategoryItemRegexSummary)
     count += GetRegexTypeSummariesContainer()->GetCount();
+  }
 
-  if ((items & eFormatCategoryItemFilter) == eFormatCategoryItemFilter)
+  if (items & eFormatCategoryItemFilter) {
     count += GetTypeFiltersContainer()->GetCount();
-  if ((items & eFormatCategoryItemRegexFilter) ==
-      eFormatCategoryItemRegexFilter)
     count += GetRegexTypeFiltersContainer()->GetCount();
+  }
 
-  if ((items & eFormatCategoryItemSynth) == eFormatCategoryItemSynth)
+  if (items & eFormatCategoryItemSynth) {
     count += GetTypeSyntheticsContainer()->GetCount();
-  if ((items & eFormatCategoryItemRegexSynth) == eFormatCategoryItemRegexSynth)
     count += GetRegexTypeSyntheticsContainer()->GetCount();
+  }
 
   return count;
 }
@@ -233,28 +227,20 @@ bool TypeCategoryImpl::AnyMatches(ConstString type_name,
   TypeFilterImpl::SharedPointer filter_sp;
   ScriptedSyntheticChildren::SharedPointer synth_sp;
 
-  if ((items & eFormatCategoryItemValue) == eFormatCategoryItemValue) {
-    if (GetTypeFormatsContainer()->Get(type_name, format_sp)) {
+  if (items & eFormatCategoryItemFormat) {
+    if (GetTypeFormatsContainer()->Get(type_name, format_sp) ||
+        GetRegexTypeFormatsContainer()->Get(type_name, format_sp)) {
       if (matching_category)
         *matching_category = m_name.GetCString();
       if (matching_type)
-        *matching_type = eFormatCategoryItemValue;
-      return true;
-    }
-  }
-  if ((items & eFormatCategoryItemRegexValue) ==
-      eFormatCategoryItemRegexValue) {
-    if (GetRegexTypeFormatsContainer()->Get(type_name, format_sp)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemRegexValue;
+        *matching_type = eFormatCategoryItemFormat;
       return true;
     }
   }
 
-  if ((items & eFormatCategoryItemSummary) == eFormatCategoryItemSummary) {
-    if (GetTypeSummariesContainer()->Get(type_name, summary_sp)) {
+  if (items & eFormatCategoryItemSummary) {
+    if (GetTypeSummariesContainer()->Get(type_name, summary_sp) ||
+        GetRegexTypeSummariesContainer()->Get(type_name, summary_sp)) {
       if (matching_category)
         *matching_category = m_name.GetCString();
       if (matching_type)
@@ -262,19 +248,10 @@ bool TypeCategoryImpl::AnyMatches(ConstString type_name,
       return true;
     }
   }
-  if ((items & eFormatCategoryItemRegexSummary) ==
-      eFormatCategoryItemRegexSummary) {
-    if (GetRegexTypeSummariesContainer()->Get(type_name, summary_sp)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemRegexSummary;
-      return true;
-    }
-  }
 
-  if ((items & eFormatCategoryItemFilter) == eFormatCategoryItemFilter) {
-    if (GetTypeFiltersContainer()->Get(type_name, filter_sp)) {
+  if (items & eFormatCategoryItemFilter) {
+    if (GetTypeFiltersContainer()->Get(type_name, filter_sp) ||
+        GetRegexTypeFiltersContainer()->Get(type_name, filter_sp)) {
       if (matching_category)
         *matching_category = m_name.GetCString();
       if (matching_type)
@@ -282,33 +259,14 @@ bool TypeCategoryImpl::AnyMatches(ConstString type_name,
       return true;
     }
   }
-  if ((items & eFormatCategoryItemRegexFilter) ==
-      eFormatCategoryItemRegexFilter) {
-    if (GetRegexTypeFiltersContainer()->Get(type_name, filter_sp)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemRegexFilter;
-      return true;
-    }
-  }
 
-  if ((items & eFormatCategoryItemSynth) == eFormatCategoryItemSynth) {
-    if (GetTypeSyntheticsContainer()->Get(type_name, synth_sp)) {
+  if (items & eFormatCategoryItemSynth) {
+    if (GetTypeSyntheticsContainer()->Get(type_name, synth_sp) ||
+        GetRegexTypeSyntheticsContainer()->Get(type_name, synth_sp)) {
       if (matching_category)
         *matching_category = m_name.GetCString();
       if (matching_type)
         *matching_type = eFormatCategoryItemSynth;
-      return true;
-    }
-  }
-  if ((items & eFormatCategoryItemRegexSynth) ==
-      eFormatCategoryItemRegexSynth) {
-    if (GetRegexTypeSyntheticsContainer()->Get(type_name, synth_sp)) {
-      if (matching_category)
-        *matching_category = m_name.GetCString();
-      if (matching_type)
-        *matching_type = eFormatCategoryItemRegexSynth;
       return true;
     }
   }

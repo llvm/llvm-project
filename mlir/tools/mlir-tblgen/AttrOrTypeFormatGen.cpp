@@ -56,18 +56,19 @@ public:
   /// Returns the name of the parameter.
   StringRef getName() const { return param.getName(); }
 
+  /// Return the code to check whether the parameter is present.
+  auto genIsPresent(FmtContext &ctx, const Twine &self) const {
+    assert(isOptional() && "cannot guard on a mandatory parameter");
+    std::string valueStr = tgfmt(*param.getDefaultValue(), &ctx).str();
+    ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
+    return tgfmt(getParam().getComparator(), &ctx);
+  }
+
   /// Generate the code to check whether the parameter should be printed.
   MethodBody &genPrintGuard(FmtContext &ctx, MethodBody &os) const {
+    assert(isOptional() && "cannot guard on a mandatory parameter");
     std::string self = param.getAccessorName() + "()";
-    ctx.withSelf(self);
-    os << tgfmt("($_self", &ctx);
-    if (llvm::Optional<StringRef> defaultValue = getParam().getDefaultValue()) {
-      // Use the `comparator` field if it exists, else the equality operator.
-      std::string valueStr = tgfmt(*defaultValue, &ctx).str();
-      ctx.addSubst("_lhs", self).addSubst("_rhs", valueStr);
-      os << " && !(" << tgfmt(getParam().getComparator(), &ctx) << ")";
-    }
-    return os << ")";
+    return os << "!(" << genIsPresent(ctx, self) << ")";
   }
 
 private:
@@ -332,13 +333,9 @@ void DefFormat::genParser(MethodBody &os) {
     os << ",\n    ";
     std::string paramSelfStr;
     llvm::raw_string_ostream selfOs(paramSelfStr);
-    if (param.isOptional()) {
-      selfOs << formatv("(_result_{0}.value_or(", param.getName());
-      if (Optional<StringRef> defaultValue = param.getDefaultValue())
-        selfOs << tgfmt(*defaultValue, &ctx);
-      else
-        selfOs << param.getCppStorageType() << "()";
-      selfOs << "))";
+    if (Optional<StringRef> defaultValue = param.getDefaultValue()) {
+      selfOs << formatv("(_result_{0}.value_or(", param.getName())
+             << tgfmt(*defaultValue, &ctx) << "))";
     } else {
       selfOs << formatv("(*_result_{0})", param.getName());
     }
@@ -447,8 +444,9 @@ void DefFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
     ParameterElement *el = *std::prev(it);
     // Parse a comma if the last optional parameter had a value.
     if (el->isOptional()) {
-      os << formatv("if (::mlir::succeeded(_result_{0}) && *_result_{0}) {{\n",
-                    el->getName());
+      os << formatv("if (::mlir::succeeded(_result_{0}) && !({1})) {{\n",
+                    el->getName(),
+                    el->genIsPresent(ctx, "(*_result_" + el->getName() + ")"));
       os.indent();
     }
     if (it <= lastReqIt) {
@@ -522,18 +520,6 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
     }
 )";
 
-  // Optional parameters in a struct must be parsed successfully if the
-  // keyword is present.
-  //
-  // {0}: Name of the parameter.
-  // {1}: Emit error string
-  const char *const checkOptionalParam = R"(
-    if (::mlir::succeeded(_result_{0}) && !*_result_{0}) {{
-      {1}"expected a value for parameter '{0}'");
-      return {{};
-    }
-)";
-
   // First iteration of the loop parsing an optional struct.
   const char *const optionalStructFirst = R"(
   ::llvm::StringRef _paramKey;
@@ -558,11 +544,6 @@ void DefFormat::genStructParser(StructDirective *el, FmtContext &ctx,
                   "  _seen_{0} = true;\n",
                   param->getName());
     genVariableParser(param, ctx, os.indent());
-    if (param->isOptional()) {
-      os.getStream().printReindented(strfmt(checkOptionalParam,
-                                            param->getName(),
-                                            tgfmt(parserErrorStr, &ctx).str()));
-    }
     os.unindent() << "} else ";
     // Print the check for duplicate or unknown parameter.
   }
@@ -656,10 +637,10 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
 
 void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
                                        MethodBody &os) {
-  ArrayRef<FormatElement *> elements =
-      el->getThenElements().drop_front(el->getParseStart());
+  ArrayRef<FormatElement *> thenElements =
+      el->getThenElements(/*parseable=*/true);
 
-  FormatElement *first = elements.front();
+  FormatElement *first = thenElements.front();
   const auto guardOn = [&](auto params) {
     os << "if (!(";
     llvm::interleave(
@@ -687,12 +668,12 @@ void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
   }
   os.indent();
 
-  // Generate the parsers for the rest of the elements.
-  for (FormatElement *element : el->getElseElements())
+  // Generate the parsers for the rest of the thenElements.
+  for (FormatElement *element : el->getElseElements(/*parseable=*/true))
     genElementParser(element, ctx, os);
   os.unindent() << "} else {\n";
   os.indent();
-  for (FormatElement *element : elements.drop_front())
+  for (FormatElement *element : thenElements.drop_front())
     genElementParser(element, ctx, os);
   os.unindent() << "}\n";
 }
@@ -781,12 +762,16 @@ void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
 
 /// Generate code to guard printing on the presence of any optional parameters.
 template <typename ParameterRange>
-static void guardOnAny(FmtContext &ctx, MethodBody &os,
-                       ParameterRange &&params) {
+static void guardOnAny(FmtContext &ctx, MethodBody &os, ParameterRange &&params,
+                       bool inverted = false) {
   os << "if (";
+  if (inverted)
+    os << "!(";
   llvm::interleave(
       params, os,
       [&](ParameterElement *param) { param->genPrintGuard(ctx, os); }, " || ");
+  if (inverted)
+    os << ")";
   os << ") {\n";
   os.indent();
 }
@@ -860,12 +845,12 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
                                         MethodBody &os) {
   FormatElement *anchor = el->getAnchor();
   if (auto *param = dyn_cast<ParameterElement>(anchor)) {
-    guardOnAny(ctx, os, llvm::makeArrayRef(param));
+    guardOnAny(ctx, os, llvm::makeArrayRef(param), el->isInverted());
   } else if (auto *params = dyn_cast<ParamsDirective>(anchor)) {
-    guardOnAny(ctx, os, params->getParams());
+    guardOnAny(ctx, os, params->getParams(), el->isInverted());
   } else {
     auto *strct = cast<StructDirective>(anchor);
-    guardOnAny(ctx, os, strct->getParams());
+    guardOnAny(ctx, os, strct->getParams(), el->isInverted());
   }
   // Generate the printer for the contained elements.
   {
@@ -917,9 +902,9 @@ protected:
   verifyCustomDirectiveArguments(SMLoc loc,
                                  ArrayRef<FormatElement *> arguments) override;
   /// Verify the elements of an optional group.
-  LogicalResult
-  verifyOptionalGroupElements(SMLoc loc, ArrayRef<FormatElement *> elements,
-                              Optional<unsigned> anchorIndex) override;
+  LogicalResult verifyOptionalGroupElements(SMLoc loc,
+                                            ArrayRef<FormatElement *> elements,
+                                            FormatElement *anchor) override;
 
   /// Parse an attribute or type variable.
   FailureOr<FormatElement *> parseVariableImpl(SMLoc loc, StringRef name,
@@ -989,7 +974,7 @@ LogicalResult DefFormatParser::verifyCustomDirectiveArguments(
 LogicalResult
 DefFormatParser::verifyOptionalGroupElements(llvm::SMLoc loc,
                                              ArrayRef<FormatElement *> elements,
-                                             Optional<unsigned> anchorIndex) {
+                                             FormatElement *anchor) {
   // `params` and `struct` directives are allowed only if all the contained
   // parameters are optional.
   for (FormatElement *el : elements) {
@@ -1011,8 +996,8 @@ DefFormatParser::verifyOptionalGroupElements(llvm::SMLoc loc,
     }
   }
   // The anchor must be a parameter or one of the aforementioned directives.
-  if (anchorIndex && !isa<ParameterElement, ParamsDirective, StructDirective>(
-                         elements[*anchorIndex])) {
+  if (anchor &&
+      !isa<ParameterElement, ParamsDirective, StructDirective>(anchor)) {
     return emitError(loc,
                      "optional group anchor must be a parameter or directive");
   }

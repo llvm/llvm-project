@@ -108,6 +108,14 @@ cl::opt<TailFoldingKind, true, cl::parser<std::string>> SVETailFolding(
 
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
+  SMEAttrs CallerAttrs(*Caller);
+  SMEAttrs CalleeAttrs(*Callee);
+  if (CallerAttrs.requiresSMChange(CalleeAttrs,
+                                   /*BodyOverridesInterface=*/true) ||
+      CallerAttrs.requiresLazySave(CalleeAttrs) ||
+      CalleeAttrs.hasNewZAInterface())
+    return false;
+
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
   const FeatureBitset &CallerBits =

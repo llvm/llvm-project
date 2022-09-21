@@ -169,8 +169,10 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.unistd_macros
+    .llvm-libc-types.pid_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
+    .llvm-libc-types.uid_t
 )
 
 add_gen_header(
@@ -222,6 +224,7 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-macros.sys_stat_macros
     .llvm-libc-types.mode_t
+    .llvm-libc-types.struct_stat
 )
 
 add_gen_header(

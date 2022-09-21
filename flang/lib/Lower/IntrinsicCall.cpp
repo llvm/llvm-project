@@ -2404,7 +2404,7 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
   if (isStaticallyAbsent(target))
     return fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, *pointer);
 
-  mlir::Value targetBox = builder.createBox(loc, target);
+  mlir::Value targetBox;
   if (fir::valueHasFirAttribute(fir::getBase(target),
                                 fir::getOptionalAttrName())) {
     // Subtle: contrary to other intrinsic optional arguments, disassociated
@@ -2416,11 +2416,26 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
     // to rerun false.  The runtime deals with the disassociated/unallocated
     // case. Simply ensures that TARGET that are OPTIONAL get conditionally
     // emboxed here to convey the optional aspect to the runtime.
+    mlir::Type boxType = fir::BoxType::get(builder.getNoneType());
     auto isPresent = builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
                                                       fir::getBase(target));
-    auto absentBox = builder.create<fir::AbsentOp>(loc, targetBox.getType());
-    targetBox = builder.create<mlir::arith::SelectOp>(loc, isPresent, targetBox,
-                                                      absentBox);
+    targetBox = builder
+                    .genIfOp(loc, {boxType}, isPresent,
+                             /*withElseRegion=*/true)
+                    .genThen([&]() {
+                      mlir::Value box = builder.createBox(loc, target);
+                      mlir::Value cast =
+                          builder.createConvert(loc, boxType, box);
+                      builder.create<fir::ResultOp>(loc, cast);
+                    })
+                    .genElse([&]() {
+                      mlir::Value absentBox =
+                          builder.create<fir::AbsentOp>(loc, boxType);
+                      builder.create<fir::ResultOp>(loc, absentBox);
+                    })
+                    .getResults()[0];
+  } else {
+    targetBox = builder.createBox(loc, target);
   }
   mlir::Value pointerBoxRef =
       fir::factory::getMutableIRBox(builder, loc, *pointer);

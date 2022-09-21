@@ -78,14 +78,6 @@ def WriteCRCCH       : SchedWrite; // crc32c.h
 def WriteCRCCW       : SchedWrite; // crc32c.w
 def WriteCRCCD       : SchedWrite; // crc32c.d
 
-// Zbt extension
-def WriteCMix        : SchedWrite; // cmix
-def WriteCMov        : SchedWrite; // cmov
-def WriteFSReg       : SchedWrite; // fsl/fsr
-def WriteFSRImm      : SchedWrite; // fsri
-def WriteFSReg32     : SchedWrite; // fslw/fsrw
-def WriteFSRImm32    : SchedWrite; // fsriw
-
 /// Define scheduler resources associated with use operands.
 
 // Zba extension
@@ -157,14 +149,6 @@ def ReadCRCCB       : SchedRead; // crc32c.b
 def ReadCRCCH       : SchedRead; // crc32c.h
 def ReadCRCCW       : SchedRead; // crc32c.w
 def ReadCRCCD       : SchedRead; // crc32c.d
-
-// Zbt extension
-def ReadCMix        : SchedRead; // cmix
-def ReadCMov        : SchedRead; // cmov
-def ReadFSReg       : SchedRead; // fsl/fsr
-def ReadFSRImm      : SchedRead; // fsri
-def ReadFSReg32     : SchedRead; // fslw/fsrw
-def ReadFSRImm32    : SchedRead; // fsriw
 
 /// Define default scheduler resources for B.
 
@@ -323,23 +307,5 @@ def : ReadAdvance<ReadCRCCB, 0>;
 def : ReadAdvance<ReadCRCCH, 0>;
 def : ReadAdvance<ReadCRCCW, 0>;
 def : ReadAdvance<ReadCRCCD, 0>;
-}
-}
-
-multiclass UnsupportedSchedZbt {
-let Unsupported = true in {
-def : WriteRes<WriteCMix, []>;
-def : WriteRes<WriteCMov, []>;
-def : WriteRes<WriteFSReg, []>;
-def : WriteRes<WriteFSRImm, []>;
-def : WriteRes<WriteFSReg32, []>;
-def : WriteRes<WriteFSRImm32, []>;
-
-def : ReadAdvance<ReadCMix, 0>;
-def : ReadAdvance<ReadCMov, 0>;
-def : ReadAdvance<ReadFSReg, 0>;
-def : ReadAdvance<ReadFSRImm, 0>;
-def : ReadAdvance<ReadFSReg32, 0>;
-def : ReadAdvance<ReadFSRImm32, 0>;
 }
 }

@@ -53,6 +53,12 @@ struct TestTensorTransforms
       llvm::cl::desc("Test folding arith.constant and tensor.extract_slice"),
       llvm::cl::init(false)};
 
+  Option<bool> testFoldConsecutiveInsertExtractSlice{
+      *this, "test-fold-consecutive-insert-extract-slice",
+      llvm::cl::desc(
+          "Test folding consecutive tensor.insert_slice/tensor.extract_slice"),
+      llvm::cl::init(false)};
+
   Option<bool> testRewriteExtractSliceWithTiledCollapseShape{
       *this, "test-rewrite-extract-slice-from-collapse-shape",
       llvm::cl::desc("Test swapping tensor.extract_slice of a collapse_shape "
@@ -87,6 +93,12 @@ static void applyFoldConstantExtractSlicePatterns(Operation *rootOp) {
       };
 
   tensor::populateFoldConstantExtractSlicePatterns(patterns, controlFn);
+  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
+}
+
+static void applyFoldConsecutiveInsertExtractSlicePatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -151,6 +163,13 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfFor
     auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
     SmallVector<Value> lbs(numTiledDims, zero);
     SmallVector<Value> steps(numTiledDims, one);
+
+    // Below, we pass out the result of the loop body builder lambda via the
+    // `insertResult` variable. In certain cases, no loops will be created, but
+    // the body builder will still execute. In this case, the results will not
+    // be passed to the LoopNest object.
+    // TODO: remove this workaround if `scf::buildLoopNest` behavior is updated.
+    Value insertResult = nullptr;
     scf::LoopNest nest = scf::buildLoopNest(
         rewriter, loc, lbs, helper.getIterationSpaceSizes(), steps, dest,
         [&](OpBuilder &nestedBuilder, Location loc, ValueRange outputIvs,
@@ -159,11 +178,16 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfFor
               helper.emitLoopNestBody(nestedBuilder, loc, outputIvs);
 
           // Insert the slice into the destination.
-          Value result = nestedBuilder.create<tensor::InsertSliceOp>(
+          insertResult = nestedBuilder.create<tensor::InsertSliceOp>(
               loc, tile, iterArgs[0], insertParams);
-          return {result};
+          return {insertResult};
         });
-    rewriter.replaceOp(op, nest.getResults()[0]);
+
+    if (!nest.loops.empty())
+      rewriter.replaceOp(op, nest.getResults());
+    else
+      rewriter.replaceOp(op, insertResult);
+
     return success();
   }
 };
@@ -221,6 +245,8 @@ void TestTensorTransforms::runOnOperation() {
     applySplitPaddingPatterns(rootOp);
   if (testFoldConstantExtractSlice)
     applyFoldConstantExtractSlicePatterns(rootOp);
+  if (testFoldConsecutiveInsertExtractSlice)
+    applyFoldConsecutiveInsertExtractSlicePatterns(rootOp);
   if (testRewriteExtractSliceWithTiledCollapseShape) {
     if (failed(
             applyRewriteExtractFromCollapseShapePatterns(rootOp, useForeach)))

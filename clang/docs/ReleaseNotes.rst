@@ -70,6 +70,8 @@ code bases.
   results do not change before/after setting
   ``-Werror=incompatible-function-pointer-types`` to avoid incompatibility with
   Clang 16.
+- Clang now disallows types whose sizes aren't a multiple of their alignments to
+  be used as the element type of arrays.
 
   .. code-block:: c
 
@@ -151,6 +153,15 @@ Bug Fixes
   `Issue 57369 <https://github.com/llvm/llvm-project/issues/57369>`_
   `Issue 57643 <https://github.com/llvm/llvm-project/issues/57643>`_
   `Issue 57793 <https://github.com/llvm/llvm-project/issues/57793>`_
+- Respect constructor constraints during class template argument deduction (CTAD).
+  This is the suggested resolution to CWG DR2628.
+  `Issue 57646 <https://github.com/llvm/llvm-project/issues/57646>`_
+  `Issue 43829 <https://github.com/llvm/llvm-project/issues/43829>`_
+- Fixed a crash in C++20 mode in Clang and Clangd when compile source
+  with compilation errors.
+  `Issue 53628 <https://github.com/llvm/llvm-project/issues/53628>`_
+- The template arguments of a variable template being accessed as a
+  member will now be represented in the AST.
 
 
 Improvements to Clang's diagnostics
@@ -273,8 +284,7 @@ C2x Feature Support
 - Implemented `WG14 N2662 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2662.pdf>`_,
   so the [[maybe_unused]] attribute may be applied to a label to silence an
   ``-Wunused-label`` warning.
-
-- Implemented `WG14 N508 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2508.pdf>`_,
+- Implemented `WG14 N2508 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2508.pdf>`_,
   so labels can placed everywhere inside a compound statement.
 
 C++ Language Changes in Clang
@@ -355,6 +365,7 @@ RISC-V Support in Clang
 X86 Support in Clang
 --------------------
 - Support ``-mindirect-branch-cs-prefix`` for call and jmp to indirect thunk.
+- Fix 32-bit ``__fastcall`` and ``__vectorcall`` ABI mismatch with MSVC.
 
 DWARF Support in Clang
 ----------------------
@@ -389,6 +400,8 @@ libclang
   the behavior of ``QualType::getUnqualifiedType`` for ``CXType``.
 - Introduced the new function ``clang_getNonReferenceType``, which mimics
   the behavior of ``QualType::getNonReferenceType`` for ``CXType``.
+- Introduced the new function ``clang_CXXMethod_isDeleted``, which queries
+  whether the method is declared ``= delete``.
 
 Static Analyzer
 ---------------

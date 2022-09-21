@@ -523,6 +523,38 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   return success();
 }
 
+template <>
+LogicalResult Deserializer::processOp<spirv::GenericCastToPtrExplicitOp>(
+    ArrayRef<uint32_t> words) {
+  if (words.size() != 4) {
+    return emitError(unknownLoc,
+                     "expected 4 words in GenericCastToPtrExplicitOp"
+                     " but got : ")
+           << words.size();
+  }
+  SmallVector<Type, 1> resultTypes;
+  SmallVector<Value, 4> operands;
+  uint32_t valueID = 0;
+  auto type = getType(words[0]);
+
+  if (!type)
+    return emitError(unknownLoc, "unknown type result <id> : ") << words[0];
+  resultTypes.push_back(type);
+
+  valueID = words[1];
+
+  auto arg = getValue(words[2]);
+  if (!arg)
+    return emitError(unknownLoc, "unknown result <id> : ") << words[2];
+  operands.push_back(arg);
+
+  Location loc = createFileLineColLoc(opBuilder);
+  Operation *op = opBuilder.create<spirv::GenericCastToPtrExplicitOp>(
+      loc, resultTypes, operands);
+  valueMap[valueID] = op->getResult(0);
+  return success();
+}
+
 // Pull in auto-generated Deserializer::dispatchToAutogenDeserialization() and
 // various Deserializer::processOp<...>() specializations.
 #define GET_DESERIALIZATION_FNS

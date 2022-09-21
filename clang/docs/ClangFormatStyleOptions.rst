@@ -1698,6 +1698,23 @@ the configuration (without a prefix: ``Auto``).
      @Mock
      DataLoad loader;
 
+**BreakArrays** (``Boolean``) :versionbadge:`clang-format 16`
+  If ``true``, clang-format will always break after a Json array `[`
+  otherwise it will scan until the closing `]` to determine if it should add
+  newlines between elements (prettier compatible).
+
+  NOTE: This is currently only for formatting JSON.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     [                          vs.      [1, 2, 3, 4]
+       1,
+       2,
+       3,
+       4
+     ]
+
 **BreakBeforeBinaryOperators** (``BinaryOperatorStyle``) :versionbadge:`clang-format 3.6`
   The way to wrap binary operators.
 

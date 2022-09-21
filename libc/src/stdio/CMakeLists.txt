@@ -185,6 +185,31 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fputs
+  SRCS
+    fputs.cpp
+  HDRS
+    fputs.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+
+add_entrypoint_object(
+  puts
+  SRCS
+    puts.cpp
+  HDRS
+    puts.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fseek
   SRCS
     fseek.cpp

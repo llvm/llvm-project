@@ -100,22 +100,23 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
       ResultFAMCP->updateFAM(FAM);
     }
 
+    // Intersect the final preserved analyses to compute the aggregate
+    // preserved set for this pass manager.
+    PA.intersect(PassPA);
+
     // If the CGSCC pass wasn't able to provide a valid updated SCC, the
     // current SCC may simply need to be skipped if invalid.
     if (UR.InvalidatedSCCs.count(C)) {
       LLVM_DEBUG(dbgs() << "Skipping invalidated root or island SCC!\n");
       break;
     }
+
     // Check that we didn't miss any update scenario.
     assert(C->begin() != C->end() && "Cannot have an empty SCC!");
 
     // Update the analysis manager as each pass runs and potentially
     // invalidates analyses.
     AM.invalidate(*C, PassPA);
-
-    // Finally, we intersect the final preserved analyses to compute the
-    // aggregate preserved set for this pass manager.
-    PA.intersect(std::move(PassPA));
   }
 
   // Before we mark all of *this* SCC's analyses as preserved below, intersect
@@ -290,12 +291,20 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
                 FAM);
           }
 
+          // Intersect with the cross-SCC preserved set to capture any
+          // cross-SCC invalidation.
+          UR.CrossSCCPA.intersect(PassPA);
+          // Intersect the preserved set so that invalidation of module
+          // analyses will eventually occur when the module pass completes.
+          PA.intersect(PassPA);
+
           // If the CGSCC pass wasn't able to provide a valid updated SCC,
           // the current SCC may simply need to be skipped if invalid.
           if (UR.InvalidatedSCCs.count(C)) {
             LLVM_DEBUG(dbgs() << "Skipping invalidated root or island SCC!\n");
             break;
           }
+
           // Check that we didn't miss any update scenario.
           assert(C->begin() != C->end() && "Cannot have an empty SCC!");
 
@@ -306,13 +315,6 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
           // late as it contains the nodes that were actively being
           // processed.
           CGAM.invalidate(*C, PassPA);
-
-          // Then intersect the preserved set so that invalidation of module
-          // analyses will eventually occur when the module pass completes.
-          // Also intersect with the cross-SCC preserved set to capture any
-          // cross-SCC invalidation.
-          UR.CrossSCCPA.intersect(PassPA);
-          PA.intersect(std::move(PassPA));
 
           // The pass may have restructured the call graph and refined the
           // current SCC and/or RefSCC. We need to update our current SCC and

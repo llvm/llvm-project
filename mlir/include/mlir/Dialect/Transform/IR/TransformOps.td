@@ -169,6 +169,25 @@ def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent
   let assemblyFormat = "$target attr-dict";
 }
 
+def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Get handle to the producer of this operation's operand number";
+  let description = [{
+    The handle defined by this Transform op corresponds to operation that
+    produces the SSA value defined by the `target` and `operand_number`
+    arguments. If the origin of the SSA value is not an operations (i.e. it is
+    a block argument), the transform silently fails.
+    The return handle points to only the subset of successfully produced
+    computational operations, which can be empty.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       I64Attr:$operand_number);
+  let results = (outs PDL_Operation:$parent);
+  let assemblyFormat = "$target `[` $operand_number `]` attr-dict";
+}
+
 def MergeHandlesOp : TransformDialectOp<"merge_handles",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {

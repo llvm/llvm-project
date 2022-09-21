@@ -338,3 +338,87 @@ func.func @memref.reshape_index(%arg0: memref<?x?xi32>, %shape: memref<1xindex>)
   %1 = memref.reshape %arg0(%shape) : (memref<?x?xi32>, memref<1xindex>) -> memref<?xi32>
   return %1 : memref<?xi32>
 }
+
+// -----
+
+// CHECK-LABEL:     func.func @realloc_static(
+// CHECK-SAME:      %[[arg0:.*]]: memref<2xi32>) -> memref<4xi32> {
+func.func @realloc_static(%in: memref<2xi32>) -> memref<4xi32>{
+// CHECK:           %[[descriptor:.*]] = builtin.unrealized_conversion_cast %[[arg0]] : memref<2xi32> to !llvm.struct<(ptr<i32>, ptr<i32>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           %[[src_dim:.*]] = llvm.mlir.constant(2 : index) : i64
+// CHECK:           %[[dst_dim:.*]] = llvm.mlir.constant(4 : index) : i64
+// CHECK:           %[[cond:.*]] = llvm.icmp "ugt" %[[dst_dim]], %[[src_dim]]
+// CHECK:           llvm.cond_br %[[cond]], ^bb1, ^bb2(%[[descriptor]]
+// CHECK:           ^bb1:
+// CHECK:           %[[dst_null:.*]] = llvm.mlir.null : !llvm.ptr<i32>
+// CHECK:           %[[dst_gep:.*]] = llvm.getelementptr %[[dst_null]][1]
+// CHECK:           %[[dst_es:.*]] = llvm.ptrtoint %[[dst_gep]] : !llvm.ptr<i32> to i64
+// CHECK:           %[[dst_size:.*]] = llvm.mul %[[dst_dim]], %[[dst_es]]
+// CHECK:           %[[new_buffer_raw:.*]] = llvm.call @malloc(%[[dst_size]])
+// CHECK:           %[[new_buffer:.*]] = llvm.bitcast %[[new_buffer_raw]] : !llvm.ptr<i8> to !llvm.ptr<i32>
+// CHECK:           %[[old_buffer_aligned:.*]] = llvm.extractvalue %[[descriptor]][1]
+// CHECK:           %[[volatile:.*]] = llvm.mlir.constant(false) : i1
+// CHECK-DAG:       %[[new_buffer_void:.*]] = llvm.bitcast %[[new_buffer]] : !llvm.ptr<i32> to !llvm.ptr<i8>
+// CHECK-DAG:       %[[old_buffer_void:.*]] = llvm.bitcast %[[old_buffer_aligned]] : !llvm.ptr<i32> to !llvm.ptr<i8>
+// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_void]], %[[old_buffer_void]], %[[dst_size]], %[[volatile]])
+// CHECK:           %[[old_buffer_unaligned:.*]] = llvm.extractvalue %[[descriptor]][0]
+// CHECK:           %[[old_buffer_unaligned_void:.*]] = llvm.bitcast %[[old_buffer_unaligned]] : !llvm.ptr<i32> to !llvm.ptr<i8>
+// CHECK:           llvm.call @free(%[[old_buffer_unaligned_void]])
+// CHECK:           %[[descriptor_update1:.*]] = llvm.insertvalue %[[new_buffer]], %[[descriptor]][0]
+// CHECK:           %[[descriptor_update2:.*]] = llvm.insertvalue %[[new_buffer]], %[[descriptor_update1]][1]
+// CHECK:           llvm.br ^bb2(%[[descriptor_update2]] : !llvm.struct<(ptr<i32>, ptr<i32>, i64, array<1 x i64>, array<1 x i64>)>)
+// CHECK:           ^bb2(%[[descriptor_update3:.*]]: !llvm.struct<(ptr<i32>, ptr<i32>, i64, array<1 x i64>, array<1 x i64>)>):
+// CHECK:           %[[descriptor_update4:.*]] = llvm.insertvalue %[[dst_dim]], %[[descriptor_update3]][3, 0]
+// CHECK:           %[[descriptor_update5:.*]] = builtin.unrealized_conversion_cast %[[descriptor_update4]]
+// CHECK:           return %[[descriptor_update5]] : memref<4xi32>
+
+  %out = memref.realloc %in : memref<2xi32> to memref<4xi32>
+  return %out : memref<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL:     func.func @realloc_static_alignment(
+// CHECK-SAME:      %[[arg0:.*]]: memref<2xf32>) -> memref<4xf32> {
+func.func @realloc_static_alignment(%in: memref<2xf32>) -> memref<4xf32>{
+// CHECK:           %[[descriptor:.*]] = builtin.unrealized_conversion_cast %[[arg0]] : memref<2xf32> to !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK:           %[[src_dim:.*]] = llvm.mlir.constant(2 : index) : i64
+// CHECK:           %[[dst_dim:.*]] = llvm.mlir.constant(4 : index) : i64
+// CHECK:           %[[cond:.*]] = llvm.icmp "ugt" %[[dst_dim]], %[[src_dim]] : i64
+// CHECK:           llvm.cond_br %[[cond]], ^bb1, ^bb2(%[[descriptor]]
+// CHECK:           ^bb1:
+// CHECK:           %[[dst_null:.*]] = llvm.mlir.null : !llvm.ptr<f32>
+// CHECK:           %[[dst_gep:.*]] = llvm.getelementptr %[[dst_null]][1]
+// CHECK:           %[[dst_es:.*]] = llvm.ptrtoint %[[dst_gep]] : !llvm.ptr<f32> to i64
+// CHECK:           %[[dst_size:.*]] = llvm.mul %[[dst_dim]], %[[dst_es]]
+// CHECK:           %[[alignment:.*]] = llvm.mlir.constant(8 : index) : i64
+// CHECK:           %[[adjust_dst_size:.*]] = llvm.add %[[dst_size]], %[[alignment]]
+// CHECK:           %[[new_buffer_raw:.*]] = llvm.call @malloc(%[[adjust_dst_size]])
+// CHECK:           %[[new_buffer_unaligned:.*]] = llvm.bitcast %[[new_buffer_raw]] : !llvm.ptr<i8> to !llvm.ptr<f32>
+// CHECK:           %[[new_buffer_int:.*]] = llvm.ptrtoint %[[new_buffer_unaligned]] : !llvm.ptr<f32>
+// CHECK:           %[[const_1:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:           %[[alignment_m1:.*]] = llvm.sub %[[alignment]], %[[const_1]]
+// CHECK:           %[[ptr_alignment_m1:.*]] = llvm.add %[[new_buffer_int]], %[[alignment_m1]]
+// CHECK:           %[[padding:.*]] = llvm.urem %[[ptr_alignment_m1]], %[[alignment]]
+// CHECK:           %[[new_buffer_aligned_int:.*]] = llvm.sub %[[ptr_alignment_m1]], %[[padding]]
+// CHECK:           %[[new_buffer_aligned:.*]] = llvm.inttoptr %[[new_buffer_aligned_int]] : i64 to !llvm.ptr<f32>
+// CHECK:           %[[old_buffer_aligned:.*]] = llvm.extractvalue %[[descriptor]][1]
+// CHECK:           %[[volatile:.*]] = llvm.mlir.constant(false) : i1
+// CHECK-DAG:       %[[new_buffer_void:.*]] = llvm.bitcast %[[new_buffer_aligned]] : !llvm.ptr<f32> to !llvm.ptr<i8>
+// CHECK-DAG:       %[[old_buffer_void:.*]] = llvm.bitcast %[[old_buffer_aligned]] : !llvm.ptr<f32> to !llvm.ptr<i8>
+// CHECK:           "llvm.intr.memcpy"(%[[new_buffer_void]], %[[old_buffer_void]], %[[dst_size]], %[[volatile]])
+// CHECK:           %[[old_buffer_unaligned:.*]] = llvm.extractvalue %[[descriptor]][0]
+// CHECK:           %[[old_buffer_unaligned_void:.*]] = llvm.bitcast %[[old_buffer_unaligned]] : !llvm.ptr<f32> to !llvm.ptr<i8>
+// CHECK:           llvm.call @free(%[[old_buffer_unaligned_void]])
+// CHECK:           %[[descriptor_update1:.*]] = llvm.insertvalue %[[new_buffer_unaligned]], %[[descriptor]][0]
+// CHECK:           %[[descriptor_update2:.*]] = llvm.insertvalue %[[new_buffer_aligned]], %[[descriptor_update1]][1]
+// CHECK:           llvm.br ^bb2(%[[descriptor_update2]]
+// CHECK:           ^bb2(%[[descriptor_update3:.*]]: !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>):
+// CHECK:           %[[descriptor_update4:.*]] = llvm.insertvalue %[[dst_dim]], %[[descriptor_update3]][3, 0]
+// CHECK:           %[[descriptor_update5:.*]] = builtin.unrealized_conversion_cast %[[descriptor_update4]]
+// CHECK:           return %[[descriptor_update5]] : memref<4xf32>
+
+
+  %out = memref.realloc %in {alignment = 8} : memref<2xf32> to memref<4xf32>
+  return %out : memref<4xf32>
+}

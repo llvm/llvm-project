@@ -198,13 +198,6 @@ def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbs),
                              "'Zbs' (Single-Bit Instructions)">;
 
-def FeatureStdExtZbt
-    : SubtargetFeature<"experimental-zbt", "HasStdExtZbt", "true",
-                       "'Zbt' (Ternary 'Zb' Instructions)">;
-def HasStdExtZbt : Predicate<"Subtarget->hasStdExtZbt()">,
-                             AssemblerPredicate<(all_of FeatureStdExtZbt),
-                             "'Zbt' (Ternary 'Zb' Instructions)">;
-
 // Some instructions belong to both the basic and the permutation
 // subextensions. They should be enabled if either has been specified.
 def HasStdExtZbbOrZbp
@@ -460,6 +453,13 @@ def FeatureStdExtZtso
 def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZTso()">,
                            AssemblerPredicate<(all_of FeatureStdExtZtso),
                            "'Ztso' (Memory Model - Total Store Order)">;
+
+def FeatureStdExtZawrs
+    : SubtargetFeature<"experimental-zawrs", "HasStdExtZawrs", "true",
+                       "'Zawrs' (Wait on Reservation Set)">;
+def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
+                           AssemblerPredicate<(all_of FeatureStdExtZawrs),
+                           "'Zawrs' (Wait on Reservation Set)">;
 
 // Feature32Bit exists to mark CPUs that support RV32 to distinquish them from
 // tuning CPU names.

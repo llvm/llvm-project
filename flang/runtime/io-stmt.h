@@ -555,7 +555,7 @@ private:
   std::optional<OpenStatus> status_;
   std::optional<Position> position_;
   std::optional<Action> action_;
-  Convert convert_{Convert::Native};
+  Convert convert_{Convert::Unknown};
   OwningPtr<char> path_;
   std::size_t pathLength_;
   std::optional<bool> isUnformatted_;

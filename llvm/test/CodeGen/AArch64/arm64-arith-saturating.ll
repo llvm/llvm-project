@@ -193,8 +193,7 @@ define i32 @vqmovnd_u(<2 x i64> %b) nounwind readnone {
 define i32 @uqxtn_ext(<4 x i32> noundef %a, <4 x i32> noundef %b, i32 %c, float %d, <2 x i64> %e) {
 ; CHECK-LABEL: uqxtn_ext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, v3.d[1]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    mov v0.d[0], v3.d[1]
 ; CHECK-NEXT:    uqxtn s0, d0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -209,8 +208,7 @@ define <4 x i32> @sqxtn_ins(<4 x i32> noundef %a, i64 %c) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov d1, x0
 ; CHECK-NEXT:    sqxtn s1, d1
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov v0.s[3], w8
+; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    ret
 entry:
   %vqmovnd_s64.i = tail call i32 @llvm.aarch64.neon.scalar.sqxtn.i32.i64(i64 %c)
@@ -221,11 +219,9 @@ entry:
 define <4 x i32> @sqxtun_insext(<4 x i32> noundef %a, <2 x i64> %e) {
 ; CHECK-LABEL: sqxtun_insext:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    mov v1.d[0], v1.d[1]
 ; CHECK-NEXT:    sqxtun s1, d1
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov v0.s[3], w8
+; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    ret
 entry:
   %c = extractelement <2 x i64> %e, i64 1
@@ -239,8 +235,7 @@ define <4 x i32> @saddluse(<4 x i32> noundef %a, <4 x i32> noundef %b, i32 %c, f
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    saddlv d1, v1.4s
 ; CHECK-NEXT:    sqxtn s1, d1
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    ret
 entry:
   %vaddlvq_s32.i = tail call i64 @llvm.aarch64.neon.saddlv.i64.v4i32(<4 x i32> %b)
