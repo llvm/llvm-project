@@ -3865,11 +3865,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorCompareScalarIntrinsic(I);
       break;
 
-    case Intrinsic::x86_sse_cmp_ps:
+    case Intrinsic::x86_avx_cmp_pd_256:
+    case Intrinsic::x86_avx_cmp_ps_256:
     case Intrinsic::x86_sse2_cmp_pd:
-      // FIXME: For x86_avx_cmp_pd_256 and x86_avx_cmp_ps_256 this function
-      // generates reasonably looking IR that fails in the backend with "Do not
-      // know how to split the result of this operator!".
+    case Intrinsic::x86_sse_cmp_ps:
       handleVectorComparePackedIntrinsic(I);
       break;
 
