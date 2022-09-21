@@ -1989,7 +1989,6 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
                       csi.hasTransferConditionSpec(), ok,
                       /*inLoop=*/false);
   }
-  stmtCtx.finalize();
 
   builder.restoreInsertionPoint(insertPt);
   if constexpr (hasIOCtrl) {
@@ -1997,7 +1996,9 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
                   csi.hasErrorConditionSpec());
   }
   // Generate end statement call/s.
-  return genEndIO(converter, loc, cookie, csi, stmtCtx);
+  mlir::Value result = genEndIO(converter, loc, cookie, csi, stmtCtx);
+  stmtCtx.finalize();
+  return result;
 }
 
 void Fortran::lower::genPrintStatement(
