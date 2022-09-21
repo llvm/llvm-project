@@ -326,6 +326,18 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   return false;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitArrayInitIndexExpr(
+    const ArrayInitIndexExpr *E) {
+  assert(ArrayIndex);
+  return this->emitConstUint64(*ArrayIndex, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
+  return this->visit(E->getSourceExpr());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);
@@ -628,6 +640,32 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     return true;
   } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
     return this->visitInitializer(DIE->getExpr());
+  } else if (const auto *AILE = dyn_cast<ArrayInitLoopExpr>(Initializer)) {
+    // TODO: This compiles to quite a lot of bytecode if the array is larger.
+    //   Investigate compiling this to a loop, or at least try to use
+    //   the AILE's Common expr.
+    const Expr *SubExpr = AILE->getSubExpr();
+    size_t Size = AILE->getArraySize().getZExtValue();
+    Optional<PrimType> ElemT = classify(SubExpr->getType());
+
+    if (!ElemT)
+      return false;
+
+    for (size_t I = 0; I != Size; ++I) {
+      ArrayIndexScope<Emitter> IndexScope(this, I);
+      if (!this->emitDupPtr(SubExpr))
+        return false;
+
+      if (!this->visit(SubExpr))
+        return false;
+
+      if (!this->emitInitElem(*ElemT, I, Initializer))
+        return false;
+
+      if (!this->emitPopPtr(Initializer))
+        return false;
+    }
+    return true;
   }
 
   assert(false && "Unknown expression for array initialization");
@@ -642,13 +680,20 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
   if (const auto CtorExpr = dyn_cast<CXXConstructExpr>(Initializer)) {
     const Function *Func = getFunction(CtorExpr->getConstructor());
 
-    if (!Func)
+    if (!Func || !Func->isConstexpr())
       return false;
 
     // The This pointer is already on the stack because this is an initializer,
     // but we need to dup() so the call() below has its own copy.
     if (!this->emitDupPtr(Initializer))
       return false;
+
+    // Constructor arguments.
+    for (const auto *Arg : CtorExpr->arguments()) {
+      if (!this->visit(Arg))
+        return false;
+    }
+
     return this->emitCallVoid(Func, Initializer);
   } else if (const auto *InitList = dyn_cast<InitListExpr>(Initializer)) {
     const Record *R = getRecord(InitList->getType());
@@ -657,14 +702,25 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
     for (const Expr *Init : InitList->inits()) {
       const Record::Field *FieldToInit = R->getField(InitIndex);
 
-      if (Optional<PrimType> T = classify(Init->getType())) {
-        if (!this->emitDupPtr(Initializer))
-          return false;
+      if (!this->emitDupPtr(Initializer))
+        return false;
 
+      if (Optional<PrimType> T = classify(Init->getType())) {
         if (!this->visit(Init))
           return false;
 
         if (!this->emitInitField(*T, FieldToInit->Offset, Initializer))
+          return false;
+      } else {
+        // Non-primitive case. Get a pointer to the field-to-initialize
+        // on the stack and recurse into visitInitializer().
+        if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+          return false;
+
+        if (!this->visitInitializer(Init))
+          return false;
+
+        if (!this->emitPopPtr(Initializer))
           return false;
       }
       ++InitIndex;
