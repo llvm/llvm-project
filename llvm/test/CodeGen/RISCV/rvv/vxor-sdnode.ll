@@ -1385,10 +1385,8 @@ define <vscale x 8 x i64> @vxor_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 define <vscale x 8 x i32> @vxor_vv_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: vxor_vv_mask_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmerge.vvm v12, v16, v12, v0
-; CHECK-NEXT:    vxor.vv v8, v8, v12
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vxor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %vb, <vscale x 8 x i32> zeroinitializer
   %vc = xor <vscale x 8 x i32> %va, %vs
@@ -1398,10 +1396,8 @@ define <vscale x 8 x i32> @vxor_vv_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale 
 define <vscale x 8 x i32> @vxor_vx_mask_nxv8i32(<vscale x 8 x i32> %va, i32 signext %b, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: vxor_vx_mask_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vmerge.vxm v12, v12, a0, v0
-; CHECK-NEXT:    vxor.vv v8, v8, v12
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vxor.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
@@ -1413,10 +1409,8 @@ define <vscale x 8 x i32> @vxor_vx_mask_nxv8i32(<vscale x 8 x i32> %va, i32 sign
 define <vscale x 8 x i32> @vxor_vi_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: vxor_vi_mask_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vmerge.vim v12, v12, 7, v0
-; CHECK-NEXT:    vxor.vv v8, v8, v12
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 7, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer

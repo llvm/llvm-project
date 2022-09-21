@@ -373,10 +373,8 @@ define <vscale x 8 x double> @vfadd_fv_nxv8f64(<vscale x 8 x double> %va, double
 define <vscale x 8 x float> @vfadd_vv_mask_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: vfadd_vv_mask_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmerge.vvm v12, v16, v12, v0
-; CHECK-NEXT:    vfadd.vv v8, v8, v12
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vfadd.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> poison, float 0.0, i32 0
   %splat = shufflevector <vscale x 8 x float> %head, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
@@ -388,10 +386,8 @@ define <vscale x 8 x float> @vfadd_vv_mask_nxv8f32(<vscale x 8 x float> %va, <vs
 define <vscale x 8 x float> @vfadd_vf_mask_nxv8f32(<vscale x 8 x float> %va, float %b, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: vfadd_vf_mask_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vfmerge.vfm v12, v12, fa0, v0
-; CHECK-NEXT:    vfadd.vv v8, v8, v12
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vfadd.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %head0 = insertelement <vscale x 8 x float> poison, float 0.0, i32 0
   %splat0 = shufflevector <vscale x 8 x float> %head0, <vscale x 8 x float> poison, <vscale x 8 x i32> zeroinitializer
