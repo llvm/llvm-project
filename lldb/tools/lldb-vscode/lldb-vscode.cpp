@@ -2953,6 +2953,31 @@ void request_variables(const llvm::json::Object &request) {
     }
 
     num_children = top_scope->GetSize();
+    if (num_children == 0 && variablesReference == VARREF_LOCALS) {
+      // Check for an error in the SBValueList that might explain why we don't
+      // have locals. If we have an error display it as the sole value in the
+      // the locals.
+
+      // "error" owns the error string so we must keep it alive as long as we
+      // want to use the returns "const char *"
+      lldb::SBError error = top_scope->GetError();
+      const char *var_err = error.GetCString();
+      if (var_err) {
+        // Create a fake variable named "error" to explain why variables were
+        // not available. This new error will help let users know when there was
+        // a problem that kept variables from being available for display and
+        // allow users to fix this issue instead of seeing no variables. The
+        // errors are only set when there is a problem that the user could
+        // fix, so no error will show up when you have no debug info, only when
+        // we do have debug info and something that is fixable can be done.
+        llvm::json::Object object;
+        EmplaceSafeString(object, "name", "<error>");
+        EmplaceSafeString(object, "type", "const char *");
+        EmplaceSafeString(object, "value", var_err);
+        object.try_emplace("variablesReference", (int64_t)0);
+        variables.emplace_back(std::move(object));
+      }
+    }
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
     // We first find out which variable names are duplicated
