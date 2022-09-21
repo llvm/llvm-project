@@ -10,7 +10,8 @@
 # DEFINE: %{fc-args} =
 # DEFINE: %{run-test} =                                                        \
 # DEFINE:   %{lit-pre} %{lit} -va  %{lit-args} %{my-inputs}/%{test} 2>&1 |     \
-# DEFINE:     FileCheck -match-full-lines %{fc-args} %{my-inputs}/%{test}
+# DEFINE:     FileCheck -match-full-lines %{fc-args} %{my-inputs}/%{test}      \
+# DEFINE:               -dump-input-filter=all -vv -color
 # DEFINE: %{record-test} =                                                     \
 # DEFINE:   echo '  shtest-define :: %{test}' >> %t.tests.actual.txt
 # DEFINE: %{run-and-record-test} = %{run-test} && %{record-test}
