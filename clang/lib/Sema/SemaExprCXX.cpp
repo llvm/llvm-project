@@ -2449,6 +2449,8 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   else if (RequireNonAbstractType(Loc, AllocType,
                                   diag::err_allocation_of_abstract_type))
     return true;
+  else if (!checkArrayElementAlignment(AllocType, Loc))
+    return true;
   else if (AllocType->isVariablyModifiedType())
     return Diag(Loc, diag::err_variably_modified_new_type)
              << AllocType;
