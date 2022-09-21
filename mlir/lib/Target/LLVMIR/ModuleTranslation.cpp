@@ -52,8 +52,8 @@ using namespace mlir::LLVM::detail;
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
 /// Translates the given data layout spec attribute to the LLVM IR data layout.
-/// Only integer, float and endianness entries are currently supported.
-FailureOr<llvm::DataLayout>
+/// Only integer, float, pointer and endianness entries are currently supported.
+static FailureOr<llvm::DataLayout>
 translateDataLayout(DataLayoutSpecInterface attribute,
                     const DataLayout &dataLayout,
                     Optional<Location> loc = llvm::None) {
@@ -80,8 +80,8 @@ translateDataLayout(DataLayoutSpecInterface attribute,
   }
 
   // Go through the list of entries to check which types are explicitly
-  // specified in entries. Don't use the entries directly though but query the
-  // data from the layout.
+  // specified in entries. Where possible, data layout queries are used instead
+  // of directly inspecting the entries.
   for (DataLayoutEntryInterface entry : attribute.getEntries()) {
     auto type = entry.getKey().dyn_cast<Type>();
     if (!type)
@@ -89,32 +89,47 @@ translateDataLayout(DataLayoutSpecInterface attribute,
     // Data layout for the index type is irrelevant at this point.
     if (type.isa<IndexType>())
       continue;
-    FailureOr<std::string> prefix =
-        llvm::TypeSwitch<Type, FailureOr<std::string>>(type)
-            .Case<IntegerType>(
-                [loc](IntegerType integerType) -> FailureOr<std::string> {
-                  if (integerType.getSignedness() == IntegerType::Signless)
-                    return std::string("i");
-                  emitError(*loc)
-                      << "unsupported data layout for non-signless integer "
-                      << integerType;
-                  return failure();
-                })
-            .Case<Float16Type, Float32Type, Float64Type, Float80Type,
-                  Float128Type>([](Type) { return std::string("f"); })
-            .Default([loc](Type type) -> FailureOr<std::string> {
-              emitError(*loc) << "unsupported type in data layout: " << type;
-              return failure();
+    layoutStream << "-";
+    LogicalResult result =
+        llvm::TypeSwitch<Type, LogicalResult>(type)
+            .Case<IntegerType, Float16Type, Float32Type, Float64Type,
+                  Float80Type, Float128Type>([&](Type type) -> LogicalResult {
+              if (auto intType = type.dyn_cast<IntegerType>()) {
+                if (intType.getSignedness() != IntegerType::Signless)
+                  return emitError(*loc)
+                         << "unsupported data layout for non-signless integer "
+                         << intType;
+                layoutStream << "i";
+              } else {
+                layoutStream << "f";
+              }
+              unsigned size = dataLayout.getTypeSizeInBits(type);
+              unsigned abi = dataLayout.getTypeABIAlignment(type) * 8u;
+              unsigned preferred =
+                  dataLayout.getTypePreferredAlignment(type) * 8u;
+              layoutStream << size << ":" << abi;
+              if (abi != preferred)
+                layoutStream << ":" << preferred;
+              return success();
+            })
+            .Case([&](LLVMPointerType ptrType) {
+              layoutStream << "p" << ptrType.getAddressSpace() << ":";
+              unsigned size = dataLayout.getTypeSizeInBits(type);
+              unsigned abi = dataLayout.getTypeABIAlignment(type) * 8u;
+              unsigned preferred =
+                  dataLayout.getTypePreferredAlignment(type) * 8u;
+              layoutStream << size << ":" << abi << ":" << preferred;
+              if (Optional<unsigned> index = extractPointerSpecValue(
+                      entry.getValue(), PtrDLEntryPos::Index))
+                layoutStream << ":" << *index;
+              return success();
+            })
+            .Default([loc](Type type) {
+              return emitError(*loc)
+                     << "unsupported type in data layout: " << type;
             });
-    if (failed(prefix))
+    if (failed(result))
       return failure();
-
-    unsigned size = dataLayout.getTypeSizeInBits(type);
-    unsigned abi = dataLayout.getTypeABIAlignment(type) * 8u;
-    unsigned preferred = dataLayout.getTypePreferredAlignment(type) * 8u;
-    layoutStream << "-" << *prefix << size << ":" << abi;
-    if (abi != preferred)
-      layoutStream << ":" << preferred;
   }
   layoutStream.flush();
   StringRef layoutSpec(llvmDataLayout);
