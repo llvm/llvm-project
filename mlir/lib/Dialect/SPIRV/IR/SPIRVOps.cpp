@@ -1526,6 +1526,90 @@ LogicalResult spirv::BitcastOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.PtrCastToGenericOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::PtrCastToGenericOp::verify() {
+  auto operandType = pointer().getType().cast<spirv::PointerType>();
+  auto resultType = result().getType().cast<spirv::PointerType>();
+
+  spirv::StorageClass operandStorage = operandType.getStorageClass();
+  if (operandStorage != spirv::StorageClass::Workgroup &&
+      operandStorage != spirv::StorageClass::CrossWorkgroup &&
+      operandStorage != spirv::StorageClass::Function)
+    return emitError("pointer must point to the Workgroup, CrossWorkgroup"
+                     ", or Function Storage Class");
+
+  spirv::StorageClass resultStorage = resultType.getStorageClass();
+  if (resultStorage != spirv::StorageClass::Generic)
+    return emitError("result type must be of storage class Generic");
+
+  Type operandPointeeType = operandType.getPointeeType();
+  Type resultPointeeType = resultType.getPointeeType();
+  if (operandPointeeType != resultPointeeType)
+    return emitOpError("pointer operand's pointee type must have the same "
+                       "as the op result type, but found ")
+           << operandPointeeType << " vs " << resultPointeeType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GenericCastToPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::GenericCastToPtrOp::verify() {
+  auto operandType = pointer().getType().cast<spirv::PointerType>();
+  auto resultType = result().getType().cast<spirv::PointerType>();
+
+  spirv::StorageClass operandStorage = operandType.getStorageClass();
+  if (operandStorage != spirv::StorageClass::Generic)
+    return emitError("pointer type must be of storage class Generic");
+
+  spirv::StorageClass resultStorage = resultType.getStorageClass();
+  if (resultStorage != spirv::StorageClass::Workgroup &&
+      resultStorage != spirv::StorageClass::CrossWorkgroup &&
+      resultStorage != spirv::StorageClass::Function)
+    return emitError("result must point to the Workgroup, CrossWorkgroup, "
+                     "or Function Storage Class");
+
+  Type operandPointeeType = operandType.getPointeeType();
+  Type resultPointeeType = resultType.getPointeeType();
+  if (operandPointeeType != resultPointeeType)
+    return emitOpError("pointer operand's pointee type must have the same "
+                       "as the op result type, but found ")
+           << operandPointeeType << " vs " << resultPointeeType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GenericCastToPtrExplicitOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::GenericCastToPtrExplicitOp::verify() {
+  auto operandType = pointer().getType().cast<spirv::PointerType>();
+  auto resultType = result().getType().cast<spirv::PointerType>();
+
+  spirv::StorageClass operandStorage = operandType.getStorageClass();
+  if (operandStorage != spirv::StorageClass::Generic)
+    return emitError("pointer type must be of storage class Generic");
+
+  spirv::StorageClass resultStorage = resultType.getStorageClass();
+  if (resultStorage != spirv::StorageClass::Workgroup &&
+      resultStorage != spirv::StorageClass::CrossWorkgroup &&
+      resultStorage != spirv::StorageClass::Function)
+    return emitError("result must point to the Workgroup, CrossWorkgroup, "
+                     "or Function Storage Class");
+
+  Type operandPointeeType = operandType.getPointeeType();
+  Type resultPointeeType = resultType.getPointeeType();
+  if (operandPointeeType != resultPointeeType)
+    return emitOpError("pointer operand's pointee type must have the same "
+                       "as the op result type, but found ")
+           << operandPointeeType << " vs " << resultPointeeType;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spv.BranchOp
 //===----------------------------------------------------------------------===//
 

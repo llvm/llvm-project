@@ -72,6 +72,19 @@ add_header_library(
     libc.src.errno.errno
 )
 
+
+add_object_library(
+  error_to_string
+  HDRS
+    error_to_string.h
+  SRCS
+    error_to_string.cpp
+  DEPENDS
+  libc.include.errno
+  libc.src.__support.CPP.string_view
+  libc.src.__support.CPP.stringstream
+)
+
 add_header_library(
   integer_operations
   HDRS
