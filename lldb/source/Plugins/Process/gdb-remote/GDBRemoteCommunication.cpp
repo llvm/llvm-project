@@ -30,7 +30,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -1224,11 +1223,6 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
 void GDBRemoteCommunication::DumpHistory(Stream &strm) { m_history.Dump(strm); }
 
-void GDBRemoteCommunication::SetPacketRecorder(
-    repro::PacketRecorder *recorder) {
-  m_history.SetRecorder(recorder);
-}
-
 llvm::Error
 GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
                                        GDBRemoteCommunication &server) {
@@ -1239,7 +1233,7 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
           listen_socket.Listen("localhost:0", backlog).ToError())
     return error;
 
-  Socket *accept_socket;
+  Socket *accept_socket = nullptr;
   std::future<Status> accept_status = std::async(
       std::launch::async, [&] { return listen_socket.Accept(accept_socket); });
 

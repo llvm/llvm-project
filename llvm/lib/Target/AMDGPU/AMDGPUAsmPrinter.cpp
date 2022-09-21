@@ -1168,8 +1168,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   // TODO: Should be able to support other operand types like globals.
   const MachineOperand &MO = MI->getOperand(OpNo);
   if (MO.isReg()) {
-    AMDGPUInstPrinter::printRegOperand(
-        MO.getReg(), O, *MF->getSubtarget().getRegisterInfo(), *getGlobalSTI());
+    AMDGPUInstPrinter::printRegOperand(MO.getReg(), O,
+                                       *MF->getSubtarget().getRegisterInfo());
     return false;
   } else if (MO.isImm()) {
     int64_t Val = MO.getImm();

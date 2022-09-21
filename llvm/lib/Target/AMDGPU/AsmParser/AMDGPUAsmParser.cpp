@@ -297,10 +297,6 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
-  bool isRegOrImmWithTFP16InputMods() const {
-    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::f16);
-  }
-
   bool isRegOrImmWithFP16InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::f16);
   }
@@ -347,6 +343,7 @@ public:
   }
 
   bool isVRegWithInputMods() const;
+  bool isT16VRegWithInputMods() const;
 
   bool isSDWAOperand(MVT type) const;
   bool isSDWAFP16Operand() const;
@@ -526,12 +523,8 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
-  bool isVCSrcTB16() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::i16);
-  }
-
-  bool isVCSrcTB16_F128() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_16_F128RegClassID, MVT::i16);
+  bool isVCSrcTB16_Lo128() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32_Lo128RegClassID, MVT::i16);
   }
 
   bool isVCSrcB16() const {
@@ -539,7 +532,7 @@ public:
   }
 
   bool isVCSrcV2B16() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i16);
+    return isVCSrcB16();
   }
 
   bool isVCSrcF32() const {
@@ -550,12 +543,8 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::f64);
   }
 
-  bool isVCSrcTF16() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
-  }
-
-  bool isVCSrcTF16_F128() const {
-    return isRegOrInlineNoMods(AMDGPU::VS_16_F128RegClassID, MVT::f16);
+  bool isVCSrcTF16_Lo128() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_32_Lo128RegClassID, MVT::f16);
   }
 
   bool isVCSrcF16() const {
@@ -574,10 +563,8 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::i64);
   }
 
-  bool isVSrcTB16() const { return isVCSrcTB16() || isLiteralImm(MVT::i16); }
-
-  bool isVSrcTB16_F128() const {
-    return isVCSrcTB16_F128() || isLiteralImm(MVT::i16);
+  bool isVSrcTB16_Lo128() const {
+    return isVCSrcTB16_Lo128() || isLiteralImm(MVT::i16);
   }
 
   bool isVSrcB16() const {
@@ -612,10 +599,8 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::f64);
   }
 
-  bool isVSrcTF16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
-
-  bool isVSrcTF16_F128() const {
-    return isVCSrcTF16_F128() || isLiteralImm(MVT::f16);
+  bool isVSrcTF16_Lo128() const {
+    return isVCSrcTF16_Lo128() || isLiteralImm(MVT::f16);
   }
 
   bool isVSrcF16() const {
@@ -1367,9 +1352,11 @@ private:
                            SmallVectorImpl<AsmToken> &Tokens);
   unsigned ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
                         unsigned &RegWidth, SmallVectorImpl<AsmToken> &Tokens);
-  bool ParseRegRange(unsigned& Num, unsigned& RegWidth);
-  unsigned getRegularReg(RegisterKind RegKind, unsigned RegNum,
-                         unsigned RegWidth, SMLoc Loc, bool IsHigh);
+  bool ParseRegRange(unsigned& Num, unsigned& Width);
+  unsigned getRegularReg(RegisterKind RegKind,
+                         unsigned RegNum,
+                         unsigned RegWidth,
+                         SMLoc Loc);
 
   bool isRegister();
   bool isRegister(const AsmToken &Token, const AsmToken &NextToken) const;
@@ -2079,6 +2066,10 @@ bool AMDGPUOperand::isVRegWithInputMods() const {
           AsmParser->getFeatureBits()[AMDGPU::Feature64BitDPP]);
 }
 
+bool AMDGPUOperand::isT16VRegWithInputMods() const {
+  return isRegClass(AMDGPU::VGPR_32_Lo128RegClassID);
+}
+
 bool AMDGPUOperand::isSDWAOperand(MVT type) const {
   if (AsmParser->isVI())
     return isVReg32();
@@ -2377,8 +2368,6 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
   if (Is == IS_VGPR) {
     switch (RegWidth) {
       default: return -1;
-      case 16:
-        return AMDGPU::VGPR_16RegClassID;
       case 32:
         return AMDGPU::VGPR_32RegClassID;
       case 64:
@@ -2640,8 +2629,6 @@ AMDGPUAsmParser::isRegister(const AsmToken &Token,
     StringRef RegName = Reg->Name;
     StringRef RegSuffix = Str.substr(RegName.size());
     if (!RegSuffix.empty()) {
-      RegSuffix.consume_back(".l");
-      RegSuffix.consume_back(".h");
       unsigned Num;
       // A single register with an index: rXX
       if (getRegNum(RegSuffix, Num))
@@ -2662,9 +2649,11 @@ AMDGPUAsmParser::isRegister()
   return isRegister(getToken(), peekToken());
 }
 
-unsigned AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
-                                        unsigned RegWidth, SMLoc Loc,
-                                        bool IsHigh) {
+unsigned
+AMDGPUAsmParser::getRegularReg(RegisterKind RegKind,
+                               unsigned RegNum,
+                               unsigned RegWidth,
+                               SMLoc Loc) {
 
   assert(isRegularReg(RegKind));
 
@@ -2689,11 +2678,6 @@ unsigned AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   const MCRegisterClass RC = TRI->getRegClass(RCID);
-  if (RCID == VGPR_16RegClassID || RCID == VGPR_16_F128RegClassID)
-    // RegIdx depends on register class definition in SIRegisterInfo.td
-    // Expected register order is alternating lo and hi :
-    // VGPR0_LO16, VGPR0_HI16, VGPR1_LO16, VGPR1_HI16, ...
-    RegIdx = RegIdx * 2 + IsHigh;
   if (RegIdx >= RC.getNumRegs()) {
     Error(Loc, "register index is out of range");
     return AMDGPU::NoRegister;
@@ -2777,31 +2761,20 @@ unsigned AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
 
   RegKind = RI->Kind;
   StringRef RegSuffix = RegName.substr(RI->Name.size());
-  bool IsHigh = false;
   if (!RegSuffix.empty()) {
-    RegWidth = 32;
-    // We don't know the opcode till we are done parsing, so we don't know if
-    // registers should be 16 or 32 bit. It is therefore mandatory to put .l or
-    // .h to correctly specify 16 bit registers. We also can't determine class
-    // VGPR_16_F128 or VGPR_16, so always parse them as VGPR_16.
-    if (RegSuffix.consume_back(".h")) {
-      RegWidth = 16;
-      IsHigh = 1;
-    } else if (RegSuffix.consume_back(".l")) {
-      RegWidth = 16;
-    }
     // Single 32-bit register: vXX.
     if (!getRegNum(RegSuffix, RegNum)) {
       Error(Loc, "invalid register index");
       return AMDGPU::NoRegister;
     }
+    RegWidth = 32;
   } else {
     // Range of registers: v[XX:YY]. ":YY" is optional.
     if (!ParseRegRange(RegNum, RegWidth))
       return AMDGPU::NoRegister;
   }
 
-  return getRegularReg(RegKind, RegNum, RegWidth, Loc, IsHigh);
+  return getRegularReg(RegKind, RegNum, RegWidth, Loc);
 }
 
 unsigned AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
@@ -2853,7 +2826,7 @@ unsigned AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
   }
 
   if (isRegularReg(RegKind))
-    Reg = getRegularReg(RegKind, RegNum, RegWidth, ListLoc, false /*Low*/);
+    Reg = getRegularReg(RegKind, RegNum, RegWidth, ListLoc);
 
   return Reg;
 }
@@ -8377,19 +8350,16 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
   // we don't allow modifiers for this operand in assembler so src2_modifiers
   // should be 0.
   if (Opc == AMDGPU::V_MAC_F32_e64_gfx6_gfx7 ||
-      Opc == AMDGPU::V_MAC_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_MAC_F32_e64_vi ||
+      Opc == AMDGPU::V_MAC_F32_e64_gfx10 || Opc == AMDGPU::V_MAC_F32_e64_vi ||
       Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx6_gfx7 ||
       Opc == AMDGPU::V_MAC_LEGACY_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_MAC_F16_e64_vi ||
-      Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
+      Opc == AMDGPU::V_MAC_F16_e64_vi || Opc == AMDGPU::V_FMAC_F64_e64_gfx90a ||
       Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
-      Opc == AMDGPU::V_FMAC_F32_e64_gfx11 ||
-      Opc == AMDGPU::V_FMAC_F32_e64_vi ||
+      Opc == AMDGPU::V_FMAC_F32_e64_gfx11 || Opc == AMDGPU::V_FMAC_F32_e64_vi ||
       Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
       Opc == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
       Opc == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-      Opc == AMDGPU::V_FMAC_F16_e64_gfx11) {
+      Opc == AMDGPU::V_FMAC_F16_t16_e64_gfx11) {
     auto it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));
     it = Inst.insert(it, MCOperand::createImm(0)); // no modifiers for src2

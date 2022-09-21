@@ -14,7 +14,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/Reproducer.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -25,7 +24,6 @@ namespace {
 class ThreadTest : public ::testing::Test {
 public:
   void SetUp() override {
-    llvm::cantFail(Reproducer::Initialize(ReproducerMode::Off, llvm::None));
     FileSystem::Initialize();
     HostInfo::Initialize();
     platform_linux::PlatformLinux::Initialize();
@@ -34,7 +32,6 @@ public:
     platform_linux::PlatformLinux::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
-    Reproducer::Terminate();
   }
 };
 

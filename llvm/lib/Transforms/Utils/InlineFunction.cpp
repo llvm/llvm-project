@@ -1784,10 +1784,10 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
 /// exists in the instruction stream.  Similarly this will inline a recursive
 /// function by one level.
 llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                                        bool MergeAttributes,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
-                                        Function *ForwardVarArgsTo,
-                                        bool MergeAttributes) {
+                                        Function *ForwardVarArgsTo) {
   assert(CB.getParent() && CB.getFunction() && "Instruction not in function!");
 
   // FIXME: we don't inline callbr yet.

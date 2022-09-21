@@ -298,11 +298,8 @@ llvm::SmallBitVector mlir::getLinearizedDimensions(
 }
 
 SmallVector<Range> SliceFromCollapseHelper::getExtractSliceParams(
-    ArrayRef<ValueRange> multiIndices) {
-  assert(!multiIndices.empty() && !multiIndices[0].empty() &&
-         "multiIndices should not be empty");
+    MLIRContext *ctx, ArrayRef<ValueRange> multiIndices) {
   unsigned loopIdx = 0;
-  MLIRContext *ctx = multiIndices[0][0].getContext();
   auto oneAttr = IntegerAttr::get(IndexType::get(ctx), 1);
   auto zeroAttr = IntegerAttr::get(IndexType::get(ctx), 0);
   SmallVector<Range> offsetsSizesAndStrides;
@@ -339,8 +336,8 @@ SmallVector<Range> SliceFromCollapseHelper::getExtractSliceParams(
 }
 
 SmallVector<Range>
-SliceFromCollapseHelper::getInsertSliceParams(ValueRange tileIndices) {
-  MLIRContext *ctx = tileIndices[0].getContext();
+SliceFromCollapseHelper::getInsertSliceParams(MLIRContext *ctx,
+                                              ValueRange tileIndices) {
   auto one = IntegerAttr::get(IndexType::get(ctx), 1);
   auto zero = IntegerAttr::get(IndexType::get(ctx), 0);
   SmallVector<Range> insertParams;

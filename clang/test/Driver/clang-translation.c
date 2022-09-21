@@ -10,7 +10,7 @@
 // I386: "-o"
 // I386: clang-translation
 
-// RUN: %clang -target i386-unknown-unknown -### -S %s -fasynchronous-unwind-tables -fno-unwind-tables 2>&1 | FileCheck --check-prefix=UNWIND-TABLES %s
+// RUN: %clang -target i386-unknown-unknown -### -S %s -fasynchronous-unwind-tables -fno-unwind-tables 2>&1 | FileCheck --check-prefix=UNWIND-TABLES %s --implicit-check-not=warning:
 // UNWIND-TABLES: "-funwind-tables=2"
 
 // RUN: %clang -target i386-apple-darwin9 -### -S %s -o %t.s 2>&1 | \
@@ -77,7 +77,11 @@
 
 // RUN: %clang -target arm64-apple-ios10 -### -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-APPLE %s
-// ARM64-APPLE: -funwind-tables=2
+// ARM64-APPLE: -funwind-tables=1
+
+// RUN: %clang -target arm64-apple-ios10 -funwind-tables -### -S %s -arch arm64 2>&1 | \
+// RUN: FileCheck -check-prefix=ARM64-APPLE-UNWIND %s
+// ARM64-APPLE-UNWIND: -funwind-tables=1
 
 // RUN: %clang -target arm64-apple-ios10 -### -ffreestanding -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-FREESTANDING-APPLE %s

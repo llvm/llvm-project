@@ -507,3 +507,84 @@ LogicalResult ExtensibleDialect::printIfDynamicAttr(Attribute attribute,
   }
   return failure();
 }
+
+//===----------------------------------------------------------------------===//
+// Dynamic dialect
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Interface that can only be implemented by extensible dialects.
+/// The interface is used to check if a dialect is extensible or not.
+class IsDynamicDialect : public DialectInterface::Base<IsDynamicDialect> {
+public:
+  IsDynamicDialect(Dialect *dialect) : Base(dialect) {}
+
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(IsDynamicDialect)
+};
+} // namespace
+
+DynamicDialect::DynamicDialect(StringRef name, MLIRContext *ctx)
+    : SelfOwningTypeID(),
+      ExtensibleDialect(name, ctx, SelfOwningTypeID::getTypeID()) {
+  addInterfaces<IsDynamicDialect>();
+}
+
+bool DynamicDialect::classof(const Dialect *dialect) {
+  return const_cast<Dialect *>(dialect)
+      ->getRegisteredInterface<IsDynamicDialect>();
+}
+
+Type DynamicDialect::parseType(DialectAsmParser &parser) const {
+  auto loc = parser.getCurrentLocation();
+  StringRef typeTag;
+  if (failed(parser.parseKeyword(&typeTag)))
+    return Type();
+
+  {
+    Type dynType;
+    auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
+    if (parseResult.has_value()) {
+      if (succeeded(parseResult.value()))
+        return dynType;
+      return Type();
+    }
+  }
+
+  parser.emitError(loc, "expected dynamic type");
+  return Type();
+}
+
+void DynamicDialect::printType(Type type, DialectAsmPrinter &printer) const {
+  auto wasDynamic = printIfDynamicType(type, printer);
+  (void)wasDynamic;
+  assert(succeeded(wasDynamic) &&
+         "non-dynamic type defined in dynamic dialect");
+}
+
+Attribute DynamicDialect::parseAttribute(DialectAsmParser &parser,
+                                         Type type) const {
+  auto loc = parser.getCurrentLocation();
+  StringRef typeTag;
+  if (failed(parser.parseKeyword(&typeTag)))
+    return Attribute();
+
+  {
+    Attribute dynAttr;
+    auto parseResult = parseOptionalDynamicAttr(typeTag, parser, dynAttr);
+    if (parseResult.has_value()) {
+      if (succeeded(parseResult.value()))
+        return dynAttr;
+      return Attribute();
+    }
+  }
+
+  parser.emitError(loc, "expected dynamic attribute");
+  return Attribute();
+}
+void DynamicDialect::printAttribute(Attribute attr,
+                                    DialectAsmPrinter &printer) const {
+  auto wasDynamic = printIfDynamicAttr(attr, printer);
+  (void)wasDynamic;
+  assert(succeeded(wasDynamic) &&
+         "non-dynamic attribute defined in dynamic dialect");
+}

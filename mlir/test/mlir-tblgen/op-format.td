@@ -40,3 +40,34 @@ def CustomStringLiteralB : TestFormat_Op<[{
 def CustomStringLiteralC : TestFormat_Op<[{
   custom<Foo>("$_builder.getStringAttr(\"foo\")") attr-dict
 }]>;
+
+//===----------------------------------------------------------------------===//
+// Optional Groups
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: OptionalGroupA::parse
+// CHECK: if (::mlir::succeeded(parser.parseOptionalQuestion())
+// CHECK-NEXT: else
+// CHECK: parser.parseOptionalOperand
+// CHECK-LABEL: OptionalGroupA::print
+// CHECK: if (!getA())
+// CHECK-NEXT: odsPrinter << ' ' << "?";
+// CHECK-NEXT: else
+// CHECK: odsPrinter << value;
+def OptionalGroupA : TestFormat_Op<[{
+  (`?`) : ($a^)? attr-dict
+}]>, Arguments<(ins Optional<I1>:$a)>;
+
+// CHECK-LABEL: OptionalGroupB::parse
+// CHECK: if (::mlir::succeeded(parser.parseOptionalKeyword("foo")))
+// CHECK-NEXT: else
+// CHECK-NEXT: result.addAttribute("a", parser.getBuilder().getUnitAttr())
+// CHECK: parser.parseKeyword("bar")
+// CHECK-LABEL: OptionalGroupB::print
+// CHECK: if (!(*this)->getAttr("a"))
+// CHECK-NEXT: odsPrinter << ' ' << "foo"
+// CHECK-NEXT: else
+// CHECK-NEXT: odsPrinter << ' ' << "bar"
+def OptionalGroupB : TestFormat_Op<[{
+  (`foo`) : (`bar` $a^)? attr-dict
+}]>, Arguments<(ins UnitAttr:$a)>;

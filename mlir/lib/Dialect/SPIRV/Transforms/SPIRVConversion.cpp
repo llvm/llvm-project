@@ -122,6 +122,10 @@ MLIRContext *SPIRVTypeConverter::getContext() const {
   return targetEnv.getAttr().getContext();
 }
 
+bool SPIRVTypeConverter::allows(spirv::Capability capability) {
+  return targetEnv.allows(capability);
+}
+
 // TODO: This is a utility function that should probably be exposed by the
 // SPIR-V dialect. Keeping it local till the use case arises.
 static Optional<int64_t> getTypeNumBytes(const SPIRVConversionOptions &options,
@@ -334,6 +338,12 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
+  // For OpenCL Kernel we can just emit a pointer pointing to the element.
+  if (targetEnv.allows(spirv::Capability::Kernel))
+    return spirv::PointerType::get(arrayElemType, storageClass);
+
+  // For Vulkan we need extra wrapping struct and array to satisfy interface
+  // needs.
   if (!type.hasStaticShape()) {
     int64_t stride = needsExplicitLayout(storageClass) ? *arrayElemSize : 0;
     auto arrayType = spirv::RuntimeArrayType::get(arrayElemType, stride);
@@ -393,6 +403,12 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
+  // For OpenCL Kernel we can just emit a pointer pointing to the element.
+  if (targetEnv.allows(spirv::Capability::Kernel))
+    return spirv::PointerType::get(arrayElemType, storageClass);
+
+  // For Vulkan we need extra wrapping struct and array to satisfy interface
+  // needs.
   if (!type.hasStaticShape()) {
     int64_t stride = needsExplicitLayout(storageClass) ? *arrayElemSize : 0;
     auto arrayType = spirv::RuntimeArrayType::get(arrayElemType, stride);
@@ -712,9 +728,10 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
   return linearizedIndex;
 }
 
-spirv::AccessChainOp mlir::spirv::getElementPtr(
-    SPIRVTypeConverter &typeConverter, MemRefType baseType, Value basePtr,
-    ValueRange indices, Location loc, OpBuilder &builder) {
+Value mlir::spirv::getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
+                                       MemRefType baseType, Value basePtr,
+                                       ValueRange indices, Location loc,
+                                       OpBuilder &builder) {
   // Get base and offset of the MemRefType and verify they are static.
 
   int64_t offset;
@@ -740,6 +757,50 @@ spirv::AccessChainOp mlir::spirv::getElementPtr(
         linearizeIndex(indices, strides, offset, indexType, loc, builder));
   }
   return builder.create<spirv::AccessChainOp>(loc, basePtr, linearizedIndices);
+}
+
+Value mlir::spirv::getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
+                                       MemRefType baseType, Value basePtr,
+                                       ValueRange indices, Location loc,
+                                       OpBuilder &builder) {
+  // Get base and offset of the MemRefType and verify they are static.
+
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  if (failed(getStridesAndOffset(baseType, strides, offset)) ||
+      llvm::is_contained(strides, MemRefType::getDynamicStrideOrOffset()) ||
+      offset == MemRefType::getDynamicStrideOrOffset()) {
+    return nullptr;
+  }
+
+  auto indexType = typeConverter.getIndexType();
+
+  SmallVector<Value, 2> linearizedIndices;
+  auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
+
+  Value linearIndex;
+  if (baseType.getRank() == 0) {
+    linearIndex = zero;
+  } else {
+    linearIndex =
+        linearizeIndex(indices, strides, offset, indexType, loc, builder);
+  }
+  return builder.create<spirv::PtrAccessChainOp>(loc, basePtr, linearIndex,
+                                                 linearizedIndices);
+}
+
+Value mlir::spirv::getElementPtr(SPIRVTypeConverter &typeConverter,
+                                 MemRefType baseType, Value basePtr,
+                                 ValueRange indices, Location loc,
+                                 OpBuilder &builder) {
+
+  if (typeConverter.allows(spirv::Capability::Kernel)) {
+    return getOpenCLElementPtr(typeConverter, baseType, basePtr, indices, loc,
+                               builder);
+  }
+
+  return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
+                             builder);
 }
 
 //===----------------------------------------------------------------------===//

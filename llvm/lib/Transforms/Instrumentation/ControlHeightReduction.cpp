@@ -462,7 +462,7 @@ static bool isHoistableInstructionType(Instruction *I) {
 static bool isHoistable(Instruction *I, DominatorTree &DT) {
   if (!isHoistableInstructionType(I))
     return false;
-  return isSafeToSpeculativelyExecute(I, nullptr, &DT);
+  return isSafeToSpeculativelyExecute(I, nullptr, nullptr, &DT);
 }
 
 // Recursively traverse the use-def chains of the given value and return a set

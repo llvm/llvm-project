@@ -156,6 +156,13 @@ public:
   DecodeStatus decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
                                        raw_string_ostream &KdStream) const;
 
+  /// Decode as directives that handle COMPUTE_PGM_RSRC3.
+  /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC3.
+  /// \param KdStream       - Stream to write the disassembled directives to.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  DecodeStatus decodeCOMPUTE_PGM_RSRC3(uint32_t FourByteBuffer,
+                                       raw_string_ostream &KdStream) const;
+
   DecodeStatus convertEXPInst(MCInst &MI) const;
   DecodeStatus convertVINTERPInst(MCInst &MI) const;
   DecodeStatus convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
@@ -166,17 +173,14 @@ public:
   DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
 
-  MCOperand decodeOperand_VGPR_16(unsigned Val) const;
-  MCOperand decodeOperand_VGPR_16_F128(unsigned Val) const;
   MCOperand decodeOperand_VGPR_32(unsigned Val) const;
+  MCOperand decodeOperand_VGPR_32_Lo128(unsigned Val) const;
   MCOperand decodeOperand_VRegOrLds_32(unsigned Val) const;
 
   MCOperand decodeOperand_VS_32(unsigned Val) const;
   MCOperand decodeOperand_VS_64(unsigned Val) const;
   MCOperand decodeOperand_VS_128(unsigned Val) const;
   MCOperand decodeOperand_VSrc16(unsigned Val) const;
-  MCOperand decodeOperand_VSrcT16(unsigned Val) const;
-  MCOperand decodeOperand_VSrcT16_F128(unsigned Val) const;
   MCOperand decodeOperand_VSrcV216(unsigned Val) const;
   MCOperand decodeOperand_VSrcV232(unsigned Val) const;
 
@@ -237,9 +241,6 @@ public:
 
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
                         bool MandatoryLiteral = false) const;
-  MCOperand decodeVGPR_16_F128(unsigned Val) const;
-  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
-                            bool MandatoryLiteral = false) const;
   MCOperand decodeDstOp(const OpWidthTy Width, unsigned Val) const;
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;

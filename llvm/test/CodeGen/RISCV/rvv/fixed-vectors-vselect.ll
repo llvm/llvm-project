@@ -6,10 +6,9 @@ define void @vselect_vv_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %cc, <8 x 
 ; CHECK-LABEL: vselect_vv_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    ret
   %va = load <8 x i32>, <8 x i32>* %a
@@ -60,10 +59,9 @@ define void @vselect_vv_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i1>* %cc, <
 ; CHECK-LABEL: vselect_vv_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle32.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse32.v v8, (a3)
 ; CHECK-NEXT:    ret
   %va = load <8 x float>, <8 x float>* %a
@@ -114,10 +112,9 @@ define void @vselect_vv_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %cc, <
 ; CHECK-LABEL: vselect_vv_v16i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
-; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
   %va = load <16 x i16>, <16 x i16>* %a
@@ -169,10 +166,9 @@ define void @vselect_vv_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i1>* %cc,
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a4, 32
 ; CHECK-NEXT:    vsetvli zero, a4, e16, m4, ta, mu
-; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    vle16.v v12, (a1)
-; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    vse16.v v8, (a3)
 ; CHECK-NEXT:    ret
   %va = load <32 x half>, <32 x half>* %a

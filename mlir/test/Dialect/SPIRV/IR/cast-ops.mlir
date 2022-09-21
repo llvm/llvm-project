@@ -260,3 +260,106 @@ func.func @u_convert_scalar(%arg0 : i32) -> i64 {
   spv.ReturnValue %0 : i64
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.PtrCastToGeneric
+//===----------------------------------------------------------------------===//
+
+func.func @ptrcasttogeneric1(%arg0 : !spv.ptr<f32, CrossWorkgroup>) {
+  // CHECK: {{%.*}} = spv.PtrCastToGeneric {{%.*}} : !spv.ptr<f32, CrossWorkgroup> to !spv.ptr<f32, Generic>
+  %0 = spv.PtrCastToGeneric %arg0 : !spv.ptr<f32, CrossWorkgroup> to !spv.ptr<f32, Generic>
+  return
+}
+// -----
+
+func.func @ptrcasttogeneric2(%arg0 : !spv.ptr<f32, StorageBuffer>) {
+  // expected-error @+1 {{pointer must point to the Workgroup, CrossWorkgroup, or Function Storage Class}}
+  %0 = spv.PtrCastToGeneric %arg0 : !spv.ptr<f32, StorageBuffer> to !spv.ptr<f32, Generic>
+  return
+}
+
+// -----
+
+func.func @ptrcasttogeneric3(%arg0 : !spv.ptr<f32, CrossWorkgroup>) {
+  // expected-error @+1 {{result type must be of storage class Generic}}
+  %0 = spv.PtrCastToGeneric %arg0 : !spv.ptr<f32, CrossWorkgroup> to !spv.ptr<f32, Uniform>
+  return
+}
+
+// -----
+
+func.func @ptrcasttogeneric4(%arg0 : !spv.ptr<f32, CrossWorkgroup>) {
+  // expected-error @+1 {{pointee type must have the same as the op result type}}
+  %0 = spv.PtrCastToGeneric %arg0 : !spv.ptr<f32, CrossWorkgroup> to !spv.ptr<vector<2xi32>, Generic>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GenericCastToPtr
+//===----------------------------------------------------------------------===//
+
+func.func @genericcasttoptr1(%arg0 : !spv.ptr<vector<2xi32>, Generic>) {
+  // CHECK: {{%.*}} = spv.GenericCastToPtr {{%.*}} : !spv.ptr<vector<2xi32>, Generic> to !spv.ptr<vector<2xi32>, CrossWorkgroup>
+  %0 = spv.GenericCastToPtr %arg0 : !spv.ptr<vector<2xi32>, Generic> to !spv.ptr<vector<2xi32>, CrossWorkgroup>
+  return
+}
+// -----
+
+func.func @genericcasttoptr2(%arg0 : !spv.ptr<f32, Uniform>) {
+  // expected-error @+1 {{pointer type must be of storage class Generic}}
+  %0 = spv.GenericCastToPtr %arg0 : !spv.ptr<f32, Uniform> to !spv.ptr<f32, Workgroup>
+  return
+}
+
+// -----
+
+func.func @genericcasttoptr3(%arg0 : !spv.ptr<f32, Generic>) {
+  // expected-error @+1 {{result must point to the Workgroup, CrossWorkgroup, or Function Storage Class}}
+  %0 = spv.GenericCastToPtr %arg0 : !spv.ptr<f32, Generic> to !spv.ptr<f32, Uniform>
+  return
+}
+
+// -----
+
+func.func @genericcasttoptr4(%arg0 : !spv.ptr<f32, Generic>) {
+  // expected-error @+1 {{pointee type must have the same as the op result type}}
+  %0 = spv.GenericCastToPtr %arg0 : !spv.ptr<f32, Generic> to !spv.ptr<vector<2xi32>, Workgroup>
+  return
+}
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GenericCastToPtrExplicit
+//===----------------------------------------------------------------------===//
+
+func.func @genericcasttoptrexplicit1(%arg0 : !spv.ptr<vector<2xi32>, Generic>) {
+  // CHECK: {{%.*}} = spv.GenericCastToPtrExplicit {{%.*}} : !spv.ptr<vector<2xi32>, Generic> to !spv.ptr<vector<2xi32>, CrossWorkgroup>
+  %0 = spv.GenericCastToPtrExplicit %arg0 : !spv.ptr<vector<2xi32>, Generic> to !spv.ptr<vector<2xi32>, CrossWorkgroup>
+  return
+}
+// -----
+
+func.func @genericcasttoptrexplicit2(%arg0 : !spv.ptr<f32, Uniform>) {
+  // expected-error @+1 {{pointer type must be of storage class Generic}}
+  %0 = spv.GenericCastToPtrExplicit %arg0 : !spv.ptr<f32, Uniform> to !spv.ptr<f32, Workgroup>
+  return
+}
+
+// -----
+
+func.func @genericcasttoptrexplicit3(%arg0 : !spv.ptr<f32, Generic>) {
+  // expected-error @+1 {{result must point to the Workgroup, CrossWorkgroup, or Function Storage Class}}
+  %0 = spv.GenericCastToPtrExplicit %arg0 : !spv.ptr<f32, Generic> to !spv.ptr<f32, Uniform>
+  return
+}
+
+// -----
+
+func.func @genericcasttoptrexplicit4(%arg0 : !spv.ptr<f32, Generic>) {
+  // expected-error @+1 {{pointee type must have the same as the op result type}}
+  %0 = spv.GenericCastToPtrExplicit %arg0 : !spv.ptr<f32, Generic> to !spv.ptr<vector<2xi32>, Workgroup>
+  return
+}

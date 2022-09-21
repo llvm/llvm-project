@@ -3330,18 +3330,25 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::v4i32,   {  1,  1,  1,  1 } },
   };
   static const CostKindTblEntry AVX512CDCostTbl[] = {
-    { ISD::CTLZ,       MVT::v8i64,   {  1 } },
-    { ISD::CTLZ,       MVT::v16i32,  {  1 } },
-    { ISD::CTLZ,       MVT::v32i16,  { 18 } },
-    { ISD::CTLZ,       MVT::v64i8,   {  3 } },
-    { ISD::CTLZ,       MVT::v4i64,   {  1 } },
-    { ISD::CTLZ,       MVT::v8i32,   {  1 } },
-    { ISD::CTLZ,       MVT::v16i16,  {  8 } },
-    { ISD::CTLZ,       MVT::v32i8,   {  2 } },
-    { ISD::CTLZ,       MVT::v2i64,   {  1 } },
-    { ISD::CTLZ,       MVT::v4i32,   {  1 } },
-    { ISD::CTLZ,       MVT::v8i16,   {  3 } },
-    { ISD::CTLZ,       MVT::v16i8,   {  2 } },
+    { ISD::CTLZ,       MVT::v8i64,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v16i32,  {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v32i16,  { 18, 27, 23, 27 } },
+    { ISD::CTLZ,       MVT::v64i8,   {  3, 16,  9, 11 } },
+    { ISD::CTLZ,       MVT::v4i64,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v8i32,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v16i16,  {  8, 19, 11, 13 } },
+    { ISD::CTLZ,       MVT::v32i8,   {  2, 11,  9, 10 } },
+    { ISD::CTLZ,       MVT::v2i64,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v4i32,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v8i16,   {  3, 15,  4,  6 } },
+    { ISD::CTLZ,       MVT::v16i8,   {  2, 10,  9, 10 } },
+
+    { ISD::CTTZ,       MVT::v8i64,   {  2,  8,  6,  7 } },
+    { ISD::CTTZ,       MVT::v16i32,  {  2,  8,  6,  7 } },
+    { ISD::CTTZ,       MVT::v4i64,   {  1,  8,  6,  6 } },
+    { ISD::CTTZ,       MVT::v8i32,   {  1,  8,  6,  6 } },
+    { ISD::CTTZ,       MVT::v2i64,   {  1,  8,  6,  6 } },
+    { ISD::CTTZ,       MVT::v4i32,   {  1,  8,  6,  6 } },
   };
   static const CostKindTblEntry AVX512BWCostTbl[] = {
     { ISD::ABS,        MVT::v32i16,  {  1,  1,  1,  1 } },
@@ -3353,10 +3360,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BSWAP,      MVT::v8i64,   {  1 } },
     { ISD::BSWAP,      MVT::v16i32,  {  1 } },
     { ISD::BSWAP,      MVT::v32i16,  {  1 } },
-    { ISD::CTLZ,       MVT::v8i64,   {  8 } },
-    { ISD::CTLZ,       MVT::v16i32,  {  8 } },
-    { ISD::CTLZ,       MVT::v32i16,  {  4 } },
-    { ISD::CTLZ,       MVT::v64i8,   {  3 } },
+    { ISD::CTLZ,       MVT::v8i64,   {  8, 22, 23, 23 } },
+    { ISD::CTLZ,       MVT::v16i32,  {  8, 23, 25, 25 } },
+    { ISD::CTLZ,       MVT::v32i16,  {  4, 15, 15, 16 } },
+    { ISD::CTLZ,       MVT::v64i8,   {  3, 12, 10,  9 } },
     { ISD::CTPOP,      MVT::v2i64,   {  3,  7, 10, 10 } },
     { ISD::CTPOP,      MVT::v4i64,   {  3,  7, 10, 10 } },
     { ISD::CTPOP,      MVT::v8i64,   {  3,  8, 10, 12 } },
@@ -3369,10 +3376,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::v16i8,   {  2,  4,  8,  8 } },
     { ISD::CTPOP,      MVT::v32i8,   {  2,  4,  8,  8 } },
     { ISD::CTPOP,      MVT::v64i8,   {  2,  5,  8, 10 } },
-    { ISD::CTTZ,       MVT::v8i64,   { 10 } },
-    { ISD::CTTZ,       MVT::v16i32,  { 14 } },
-    { ISD::CTTZ,       MVT::v32i16,  { 12 } },
-    { ISD::CTTZ,       MVT::v64i8,   {  9 } },
+    { ISD::CTTZ,       MVT::v8i16,   {  3,  9, 14, 14 } },
+    { ISD::CTTZ,       MVT::v16i16,  {  3,  9, 14, 14 } },
+    { ISD::CTTZ,       MVT::v32i16,  {  3, 10, 14, 16 } },
+    { ISD::CTTZ,       MVT::v16i8,   {  2,  6, 11, 11 } },
+    { ISD::CTTZ,       MVT::v32i8,   {  2,  6, 11, 11 } },
+    { ISD::CTTZ,       MVT::v64i8,   {  3,  7, 11, 13 } },
     { ISD::ROTL,       MVT::v32i16,  {  2 } },
     { ISD::ROTL,       MVT::v16i16,  {  2 } },
     { ISD::ROTL,       MVT::v8i16,   {  2 } },
@@ -3419,18 +3428,18 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BSWAP,      MVT::v8i64,   {  4 } },
     { ISD::BSWAP,      MVT::v16i32,  {  4 } },
     { ISD::BSWAP,      MVT::v32i16,  {  4 } },
-    { ISD::CTLZ,       MVT::v8i64,   { 10 } },
-    { ISD::CTLZ,       MVT::v16i32,  { 11 } },
-    { ISD::CTLZ,       MVT::v32i16,  {  8 } },
-    { ISD::CTLZ,       MVT::v64i8,   {  5 } },
+    { ISD::CTLZ,       MVT::v8i64,   { 10, 28, 32, 32 } },
+    { ISD::CTLZ,       MVT::v16i32,  { 12, 30, 38, 38 } },
+    { ISD::CTLZ,       MVT::v32i16,  {  8, 15, 29, 29 } },
+    { ISD::CTLZ,       MVT::v64i8,   {  6, 11, 19, 19 } },
     { ISD::CTPOP,      MVT::v8i64,   { 16, 16, 19, 19 } },
     { ISD::CTPOP,      MVT::v16i32,  { 24, 19, 27, 27 } },
     { ISD::CTPOP,      MVT::v32i16,  { 18, 15, 22, 22 } },
     { ISD::CTPOP,      MVT::v64i8,   { 12, 11, 16, 16 } },
-    { ISD::CTTZ,       MVT::v8i64,   { 20 } },
-    { ISD::CTTZ,       MVT::v16i32,  { 28 } },
-    { ISD::CTTZ,       MVT::v32i16,  { 24 } },
-    { ISD::CTTZ,       MVT::v64i8,   { 18 } },
+    { ISD::CTTZ,       MVT::v8i64,   {  2,  8,  6,  7 } },
+    { ISD::CTTZ,       MVT::v16i32,  {  2,  8,  6,  7 } },
+    { ISD::CTTZ,       MVT::v32i16,  {  7, 17, 27, 27 } },
+    { ISD::CTTZ,       MVT::v64i8,   {  6, 13, 21, 21 } },
     { ISD::ROTL,       MVT::v8i64,   {  1 } },
     { ISD::ROTL,       MVT::v4i64,   {  1 } },
     { ISD::ROTL,       MVT::v2i64,   {  1 } },
@@ -3551,14 +3560,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BSWAP,      MVT::v4i64,   {  1 } },
     { ISD::BSWAP,      MVT::v8i32,   {  1 } },
     { ISD::BSWAP,      MVT::v16i16,  {  1 } },
-    { ISD::CTLZ,       MVT::v2i64,   {  7 } },
-    { ISD::CTLZ,       MVT::v4i64,   { 14 } },
-    { ISD::CTLZ,       MVT::v4i32,   {  5 } },
-    { ISD::CTLZ,       MVT::v8i32,   { 10 } },
-    { ISD::CTLZ,       MVT::v8i16,   {  4 } },
-    { ISD::CTLZ,       MVT::v16i16,  {  6 } },
-    { ISD::CTLZ,       MVT::v16i8,   {  3 } },
-    { ISD::CTLZ,       MVT::v32i8,   {  4 } },
+    { ISD::CTLZ,       MVT::v2i64,   {  7, 18, 24, 25 } },
+    { ISD::CTLZ,       MVT::v4i64,   { 14, 18, 24, 44 } },
+    { ISD::CTLZ,       MVT::v4i32,   {  5, 16, 19, 20 } },
+    { ISD::CTLZ,       MVT::v8i32,   { 10, 16, 19, 34 } },
+    { ISD::CTLZ,       MVT::v8i16,   {  4, 13, 14, 15 } },
+    { ISD::CTLZ,       MVT::v16i16,  {  6, 14, 14, 24 } },
+    { ISD::CTLZ,       MVT::v16i8,   {  3, 12,  9, 10 } },
+    { ISD::CTLZ,       MVT::v32i8,   {  4, 12,  9, 14 } },
     { ISD::CTPOP,      MVT::v2i64,   {  3,  9, 10, 10 } },
     { ISD::CTPOP,      MVT::v4i64,   {  4,  9, 10, 14 } },
     { ISD::CTPOP,      MVT::v4i32,   {  7, 12, 14, 14 } },
@@ -3567,14 +3576,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::v16i16,  {  6,  8, 11, 18 } },
     { ISD::CTPOP,      MVT::v16i8,   {  2,  5,  8,  8 } },
     { ISD::CTPOP,      MVT::v32i8,   {  3,  5,  8, 12 } },
-    { ISD::CTTZ,       MVT::v2i64,   {  4 } },
-    { ISD::CTTZ,       MVT::v4i64,   {  4 } },
-    { ISD::CTTZ,       MVT::v4i32,   {  7 } },
-    { ISD::CTTZ,       MVT::v8i32,   {  7 } },
-    { ISD::CTTZ,       MVT::v8i16,   {  4 } },
-    { ISD::CTTZ,       MVT::v16i16,  {  4 } },
-    { ISD::CTTZ,       MVT::v16i8,   {  3 } },
-    { ISD::CTTZ,       MVT::v32i8,   {  3 } },
+    { ISD::CTTZ,       MVT::v2i64,   {  4, 11, 13, 13 } },
+    { ISD::CTTZ,       MVT::v4i64,   {  5, 11, 13, 20 } },
+    { ISD::CTTZ,       MVT::v4i32,   {  7, 14, 17, 17 } },
+    { ISD::CTTZ,       MVT::v8i32,   {  7, 15, 17, 24 } },
+    { ISD::CTTZ,       MVT::v8i16,   {  4,  9, 14, 14 } },
+    { ISD::CTTZ,       MVT::v16i16,  {  6,  9, 14, 24 } },
+    { ISD::CTTZ,       MVT::v16i8,   {  3,  7, 11, 11 } },
+    { ISD::CTTZ,       MVT::v32i8,   {  5,  7, 11, 18 } },
     { ISD::SADDSAT,    MVT::v16i16,  {  1 } },
     { ISD::SADDSAT,    MVT::v32i8,   {  1 } },
     { ISD::SMAX,       MVT::v8i32,   {  1 } },
@@ -3618,14 +3627,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BSWAP,      MVT::v4i64,   {  4 } },
     { ISD::BSWAP,      MVT::v8i32,   {  4 } },
     { ISD::BSWAP,      MVT::v16i16,  {  4 } },
-    { ISD::CTLZ,       MVT::v4i64,   { 29 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTLZ,       MVT::v2i64,   { 14 } },
-    { ISD::CTLZ,       MVT::v8i32,   { 24 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTLZ,       MVT::v4i32,   { 12 } },
-    { ISD::CTLZ,       MVT::v16i16,  { 19 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTLZ,       MVT::v8i16,   {  9 } },
-    { ISD::CTLZ,       MVT::v32i8,   { 14 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTLZ,       MVT::v16i8,   {  7 } },
+    { ISD::CTLZ,       MVT::v4i64,   { 29, 33, 49, 58 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v2i64,   { 14, 24, 24, 28 } },
+    { ISD::CTLZ,       MVT::v8i32,   { 24, 28, 39, 48 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v4i32,   { 12, 20, 19, 23 } },
+    { ISD::CTLZ,       MVT::v16i16,  { 19, 22, 29, 38 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v8i16,   {  9, 16, 14, 18 } },
+    { ISD::CTLZ,       MVT::v32i8,   { 14, 15, 19, 28 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v16i8,   {  7, 12,  9, 13 } },
     { ISD::CTPOP,      MVT::v4i64,   { 14, 18, 19, 28 } }, // 2 x 128-bit Op + extract/insert
     { ISD::CTPOP,      MVT::v2i64,   {  7, 14, 10, 14 } },
     { ISD::CTPOP,      MVT::v8i32,   { 18, 24, 27, 36 } }, // 2 x 128-bit Op + extract/insert
@@ -3634,10 +3643,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::v8i16,   {  8, 18, 11, 15 } },
     { ISD::CTPOP,      MVT::v32i8,   { 13, 15, 16, 25 } }, // 2 x 128-bit Op + extract/insert
     { ISD::CTPOP,      MVT::v16i8,   {  6, 12,  8, 12 } },
-    { ISD::CTTZ,       MVT::v4i64,   { 22 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTTZ,       MVT::v8i32,   { 30 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTTZ,       MVT::v16i16,  { 26 } }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTTZ,       MVT::v32i8,   { 20 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v4i64,   { 17, 22, 24, 33 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v2i64,   {  9, 19, 13, 17 } },
+    { ISD::CTTZ,       MVT::v8i32,   { 21, 27, 32, 41 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v4i32,   { 11, 24, 17, 21 } },
+    { ISD::CTTZ,       MVT::v16i16,  { 18, 24, 27, 36 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v8i16,   {  9, 21, 14, 18 } },
+    { ISD::CTTZ,       MVT::v32i8,   { 15, 18, 21, 30 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v16i8,   {  8, 16, 11, 15 } },
     { ISD::SADDSAT,    MVT::v16i16,  {  4 } }, // 2 x 128-bit Op + extract/insert
     { ISD::SADDSAT,    MVT::v32i8,   {  4 } }, // 2 x 128-bit Op + extract/insert
     { ISD::SMAX,       MVT::v8i32,   {  4 } }, // 2 x 128-bit Op + extract/insert
@@ -3713,18 +3726,18 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BSWAP,      MVT::v2i64,   {  1 } },
     { ISD::BSWAP,      MVT::v4i32,   {  1 } },
     { ISD::BSWAP,      MVT::v8i16,   {  1 } },
-    { ISD::CTLZ,       MVT::v2i64,   { 18 } },
-    { ISD::CTLZ,       MVT::v4i32,   { 15 } },
-    { ISD::CTLZ,       MVT::v8i16,   { 13 } },
-    { ISD::CTLZ,       MVT::v16i8,   { 11 } },
+    { ISD::CTLZ,       MVT::v2i64,   { 18, 28, 28, 35 } },
+    { ISD::CTLZ,       MVT::v4i32,   { 15, 20, 22, 28 } },
+    { ISD::CTLZ,       MVT::v8i16,   { 13, 17, 16, 22 } },
+    { ISD::CTLZ,       MVT::v16i8,   { 11, 15, 10, 16 } },
     { ISD::CTPOP,      MVT::v2i64,   { 13, 19, 12, 18 } },
     { ISD::CTPOP,      MVT::v4i32,   { 18, 24, 16, 22 } },
     { ISD::CTPOP,      MVT::v8i16,   { 13, 18, 14, 20 } },
     { ISD::CTPOP,      MVT::v16i8,   { 11, 12, 10, 16 } },
-    { ISD::CTTZ,       MVT::v2i64,   { 10 } },
-    { ISD::CTTZ,       MVT::v4i32,   { 14 } },
-    { ISD::CTTZ,       MVT::v8i16,   { 12 } },
-    { ISD::CTTZ,       MVT::v16i8,   {  9 } }
+    { ISD::CTTZ,       MVT::v2i64,   { 13, 25, 15, 22 } },
+    { ISD::CTTZ,       MVT::v4i32,   { 18, 26, 19, 25 } },
+    { ISD::CTTZ,       MVT::v8i16,   { 13, 20, 17, 23 } },
+    { ISD::CTTZ,       MVT::v16i8,   { 11, 16, 13, 19 } }
   };
   static const CostKindTblEntry SSE2CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  3,  6,  5,  5 } },
@@ -3738,18 +3751,18 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BSWAP,      MVT::v2i64,   {  7 } },
     { ISD::BSWAP,      MVT::v4i32,   {  7 } },
     { ISD::BSWAP,      MVT::v8i16,   {  7 } },
-    { ISD::CTLZ,       MVT::v2i64,   { 10 } },
-    { ISD::CTLZ,       MVT::v4i32,   { 10 } },
-    { ISD::CTLZ,       MVT::v8i16,   {  9 } },
-    { ISD::CTLZ,       MVT::v16i8,   {  8 } },
+    { ISD::CTLZ,       MVT::v2i64,   { 10, 45, 36, 38 } },
+    { ISD::CTLZ,       MVT::v4i32,   { 10, 45, 38, 40 } },
+    { ISD::CTLZ,       MVT::v8i16,   {  9, 38, 32, 34 } },
+    { ISD::CTLZ,       MVT::v16i8,   {  8, 39, 29, 32 } },
     { ISD::CTPOP,      MVT::v2i64,   { 12, 26, 16, 18 } },
     { ISD::CTPOP,      MVT::v4i32,   { 15, 29, 21, 23 } },
     { ISD::CTPOP,      MVT::v8i16,   { 13, 25, 18, 20 } },
     { ISD::CTPOP,      MVT::v16i8,   { 10, 21, 14, 16 } },
-    { ISD::CTTZ,       MVT::v2i64,   { 14 } },
-    { ISD::CTTZ,       MVT::v4i32,   { 18 } },
-    { ISD::CTTZ,       MVT::v8i16,   { 16 } },
-    { ISD::CTTZ,       MVT::v16i8,   { 13 } },
+    { ISD::CTTZ,       MVT::v2i64,   { 14, 28, 19, 21 } },
+    { ISD::CTTZ,       MVT::v4i32,   { 18, 31, 24, 26 } },
+    { ISD::CTTZ,       MVT::v8i16,   { 16, 27, 21, 23 } },
+    { ISD::CTTZ,       MVT::v16i8,   { 13, 23, 17, 19 } },
     { ISD::SADDSAT,    MVT::v8i16,   {  1 } },
     { ISD::SADDSAT,    MVT::v16i8,   {  1 } },
     { ISD::SMAX,       MVT::v8i16,   {  1 } },
@@ -3804,9 +3817,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BITREVERSE, MVT::i64,     { 14 } },
     { ISD::BSWAP,      MVT::i64,     {  1 } },
     { ISD::CTLZ,       MVT::i64,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  1,  1,  1 } }, // BSR+XOR
     { ISD::CTTZ,       MVT::i64,     {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1 } }, // BSR
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  1,  1,  1 } }, // BSR
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  1 } },
     { ISD::ROTR,       MVT::i64,     {  1 } },
@@ -3827,15 +3840,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::i32,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i16,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i8,      {  4 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1,  1,  1,  1 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2,  2,  3,  3 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR
     { ISD::CTTZ,       MVT::i32,     {  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i16,     {  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i8,      {  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1,  1,  1,  1 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2,  2,  1,  1 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  1 } }, // BSF
     { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
     { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
     { ISD::CTPOP,      MVT::i8,      {  7,  6, 13, 13 } },

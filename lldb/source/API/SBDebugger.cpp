@@ -377,7 +377,11 @@ SBError SBDebugger::SetInputFile(SBFile file) {
     error.ref().SetErrorString("invalid debugger");
     return error;
   }
-  error.SetError(m_opaque_sp->SetInputFile(file.m_opaque_sp));
+  if (!file) {
+    error.ref().SetErrorString("invalid file");
+    return error;
+  }
+  m_opaque_sp->SetInputFile(file.m_opaque_sp);
   return error;
 }
 
@@ -1388,9 +1392,7 @@ void SBDebugger::SetPrompt(const char *prompt) {
 const char *SBDebugger::GetReproducerPath() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return (m_opaque_sp
-              ? ConstString(m_opaque_sp->GetReproducerPath()).GetCString()
-              : nullptr);
+  return "GetReproducerPath has been deprecated";
 }
 
 ScriptLanguage SBDebugger::GetScriptLanguage() const {

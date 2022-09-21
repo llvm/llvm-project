@@ -7,7 +7,7 @@ define void @test(float* noalias %0, float* %p) {
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x float*> [[TMP2]], <8 x float*> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, <8 x float*> [[SHUFFLE]], <8 x i64> <i64 15, i64 4, i64 5, i64 0, i64 2, i64 6, i64 7, i64 8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, float* [[TMP0:%.*]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*> [[TMP3]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x float> undef)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x float> @llvm.masked.gather.v8f32.v8p0f32(<8 x float*> [[TMP3]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x float> poison)
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <8 x float> [[TMP5]], <8 x float> poison, <16 x i32> <i32 4, i32 3, i32 0, i32 1, i32 2, i32 0, i32 1, i32 2, i32 0, i32 2, i32 5, i32 6, i32 7, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x float> <float poison, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> [[SHUFFLE1]], <16 x i32> <i32 18, i32 19, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd reassoc nsz arcp contract afn <16 x float> [[SHUFFLE1]], [[TMP6]]

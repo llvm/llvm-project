@@ -111,7 +111,7 @@ define hidden void @pointer_phi_v4i32_add3(i32* noalias nocapture readonly %A, i
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, i32* [[POINTER_PHI]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i32, i32* [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[NEXT_GEP]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], <4 x i32>* [[TMP2]], align 4
@@ -550,7 +550,7 @@ define hidden void @pointer_phi_v4f32_add3(float* noalias nocapture readonly %A,
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, float* [[POINTER_PHI]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr float, float* [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <4 x float> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[NEXT_GEP]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float>* [[TMP2]], align 4
@@ -759,8 +759,8 @@ define hidden void @pointer_phi_v4i32_uf2(i32* noalias nocapture readonly %A, i3
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, i32* [[POINTER_PHI]], <4 x i32> <i32 0, i32 6, i32 12, i32 18>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, i32* [[POINTER_PHI]], <4 x i32> <i32 24, i32 30, i32 36, i32 42>
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i32, i32* [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP1]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP1]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER5]], [[BROADCAST_SPLAT7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[NEXT_GEP]] to <4 x i32>*
@@ -833,10 +833,10 @@ define hidden void @pointer_phi_v4i32_uf4(i32* noalias nocapture readonly %A, i3
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, i32* [[POINTER_PHI]], <4 x i32> <i32 48, i32 54, i32 60, i32 66>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, i32* [[POINTER_PHI]], <4 x i32> <i32 72, i32 78, i32 84, i32 90>
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i32, i32* [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP1]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP2]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP3]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP0]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP1]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP2]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[TMP3]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER7]], [[BROADCAST_SPLAT11]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER8]], [[BROADCAST_SPLAT13]]
@@ -911,10 +911,10 @@ define hidden void @mult_ptr_iv(i8* noalias nocapture readonly %x, i8* noalias n
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* [[POINTER_PHI]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[POINTER_PHI5]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x i8*> [[TMP0]], i32 1
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> [[TMP0]], i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef), !alias.scope !28
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> [[TMP0]], i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> poison), !alias.scope !28
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, <4 x i8*> [[TMP0]], i32 2
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> [[TMP2]], i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef), !alias.scope !28
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> [[TMP3]], i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef), !alias.scope !28
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> [[TMP2]], i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> poison), !alias.scope !28
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> [[TMP3]], i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> poison), !alias.scope !28
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], <i8 10, i8 10, i8 10, i8 10>
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER8]]

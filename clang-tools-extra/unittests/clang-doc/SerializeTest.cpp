@@ -266,8 +266,8 @@ TEST(SerializeTest, emitEnumInfo) {
   EnumInfo E;
   E.Name = "E";
   E.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  E.Members.emplace_back("X");
-  E.Members.emplace_back("Y");
+  E.Members.emplace_back("X", "0");
+  E.Members.emplace_back("Y", "1");
   ExpectedNamespaceWithEnum.ChildEnums.emplace_back(std::move(E));
   CheckNamespaceInfo(&ExpectedNamespaceWithEnum, NamespaceWithEnum);
 
@@ -277,8 +277,8 @@ TEST(SerializeTest, emitEnumInfo) {
   G.Name = "G";
   G.Scoped = true;
   G.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  G.Members.emplace_back("A");
-  G.Members.emplace_back("B");
+  G.Members.emplace_back("A", "0");
+  G.Members.emplace_back("B", "1");
   ExpectedNamespaceWithScopedEnum.ChildEnums.emplace_back(std::move(G));
   CheckNamespaceInfo(&ExpectedNamespaceWithScopedEnum, NamespaceWithScopedEnum);
 }

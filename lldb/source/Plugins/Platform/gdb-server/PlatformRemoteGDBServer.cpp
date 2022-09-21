@@ -238,11 +238,6 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
   client_up->SetPacketTimeout(
       process_gdb_remote::ProcessGDBRemote::GetPacketTimeout());
   client_up->SetConnection(std::make_unique<ConnectionFileDescriptor>());
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::GDBRemoteProvider &provider =
-        g->GetOrCreate<repro::GDBRemoteProvider>();
-    client_up->SetPacketRecorder(provider.GetNewPacketRecorder());
-  }
   client_up->Connect(url, &error);
 
   if (error.Fail())

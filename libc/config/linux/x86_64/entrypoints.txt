@@ -57,6 +57,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # string.h entrypoints that depend on malloc
     libc.src.string.strdup
     libc.src.string.strndup
+    libc.src.string.strerror
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -177,6 +178,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.coshf
     libc.src.math.cosf
     libc.src.math.expf
+    libc.src.math.exp10f
     libc.src.math.exp2f
     libc.src.math.expm1f
     libc.src.math.fabs

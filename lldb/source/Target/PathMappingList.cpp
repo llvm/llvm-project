@@ -76,6 +76,18 @@ void PathMappingList::Append(const PathMappingList &rhs, bool notify) {
   }
 }
 
+void PathMappingList::AppendUnique(llvm::StringRef path,
+                                   llvm::StringRef replacement, bool notify) {
+  auto normalized_path = NormalizePath(path);
+  auto normalized_replacement = NormalizePath(replacement);
+  for (const auto &pair : m_pairs) {
+    if (pair.first.GetStringRef().equals(normalized_path) &&
+        pair.second.GetStringRef().equals(normalized_replacement))
+      return;
+  }
+  Append(path, replacement, notify);
+}
+
 void PathMappingList::Insert(llvm::StringRef path, llvm::StringRef replacement,
                              uint32_t index, bool notify) {
   ++m_mod_id;
@@ -207,20 +219,22 @@ PathMappingList::RemapPath(llvm::StringRef mapping_path,
   return {};
 }
 
-bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const {
+llvm::Optional<llvm::StringRef>
+PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) const {
   std::string path = file.GetPath();
   llvm::StringRef path_ref(path);
   for (const auto &it : m_pairs) {
+    llvm::StringRef removed_prefix = it.second.GetStringRef();
     if (!path_ref.consume_front(it.second.GetStringRef()))
       continue;
     auto orig_file = it.first.GetStringRef();
-    auto orig_style = FileSpec::GuessPathStyle(orig_file).value_or(
+    auto orig_style = FileSpec::GuessPathStyle(orig_file).getValueOr(
         llvm::sys::path::Style::native);
     fixed.SetFile(orig_file, orig_style);
     AppendPathComponents(fixed, path_ref, orig_style);
-    return true;
+    return removed_prefix;
   }
-  return false;
+  return llvm::None;
 }
 
 llvm::Optional<FileSpec> PathMappingList::FindFile(const FileSpec &orig_spec) const {

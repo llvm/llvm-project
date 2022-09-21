@@ -1241,7 +1241,7 @@ private:
   /// Returns true if \p Ptr is guaranteed to be loop invariant for any possible
   /// loop. In particular, this guarantees that it only references a single
   /// MemoryLocation during execution of the containing function.
-  bool IsGuaranteedLoopInvariant(Value *Ptr) const;
+  bool IsGuaranteedLoopInvariant(const Value *Ptr) const;
 
   void fillInCurrentPair() {
     CurrentPair.first = *DefIterator;
@@ -1252,7 +1252,7 @@ private:
       // to unknown guarantees that any memory accesses that access locations
       // after the pointer are considered as clobbers, which is important to
       // catch loop carried dependences.
-      if (!IsGuaranteedLoopInvariant(const_cast<Value *>(Location.Ptr)))
+      if (!IsGuaranteedLoopInvariant(Location.Ptr))
         CurrentPair.second =
             Location.getWithNewSize(LocationSize::beforeOrAfterPointer());
       PHITransAddr Translator(
@@ -1267,7 +1267,7 @@ private:
           CurrentPair.second = CurrentPair.second.getWithNewPtr(TransAddr);
 
           if (TransAddr &&
-              !IsGuaranteedLoopInvariant(const_cast<Value *>(TransAddr)))
+              !IsGuaranteedLoopInvariant(TransAddr))
             CurrentPair.second = CurrentPair.second.getWithNewSize(
                 LocationSize::beforeOrAfterPointer());
 

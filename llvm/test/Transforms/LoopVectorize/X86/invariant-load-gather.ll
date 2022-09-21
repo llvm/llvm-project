@@ -39,7 +39,7 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <16 x i32*> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> [[BROADCAST_SPLAT]], i32 4, <16 x i1> [[TMP3]], <16 x i32> undef), !alias.scope !3
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0i32(<16 x i32*> [[BROADCAST_SPLAT]], i32 4, <16 x i1> [[TMP3]], <16 x i32> poison), !alias.scope !3
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP3]], <16 x i32> [[WIDE_MASKED_GATHER]], <16 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i32> [[PREDPHI]], i64 15
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX6]], [[N_VEC]]
@@ -66,7 +66,7 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <8 x i32*> [[BROADCAST_SPLAT16]], zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER19:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[BROADCAST_SPLAT16]], i32 4, <8 x i1> [[TMP8]], <8 x i32> undef), !alias.scope !10
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER19:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[BROADCAST_SPLAT16]], i32 4, <8 x i1> [[TMP8]], <8 x i32> poison), !alias.scope !10
 ; CHECK-NEXT:    [[PREDPHI20:%.*]] = select <8 x i1> [[TMP8]], <8 x i32> [[WIDE_MASKED_GATHER19]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[PREDPHI20]], i64 7
 ; CHECK-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[SMAX6]], [[N_VEC11]]
