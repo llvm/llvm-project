@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
 
 ; FUNC-LABEL: {{^}}ds_ordered_add:
-; GCN-DAG: v_{{(dual_)?}}mov_b32{{(_e32)?}} v[[INCR:[0-9]+]], 31
+; GCN-DAG: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
 ; GCN-DAG: s_mov_b32 m0,
 ; GCN: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
 define amdgpu_kernel void @ds_ordered_add(i32 addrspace(2)* inreg %gds, i32 addrspace(1)* %out) {

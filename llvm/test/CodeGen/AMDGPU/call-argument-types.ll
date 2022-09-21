@@ -746,8 +746,8 @@ entry:
 
 ; GCN: buffer_store_dword [[VREG2]], off, s[0:3], s32 offset:20
 ; GCN: buffer_load_dword [[VREG3:v[0-9]+]], off, s[0:3], s32 offset:24{{$}}
-; GCN-DAG: buffer_store_dword [[VREG1]], off, s[0:3], s32{{$}}
-; GCN-DAG: buffer_store_dword [[VREG3]], off, s[0:3], s32 offset:16{{$}}
+; GCN: buffer_store_dword [[VREG1]], off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword [[VREG3]], off, s[0:3], s32 offset:16{{$}}
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
 define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
