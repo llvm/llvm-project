@@ -244,9 +244,9 @@ enum NodeType : unsigned {
   FABS_VL,
   FSQRT_VL,
   FCOPYSIGN_VL, // Has a merge operand
-  FP_TO_SINT_VL,
-  FP_TO_UINT_VL,
-  VFCVT_X_F_VL,
+  VFCVT_RTZ_X_F_VL,
+  VFCVT_RTZ_XU_F_VL,
+  VFCVT_X_F_VL, // Has a rounding mode operand.
   SINT_TO_FP_VL,
   UINT_TO_FP_VL,
   FP_ROUND_VL,
