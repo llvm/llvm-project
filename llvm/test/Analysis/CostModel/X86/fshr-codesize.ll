@@ -49,12 +49,33 @@ define void @var_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %c512)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; AVX512-LABEL: 'var_funnel_i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 %c64)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %c128)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %c256)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %c512)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; AVX512F-LABEL: 'var_funnel_i64'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 %c64)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %c128)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %c256)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %c512)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512BW-LABEL: 'var_funnel_i64'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 %c64)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %c128)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %c256)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %c512)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'var_funnel_i64'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 %c64)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %c128)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %c256)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %c512)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512VBMI2-LABEL: 'var_funnel_i64'
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 %c64)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %c128)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %c256)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %c512)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'var_funnel_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 %c64)
@@ -113,12 +134,33 @@ define void @var_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i3
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %c512)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; AVX512-LABEL: 'var_funnel_i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 %c32)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %c128)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %c256)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %c512)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; AVX512F-LABEL: 'var_funnel_i32'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 %c32)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %c128)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %c256)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %c512)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512BW-LABEL: 'var_funnel_i32'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 %c32)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %c128)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %c256)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %c512)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'var_funnel_i32'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 %c32)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %c128)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %c256)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %c512)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512VBMI2-LABEL: 'var_funnel_i32'
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 %c32)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %c128)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %c256)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %c512)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'var_funnel_i32'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 %c32)
@@ -200,9 +242,9 @@ define void @var_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i
 ;
 ; AVX512VBMI2-LABEL: 'var_funnel_i16'
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 %c16)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %c128)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %c256)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %c512)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %c128)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %c256)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %c512)
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'var_funnel_i16'
@@ -359,14 +401,41 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; AVX512-LABEL: 'splatvar_funnel_i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; AVX512F-LABEL: 'splatvar_funnel_i64'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512BW-LABEL: 'splatvar_funnel_i64'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'splatvar_funnel_i64'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512VBMI2-LABEL: 'splatvar_funnel_i64'
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'splatvar_funnel_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -441,14 +510,41 @@ define void @splatvar_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; AVX512-LABEL: 'splatvar_funnel_i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; AVX512F-LABEL: 'splatvar_funnel_i32'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512BW-LABEL: 'splatvar_funnel_i32'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'splatvar_funnel_i32'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512VBMI2-LABEL: 'splatvar_funnel_i32'
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <8 x i32> %c256, <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <16 x i32> %c512, <16 x i32> undef, <16 x i32> zeroinitializer
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> %u128)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> %u256)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> %u512)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'splatvar_funnel_i32'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <4 x i32> %c128, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -554,9 +650,9 @@ define void @splatvar_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> %u128)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> %u256)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> %u512)
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'splatvar_funnel_i16'
@@ -737,12 +833,33 @@ define void @constant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; AVX512-LABEL: 'constant_funnel_i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; AVX512F-LABEL: 'constant_funnel_i64'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512BW-LABEL: 'constant_funnel_i64'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'constant_funnel_i64'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512VBMI2-LABEL: 'constant_funnel_i64'
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'constant_funnel_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
@@ -801,12 +918,33 @@ define void @constant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; AVX512-LABEL: 'constant_funnel_i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; AVX512F-LABEL: 'constant_funnel_i32'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512BW-LABEL: 'constant_funnel_i32'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'constant_funnel_i32'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512VBMI2-LABEL: 'constant_funnel_i32'
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'constant_funnel_i32'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
@@ -888,9 +1026,9 @@ define void @constant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ;
 ; AVX512VBMI2-LABEL: 'constant_funnel_i16'
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'constant_funnel_i16'
@@ -1039,12 +1177,33 @@ define void @splatconstant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; AVX512-LABEL: 'splatconstant_funnel_i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 7, i64 7>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 7, i64 7, i64 7, i64 7>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; AVX512F-LABEL: 'splatconstant_funnel_i64'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 7, i64 7>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 7, i64 7, i64 7, i64 7>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512BW-LABEL: 'splatconstant_funnel_i64'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 7, i64 7>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 7, i64 7, i64 7, i64 7>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'splatconstant_funnel_i64'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 7, i64 7>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 7, i64 7, i64 7, i64 7>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512VBMI2-LABEL: 'splatconstant_funnel_i64'
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 7, i64 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 7, i64 7, i64 7, i64 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'splatconstant_funnel_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
@@ -1103,12 +1262,33 @@ define void @splatconstant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; AVX512-LABEL: 'splatconstant_funnel_i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; AVX512F-LABEL: 'splatconstant_funnel_i32'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512BW-LABEL: 'splatconstant_funnel_i32'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512DQ-LABEL: 'splatconstant_funnel_i32'
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; AVX512VBMI2-LABEL: 'splatconstant_funnel_i32'
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'splatconstant_funnel_i32'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
@@ -1190,9 +1370,9 @@ define void @splatconstant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a25
 ;
 ; AVX512VBMI2-LABEL: 'splatconstant_funnel_i16'
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'splatconstant_funnel_i16'
@@ -1485,9 +1665,9 @@ define void @var_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i
 ;
 ; AVX512VBMI2-LABEL: 'var_rotate_i16'
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 %c16)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %c128)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %c256)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %c512)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %c128)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %c256)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %c512)
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'var_rotate_i16'
@@ -1812,9 +1992,9 @@ define void @splatvar_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <8 x i16> %c128, <8 x i16> undef, <8 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <16 x i16> %c256, <16 x i16> undef, <16 x i32> zeroinitializer
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <32 x i16> %c512, <32 x i16> undef, <32 x i32> zeroinitializer
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> %u128)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> %u256)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> %u512)
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'splatvar_rotate_i16'
@@ -2130,9 +2310,9 @@ define void @constant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ;
 ; AVX512VBMI2-LABEL: 'constant_rotate_i16'
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'constant_rotate_i16'
@@ -2411,9 +2591,9 @@ define void @splatconstant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a25
 ;
 ; AVX512VBMI2-LABEL: 'splatconstant_rotate_i16'
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 3)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
-; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
+; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
 ; AVX512VBMI2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLM-LABEL: 'splatconstant_rotate_i16'
