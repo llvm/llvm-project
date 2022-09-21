@@ -34,6 +34,7 @@ template <class Emitter> class RecordScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
+template <class Emitter> class ArrayIndexScope;
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -85,6 +86,8 @@ public:
   bool VisitConstantExpr(const ConstantExpr *E);
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
+  bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E);
+  bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -199,6 +202,7 @@ private:
   friend class RecordScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
+  friend class ArrayIndexScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, const Expr *E);
@@ -260,7 +264,7 @@ protected:
   /// Current scope.
   VariableScope<Emitter> *VarScope = nullptr;
 
-  /// Current argument index.
+  /// Current argument index. Needed to emit ArrayInitIndexExpr.
   llvm::Optional<uint64_t> ArrayIndex;
 
   /// Flag indicating if return value is to be discarded.
@@ -360,6 +364,20 @@ public:
   void addExtended(const Scope::Local &Local) override {
     this->Parent->addLocal(Local);
   }
+};
+
+template <class Emitter> class ArrayIndexScope final {
+public:
+  ArrayIndexScope(ByteCodeExprGen<Emitter> *Ctx, uint64_t Index) : Ctx(Ctx) {
+    OldArrayIndex = Ctx->ArrayIndex;
+    Ctx->ArrayIndex = Index;
+  }
+
+  ~ArrayIndexScope() { Ctx->ArrayIndex = OldArrayIndex; }
+
+private:
+  ByteCodeExprGen<Emitter> *Ctx;
+  Optional<uint64_t> OldArrayIndex;
 };
 
 } // namespace interp

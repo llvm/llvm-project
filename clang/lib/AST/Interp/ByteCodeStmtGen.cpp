@@ -105,7 +105,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
       const Record::Field *F = R->getField(Member);
 
       if (Optional<PrimType> T = this->classify(InitExpr->getType())) {
-        if (!this->emitDupPtr(InitExpr))
+        if (!this->emitThis(InitExpr))
           return false;
 
         if (!this->visit(InitExpr))
@@ -116,7 +116,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
       } else {
         // Non-primitive case. Get a pointer to the field-to-initialize
         // on the stack and call visitInitialzer() for it.
-        if (!this->emitDupPtr(InitExpr))
+        if (!this->emitThis(InitExpr))
           return false;
 
         if (!this->emitGetPtrField(F->Offset, InitExpr))
