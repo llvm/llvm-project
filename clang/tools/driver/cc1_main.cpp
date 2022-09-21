@@ -718,8 +718,10 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
     // See FIXME in CompileJobCache::tryReplayCachedResult() about improving how
     // we handle diagnostics for caching purposes.
     Clang.getDiagnosticClient().finish();
-    Clang.getDiagnostics().setClient(new IgnoringDiagConsumer(),
-                                     /*ShouldOwnClient=*/true);
+    DiagnosticOptions &DiagOpts = Clang.getInvocation().getDiagnosticOpts();
+    Clang.getDiagnostics().setClient(
+        new TextDiagnosticPrinter(llvm::errs(), &DiagOpts),
+        /*ShouldOwnClient=*/true);
   }
 
   // FIXME: Stop calling report_fatal_error().
