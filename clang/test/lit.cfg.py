@@ -287,3 +287,13 @@ if 'AIXTHREAD_STK' in os.environ:
     config.environment['AIXTHREAD_STK'] = os.environ['AIXTHREAD_STK']
 elif platform.system() == 'AIX':
     config.environment['AIXTHREAD_STK'] = '4194304'
+
+# The llvm-nm tool supports an environment variable "OBJECT_MODE" on AIX OS, which
+# controls the kind of objects they will support. If there is no "OBJECT_MODE"
+# environment variable specified, the default behaviour is to support 32-bit
+# objects only. In order to not affect most test cases, which expect to support
+# 32-bit and 64-bit objects by default, set the environment variable
+# "OBJECT_MODE" to 'any' for llvm-nm on AIX OS.
+
+if 'system-aix' in config.available_features:
+        config.substitutions.append(('llvm-nm', 'env OBJECT_MODE=any llvm-nm'))
