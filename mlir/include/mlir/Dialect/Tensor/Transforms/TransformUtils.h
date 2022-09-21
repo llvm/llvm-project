@@ -14,37 +14,6 @@
 namespace mlir {
 namespace tensor {
 
-/// Fills the `combinedOffsets`, `combinedSizes` and `combinedStrides` to use
-/// when combining a producer slice **into** a consumer slice.
-///
-/// This function performs the following computation:
-/// - Combined offsets = producer_offsets * consumer_strides + consumer_offsets
-/// - Combined sizes = consumer_sizes
-/// - Combined strides = producer_strides * consumer_strides
-LogicalResult
-mergeOffsetsSizesAndStrides(OpBuilder &builder, Location loc,
-                            ArrayRef<OpFoldResult> producerOffsets,
-                            ArrayRef<OpFoldResult> producerSizes,
-                            ArrayRef<OpFoldResult> producerStrides,
-                            const llvm::SmallBitVector &droppedProducerDims,
-                            ArrayRef<OpFoldResult> consumerOffsets,
-                            ArrayRef<OpFoldResult> consumerSizes,
-                            ArrayRef<OpFoldResult> consumerStrides,
-                            SmallVector<OpFoldResult> &combinedOffsets,
-                            SmallVector<OpFoldResult> &combinedSizes,
-                            SmallVector<OpFoldResult> &combinedStrides);
-
-/// Fills the `combinedOffsets`, `combinedSizes` and `combinedStrides` to use
-/// when combining a `producer` slice op **into** a `consumer` slice op.
-LogicalResult
-mergeOffsetsSizesAndStrides(OpBuilder &builder, Location loc,
-                            OffsetSizeAndStrideOpInterface producer,
-                            OffsetSizeAndStrideOpInterface consumer,
-                            const llvm::SmallBitVector &droppedProducerDims,
-                            SmallVector<OpFoldResult> &combinedOffsets,
-                            SmallVector<OpFoldResult> &combinedSizes,
-                            SmallVector<OpFoldResult> &combinedStrides);
-
 //===----------------------------------------------------------------------===//
 // Extract slice from `tensor.collapse_shape`
 //===----------------------------------------------------------------------===//
