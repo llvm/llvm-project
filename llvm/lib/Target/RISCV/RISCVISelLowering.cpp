@@ -301,15 +301,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
-  if (Subtarget.hasStdExtZbt()) {
-    setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Custom);
-    setOperationAction(ISD::SELECT, XLenVT, Legal);
-
-    if (Subtarget.is64Bit())
-      setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i32, Custom);
-  } else {
-    setOperationAction(ISD::SELECT, XLenVT, Custom);
-  }
+  setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   static const unsigned FPLegalNodeTypes[] = {
       ISD::FMINNUM,        ISD::FMAXNUM,       ISD::LRINT,
@@ -3398,31 +3390,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return DAG.getNode(RISCVISD::GREV, DL, VT, BSwap,
                        DAG.getConstant(7, DL, VT));
   }
-  case ISD::FSHL:
-  case ISD::FSHR: {
-    MVT VT = Op.getSimpleValueType();
-    assert(VT == Subtarget.getXLenVT() && "Unexpected custom legalization");
-    SDLoc DL(Op);
-    // FSL/FSR take a log2(XLen)+1 bit shift amount but XLenVT FSHL/FSHR only
-    // use log(XLen) bits. Mask the shift amount accordingly to prevent
-    // accidentally setting the extra bit.
-    unsigned ShAmtWidth = Subtarget.getXLen() - 1;
-    SDValue ShAmt = DAG.getNode(ISD::AND, DL, VT, Op.getOperand(2),
-                                DAG.getConstant(ShAmtWidth, DL, VT));
-    // fshl and fshr concatenate their operands in the same order. fsr and fsl
-    // instruction use different orders. fshl will return its first operand for
-    // shift of zero, fshr will return its second operand. fsl and fsr both
-    // return rs1 so the ISD nodes need to have different operand orders.
-    // Shift amount is in rs2.
-    SDValue Op0 = Op.getOperand(0);
-    SDValue Op1 = Op.getOperand(1);
-    unsigned Opc = RISCVISD::FSL;
-    if (Op.getOpcode() == ISD::FSHR) {
-      std::swap(Op0, Op1);
-      Opc = RISCVISD::FSR;
-    }
-    return DAG.getNode(Opc, DL, VT, Op0, Op1, ShAmt);
-  }
   case ISD::TRUNCATE:
     // Only custom-lower vector truncates
     if (!Op.getSimpleValueType().isVector())
@@ -5150,12 +5117,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_bfp:
     return DAG.getNode(RISCVISD::BFP, DL, XLenVT, Op.getOperand(1),
                        Op.getOperand(2));
-  case Intrinsic::riscv_fsl:
-    return DAG.getNode(RISCVISD::FSL, DL, XLenVT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
-  case Intrinsic::riscv_fsr:
-    return DAG.getNode(RISCVISD::FSR, DL, XLenVT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::riscv_vmv_x_s:
     assert(Op.getValueType() == XLenVT && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
@@ -7115,10 +7076,6 @@ static RISCVISD::NodeType getRISCVWOpcodeByIntr(unsigned IntNo) {
     return RISCVISD::BDECOMPRESSW;
   case Intrinsic::riscv_bfp:
     return RISCVISD::BFPW;
-  case Intrinsic::riscv_fsl:
-    return RISCVISD::FSLW;
-  case Intrinsic::riscv_fsr:
-    return RISCVISD::FSRW;
   }
 }
 
@@ -7554,34 +7511,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, GREVI));
     break;
   }
-  case ISD::FSHL:
-  case ISD::FSHR: {
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-           Subtarget.hasStdExtZbt() && "Unexpected custom legalisation");
-    SDValue NewOp0 =
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
-    SDValue NewOp1 =
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-    SDValue NewShAmt =
-        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-    // FSLW/FSRW take a 6 bit shift amount but i32 FSHL/FSHR only use 5 bits.
-    // Mask the shift amount to 5 bits to prevent accidentally setting bit 5.
-    NewShAmt = DAG.getNode(ISD::AND, DL, MVT::i64, NewShAmt,
-                           DAG.getConstant(0x1f, DL, MVT::i64));
-    // fshl and fshr concatenate their operands in the same order. fsrw and fslw
-    // instruction use different orders. fshl will return its first operand for
-    // shift of zero, fshr will return its second operand. fsl and fsr both
-    // return rs1 so the ISD nodes need to have different operand orders.
-    // Shift amount is in rs2.
-    unsigned Opc = RISCVISD::FSLW;
-    if (N->getOpcode() == ISD::FSHR) {
-      std::swap(NewOp0, NewOp1);
-      Opc = RISCVISD::FSRW;
-    }
-    SDValue NewOp = DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1, NewShAmt);
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewOp));
-    break;
-  }
   case ISD::EXTRACT_VECTOR_ELT: {
     // Custom-legalize an EXTRACT_VECTOR_ELT where XLEN<SEW, as the SEW element
     // type is illegal (currently only vXi64 RV32).
@@ -7671,9 +7600,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
     case Intrinsic::riscv_bcompress:
     case Intrinsic::riscv_bdecompress:
-    case Intrinsic::riscv_bfp:
-    case Intrinsic::riscv_fsl:
-    case Intrinsic::riscv_fsr: {
+    case Intrinsic::riscv_bfp: {
       assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
              "Unexpected custom legalisation");
       Results.push_back(customLegalizeToWOpByIntr(N, DAG, IntNo));
@@ -9524,21 +9451,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
-  case RISCVISD::FSR:
-  case RISCVISD::FSL:
-  case RISCVISD::FSRW:
-  case RISCVISD::FSLW: {
-    bool IsWInstruction =
-        N->getOpcode() == RISCVISD::FSRW || N->getOpcode() == RISCVISD::FSLW;
-    unsigned BitWidth =
-        IsWInstruction ? 32 : N->getSimpleValueType(0).getSizeInBits();
-    assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
-    // Only the lower log2(Bitwidth)+1 bits of the the shift amount are read.
-    if (SimplifyDemandedLowBitsHelper(1, Log2_32(BitWidth) + 1))
-      return SDValue(N, 0);
-
-    break;
-  }
   case RISCVISD::FMV_X_ANYEXTH:
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
     SDLoc DL(N);
@@ -10232,8 +10144,6 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::RORW:
   case RISCVISD::GREVW:
   case RISCVISD::GORCW:
-  case RISCVISD::FSLW:
-  case RISCVISD::FSRW:
   case RISCVISD::SHFLW:
   case RISCVISD::UNSHFLW:
   case RISCVISD::BCOMPRESSW:
@@ -12290,10 +12200,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RORW)
   NODE_NAME_CASE(CLZW)
   NODE_NAME_CASE(CTZW)
-  NODE_NAME_CASE(FSLW)
-  NODE_NAME_CASE(FSRW)
-  NODE_NAME_CASE(FSL)
-  NODE_NAME_CASE(FSR)
   NODE_NAME_CASE(FMV_H_X)
   NODE_NAME_CASE(FMV_X_ANYEXTH)
   NODE_NAME_CASE(FMV_X_SIGNEXTH)
@@ -13156,60 +13062,6 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     }
   }
   return SDValue();
-}
-
-SDValue
-RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
-                                   SelectionDAG &DAG,
-                                   SmallVectorImpl<SDNode *> &Created) const {
-  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isIntDivCheap(N->getValueType(0), Attr))
-    return SDValue(N, 0); // Lower SDIV as SDIV
-
-  assert((Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()) &&
-         "Unexpected divisor!");
-
-  // Conditional move is needed, so do the transformation iff Zbt is enabled.
-  if (!Subtarget.hasStdExtZbt())
-    return SDValue();
-
-  // When |Divisor| >= 2 ^ 12, it isn't profitable to do such transformation.
-  // Besides, more critical path instructions will be generated when dividing
-  // by 2. So we keep using the original DAGs for these cases.
-  unsigned Lg2 = Divisor.countTrailingZeros();
-  if (Lg2 == 1 || Lg2 >= 12)
-    return SDValue();
-
-  // fold (sdiv X, pow2)
-  EVT VT = N->getValueType(0);
-  if (VT != MVT::i32 && !(Subtarget.is64Bit() && VT == MVT::i64))
-    return SDValue();
-
-  SDLoc DL(N);
-  SDValue N0 = N->getOperand(0);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue Pow2MinusOne = DAG.getConstant((1ULL << Lg2) - 1, DL, VT);
-
-  // Add (N0 < 0) ? Pow2 - 1 : 0;
-  SDValue Cmp = DAG.getSetCC(DL, VT, N0, Zero, ISD::SETLT);
-  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
-  SDValue Sel = DAG.getNode(ISD::SELECT, DL, VT, Cmp, Add, N0);
-
-  Created.push_back(Cmp.getNode());
-  Created.push_back(Add.getNode());
-  Created.push_back(Sel.getNode());
-
-  // Divide by pow2.
-  SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, Sel, DAG.getConstant(Lg2, DL, VT));
-
-  // If we're dividing by a positive value, we're done.  Otherwise, we must
-  // negate the result.
-  if (Divisor.isNonNegative())
-    return SRA;
-
-  Created.push_back(SRA.getNode());
-  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), SRA);
 }
 
 bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {

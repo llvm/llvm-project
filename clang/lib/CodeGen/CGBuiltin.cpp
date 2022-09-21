@@ -19284,10 +19284,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_crc32c_h:
   case RISCV::BI__builtin_riscv_crc32c_w:
   case RISCV::BI__builtin_riscv_crc32c_d:
-  case RISCV::BI__builtin_riscv_fsl_32:
-  case RISCV::BI__builtin_riscv_fsr_32:
-  case RISCV::BI__builtin_riscv_fsl_64:
-  case RISCV::BI__builtin_riscv_fsr_64:
   case RISCV::BI__builtin_riscv_brev8:
   case RISCV::BI__builtin_riscv_zip_32:
   case RISCV::BI__builtin_riscv_unzip_32: {
@@ -19390,16 +19386,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_crc32c_d:
       ID = Intrinsic::riscv_crc32c_d;
-      break;
-
-    // Zbt
-    case RISCV::BI__builtin_riscv_fsl_32:
-    case RISCV::BI__builtin_riscv_fsl_64:
-      ID = Intrinsic::riscv_fsl;
-      break;
-    case RISCV::BI__builtin_riscv_fsr_32:
-    case RISCV::BI__builtin_riscv_fsr_64:
-      ID = Intrinsic::riscv_fsr;
       break;
 
     // Zbkx

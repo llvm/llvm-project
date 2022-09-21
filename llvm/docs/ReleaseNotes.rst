@@ -112,6 +112,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Support the unratified Zbt extension has been removed.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 

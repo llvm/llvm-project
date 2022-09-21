@@ -198,13 +198,6 @@ def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbs),
                              "'Zbs' (Single-Bit Instructions)">;
 
-def FeatureStdExtZbt
-    : SubtargetFeature<"experimental-zbt", "HasStdExtZbt", "true",
-                       "'Zbt' (Ternary 'Zb' Instructions)">;
-def HasStdExtZbt : Predicate<"Subtarget->hasStdExtZbt()">,
-                             AssemblerPredicate<(all_of FeatureStdExtZbt),
-                             "'Zbt' (Ternary 'Zb' Instructions)">;
-
 // Some instructions belong to both the basic and the permutation
 // subextensions. They should be enabled if either has been specified.
 def HasStdExtZbbOrZbp
