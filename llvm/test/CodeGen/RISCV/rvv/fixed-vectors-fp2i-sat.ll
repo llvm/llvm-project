@@ -2624,3 +2624,96 @@ define void @fp2ui_v8f64_v8i8(<8 x double>* %x, <8 x i8>* %y) {
   ret void
 }
 declare <8 x i8> @llvm.fptoui.sat.v8i8.v8f64(<8 x double> %a)
+
+define void @fp2si_v2f64_v2i32(<2 x double>* %x, <2 x i32>* %y) {
+; CHECK-LABEL: fp2si_v2f64_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    feq.d a0, ft0, ft0
+; CHECK-NEXT:    beqz a0, .LBB14_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fcvt.w.d a0, ft0, rtz
+; CHECK-NEXT:  .LBB14_2:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    feq.d a2, ft0, ft0
+; CHECK-NEXT:    beqz a2, .LBB14_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    fcvt.w.d a2, ft0, rtz
+; CHECK-NEXT:  .LBB14_4:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.x v8, a2
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vse32.v v8, (a1)
+; CHECK-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %d = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> %a)
+  store <2 x i32> %d, <2 x i32>* %y
+  ret void
+}
+declare <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double>)
+
+define void @fp2ui_v2f64_v2i32(<2 x double>* %x, <2 x i32>* %y) {
+; RV32-LABEL: fp2ui_v2f64_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV32-NEXT:    vle64.v v8, (a0)
+; RV32-NEXT:    vfmv.f.s ft0, v8
+; RV32-NEXT:    feq.d a0, ft0, ft0
+; RV32-NEXT:    beqz a0, .LBB15_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    fcvt.wu.d a0, ft0, rtz
+; RV32-NEXT:  .LBB15_2:
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vslidedown.vi v8, v8, 1
+; RV32-NEXT:    vfmv.f.s ft0, v8
+; RV32-NEXT:    feq.d a2, ft0, ft0
+; RV32-NEXT:    beqz a2, .LBB15_4
+; RV32-NEXT:  # %bb.3:
+; RV32-NEXT:    fcvt.wu.d a2, ft0, rtz
+; RV32-NEXT:  .LBB15_4:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV32-NEXT:    vmv.v.x v8, a2
+; RV32-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; RV32-NEXT:    vmv.s.x v8, a0
+; RV32-NEXT:    vse32.v v8, (a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: fp2ui_v2f64_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    vfmv.f.s ft0, v8
+; RV64-NEXT:    feq.d a0, ft0, ft0
+; RV64-NEXT:    beqz a0, .LBB15_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    fcvt.wu.d a0, ft0, rtz
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:  .LBB15_2:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vslidedown.vi v8, v8, 1
+; RV64-NEXT:    vfmv.f.s ft0, v8
+; RV64-NEXT:    feq.d a2, ft0, ft0
+; RV64-NEXT:    beqz a2, .LBB15_4
+; RV64-NEXT:  # %bb.3:
+; RV64-NEXT:    fcvt.wu.d a2, ft0, rtz
+; RV64-NEXT:    slli a2, a2, 32
+; RV64-NEXT:    srli a2, a2, 32
+; RV64-NEXT:  .LBB15_4:
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vmv.v.x v8, a2
+; RV64-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; RV64-NEXT:    vmv.s.x v8, a0
+; RV64-NEXT:    vse32.v v8, (a1)
+; RV64-NEXT:    ret
+  %a = load <2 x double>, <2 x double>* %x
+  %d = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double> %a)
+  store <2 x i32> %d, <2 x i32>* %y
+  ret void
+}
+declare <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double>)
