@@ -35,8 +35,7 @@ func.func @entry() {
   %cst9 = arith.constant 9 : i16
   %cst15 = arith.constant 15 : i16
 
-  %cst_1 = arith.constant -1 : i16
-  %cst_3 = arith.constant -3 : i16
+  %cst_n1 = arith.constant -1 : i16
 
   %cst1337 = arith.constant 1337 : i16
 
@@ -52,8 +51,8 @@ func.func @entry() {
   func.call @check_shrui(%cst0, %cst1) : (i16, i16) -> ()
   func.call @check_shrui(%cst1, %cst1) : (i16, i16) -> ()
   func.call @check_shrui(%cst1, %cst0) : (i16, i16) -> ()
-  func.call @check_shrui(%cst_1, %cst1) : (i16, i16) -> ()
-  func.call @check_shrui(%cst_1, %cst15) : (i16, i16) -> ()
+  func.call @check_shrui(%cst_n1, %cst1) : (i16, i16) -> ()
+  func.call @check_shrui(%cst_n1, %cst15) : (i16, i16) -> ()
 
   // CHECK-NEXT: 1337
   // CHECK-NEXT: 334

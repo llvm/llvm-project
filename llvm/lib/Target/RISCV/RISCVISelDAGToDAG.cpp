@@ -2630,11 +2630,14 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 // peephole only deals with VMERGE_VVM which is TU and has false operand same as
 // its true operand now. E.g. (VMERGE_VVM_M1_TU False, False, (VADD_M1 ...),
 // ...) -> (VADD_VV_M1_MASK)
-bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
-  SDValue Merge = N->getOperand(0);
-  SDValue True = N->getOperand(2);
-  SDValue Mask = N->getOperand(3);
-  SDValue VL = N->getOperand(4);
+bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
+  unsigned Offset = IsTA ? 0 : 1;
+  uint64_t Policy = IsTA ? RISCVII::TAIL_AGNOSTIC : /*TUMU*/ 0;
+
+  SDValue False = N->getOperand(0 + Offset);
+  SDValue True = N->getOperand(1 + Offset);
+  SDValue Mask = N->getOperand(2 + Offset);
+  SDValue VL = N->getOperand(3 + Offset);
 
   assert(True.getResNo() == 0 &&
          "Expect True is the first output of an instruction.");
@@ -2688,13 +2691,14 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   unsigned MaskedOpc = Info->MaskedPseudo;
   assert(RISCVII::hasVecPolicyOp(TII->get(MaskedOpc).TSFlags) &&
          "Expected instructions with mask have policy operand.");
+  assert(RISCVII::hasMergeOp(TII->get(MaskedOpc).TSFlags) &&
+         "Expected instructions with mask have merge operand.");
 
   SmallVector<SDValue, 8> Ops;
-  Ops.push_back(Merge);
+  Ops.push_back(False);
   Ops.append(True->op_begin(), True->op_begin() + TrueVLIndex);
   Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
-  Ops.push_back(
-      CurDAG->getTargetConstant(/* TUMU */ 0, DL, Subtarget->getXLenVT()));
+  Ops.push_back(CurDAG->getTargetConstant(Policy, DL, Subtarget->getXLenVT()));
 
   // Result node should have chain operand of True.
   if (HasChainOp)
@@ -2782,15 +2786,24 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
              Opcode == RISCV::PseudoVMERGE_VVM_M8_TU;
     };
 
+    auto IsVMergeTA = [](unsigned Opcode) {
+      return Opcode == RISCV::PseudoVMERGE_VVM_MF8 ||
+             Opcode == RISCV::PseudoVMERGE_VVM_MF4 ||
+             Opcode == RISCV::PseudoVMERGE_VVM_MF2 ||
+             Opcode == RISCV::PseudoVMERGE_VVM_M1 ||
+             Opcode == RISCV::PseudoVMERGE_VVM_M2 ||
+             Opcode == RISCV::PseudoVMERGE_VVM_M4 ||
+             Opcode == RISCV::PseudoVMERGE_VVM_M8;
+    };
+
     unsigned Opc = N->getMachineOpcode();
     // The following optimizations require that the merge operand of N is same
     // as the false operand of N.
-    // TODO: Also deal with TA VMerge nodes.
-    if (!IsVMergeTU(Opc) || N->getOperand(0) != N->getOperand(1))
-      continue;
-
-    MadeChange |= performCombineVMergeAndVOps(N);
-    MadeChange |= performVMergeToVAdd(N);
+    if ((IsVMergeTU(Opc) && N->getOperand(0) == N->getOperand(1)) ||
+        IsVMergeTA(Opc))
+      MadeChange |= performCombineVMergeAndVOps(N, IsVMergeTA(Opc));
+    if (IsVMergeTU(Opc) && N->getOperand(0) == N->getOperand(1))
+      MadeChange |= performVMergeToVAdd(N);
   }
   return MadeChange;
 }

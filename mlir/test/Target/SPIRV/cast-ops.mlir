@@ -71,3 +71,23 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     spv.ReturnValue %0 : i64
   }
 }
+
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Kernel], []> {
+  spv.func @ptr_cast_to_generic(%arg0 : !spv.ptr<f32, CrossWorkgroup>) "None" {
+    // CHECK: {{%.*}} = spv.PtrCastToGeneric {{%.*}} : !spv.ptr<f32, CrossWorkgroup> to !spv.ptr<f32, Generic>
+    %0 = spv.PtrCastToGeneric %arg0 : !spv.ptr<f32, CrossWorkgroup> to !spv.ptr<f32, Generic>
+    spv.Return
+  }
+  spv.func @generic_cast_to_ptr(%arg0 : !spv.ptr<vector<2xi32>, Generic>) "None" {
+    // CHECK: {{%.*}} = spv.GenericCastToPtr {{%.*}} : !spv.ptr<vector<2xi32>, Generic> to !spv.ptr<vector<2xi32>, CrossWorkgroup>
+    %0 = spv.GenericCastToPtr %arg0 : !spv.ptr<vector<2xi32>, Generic> to !spv.ptr<vector<2xi32>, CrossWorkgroup>
+    spv.Return
+  }
+  spv.func @generic_cast_to_ptr_explicit(%arg0 : !spv.ptr<vector<2xi32>, Generic>) "None" {
+    // CHECK: {{%.*}} = spv.GenericCastToPtrExplicit {{%.*}} : !spv.ptr<vector<2xi32>, Generic> to !spv.ptr<vector<2xi32>, CrossWorkgroup>
+    %0 = spv.GenericCastToPtrExplicit %arg0 : !spv.ptr<vector<2xi32>, Generic> to !spv.ptr<vector<2xi32>, CrossWorkgroup>
+    spv.Return
+  }
+}

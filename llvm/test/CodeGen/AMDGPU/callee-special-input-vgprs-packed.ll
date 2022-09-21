@@ -562,13 +562,13 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 }
 
 ; GCN-LABEL: {{^}}too_many_args_use_workitem_id_xyz:
-; GFX90A-DAG: buffer_load_dword [[LOAD_ARG31:v[0-9]+]], off, s[0:3], s32{{$}}
-; GFX90A-DAG: v_and_b32_e32 [[ID_X:v[0-9]+]], 0x3ff, v31
-; GFX90A-DAG: global_store_dword v{{\[[0-9]+:[0-9]+]}}, [[ID_X]], off{{$}}
-; GFX90A-DAG: v_bfe_u32 [[ID_Y:v[0-9]+]], v31, 10, 10
-; GFX90A-DAG: v_bfe_u32 [[ID_Z:v[0-9]+]], v31, 20, 10
-; GFX90A-DAG: global_store_dword v{{\[[0-9]+:[0-9]+]}}, [[ID_Y]], off{{$}}
-; GFX90A-DAG: global_store_dword v{{\[[0-9]+:[0-9]+]}}, [[ID_Z]], off{{$}}
+; GFX90A: buffer_load_dword [[LOAD_ARG31:v[0-9]+]], off, s[0:3], s32{{$}}
+; GFX90A: v_and_b32_e32 [[ID_X:v[0-9]+]], 0x3ff, v31
+; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, [[ID_X]], off{{$}}
+; GFX90A: v_bfe_u32 [[ID_Y:v[0-9]+]], v31, 10, 10
+; GFX90A: v_bfe_u32 [[ID_Z:v[0-9]+]], v31, 20, 10
+; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, [[ID_Y]], off{{$}}
+; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, [[ID_Z]], off{{$}}
 
 ; GFX7:   v_and_b32_e32 v32, 0x3ff, v31
 ; GFX7:   v_bfe_u32 v32, v31, 10, 10

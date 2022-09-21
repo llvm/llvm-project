@@ -331,4 +331,144 @@ def SPV_UConvertOp : SPV_CastOp<"UConvert",
   }];
 }
 
+// -----
+def SPV_PtrCastToGenericOp : SPV_Op<"PtrCastToGeneric", [NoSideEffect]> {
+  let summary = "Convert a pointer’s Storage Class to Generic.";
+
+  let description = [{
+    Result Type must be an OpTypePointer. Its Storage Class must be Generic.
+
+    Pointer must point to the Workgroup, CrossWorkgroup, or Function Storage
+    Class.
+
+    Result Type and Pointer must point to the same type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spv.PtrCastToGenericOp %0 : !spv.ptr<f32, CrossWorkGroup> to 
+         !spv.ptr<f32, Generic>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPV_AnyPtr:$pointer
+  );
+
+  let results = (outs
+    SPV_AnyPtr:$result
+  );
+
+  let assemblyFormat = [{
+    $pointer attr-dict `:` type($pointer) `to` type($result)
+  }];
+}
+
+// -----
+
+def SPV_GenericCastToPtrOp : SPV_Op<"GenericCastToPtr", [NoSideEffect]> {
+  let summary = "Convert a pointer’s Storage Class to a non-Generic class.";
+
+  let description = [{
+    Result Type must be an OpTypePointer. Its Storage Class must be
+    Workgroup, CrossWorkgroup, or Function.
+
+    Pointer must point to the Generic Storage Class.
+
+    Result Type and Pointer must point to the same type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+       %1 = spv.GenericCastToPtrOp %0 : !spv.ptr<f32, Generic> to
+       !spv.ptr<f32, CrossWorkGroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPV_AnyPtr:$pointer
+  );
+
+  let results = (outs
+    SPV_AnyPtr:$result
+  );
+
+  let assemblyFormat = [{
+    $pointer attr-dict `:` type($pointer) `to` type($result)
+  }];
+}
+
+// -----
+
+def SPV_GenericCastToPtrExplicitOp : SPV_Op<"GenericCastToPtrExplicit", [NoSideEffect]> {
+  let summary = [{
+    Attempts to explicitly convert Pointer to Storage storage-class pointer
+    value.
+  }];
+
+  let description = [{
+    Result Type must be an OpTypePointer. Its Storage Class must be Storage.
+
+    Pointer must have a type of OpTypePointer whose Type is the same as the
+    Type of Result Type.Pointer must point to the Generic Storage Class. If
+    the cast fails, the instruction result is an OpConstantNull pointer in
+    the Storage Storage Class.
+
+    Storage must be one of the following literal values from Storage Class:
+    Workgroup, CrossWorkgroup, or Function.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    [TODO]
+    ```mlir
+
+    #### Example:
+
+    ```mlir
+       %1 = spv.GenericCastToPtrExplicitOp %0 : !spv.ptr<f32, Generic> to
+       !spv.ptr<f32, CrossWorkGroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPV_AnyPtr:$pointer
+  );
+
+  let results = (outs
+    SPV_AnyPtr:$result
+  );
+
+  let assemblyFormat = [{
+    $pointer attr-dict `:` type($pointer) `to` type($result)
+  }];
+
+  let autogenSerialization = 0;
+}
+
 #endif // MLIR_DIALECT_SPIRV_IR_CAST_OPS

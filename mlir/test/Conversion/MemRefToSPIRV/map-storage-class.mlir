@@ -114,3 +114,56 @@ func.func @missing_mapping() {
   %0 = "dialect.memref_producer"() : () -> (memref<f32, 2>)
   return
 }
+
+// -----
+
+/// Checks memory maps to OpenCL mapping if Kernel capability is enabled.
+module attributes { spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel], []>, #spv.resource_limits<>> } {
+func.func @operand_result() {
+  // CHECK: memref<f32, #spv.storage_class<CrossWorkgroup>>
+  %0 = "dialect.memref_producer"() : () -> (memref<f32>)
+  // CHECK: memref<4xi32, #spv.storage_class<Generic>>
+  %1 = "dialect.memref_producer"() : () -> (memref<4xi32, 1>)
+  // CHECK: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  %2 = "dialect.memref_producer"() : () -> (memref<?x4xf16, 3>)
+  // CHECK: memref<*xf16, #spv.storage_class<UniformConstant>>
+  %3 = "dialect.memref_producer"() : () -> (memref<*xf16, 4>)
+
+
+  "dialect.memref_consumer"(%0) : (memref<f32>) -> ()
+  // CHECK: memref<4xi32, #spv.storage_class<Generic>>
+  "dialect.memref_consumer"(%1) : (memref<4xi32, 1>) -> ()
+  // CHECK: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  "dialect.memref_consumer"(%2) : (memref<?x4xf16, 3>) -> ()
+  // CHECK: memref<*xf16, #spv.storage_class<UniformConstant>>
+  "dialect.memref_consumer"(%3) : (memref<*xf16, 4>) -> ()
+
+  return
+}
+}
+
+// -----
+
+/// Checks memory maps to Vulkan mapping if Shader capability is enabled.
+module attributes { spv.target_env = #spv.target_env<#spv.vce<v1.0, [Shader], []>, #spv.resource_limits<>> } {
+func.func @operand_result() {
+  // CHECK: memref<f32, #spv.storage_class<StorageBuffer>>
+  %0 = "dialect.memref_producer"() : () -> (memref<f32>)
+  // CHECK: memref<4xi32, #spv.storage_class<Generic>>
+  %1 = "dialect.memref_producer"() : () -> (memref<4xi32, 1>)
+  // CHECK: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  %2 = "dialect.memref_producer"() : () -> (memref<?x4xf16, 3>)
+  // CHECK: memref<*xf16, #spv.storage_class<Uniform>>
+  %3 = "dialect.memref_producer"() : () -> (memref<*xf16, 4>)
+
+
+  "dialect.memref_consumer"(%0) : (memref<f32>) -> ()
+  // CHECK: memref<4xi32, #spv.storage_class<Generic>>
+  "dialect.memref_consumer"(%1) : (memref<4xi32, 1>) -> ()
+  // CHECK: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  "dialect.memref_consumer"(%2) : (memref<?x4xf16, 3>) -> ()
+  // CHECK: memref<*xf16, #spv.storage_class<Uniform>>
+  "dialect.memref_consumer"(%3) : (memref<*xf16, 4>) -> ()
+  return
+}
+}

@@ -158,6 +158,7 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool IsPS4 = TC.getTriple().isPS4();
   const bool IsPS5 = TC.getTriple().isPS5();
   assert(IsPS4 || IsPS5);
+  (void)IsPS5;
 
   ArgStringList DbgOpts;
 

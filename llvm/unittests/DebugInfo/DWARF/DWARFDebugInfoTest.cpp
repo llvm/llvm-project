@@ -1109,6 +1109,7 @@ TEST(DWARFDebugInfo, TestStringOffsets) {
   DWARFUnit *U = DwarfContext->getUnitAtIndex(0);
   auto DieDG = U->getUnitDIE(false);
   ASSERT_TRUE(DieDG.isValid());
+  ASSERT_TRUE(U->isLittleEndian() == Triple.isLittleEndian());
 
   // Now make sure the string offsets came out properly. Attr2 should have index
   // 0 (because it was the first indexed string) even though the string itself
