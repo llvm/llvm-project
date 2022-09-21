@@ -129,10 +129,6 @@ let TargetPrefix = "riscv" in {
   def int_riscv_crc32c_w : BitManipGPRIntrinsics;
   def int_riscv_crc32c_d : BitManipGPRIntrinsics;
 
-  // Zbt
-  def int_riscv_fsl : BitManipGPRGPRGRIntrinsics;
-  def int_riscv_fsr : BitManipGPRGPRGRIntrinsics;
-
   // Zbkb
   def int_riscv_brev8 : BitManipGPRIntrinsics;
   def int_riscv_zip   : BitManipGPRIntrinsics;

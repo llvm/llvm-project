@@ -131,7 +131,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zawrs``
   LLVM implements the `1.0-rc3 draft specification <https://github.com/riscv/riscv-zawrs/releases/download/V1.0-rc3/Zawrs.pdf>`_.  Note that have been backwards incompatible changes made between release candidates for the 1.0 draft.
 
-``experimental-zbe``, ``experimental-zbf``, ``experimental-zbm``, ``experimental-zbp``, ``experimental-zbr``, ``experimental-zbt``
+``experimental-zbe``, ``experimental-zbf``, ``experimental-zbm``, ``experimental-zbp``, ``experimental-zbr``
   LLVM implements the `latest state of the bitmanip working branch <https://github.com/riscv/riscv-bitmanip/tree/main-history>`_, which is largely similar to the 0.93 draft specification but with some instruction naming changes.  These are individual portions of the bitmanip efforts which did *not* get ratified.  Given ratification for these sub-extensions appears stalled; they are a likely candidate for removal in the future.
 
 ``experimental-zca``

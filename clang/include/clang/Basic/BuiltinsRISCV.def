@@ -69,12 +69,6 @@ TARGET_BUILTIN(__builtin_riscv_crc32c_w, "LiLi", "nc", "experimental-zbr")
 TARGET_BUILTIN(__builtin_riscv_crc32_d, "LiLi", "nc", "experimental-zbr,64bit")
 TARGET_BUILTIN(__builtin_riscv_crc32c_d, "LiLi", "nc", "experimental-zbr,64bit")
 
-// Zbt extension
-TARGET_BUILTIN(__builtin_riscv_fsl_32, "LiLiLiLi", "nc", "experimental-zbt")
-TARGET_BUILTIN(__builtin_riscv_fsr_32, "LiLiLiLi", "nc", "experimental-zbt")
-TARGET_BUILTIN(__builtin_riscv_fsl_64, "WiWiWiWi", "nc", "experimental-zbt,64bit")
-TARGET_BUILTIN(__builtin_riscv_fsr_64, "WiWiWiWi", "nc", "experimental-zbt,64bit")
-
 // Zbkb extension
 TARGET_BUILTIN(__builtin_riscv_brev8, "LiLi", "nc", "zbkb")
 TARGET_BUILTIN(__builtin_riscv_zip_32, "ZiZi", "nc", "zbkb,32bit")
