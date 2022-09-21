@@ -295,8 +295,6 @@ def note_missing_selector_name : Note<
 def note_force_empty_selector_name : Note<
   "or insert whitespace before ':' to use %0 as parameter name "
   "and have an empty entry in the selector">;
-def err_switch_label_end_of_compound_statement : Error<
-  "label at end of switch compound statement: expected statement">;
 def ext_c_label_end_of_compound_statement : ExtWarn<
   "label at end of compound statement is a C2x extension">,
    InGroup<C2x>;
