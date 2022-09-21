@@ -49,7 +49,7 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SerializeToCubinPass)
 
   SerializeToCubinPass(StringRef triple = "nvptx64-nvidia-cuda",
-                       StringRef chip = "sm_80", StringRef features = "+ptx75");
+                       StringRef chip = "sm_80", StringRef features = "+ptx70");
 
   StringRef getArgument() const override { return "gpu-to-cubin"; }
   StringRef getDescription() const override {
