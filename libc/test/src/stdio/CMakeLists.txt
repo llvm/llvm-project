@@ -15,6 +15,7 @@ add_libc_unittest(
     libc.src.stdio.ferror
     libc.src.stdio.fflush
     libc.src.stdio.fopen
+    libc.src.stdio.fputs
     libc.src.stdio.fread
     libc.src.stdio.fseek
     libc.src.stdio.fwrite
@@ -108,7 +109,16 @@ add_libc_unittest(
     printf_test.cpp
   DEPENDS
     libc.src.stdio.printf
-    libc.src.fenv.fesetround
+)
+
+add_libc_unittest(
+  puts_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    puts_test.cpp
+  DEPENDS
+    libc.src.stdio.puts
 )
 
 add_libc_unittest(
