@@ -109,7 +109,7 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;mlir;openmp;polly;pstl")
 
 # Add tapi to the list of llvm projects.
 set(LLVM_ALL_PROJECTS "${LLVM_ALL_PROJECTS};tapi")
@@ -126,7 +126,13 @@ if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
 endif()
 foreach(proj ${LLVM_ENABLE_PROJECTS})
   if (NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
-     MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}. Did you mean to enable it as a runtime in LLVM_ENABLE_RUNTIMES?")
+     MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}")
+  endif()
+endforeach()
+foreach(proj "libcxx" "libcxxabi" "libunwind")
+  if (${proj} IN_LIST LLVM_ENABLE_PROJECTS)
+    message(WARNING "Using LLVM_ENABLE_PROJECTS=${proj} is deprecated now, please use -DLLVM_ENABLE_RUNTIMES=${proj} or "
+                    "see the instructions at https://libcxx.llvm.org/BuildingLibcxx.html for building the runtimes.")
   endif()
 endforeach()
 
@@ -1006,7 +1012,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   file(COPY ${TENSORFLOW_AOT_PATH}/include DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow
     NO_SOURCE_PERMISSIONS
     PATTERN "google/*" EXCLUDE
-    PATTERN "*.pb.h" EXCLUDE) 
+    PATTERN "*.pb.h" EXCLUDE)
   include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
