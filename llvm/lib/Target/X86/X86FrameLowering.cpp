@@ -3509,6 +3509,12 @@ bool X86FrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   if (!MBB.isLiveIn(X86::EFLAGS))
     return true;
 
+  // If stack probes have to loop inline or call, that will clobber EFLAGS.
+  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
+  const X86TargetLowering &TLI = *STI.getTargetLowering();
+  if (TLI.hasInlineStackProbe(MF) || TLI.hasStackProbeSymbol(MF))
+    return false;
+
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   return !TRI->hasStackRealignment(MF) && !X86FI->hasSwiftAsyncContext();
 }
