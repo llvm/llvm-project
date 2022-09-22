@@ -511,7 +511,6 @@ define i8 @disguised_signbit_clear_test(i64 %x) {
   ret i8 %t6
 }
 
-; FIXME: Currently miscompiled.
 define i16 @pr57899(i1 %c, i32 %x) {
 ; CHECK-LABEL: @pr57899(
 ; CHECK-NEXT:  entry:
@@ -519,7 +518,7 @@ define i16 @pr57899(i1 %c, i32 %x) {
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    ret i16 0
+; CHECK-NEXT:    ret i16 1
 ;
 entry:
   br i1 %c, label %if, label %join
