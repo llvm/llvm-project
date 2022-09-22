@@ -116,9 +116,6 @@
 .attribute arch, "rv32izbm0p93"
 # CHECK: attribute      5, "rv32i2p0_zbm0p93"
 
-.attribute arch, "rv32izbp0p93"
-# CHECK: attribute      5, "rv32i2p0_zbp0p93"
-
 .attribute arch, "rv32izbr0p93"
 # CHECK: attribute      5, "rv32i2p0_zbr0p93"
 
