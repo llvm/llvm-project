@@ -76,23 +76,23 @@ define void @umul(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 
 define void @smax(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 ; THRU-LABEL: 'smax'
-; THRU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
-; THRU-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'smax'
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'smax'
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'smax'
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
