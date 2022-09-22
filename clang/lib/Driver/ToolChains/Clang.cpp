@@ -6500,6 +6500,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcoroutines-ts");
   }
 
+  if (Args.hasFlag(options::OPT_fcoro_aligned_allocation,
+                   options::OPT_fno_coro_aligned_allocation, false) &&
+      types::isCXX(InputType))
+    CmdArgs.push_back("-fcoro-aligned-allocation");
+
   Args.AddLastArg(CmdArgs, options::OPT_fdouble_square_bracket_attributes,
                   options::OPT_fno_double_square_bracket_attributes);
 
