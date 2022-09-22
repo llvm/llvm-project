@@ -1,5 +1,24 @@
 // RUN: mlir-opt --simplify-extract-strided-metadata -split-input-file %s -o - | FileCheck %s
 
+// CHECK-LABEL: func @extract_strided_metadata_constants
+//  CHECK-SAME: (%[[ARG:.*]]: memref<5x4xf32, strided<[4, 1], offset: 2>>)
+func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4, 1], offset: 2>>)
+    -> (memref<f32>, index, index, index, index, index) {
+  //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+  //   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+  //   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+  //   CHECK-DAG: %[[C5:.*]] = arith.constant 5 : index
+  
+  //       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
+  %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %base :
+    memref<5x4xf32, strided<[4,1], offset:2>>
+    -> memref<f32>, index, index, index, index, index
+
+  // CHECK: %[[BASE]], %[[C2]], %[[C5]], %[[C4]], %[[C4]], %[[C1]]
+  return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
+    memref<f32>, index, index, index, index, index
+}
+
 // -----
 
 // Check that we simplify extract_strided_metadata of subview to

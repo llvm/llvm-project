@@ -18,6 +18,7 @@
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 namespace mlir {
@@ -428,13 +429,72 @@ public:
     return success();
   }
 };
+
+/// Helper function to perform the replacement of all constant uses of `values`
+/// by a materialized constant extracted from `maybeConstants`.
+/// `values` and `maybeConstants` are expected to have the same size.
+template <typename Container>
+bool replaceConstantUsesOf(PatternRewriter &rewriter, Location loc,
+                           Container values, ArrayRef<int64_t> maybeConstants,
+                           llvm::function_ref<bool(int64_t)> isDynamic) {
+  assert(values.size() == maybeConstants.size() &&
+         " expected values and maybeConstants of the same size");
+  bool atLeastOneReplacement = false;
+  for (auto [maybeConstant, result] : llvm::zip(maybeConstants, values)) {
+    // Don't materialize a constant if there are no uses: this would indice
+    // infinite loops in the driver.
+    if (isDynamic(maybeConstant) || result.use_empty())
+      continue;
+    Value constantVal =
+        rewriter.create<arith::ConstantIndexOp>(loc, maybeConstant);
+    for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
+      rewriter.startRootUpdate(op);
+      // updateRootInplace: lambda cannot capture structured bindings in C++17
+      // yet.
+      op->replaceUsesOfWith(result, constantVal);
+      rewriter.finalizeRootUpdate(op);
+      atLeastOneReplacement = true;
+    }
+  }
+  return atLeastOneReplacement;
+}
+
+// Forward propagate all constants information from an ExtractStridedMetadataOp.
+struct ForwardStaticMetadata
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+  using OpRewritePattern<memref::ExtractStridedMetadataOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp metadataOp,
+                                PatternRewriter &rewriter) const override {
+    auto memrefType = metadataOp.getSource().getType().cast<MemRefType>();
+    SmallVector<int64_t> strides;
+    int64_t offset;
+    LogicalResult res = getStridesAndOffset(memrefType, strides, offset);
+    (void)res;
+    assert(succeeded(res) && "must be a strided memref type");
+
+    bool atLeastOneReplacement = replaceConstantUsesOf(
+        rewriter, metadataOp.getLoc(),
+        ArrayRef<TypedValue<IndexType>>(metadataOp.getOffset()),
+        ArrayRef<int64_t>(offset), ShapedType::isDynamicStrideOrOffset);
+    atLeastOneReplacement |= replaceConstantUsesOf(
+        rewriter, metadataOp.getLoc(), metadataOp.getSizes(),
+        memrefType.getShape(), ShapedType::isDynamic);
+    atLeastOneReplacement |= replaceConstantUsesOf(
+        rewriter, metadataOp.getLoc(), metadataOp.getStrides(), strides,
+        ShapedType::isDynamicStrideOrOffset);
+
+    return success(atLeastOneReplacement);
+  }
+};
 } // namespace
 
 void memref::populateSimplifyExtractStridedMetadataOpPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<ExtractStridedMetadataOpSubviewFolder,
-               ExtractStridedMetadataOpExpandShapeFolder>(
-      patterns.getContext());
+  patterns
+      .add<ExtractStridedMetadataOpSubviewFolder,
+           ExtractStridedMetadataOpExpandShapeFolder, ForwardStaticMetadata>(
+          patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
