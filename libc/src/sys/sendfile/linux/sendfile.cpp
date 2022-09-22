@@ -19,7 +19,8 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(ssize_t, sendfile,
                    (int out_fd, int in_fd, off_t *offset, size_t count)) {
-  long ret = __llvm_libc::syscall(SYS_sendfile, in_fd, out_fd, offset, count);
+  long ret =
+      __llvm_libc::syscall_impl(SYS_sendfile, in_fd, out_fd, offset, count);
   if (ret < 0) {
     errno = -ret;
     return -1;

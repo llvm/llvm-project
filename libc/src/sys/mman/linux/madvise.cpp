@@ -19,8 +19,8 @@ namespace __llvm_libc {
 // This function is currently linux only. It has to be refactored suitably if
 // madvise is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(int, madvise, (void *addr, size_t size, int advice)) {
-  long ret_val = __llvm_libc::syscall(SYS_madvise, reinterpret_cast<long>(addr),
-                                      size, advice);
+  long ret_val = __llvm_libc::syscall_impl(
+      SYS_madvise, reinterpret_cast<long>(addr), size, advice);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.

@@ -20,7 +20,8 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(ssize_t, readlinkat,
                    (int fd, const char *__restrict path, char *__restrict buf,
                     size_t bufsize)) {
-  ssize_t ret = __llvm_libc::syscall(SYS_readlinkat, fd, path, buf, bufsize);
+  ssize_t ret =
+      __llvm_libc::syscall_impl(SYS_readlinkat, fd, path, buf, bufsize);
   if (ret < 0) {
     errno = -ret;
     return -1;

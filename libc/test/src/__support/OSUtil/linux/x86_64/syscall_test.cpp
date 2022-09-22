@@ -16,28 +16,29 @@ TEST(LlvmLibcX86_64_SyscallTest, APITest) {
 
   using __llvm_libc::cpp::function;
 
-  function<long(long)> f([](long n) { return __llvm_libc::syscall(n); });
+  function<long(long)> f([](long n) { return __llvm_libc::syscall_impl(n); });
   function<long(long, long)> f1(
-      [](long n, long a1) { return __llvm_libc::syscall(n, a1); });
-  function<long(long, long, long)> f2(
-      [](long n, long a1, long a2) { return __llvm_libc::syscall(n, a1, a2); });
+      [](long n, long a1) { return __llvm_libc::syscall_impl(n, a1); });
+  function<long(long, long, long)> f2([](long n, long a1, long a2) {
+    return __llvm_libc::syscall_impl(n, a1, a2);
+  });
   function<long(long, long, long, long)> f3(
       [](long n, long a1, long a2, long a3) {
-        return __llvm_libc::syscall(n, a1, a2, a3);
+        return __llvm_libc::syscall_impl(n, a1, a2, a3);
       });
   function<long(long, long, long, long, long)> f4(
       [](long n, long a1, long a2, long a3, long a4) {
-        return __llvm_libc::syscall(n, a1, a2, a3, a4);
+        return __llvm_libc::syscall_impl(n, a1, a2, a3, a4);
       });
   function<long(long, long, long, long, long, long)> f5(
       [](long n, long a1, long a2, long a3, long a4, long a5) {
-        return __llvm_libc::syscall(n, a1, a2, a3, a4, a5);
+        return __llvm_libc::syscall_impl(n, a1, a2, a3, a4, a5);
       });
   function<long(long, long, long, long, long, long, long)> f6(
       [](long n, long a1, long a2, long a3, long a4, long a5, long a6) {
-        return __llvm_libc::syscall(n, a1, a2, a3, a4, a5, a6);
+        return __llvm_libc::syscall_impl(n, a1, a2, a3, a4, a5, a6);
       });
 
   function<long(long, void *)> not_long_type(
-      [](long n, void *a1) { return __llvm_libc::syscall(n, a1); });
+      [](long n, void *a1) { return __llvm_libc::syscall_impl(n, a1); });
 }

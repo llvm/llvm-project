@@ -95,13 +95,13 @@ constexpr inline bool delete_signal(sigset_t &set, int signal) {
 
 static inline int block_all_signals(sigset_t &set) {
   sigset_t full = full_set();
-  return __llvm_libc::syscall(SYS_rt_sigprocmask, SIG_BLOCK, &full, &set,
-                              sizeof(sigset_t));
+  return __llvm_libc::syscall_impl(SYS_rt_sigprocmask, SIG_BLOCK, &full, &set,
+                                   sizeof(sigset_t));
 }
 
 static inline int restore_signals(const sigset_t &set) {
-  return __llvm_libc::syscall(SYS_rt_sigprocmask, SIG_SETMASK, &set, nullptr,
-                              sizeof(sigset_t));
+  return __llvm_libc::syscall_impl(SYS_rt_sigprocmask, SIG_SETMASK, &set,
+                                   nullptr, sizeof(sigset_t));
 }
 
 } // namespace __llvm_libc

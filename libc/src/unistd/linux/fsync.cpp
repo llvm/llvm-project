@@ -17,7 +17,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, fsync, (int fd)) {
-  long ret = __llvm_libc::syscall(SYS_fsync, fd);
+  long ret = __llvm_libc::syscall_impl(SYS_fsync, fd);
   if (ret < 0) {
     errno = -ret;
     return -1;
