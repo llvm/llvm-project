@@ -4359,7 +4359,7 @@ TEST(TransferTest, ContextSensitiveMethodSetter) {
   std::string Code = R"(
     class MyClass {
     public:
-      bool setField(bool Val) { Field = Val; }
+      void setField(bool Val) { Field = Val; }
 
       bool Field;
     };
@@ -4392,7 +4392,7 @@ TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
     class MyClass {
     public:
       bool getField() { return Field; }
-      bool setField(bool Val) { Field = Val; }
+      void setField(bool Val) { Field = Val; }
 
     private:
       bool Field;
@@ -4410,6 +4410,73 @@ TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+      },
+      {TransferOptions{ContextSensitiveOptions{}}});
+}
+
+
+TEST(TransferTest, ContextSensitiveMethodTwoLayersVoid) {
+  std::string Code = R"(
+    class MyClass {
+    public:
+      void Inner() { MyField = true; }
+      void Outer() { Inner(); }
+
+      bool MyField;
+    };
+
+    void target() {
+      MyClass MyObj;
+      MyObj.Outer();
+      bool Foo = MyObj.MyField;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));;
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+      },
+      {TransferOptions{ContextSensitiveOptions{}}});
+}
+
+TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
+  std::string Code = R"(
+    class MyClass {
+    public:
+      bool Inner() { return MyField; }
+      bool Outer() { return Inner(); }
+
+      bool MyField;
+    };
+
+    void target() {
+      MyClass MyObj;
+      MyObj.MyField = true;
+      bool Foo = MyObj.Outer();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));;
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
