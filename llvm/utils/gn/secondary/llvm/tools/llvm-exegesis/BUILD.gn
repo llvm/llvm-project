@@ -16,7 +16,4 @@ executable("llvm-exegesis") {
     "//llvm/lib/Target:AllTargetsInfos",
   ]
   sources = [ "llvm-exegesis.cpp" ]
-
-  defines = [ "LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET=" +
-              "Initialize${native_target}ExegesisTarget" ]
 }
