@@ -46,23 +46,7 @@ def WriteBFP32       : SchedWrite; // BFPW
 // Zbm extension
 def WriteBMatrix     : SchedWrite; // bmator/bmatxor/bmatflip
 
-// Zbp extension
-def WriteORC         : SchedWrite; // gorc
-def WriteREV         : SchedWrite; // grev
-def WriteORC32       : SchedWrite; // gorcw
-def WriteREV32       : SchedWrite; // grevw
-def WriteREVImm      : SchedWrite; // grevi
-def WriteORCImm      : SchedWrite; // gorci
-def WriteREVImm32    : SchedWrite; // greviw
-def WriteORCImm32    : SchedWrite; // gorciw
-def WriteSHFL        : SchedWrite; // shfl
-def WriteUNSHFL      : SchedWrite; // unshfl
-def WriteSHFL32      : SchedWrite; // shflw
-def WriteUNSHFL32    : SchedWrite; // unshflw
-def WriteSHFLImm     : SchedWrite; // shfli
-def WriteUNSHFLImm   : SchedWrite; // unshfli
-def WriteXPERMH      : SchedWrite; // xperm.h
-def WriteXPERMW      : SchedWrite; // xperm.w
+// Zbkb extension
 def WritePACK        : SchedWrite; // pack/packh
 def WritePACK32      : SchedWrite; // packw
 def WritePACKU       : SchedWrite; // packu
@@ -118,23 +102,7 @@ def ReadBFP32       : SchedRead; // BFPW
 // Zbm extension
 def ReadBMatrix     : SchedRead; // bmator/bmatxor/bmatflip
 
-// Zbp extension
-def ReadORC         : SchedRead; // gorc
-def ReadREV         : SchedRead; // grev
-def ReadORC32       : SchedRead; // gorcw
-def ReadREV32       : SchedRead; // grevw
-def ReadREVImm      : SchedRead; // grevi
-def ReadORCImm      : SchedRead; // groci
-def ReadREVImm32    : SchedRead; // greviw
-def ReadORCImm32    : SchedRead; // gorciw
-def ReadSHFL        : SchedRead; // shfl
-def ReadUNSHFL      : SchedRead; // unshfl
-def ReadSHFL32      : SchedRead; // shflw
-def ReadUNSHFL32    : SchedRead; // unshflw
-def ReadSHFLImm     : SchedRead; // shfli
-def ReadUNSHFLImm   : SchedRead; // unshfli
-def ReadXPERMH      : SchedRead; // xperm.h
-def ReadXPERMW      : SchedRead; // xperm.w
+// Zbkb extension
 def ReadPACK        : SchedRead; // pack/packh
 def ReadPACK32      : SchedRead; // packw
 def ReadPACKU       : SchedRead; // packu
@@ -242,45 +210,13 @@ def : ReadAdvance<ReadBMatrix, 0>;
 }
 }
 
-multiclass UnsupportedSchedZbp {
+multiclass UnsupportedSchedZbkb {
 let Unsupported = true in {
-def : WriteRes<WriteORC, []>;
-def : WriteRes<WriteREV, []>;
-def : WriteRes<WriteORC32, []>;
-def : WriteRes<WriteREV32, []>;
-def : WriteRes<WriteREVImm, []>;
-def : WriteRes<WriteORCImm, []>;
-def : WriteRes<WriteREVImm32, []>;
-def : WriteRes<WriteORCImm32, []>;
-def : WriteRes<WriteSHFL, []>;
-def : WriteRes<WriteUNSHFL, []>;
-def : WriteRes<WriteSHFL32, []>;
-def : WriteRes<WriteUNSHFL32, []>;
-def : WriteRes<WriteSHFLImm, []>;
-def : WriteRes<WriteUNSHFLImm, []>;
-def : WriteRes<WriteXPERMH, []>;
-def : WriteRes<WriteXPERMW, []>;
 def : WriteRes<WritePACK, []>;
 def : WriteRes<WritePACK32, []>;
 def : WriteRes<WritePACKU, []>;
 def : WriteRes<WritePACKU32, []>;
 
-def : ReadAdvance<ReadORC, 0>;
-def : ReadAdvance<ReadREV, 0>;
-def : ReadAdvance<ReadORC32, 0>;
-def : ReadAdvance<ReadREV32, 0>;
-def : ReadAdvance<ReadREVImm, 0>;
-def : ReadAdvance<ReadORCImm, 0>;
-def : ReadAdvance<ReadREVImm32, 0>;
-def : ReadAdvance<ReadORCImm32, 0>;
-def : ReadAdvance<ReadSHFL, 0>;
-def : ReadAdvance<ReadUNSHFL, 0>;
-def : ReadAdvance<ReadSHFL32, 0>;
-def : ReadAdvance<ReadUNSHFL32, 0>;
-def : ReadAdvance<ReadSHFLImm, 0>;
-def : ReadAdvance<ReadUNSHFLImm, 0>;
-def : ReadAdvance<ReadXPERMH, 0>;
-def : ReadAdvance<ReadXPERMW, 0>;
 def : ReadAdvance<ReadPACK, 0>;
 def : ReadAdvance<ReadPACK32, 0>;
 def : ReadAdvance<ReadPACKU, 0>;

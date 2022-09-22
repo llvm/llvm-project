@@ -25,7 +25,6 @@
 // CHECK-NOT: __riscv_zbe
 // CHECK-NOT: __riscv_zbf
 // CHECK-NOT: __riscv_zbm
-// CHECK-NOT: __riscv_zbp
 // CHECK-NOT: __riscv_zbr
 // CHECK-NOT: __riscv_zbs
 // CHECK-NOT: __riscv_zbt
@@ -190,15 +189,6 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZBM-EXT %s
 // CHECK-ZBM-NOT: __riscv_b
 // CHECK-ZBM-EXT: __riscv_zbm 93000{{$}}
-
-// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv32izbp0p93 -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-ZBP-EXT %s
-// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv64izbp0p93 -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-ZBP-EXT %s
-// CHECK-ZBP-NOT: __riscv_b
-// CHECK-ZBP-EXT: __riscv_zbp 93000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
 // RUN: -march=rv32izbr0p93 -x c -E -dM %s \

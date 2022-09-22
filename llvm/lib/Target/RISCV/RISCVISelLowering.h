@@ -114,13 +114,9 @@ enum NodeType : unsigned {
   // DAGs. Each node takes an input operand and a control operand and outputs a
   // bit-manipulated version of input. All operands are i32 or XLenVT.
   GREV,
-  GREVW,
   GORC,
-  GORCW,
   SHFL,
-  SHFLW,
   UNSHFL,
-  UNSHFLW,
   // Bit Compress/Decompress implement the generic bit extract and bit deposit
   // functions. This operation is also referred to as bit gather/scatter, bit
   // pack/unpack, parallel extract/deposit, compress/expand, or right
