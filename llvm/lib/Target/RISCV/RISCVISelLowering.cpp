@@ -9020,26 +9020,27 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (!DCI.isBeforeLegalize())
       break;
     SDValue Index, ScaleOp;
-    bool IsIndexScaled = false;
     bool IsIndexSigned = false;
     if (const auto *VPGSN = dyn_cast<VPGatherScatterSDNode>(N)) {
       Index = VPGSN->getIndex();
       ScaleOp = VPGSN->getScale();
-      IsIndexScaled = VPGSN->isIndexScaled();
       IsIndexSigned = VPGSN->isIndexSigned();
+      assert(!VPGSN->isIndexScaled() &&
+             "Scaled gather/scatter should not be formed");
     } else {
       const auto *MGSN = cast<MaskedGatherScatterSDNode>(N);
       Index = MGSN->getIndex();
       ScaleOp = MGSN->getScale();
-      IsIndexScaled = MGSN->isIndexScaled();
       IsIndexSigned = MGSN->isIndexSigned();
+      assert(!MGSN->isIndexScaled() &&
+             "Scaled gather/scatter should not be formed");
+
     }
     EVT IndexVT = Index.getValueType();
     MVT XLenVT = Subtarget.getXLenVT();
     // RISCV indexed loads only support the "unsigned unscaled" addressing
     // mode, so anything else must be manually legalized.
     bool NeedsIdxLegalization =
-        IsIndexScaled ||
         (IsIndexSigned && IndexVT.getVectorElementType().bitsLT(XLenVT));
     if (!NeedsIdxLegalization)
       break;
@@ -9054,17 +9055,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       IndexVT = IndexVT.changeVectorElementType(XLenVT);
       Index = DAG.getNode(IsIndexSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
                           DL, IndexVT, Index);
-    }
-
-    if (IsIndexScaled) {
-      // Manually scale the indices.
-      // TODO: Sanitize the scale operand here?
-      // TODO: For VP nodes, should we use VP_SHL here?
-      unsigned Scale = cast<ConstantSDNode>(ScaleOp)->getZExtValue();
-      assert(isPowerOf2_32(Scale) && "Expecting power-of-two types");
-      SDValue SplatScale = DAG.getConstant(Log2_32(Scale), DL, IndexVT);
-      Index = DAG.getNode(ISD::SHL, DL, IndexVT, Index, SplatScale);
-      ScaleOp = DAG.getTargetConstant(1, DL, ScaleOp.getValueType());
     }
 
     ISD::MemIndexType NewIndexTy = ISD::UNSIGNED_SCALED;

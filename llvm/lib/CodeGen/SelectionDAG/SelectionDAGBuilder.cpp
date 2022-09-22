@@ -4451,16 +4451,16 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
   if (BasePtr->getType()->isVectorTy() || !IndexVal->getType()->isVectorTy())
     return false;
 
+  uint64_t ScaleVal = DL.getTypeAllocSize(GEP->getResultElementType());
+
+  // Target may not support the required addressing mode.
+  if (ScaleVal != 1 &&
+      !TLI.isLegalScaleForGatherScatter(ScaleVal, ElemSize))
+    return false;
+
   Base = SDB->getValue(BasePtr);
   Index = SDB->getValue(IndexVal);
   IndexType = ISD::SIGNED_SCALED;
-
-  // MGATHER/MSCATTER are only required to support scaling by one or by the
-  // element size. Other scales may be produced using target-specific DAG
-  // combines.
-  uint64_t ScaleVal = DL.getTypeAllocSize(GEP->getResultElementType());
-  if (ScaleVal != ElemSize && ScaleVal != 1)
-    return false;
 
   Scale =
       DAG.getTargetConstant(ScaleVal, SDB->getCurSDLoc(), TLI.getPointerTy(DL));
