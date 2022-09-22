@@ -227,6 +227,18 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- Implemented `-fcoro-aligned-allocation` flag. This flag implements
+  Option 2 of P2014R0 aligned allocation of coroutine frames
+  (`P2014R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p2014r0.pdf>`_).
+  With this flag, the coroutines will try to lookup aligned allocation
+  function all the time. The compiler will emit an error if it fails to
+  find aligned allocation function. So if the user code implemented self
+  defined allocation function for coroutines, the existing code will be
+  broken. A little divergence with P2014R0 is that clang will lookup
+  `::operator new(size_­t, std::aligned_val_t, nothrow_­t)` if there is
+  `get_­return_­object_­on_­allocation_­failure`. We feel this is more consistent
+  with the intention.
+
 Deprecated Compiler Flags
 -------------------------
 
