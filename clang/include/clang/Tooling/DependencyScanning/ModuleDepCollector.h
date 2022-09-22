@@ -95,7 +95,7 @@ struct ModuleDeps {
   llvm::StringSet<> FileDeps;
 
   /// A collection of absolute paths to module map files that this module needs
-  /// to know about.
+  /// to know about. The ordering is significant.
   std::vector<std::string> ModuleMapFileDeps;
 
   /// A collection of prebuilt modular dependencies this module directly depends
@@ -235,6 +235,10 @@ private:
   CompilerInvocation makeInvocationForModuleBuildWithoutOutputs(
       const ModuleDeps &Deps,
       llvm::function_ref<void(CompilerInvocation &)> Optimize) const;
+
+  /// Collect module map files for given modules.
+  llvm::StringSet<>
+  collectModuleMapFiles(ArrayRef<ModuleID> ClangModuleDeps) const;
 
   /// Add module map files to the invocation, if needed.
   void addModuleMapFiles(CompilerInvocation &CI,
