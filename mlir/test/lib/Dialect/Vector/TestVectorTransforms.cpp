@@ -692,7 +692,7 @@ static Value warpReduction(Location loc, OpBuilder &builder, Value input,
                          .create<gpu::ShuffleOp>(loc, laneVal, i,
                                                  /*width=*/size,
                                                  /*mode=*/gpu::ShuffleMode::XOR)
-                         .result();
+                         .getShuffleResult();
     laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
   }
   return laneVal;

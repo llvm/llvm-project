@@ -30,7 +30,7 @@ def OpenMP_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
 
   // TODO: Flip to _Prefixed.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 // OmpCommon requires definition of OpenACC_Dialect.
@@ -114,15 +114,6 @@ def ParallelOp : OpenMP_Op<"parallel", [
     ) $region attr-dict
   }];
   let hasVerifier = 1;
-  let extraClassDeclaration = [{
-    // TODO: remove this once emitAccessorPrefix is set to
-    // kEmitAccessorPrefix_Prefixed for the dialect.
-    /// Returns the reduction variables
-    SmallVector<Value> getReductionVars() {
-      return SmallVector<Value>(reduction_vars().begin(),
-                                reduction_vars().end());
-    }
-  }];
 }
 
 def TerminatorOp : OpenMP_Op<"terminator", [Terminator, NoSideEffect]> {
@@ -221,16 +212,6 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
-
-  let extraClassDeclaration = [{
-    // TODO: remove this once emitAccessorPrefix is set to
-    // kEmitAccessorPrefix_Prefixed for the dialect.
-    /// Returns the reduction variables
-    SmallVector<Value> getReductionVars() {
-      return SmallVector<Value>(reduction_vars().begin(),
-                                reduction_vars().end());
-    }
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -363,14 +344,6 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
 
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return reduction_vars().size(); }
-
-    // TODO: remove this once emitAccessorPrefix is set to
-    // kEmitAccessorPrefix_Prefixed for the dialect.
-    /// Returns the reduction variables
-    SmallVector<Value> getReductionVars() {
-      return SmallVector<Value>(reduction_vars().begin(),
-                                reduction_vars().end());
-    }
   }];
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{
@@ -723,7 +696,7 @@ def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
 
   let extraClassDeclaration = [{
     /// Returns the reduction variables
-    SmallVector<Value> getReductionVars();
+    SmallVector<Value> getAllReductionVars();
     void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
   }];
 
@@ -779,7 +752,7 @@ def TaskGroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
 
   let extraClassDeclaration = [{
     /// Returns the reduction variables
-    operand_range getReductionVars() { return task_reduction_vars(); }
+    operand_range getAllReductionVars() { return task_reduction_vars(); }
   }];
 
   let hasVerifier = 1;
