@@ -20,9 +20,7 @@
 #include "gtest/gtest.h"
 
 using ::testing::AllOf;
-using ::testing::ElementsAre;
 using ::testing::Eq;
-using ::testing::Field;
 using ::testing::get;
 using ::testing::Pointwise;
 using ::testing::Property;
@@ -91,25 +89,10 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   errs() << Filename << "-------\n";
   ExitOnErr(ToDisk.writeYaml(State, Filename));
 
-  const std::unique_ptr<MemoryBuffer> Buffer =
-      std::move(*MemoryBuffer::getFile(Filename));
-
-  {
-    // Read Triples/Cpu only.
-    const auto TriplesAndCpus =
-        ExitOnErr(InstructionBenchmark::readTriplesAndCpusFromYamls(*Buffer));
-
-    ASSERT_THAT(TriplesAndCpus,
-                testing::ElementsAre(
-                    AllOf(Field(&InstructionBenchmark::TripleAndCpu::LLVMTriple,
-                                Eq("llvm_triple")),
-                          Field(&InstructionBenchmark::TripleAndCpu::CpuName,
-                                Eq("cpu_name")))));
-  }
   {
     // One-element version.
     const auto FromDisk =
-        ExitOnErr(InstructionBenchmark::readYaml(State, *Buffer));
+        ExitOnErr(InstructionBenchmark::readYaml(State, Filename));
 
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
@@ -125,7 +108,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // Vector version.
     const auto FromDiskVector =
-        ExitOnErr(InstructionBenchmark::readYamls(State, *Buffer));
+        ExitOnErr(InstructionBenchmark::readYamls(State, Filename));
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto FromDisk = FromDiskVector[0];
     EXPECT_THAT(FromDisk.Key.Instructions,

@@ -327,69 +327,47 @@ struct MappingContextTraits<exegesis::InstructionBenchmark, YamlContext> {
   }
 };
 
-template <> struct MappingTraits<exegesis::InstructionBenchmark::TripleAndCpu> {
-  static void mapping(IO &Io,
-                      exegesis::InstructionBenchmark::TripleAndCpu &Obj) {
-    assert(!Io.outputting() && "can only read TripleAndCpu");
-    // Read triple.
-    Io.mapRequired("llvm_triple", Obj.LLVMTriple);
-    Io.mapRequired("cpu_name", Obj.CpuName);
-    // Drop everything else.
-  }
-};
-
 } // namespace yaml
 
 namespace exegesis {
 
-Expected<std::set<InstructionBenchmark::TripleAndCpu>>
-InstructionBenchmark::readTriplesAndCpusFromYamls(MemoryBufferRef Buffer) {
-  // We're only mapping a field, drop other fields and silence the corresponding
-  // warnings.
-  yaml::Input Yin(
-      Buffer, nullptr, +[](const SMDiagnostic &, void *Context) {});
-  Yin.setAllowUnknownKeys(true);
-  std::set<TripleAndCpu> Result;
-  yaml::EmptyContext Context;
-  while (Yin.setCurrentDocument()) {
-    TripleAndCpu TC;
-    yamlize(Yin, TC, /*unused*/ true, Context);
-    if (Yin.error())
-      return errorCodeToError(Yin.error());
-    Result.insert(TC);
-    Yin.nextDocument();
-  }
-  return Result;
-}
-
 Expected<InstructionBenchmark>
-InstructionBenchmark::readYaml(const LLVMState &State, MemoryBufferRef Buffer) {
-  yaml::Input Yin(Buffer);
-  YamlContext Context(State);
-  InstructionBenchmark Benchmark;
-  if (Yin.setCurrentDocument())
-    yaml::yamlize(Yin, Benchmark, /*unused*/ true, Context);
-  if (!Context.getLastError().empty())
-    return make_error<Failure>(Context.getLastError());
-  return Benchmark;
+InstructionBenchmark::readYaml(const LLVMState &State, StringRef Filename) {
+  if (auto ExpectedMemoryBuffer =
+          errorOrToExpected(MemoryBuffer::getFile(Filename, /*IsText=*/true))) {
+    yaml::Input Yin(*ExpectedMemoryBuffer.get());
+    YamlContext Context(State);
+    InstructionBenchmark Benchmark;
+    if (Yin.setCurrentDocument())
+      yaml::yamlize(Yin, Benchmark, /*unused*/ true, Context);
+    if (!Context.getLastError().empty())
+      return make_error<Failure>(Context.getLastError());
+    return Benchmark;
+  } else {
+    return ExpectedMemoryBuffer.takeError();
+  }
 }
 
 Expected<std::vector<InstructionBenchmark>>
-InstructionBenchmark::readYamls(const LLVMState &State,
-                                MemoryBufferRef Buffer) {
-  yaml::Input Yin(Buffer);
-  YamlContext Context(State);
-  std::vector<InstructionBenchmark> Benchmarks;
-  while (Yin.setCurrentDocument()) {
-    Benchmarks.emplace_back();
-    yamlize(Yin, Benchmarks.back(), /*unused*/ true, Context);
-    if (Yin.error())
-      return errorCodeToError(Yin.error());
-    if (!Context.getLastError().empty())
-      return make_error<Failure>(Context.getLastError());
-    Yin.nextDocument();
+InstructionBenchmark::readYamls(const LLVMState &State, StringRef Filename) {
+  if (auto ExpectedMemoryBuffer =
+          errorOrToExpected(MemoryBuffer::getFile(Filename, /*IsText=*/true))) {
+    yaml::Input Yin(*ExpectedMemoryBuffer.get());
+    YamlContext Context(State);
+    std::vector<InstructionBenchmark> Benchmarks;
+    while (Yin.setCurrentDocument()) {
+      Benchmarks.emplace_back();
+      yamlize(Yin, Benchmarks.back(), /*unused*/ true, Context);
+      if (Yin.error())
+        return errorCodeToError(Yin.error());
+      if (!Context.getLastError().empty())
+        return make_error<Failure>(Context.getLastError());
+      Yin.nextDocument();
+    }
+    return Benchmarks;
+  } else {
+    return ExpectedMemoryBuffer.takeError();
   }
-  return Benchmarks;
 }
 
 Error InstructionBenchmark::writeYamlTo(const LLVMState &State,
