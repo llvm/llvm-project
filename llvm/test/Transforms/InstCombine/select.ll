@@ -1460,10 +1460,8 @@ define i32 @PR27817_nsw(i32 %x) {
 
 define <2 x i32> @PR27817_nsw_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @PR27817_nsw_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 -2147483648, i32 -2147483648>
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> <i32 -2147483648, i32 -2147483648>, <2 x i32> [[SUB]]
-; CHECK-NEXT:    ret <2 x i32> [[SEL]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[SUB]]
 ;
   %cmp = icmp eq <2 x i32> %x, <i32 -2147483648, i32 -2147483648>
   %sub = sub nsw <2 x i32> zeroinitializer, %x
@@ -2785,8 +2783,7 @@ define i8 @select_replacement_add_eq(i8 %x, i8 %y) {
 define <2 x i8> @select_replacement_add_eq_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @select_replacement_add_eq_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 2, i8 2>, <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %cmp = icmp eq <2 x i8> %x, <i8 1, i8 1>
@@ -2798,8 +2795,7 @@ define <2 x i8> @select_replacement_add_eq_vec(<2 x i8> %x, <2 x i8> %y) {
 define <2 x i8> @select_replacement_add_eq_vec_nonuniform(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @select_replacement_add_eq_vec_nonuniform(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 2>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 3, i8 4>
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[ADD]], <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> <i8 4, i8 6>, <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
   %cmp = icmp eq <2 x i8> %x, <i8 1, i8 2>
