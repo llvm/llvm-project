@@ -76,16 +76,17 @@ void PathMappingList::Append(const PathMappingList &rhs, bool notify) {
   }
 }
 
-void PathMappingList::AppendUnique(llvm::StringRef path,
+bool PathMappingList::AppendUnique(llvm::StringRef path,
                                    llvm::StringRef replacement, bool notify) {
   auto normalized_path = NormalizePath(path);
   auto normalized_replacement = NormalizePath(replacement);
   for (const auto &pair : m_pairs) {
     if (pair.first.GetStringRef().equals(normalized_path) &&
         pair.second.GetStringRef().equals(normalized_replacement))
-      return;
+      return false;
   }
   Append(path, replacement, notify);
+  return true;
 }
 
 void PathMappingList::Insert(llvm::StringRef path, llvm::StringRef replacement,
