@@ -81,6 +81,7 @@ namespace llvm {
     }
 
     bool operator<(const ValID &RHS) const {
+      assert(Kind == RHS.Kind && "Comparing ValIDs of different kinds");
       if (Kind == t_LocalID || Kind == t_GlobalID)
         return UIntVal < RHS.UIntVal;
       assert((Kind == t_LocalName || Kind == t_GlobalName ||
