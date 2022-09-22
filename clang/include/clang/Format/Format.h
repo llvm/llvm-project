@@ -1840,6 +1840,10 @@ struct FormatStyle {
   enum BreakInheritanceListStyle : int8_t {
     /// Break inheritance list before the colon and after the commas.
     /// \code
+    ///    class Foo: Base1, Base2{};
+      BILS_None,
+    /// Break inheritance list before the colon and after the commas.
+    /// \code
     ///    class Foo
     ///        : Base1,
     ///          Base2
