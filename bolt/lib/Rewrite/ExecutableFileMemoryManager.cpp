@@ -55,19 +55,50 @@ uint8_t *ExecutableFileMemoryManager::allocateSection(
     }
   }
 
-  BinarySection &Section = BC.registerOrUpdateSection(
-      SectionName, ELF::SHT_PROGBITS,
-      BinarySection::getFlags(IsReadOnly, IsCode, true), Ret, Size, Alignment);
-  Section.setSectionID(SectionID);
-  assert(Section.isAllocatable() &&
-         "verify that allocatable is marked as allocatable");
+  BinarySection *Section = nullptr;
+  if (!OrgSecPrefix.empty() && SectionName.startswith(OrgSecPrefix)) {
+    // Update the original section contents.
+    ErrorOr<BinarySection &> OrgSection =
+        BC.getUniqueSectionByName(SectionName.substr(OrgSecPrefix.length()));
+    assert(OrgSection && OrgSection->isAllocatable() &&
+           "Original section must exist and be allocatable.");
 
-  LLVM_DEBUG(
-      dbgs() << "BOLT: allocating "
-             << (IsCode ? "code" : (IsReadOnly ? "read-only data" : "data"))
-             << " section : " << SectionName << " with size " << Size
-             << ", alignment " << Alignment << " at " << Ret
-             << ", ID = " << SectionID << "\n");
+    Section = &OrgSection.get();
+    Section->updateContents(Ret, Size);
+  } else {
+    // If the input contains a section with the section name, rename it in the
+    // output file to avoid the section name conflict and emit the new section
+    // under a unique internal name.
+    ErrorOr<BinarySection &> OrgSection =
+        BC.getUniqueSectionByName(SectionName);
+    bool UsePrefix = false;
+    if (OrgSection && OrgSection->hasSectionRef()) {
+      OrgSection->setOutputName(OrgSecPrefix + SectionName);
+      UsePrefix = true;
+    }
+
+    // Register the new section under a unique name to avoid name collision with
+    // sections in the input file.
+    BinarySection &NewSection = BC.registerOrUpdateSection(
+        UsePrefix ? NewSecPrefix + SectionName : SectionName, ELF::SHT_PROGBITS,
+        BinarySection::getFlags(IsReadOnly, IsCode, true), Ret, Size,
+        Alignment);
+    if (UsePrefix)
+      NewSection.setOutputName(SectionName);
+    Section = &NewSection;
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "BOLT: allocating "
+           << (IsCode ? "code" : (IsReadOnly ? "read-only data" : "data"))
+           << " section : " << Section->getOutputName() << " ("
+           << Section->getName() << ")"
+           << " with size " << Size << ", alignment " << Alignment << " at "
+           << Ret << ", ID = " << SectionID << "\n";
+  });
+
+  Section->setSectionID(SectionID);
+
   return Ret;
 }
 
