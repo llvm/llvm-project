@@ -354,10 +354,9 @@ template <class ELFT> void OutputSection::maybeCompress() {
     size_t pos = 0;
 
     ZSTD_CCtx *cctx = ZSTD_createCCtx();
-    size_t ret = ZSTD_CCtx_setParameter(
-        cctx, ZSTD_c_nbWorkers, parallel::strategy.compute_thread_count());
-    if (ZSTD_isError(ret))
-      fatal(Twine("ZSTD_CCtx_setParameter: ") + ZSTD_getErrorName(ret));
+    // Ignore error if zstd was not built with ZSTD_MULTITHREAD.
+    (void)ZSTD_CCtx_setParameter(cctx, ZSTD_c_nbWorkers,
+                                 parallel::strategy.compute_thread_count());
     ZSTD_outBuffer zob = {out.data(), out.size(), 0};
     ZSTD_EndDirective directive = ZSTD_e_continue;
     const size_t blockSize = ZSTD_CStreamInSize();
