@@ -10674,15 +10674,19 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
   if (IndexIsScaled)
     return false;
 
-  // For now we check only the LHS of the add.
-  SDValue LHS = Index.getOperand(0);
-  SDValue SplatVal = DAG.getSplatValue(LHS);
-  if (!SplatVal || SplatVal.getValueType() != BasePtr.getValueType())
-    return false;
-
-  BasePtr = SplatVal;
-  Index = Index.getOperand(1);
-  return true;
+  if (SDValue SplatVal = DAG.getSplatValue(Index.getOperand(0));
+      SplatVal && SplatVal.getValueType() == BasePtr.getValueType()) {
+    BasePtr = SplatVal;
+    Index = Index.getOperand(1);
+    return true;
+  }
+  if (SDValue SplatVal = DAG.getSplatValue(Index.getOperand(1));
+      SplatVal && SplatVal.getValueType() == BasePtr.getValueType()) {
+    BasePtr = SplatVal;
+    Index = Index.getOperand(0);
+    return true;
+  }
+  return false;
 }
 
 // Fold sext/zext of index into index type.
