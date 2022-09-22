@@ -1,4 +1,4 @@
-/* RUN: %clang_cc1 -std=c89 -fsyntax-only -Wvla -verify -pedantic -Wno-c11-extensions %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -Wvla -verify=expected,c89only -pedantic -Wno-c11-extensions %s
    RUN: %clang_cc1 -std=c99 -fsyntax-only -Wvla -verify -pedantic -Wno-c11-extensions %s
    RUN: %clang_cc1 -std=c11 -fsyntax-only -Wvla -verify -pedantic %s
    RUN: %clang_cc1 -std=c17 -fsyntax-only -Wvla -verify -pedantic %s
@@ -83,7 +83,7 @@ void dr311(int x) {
   vla y[3]; /* expected-warning {{variable length array}} */
 }
 
-/* WG14 DR313:
+/* WG14 DR313: yes
  * Incomplete arrays of VLAs
  */
 void dr313(int i) {
@@ -91,3 +91,27 @@ void dr313(int i) {
                          expected-warning {{variable length array}}
                        */
 }
+
+/* WG14 DR315: yes
+ * Implementation-defined bit-field types
+ */
+struct dr315_t {
+  unsigned long long a : 37; /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
+  unsigned long long b : 37; /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
+
+  short c : 8;
+  short d : 8;
+} dr315;
+_Static_assert(sizeof(dr315.a + dr315.b) == sizeof(unsigned long long), ""); /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
+/* Demonstrate that integer promotions still happen when less than the width of
+ * an int.
+ */
+_Static_assert(sizeof(dr315.c + dr315.d) == sizeof(int), "");
+
+/* WG14 DR316: yes
+ * Unprototyped function types
+ */
+#if __STDC_VERSION__ < 202000L
+void dr316_1(a) int a; {}  /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+void (*dr316_1_ptr)(int, int, int) = dr316_1;
+#endif /* __STDC_VERSION__ < 202000L */

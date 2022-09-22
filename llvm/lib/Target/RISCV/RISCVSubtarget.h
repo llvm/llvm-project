@@ -57,7 +57,6 @@ private:
   bool HasStdExtZbe = false;
   bool HasStdExtZbf = false;
   bool HasStdExtZbm = false;
-  bool HasStdExtZbp = false;
   bool HasStdExtZbr = false;
   bool HasStdExtZbs = false;
   bool HasStdExtZca = false;
@@ -167,7 +166,6 @@ public:
   bool hasStdExtZbe() const { return HasStdExtZbe; }
   bool hasStdExtZbf() const { return HasStdExtZbf; }
   bool hasStdExtZbm() const { return HasStdExtZbm; }
-  bool hasStdExtZbp() const { return HasStdExtZbp; }
   bool hasStdExtZbr() const { return HasStdExtZbr; }
   bool hasStdExtZbs() const { return HasStdExtZbs; }
   bool hasStdExtZca() const { return HasStdExtZca; }

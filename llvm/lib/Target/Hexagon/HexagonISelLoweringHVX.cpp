@@ -1459,8 +1459,7 @@ HexagonTargetLowering::resizeToWidth(SDValue VecV, MVT ResTy, bool Signed,
 SDValue
 HexagonTargetLowering::extractSubvector(SDValue Vec, MVT SubTy, unsigned SubIdx,
       SelectionDAG &DAG) const {
-  MVT VecTy = ty(Vec);
-  assert(VecTy.getSizeInBits() % SubTy.getSizeInBits() == 0);
+  assert(ty(Vec).getSizeInBits() % SubTy.getSizeInBits() == 0);
 
   const SDLoc &dl(Vec);
   unsigned ElemIdx = SubIdx * SubTy.getVectorNumElements();
@@ -2588,8 +2587,8 @@ HexagonTargetLowering::CreateTLWrapper(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue
 HexagonTargetLowering::RemoveTLWrapper(SDValue Op, SelectionDAG &DAG) const {
-  unsigned TLOpc = Op.getOpcode();
-  assert(TLOpc == HexagonISD::TL_EXTEND || TLOpc == HexagonISD::TL_TRUNCATE);
+  assert(Op.getOpcode() == HexagonISD::TL_EXTEND ||
+         Op.getOpcode() == HexagonISD::TL_TRUNCATE);
   unsigned Opc = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
   return DAG.getNode(Opc, SDLoc(Op), ty(Op), Op.getOperand(0));
 }

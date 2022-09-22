@@ -4677,6 +4677,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_suspend);
   case Builtin::BI__builtin_coro_size:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_size);
+  case Builtin::BI__builtin_coro_align:
+    return EmitCoroutineIntrinsic(E, Intrinsic::coro_align);
 
   // OpenCL v2.0 s6.13.16.2, Built-in pipe read and write functions
   case Builtin::BIread_pipe:
@@ -19191,20 +19193,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_bdecompress_64:
   case RISCV::BI__builtin_riscv_bfp_32:
   case RISCV::BI__builtin_riscv_bfp_64:
-  case RISCV::BI__builtin_riscv_grev_32:
-  case RISCV::BI__builtin_riscv_grev_64:
-  case RISCV::BI__builtin_riscv_gorc_32:
-  case RISCV::BI__builtin_riscv_gorc_64:
-  case RISCV::BI__builtin_riscv_shfl_32:
-  case RISCV::BI__builtin_riscv_shfl_64:
-  case RISCV::BI__builtin_riscv_unshfl_32:
-  case RISCV::BI__builtin_riscv_unshfl_64:
   case RISCV::BI__builtin_riscv_xperm4:
   case RISCV::BI__builtin_riscv_xperm8:
-  case RISCV::BI__builtin_riscv_xperm_n:
-  case RISCV::BI__builtin_riscv_xperm_b:
-  case RISCV::BI__builtin_riscv_xperm_h:
-  case RISCV::BI__builtin_riscv_xperm_w:
   case RISCV::BI__builtin_riscv_crc32_b:
   case RISCV::BI__builtin_riscv_crc32_h:
   case RISCV::BI__builtin_riscv_crc32_w:
@@ -19259,36 +19249,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_bfp_32:
     case RISCV::BI__builtin_riscv_bfp_64:
       ID = Intrinsic::riscv_bfp;
-      break;
-
-    // Zbp
-    case RISCV::BI__builtin_riscv_grev_32:
-    case RISCV::BI__builtin_riscv_grev_64:
-      ID = Intrinsic::riscv_grev;
-      break;
-    case RISCV::BI__builtin_riscv_gorc_32:
-    case RISCV::BI__builtin_riscv_gorc_64:
-      ID = Intrinsic::riscv_gorc;
-      break;
-    case RISCV::BI__builtin_riscv_shfl_32:
-    case RISCV::BI__builtin_riscv_shfl_64:
-      ID = Intrinsic::riscv_shfl;
-      break;
-    case RISCV::BI__builtin_riscv_unshfl_32:
-    case RISCV::BI__builtin_riscv_unshfl_64:
-      ID = Intrinsic::riscv_unshfl;
-      break;
-    case RISCV::BI__builtin_riscv_xperm_n:
-      ID = Intrinsic::riscv_xperm_n;
-      break;
-    case RISCV::BI__builtin_riscv_xperm_b:
-      ID = Intrinsic::riscv_xperm_b;
-      break;
-    case RISCV::BI__builtin_riscv_xperm_h:
-      ID = Intrinsic::riscv_xperm_h;
-      break;
-    case RISCV::BI__builtin_riscv_xperm_w:
-      ID = Intrinsic::riscv_xperm_w;
       break;
 
     // Zbr

@@ -1923,6 +1923,36 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       break;
     }
   } break;
+  case TargetOpcode::REG_SEQUENCE: {
+    unsigned NumOps = MI->getNumOperands();
+    if (!(NumOps & 1)) {
+      report("Invalid number of operands for REG_SEQUENCE", MI);
+      break;
+    }
+
+    for (unsigned I = 1; I != NumOps; I += 2) {
+      const MachineOperand &RegOp = MI->getOperand(I);
+      const MachineOperand &SubRegOp = MI->getOperand(I + 1);
+
+      if (!RegOp.isReg())
+        report("Invalid register operand for REG_SEQUENCE", &RegOp, I);
+
+      if (!SubRegOp.isImm() || SubRegOp.getImm() == 0 ||
+          SubRegOp.getImm() >= TRI->getNumSubRegIndices()) {
+        report("Invalid subregister index operand for REG_SEQUENCE",
+               &SubRegOp, I + 1);
+      }
+    }
+
+    Register DstReg = MI->getOperand(0).getReg();
+    if (DstReg.isPhysical())
+      report("REG_SEQUENCE does not support physical register results", MI);
+
+    if (MI->getOperand(0).getSubReg())
+      report("Invalid subreg result for REG_SEQUENCE", MI);
+
+    break;
+  }
   }
 }
 

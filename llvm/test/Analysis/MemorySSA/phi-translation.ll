@@ -439,10 +439,10 @@ define i32 @phi_with_constant_values(i1 %cmp) {
 ; CHECK-LABEL: merge:
 ; CHECK:       ; 3 = MemoryPhi({lhs,1},{rhs,2})
 ; CHECK-NEXT   %storemerge2 = phi i32 [ 2, %lhs ], [ 3, %rhs ]
-; TODO: Here the defining access could be liveOnEntry. Since all incoming
-; values of phi node can be phi translated.
-; CHECK:       ; MemoryUse(3)
-; CHECK-NEXT:    %lv = load i16, i16* %arrayidx, align 2
+; LIMIT:       ; MemoryUse(3)
+; LIMIT-NEXT:  %lv = load i16, i16* %arrayidx, align 2
+; NOLIMIT:     ; MemoryUse(liveOnEntry)
+; NOLIMIT-NEXT: %lv = load i16, i16* %arrayidx, align 2
 
 entry:
   br i1 %cmp, label %lhs, label %rhs

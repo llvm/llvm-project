@@ -683,6 +683,13 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
     llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::coro_size, T);
     return RValue::get(Builder.CreateCall(F));
   }
+  case llvm::Intrinsic::coro_align: {
+    auto &Context = getContext();
+    CanQualType SizeTy = Context.getSizeType();
+    llvm::IntegerType *T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
+    llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::coro_align, T);
+    return RValue::get(Builder.CreateCall(F));
+  }
   // The following three intrinsics take a token parameter referring to a token
   // returned by earlier call to @llvm.coro.id. Since we cannot represent it in
   // builtins, we patch it up here.

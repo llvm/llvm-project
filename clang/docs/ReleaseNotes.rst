@@ -162,6 +162,7 @@ Bug Fixes
   `Issue 53628 <https://github.com/llvm/llvm-project/issues/53628>`_
 - The template arguments of a variable template being accessed as a
   member will now be represented in the AST.
+- Fix incorrect handling of inline builtins with asm labels.
 
 
 Improvements to Clang's diagnostics
@@ -207,6 +208,8 @@ Improvements to Clang's diagnostics
   underlying type is ``long long`` or ``unsigned long long`` as an extension in
   C89 mode . Clang previously only diagnosed if the literal had an explicit
   ``LL`` suffix.
+- Clang now correctly diagnoses index that refers past the last possible element
+  of FAM-like arrays.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -220,9 +223,24 @@ Non-comprehensive list of changes in this release
   temporarily reversed with ``-Xclang
   -fno-modules-validate-textual-header-includes``, but this flag will be
   removed in a future Clang release.
+- Unicode support has been updated to support Unicode 15.0.
+  New unicode codepoints are supported as appropriate in diagnostics,
+  C and C++ identifiers, and escape sequences.
 
 New Compiler Flags
 ------------------
+
+- Implemented `-fcoro-aligned-allocation` flag. This flag implements
+  Option 2 of P2014R0 aligned allocation of coroutine frames
+  (`P2014R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p2014r0.pdf>`_).
+  With this flag, the coroutines will try to lookup aligned allocation
+  function all the time. The compiler will emit an error if it fails to
+  find aligned allocation function. So if the user code implemented self
+  defined allocation function for coroutines, the existing code will be
+  broken. A little divergence with P2014R0 is that clang will lookup
+  `::operator new(size_­t, std::aligned_val_t, nothrow_­t)` if there is
+  `get_­return_­object_­on_­allocation_­failure`. We feel this is more consistent
+  with the intention.
 
 Deprecated Compiler Flags
 -------------------------
@@ -327,6 +345,10 @@ C++20 Feature Support
   `Issue 50455 <https://github.com/llvm/llvm-project/issues/50455>`_,
   `Issue 54872 <https://github.com/llvm/llvm-project/issues/54872>`_,
   `Issue 54587 <https://github.com/llvm/llvm-project/issues/54587>`_.
+- Clang now correctly delays the instantiation of function constraints until
+  the time of checking, which should now allow the libstdc++ ranges implementation
+  to work for at least trivial examples.  This fixes
+  `Issue 44178 <https://github.com/llvm/llvm-project/issues/44178>`_.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

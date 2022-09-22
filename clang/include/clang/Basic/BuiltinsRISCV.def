@@ -45,20 +45,6 @@ TARGET_BUILTIN(__builtin_riscv_bdecompress_64, "WiWiWi", "nc",
 TARGET_BUILTIN(__builtin_riscv_bfp_32, "ZiZiZi", "nc", "experimental-zbf")
 TARGET_BUILTIN(__builtin_riscv_bfp_64, "WiWiWi", "nc", "experimental-zbf,64bit")
 
-// Zbp extension
-TARGET_BUILTIN(__builtin_riscv_grev_32, "ZiZiZi", "nc", "experimental-zbp")
-TARGET_BUILTIN(__builtin_riscv_grev_64, "WiWiWi", "nc", "experimental-zbp,64bit")
-TARGET_BUILTIN(__builtin_riscv_gorc_32, "ZiZiZi", "nc", "experimental-zbp")
-TARGET_BUILTIN(__builtin_riscv_gorc_64, "WiWiWi", "nc", "experimental-zbp,64bit")
-TARGET_BUILTIN(__builtin_riscv_shfl_32, "ZiZiZi", "nc", "experimental-zbp")
-TARGET_BUILTIN(__builtin_riscv_shfl_64, "WiWiWi", "nc", "experimental-zbp,64bit")
-TARGET_BUILTIN(__builtin_riscv_unshfl_32, "ZiZiZi", "nc", "experimental-zbp")
-TARGET_BUILTIN(__builtin_riscv_unshfl_64, "WiWiWi", "nc", "experimental-zbp,64bit")
-TARGET_BUILTIN(__builtin_riscv_xperm_n, "LiLiLi", "nc", "experimental-zbp")
-TARGET_BUILTIN(__builtin_riscv_xperm_b, "LiLiLi", "nc", "experimental-zbp")
-TARGET_BUILTIN(__builtin_riscv_xperm_h, "LiLiLi", "nc", "experimental-zbp")
-TARGET_BUILTIN(__builtin_riscv_xperm_w, "WiWiWi", "nc", "experimental-zbp,64bit")
-
 // Zbr extension
 TARGET_BUILTIN(__builtin_riscv_crc32_b, "LiLi", "nc", "experimental-zbr")
 TARGET_BUILTIN(__builtin_riscv_crc32_h, "LiLi", "nc", "experimental-zbr")

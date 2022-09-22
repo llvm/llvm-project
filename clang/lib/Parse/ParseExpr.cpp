@@ -943,8 +943,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     ParenParseOption ParenExprType;
     switch (ParseKind) {
       case CastParseKind::UnaryExprOnly:
-        if (!getLangOpts().CPlusPlus)
-          ParenExprType = CompoundLiteral;
+        assert(getLangOpts().CPlusPlus && "not possible to get here in C");
         [[fallthrough]];
       case CastParseKind::AnyCastExpr:
         ParenExprType = ParenParseOption::CastExpr;

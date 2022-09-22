@@ -930,6 +930,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setHasSkippedBody(Record.readInt());
   FD->setIsMultiVersion(Record.readInt());
   FD->setLateTemplateParsed(Record.readInt());
+  FD->setFriendConstraintRefersToEnclosingTemplate(Record.readInt());
 
   FD->setCachedLinkage(static_cast<Linkage>(Record.readInt()));
   FD->EndRangeLoc = readSourceLocation();

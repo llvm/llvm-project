@@ -1,29 +1,6 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 %s 2>&1 | FileCheck %s --implicit-check-not=error: --strict-whitespace
 
 //==============================================================================
-// destination must be different than all sources
-
-v_mqsad_pk_u16_u8 v[0:1], v[1:2], v9, v[4:5]
-// CHECK: error: destination must be different than all sources
-// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[1:2], v9, v[4:5]
-// CHECK-NEXT:{{^}}                          ^
-
-v_mqsad_pk_u16_u8 v[0:1], v[2:3], v0, v[4:5]
-// CHECK: error: destination must be different than all sources
-// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v0, v[4:5]
-// CHECK-NEXT:{{^}}                                  ^
-
-v_mqsad_pk_u16_u8 v[0:1], v[2:3], v1, v[4:5]
-// CHECK: error: destination must be different than all sources
-// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v1, v[4:5]
-// CHECK-NEXT:{{^}}                                  ^
-
-v_mqsad_pk_u16_u8 v[0:1], v[2:3], v9, v[0:1]
-// CHECK: error: destination must be different than all sources
-// CHECK-NEXT:{{^}}v_mqsad_pk_u16_u8 v[0:1], v[2:3], v9, v[0:1]
-// CHECK-NEXT:{{^}}                                      ^
-
-//==============================================================================
 // dim modifier is required on this GPU
 
 image_atomic_add v252, v2, s[8:15]
