@@ -149,6 +149,9 @@ def HLSLEntry
     : SubsetSubject<Function,
                     [{S->isExternallyVisible() && !isa<CXXMethodDecl>(S)}],
                     "global functions">;
+def HLSLBufferObj : SubsetSubject<HLSLBuffer,
+                    [{isa<HLSLBufferDecl>(S)}],
+                    "cbuffer/tbuffer">;
 
 def ClassTmpl : SubsetSubject<CXXRecord, [{S->getDescribedClassTemplate()}],
                               "class templates">;
@@ -4101,6 +4104,14 @@ def HLSLSV_GroupIndex: HLSLAnnotationAttr {
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIndexDocs];
+}
+
+def HLSLResourceBinding: InheritableAttr {
+  let Spellings = [HLSLSemantic<"register">];
+  let Subjects = SubjectList<[HLSLBufferObj, GlobalVar]>;
+  let LangOpts = [HLSL];
+  let Args = [StringArgument<"Slot">, StringArgument<"Space", 1>];
+  let Documentation = [HLSLResourceBindingDocs];
 }
 
 def HLSLShader : InheritableAttr {
