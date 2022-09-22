@@ -92,6 +92,22 @@ enum_targets_gen(
     targets = llvm_target_mcas,
 )
 
+# Enabled targets with exegesis.
+llvm_target_exegesis = [
+    t
+    for t in llvm_targets
+    if glob(["tools/llvm-exegesis/lib/{}/CMakeLists.txt".format(t)])
+]
+
+enum_targets_gen(
+    name = "target_exegesis_def_gen",
+    src = "include/llvm/Config/TargetExegesis.def.in",
+    out = "include/llvm/Config/TargetExegesis.def",
+    macro_name = "EXEGESIS",
+    placeholder_name = "@LLVM_ENUM_EXEGESIS@",
+    targets = llvm_target_exegesis,
+)
+
 template_rule(
     name = "abi_breaking_h_gen",
     src = "include/llvm/Config/abi-breaking.h.cmake",
@@ -126,6 +142,7 @@ cc_library(
         "include/llvm/Config/AsmPrinters.def",
         "include/llvm/Config/Disassemblers.def",
         "include/llvm/Config/Targets.def",
+        "include/llvm/Config/TargetExegesis.def",
         "include/llvm/Config/TargetMCAs.def",
         # Needed for include scanner to find execinfo.h
         "include/llvm/Config/config.h",
@@ -1526,6 +1543,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-subtarget", "lib/Target/AArch64/AArch64GenSubtargetInfo.inc"),
             ("-gen-disassembler", "lib/Target/AArch64/AArch64GenDisassemblerTables.inc"),
             ("-gen-searchable-tables", "lib/Target/AArch64/AArch64GenSystemOperands.inc"),
+            ("-gen-exegesis", "lib/Target/AArch64/AArch64GenExegesis.inc"),
         ],
     },
     {
@@ -1694,6 +1712,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-disassembler", "lib/Target/PowerPC/PPCGenDisassemblerTables.inc"),
             ("-gen-register-bank", "lib/Target/PowerPC/PPCGenRegisterBank.inc"),
             ("-gen-global-isel", "lib/Target/PowerPC/PPCGenGlobalISel.inc"),
+            ("-gen-exegesis", "lib/Target/PowerPC/PPCGenExegesis.inc"),
         ],
     },
     {
@@ -2576,6 +2595,9 @@ cc_library(
     name = "Exegesis",
     srcs = glob([
         "tools/llvm-exegesis/lib/*.cpp",
+        "tools/llvm-exegesis/lib/AArch64/*.cpp",
+        "tools/llvm-exegesis/lib/Mips/*.cpp",
+        "tools/llvm-exegesis/lib/PowerPC/*.cpp",
         "tools/llvm-exegesis/lib/X86/*.cpp",
         "tools/llvm-exegesis/lib/X86/*.h",
         # We have to include these headers here as well as in the `hdrs` below
@@ -2587,7 +2609,6 @@ cc_library(
     ]),
     hdrs = glob(["tools/llvm-exegesis/lib/*.h"]),
     copts = llvm_copts + ["-DHAVE_LIBPFM=1"],
-    defines = ["LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET=InitializeX86ExegesisTarget"],
     features = ["-header_modules"],
     strip_include_prefix = "tools/llvm-exegesis/lib",
     tags = [
