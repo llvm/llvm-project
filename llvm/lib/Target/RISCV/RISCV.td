@@ -22,9 +22,6 @@ def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
 def FeatureStdExtZmmul
     : SubtargetFeature<"zmmul", "HasStdExtZmmul", "true",
                        "'Zmmul' (Integer Multiplication)">;
-def HasStdExtZmmul : Predicate<"Subtarget->hasStdExtZmmul()">,
-                               AssemblerPredicate<(all_of FeatureStdExtZmmul),
-                               "'Zmmul' (Integer Multiplication)">;
 
 def HasStdExtMOrZmmul
     : Predicate<"Subtarget->hasStdExtM() || Subtarget->hasStdExtZmmul()">,
@@ -343,9 +340,6 @@ def FeatureStdExtZk
 def FeatureExtZca
     : SubtargetFeature<"experimental-zca", "HasStdExtZca", "true",
                        "'Zca' (part of the C extension, excluding compressed floating point loads/stores)">;
-def HasStdExtZca : Predicate<"Subtarget->hasStdExtZca()">,
-                           AssemblerPredicate<(all_of FeatureExtZca),
-                           "'Zca' (part of the C extension, excluding compressed floating point loads/stores)">;
 
 def HasStdExtCOrZca
     : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZca()">,
