@@ -443,6 +443,119 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
   }
 }
 
+TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
+      cantFail(cas::createCachingOnDiskFileSystem(cas::createInMemoryCAS()));
+  ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
+
+  TreePathPrefixMapper Remapper(FS);
+  ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
+                    Succeeded());
+
+  TempDir D1(TestDirectory.path("d1"));
+  TempDir D2(TestDirectory.path("d2"));
+  TempFile F11(D1.path("f1"), "", "content");
+  TempFile F12(D1.path("f2"), "", "content");
+  TempFile F21(D2.path("f1"), "", "content");
+  TempFile F22(D2.path("f2"), "", "content");
+  TempDir D1Sub(D1.path("sub"));
+  TempFile D1SubF(D1Sub.path("file"), "", "content");
+
+  llvm::cas::TreeSchema Schema(FS->getCAS());
+
+  auto CreateTreeFromNewAccesses = [&]() -> Optional<llvm::cas::TreeProxy> {
+    Optional<cas::ObjectProxy> Tree;
+    EXPECT_THAT_ERROR(FS->createTreeFromNewAccesses(
+                            [&](const vfs::CachedDirectoryEntry &Entry) {
+                              return Remapper.map(Entry);
+                            })
+                          .moveInto(Tree),
+                      Succeeded());
+    if (!Tree)
+      return None;
+    Optional<llvm::cas::TreeProxy> TreeNode;
+    EXPECT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
+                      Succeeded());
+    return TreeNode;
+  };
+
+  auto AccessAllFiles = [&] {
+    FS->status(F11.path());
+    FS->status(F12.path());
+    FS->status(F21.path());
+    FS->status(F22.path());
+    FS->status(D1SubF.path());
+  };
+
+  {
+    // Excluding should not itself cause any tracked accesses.
+    FS->trackNewAccesses();
+    EXPECT_EQ(FS->excludeFromTracking(TestDirectory.path("non_existent")),
+              errc::no_such_file_or_directory);
+    EXPECT_EQ(FS->excludeFromTracking(D1.path()), std::error_code());
+    EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
+    auto Tree = CreateTreeFromNewAccesses();
+    ASSERT_NE(Tree, None);
+    EXPECT_EQ(Tree->size(), 0u);
+  }
+
+  {
+    // Exclude file and directory before access.
+    FS->trackNewAccesses();
+    EXPECT_EQ(FS->excludeFromTracking(D1.path()), std::error_code());
+    EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
+    AccessAllFiles();
+    auto Tree = CreateTreeFromNewAccesses();
+    ASSERT_NE(Tree, None);
+    EXPECT_EQ(Tree->size(), 1u);
+    EXPECT_FALSE(Tree->lookup("d1"));
+    auto D2Node = Tree->lookup("d2");
+    ASSERT_TRUE(D2Node);
+    auto D2Dir = Schema.load(D2Node->getRef());
+    ASSERT_THAT_EXPECTED(D2Dir, Succeeded());
+    EXPECT_EQ(D2Dir->size(), 1u);
+    EXPECT_FALSE(D2Dir->lookup("f1"));
+    EXPECT_TRUE(D2Dir->lookup("f2"));
+  }
+  {
+    // Exclude file and directory after access.
+    FS->trackNewAccesses();
+    AccessAllFiles();
+    EXPECT_EQ(FS->excludeFromTracking(D1.path()), std::error_code());
+    EXPECT_EQ(FS->excludeFromTracking(F21.path()), std::error_code());
+    auto Tree = CreateTreeFromNewAccesses();
+    ASSERT_NE(Tree, None);
+    EXPECT_EQ(Tree->size(), 1u);
+    EXPECT_FALSE(Tree->lookup("d1"));
+    auto D2Node = Tree->lookup("d2");
+    ASSERT_TRUE(D2Node);
+    auto D2Dir = Schema.load(D2Node->getRef());
+    ASSERT_THAT_EXPECTED(D2Dir, Succeeded());
+    EXPECT_EQ(D2Dir->size(), 1u);
+    EXPECT_FALSE(D2Dir->lookup("f1"));
+    EXPECT_TRUE(D2Dir->lookup("f2"));
+  }
+  {
+    // Exclude sub-directory.
+    FS->trackNewAccesses();
+    AccessAllFiles();
+    EXPECT_EQ(FS->excludeFromTracking(D1Sub.path()), std::error_code());
+    EXPECT_EQ(FS->excludeFromTracking(D2.path()), std::error_code());
+    auto Tree = CreateTreeFromNewAccesses();
+    ASSERT_NE(Tree, None);
+    EXPECT_EQ(Tree->size(), 1u);
+    EXPECT_FALSE(Tree->lookup("d2"));
+    auto D1Node = Tree->lookup("d1");
+    ASSERT_TRUE(D1Node);
+    auto D1Dir = Schema.load(D1Node->getRef());
+    ASSERT_THAT_EXPECTED(D1Dir, Succeeded());
+    EXPECT_EQ(D1Dir->size(), 2u);
+    EXPECT_TRUE(D1Dir->lookup("f1"));
+    EXPECT_TRUE(D1Dir->lookup("f2"));
+  }
+}
+
 TEST(CachingOnDiskFileSystemTest, getRealPath) {
   TempDir D("caching-on-disk-file-system-test", /*Unique=*/true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
