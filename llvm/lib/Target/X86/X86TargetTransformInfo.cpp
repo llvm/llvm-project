@@ -390,38 +390,38 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVX2UniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v16i8, { 1,  8, 2, 3 } }, // psllw + pand.
-    { ISD::SRL,  MVT::v16i8, { 1,  8, 2, 3 } }, // psrlw + pand.
-    { ISD::SRA,  MVT::v16i8, { 2, 10, 5, 6 } }, // psrlw, pand, pxor, psubb.
-    { ISD::SHL,  MVT::v32i8, { 2,  8, 2, 4 } }, // psllw + pand.
-    { ISD::SRL,  MVT::v32i8, { 2,  8, 2, 4 } }, // psrlw + pand.
-    { ISD::SRA,  MVT::v32i8, { 3, 10, 5, 9 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v16i8, {  1,  8,  2,  3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {  1,  8,  2,  3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, {  2, 10,  5,  6 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8, {  2,  8,  2,  4 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8, {  2,  8,  2,  4 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8, {  3, 10,  5,  9 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v8i16, { 1,  1, 1, 1 } }, // psllw
-    { ISD::SRL,  MVT::v8i16, { 1,  1, 1, 1 } }, // psrlw
-    { ISD::SRA,  MVT::v8i16, { 1,  1, 1, 1 } }, // psraw
-    { ISD::SHL,  MVT::v16i16,{ 2,  2, 1, 2 } }, // psllw
-    { ISD::SRL,  MVT::v16i16,{ 2,  2, 1, 2 } }, // psrlw
-    { ISD::SRA,  MVT::v16i16,{ 2,  2, 1, 2 } }, // psraw
+    { ISD::SHL,  MVT::v8i16, {  1,  1,  1,  1 } }, // psllw
+    { ISD::SRL,  MVT::v8i16, {  1,  1,  1,  1 } }, // psrlw
+    { ISD::SRA,  MVT::v8i16, {  1,  1,  1,  1 } }, // psraw
+    { ISD::SHL,  MVT::v16i16,{  2,  2,  1,  2 } }, // psllw
+    { ISD::SRL,  MVT::v16i16,{  2,  2,  1,  2 } }, // psrlw
+    { ISD::SRA,  MVT::v16i16,{  2,  2,  1,  2 } }, // psraw
 
-    { ISD::SHL,  MVT::v4i32, { 1,  1, 1, 1 } }, // pslld
-    { ISD::SRL,  MVT::v4i32, { 1,  1, 1, 1 } }, // psrld
-    { ISD::SRA,  MVT::v4i32, { 1,  1, 1, 1 } }, // psrad
-    { ISD::SHL,  MVT::v8i32, { 2,  2, 1, 2 } }, // pslld
-    { ISD::SRL,  MVT::v8i32, { 2,  2, 1, 2 } }, // psrld
-    { ISD::SRA,  MVT::v8i32, { 2,  2, 1, 2 } }, // psrad
+    { ISD::SHL,  MVT::v4i32, {  1,  1,  1,  1 } }, // pslld
+    { ISD::SRL,  MVT::v4i32, {  1,  1,  1,  1 } }, // psrld
+    { ISD::SRA,  MVT::v4i32, {  1,  1,  1,  1 } }, // psrad
+    { ISD::SHL,  MVT::v8i32, {  2,  2,  1,  2 } }, // pslld
+    { ISD::SRL,  MVT::v8i32, {  2,  2,  1,  2 } }, // psrld
+    { ISD::SRA,  MVT::v8i32, {  2,  2,  1,  2 } }, // psrad
 
-    { ISD::SHL,  MVT::v2i64, { 1,  1, 1, 1 } }, // psllq
-    { ISD::SRL,  MVT::v2i64, { 1,  1, 1, 1 } }, // psrlq
-    { ISD::SRA,  MVT::v2i64, { 2,  3, 3, 3 } }, // psrad + shuffle.
-    { ISD::SHL,  MVT::v4i64, { 2,  2, 1, 2 } }, // psllq
-    { ISD::SRL,  MVT::v4i64, { 2,  2, 1, 2 } }, // psrlq
-    { ISD::SRA,  MVT::v4i64, { 4,  4, 3, 6 } }, // psrad + shuffle + split.
+    { ISD::SHL,  MVT::v2i64, {  1,  1,  1,  1 } }, // psllq
+    { ISD::SRL,  MVT::v2i64, {  1,  1,  1,  1 } }, // psrlq
+    { ISD::SRA,  MVT::v2i64, {  2,  3,  3,  3 } }, // psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64, {  2,  2,  1,  2 } }, // psllq
+    { ISD::SRL,  MVT::v4i64, {  2,  2,  1,  2 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64, {  4,  4,  3,  6 } }, // psrad + shuffle + split.
 
-    { ISD::SDIV, MVT::v8i32, { 6 } }, // pmuludq sequence
-    { ISD::SREM, MVT::v8i32, { 8 } }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32, { 5 } }, // pmuludq sequence
-    { ISD::UREM, MVT::v8i32, { 7 } }, // pmuludq+mul+sub sequence
+    { ISD::SDIV, MVT::v8i32, {  6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v8i32, {  8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32, {  5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v8i32, {  7 } }, // pmuludq+mul+sub sequence
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX2())
@@ -474,26 +474,26 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry SSE2UniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v16i8, { 1, 7, 2, 3 } }, // psllw + pand.
-    { ISD::SRL,  MVT::v16i8, { 1, 7, 2, 3 } }, // psrlw + pand.
-    { ISD::SRA,  MVT::v16i8, { 3, 9, 5, 6 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v16i8, {  1,  7,  2,  3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {  1,  7,  2,  3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, {  3,  9,  5,  6 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v8i16, { 1, 1, 1, 1 } }, // psllw.
-    { ISD::SRL,  MVT::v8i16, { 1, 1, 1, 1 } }, // psrlw.
-    { ISD::SRA,  MVT::v8i16, { 1, 1, 1, 1 } }, // psraw.
+    { ISD::SHL,  MVT::v8i16, {  1,  1,  1,  1 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16, {  1,  1,  1,  1 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16, {  1,  1,  1,  1 } }, // psraw.
 
-    { ISD::SHL,  MVT::v4i32, { 1, 1, 1, 1 } }, // pslld
-    { ISD::SRL,  MVT::v4i32, { 1, 1, 1, 1 } }, // psrld.
-    { ISD::SRA,  MVT::v4i32, { 1, 1, 1, 1 } }, // psrad.
+    { ISD::SHL,  MVT::v4i32, {  1,  1,  1,  1 } }, // pslld
+    { ISD::SRL,  MVT::v4i32, {  1,  1,  1,  1 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32, {  1,  1,  1,  1 } }, // psrad.
 
-    { ISD::SHL,  MVT::v2i64, { 1, 1, 1, 1 } }, // psllq.
-    { ISD::SRL,  MVT::v2i64, { 1, 1, 1, 1 } }, // psrlq.
-    { ISD::SRA,  MVT::v2i64, { 3, 5, 6, 6 } }, // 2 x psrad + shuffle.
+    { ISD::SHL,  MVT::v2i64, {  1,  1,  1,  1 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64, {  1,  1,  1,  1 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64, {  3,  5,  6,  6 } }, // 2 x psrad + shuffle.
 
-    { ISD::SDIV, MVT::v4i32, { 6 } }, // pmuludq sequence
-    { ISD::SREM, MVT::v4i32, { 8 } }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v4i32, { 5 } }, // pmuludq sequence
-    { ISD::UREM, MVT::v4i32, { 7 } }, // pmuludq+mul+sub sequence
+    { ISD::SDIV, MVT::v4i32, {  6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32, {  8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v4i32, {  5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32, {  7 } }, // pmuludq+mul+sub sequence
   };
 
   // XOP has faster vXi8 shifts.
@@ -509,6 +509,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v64i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v64i8,  { 14 } }, // 2*ext+2*pmulhw sequence
     { ISD::UREM, MVT::v64i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+
     { ISD::SDIV, MVT::v32i16, {  6 } }, // vpmulhw sequence
     { ISD::SREM, MVT::v32i16, {  8 } }, // vpmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v32i16, {  6 } }, // vpmulhuw sequence
@@ -522,18 +523,20 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVX512ConstCostTable[] = {
-    { ISD::SDIV, MVT::v16i32, { 15 } }, // vpmuldq sequence
-    { ISD::SREM, MVT::v16i32, { 17 } }, // vpmuldq+mul+sub sequence
-    { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
-    { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
     { ISD::SDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
     { ISD::SREM, MVT::v64i8,  { 32 } }, // 4*ext+4*pmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
     { ISD::UREM, MVT::v64i8,  { 32 } }, // 4*ext+4*pmulhw+mul+sub sequence
+
     { ISD::SDIV, MVT::v32i16, { 12 } }, // 2*vpmulhw sequence
     { ISD::SREM, MVT::v32i16, { 16 } }, // 2*vpmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v32i16, { 12 } }, // 2*vpmulhuw sequence
     { ISD::UREM, MVT::v32i16, { 16 } }, // 2*vpmulhuw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v16i32, { 15 } }, // vpmuldq sequence
+    { ISD::SREM, MVT::v16i32, { 17 } }, // vpmuldq+mul+sub sequence
+    { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
+    { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasAVX512())
@@ -547,10 +550,12 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v32i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v32i8,  { 14 } }, // 2*ext+2*pmulhw sequence
     { ISD::UREM, MVT::v32i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+
     { ISD::SDIV, MVT::v16i16, {  6 } }, // vpmulhw sequence
     { ISD::SREM, MVT::v16i16, {  8 } }, // vpmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v16i16, {  6 } }, // vpmulhuw sequence
     { ISD::UREM, MVT::v16i16, {  8 } }, // vpmulhuw+mul+sub sequence
+
     { ISD::SDIV, MVT::v8i32,  { 15 } }, // vpmuldq sequence
     { ISD::SREM, MVT::v8i32,  { 19 } }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32,  { 15 } }, // vpmuludq sequence
@@ -563,8 +568,20 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVXConstCostTable[] = {
+    { ISD::SDIV, MVT::v32i8,  { 30 } }, // 4*ext+4*pmulhw sequence + split.
+    { ISD::SREM, MVT::v32i8,  { 34 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v32i8,  { 30 } }, // 4*ext+4*pmulhw sequence + split.
+    { ISD::UREM, MVT::v32i8,  { 34 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
+
+    { ISD::SDIV, MVT::v16i16, { 14 } }, // 2*pmulhw sequence + split.
+    { ISD::SREM, MVT::v16i16, { 18 } }, // 2*pmulhw+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v16i16, { 14 } }, // 2*pmulhuw sequence + split.
+    { ISD::UREM, MVT::v16i16, { 18 } }, // 2*pmulhuw+mul+sub sequence + split.
+
     { ISD::SDIV, MVT::v8i32,  { 32 } }, // vpmuludq sequence
     { ISD::SREM, MVT::v8i32,  { 38 } }, // vpmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32,  { 32 } }, // 2*pmuludq sequence + split.
+    { ISD::UREM, MVT::v8i32,  { 42 } }, // 2*pmuludq+mul+sub sequence + split.
   };
 
   if (Op2Info.isConstant() && ST->hasAVX())
@@ -584,30 +601,20 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry SSE2ConstCostTable[] = {
-    { ISD::SDIV, MVT::v32i8,  { 28+2 } }, // 4*ext+4*pmulhw sequence + split.
-    { ISD::SREM, MVT::v32i8,  { 32+2 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v16i8,  {   14 } }, // 2*ext+2*pmulhw sequence
-    { ISD::SREM, MVT::v16i8,  {   16 } }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i8,  { 28+2 } }, // 4*ext+4*pmulhw sequence + split.
-    { ISD::UREM, MVT::v32i8,  { 32+2 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v16i8,  {   14 } }, // 2*ext+2*pmulhw sequence
-    { ISD::UREM, MVT::v16i8,  {   16 } }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v16i16, { 12+2 } }, // 2*pmulhw sequence + split.
-    { ISD::SREM, MVT::v16i16, { 16+2 } }, // 2*pmulhw+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v8i16,  {    6 } }, // pmulhw sequence
-    { ISD::SREM, MVT::v8i16,  {    8 } }, // pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v16i16, { 12+2 } }, // 2*pmulhuw sequence + split.
-    { ISD::UREM, MVT::v16i16, { 16+2 } }, // 2*pmulhuw+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v8i16,  {    6 } }, // pmulhuw sequence
-    { ISD::UREM, MVT::v8i16,  {    8 } }, // pmulhuw+mul+sub sequence
-    { ISD::SDIV, MVT::v8i32,  { 38+2 } }, // 2*pmuludq sequence + split.
-    { ISD::SREM, MVT::v8i32,  { 48+2 } }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v4i32,  {   19 } }, // pmuludq sequence
-    { ISD::SREM, MVT::v4i32,  {   24 } }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,  { 30+2 } }, // 2*pmuludq sequence + split.
-    { ISD::UREM, MVT::v8i32,  { 40+2 } }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v4i32,  {   15 } }, // pmuludq sequence
-    { ISD::UREM, MVT::v4i32,  {   20 } }, // pmuludq+mul+sub sequence
+    { ISD::SDIV, MVT::v16i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v16i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v16i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v16i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v8i16,  {  6 } }, // pmulhw sequence
+    { ISD::SREM, MVT::v8i16,  {  8 } }, // pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v8i16,  {  6 } }, // pmulhuw sequence
+    { ISD::UREM, MVT::v8i16,  {  8 } }, // pmulhuw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v4i32,  { 19 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32,  { 24 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v4i32,  { 15 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32,  { 20 } }, // pmuludq+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasSSE2())
