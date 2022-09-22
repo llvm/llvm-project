@@ -22,7 +22,7 @@
 
 #undef HAS_FLOAT128
 #if __x86_64__
-#if __GNUC__ >= 7 || __clang_major >= 7
+#if __GNUC__ >= 7 || __clang_major__ >= 7
 #define HAS_FLOAT128 1
 #endif
 #elif defined __PPC__ && __GNUC__ >= 8
