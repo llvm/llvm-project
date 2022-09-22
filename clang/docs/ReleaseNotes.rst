@@ -208,6 +208,8 @@ Improvements to Clang's diagnostics
   underlying type is ``long long`` or ``unsigned long long`` as an extension in
   C89 mode . Clang previously only diagnosed if the literal had an explicit
   ``LL`` suffix.
+- Clang now correctly diagnoses index that refers past the last possible element
+  of FAM-like arrays.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
