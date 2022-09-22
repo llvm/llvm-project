@@ -1,3 +1,5 @@
+; REQUIRES: zlib
+
 ;; Tests memprof profile matching (with and without instrumentation profiles).
 
 ;; TODO: Use text profile inputs once that is available for memprof.
