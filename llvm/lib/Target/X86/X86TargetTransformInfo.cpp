@@ -690,7 +690,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SHL,  MVT::v4i64,  { 2, 4, 1, 2 } }, // psllq
     { ISD::SRL,  MVT::v4i64,  { 2, 4, 1, 2 } }, // psrlq
     { ISD::SRA,  MVT::v4i64,  { 4, 6, 5, 9 } }, // 2 x psrad + shuffle.
-    { ISD::SRA,  MVT::v4i64,  { 4 } }, // 2*psrad + shuffle.
   };
 
   if (ST->hasAVX2() && Op2Info.isUniform())
