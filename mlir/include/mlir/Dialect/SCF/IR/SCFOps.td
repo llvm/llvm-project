@@ -250,6 +250,9 @@ def ForOp : SCF_Op<"for",
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
+    void setIterArg(unsigned iterArgNum, Value iterArgValue) {
+      getOperation()->setOperand(iterArgNum + getNumControlOperands(), iterArgValue);
+    }
 
     /// Number of induction variables, always 1 for scf::ForOp.
     unsigned getNumInductionVars() { return 1; }
@@ -267,6 +270,17 @@ def ForOp : SCF_Op<"for",
     unsigned getNumIterOperands() {
       return getOperation()->getNumOperands() - getNumControlOperands();
     }
+    /// Get the iter arg number for an operand. If it isnt an iter arg
+    /// operand return llvm::None.
+    Optional<unsigned> getIterArgNumberForOpOperand(OpOperand &opOperand) {
+      if (opOperand.getOwner() != getOperation())
+        return llvm::None;
+      unsigned operandNumber = opOperand.getOperandNumber();
+      if (operandNumber < getNumControlOperands())
+        return llvm::None;
+      return operandNumber - getNumControlOperands();
+    }
+
     /// Get the region iter arg that corresponds to an OpOperand.
     /// This helper prevents internal op implementation detail leakage to
     /// clients by hiding the operand / block argument mapping.
