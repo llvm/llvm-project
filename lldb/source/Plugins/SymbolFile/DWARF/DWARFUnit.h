@@ -266,6 +266,25 @@ public:
   ///   True if any DIEs match any tag in \a tags, false otherwise.
   bool HasAny(llvm::ArrayRef<dw_tag_t> tags);
 
+
+  /// Get the fission .dwo file specific error for this compile unit.
+  ///
+  /// The skeleton compile unit only can have a DWO error. Any other type
+  /// of DWARFUnit will not have a valid DWO error.
+  ///
+  /// \returns
+  ///   A valid DWO error if there is a problem with anything in the
+  ///   locating or parsing inforamtion in the .dwo file
+  const lldb_private::Status &GetDwoError() const { return m_dwo_error; }
+
+  /// Set the fission .dwo file specific error for this compile unit.
+  ///
+  /// This helps tracks issues that arise when trying to locate or parse a
+  /// .dwo file. Things like a missing .dwo file, DWO ID mismatch, and other
+  /// .dwo errors can be stored in each compile unit so the issues can be
+  /// communicated to the user.
+  void SetDwoError(const lldb_private::Status &error) { m_dwo_error = error; }
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
@@ -346,6 +365,10 @@ protected:
   bool m_has_parsed_non_skeleton_unit;
   /// Value of DW_AT_GNU_dwo_id (v4) or dwo_id from CU header (v5).
   llvm::Optional<uint64_t> m_dwo_id;
+  /// If we get an error when trying to load a .dwo file, save that error here.
+  /// Errors include .dwo/.dwp file not found, or the .dwp/.dwp file was found
+  /// but DWO ID doesn't match, etc.
+  lldb_private::Status m_dwo_error;
 
 private:
   void ParseProducerInfo();
