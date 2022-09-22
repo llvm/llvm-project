@@ -7365,11 +7365,6 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     const ConstrainedFPIntrinsic &FPI) {
   SDLoc sdl = getCurSDLoc();
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), FPI.getType(), ValueVTs);
-  ValueVTs.push_back(MVT::Other); // Out chain
-
   // We do not need to serialize constrained FP intrinsics against
   // each other or against (nonvolatile) loads, so they can be
   // chained like loads.
@@ -7413,7 +7408,9 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     }
   };
 
-  SDVTList VTs = DAG.getVTList(ValueVTs);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), FPI.getType());
+  SDVTList VTs = DAG.getVTList(VT, MVT::Other);
   fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
 
   SDNodeFlags Flags;
@@ -7435,8 +7432,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     Opcode = ISD::STRICT_FMA;
     // Break fmuladd into fmul and fadd.
     if (TM.Options.AllowFPOpFusion == FPOpFusion::Strict ||
-        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(),
-                                        ValueVTs[0])) {
+        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
       Opers.pop_back();
       SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers, Flags);
       pushOutChain(Mul, EB);
