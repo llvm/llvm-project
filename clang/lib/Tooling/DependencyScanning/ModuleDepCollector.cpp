@@ -397,52 +397,34 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         MDC.addFileDep(MD, IF.getFile()->getName());
       });
 
-  // We usually don't need to list the module map files of our dependencies when
-  // building a module explicitly: their semantics will be deserialized from PCM
-  // files.
-  //
-  // However, some module maps loaded implicitly during the dependency scan can
-  // describe anti-dependencies. That happens when this module, let's call it
-  // M1, is marked as '[no_undeclared_includes]' and tries to access a header
-  // "M2/M2.h" from another module, M2, but doesn't have a 'use M2;'
-  // declaration. The explicit build needs the module map for M2 so that it
-  // knows that textually including "M2/M2.h" is not allowed.
-  // E.g., '__has_include("M2/M2.h")' should return false, but without M2's
-  // module map the explicit build would return true.
-  //
-  // An alternative approach would be to tell the explicit build what its
-  // textual dependencies are, instead of having it re-discover its
-  // anti-dependencies. For example, we could create and use an `-ivfs-overlay`
-  // with `fall-through: false` that explicitly listed the dependencies.
-  // However, that's more complicated to implement and harder to reason about.
-  if (M->NoUndeclaredIncludes) {
-    // We don't have a good way to determine which module map described the
-    // anti-dependency (let alone what's the corresponding top-level module
-    // map). We simply specify all the module maps in the order they were loaded
-    // during the implicit build during scan.
-    // TODO: Resolve this by serializing and only using Module::UndeclaredUses.
-    MDC.ScanInstance.getASTReader()->visitTopLevelModuleMaps(
-        *MF, [&](const FileEntry *FE) {
-          if (FE->getName().endswith("__inferred_module.map"))
-            return;
-          // The top-level modulemap of this module will be the input file. We
-          // don't need to specify it as a module map.
-          if (FE == ModuleMap)
-            return;
-          MD.ModuleMapFileDeps.push_back(FE->getName().str());
-        });
-  }
+  llvm::DenseSet<const Module *> SeenDeps;
+  addAllSubmodulePrebuiltDeps(M, MD, SeenDeps);
+  addAllSubmoduleDeps(M, MD, SeenDeps);
+  addAllAffectingModules(M, MD, SeenDeps);
 
-  // Add direct prebuilt module dependencies now, so that we can use them when
-  // creating a CompilerInvocation and computing context hash for this
-  // ModuleDeps instance.
-  // TODO: Squash these.
-  llvm::DenseSet<const Module *> SeenModules;
-  addAllSubmodulePrebuiltDeps(M, MD, SeenModules);
-  llvm::DenseSet<const Module *> AddedModules;
-  addAllSubmoduleDeps(M, MD, AddedModules);
-  llvm::DenseSet<const Module *> ProcessedModules;
-  addAllAffectingModules(M, MD, ProcessedModules);
+  llvm::DenseSet<const FileEntry *> SeenModuleMaps;
+  for (const Module *SM : SeenDeps)
+    if (const FileEntry *SMM = MDC.ScanInstance.getPreprocessor()
+                                   .getHeaderSearchInfo()
+                                   .getModuleMap()
+                                   .getModuleMapFileForUniquing(SM))
+      SeenModuleMaps.insert(SMM);
+
+  MDC.ScanInstance.getASTReader()->visitTopLevelModuleMaps(
+      *MF, [&](const FileEntry *FE) {
+        if (FE->getName().endswith("__inferred_module.map"))
+          return;
+        // The top-level modulemap of this module will be the input file. We
+        // don't need to specify it via "-fmodule-map-file=".
+        if (FE == ModuleMap)
+          return;
+        // The top-level modulemap of dependencies will be serialized in the PCM
+        // file (eager loading mode) or passed on the command-line through a
+        // different mechanism (lazy loading mode).
+        if (SeenModuleMaps.contains(FE))
+          return;
+        MD.ModuleMapFileDeps.emplace_back(FE->getName());
+      });
 
   CompilerInvocation CI = MDC.makeInvocationForModuleBuildWithoutOutputs(
       MD, [&](CompilerInvocation &BuildInvocation) {
