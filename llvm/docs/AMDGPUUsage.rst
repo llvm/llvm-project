@@ -1298,6 +1298,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1036``    0x045      ``gfx1036``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1101``    0x046      ``gfx1101``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1102``    0x047      ``gfx1102``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1200``    0x048      ``gfx1200``
      ==================================== ========== =============================
 
 Sections
