@@ -762,11 +762,11 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   // not used).
   Block &block = linalgOp->getRegion(0).front();
 
-  if (linalgOp.getNumInputsAndOutputs() != block.getNumArguments())
+  if (linalgOp.getOpOperandsMatchingBBargs().size() != block.getNumArguments())
     return op->emitOpError("expected as many non-induction variable region "
                            "arguments as the number of input/output operands");
 
-  for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
+  for (OpOperand *opOperand : linalgOp.getOpOperandsMatchingBBargs()) {
     Type elementType = getElementTypeOrSelf(opOperand->get());
     Type argType = block.getArgument(opOperand->getOperandNumber()).getType();
     if (elementType != argType)
