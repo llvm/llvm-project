@@ -43,6 +43,7 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
                                                                      ACStoreFunction(nullptr),
                                                                      CGStoreFunction(nullptr),
                                                                      AFStoreFunction(nullptr),
+                                                                     AFPrintTopAmplificationPaths(nullptr),
                                                                      AFfp32AnalysisFunction(nullptr),
                                                                      AFfp64AnalysisFunction(nullptr),
                                                                      CGDotGraphFunction(nullptr)
@@ -109,8 +110,13 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
     else if (CurrentFunction->getName().str().find("fCGStoreCG") != std::string::npos) {
       confFunction(CurrentFunction, &CGStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-    }else if (CurrentFunction->getName().str().find("fAFStoreAFs") != std::string::npos) {
+    }
+    else if (CurrentFunction->getName().str().find("fAFStoreAFs") != std::string::npos) {
       confFunction(CurrentFunction, &AFStoreFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
+    else if (CurrentFunction->getName().str().find("fAFPrintTopAmplificationPaths") != std::string::npos) {
+      confFunction(CurrentFunction, &AFPrintTopAmplificationPaths,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
     else if (CurrentFunction->getName().str().find("fAFfp32Analysis") != std::string::npos) {
@@ -918,18 +924,17 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
          (ACStoreFunction!=nullptr) &&
          (CGStoreFunction!=nullptr) &&
          (AFStoreFunction!= nullptr) &&
+         (AFPrintTopAmplificationPaths != nullptr) &&
          (CGDotGraphFunction!=nullptr) &&
          "Function not initialized!");
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
   IRBuilder<> InstructionBuilder(Inst);
-  std::vector<Value *> ACInitCallArgs, CGInitCallArgs, AFInitCallArgs,
-      AnalysisCallArgs;
+  std::vector<Value *> ACInitCallArgs, CGInitCallArgs, AFInitCallArgs, PrintAFPathsCallArgs;
   std::vector<Value *> ACStoreCallArgs, CGStoreCallArgs, AFStoreCallArgs;
   std::vector<Value *> DotGraphCallArgs;
 
-  CallInst *ACInitCallInstruction, *CGInitCallInstruction, *AFInitCallInstruction,
-      *AnalysisCallInstruction;
+  CallInst *ACInitCallInstruction, *CGInitCallInstruction, *AFInitCallInstruction, *PrintAFPathsCallInstruction;
   CallInst *StoreACTableCallInstruction, *StoreCGTableCallInstruction,
       *StoreAFTableCallInstruction;
   CallInst *DotGraphCallInstruction;
@@ -961,12 +966,14 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
       if (isa<ReturnInst>(CurrentInstruction) || isa<ResumeInst>(CurrentInstruction)) {
         ArrayRef<Value *> ACStoreCallArgsRef(ACStoreCallArgs);
         ArrayRef<Value *> CGStoreCallArgsRef(CGStoreCallArgs);
-        ArrayRef<Value *> AFStoreCallArgesRef(AFStoreCallArgs);
+        ArrayRef<Value *> AFStoreCallArgsRef(AFStoreCallArgs);
+        ArrayRef<Value *> PrintAFPathsCallArgsRef(PrintAFPathsCallArgs);
 
         InstructionBuilder.SetInsertPoint(CurrentInstruction);
         StoreACTableCallInstruction = InstructionBuilder.CreateCall(ACStoreFunction, ACStoreCallArgsRef);
         StoreCGTableCallInstruction = InstructionBuilder.CreateCall(CGStoreFunction, CGStoreCallArgsRef);
-        StoreAFTableCallInstruction = InstructionBuilder.CreateCall(AFStoreFunction, AFStoreCallArgesRef);
+        StoreAFTableCallInstruction = InstructionBuilder.CreateCall(AFStoreFunction, AFStoreCallArgsRef);
+        PrintAFPathsCallInstruction = InstructionBuilder.CreateCall(AFPrintTopAmplificationPaths, PrintAFPathsCallArgsRef);
 
         ArrayRef<Value *> DotGraphCallArgsRef(DotGraphCallArgs);
         DotGraphCallInstruction = InstructionBuilder.CreateCall(CGDotGraphFunction, DotGraphCallArgsRef);
@@ -975,9 +982,9 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
   }
 
   assert(ACInitCallInstruction && CGInitCallInstruction &&
-         AFInitCallInstruction && AnalysisCallInstruction && "Invalid call instruction!");
+         AFInitCallInstruction && "Invalid call instruction!");
   assert(StoreACTableCallInstruction && StoreCGTableCallInstruction &&
-         StoreAFTableCallInstruction && "Invalid call instruction!");
+         StoreAFTableCallInstruction && PrintAFPathsCallInstruction && "Invalid call instruction!");
   assert(DotGraphCallInstruction && "Invalid call instruction!");
   return;
 }

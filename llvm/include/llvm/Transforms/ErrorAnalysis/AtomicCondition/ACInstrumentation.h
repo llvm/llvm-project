@@ -33,6 +33,7 @@ private:
   Function *ACStoreFunction;
   Function *CGStoreFunction;
   Function *AFStoreFunction;
+  Function *AFPrintTopAmplificationPaths;
 
   Function *AFfp32AnalysisFunction;
   Function *AFfp64AnalysisFunction;
