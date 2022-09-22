@@ -4215,7 +4215,7 @@ The fields used by CP for code objects before V3 also match those specified in
                      WG_RR_EN                        GFX12
                                                        If 1, wavefronts are scheduled
                                                        in a round-robin fashion with
-                                                       respect to the other wavesfronts
+                                                       respect to the other wavefronts
                                                        of the SIMD. Otherwise, wavefronts
                                                        are scheduled in oldest age order.
 
@@ -4245,7 +4245,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.IEEE_MODE``.
-                                                     GFX12
+                     DISABLE_PERF                    GFX12
                                                        Reserved. Must be 0.
      24      1 bit   BULKY                           Must be 0.
 
