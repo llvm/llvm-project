@@ -362,7 +362,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
     ZSTD_EndDirective directive = ZSTD_e_continue;
     const size_t blockSize = ZSTD_CStreamInSize();
     do {
-      const size_t n = std::min(size - pos, blockSize);
+      const size_t n = std::min(static_cast<size_t>(size - pos), blockSize);
       if (n == size - pos)
         directive = ZSTD_e_end;
       ZSTD_inBuffer zib = {buf.get() + pos, n, 0};
