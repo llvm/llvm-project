@@ -189,6 +189,15 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
+    Preprocessor &PP = ScanInstance.getPreprocessor();
+    if (Module *CurrentModule = PP.getCurrentModuleImplementation())
+      if (const FileEntry *CurrentModuleMap =
+              PP.getHeaderSearchInfo()
+                  .getModuleMap()
+                  .getModuleMapFileForUniquing(CurrentModule))
+        CI.getFrontendOpts().ModuleMapFiles.emplace_back(
+            CurrentModuleMap->getName());
+
     SmallVector<ModuleID> DirectDeps;
     for (const auto &KV : ModularDeps)
       if (KV.second->ImportedByMainFile)
