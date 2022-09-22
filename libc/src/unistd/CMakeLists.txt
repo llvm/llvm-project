@@ -199,6 +199,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sysconf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sysconf
+)
+
+add_entrypoint_object(
   truncate
   ALIAS
   DEPENDS
