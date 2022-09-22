@@ -2093,12 +2093,6 @@ static bool annotateAllFunctions(
     // function is actually hot / warm. We will reset the function hot / cold
     // attribute and drop all the profile counters.
     InstrProfRecord::CountPseudoKind PseudoKind = InstrProfRecord::NotPseudo;
-
-    // When AllMinusOnes is true, it means the profile for the function
-    // is unrepresentative and this function is actually hot. Set the
-    // entry count of the function to be multiple times of hot threshold
-    // and drop all its internal counters.
-    bool AllMinusOnes = false;
     bool AllZeros = false;
     if (!Func.readCounters(PGOReader.get(), AllZeros, PseudoKind))
       continue;
