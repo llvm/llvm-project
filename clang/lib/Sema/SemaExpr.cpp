@@ -3183,8 +3183,9 @@ bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
 /// as an expression.  This is only actually called for lookups that
 /// were not overloaded, and it doesn't promise that the declaration
 /// will in fact be used.
-static bool CheckDeclInExpr(Sema &S, SourceLocation Loc, NamedDecl *D) {
-  if (D->isInvalidDecl())
+static bool CheckDeclInExpr(Sema &S, SourceLocation Loc, NamedDecl *D,
+                            bool AcceptInvalid) {
+  if (D->isInvalidDecl() && !AcceptInvalid)
     return true;
 
   if (isa<TypedefNameDecl>(D)) {
@@ -3230,7 +3231,8 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   // result, because in the overloaded case the results can only be
   // functions and function templates.
   if (R.isSingleResult() && !ShouldLookupResultBeMultiVersionOverload(R) &&
-      CheckDeclInExpr(*this, R.getNameLoc(), R.getFoundDecl()))
+      CheckDeclInExpr(*this, R.getNameLoc(), R.getFoundDecl(),
+                      AcceptInvalidDecl))
     return ExprError();
 
   // Otherwise, just build an unresolved lookup expression.  Suppress
@@ -3262,7 +3264,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
          "Cannot refer unambiguously to a function template");
 
   SourceLocation Loc = NameInfo.getLoc();
-  if (CheckDeclInExpr(*this, Loc, D)) {
+  if (CheckDeclInExpr(*this, Loc, D, AcceptInvalidDecl)) {
     // Recovery from invalid cases (e.g. D is an invalid Decl).
     // We use the dependent type for the RecoveryExpr to prevent bogus follow-up
     // diagnostics, as invalid decls use int as a fallback type.
@@ -3494,9 +3496,16 @@ ExprResult Sema::BuildDeclarationNameExpr(
     break;
   }
 
-  return BuildDeclRefExpr(VD, type, valueKind, NameInfo, &SS, FoundD,
-                          /*FIXME: TemplateKWLoc*/ SourceLocation(),
-                          TemplateArgs);
+  auto *E =
+      BuildDeclRefExpr(VD, type, valueKind, NameInfo, &SS, FoundD,
+                       /*FIXME: TemplateKWLoc*/ SourceLocation(), TemplateArgs);
+  // Clang AST consumers assume a DeclRefExpr refers to a valid decl. We
+  // wrap a DeclRefExpr referring to an invalid decl with a dependent-type
+  // RecoveryExpr to avoid follow-up semantic analysis (thus prevent bogus
+  // diagnostics).
+  if (VD->isInvalidDecl() && E)
+    return CreateRecoveryExpr(E->getBeginLoc(), E->getEndLoc(), {E});
+  return E;
 }
 
 static void ConvertUTF8ToWideString(unsigned CharByteWidth, StringRef Source,
