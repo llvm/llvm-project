@@ -8297,7 +8297,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Triple.isAMDGPU())
-    handleAMDGPUCodeObjectVersionOptions(D, Args, CmdArgs, /*IsCC1As=*/true);
+    handleAMDGPUCodeObjectVersionOptions(D, C.getArgs(), CmdArgs,
+                                         /*IsCC1As=*/true);
 
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());

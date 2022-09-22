@@ -231,7 +231,8 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
                                         GPUArch + ".bc"));
 
   // Add the generic set of libraries, OpenMP subset only
-  BCLibs.append(AMDGPUOpenMPTC.getCommonDeviceLibNames(Args, GPUArch.str(),
+  BCLibs.append(AMDGPUOpenMPTC.getCommonDeviceLibNames(C.getArgs(),
+                                                       GPUArch.str(),
                                                        /* isOpenMP=*/true));
   llvm::for_each(BCLibs, [&](StringRef BCFile) {
     LastLinkArgs.push_back(Args.MakeArgString(BCFile));
@@ -254,6 +255,13 @@ const char *AMDGCN::OpenMPLinker::constructOptCommand(
   ArgStringList OptArgs;
   // The input to opt is the output from llvm-link.
   OptArgs.push_back(InputFileName);
+
+  unsigned CodeObjVer =
+      getOrCheckAMDGPUCodeObjectVersion(C.getDriver(), C.getArgs(), true);
+  if (CodeObjVer)
+    OptArgs.push_back(Args.MakeArgString(
+        Twine("--amdhsa-code-object-version=") + Twine(CodeObjVer)));
+
   StringRef GPUArch =
       getProcessorFromTargetID(getToolChain().getTriple(), TargetID);
 
@@ -315,6 +323,13 @@ const char *AMDGCN::OpenMPLinker::constructLlcCommand(
   ArgStringList LlcArgs;
   // The input to llc is the output from opt.
   LlcArgs.push_back(InputFileName);
+
+  unsigned CodeObjVer =
+      getOrCheckAMDGPUCodeObjectVersion(C.getDriver(), C.getArgs(), true);
+  if (CodeObjVer)
+    LlcArgs.push_back(Args.MakeArgString(
+        Twine("--amdhsa-code-object-version=") + Twine(CodeObjVer)));
+
   // Pass optimization arg to llc.
   addLLCOptArg(Args, LlcArgs, /*IsLlc=*/true);
   LlcArgs.push_back("-mtriple=amdgcn-amd-amdhsa");
