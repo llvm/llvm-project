@@ -544,7 +544,7 @@ class CompressedSection : public SectionBase {
 
 public:
   CompressedSection(const SectionBase &Sec,
-                    DebugCompressionType CompressionType);
+    DebugCompressionType CompressionType, bool Is64Bits);
   CompressedSection(ArrayRef<uint8_t> CompressedData, uint32_t ChType,
                     uint64_t DecompressedSize, uint64_t DecompressedAlign);
 
@@ -1045,6 +1045,7 @@ public:
   Segment ElfHdrSegment;
   Segment ProgramHdrSegment;
 
+  bool Is64Bits;
   uint8_t OSABI;
   uint8_t ABIVersion;
   uint64_t Entry;
