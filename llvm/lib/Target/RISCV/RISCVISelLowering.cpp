@@ -1907,9 +1907,7 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) =
-      getDefaultVLOps(DstVT, DstContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(DstVT, DstContainerVT, DL, DAG, Subtarget);
 
   SDValue IsNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
                               {Src, Src, DAG.getCondCode(ISD::SETNE),
@@ -1970,8 +1968,7 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
     Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
   }
 
-  SDValue TrueMask, VL;
-  std::tie(TrueMask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   // Freeze the source since we are increasing the number of uses.
   Src = DAG.getFreeze(Src);
@@ -2187,8 +2184,7 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
     Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
   }
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, Vec,
                                Idx, DAG.getUNDEF(ContainerVT), Mask, VL);
@@ -2207,8 +2203,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
   SDLoc DL(Op);
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   MVT XLenVT = Subtarget.getXLenVT();
   unsigned NumElts = Op.getNumOperands();
@@ -2832,8 +2827,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
-  SDValue TrueMask, VL;
-  std::tie(TrueMask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   if (SVN->isSplat()) {
     const int Lane = SVN->getSplatIndex();
@@ -3590,8 +3584,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     assert(ContainerVT.getVectorElementCount() == SrcContainerVT.getVectorElementCount() &&
            "Expected same element count");
 
-    SDValue Mask, VL;
-    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+    auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
     Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
     Src = DAG.getNode(RVVOpc, DL, ContainerVT, Src, Mask, VL);
@@ -4438,9 +4431,7 @@ SDValue RISCVTargetLowering::lowerSPLAT_VECTOR_PARTS(SDValue Op,
   if (VecVT.isFixedLengthVector()) {
     MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
     SDLoc DL(Op);
-    SDValue Mask, VL;
-    std::tie(Mask, VL) =
-        getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+    auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
     SDValue Res =
         splatPartsI64WithVL(DL, ContainerVT, SDValue(), Lo, Hi, VL, DAG);
@@ -4495,8 +4486,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
 
   SDValue CC = convertToScalableVector(I1ContainerVT, Src, DAG, Subtarget);
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue SplatZero = DAG.getConstant(0, DL, XLenVT);
@@ -4532,8 +4522,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorExtendToRVV(
       convertToScalableVector(ContainerVT, Op.getOperand(0), DAG, Subtarget);
 
   SDLoc DL(Op);
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue Ext = DAG.getNode(ExtendOpc, DL, ContainerExtVT, Op1, Mask, VL);
 
@@ -4772,8 +4761,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     }
   }
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue ValInVec;
 
@@ -5472,8 +5460,7 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
   // be split. Do that manually so we can get down to a legal type.
   while (getTypeAction(*DAG.getContext(), VecEVT) ==
          TargetLowering::TypeSplitVector) {
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
+    auto [Lo, Hi] = DAG.SplitVector(Vec, DL);
     VecEVT = Lo.getValueType();
     Vec = DAG.getNode(BaseOpc, DL, VecEVT, Lo, Hi);
   }
@@ -5496,8 +5483,7 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
   MVT M1VT = getLMUL1VT(ContainerVT);
   MVT XLenVT = Subtarget.getXLenVT();
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue NeutralElem =
       DAG.getNeutralElement(BaseOpc, DL, VecEltVT, SDNodeFlags());
@@ -5561,8 +5547,7 @@ SDValue RISCVTargetLowering::lowerFPVECREDUCE(SDValue Op,
   MVT M1VT = getLMUL1VT(VectorVal.getSimpleValueType());
   MVT XLenVT = Subtarget.getXLenVT();
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue ScalarSplat =
       lowerScalarSplat(SDValue(), ScalarVal, DAG.getConstant(1, DL, XLenVT),
@@ -5772,8 +5757,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   // For scalable vectors this must be further multiplied by vscale.
   SlideupAmt = DAG.getNode(ISD::VSCALE, DL, XLenVT, SlideupAmt);
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
 
   // Construct the vector length corresponding to RemIdx + length(SubVecVT).
   VL = DAG.getConstant(SubVecVT.getVectorMinNumElements(), DL, XLenVT);
@@ -5906,8 +5890,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // For scalable vectors this must be further multiplied by vscale.
   SlidedownAmt = DAG.getNode(ISD::VSCALE, DL, XLenVT, SlidedownAmt);
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultScalableVLOps(InterSubVT, DL, DAG, Subtarget);
   SDValue Slidedown =
       DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, InterSubVT,
                   DAG.getUNDEF(InterSubVT), Vec, SlidedownAmt, Mask, VL);
@@ -5929,8 +5912,7 @@ SDValue RISCVTargetLowering::lowerSTEP_VECTOR(SDValue Op,
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
   SDValue StepVec = DAG.getNode(RISCVISD::VID_VL, DL, VT, Mask, VL);
   uint64_t StepValImm = Op.getConstantOperandVal(0);
   if (StepValImm != 1) {
@@ -5983,10 +5965,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
     // NOTE: It's also possible that after splitting that VLMAX no longer
     // requires vrgatherei16.vv.
     if (MinSize == (8 * RISCV::RVVBitsPerBlock)) {
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = DAG.SplitVectorOperand(Op.getNode(), 0);
-      EVT LoVT, HiVT;
-      std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VecVT);
+      auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+      auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VecVT);
       Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, LoVT, Lo);
       Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, HiVT, Hi);
       // Reassemble the low and high pieces reversed.
@@ -6005,8 +5985,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   }
 
   MVT XLenVT = Subtarget.getXLenVT();
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
 
   // Calculate VLMAX-1 for the desired SEW.
   unsigned MinElts = VecVT.getVectorMinNumElements();
@@ -6322,8 +6301,7 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
   X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue SplatZero = DAG.getNode(
       RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
@@ -6349,8 +6327,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorFCOPYSIGNToRVV(
   Mag = convertToScalableVector(ContainerVT, Mag, DAG, Subtarget);
   Sign = convertToScalableVector(ContainerVT, Sign, DAG, Subtarget);
 
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue CopySign = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Mag,
                                  Sign, DAG.getUNDEF(ContainerVT), Mask, VL);
@@ -6374,8 +6351,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
       convertToScalableVector(ContainerVT, Op.getOperand(2), DAG, Subtarget);
 
   SDLoc DL(Op);
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   SDValue Select =
       DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, CC, Op1, Op2, VL);
@@ -6407,8 +6383,7 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
   }
 
   SDLoc DL(Op);
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
   if (HasMergeOp)
     Ops.push_back(DAG.getUNDEF(ContainerVT));
   if (HasMask)
