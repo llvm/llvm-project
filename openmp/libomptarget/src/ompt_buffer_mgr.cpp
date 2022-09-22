@@ -34,7 +34,6 @@ static std::atomic<uint64_t> buf_id{0};
 static std::atomic<uint64_t> flush_id{0};
 
 static uint64_t get_and_inc_buf_id() { return buf_id++; }
-static uint64_t get_buf_id() { return buf_id; }
 
 static uint64_t get_and_inc_flush_id() { return flush_id++; }
 static uint64_t get_flush_id() { return flush_id; }

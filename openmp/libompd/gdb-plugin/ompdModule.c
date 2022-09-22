@@ -783,11 +783,11 @@ _thread_context(ompd_address_space_context_t *context, /* IN */
     return ompd_rc_unsupported;
   long int tid;
   if (sizeof(long int) >= 8 && sizeof_thread_id == 8)
-    tid = *(uint64_t *)thread_id;
+    tid = *(const uint64_t *)thread_id;
   else if (sizeof(long int) >= 4 && sizeof_thread_id == 4)
-    tid = *(uint32_t *)thread_id;
+    tid = *(const uint32_t *)thread_id;
   else if (sizeof(long int) >= 2 && sizeof_thread_id == 2)
-    tid = *(uint16_t *)thread_id;
+    tid = *(const uint16_t *)thread_id;
   else
     return ompd_rc_bad_input;
   PyObject *pFunc = PyObject_GetAttrString(pModule, "_thread_context");

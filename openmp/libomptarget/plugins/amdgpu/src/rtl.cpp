@@ -2492,7 +2492,7 @@ struct DeviceEnvironment {
       if (inImage()) {
         DP("Setting global device environment before load (%u bytes)\n",
            SI.Size);
-        uint64_t Offset = (char *)SI.Addr - (char *)Image->ImageStart;
+        uint64_t Offset = (const char *)SI.Addr - (char *)Image->ImageStart;
         void *Pos = (char *)Data + Offset;
         memcpy(Pos, &HostDeviceEnv, SI.Size);
       }
@@ -2699,6 +2699,7 @@ void launchInitFiniKernel(int32_t DeviceId, void *img, const size_t &size,
 }
 } // namespace core
 
+#ifdef newdriver
 static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
   hsa_status_t err;
   uint32_t name_len;
@@ -2721,6 +2722,7 @@ static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
   }
   return HSA_STATUS_SUCCESS;
 }
+#endif
 
 /// Parse a TargetID to get processor arch and feature map.
 /// Returns processor subarch.

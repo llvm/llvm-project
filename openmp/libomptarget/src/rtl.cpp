@@ -44,24 +44,6 @@ static const char *RTLNames[] = {
     /* Remote target        */ "libomptarget.rtl.rpc.so",
 };
 
-// Define the platform quick check files.
-// At least one must be found to attempt to load plugin for that platform.
-#define MAX_PLATFORM_CHECK_FILES 2
-// FIXME The current review says we should merge this static structure with
-// RTLNames above This will avoid need for  MAX_PLATFORM_CHECK_FILES  in loop
-// below
-static const char *RTLQuickCheckFiles[][MAX_PLATFORM_CHECK_FILES] = {
-    /* ppc64 has multiple quick check files */
-    {"/sys/firmware/devicetree/base/ibm,firmware-versions/open-power",
-     "/sys/firmware/devicetree/base/cpus/ibm,powerpc-cpu-features"},
-    /* acpi is unique to x86       */ {"/sys/firmware/acpi","/sys/module/acpi"},
-    /* nvidia0 is unique with cuda */ {"/dev/nvidia0"},
-    /* More arm check files needed */ {"/sys/module/mdio_thunder/initstate"},
-    /* SX-Aurora VE target         */ {"fixme.so"},
-    /* kfd is unique to amdgcn     */ {"/dev/kfd"},
-    /* remote target, experimental */ {"fixme.so"},
-};
-
 PluginManager *PM;
 
 static char *ProfileTraceFile = nullptr;
@@ -358,6 +340,7 @@ static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
   }
 }
 
+#ifdef newdriver
 static __tgt_device_image getExecutableImage(__tgt_device_image *Image) {
   StringRef ImageStr(static_cast<char *>(Image->ImageStart),
                      static_cast<char *>(Image->ImageEnd) -
@@ -385,12 +368,10 @@ static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
       object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
   if (!BinaryOrErr) {
     consumeError(BinaryOrErr.takeError());
-    return __tgt_image_info{};
   }
-#ifdef FIXME  
-  return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
-#endif
+  return __tgt_image_info{};
 }
+#endif
 
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
