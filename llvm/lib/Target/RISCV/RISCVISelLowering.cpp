@@ -3357,11 +3357,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     assert(Op.getOpcode() == ISD::BITREVERSE && "Unexpected opcode");
     // Expand bitreverse to a bswap(rev8) followed by brev8.
     SDValue BSwap = DAG.getNode(ISD::BSWAP, DL, VT, Op.getOperand(0));
-    // We use the old Zbp grevi encoding for rev.b/brev8 which will be
-    // recognized as brev8 by an isel pattern.
-    // TODO: Replace with RISCVISD::BREV8.
-    return DAG.getNode(RISCVISD::GREV, DL, VT, BSwap,
-                       DAG.getConstant(7, DL, VT));
+    return DAG.getNode(RISCVISD::BREV8, DL, VT, BSwap);
   }
   case ISD::TRUNCATE:
     // Only custom-lower vector truncates
@@ -5052,22 +5048,15 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::riscv_orc_b:
   case Intrinsic::riscv_brev8: {
-    // Lower to the GORCI encoding for orc.b or the GREVI encoding for brev8.
     unsigned Opc =
-        IntNo == Intrinsic::riscv_brev8 ? RISCVISD::GREV : RISCVISD::GORC;
-    return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1),
-                       DAG.getConstant(7, DL, XLenVT));
+        IntNo == Intrinsic::riscv_brev8 ? RISCVISD::BREV8 : RISCVISD::ORC_B;
+    return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
   }
   case Intrinsic::riscv_zip:
   case Intrinsic::riscv_unzip: {
-    // Lower to the SHFLI encoding for zip or the UNSHFLI encoding for unzip.
-    // For i32 the immediate is 15. For i64 the immediate is 31.
     unsigned Opc =
-        IntNo == Intrinsic::riscv_zip ? RISCVISD::SHFL : RISCVISD::UNSHFL;
-    unsigned BitWidth = Op.getValueSizeInBits();
-    assert(isPowerOf2_32(BitWidth) && BitWidth >= 2 && "Unexpected bit width");
-    return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1),
-                       DAG.getConstant((BitWidth / 2) - 1, DL, XLenVT));
+        IntNo == Intrinsic::riscv_zip ? RISCVISD::ZIP : RISCVISD::UNZIP;
+    return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
   }
   case Intrinsic::riscv_bcompress:
   case Intrinsic::riscv_bdecompress: {
@@ -7431,18 +7420,14 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
     break;
   }
-  case RISCVISD::GREV: {
+  case RISCVISD::BREV8: {
     MVT VT = N->getSimpleValueType(0);
     MVT XLenVT = Subtarget.getXLenVT();
     assert((VT == MVT::i16 || (VT == MVT::i32 && Subtarget.is64Bit())) &&
            "Unexpected custom legalisation");
-    assert(isa<ConstantSDNode>(N->getOperand(1)) && "Expected constant");
-    assert(Subtarget.hasStdExtZbkb() && N->getConstantOperandVal(1) == 7 &&
-           "Unexpected extension");
-    SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, N->getOperand(0));
-    SDValue NewOp1 =
-        DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, N->getOperand(1));
-    SDValue NewRes = DAG.getNode(N->getOpcode(), DL, XLenVT, NewOp0, NewOp1);
+    assert(Subtarget.hasStdExtZbkb() && "Unexpected extension");
+    SDValue NewOp = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, N->getOperand(0));
+    SDValue NewRes = DAG.getNode(N->getOpcode(), DL, XLenVT, NewOp);
     // ReplaceNodeResults requires we maintain the same type for the return
     // value.
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, NewRes));
@@ -7522,11 +7507,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       break;
     }
     case Intrinsic::riscv_orc_b: {
-      // Lower to the GORCI encoding for orc.b with the operand extended.
       SDValue NewOp =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue Res = DAG.getNode(RISCVISD::GORC, DL, MVT::i64, NewOp,
-                                DAG.getConstant(7, DL, MVT::i64));
+      SDValue Res = DAG.getNode(RISCVISD::ORC_B, DL, MVT::i64, NewOp);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
@@ -7750,41 +7733,6 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
       DAG.getNode(ISD::SHL, DL, VT, NL, DAG.getConstant(Diff, DL, VT));
   SDValue NA1 = DAG.getNode(ISD::ADD, DL, VT, NA0, NS);
   return DAG.getNode(ISD::SHL, DL, VT, NA1, DAG.getConstant(Bits, DL, VT));
-}
-
-// Combine (GREVI (GREVI x, C2), C1) -> (GREVI x, C1^C2) when C1^C2 is
-// non-zero, and to x when it is. Any repeated GREVI stage undoes itself.
-// Combine (GORCI (GORCI x, C2), C1) -> (GORCI x, C1|C2). Repeated stage does
-// not undo itself, but they are redundant.
-static SDValue combineGREVI_GORCI(SDNode *N, SelectionDAG &DAG) {
-  bool IsGORC = N->getOpcode() == RISCVISD::GORC;
-  assert((IsGORC || N->getOpcode() == RISCVISD::GREV) && "Unexpected opcode");
-  SDValue Src = N->getOperand(0);
-
-  if (Src.getOpcode() != N->getOpcode())
-    return SDValue();
-
-  if (!isa<ConstantSDNode>(N->getOperand(1)) ||
-      !isa<ConstantSDNode>(Src.getOperand(1)))
-    return SDValue();
-
-  unsigned ShAmt1 = N->getConstantOperandVal(1);
-  unsigned ShAmt2 = Src.getConstantOperandVal(1);
-  Src = Src.getOperand(0);
-
-  unsigned CombinedShAmt;
-  if (IsGORC)
-    CombinedShAmt = ShAmt1 | ShAmt2;
-  else
-    CombinedShAmt = ShAmt1 ^ ShAmt2;
-
-  if (CombinedShAmt == 0)
-    return Src;
-
-  SDLoc DL(N);
-  return DAG.getNode(
-      N->getOpcode(), DL, N->getValueType(0), Src,
-      DAG.getConstant(CombinedShAmt, DL, N->getOperand(1).getValueType()));
 }
 
 // Combine a constant select operand into its use:
@@ -8551,8 +8499,7 @@ static SDValue performBITREVERSECombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(N);
-  return DAG.getNode(RISCVISD::GREV, DL, VT, Src.getOperand(0),
-                     DAG.getConstant(7, DL, VT));
+  return DAG.getNode(RISCVISD::BREV8, DL, VT, Src.getOperand(0));
 }
 
 // Convert from one FMA opcode to another based on whether we are negating the
@@ -8924,26 +8871,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Only the lower 32 bits of the first operand are read
     if (SimplifyDemandedLowBitsHelper(0, 32))
       return SDValue(N, 0);
-    break;
-  }
-  case RISCVISD::GREV:
-  case RISCVISD::GORC: {
-    // Only the lower log2(Bitwidth) bits of the the shift amount are read.
-    unsigned BitWidth = N->getOperand(1).getValueSizeInBits();
-    assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
-    if (SimplifyDemandedLowBitsHelper(1, Log2_32(BitWidth)))
-      return SDValue(N, 0);
-
-    return combineGREVI_GORCI(N, DAG);
-  }
-  case RISCVISD::SHFL:
-  case RISCVISD::UNSHFL: {
-    // Only the lower log2(Bitwidth)-1 bits of the the shift amount are read.
-    unsigned BitWidth = N->getOperand(1).getValueSizeInBits();
-    assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
-    if (SimplifyDemandedLowBitsHelper(1, Log2_32(BitWidth) - 1))
-      return SDValue(N, 0);
-
     break;
   }
   case RISCVISD::BCOMPRESSW:
@@ -9576,17 +9503,16 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
-  case RISCVISD::GREV:
-  case RISCVISD::GORC: {
-    if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-      Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
-      unsigned ShAmt = C->getZExtValue() & (Known.getBitWidth() - 1);
-      bool IsGORC = Op.getOpcode() == RISCVISD::GORC;
-      // To compute zeros, we need to invert the value and invert it back after.
-      Known.Zero =
-          ~computeGREVOrGORC(~Known.Zero.getZExtValue(), ShAmt, IsGORC);
-      Known.One = computeGREVOrGORC(Known.One.getZExtValue(), ShAmt, IsGORC);
-    }
+  case RISCVISD::BREV8:
+  case RISCVISD::ORC_B: {
+    // FIXME: This is based on the non-ratified Zbp GREV and GORC where a
+    // control value of 7 is equivalent to brev8 and orc.b.
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    bool IsGORC = Op.getOpcode() == RISCVISD::ORC_B;
+    // To compute zeros, we need to invert the value and invert it back after.
+    Known.Zero =
+        ~computeGREVOrGORC(~Known.Zero.getZExtValue(), 7, IsGORC);
+    Known.One = computeGREVOrGORC(Known.One.getZExtValue(), 7, IsGORC);
     break;
   }
   case RISCVISD::READ_VLENB: {
@@ -9657,21 +9583,6 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     // more precise answer could be calculated for SRAW depending on known
     // bits in the shift amount.
     return 33;
-  case RISCVISD::SHFL:
-  case RISCVISD::UNSHFL: {
-    // There is no SHFLIW, but a i64 SHFLI with bit 4 of the control word
-    // cleared doesn't affect bit 31. The upper 32 bits will be shuffled, but
-    // will stay within the upper 32 bits. If there were more than 32 sign bits
-    // before there will be at least 33 sign bits after.
-    if (Op.getValueType() == MVT::i64 &&
-        isa<ConstantSDNode>(Op.getOperand(1)) &&
-        (Op.getConstantOperandVal(1) & 0x10) == 0) {
-      unsigned Tmp = DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1);
-      if (Tmp > 32)
-        return 33;
-    }
-    break;
-  }
   case RISCVISD::VMV_X_S: {
     // The number of sign bits of the scalar result is computed by obtaining the
     // element type of the input vector operand, subtracting its width from the
@@ -11712,10 +11623,10 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FCVT_W_RV64)
   NODE_NAME_CASE(STRICT_FCVT_WU_RV64)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
-  NODE_NAME_CASE(GREV)
-  NODE_NAME_CASE(GORC)
-  NODE_NAME_CASE(SHFL)
-  NODE_NAME_CASE(UNSHFL)
+  NODE_NAME_CASE(BREV8)
+  NODE_NAME_CASE(ORC_B)
+  NODE_NAME_CASE(ZIP)
+  NODE_NAME_CASE(UNZIP)
   NODE_NAME_CASE(BFP)
   NODE_NAME_CASE(BFPW)
   NODE_NAME_CASE(BCOMPRESS)
