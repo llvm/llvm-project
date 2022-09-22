@@ -480,7 +480,6 @@ static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
                             MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
-  SimplifyCFGCostTracker CostTracker;
   bool Changed = false;
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -660,14 +659,14 @@ ReprocessLoop:
         // The loop disposition of all SCEV expressions that depend on any
         // hoisted values have also changed.
         if (SE)
-          SE->forgetLoopDispositions(L);
+          SE->forgetLoopDispositions();
       }
       if (!AllInvariant) continue;
 
       // The block has now been cleared of all instructions except for
       // a comparison and a conditional branch. SimplifyCFG may be able
       // to fold it now.
-      if (!FoldBranchToCommonDest(BI, CostTracker, /*DTU=*/nullptr, MSSAU))
+      if (!FoldBranchToCommonDest(BI, /*DTU=*/nullptr, MSSAU))
         continue;
 
       // Success. The block is now dead, so remove it from the loop,

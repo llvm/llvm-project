@@ -332,6 +332,67 @@ def SPV_CLFmaOp : SPV_CLTernaryArithmeticOp<"fma", 26, SPV_Float> {
 
 // -----
 
+def SPV_CLFMaxOp : SPV_CLBinaryArithmeticOp<"fmax", 27, SPV_Float> {
+  let summary = "Return maximum of two floating-point operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x. If one argument is a NaN,
+    Fmax returns the other argument. If both arguments are NaNs, Fmax returns a NaN.
+
+    Result Type, x and y must be floating-point or vector(2,3,4,8,16) 
+    of floating-point values.
+
+    All of the operands, including the Result Type operand, 
+    must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    fmax-op ::= ssa-id `=` `spv.CL.fmax` ssa-use `:`
+                float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.CL.fmax %0, %1 : f32
+    %3 = spv.CL.fmax %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_CLFMinOp : SPV_CLBinaryArithmeticOp<"fmin", 28, SPV_Float> {
+  let summary = "Return minimum of two floating-point operands";
+
+  let description = [{
+    Returns y if y < x, otherwise it returns x. If one argument is a NaN, Fmin returns the other argument. 
+    If both arguments are NaNs, Fmin returns a NaN.
+
+    Result Type,x and y must be floating-point or vector(2,3,4,8,16) of floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+
+    <!-- End of AutoGen section -->
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    fmin-op ::= ssa-id `=` `spv.CL.fmin` ssa-use `:`
+                float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.CL.fmin %0, %1 : f32
+    %3 = spv.CL.fmin %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_CLLogOp : SPV_CLUnaryArithmeticOp<"log", 37, SPV_Float> {
   let summary = "Compute the natural logarithm of x.";
 
@@ -569,6 +630,112 @@ def SPV_CLSAbsOp : SPV_CLUnaryArithmeticOp<"s_abs", 141, SPV_Integer> {
     ```mlir
     %2 = spv.CL.s_abs %0 : i32
     %3 = spv.CL.s_abs %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_CLSMaxOp : SPV_CLBinaryArithmeticOp<"s_max", 156, SPV_Integer> {
+  let summary = "Return maximum of two signed integer operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x, where x and y are treated as signed integers.
+
+    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    smax-op ::= ssa-id `=` `spv.CL.s_max` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+    ```mlir
+    %2 = spv.CL.s_max %0, %1 : i32
+    %3 = spv.CL.s_max %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_CLUMaxOp : SPV_CLBinaryArithmeticOp<"u_max", 157, SPV_Integer> {
+  let summary = "Return maximum of two unsigned integer operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x, where x and y are treated as unsigned integers.
+
+    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    umax-op ::= ssa-id `=` `spv.CL.u_max` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+    ```mlir
+    %2 = spv.CL.u_max %0, %1 : i32
+    %3 = spv.CL.u_max %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+def SPV_CLSMinOp : SPV_CLBinaryArithmeticOp<"s_min", 158, SPV_Integer> {
+  let summary = "Return minimum of two signed integer operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x, where x and y are treated as signed integers.
+
+    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    smin-op ::= ssa-id `=` `spv.CL.s_min` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+    ```mlir
+    %2 = spv.CL.s_min %0, %1 : i32
+    %3 = spv.CL.s_min %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_CLUMinOp : SPV_CLBinaryArithmeticOp<"u_min", 159, SPV_Integer> {
+  let summary = "Return minimum of two unsigned integer operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x, where x and y are treated as unsigned integers.
+
+    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    umin-op ::= ssa-id `=` `spv.CL.u_min` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+    ```mlir
+    %2 = spv.CL.u_min %0, %1 : i32
+    %3 = spv.CL.u_min %0, %1 : vector<3xi16>
     ```
   }];
 }

@@ -11,6 +11,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/MapVector.h"
@@ -165,6 +166,24 @@ void DialectRegistry::insert(TypeID typeID, StringRef name,
         "Trying to register different dialects for the same namespace: " +
         name);
   }
+}
+
+void DialectRegistry::insertDynamic(
+    StringRef name, const DynamicDialectPopulationFunction &ctor) {
+  // This TypeID marks dynamic dialects. We cannot give a TypeID for the
+  // dialect yet, since the TypeID of a dynamic dialect is defined at its
+  // construction.
+  TypeID typeID = TypeID::get<void>();
+
+  // Create the dialect, and then call ctor, which allocates its components.
+  auto constructor = [nameStr = name.str(), ctor](MLIRContext *ctx) {
+    auto *dynDialect = ctx->getOrLoadDynamicDialect(
+        nameStr, [ctx, ctor](DynamicDialect *dialect) { ctor(ctx, dialect); });
+    assert(dynDialect && "Dynamic dialect creation unexpectedly failed");
+    return dynDialect;
+  };
+
+  insert(typeID, name, constructor);
 }
 
 void DialectRegistry::applyExtensions(Dialect *dialect) const {

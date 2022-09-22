@@ -1202,11 +1202,9 @@ class upward_defs_iterator
   using BaseT = upward_defs_iterator::iterator_facade_base;
 
 public:
-  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT,
-                       bool *PerformedPhiTranslation = nullptr)
+  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT)
       : DefIterator(Info.first), Location(Info.second),
-        OriginalAccess(Info.first), DT(DT),
-        PerformedPhiTranslation(PerformedPhiTranslation) {
+        OriginalAccess(Info.first), DT(DT) {
     CurrentPair.first = nullptr;
 
     WalkingPhi = Info.first && isa<MemoryPhi>(Info.first);
@@ -1241,7 +1239,7 @@ private:
   /// Returns true if \p Ptr is guaranteed to be loop invariant for any possible
   /// loop. In particular, this guarantees that it only references a single
   /// MemoryLocation during execution of the containing function.
-  bool IsGuaranteedLoopInvariant(Value *Ptr) const;
+  bool IsGuaranteedLoopInvariant(const Value *Ptr) const;
 
   void fillInCurrentPair() {
     CurrentPair.first = *DefIterator;
@@ -1252,7 +1250,7 @@ private:
       // to unknown guarantees that any memory accesses that access locations
       // after the pointer are considered as clobbers, which is important to
       // catch loop carried dependences.
-      if (!IsGuaranteedLoopInvariant(const_cast<Value *>(Location.Ptr)))
+      if (!IsGuaranteedLoopInvariant(Location.Ptr))
         CurrentPair.second =
             Location.getWithNewSize(LocationSize::beforeOrAfterPointer());
       PHITransAddr Translator(
@@ -1267,12 +1265,9 @@ private:
           CurrentPair.second = CurrentPair.second.getWithNewPtr(TransAddr);
 
           if (TransAddr &&
-              !IsGuaranteedLoopInvariant(const_cast<Value *>(TransAddr)))
+              !IsGuaranteedLoopInvariant(TransAddr))
             CurrentPair.second = CurrentPair.second.getWithNewSize(
                 LocationSize::beforeOrAfterPointer());
-
-          if (PerformedPhiTranslation)
-            *PerformedPhiTranslation = true;
         }
       }
     }
@@ -1284,13 +1279,11 @@ private:
   MemoryAccess *OriginalAccess = nullptr;
   DominatorTree *DT = nullptr;
   bool WalkingPhi = false;
-  bool *PerformedPhiTranslation = nullptr;
 };
 
 inline upward_defs_iterator
-upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT,
-                  bool *PerformedPhiTranslation = nullptr) {
-  return upward_defs_iterator(Pair, &DT, PerformedPhiTranslation);
+upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT) {
+  return upward_defs_iterator(Pair, &DT);
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }

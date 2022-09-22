@@ -112,6 +112,7 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_VERSION_BLOCK_ID, "VersionBlock"},
           {BI_NAMESPACE_BLOCK_ID, "NamespaceBlock"},
           {BI_ENUM_BLOCK_ID, "EnumBlock"},
+          {BI_ENUM_VALUE_BLOCK_ID, "EnumValueBlock"},
           {BI_TYPE_BLOCK_ID, "TypeBlock"},
           {BI_FIELD_TYPE_BLOCK_ID, "FieldTypeBlock"},
           {BI_MEMBER_TYPE_BLOCK_ID, "MemberTypeBlock"},
@@ -158,8 +159,10 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {ENUM_NAME, {"Name", &StringAbbrev}},
           {ENUM_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {ENUM_LOCATION, {"Location", &LocationAbbrev}},
-          {ENUM_MEMBER, {"Member", &StringAbbrev}},
           {ENUM_SCOPED, {"Scoped", &BoolAbbrev}},
+          {ENUM_VALUE_NAME, {"Name", &StringAbbrev}},
+          {ENUM_VALUE_VALUE, {"Value", &StringAbbrev}},
+          {ENUM_VALUE_EXPR, {"Expr", &StringAbbrev}},
           {RECORD_USR, {"USR", &SymbolIDAbbrev}},
           {RECORD_NAME, {"Name", &StringAbbrev}},
           {RECORD_PATH, {"Path", &StringAbbrev}},
@@ -213,8 +216,10 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         {BI_MEMBER_TYPE_BLOCK_ID, {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS}},
         // Enum Block
         {BI_ENUM_BLOCK_ID,
-         {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_MEMBER,
-          ENUM_SCOPED}},
+         {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_SCOPED}},
+        // Enum Value Block
+        {BI_ENUM_VALUE_BLOCK_ID,
+         {ENUM_VALUE_NAME, ENUM_VALUE_VALUE, ENUM_VALUE_EXPR}},
         // Namespace Block
         {BI_NAMESPACE_BLOCK_ID,
          {NAMESPACE_USR, NAMESPACE_NAME, NAMESPACE_PATH}},
@@ -486,8 +491,17 @@ void ClangDocBitcodeWriter::emitBlock(const EnumInfo &I) {
   for (const auto &L : I.Loc)
     emitRecord(L, ENUM_LOCATION);
   emitRecord(I.Scoped, ENUM_SCOPED);
+  if (I.BaseType)
+    emitBlock(*I.BaseType);
   for (const auto &N : I.Members)
-    emitRecord(N, ENUM_MEMBER);
+    emitBlock(N);
+}
+
+void ClangDocBitcodeWriter::emitBlock(const EnumValueInfo &I) {
+  StreamSubBlockGuard Block(Stream, BI_ENUM_VALUE_BLOCK_ID);
+  emitRecord(I.Name, ENUM_VALUE_NAME);
+  emitRecord(I.Value, ENUM_VALUE_VALUE);
+  emitRecord(I.ValueExpr, ENUM_VALUE_EXPR);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {

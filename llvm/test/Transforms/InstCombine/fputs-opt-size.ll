@@ -2,7 +2,6 @@
 ; because it requires more arguments and thus extra MOVs are required.
 ;
 ; RUN: opt < %s -instcombine -S | FileCheck %s
-; RUN: opt < %s -instcombine -pgso -S -enable-new-pm=0 | FileCheck %s -check-prefix=PGSO
 ; RUN: opt < %s -passes='require<profile-summary>,function(instcombine)' -pgso -S | FileCheck %s -check-prefix=PGSO
 ; RUN: opt < %s -instcombine -pgso=false -S | FileCheck %s -check-prefix=NPGSO
 

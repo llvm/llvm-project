@@ -181,6 +181,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
       EmitVariablyModifiedType(Ty);
     return;
   }
+  case Decl::HLSLBuffer:
+    // FIXME: add codegen for HLSLBuffer.
+    return;
   }
 }
 

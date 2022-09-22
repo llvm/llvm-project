@@ -4673,7 +4673,18 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_umin:
     return DAG.getNode(ISD::UMIN, dl, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
-
+  case Intrinsic::aarch64_neon_scalar_sqxtn:
+  case Intrinsic::aarch64_neon_scalar_sqxtun:
+  case Intrinsic::aarch64_neon_scalar_uqxtn: {
+    assert(Op.getValueType() == MVT::i32 || Op.getValueType() == MVT::f32);
+    if (Op.getValueType() == MVT::i32)
+      return DAG.getNode(ISD::BITCAST, dl, MVT::i32,
+                         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::f32,
+                                     Op.getOperand(0),
+                                     DAG.getNode(ISD::BITCAST, dl, MVT::f64,
+                                                 Op.getOperand(1))));
+    return SDValue();
+  }
   case Intrinsic::aarch64_sve_sunpkhi:
     return DAG.getNode(AArch64ISD::SUNPKHI, dl, Op.getValueType(),
                        Op.getOperand(1));
@@ -10784,6 +10795,51 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Try to fold shuffle (tbl2, tbl2) into a single tbl4.
+static SDValue tryToConvertShuffleOfTbl2ToTbl4(SDValue Op,
+                                               ArrayRef<int> ShuffleMask,
+                                               SelectionDAG &DAG) {
+  SDValue Tbl1 = Op->getOperand(0);
+  SDValue Tbl2 = Op->getOperand(1);
+  SDLoc dl(Op);
+  SDValue Tbl2ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl2, dl, MVT::i64);
+
+  EVT VT = Op.getValueType();
+  if (Tbl1->getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      Tbl1->getOperand(0) != Tbl2ID ||
+      Tbl2->getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      Tbl2->getOperand(0) != Tbl2ID)
+    return SDValue();
+
+  if (Tbl1->getValueType(0) != MVT::v16i8 ||
+      Tbl2->getValueType(0) != MVT::v16i8)
+    return SDValue();
+
+  SDValue Mask1 = Tbl1->getOperand(3);
+  SDValue Mask2 = Tbl2->getOperand(3);
+  SmallVector<SDValue, 16> TBLMaskParts(16, SDValue());
+  for (unsigned I = 0; I < 16; I++) {
+    if (ShuffleMask[I] < 16)
+      TBLMaskParts[I] = Mask1->getOperand(ShuffleMask[I]);
+    else {
+      auto *C =
+          dyn_cast<ConstantSDNode>(Mask2->getOperand(ShuffleMask[I] - 16));
+      if (!C)
+        return SDValue();
+      TBLMaskParts[I] = DAG.getConstant(C->getSExtValue() + 32, dl, MVT::i32);
+    }
+  }
+
+  SDValue TBLMask = DAG.getBuildVector(VT, dl, TBLMaskParts);
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl4, dl, MVT::i64);
+
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
+                     {ID, Tbl1->getOperand(1), Tbl1->getOperand(2),
+                      Tbl2->getOperand(1), Tbl2->getOperand(2), TBLMask});
+}
+
 SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                                                    SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -10806,6 +10862,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   assert(V1.getValueType() == VT && "Unexpected VECTOR_SHUFFLE type!");
   assert(ShuffleMask.size() == VT.getVectorNumElements() &&
          "Unexpected VECTOR_SHUFFLE mask size!");
+
+  if (SDValue Res = tryToConvertShuffleOfTbl2ToTbl4(Op, ShuffleMask, DAG))
+    return Res;
 
   if (SVN->isSplat()) {
     int Lane = SVN->getSplatIndex();
@@ -13838,61 +13897,6 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
     Builder.CreateCall(StNFunc, Ops);
   }
   return true;
-}
-
-// Lower an SVE structured load intrinsic returning a tuple type to target
-// specific intrinsic taking the same input but returning a multi-result value
-// of the split tuple type.
-//
-// E.g. Lowering an LD3:
-//
-//  call <vscale x 12 x i32> @llvm.aarch64.sve.ld3.nxv12i32(
-//                                                    <vscale x 4 x i1> %pred,
-//                                                    <vscale x 4 x i32>* %addr)
-//
-//  Output DAG:
-//
-//    t0: ch = EntryToken
-//        t2: nxv4i1,ch = CopyFromReg t0, Register:nxv4i1 %0
-//        t4: i64,ch = CopyFromReg t0, Register:i64 %1
-//    t5: nxv4i32,nxv4i32,nxv4i32,ch = AArch64ISD::SVE_LD3 t0, t2, t4
-//    t6: nxv12i32 = concat_vectors t5, t5:1, t5:2
-//
-// This is called pre-legalization to avoid widening/splitting issues with
-// non-power-of-2 tuple types used for LD3, such as nxv12i32.
-SDValue AArch64TargetLowering::LowerSVEStructLoad(unsigned Intrinsic,
-                                                  ArrayRef<SDValue> LoadOps,
-                                                  EVT VT, SelectionDAG &DAG,
-                                                  const SDLoc &DL) const {
-  assert(VT.isScalableVector() && "Can only lower scalable vectors");
-
-  unsigned N, Opcode;
-  static const std::pair<unsigned, std::pair<unsigned, unsigned>>
-      IntrinsicMap[] = {
-          {Intrinsic::aarch64_sve_ld2, {2, AArch64ISD::SVE_LD2_MERGE_ZERO}},
-          {Intrinsic::aarch64_sve_ld3, {3, AArch64ISD::SVE_LD3_MERGE_ZERO}},
-          {Intrinsic::aarch64_sve_ld4, {4, AArch64ISD::SVE_LD4_MERGE_ZERO}}};
-
-  std::tie(N, Opcode) = llvm::find_if(IntrinsicMap, [&](auto P) {
-                          return P.first == Intrinsic;
-                        })->second;
-  assert(VT.getVectorElementCount().getKnownMinValue() % N == 0 &&
-         "invalid tuple vector type!");
-
-  EVT SplitVT =
-      EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
-                       VT.getVectorElementCount().divideCoefficientBy(N));
-  assert(isTypeLegal(SplitVT));
-
-  SmallVector<EVT, 5> VTs(N, SplitVT);
-  VTs.push_back(MVT::Other); // Chain
-  SDVTList NodeTys = DAG.getVTList(VTs);
-
-  SDValue PseudoLoad = DAG.getNode(Opcode, DL, NodeTys, LoadOps);
-  SmallVector<SDValue, 4> PseudoLoadOps;
-  for (unsigned I = 0; I < N; ++I)
-    PseudoLoadOps.push_back(SDValue(PseudoLoad.getNode(), I));
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, PseudoLoadOps);
 }
 
 EVT AArch64TargetLowering::getOptimalMemOpType(
@@ -20399,20 +20403,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                         (N->getNumOperands() - 2));
       SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, DestVT, Opnds);
       return DAG.getMergeValues({Concat, Chain}, DL);
-    }
-    case Intrinsic::aarch64_sve_ld2:
-    case Intrinsic::aarch64_sve_ld3:
-    case Intrinsic::aarch64_sve_ld4: {
-      SDLoc DL(N);
-      SDValue Chain = N->getOperand(0);
-      SDValue Mask = N->getOperand(2);
-      SDValue BasePtr = N->getOperand(3);
-      SDValue LoadOps[] = {Chain, Mask, BasePtr};
-      unsigned IntrinsicID =
-          cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
-      SDValue Result =
-          LowerSVEStructLoad(IntrinsicID, LoadOps, N->getValueType(0), DAG, DL);
-      return DAG.getMergeValues({Result, Chain}, DL);
     }
     case Intrinsic::aarch64_rndr:
     case Intrinsic::aarch64_rndrrs: {

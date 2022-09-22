@@ -1241,8 +1241,8 @@ define i8 @negate_left_shift_by_constant(i8 %x, i8 %y, i8 %z, i8 %k) {
 ; CHECK-LABEL: @negate_left_shift_by_constant(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 [[K:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1_NEG:%.*]] = mul i8 [[T0]], -16
-; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 4
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i8 [[T2]]
 ;
   %t0 = sub i8 %k, %z

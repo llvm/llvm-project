@@ -12,7 +12,7 @@ define void @"foo"(i8 addrspace(1)* %0, i8 addrspace(1)* %1) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[TMP1:%.*]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8 addrspace(1)* [[TMP5]] to float addrspace(1)*
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i8 addrspace(1)*> [[TMP4]] to <4 x float addrspace(1)*>
-; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p1f32(<4 x float addrspace(1)*> [[TMP7]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> undef)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p1f32(<4 x float addrspace(1)*> [[TMP7]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x float> poison)
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <8 x i32> <i32 0, i32 3, i32 0, i32 3, i32 2, i32 1, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float addrspace(1)* [[TMP6]] to <8 x float> addrspace(1)*
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <8 x float>, <8 x float> addrspace(1)* [[TMP9]], align 4

@@ -464,6 +464,14 @@
 // CHECK-ZICBOP-EXT: __riscv_zicbop 1000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
+// RUN: -march=rv32izawrs1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZAWRS-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
+// RUN: -march=rv64izawrs1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZAWRS-EXT %s
+// CHECK-ZAWRS-EXT: __riscv_zawrs 1000000{{$}}
+
+// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
 // RUN: -march=rv32iztso0p1 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZTSO-EXT %s
 // RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \

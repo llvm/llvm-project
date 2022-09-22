@@ -315,6 +315,19 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   for (Defined *sym : staticSyms)
     os << staticSymStr[sym] << '\n';
 
+  // Print out the exported functions
+  if (config->mapInfo) {
+    os << "\n";
+    os << " Exports\n";
+    os << "\n";
+    os << "  ordinal    name\n\n";
+    for (Export &e : config->exports) {
+      os << format("  %7d", e.ordinal) << "    " << e.name << "\n";
+      if (!e.extName.empty() && e.extName != e.name)
+        os << "               exported name: " << e.extName << "\n";
+    }
+  }
+
   t4.stop();
   t1.stop();
 }

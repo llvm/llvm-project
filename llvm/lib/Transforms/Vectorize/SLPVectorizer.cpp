@@ -2116,6 +2116,10 @@ private:
                      ArrayRef<TreeEntry *> ReorderableGathers,
                      SmallVectorImpl<TreeEntry *> &GatherOps);
 
+  /// Checks if the given \p TE is a gather node with clustered reused scalars
+  /// and reorders it per given \p Mask.
+  void reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const;
+
   /// Returns vectorized operand \p OpIdx of the node \p UserTE from the graph,
   /// if any. If it is not vectorized (gather node), returns nullptr.
   TreeEntry *getVectorizedOperand(TreeEntry *UserTE, unsigned OpIdx) {
@@ -3785,6 +3789,40 @@ Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
   return None;
 }
 
+/// Checks if the given mask is a "clustered" mask with the same clusters of
+/// size \p Sz, which are not identity submasks.
+static bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask,
+                                               unsigned Sz) {
+  ArrayRef<int> FirstCluster = Mask.slice(0, Sz);
+  if (ShuffleVectorInst::isIdentityMask(FirstCluster))
+    return false;
+  for (unsigned I = 0, E = Mask.size(); I < E; I += Sz) {
+    ArrayRef<int> Cluster = Mask.slice(I, Sz);
+    if (Cluster != FirstCluster)
+      return false;
+  }
+  return true;
+}
+
+void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
+  // For vectorized and non-clustered reused - just reorder reuses mask.
+  const unsigned Sz = TE.Scalars.size();
+  if (TE.State != TreeEntry::NeedToGather || !TE.ReorderIndices.empty() ||
+      !ShuffleVectorInst::isOneUseSingleSourceMask(TE.ReuseShuffleIndices,
+                                                   Sz) ||
+      !isRepeatedNonIdentityClusteredMask(TE.ReuseShuffleIndices, Sz)) {
+    reorderReuses(TE.ReuseShuffleIndices, Mask);
+    return;
+  }
+  // Try to improve gathered nodes with clustered reuses, if possible.
+  reorderScalars(TE.Scalars, makeArrayRef(TE.ReuseShuffleIndices).slice(0, Sz));
+  // Fill the reuses mask with the identity submasks.
+  for (auto It = TE.ReuseShuffleIndices.begin(),
+            End = TE.ReuseShuffleIndices.end();
+       It != End; std::advance(It, Sz))
+    std::iota(It, std::next(It + Sz), 0);
+}
+
 void BoUpSLP::reorderTopToBottom() {
   // Maps VF to the graph nodes.
   DenseMap<unsigned, SetVector<TreeEntry *>> VFToOrderedEntries;
@@ -3976,7 +4014,7 @@ void BoUpSLP::reorderTopToBottom() {
                  "All users must be of VF size.");
           // Update ordering of the operands with the smaller VF than the given
           // one.
-          reorderReuses(TE->ReuseShuffleIndices, Mask);
+          reorderNodeWithReuses(*TE, Mask);
         }
         continue;
       }
@@ -4258,8 +4296,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         if (!VisitedOps.insert(TE).second)
           continue;
         if (TE->ReuseShuffleIndices.size() == BestOrder.size()) {
-          // Just reorder reuses indices.
-          reorderReuses(TE->ReuseShuffleIndices, Mask);
+          reorderNodeWithReuses(*TE, Mask);
           continue;
         }
         // Gathers are processed separately.
@@ -6303,14 +6340,17 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
 
       unsigned NumOfParts = TTI->getNumberOfParts(SrcVecTy);
 
+      SmallVector<int> InsertMask(NumElts, UndefMaskElem);
       unsigned OffsetBeg = *getInsertIndex(VL.front());
       unsigned OffsetEnd = OffsetBeg;
-      for (Value *V : VL.drop_front()) {
+      InsertMask[OffsetBeg] = 0;
+      for (auto [I, V] : enumerate(VL.drop_front())) {
         unsigned Idx = *getInsertIndex(V);
         if (OffsetBeg > Idx)
           OffsetBeg = Idx;
         else if (OffsetEnd < Idx)
           OffsetEnd = Idx;
+        InsertMask[Idx] = I + 1;
       }
       unsigned VecScalarsSz = PowerOf2Ceil(NumElts);
       if (NumOfParts > 0)
@@ -6375,8 +6415,6 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // initial vector or inserting a subvector.
       // TODO: Implement the analysis of the FirstInsert->getOperand(0)
       // subvector of ActualVecTy.
-      SmallVector<int> InsertMask(NumElts, UndefMaskElem);
-      copy(Mask, std::next(InsertMask.begin(), OffsetBeg));
       if (!isUndefVector(FirstInsert->getOperand(0), InsertMask) &&
           NumScalars != NumElts && !IsWholeSubvector) {
         if (InsertVecSz != VecSz) {
@@ -7165,6 +7203,18 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
 
   for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
     TreeEntry &TE = *VectorizableTree[I];
+    if (TE.State == TreeEntry::NeedToGather) {
+      if (const TreeEntry *E = getTreeEntry(TE.getMainOp());
+          E && E->getVectorFactor() == TE.getVectorFactor() &&
+          E->isSame(TE.Scalars)) {
+        // Some gather nodes might be absolutely the same as some vectorizable
+        // nodes after reordering, need to handle it.
+        LLVM_DEBUG(dbgs() << "SLP: Adding cost 0 for bundle that starts with "
+                          << *TE.Scalars[0] << ".\n"
+                          << "SLP: Current total cost = " << Cost << "\n");
+        continue;
+      }
+    }
 
     InstructionCost C = getEntryCost(&TE, VectorizedVals);
     Cost += C;
@@ -9546,7 +9596,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
       if (!isGuaranteedToTransferExecutionToSuccessor(BundleMember->Inst)) {
         for (Instruction *I = BundleMember->Inst->getNextNode();
              I != ScheduleEnd; I = I->getNextNode()) {
-          if (isSafeToSpeculativelyExecute(I, &*BB->begin()))
+          if (isSafeToSpeculativelyExecute(I, &*BB->begin(), SLP->AC))
             continue;
 
           // Add the dependency

@@ -56,11 +56,11 @@ define void @foo4(double* nocapture %A, double* nocapture readonly %B, i32* noca
 ; RV32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], <vscale x 1 x i64> [[VEC_IND]]
-; RV32-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 1 x i32> @llvm.masked.gather.nxv1i32.nxv1p0i32(<vscale x 1 x i32*> [[TMP8]], i32 4, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), <vscale x 1 x i32> undef), !alias.scope !0
+; RV32-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 1 x i32> @llvm.masked.gather.nxv1i32.nxv1p0i32(<vscale x 1 x i32*> [[TMP8]], i32 4, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), <vscale x 1 x i32> poison), !alias.scope !0
 ; RV32-NEXT:    [[TMP9:%.*]] = icmp slt <vscale x 1 x i32> [[WIDE_MASKED_GATHER]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 100, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
 ; RV32-NEXT:    [[TMP10:%.*]] = shl nuw nsw <vscale x 1 x i64> [[VEC_IND]], shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
 ; RV32-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, double* [[B]], <vscale x 1 x i64> [[TMP10]]
-; RV32-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <vscale x 1 x double> @llvm.masked.gather.nxv1f64.nxv1p0f64(<vscale x 1 x double*> [[TMP11]], i32 8, <vscale x 1 x i1> [[TMP9]], <vscale x 1 x double> undef), !alias.scope !3
+; RV32-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <vscale x 1 x double> @llvm.masked.gather.nxv1f64.nxv1p0f64(<vscale x 1 x double*> [[TMP11]], i32 8, <vscale x 1 x i1> [[TMP9]], <vscale x 1 x double> poison), !alias.scope !3
 ; RV32-NEXT:    [[TMP12:%.*]] = sitofp <vscale x 1 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 1 x double>
 ; RV32-NEXT:    [[TMP13:%.*]] = fadd <vscale x 1 x double> [[WIDE_MASKED_GATHER12]], [[TMP12]]
 ; RV32-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, double* [[A]], <vscale x 1 x i64> [[VEC_IND]]
@@ -140,11 +140,11 @@ define void @foo4(double* nocapture %A, double* nocapture readonly %B, i32* noca
 ; RV64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 1 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], <vscale x 1 x i64> [[VEC_IND]]
-; RV64-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 1 x i32> @llvm.masked.gather.nxv1i32.nxv1p0i32(<vscale x 1 x i32*> [[TMP8]], i32 4, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), <vscale x 1 x i32> undef), !alias.scope !0
+; RV64-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 1 x i32> @llvm.masked.gather.nxv1i32.nxv1p0i32(<vscale x 1 x i32*> [[TMP8]], i32 4, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer), <vscale x 1 x i32> poison), !alias.scope !0
 ; RV64-NEXT:    [[TMP9:%.*]] = icmp slt <vscale x 1 x i32> [[WIDE_MASKED_GATHER]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 100, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
 ; RV64-NEXT:    [[TMP10:%.*]] = shl nuw nsw <vscale x 1 x i64> [[VEC_IND]], shufflevector (<vscale x 1 x i64> insertelement (<vscale x 1 x i64> poison, i64 1, i32 0), <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer)
 ; RV64-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, double* [[B]], <vscale x 1 x i64> [[TMP10]]
-; RV64-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <vscale x 1 x double> @llvm.masked.gather.nxv1f64.nxv1p0f64(<vscale x 1 x double*> [[TMP11]], i32 8, <vscale x 1 x i1> [[TMP9]], <vscale x 1 x double> undef), !alias.scope !3
+; RV64-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <vscale x 1 x double> @llvm.masked.gather.nxv1f64.nxv1p0f64(<vscale x 1 x double*> [[TMP11]], i32 8, <vscale x 1 x i1> [[TMP9]], <vscale x 1 x double> poison), !alias.scope !3
 ; RV64-NEXT:    [[TMP12:%.*]] = sitofp <vscale x 1 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 1 x double>
 ; RV64-NEXT:    [[TMP13:%.*]] = fadd <vscale x 1 x double> [[WIDE_MASKED_GATHER12]], [[TMP12]]
 ; RV64-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, double* [[A]], <vscale x 1 x i64> [[VEC_IND]]

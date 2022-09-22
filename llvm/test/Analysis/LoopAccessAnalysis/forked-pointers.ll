@@ -569,13 +569,13 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK-NEXT:      Against group ([[G2:.+]]):
 ; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:    Check 1:
-; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:      Comparing group ([[G1]]):
 ; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds float, ptr %Dest, i64 %indvars.iv
 ; CHECK-NEXT:      Against group ([[G3:.+]]):
 ; CHECK-NEXT:        %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:        %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:    Grouped accesses:
-; CHECK-NEXT:      Group [[G1:.+]]:
+; CHECK-NEXT:      Group [[G1]]:
 ; CHECK-NEXT:        (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:          Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:      Group [[G2]]:
@@ -878,5 +878,61 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
+  ret void
+}
+
+; CHECK-LABEL: Loop access info in function 'sc_add_expr_ice':
+; CHECK-NEXT:   for.body:
+; CHECK-NEXT:     Memory dependences are safe with run-time checks
+; CHECK-NEXT:     Dependences:
+; CHECK-NEXT:     Run-time memory checks:
+; CHECK-NEXT:     Check 0:
+; CHECK-NEXT:       Comparing group ([[G1:.+]]):
+; CHECK-NEXT:       ptr %Base1
+; CHECK-NEXT:       Against group ([[G2:.+]]):
+; CHECK-NEXT:         %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
+; CHECK-NEXT:     Grouped accesses:
+; CHECK-NEXT:       Group [[G1]]:
+; CHECK-NEXT:         (Low: %Base1 High: (8 + %Base1))
+; CHECK-NEXT:           Member: %Base1
+; CHECK-NEXT:       Group [[G2]]:
+; CHECK-NEXT:         (Low: %Base2 High: ((8 * %N) + %Base2))
+; CHECK-NEXT:           Member: {%Base2,+,8}<%for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:     Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:     SCEV assumptions:
+; CHECK-NEXT:     {0,+,1}<%for.body> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:     Expressions re-written:
+; CHECK-NEXT:     [PSE]  %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel:
+; CHECK-NEXT:       ((8 * (zext i32 {0,+,1}<%for.body> to i64))<nuw><nsw> + %Base2)<nuw>
+; CHECK-NEXT:       --> {%Base2,+,8}<%for.body>
+
+;;; The following test caused an ICE with the initial forked pointers work.
+;;; One fork is loop invariant (%Base2 + 0), the other is an scAddExpr that
+;;; contains an scAddRecExpr inside it:
+;;;   ((8 * (zext i32 {0,+,1}<%for.body> to i64))<nuw><nsw> + %Base2)<nuw>
+;;;
+;;; RtCheck::insert was expecting either loop invariant or SAR, so asserted
+;;; on a plain scAddExpr. For now we restrict to loop invariant or SAR
+;;; forks only, but we should be able to do better.
+
+define void @sc_add_expr_ice(ptr %Base1, ptr %Base2, i64 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %iv.trunc = trunc i64 %iv to i32
+  store double 0.000000e+00, ptr %Base1, align 8
+  %iv.zext = zext i32 %iv.trunc to i64
+  %sel = select i1 true, i64 %iv.zext, i64 0
+  %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
+  %dummy.load = load double, ptr %fptr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
   ret void
 }

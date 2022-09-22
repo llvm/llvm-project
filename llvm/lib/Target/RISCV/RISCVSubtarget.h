@@ -60,7 +60,6 @@ private:
   bool HasStdExtZbp = false;
   bool HasStdExtZbr = false;
   bool HasStdExtZbs = false;
-  bool HasStdExtZbt = false;
   bool HasStdExtZca = false;
   bool HasStdExtV = false;
   bool HasStdExtZve32x = false;
@@ -92,6 +91,7 @@ private:
   bool HasStdExtZicboz = false;
   bool HasStdExtZicbop = false;
   bool HasStdExtZmmul = false;
+  bool HasStdExtZawrs = false;
   bool HasStdExtZtso = false;
   bool HasRV32 = false;
   bool HasRV64 = false;
@@ -170,7 +170,6 @@ public:
   bool hasStdExtZbp() const { return HasStdExtZbp; }
   bool hasStdExtZbr() const { return HasStdExtZbr; }
   bool hasStdExtZbs() const { return HasStdExtZbs; }
-  bool hasStdExtZbt() const { return HasStdExtZbt; }
   bool hasStdExtZca() const { return HasStdExtZca; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtZvfh() const { return HasStdExtZvfh; }
@@ -192,6 +191,7 @@ public:
   bool hasStdExtZicbom() const { return HasStdExtZicbom; }
   bool hasStdExtZicboz() const { return HasStdExtZicboz; }
   bool hasStdExtZicbop() const { return HasStdExtZicbop; }
+  bool hasStdExtZawrs() const { return HasStdExtZawrs; }
   bool hasStdExtZmmul() const { return HasStdExtZmmul; }
   bool hasStdExtZtso() const { return HasStdExtZtso; }
   bool is64Bit() const { return HasRV64; }

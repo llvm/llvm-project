@@ -26,7 +26,6 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"

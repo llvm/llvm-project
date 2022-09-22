@@ -15,6 +15,15 @@
 # CHECK-NEXT:     Value: 80
 # CHECK-NEXT:     Section: .text (1)
 # CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Function (0x2)
+# CHECK-NEXT:     StorageClass: External (0x2)
+# CHECK-NEXT:     AuxSymbolCount: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __imp_MessageBoxA
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Section: .rdata (2)
+# CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: External (0x2)
 # CHECK-NEXT:     AuxSymbolCount: 0
@@ -23,6 +32,15 @@
 # CHECK-NEXT:     Name: ExitProcess
 # CHECK-NEXT:     Value: 64
 # CHECK-NEXT:     Section: .text (1)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Function (0x2)
+# CHECK-NEXT:     StorageClass: External (0x2)
+# CHECK-NEXT:     AuxSymbolCount: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __imp_ExitProcess
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Section: .rdata (2)
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: External (0x2)

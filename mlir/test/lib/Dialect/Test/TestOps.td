@@ -797,6 +797,11 @@ def OIListAllowedLiteral : TEST_Op<"oilist_allowed_literal"> {
   }];
 }
 
+def ElseAnchorOp : TEST_Op<"else_anchor"> {
+  let arguments = (ins Optional<AnyType>:$a);
+  let assemblyFormat = "`(` (`?`) : (`` $a^ `:` type($a))? `)` attr-dict";
+}
+
 // This is used to test encoding of a string attribute into an SSA name of a
 // pretty printed value name.
 def StringAttrPrettyNameOp

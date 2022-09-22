@@ -192,7 +192,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.load to spv.Load.
+/// Converts memref.load to spv.Load + spv.AccessChain on integers.
 class IntLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
   using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
@@ -202,7 +202,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.load to spv.Load.
+/// Converts memref.load to spv.Load + spv.AccessChain.
 class LoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
   using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
@@ -319,11 +319,11 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
     return failure();
 
   auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
-  spirv::AccessChainOp accessChainOp =
+  Value accessChain =
       spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
                            adaptor.getIndices(), loc, rewriter);
 
-  if (!accessChainOp)
+  if (!accessChain)
     return failure();
 
   int srcBits = memrefType.getElementType().getIntOrFloatBitWidth();
@@ -333,26 +333,40 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   Type pointeeType = typeConverter.convertType(memrefType)
                          .cast<spirv::PointerType>()
                          .getPointeeType();
-  Type structElemType = pointeeType.cast<spirv::StructType>().getElementType(0);
   Type dstType;
-  if (auto arrayType = structElemType.dyn_cast<spirv::ArrayType>())
-    dstType = arrayType.getElementType();
-  else
-    dstType = structElemType.cast<spirv::RuntimeArrayType>().getElementType();
-
+  if (typeConverter.allows(spirv::Capability::Kernel)) {
+    // For OpenCL Kernel, pointer will be directly pointing to the element.
+    dstType = pointeeType;
+  } else {
+    // For Vulkan we need to extract element from wrapping struct and array.
+    Type structElemType =
+        pointeeType.cast<spirv::StructType>().getElementType(0);
+    if (auto arrayType = structElemType.dyn_cast<spirv::ArrayType>())
+      dstType = arrayType.getElementType();
+    else
+      dstType = structElemType.cast<spirv::RuntimeArrayType>().getElementType();
+  }
   int dstBits = dstType.getIntOrFloatBitWidth();
   assert(dstBits % srcBits == 0);
 
   // If the rewrited load op has the same bit width, use the loading value
   // directly.
   if (srcBits == dstBits) {
-    Value loadVal =
-        rewriter.create<spirv::LoadOp>(loc, accessChainOp.getResult());
+    Value loadVal = rewriter.create<spirv::LoadOp>(loc, accessChain);
     if (isBool)
       loadVal = castIntNToBool(loc, loadVal, rewriter);
     rewriter.replaceOp(loadOp, loadVal);
     return success();
   }
+
+  // Bitcasting is currently unsupported for Kernel capability /
+  // spv.PtrAccessChain.
+  if (typeConverter.allows(spirv::Capability::Kernel))
+    return failure();
+
+  auto accessChainOp = accessChain.getDefiningOp<spirv::AccessChainOp>();
+  if (!accessChainOp)
+    return failure();
 
   // Assume that getElementPtr() works linearizely. If it's a scalar, the method
   // still returns a linearized accessing. If the accessing is not linearized,
@@ -432,11 +446,11 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
 
   auto loc = storeOp.getLoc();
   auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
-  spirv::AccessChainOp accessChainOp =
+  Value accessChain =
       spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
                            adaptor.getIndices(), loc, rewriter);
 
-  if (!accessChainOp)
+  if (!accessChain)
     return failure();
 
   int srcBits = memrefType.getElementType().getIntOrFloatBitWidth();
@@ -448,12 +462,19 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   Type pointeeType = typeConverter.convertType(memrefType)
                          .cast<spirv::PointerType>()
                          .getPointeeType();
-  Type structElemType = pointeeType.cast<spirv::StructType>().getElementType(0);
   Type dstType;
-  if (auto arrayType = structElemType.dyn_cast<spirv::ArrayType>())
-    dstType = arrayType.getElementType();
-  else
-    dstType = structElemType.cast<spirv::RuntimeArrayType>().getElementType();
+  if (typeConverter.allows(spirv::Capability::Kernel)) {
+    // For OpenCL Kernel, pointer will be directly pointing to the element.
+    dstType = pointeeType;
+  } else {
+    // For Vulkan we need to extract element from wrapping struct and array.
+    Type structElemType =
+        pointeeType.cast<spirv::StructType>().getElementType(0);
+    if (auto arrayType = structElemType.dyn_cast<spirv::ArrayType>())
+      dstType = arrayType.getElementType();
+    else
+      dstType = structElemType.cast<spirv::RuntimeArrayType>().getElementType();
+  }
 
   int dstBits = dstType.getIntOrFloatBitWidth();
   assert(dstBits % srcBits == 0);
@@ -462,10 +483,18 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
     Value storeVal = adaptor.getValue();
     if (isBool)
       storeVal = castBoolToIntN(loc, storeVal, dstType, rewriter);
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(
-        storeOp, accessChainOp.getResult(), storeVal);
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, accessChain, storeVal);
     return success();
   }
+
+  // Bitcasting is currently unsupported for Kernel capability /
+  // spv.PtrAccessChain.
+  if (typeConverter.allows(spirv::Capability::Kernel))
+    return failure();
+
+  auto accessChainOp = accessChain.getDefiningOp<spirv::AccessChainOp>();
+  if (!accessChainOp)
+    return failure();
 
   // Since there are multi threads in the processing, the emulation will be done
   // with atomic operations. E.g., if the storing value is i8, rewrite the

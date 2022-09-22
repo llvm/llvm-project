@@ -85,6 +85,14 @@ API Changes
 
 ABI Affecting Changes
 ---------------------
+- In freestanding mode, ``atomic<small enum class>`` does not contain a lock byte anymore if the platform
+  can implement lockfree atomics for that size. More specifically, in LLVM <= 11.0.1, an ``atomic<small enum class>``
+  would not contain a lock byte. This was broken in LLVM >= 12.0.0, where it started including a lock byte despite
+  the platform supporting lockfree atomics for that size. Starting in LLVM 15.0.1, the ABI for these types has been
+  restored to what it used to be (no lock byte), which is the most efficient implementation.
+
+  This ABI break only affects users that compile with ``-ffreestanding``, and only for ``atomic<T>`` where ``T``
+  is a non-builtin type that could be lockfree on the platform. See https://llvm.org/D133377 for more details.
 
 Build System Changes
 --------------------

@@ -219,7 +219,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts arith.maxf to spv.GL.FMax.
+/// Converts arith.maxf to spv.GL.FMax or spv.CL.fmax.
 template <typename Op, typename SPIRVOp>
 class MinMaxFOpPattern final : public OpConversionPattern<Op> {
 public:
@@ -926,9 +926,11 @@ LogicalResult MinMaxFOpPattern<Op, SPIRVOp>::matchAndRewrite(
 
   // arith.maxf/minf:
   //   "if one of the arguments is NaN, then the result is also NaN."
-  // spv.GL.FMax/FMin:
+  // spv.GL.FMax/FMin
   //   "which operand is the result is undefined if one of the operands
   //   is a NaN."
+  // spv.CL.fmax/fmin:
+  //   "If one argument is a NaN, Fmin returns the other argument."
 
   Location loc = op.getLoc();
   Value spirvOp = rewriter.create<SPIRVOp>(loc, dstType, adaptor.getOperands());
@@ -998,7 +1000,14 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::GLSMaxOp>,
     spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::GLUMaxOp>,
     spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSMinOp>,
-    spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLUMinOp>
+    spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLUMinOp>,
+
+    MinMaxFOpPattern<arith::MaxFOp, spirv::CLFMaxOp>,
+    MinMaxFOpPattern<arith::MinFOp, spirv::CLFMinOp>,
+    spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::CLSMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MaxUIOp, spirv::CLUMaxOp>,
+    spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::CLSMinOp>,
+    spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::CLUMinOp>
   >(typeConverter, patterns.getContext());
   // clang-format on
 

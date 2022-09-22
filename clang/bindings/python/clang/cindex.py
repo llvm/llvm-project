@@ -1473,6 +1473,12 @@ class Cursor(Structure):
         """
         return conf.lib.clang_CXXMethod_isDefaulted(self)
 
+    def is_deleted_method(self):
+        """Returns True if the cursor refers to a C++ member function or member
+        function template that is declared '= delete'.
+        """
+        return conf.lib.clang_CXXMethod_isDeleted(self)
+
     def is_mutable_field(self):
         """Returns True if the cursor refers to a C++ field that is declared
         'mutable'.
@@ -3423,6 +3429,10 @@ functionList = [
    bool),
 
   ("clang_CXXMethod_isDefaulted",
+   [Cursor],
+   bool),
+
+  ("clang_CXXMethod_isDeleted",
    [Cursor],
    bool),
 

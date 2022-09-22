@@ -38,7 +38,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <bitset>
@@ -2395,6 +2394,23 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
   return R;
 }
 
+bool Sema::checkArrayElementAlignment(QualType EltTy, SourceLocation Loc) {
+  EltTy = Context.getBaseElementType(EltTy);
+  if (EltTy->isIncompleteType() || EltTy->isDependentType() ||
+      EltTy->isUndeducedType())
+    return true;
+
+  CharUnits Size = Context.getTypeSizeInChars(EltTy);
+  CharUnits Alignment = Context.getTypeAlignInChars(EltTy);
+
+  if (Size.isMultipleOf(Alignment))
+    return true;
+
+  Diag(Loc, diag::err_array_element_alignment)
+      << EltTy << Size.getQuantity() << Alignment.getQuantity();
+  return false;
+}
+
 /// Build an array type.
 ///
 /// \param T The type of each element in the array.
@@ -2477,6 +2493,9 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     Diag(Loc, diag::err_objc_array_of_interfaces) << T;
     return QualType();
   }
+
+  if (!checkArrayElementAlignment(T, Loc))
+    return QualType();
 
   // Do placeholder conversions on the array size expression.
   if (ArraySize && ArraySize->hasPlaceholderType()) {
@@ -2637,10 +2656,20 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
   // can't already be a vector.
   if ((!CurType->isDependentType() &&
        (!CurType->isBuiltinType() || CurType->isBooleanType() ||
-        (!CurType->isIntegerType() && !CurType->isRealFloatingType()))) ||
+        (!CurType->isIntegerType() && !CurType->isRealFloatingType())) &&
+       !CurType->isBitIntType()) ||
       CurType->isArrayType()) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << CurType;
     return QualType();
+  }
+  // Only support _BitInt elements with byte-sized power of 2 NumBits.
+  if (CurType->isBitIntType()) {
+    unsigned NumBits = CurType->getAs<BitIntType>()->getNumBits();
+    if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8) {
+      Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
+          << (NumBits < 8);
+      return QualType();
+    }
   }
 
   if (SizeExpr->isTypeDependent() || SizeExpr->isValueDependent())
@@ -2707,10 +2736,20 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   // We explictly allow bool elements in ext_vector_type for C/C++.
   bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
-       !T->isRealFloatingType()) || T->isBitIntType() ||
+       !T->isRealFloatingType()) ||
       (IsNoBoolVecLang && T->isBooleanType())) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
+  }
+
+  // Only support _BitInt elements with byte-sized power of 2 NumBits.
+  if (T->isBitIntType()) {
+    unsigned NumBits = T->getAs<BitIntType>()->getNumBits();
+    if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8) {
+      Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
+          << (NumBits < 8);
+      return QualType();
+    }
   }
 
   if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {

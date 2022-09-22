@@ -252,6 +252,7 @@ void adl_swap(T &&lhs, T &&rhs) noexcept(
 
 /// Test whether \p RangeOrContainer is empty. Similar to C++17 std::empty.
 template <typename T>
+LLVM_DEPRECATED("Use x.empty() instead", "empty")
 constexpr bool empty(const T &RangeOrContainer) {
   return adl_begin(RangeOrContainer) == adl_end(RangeOrContainer);
 }

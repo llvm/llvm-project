@@ -345,8 +345,12 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // all outer loops because insertion and deletion of blocks that happens
     // during the rotation may violate invariants related to backedge taken
     // infos in them.
-    if (SE)
+    if (SE) {
       SE->forgetTopmostLoop(L);
+      // We may hoist some instructions out of loop. In case if they were cached
+      // as "loop variant" or "loop computable", these caches must be dropped.
+      SE->forgetLoopDispositions();
+    }
 
     LLVM_DEBUG(dbgs() << "LoopRotation: rotating "; L->dump());
     if (MSSAU && VerifyMemorySSA)

@@ -21,6 +21,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
@@ -31,6 +32,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace llvm {
 class Triple;
@@ -264,8 +266,8 @@ private:
   /// Name to use when invoking gcc/g++.
   std::string CCCGenericGCCName;
 
-  /// Name of configuration file if used.
-  std::string ConfigFile;
+  /// Paths to configuration files used.
+  std::vector<std::string> ConfigFiles;
 
   /// Allocator for string saver.
   llvm::BumpPtrAllocator Alloc;
@@ -361,7 +363,9 @@ public:
   /// Name to use when invoking gcc/g++.
   const std::string &getCCCGenericGCCName() const { return CCCGenericGCCName; }
 
-  const std::string &getConfigFile() const { return ConfigFile; }
+  llvm::ArrayRef<std::string> getConfigFiles() const {
+    return ConfigFiles;
+  }
 
   const llvm::opt::OptTable &getOpts() const { return getDriverOptTable(); }
 
@@ -678,10 +682,16 @@ public:
 
 private:
 
-  /// Tries to load options from configuration file.
+  /// Tries to load options from configuration files.
   ///
   /// \returns true if error occurred.
-  bool loadConfigFile();
+  bool loadConfigFiles();
+
+  /// Tries to load options from default configuration files (deduced from
+  /// executable filename).
+  ///
+  /// \returns true if error occurred.
+  bool loadDefaultConfigFiles(ArrayRef<StringRef> CfgFileSearchDirs);
 
   /// Read options from the specified file.
   ///

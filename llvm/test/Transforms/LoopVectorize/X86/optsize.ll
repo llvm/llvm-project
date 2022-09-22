@@ -233,7 +233,7 @@ define void @scev4stride1(i32* noalias nocapture %a, i32* noalias nocapture read
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <64 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], <64 x i32> [[TMP1]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <64 x i32> @llvm.masked.gather.v64i32.v64p0i32(<64 x i32*> [[TMP2]], i32 4, <64 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <64 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <64 x i32> @llvm.masked.gather.v64i32.v64p0i32(<64 x i32*> [[TMP2]], i32 4, <64 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <64 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <64 x i32>*
@@ -274,7 +274,7 @@ define void @scev4stride1(i32* noalias nocapture %a, i32* noalias nocapture read
 ; AUTOVF-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; AUTOVF-NEXT:    [[TMP1:%.*]] = mul nsw <8 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], <8 x i32> [[TMP1]]
-; AUTOVF-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP2]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+; AUTOVF-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP2]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
 ; AUTOVF-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP0]]
 ; AUTOVF-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[TMP3]], i32 0
 ; AUTOVF-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <8 x i32>*

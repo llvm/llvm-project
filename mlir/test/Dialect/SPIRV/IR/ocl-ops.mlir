@@ -185,3 +185,45 @@ func.func @fma(%a : vector<3xf32>, %b : vector<3xf32>, %c : vector<3xf32>) -> ()
   %2 = spv.CL.fma %a, %b, %c : vector<3xf32>
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.CL.{F|S|U}{Max|Min}
+//===----------------------------------------------------------------------===//
+
+func.func @fmaxmin(%arg0 : f32, %arg1 : f32) {
+  // CHECK: spv.CL.fmax {{%.*}}, {{%.*}} : f32
+  %1 = spv.CL.fmax %arg0, %arg1 : f32
+  // CHECK: spv.CL.fmin {{%.*}}, {{%.*}} : f32
+  %2 = spv.CL.fmin %arg0, %arg1 : f32
+  return
+}
+
+func.func @fmaxminvec(%arg0 : vector<3xf16>, %arg1 : vector<3xf16>) {
+  // CHECK: spv.CL.fmax {{%.*}}, {{%.*}} : vector<3xf16>
+  %1 = spv.CL.fmax %arg0, %arg1 : vector<3xf16>
+  // CHECK: spv.CL.fmin {{%.*}}, {{%.*}} : vector<3xf16>
+  %2 = spv.CL.fmin %arg0, %arg1 : vector<3xf16>
+  return
+}
+
+func.func @fmaxminf64(%arg0 : f64, %arg1 : f64) {
+  // CHECK: spv.CL.fmax {{%.*}}, {{%.*}} : f64
+  %1 = spv.CL.fmax %arg0, %arg1 : f64
+  // CHECK: spv.CL.fmin {{%.*}}, {{%.*}} : f64
+  %2 = spv.CL.fmin %arg0, %arg1 : f64
+  return
+}
+
+func.func @iminmax(%arg0: i32, %arg1: i32) {
+  // CHECK: spv.CL.s_max {{%.*}}, {{%.*}} : i32
+  %1 = spv.CL.s_max %arg0, %arg1 : i32
+  // CHECK: spv.CL.u_max {{%.*}}, {{%.*}} : i32
+  %2 = spv.CL.u_max %arg0, %arg1 : i32
+  // CHECK: spv.CL.s_min {{%.*}}, {{%.*}} : i32
+  %3 = spv.CL.s_min %arg0, %arg1 : i32
+  // CHECK: spv.CL.u_min {{%.*}}, {{%.*}} : i32
+  %4 = spv.CL.u_min %arg0, %arg1 : i32
+  return
+}

@@ -60,7 +60,6 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -265,12 +264,6 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
                                    "async thread continue");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadDidExit,
                                    "async thread did exit");
-
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::GDBRemoteProvider &provider =
-        g->GetOrCreate<repro::GDBRemoteProvider>();
-    m_gdb_comm.SetPacketRecorder(provider.GetNewPacketRecorder());
-  }
 
   Log *log = GetLog(GDBRLog::Async);
 
@@ -510,16 +503,16 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   AddRemoteRegisters(registers, arch_to_use);
 }
 
-Status ProcessGDBRemote::WillLaunch(lldb_private::Module *module) {
+Status ProcessGDBRemote::DoWillLaunch(lldb_private::Module *module) {
   return WillLaunchOrAttach();
 }
 
-Status ProcessGDBRemote::WillAttachToProcessWithID(lldb::pid_t pid) {
+Status ProcessGDBRemote::DoWillAttachToProcessWithID(lldb::pid_t pid) {
   return WillLaunchOrAttach();
 }
 
-Status ProcessGDBRemote::WillAttachToProcessWithName(const char *process_name,
-                                                     bool wait_for_launch) {
+Status ProcessGDBRemote::DoWillAttachToProcessWithName(const char *process_name,
+                                                       bool wait_for_launch) {
   return WillLaunchOrAttach();
 }
 
@@ -4029,8 +4022,10 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
   if (!feature_node)
     return false;
 
+  Log *log(GetLog(GDBRLog::Process));
+
   feature_node.ForEachChildElementWithName(
-      "reg", [&target_info, &registers](const XMLNode &reg_node) -> bool {
+      "reg", [&target_info, &registers, log](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
         std::string gdb_type;
         DynamicRegisterInfo::Register reg_info;
@@ -4039,9 +4034,9 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 
         // FIXME: we're silently ignoring invalid data here
         reg_node.ForEachAttribute([&target_info, &gdb_group, &gdb_type,
-                                   &encoding_set, &format_set, &reg_info](
-                                      const llvm::StringRef &name,
-                                      const llvm::StringRef &value) -> bool {
+                                   &encoding_set, &format_set, &reg_info,
+                                   log](const llvm::StringRef &name,
+                                        const llvm::StringRef &value) -> bool {
           if (name == "name") {
             reg_info.name.SetString(value);
           } else if (name == "bitsize") {
@@ -4098,10 +4093,10 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             SplitCommaSeparatedRegisterNumberString(
                 value, reg_info.invalidate_regs, 0);
           } else {
-            Log *log(GetLog(GDBRLog::Process));
             LLDB_LOGF(log,
-                      "ProcessGDBRemote::%s unhandled reg attribute %s = %s",
-                      __FUNCTION__, name.data(), value.data());
+                      "ProcessGDBRemote::ParseRegisters unhandled reg "
+                      "attribute %s = %s",
+                      name.data(), value.data());
           }
           return true; // Keep iterating through all attributes
         });
@@ -4123,6 +4118,12 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
             // them as vector (similarly to xmm/ymm)
             reg_info.format = eFormatVectorOfUInt8;
             reg_info.encoding = eEncodingVector;
+          } else {
+            LLDB_LOGF(
+                log,
+                "ProcessGDBRemote::ParseRegisters Could not determine lldb"
+                "format and encoding for gdb type %s",
+                gdb_type.c_str());
           }
         }
 
@@ -4140,7 +4141,6 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         }
 
         if (reg_info.byte_size == 0) {
-          Log *log(GetLog(GDBRLog::Process));
           LLDB_LOGF(log,
                     "ProcessGDBRemote::%s Skipping zero bitsize register %s",
                     __FUNCTION__, reg_info.name.AsCString());

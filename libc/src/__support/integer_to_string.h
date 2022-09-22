@@ -11,9 +11,9 @@
 
 #include <stdint.h>
 
-#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc {
@@ -45,9 +45,9 @@ namespace __llvm_libc {
 //   auto str = IntegerToString::convert<30>(a, b30buf);
 class IntegerToString {
   static cpp::string_view convert_uintmax(uintmax_t uval,
-                                         cpp::span<char> &buffer,
-                                         bool lowercase,
-                                         const uint8_t conv_base) {
+                                          cpp::span<char> &buffer,
+                                          bool lowercase,
+                                          const uint8_t conv_base) {
     const char a = lowercase ? 'a' : 'A';
 
     size_t len = 0;
@@ -68,8 +68,8 @@ class IntegerToString {
   }
 
   static cpp::string_view convert_intmax(intmax_t val, cpp::span<char> &buffer,
-                                        bool lowercase,
-                                        const uint8_t conv_base) {
+                                         bool lowercase,
+                                         const uint8_t conv_base) {
     if (val >= 0)
       return convert_uintmax(uintmax_t(val), buffer, lowercase, conv_base);
     uintmax_t uval = uintmax_t(-val);
@@ -139,7 +139,7 @@ public:
             cpp::enable_if_t<2 <= BASE && BASE <= 36 && cpp::is_integral_v<T>,
                              int> = 0>
   static cpp::optional<cpp::string_view> convert(T val, cpp::span<char> buffer,
-                                                bool lowercase = true) {
+                                                 bool lowercase = true) {
     if (buffer.size() < bufsize<BASE, T>())
       return cpp::optional<cpp::string_view>();
     if (cpp::is_signed_v<T>)
@@ -155,7 +155,7 @@ public:
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
   static cpp::optional<cpp::string_view> hex(T val, cpp::span<char> buffer,
-                                            bool lowercase = true) {
+                                             bool lowercase = true) {
     return convert<16>(val, buffer, lowercase);
   }
 

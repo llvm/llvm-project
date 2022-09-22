@@ -5061,8 +5061,8 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Tensor/Transforms/Passes.h",
+        "include/mlir/Dialect/Tensor/Transforms/TransformUtils.h",
         "include/mlir/Dialect/Tensor/Transforms/Transforms.h",
-        "include/mlir/Dialect/Tensor/Transforms/TransformUtils.h"
     ],
     includes = ["include"],
     deps = [
@@ -6421,6 +6421,7 @@ cc_binary(
         "//llvm:Support",
         "//mlir/test:TestAffine",
         "//mlir/test:TestAnalysis",
+        "//mlir/test:TestArithmetic",
         "//mlir/test:TestDLTI",
         "//mlir/test:TestDialect",
         "//mlir/test:TestFunc",
@@ -6439,6 +6440,7 @@ cc_binary(
         "//mlir/test:TestSPIRV",
         "//mlir/test:TestShapeDialect",
         "//mlir/test:TestTensor",
+        "//mlir/test:TestTestDynDialect",
         "//mlir/test:TestTilingInterface",
         "//mlir/test:TestTosaDialect",
         "//mlir/test:TestTransformDialect",
@@ -7546,6 +7548,7 @@ cc_library(
         ":ArithmeticDialect",
         ":AsmParser",
         ":ControlFlowDialect",
+        ":GPUDialect",
         ":IR",
         ":LinalgDialect",
         ":LinalgTransformOpsIncGen",

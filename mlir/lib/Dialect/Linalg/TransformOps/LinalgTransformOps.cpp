@@ -11,6 +11,7 @@
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -228,12 +229,16 @@ LogicalResult transform::FuseOp::verify() {
 /// Find the first "extract" user of `producerOp` and tile it right before its
 /// use. The tiled op is fused under the `containingOp`.
 /// Return this fused op on success or nullptr if anything fails.
-static Operation *tileAndFuseFirstExtractUse(Operation *producerOp,
-                                             Operation *containingOp,
-                                             RewriterBase &rewriter) {
+static Operation *tileAndFuseFirstExtractUse(RewriterBase &rewriter,
+                                             Diagnostic &diag,
+                                             Operation *producerOp,
+                                             Operation *containingOp) {
   auto tileableProducer = dyn_cast<TilingInterface>(producerOp);
-  if (!tileableProducer)
+  if (!tileableProducer) {
+    diag.attachNote(producerOp->getLoc())
+        << "producer is not a TileableInterface: " << *producerOp;
     return nullptr;
+  }
 
   // Search the producer slices accessed within the containing operation.
   // TODO: Generalize to more extract/insert/parallel_insert triples, maybe
@@ -244,8 +249,11 @@ static Operation *tileAndFuseFirstExtractUse(Operation *producerOp,
   });
 
   // Find a fusion opportunity.
-  if (it == tileableProducer->getUsers().end())
+  if (it == tileableProducer->getUsers().end()) {
+    diag.attachNote(tileableProducer->getLoc())
+        << "could not find fusion opportunity for: " << *tileableProducer;
     return nullptr;
+  }
   auto sliceOpToTile = cast<tensor::ExtractSliceOp>(*it);
 
   // Try to fuse the producer in-place.
@@ -256,8 +264,11 @@ static Operation *tileAndFuseFirstExtractUse(Operation *producerOp,
   FailureOr<Value> tiledProducer = tileableProducer.generateResultTileValue(
       rewriter, /*resultNumber=*/0, sliceOpToTile.getMixedOffsets(),
       sliceOpToTile.getMixedSizes());
-  if (failed(tiledProducer))
+  if (failed(tiledProducer)) {
+    diag.attachNote(tileableProducer->getLoc())
+        << "failed to tile producer op: " << *tileableProducer;
     return nullptr;
+  }
 
   // Replace the extract op.
   Operation *fusedOp = tiledProducer->getDefiningOp();
@@ -272,11 +283,25 @@ static Operation *tileAndFuseFirstExtractUse(Operation *producerOp,
 /// `containingOp`.
 /// Return this fused op on success or nullptr if anything fails.
 static Operation *tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
-    Operation *producerOp, Operation *containingOp, RewriterBase &rewriter) {
+    RewriterBase &rewriter, Diagnostic &diag, Operation *producerOp,
+    Operation *containingOp) {
 
   auto tileableProducer = dyn_cast<TilingInterface>(producerOp);
-  if (!tileableProducer)
+  if (!tileableProducer) {
+    diag.attachNote(producerOp->getLoc())
+        << "producer is not a TileableInterface: " << *producerOp;
     return nullptr;
+  }
+
+  // Ensure `tileableProducer` has exactly one destination operand that we can
+  // replace the ForeachThreadOp bbArg with.
+  auto destinationOperands = tileableProducer.getDestinationOperands(rewriter);
+  if (destinationOperands.size() != 1) {
+    diag.attachNote(tileableProducer->getLoc())
+        << "tileableProducer must have exactly one destination operand: "
+        << *tileableProducer;
+    return nullptr;
+  }
 
   // Search the first use by a "scf::ForeachThreadOp" user.
   scf::ForeachThreadOp foreachThreadOp;
@@ -286,8 +311,11 @@ static Operation *tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
         return foreachThreadOp;
       });
   // If it's not from the containing op, return.
-  if (!foreachThreadOp || foreachThreadOp != containingOp)
+  if (!foreachThreadOp || foreachThreadOp != containingOp) {
+    diag.attachNote(tileableProducer->getLoc())
+        << "could not find a use by the containing op: " << *tileableProducer;
     return nullptr;
+  }
 
   // Search the producer slices accessed within the containing
   // operation.
@@ -305,15 +333,12 @@ static Operation *tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   });
 
   // Find a fusion opportunity.
-  if (itBBArgUsers == bbArg.getUsers().end())
+  if (itBBArgUsers == bbArg.getUsers().end()) {
+    diag.attachNote(containingOp->getLoc())
+        << "could not find fusion opportunity for bbArg: " << bbArg;
     return nullptr;
+  }
   auto sliceOpToTile = cast<tensor::ExtractSliceOp>(*itBBArgUsers);
-
-  // Ensure `tileableProducer` has exactly one destination operand that we can
-  // replace the ForeachThreadOp bbArg with.
-  auto destinationOperands = tileableProducer.getDestinationOperands(rewriter);
-  if (destinationOperands.size() != 1)
-    return nullptr;
 
   // Try to fuse the producer in-place.
   OpBuilder::InsertionGuard guard(rewriter);
@@ -333,8 +358,11 @@ static Operation *tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
       tileableProducerClone.generateResultTileValue(
           rewriter, /*resultNumber=*/0, sliceOpToTile.getMixedOffsets(),
           sliceOpToTile.getMixedSizes());
-  if (failed(tiledProducer))
+  if (failed(tiledProducer)) {
+    diag.attachNote(tileableProducer->getLoc())
+        << "failed to tile producer op: " << *tileableProducer;
     return nullptr;
+  }
 
   // Replace the extract op.
   Operation *fusedOp = tiledProducer->getDefiningOp();
@@ -349,9 +377,9 @@ static Operation *tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   return fusedOp;
 }
 
-static Operation *cloneAndFuseFirstUse(Operation *producerOp,
-                                       Operation *containingOp,
-                                       RewriterBase &rewriter) {
+static Operation *cloneAndFuseFirstUse(RewriterBase &rewriter, Diagnostic &diag,
+                                       Operation *producerOp,
+                                       Operation *containingOp) {
   // Gather all uses inside the containing op.
   SmallVector<OpOperand *> uses;
   for (OpResult result : producerOp->getOpResults()) {
@@ -362,14 +390,19 @@ static Operation *cloneAndFuseFirstUse(Operation *producerOp,
       }
       // Cannot clone and fuse if the use is by the containing op itself: fail
       // immediately.
-      if (containingOp == use.getOwner())
+      if (containingOp == use.getOwner()) {
+        diag.attachNote(producerOp->getLoc())
+            << "producer op use by containing op cannot be fused by cloning";
         return nullptr;
+      }
     }
   }
 
   // Check for a non-empty list of fusion opportunities.
-  if (uses.empty())
+  if (uses.empty()) {
+    diag.attachNote(producerOp->getLoc()) << "no fusion opportunity by cloning";
     return nullptr;
+  }
 
   // Clone and fuse inside the containing op.
   Operation *fusedOp = nullptr;
@@ -441,18 +474,23 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
     auto nextProducer = getNextProducer();
     if (failed(nextProducer)) {
       Diagnostic diag(containingOp->getLoc(), DiagnosticSeverity::Remark);
-      diag << "could not fuse ops into container";
+      diag << "could not find next producer to fuse into container";
       return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
     }
 
     Operation *producerOp = *nextProducer;
+
+    // Detaul diagnostic, to be complemented with more failure information.
+    Diagnostic diag(producerOp->getLoc(), DiagnosticSeverity::Remark);
+    diag << "could not fuse " << *producerOp << " into " << *containingOp;
+
     // TODO: If there are multiple uses of the producer in the containing op,
     // we currently tile/clone the op multiple times (once per use). In some
     // cases, we can tile/clone once and reuse the value for each use.
     // Futhermore, producers should then be traversed according to a
     // topological sorting.
     Operation *tiled =
-        tileAndFuseFirstExtractUse(producerOp, containingOp, rewriter);
+        tileAndFuseFirstExtractUse(rewriter, diag, producerOp, containingOp);
     if (tiled) {
       fusedOps.push_back(tiled);
       continue;
@@ -460,21 +498,19 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
 
     Operation *tiledContainingOpOperand =
         tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
-            producerOp, containingOp, rewriter);
+            rewriter, diag, producerOp, containingOp);
     if (tiledContainingOpOperand) {
       fusedOps.push_back(tiledContainingOpOperand);
       continue;
     }
 
     Operation *cloned =
-        cloneAndFuseFirstUse(producerOp, containingOp, rewriter);
+        cloneAndFuseFirstUse(rewriter, diag, producerOp, containingOp);
     if (cloned) {
       fusedOps.push_back(cloned);
       continue;
     }
 
-    Diagnostic diag(producerOp->getLoc(), DiagnosticSeverity::Remark);
-    diag << "could not fuse " << *producerOp << "into " << *containingOp;
     return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
   }
 
@@ -1128,6 +1164,175 @@ void transform::TileOp::getEffects(
   producesHandle(getTiledLinalgOp(), effects);
   producesHandle(getLoops(), effects);
   modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// MapNestedForeachThreadToGpuThreads
+//===----------------------------------------------------------------------===//
+
+/// Searches `scf.foreach_thread` ops nested under `target` and maps each such
+/// op to GPU threads. Mapping is one-to-one and the induction variables of
+/// `scf.foreach_thread` are rewritten to gpu.thread_id according to the
+/// thread_dim_apping attribute. Sibling `scf.foreach_thread` are supported in
+/// which case, the union of the number of threads is computed and may result in
+/// predication. Dynamic, `scf.foreach_thread` trip counts are currently not
+/// supported. Dynamic block dim sizes are currently not supported.
+static FailureOr<SmallVector<OpFoldResult>> rewriteOneForeachThreadToGpuThreads(
+    RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
+    const SmallVector<int64_t> &globalBlockDims, bool syncAfterDistribute) {
+  if (foreachThreadOp.getNumResults() > 0)
+    return foreachThreadOp->emitError(
+        "only bufferized scf.foreach_thread lowers to gpu.thread");
+  if (foreachThreadOp.getNumThreads().size() > 3)
+    return foreachThreadOp->emitError(
+        "scf.foreach_thread with rank > 3 does not lower to gpu.thread");
+
+  auto potentialBlockDim = foreachThreadOp.getPermutedNumThreads(rewriter);
+  if (failed(potentialBlockDim) ||
+      llvm::any_of(*potentialBlockDim, [](OpFoldResult ofr) {
+        return !getConstantIntValue(ofr).has_value();
+      }))
+    return foreachThreadOp->emitError("unsupported dynamic blockdim size");
+
+  SmallVector<int64_t> blockDim =
+      llvm::to_vector(llvm::map_range(*potentialBlockDim, [](OpFoldResult ofr) {
+        return getConstantIntValue(ofr).value();
+      }));
+
+  // Step 1. Create the gpu.thread ops
+  Location loc = foreachThreadOp.getLoc();
+  IndexType indexType = rewriter.getIndexType();
+
+  SmallVector<gpu::Dimension> gpuDims{gpu::Dimension::x, gpu::Dimension::y,
+                                      gpu::Dimension::z};
+  SmallVector<Value> threadOps;
+  for (int64_t idx : llvm::seq<int64_t>(0, blockDim.size())) {
+    threadOps.push_back(
+        rewriter.create<gpu::ThreadIdOp>(loc, indexType, gpuDims[idx]));
+  }
+  // Step 2. Maybe create conditionals to predicate the region.
+  Value predicate;
+  for (auto [threadId, blockDim, globalBlockDim] :
+       llvm::zip(threadOps, blockDim, globalBlockDims)) {
+    if (blockDim > globalBlockDim) {
+      return foreachThreadOp.emitOpError("blockDim size overflow: ")
+             << blockDim << " > " << globalBlockDim;
+    }
+    if (blockDim == globalBlockDim)
+      continue;
+    Value tmpPredicate = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ult, threadId,
+        rewriter.create<arith::ConstantIndexOp>(loc, blockDim));
+    predicate =
+        predicate ? rewriter.create<arith::AndIOp>(loc, predicate, tmpPredicate)
+                  : tmpPredicate;
+  }
+
+  // Step 3. Move the body of foreachThreadOp.
+  // Erase the terminator first, it will not be used.
+  rewriter.eraseOp(foreachThreadOp.getTerminator());
+  Block *targetBlock;
+  Block::iterator insertionPoint;
+  if (predicate) {
+    // Step 3.a. If predicated, move at the beginning.
+    auto ifOp =
+        rewriter.create<scf::IfOp>(loc, predicate, /*withElseRegion=*/false);
+    targetBlock = ifOp.thenBlock();
+    insertionPoint = ifOp.thenBlock()->begin();
+  } else {
+    // Step 3.a. Otherwise, move inline just before foreachThreadOp.
+    targetBlock = foreachThreadOp->getBlock();
+    insertionPoint = Block::iterator(foreachThreadOp);
+  }
+  Block &sourceBlock = foreachThreadOp.getRegion().front();
+  targetBlock->getOperations().splice(insertionPoint,
+                                      sourceBlock.getOperations());
+
+  // Step 4. RAUW thread indices to thread ops.
+  SmallVector<Value> threadIndices =
+      *foreachThreadOp.getPermutedThreadIndices();
+  for (auto it : llvm::zip(threadIndices, threadOps)) {
+    Value val = std::get<0>(it);
+    if (!val)
+      continue;
+    for (Operation *user : llvm::make_early_inc_range(val.getUsers())) {
+      rewriter.updateRootInPlace(
+          user, [&]() { user->replaceUsesOfWith(val, std::get<1>(it)); });
+    }
+  }
+
+  // Step 5. syncthreads.
+  // TODO: Need warpsync
+  if (syncAfterDistribute)
+    rewriter.create<gpu::BarrierOp>(loc);
+
+  // Step 6. Erase old op.
+  rewriter.eraseOp(foreachThreadOp);
+
+  return *potentialBlockDim;
+}
+
+mlir::WalkResult mlir::linalg::rewriteMapNestedForeachThreadToGpuThreads(
+    RewriterBase &rewriter, Operation *target,
+    const SmallVector<int64_t> &blockDim, bool syncAfterDistribute) {
+  auto walkResult = target->walk([&](scf::ForeachThreadOp foreachThreadOp) {
+    rewriter.setInsertionPoint(foreachThreadOp);
+    if (failed(rewriteOneForeachThreadToGpuThreads(rewriter, foreachThreadOp,
+                                                   blockDim, true)))
+      return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  return walkResult;
+}
+
+// Alter blockDim of the given kernel
+static LogicalResult alterGpuLaunchBlockDim(SimpleRewriter &rewriter,
+                                            gpu::LaunchOp gpuLaunch,
+                                            SmallVector<int64_t> blockDim) {
+  gpu::KernelDim3 currentBlockdim = gpuLaunch.getBlockSizeOperandValues();
+  if (blockDim[0] < 1 || blockDim[1] < 1 || blockDim[2] < 1) {
+    gpuLaunch->emitError() << "Given blockDim(" << blockDim[0] << ","
+                           << blockDim[1] << "," << blockDim[2]
+                           << ") is invalid";
+    return failure();
+  }
+  rewriter.setInsertionPointAfterValue(currentBlockdim.x);
+  auto createBlockDimValue = [&](int64_t dim) {
+    return rewriter.create<arith::ConstantIndexOp>(currentBlockdim.x.getLoc(),
+                                                   dim);
+  };
+  gpuLaunch.blockSizeXMutable().assign(createBlockDimValue(blockDim[0]));
+  gpuLaunch.blockSizeYMutable().assign(createBlockDimValue(blockDim[1]));
+  gpuLaunch.blockSizeZMutable().assign(createBlockDimValue(blockDim[2]));
+  return success();
+}
+
+DiagnosedSilenceableFailure
+transform::MapNestedForeachThreadToGpuThreads::applyToOne(
+    Operation *target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+
+  gpu::LaunchOp gpuLaunch = dyn_cast<gpu::LaunchOp>(target);
+  if (!gpuLaunch) {
+    target->emitError("Given target is not gpu.launch");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  SmallVector<int64_t> blockDim = extractFromI64ArrayAttr(getBlockDim());
+  blockDim.resize(/*size=*/3, /*value=*/1);
+  SimpleRewriter rewriter(getContext());
+  rewriter.setInsertionPoint(target);
+  auto walkResult = mlir::linalg::rewriteMapNestedForeachThreadToGpuThreads(
+      rewriter, target, blockDim, true);
+  if (walkResult.wasInterrupted())
+    return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+
+  LogicalResult result = alterGpuLaunchBlockDim(rewriter, gpuLaunch, blockDim);
+  if (failed(result))
+    return DiagnosedSilenceableFailure::definiteFailure();
+
+  results.assign({target});
+  return DiagnosedSilenceableFailure(success());
 }
 
 //===----------------------------------------------------------------------===//

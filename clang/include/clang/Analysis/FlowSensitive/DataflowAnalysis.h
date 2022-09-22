@@ -20,7 +20,6 @@
 #include <vector>
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
@@ -32,17 +31,6 @@
 
 namespace clang {
 namespace dataflow {
-
-template <typename AnalysisT, typename LatticeT, typename InputT,
-          typename = std::void_t<>>
-struct HasTransferFor : std::false_type {};
-
-template <typename AnalysisT, typename LatticeT, typename InputT>
-struct HasTransferFor<
-    AnalysisT, LatticeT, InputT,
-    std::void_t<decltype(std::declval<AnalysisT>().transfer(
-        std::declval<const InputT *>(), std::declval<LatticeT &>(),
-        std::declval<Environment &>()))>> : std::true_type {};
 
 /// Base class template for dataflow analyses built on a single lattice type.
 ///
@@ -110,17 +98,7 @@ public:
   void transferTypeErased(const CFGElement *Element, TypeErasedLattice &E,
                           Environment &Env) final {
     Lattice &L = llvm::any_cast<Lattice &>(E.Value);
-    if constexpr (HasTransferFor<Derived, LatticeT, CFGElement>::value) {
-      static_cast<Derived *>(this)->transfer(Element, L, Env);
-    }
-
-    // FIXME: Remove after users have been updated to implement `transfer` on
-    // `CFGElement`.
-    if constexpr (HasTransferFor<Derived, LatticeT, Stmt>::value) {
-      if (auto Stmt = Element->getAs<CFGStmt>()) {
-        static_cast<Derived *>(this)->transfer(Stmt->getStmt(), L, Env);
-      }
-    }
+    static_cast<Derived *>(this)->transfer(Element, L, Env);
   }
 
 private:
@@ -136,9 +114,6 @@ template <typename LatticeT> struct DataflowAnalysisState {
   Environment Env;
 };
 
-// FIXME: Rename to `runDataflowAnalysis` after usages of the overload that
-// applies to `CFGStmt` have been replaced.
-//
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. The
 /// returned vector, if any, will have the same size as the number of CFG
@@ -149,7 +124,7 @@ template <typename LatticeT> struct DataflowAnalysisState {
 template <typename AnalysisT>
 llvm::Expected<std::vector<
     llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-runDataflowAnalysisOnCFG(
+runDataflowAnalysis(
     const ControlFlowContext &CFCtx, AnalysisT &Analysis,
     const Environment &InitEnv,
     std::function<void(const CFGElement &, const DataflowAnalysisState<
@@ -191,48 +166,13 @@ runDataflowAnalysisOnCFG(
   return BlockStates;
 }
 
-/// Deprecated. Use `runDataflowAnalysisOnCFG` instead.
-///
-/// Performs dataflow analysis and returns a mapping from basic block IDs to
-/// dataflow analysis states that model the respective basic blocks. The
-/// returned vector, if any, will have the same size as the number of CFG
-/// blocks, with indices corresponding to basic block IDs. Returns an error if
-/// the dataflow analysis cannot be performed successfully. Otherwise, calls
-/// `PostVisitStmt` on each statement with the final analysis results at that
-/// program point.
-template <typename AnalysisT>
-llvm::Expected<std::vector<
-    llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-runDataflowAnalysis(
-    const ControlFlowContext &CFCtx, AnalysisT &Analysis,
-    const Environment &InitEnv,
-    std::function<void(const CFGStmt &, const DataflowAnalysisState<
-                                            typename AnalysisT::Lattice> &)>
-        PostVisitStmt = nullptr) {
-  std::function<void(
-      const CFGElement &,
-      const DataflowAnalysisState<typename AnalysisT::Lattice> &)>
-      PostVisitCFG = nullptr;
-  if (PostVisitStmt) {
-    PostVisitCFG =
-        [&PostVisitStmt](
-            const CFGElement &Element,
-            const DataflowAnalysisState<typename AnalysisT::Lattice> &State) {
-          if (auto Stmt = Element.getAs<CFGStmt>()) {
-            PostVisitStmt(*Stmt, State);
-          }
-        };
-  }
-  return runDataflowAnalysisOnCFG(CFCtx, Analysis, InitEnv, PostVisitCFG);
-}
-
 /// Abstract base class for dataflow "models": reusable analysis components that
 /// model a particular aspect of program semantics in the `Environment`. For
 /// example, a model may capture a type and its related functions.
 class DataflowModel : public Environment::ValueModel {
 public:
-  /// Return value indicates whether the model processed the `Stmt`.
-  virtual bool transfer(const Stmt *Stmt, Environment &Env) = 0;
+  /// Return value indicates whether the model processed the `Element`.
+  virtual bool transfer(const CFGElement *Element, Environment &Env) = 0;
 };
 
 } // namespace dataflow

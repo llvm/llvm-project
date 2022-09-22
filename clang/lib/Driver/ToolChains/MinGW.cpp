@@ -493,15 +493,19 @@ bool toolchains::MinGW::HasNativeLLVMSupport() const {
   return NativeLLVMSupport;
 }
 
-bool toolchains::MinGW::IsUnwindTablesDefault(const ArgList &Args) const {
+ToolChain::UnwindTableLevel
+toolchains::MinGW::getDefaultUnwindTableLevel(const ArgList &Args) const {
   Arg *ExceptionArg = Args.getLastArg(options::OPT_fsjlj_exceptions,
                                       options::OPT_fseh_exceptions,
                                       options::OPT_fdwarf_exceptions);
   if (ExceptionArg &&
       ExceptionArg->getOption().matches(options::OPT_fseh_exceptions))
-    return true;
-  return getArch() == llvm::Triple::x86_64 || getArch() == llvm::Triple::arm ||
-         getArch() == llvm::Triple::thumb || getArch() == llvm::Triple::aarch64;
+    return UnwindTableLevel::Asynchronous;
+
+  if (getArch() == llvm::Triple::x86_64 || getArch() == llvm::Triple::arm ||
+      getArch() == llvm::Triple::thumb || getArch() == llvm::Triple::aarch64)
+    return UnwindTableLevel::Asynchronous;
+  return UnwindTableLevel::None;
 }
 
 bool toolchains::MinGW::isPICDefault() const {

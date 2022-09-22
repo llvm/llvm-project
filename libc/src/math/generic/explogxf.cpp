@@ -10,21 +10,6 @@
 
 namespace __llvm_libc {
 
-// Wolfram alpha: N[Table[2^x-1,{x,-16/32,15/32,1/32}],27]
-// printf("%.13a,\n", d[i]);
-alignas(64) const double EXP_2_POW[EXP_num_p] = {
-    -0x1.2bec333018867p-2, -0x1.1c1142e274118p-2, -0x1.0bdd71829fcf2p-2,
-    -0x1.f69d99accc7b6p-3, -0x1.d4c6af7557c93p-3, -0x1.b23213cc8e86cp-3,
-    -0x1.8edb9f5703dc0p-3, -0x1.6abf137076a8ep-3, -0x1.45d819a94b14bp-3,
-    -0x1.20224341286e4p-3, -0x1.f332113d56b1fp-4, -0x1.a46f918837cb7p-4,
-    -0x1.53f391822dbc7p-4, -0x1.01b466423250ap-4, -0x1.5b505d5b6f268p-5,
-    -0x1.5f134923757f3p-6, 0x0.0000000000000p+0,  0x1.66c34c5615d0fp-6,
-    0x1.6ab0d9f3121ecp-5,  0x1.1301d0125b50ap-4,  0x1.72b83c7d517aep-4,
-    0x1.d4873168b9aa8p-4,  0x1.1c3d373ab11c3p-3,  0x1.4f4efa8fef709p-3,
-    0x1.837f0518db8a9p-3,  0x1.b8d39b9d54e55p-3,  0x1.ef5326091a112p-3,
-    0x1.13821818624b4p-2,  0x1.2ff6b54d8a89cp-2,  0x1.4d0ad5a753e07p-2,
-    0x1.6ac1f752150a5p-2,  0x1.891fac0e95613p-2};
-
 // N[Table[Log[2, 1 + x], {x, 0/64, 63/64, 1/64}], 40]
 alignas(64) const double LOG_P1_LOG2[LOG_P1_SIZE] = {
     0x0.0000000000000p+0, 0x1.6e79685c2d22ap-6, 0x1.6bad3758efd87p-5,

@@ -1783,10 +1783,15 @@ example:
     function can return a pointer to a previously deallocated memory object.
 ``noimplicitfloat``
     Disallows implicit floating-point code. This inhibits optimizations that
-    use floating-point code and floating-point/SIMD/vector registers for
-    operations that are not nominally floating-point. LLVM instructions that
-    perform floating-point operations or require access to floating-point
-    registers may still cause floating-point code to be generated.
+    use floating-point code and floating-point registers for operations that are
+    not nominally floating-point. LLVM instructions that perform floating-point
+    operations or require access to floating-point registers may still cause
+    floating-point code to be generated.
+
+    Also inhibits optimizations that create SIMD/vector code and registers from
+    scalar code such as vectorization or memcpy/memset optimization. This
+    includes integer vectors. Vector instructions present in IR may still cause
+    vector code to be generated.
 ``noinline``
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
@@ -12444,7 +12449,7 @@ algorithm <gc>`.
 
 .. _gc_statepoint:
 
-'llvm.experimental.gc.statepoint' Intrinsic
+'``llvm.experimental.gc.statepoint``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12540,7 +12545,7 @@ pointer' argument of the statepoint in a location statically reachable
 from the statepoint.  Instead, the explicitly relocated value (from a
 ``gc.relocate``) must be used.
 
-'llvm.experimental.gc.result' Intrinsic
+'``llvm.experimental.gc.result``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12580,7 +12585,7 @@ A ``gc.result`` is modeled as a 'readnone' pure function.  It has no
 side effects since it is just a projection of the return value of the
 previous call represented by the ``gc.statepoint``.
 
-'llvm.experimental.gc.relocate' Intrinsic
+'``llvm.experimental.gc.relocate``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12640,8 +12645,8 @@ done during the actual call modeled by the ``gc.statepoint``.
 
 .. _gc.get.pointer.base:
 
-'llvm.experimental.gc.get.pointer.base' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.experimental.gc.get.pointer.base``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -12678,8 +12683,8 @@ explicit statepoint model.
 The return pointer type must be the same as the type of the parameter.
 
 
-'llvm.experimental.gc.get.pointer.offset' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.experimental.gc.get.pointer.offset``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -18258,7 +18263,7 @@ Semantics:
 
 The '``llvm.vp.add``' intrinsic performs integer addition (:ref:`add <i_add>`)
 of the first and second vector operand on each enabled lane.  The result on
-disabled lanes is undefined.
+disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18269,7 +18274,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = add <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 .. _int_vp_sub:
 
@@ -18305,7 +18310,7 @@ Semantics:
 
 The '``llvm.vp.sub``' intrinsic performs integer subtraction
 (:ref:`sub <i_sub>`)  of the first and second vector operand on each enabled
-lane. The result on disabled lanes is undefined.
+lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18316,7 +18321,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = sub <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 
@@ -18353,7 +18358,7 @@ Semantics:
 """"""""""
 The '``llvm.vp.mul``' intrinsic performs integer multiplication
 (:ref:`mul <i_mul>`) of the first and second vector operand on each enabled
-lane. The result on disabled lanes is undefined.
+lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18364,7 +18369,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = mul <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_sdiv:
@@ -18401,7 +18406,7 @@ Semantics:
 
 The '``llvm.vp.sdiv``' intrinsic performs signed division (:ref:`sdiv <i_sdiv>`)
 of the first and second vector operand on each enabled lane.  The result on
-disabled lanes is undefined.
+disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18412,7 +18417,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = sdiv <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_udiv:
@@ -18446,7 +18451,7 @@ Semantics:
 
 The '``llvm.vp.udiv``' intrinsic performs unsigned division
 (:ref:`udiv <i_udiv>`) of the first and second vector operand on each enabled
-lane. The result on disabled lanes is undefined.
+lane. The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18457,7 +18462,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = udiv <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 
@@ -18495,7 +18500,7 @@ Semantics:
 
 The '``llvm.vp.srem``' intrinsic computes the remainder of the signed division
 (:ref:`srem <i_srem>`) of the first and second vector operand on each enabled
-lane.  The result on disabled lanes is undefined.
+lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18506,7 +18511,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = srem <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 
@@ -18544,7 +18549,7 @@ Semantics:
 
 The '``llvm.vp.urem``' intrinsic computes the remainder of the unsigned division
 (:ref:`urem <i_urem>`) of the first and second vector operand on each enabled
-lane.  The result on disabled lanes is undefined.
+lane.  The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18555,7 +18560,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = urem <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_ashr:
@@ -18592,7 +18597,8 @@ Semantics:
 
 The '``llvm.vp.ashr``' intrinsic computes the arithmetic right shift
 (:ref:`ashr <i_ashr>`) of the first operand by the second operand on each
-enabled lane. The result on disabled lanes is undefined.
+enabled lane. The result on disabled lanes is a
+:ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18603,7 +18609,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = ashr <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_lshr:
@@ -18641,7 +18647,8 @@ Semantics:
 
 The '``llvm.vp.lshr``' intrinsic computes the logical right shift
 (:ref:`lshr <i_lshr>`) of the first operand by the second operand on each
-enabled lane. The result on disabled lanes is undefined.
+enabled lane. The result on disabled lanes is a
+:ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18652,7 +18659,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = lshr <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_shl:
@@ -18689,7 +18696,7 @@ Semantics:
 
 The '``llvm.vp.shl``' intrinsic computes the left shift (:ref:`shl <i_shl>`) of
 the first operand by the second operand on each enabled lane.  The result on
-disabled lanes is undefined.
+disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18700,7 +18707,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = shl <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_or:
@@ -18737,7 +18744,7 @@ Semantics:
 
 The '``llvm.vp.or``' intrinsic performs a bitwise or (:ref:`or <i_or>`) of the
 first two operands on each enabled lane.  The result on disabled lanes is
-undefined.
+a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18748,7 +18755,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = or <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_and:
@@ -18785,7 +18792,7 @@ Semantics:
 
 The '``llvm.vp.and``' intrinsic performs a bitwise and (:ref:`and <i_or>`) of
 the first two operands on each enabled lane.  The result on disabled lanes is
-undefined.
+a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18796,7 +18803,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = and <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_xor:
@@ -18833,7 +18840,7 @@ Semantics:
 
 The '``llvm.vp.xor``' intrinsic performs a bitwise xor (:ref:`xor <i_xor>`) of
 the first two operands on each enabled lane.
-The result on disabled lanes is undefined.
+The result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -18844,7 +18851,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = xor <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_fadd:
@@ -18881,8 +18888,8 @@ Semantics:
 
 The '``llvm.vp.fadd``' intrinsic performs floating-point addition (:ref:`fadd <i_fadd>`)
 of the first and second vector operand on each enabled lane.  The result on
-disabled lanes is undefined.  The operation is performed in the default
-floating-point environment.
+disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
+performed in the default floating-point environment.
 
 Examples:
 """""""""
@@ -18893,7 +18900,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fadd <4 x float> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_fsub:
@@ -18930,8 +18937,8 @@ Semantics:
 
 The '``llvm.vp.fsub``' intrinsic performs floating-point subtraction (:ref:`fsub <i_fsub>`)
 of the first and second vector operand on each enabled lane.  The result on
-disabled lanes is undefined.  The operation is performed in the default
-floating-point environment.
+disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
+performed in the default floating-point environment.
 
 Examples:
 """""""""
@@ -18942,7 +18949,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fsub <4 x float> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_fmul:
@@ -18979,8 +18986,8 @@ Semantics:
 
 The '``llvm.vp.fmul``' intrinsic performs floating-point multiplication (:ref:`fmul <i_fmul>`)
 of the first and second vector operand on each enabled lane.  The result on
-disabled lanes is undefined.  The operation is performed in the default
-floating-point environment.
+disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
+performed in the default floating-point environment.
 
 Examples:
 """""""""
@@ -18991,7 +18998,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fmul <4 x float> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_fdiv:
@@ -19028,8 +19035,8 @@ Semantics:
 
 The '``llvm.vp.fdiv``' intrinsic performs floating-point division (:ref:`fdiv <i_fdiv>`)
 of the first and second vector operand on each enabled lane.  The result on
-disabled lanes is undefined.  The operation is performed in the default
-floating-point environment.
+disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
+performed in the default floating-point environment.
 
 Examples:
 """""""""
@@ -19040,7 +19047,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fdiv <4 x float> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_frem:
@@ -19077,8 +19084,8 @@ Semantics:
 
 The '``llvm.vp.frem``' intrinsic performs floating-point remainder (:ref:`frem <i_frem>`)
 of the first and second vector operand on each enabled lane.  The result on
-disabled lanes is undefined.  The operation is performed in the default
-floating-point environment.
+disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
+performed in the default floating-point environment.
 
 Examples:
 """""""""
@@ -19089,7 +19096,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = frem <4 x float> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_fneg:
@@ -19126,7 +19133,7 @@ Semantics:
 
 The '``llvm.vp.fneg``' intrinsic performs floating-point negation (:ref:`fneg <i_fneg>`)
 of the first vector operand on each enabled lane.  The result on disabled lanes
-is undefined.
+is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -19137,7 +19144,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fneg <4 x float> %a
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_fabs:
@@ -19174,7 +19181,7 @@ Semantics:
 
 The '``llvm.vp.fabs``' intrinsic performs floating-point absolute value
 (:ref:`fabs <int_fabs>`) of the first vector operand on each enabled lane.  The
-result on disabled lanes is undefined.
+result on disabled lanes is a :ref:`poison value <poisonvalues>`.
 
 Examples:
 """""""""
@@ -19185,7 +19192,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_fma:
@@ -19222,8 +19229,8 @@ Semantics:
 
 The '``llvm.vp.fma``' intrinsic performs floating-point fused multiply-add (:ref:`llvm.fma <int_fma>`)
 of the first, second, and third vector operand on each enabled lane.  The result on
-disabled lanes is undefined.  The operation is performed in the default
-floating-point environment.
+disabled lanes is a :ref:`poison value <poisonvalues>`.  The operation is
+performed in the default floating-point environment.
 
 Examples:
 """""""""
@@ -19234,7 +19241,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = call <4 x float> @llvm.fma(<4 x float> %a, <4 x float> %b, <4 x float> %c)
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_reduce_add:
@@ -20079,7 +20086,7 @@ Examples:
 .. code-block:: llvm
 
       %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
-      %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
+      %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
 
 .. _int_experimental_vp_splice:
@@ -20129,15 +20136,15 @@ negative ``imm``) elements from indices ``[imm..evl1 - 1]``
 first ``evl2 - (evl1 - imm)`` (``evl2 + imm`` for negative ``imm``) elements of
 ``vec2``. If ``evl1 - imm`` (``-imm``) >= ``evl2``, only the first ``evl2``
 elements are considered and the remaining are ``undef``.  The lanes in the result
-vector disabled by ``mask`` are ``undef``.
+vector disabled by ``mask`` are ``poison``.
 
 Examples:
 """""""""
 
 .. code-block:: text
 
- llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3)  ==> <B, E, F, undef> ; index
- llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2) ==> <B, C, undef, undef> ; trailing elements
+ llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, 1, 2, 3)  ==> <B, E, F, poison> ; index
+ llvm.experimental.vp.splice(<A,B,C,D>, <E,F,G,H>, -2, 3, 2) ==> <B, C, poison, poison> ; trailing elements
 
 
 .. _int_vp_load:
@@ -20180,7 +20187,7 @@ The '``llvm.vp.load``' intrinsic reads a vector from memory in the same way as
 the '``llvm.masked.load``' intrinsic, where the mask is taken from the
 combination of the '``mask``' and '``evl``' operands in the usual VP way.
 Certain '``llvm.masked.load``' operands do not have corresponding operands in
-'``llvm.vp.load``': the '``passthru``' operand is implicitly ``undef``; the
+'``llvm.vp.load``': the '``passthru``' operand is implicitly ``poison``; the
 '``alignment``' operand is taken as the ``align`` parameter attribute, if
 provided. The default alignment is taken as the ABI alignment of the return
 type as specified by the :ref:`datalayout string<langref_datalayout>`.
@@ -20193,7 +20200,7 @@ Examples:
      %r = call <8 x i8> @llvm.vp.load.v8i8.p0(ptr align 2 %ptr, <8 x i1> %mask, i32 %evl)
      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
-     %also.r = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %ptr, i32 2, <8 x i1> %mask, <8 x i8> undef)
+     %also.r = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %ptr, i32 2, <8 x i1> %mask, <8 x i8> poison)
 
 
 .. _int_vp_store:
@@ -20415,7 +20422,7 @@ the same way as the '``llvm.masked.gather``' intrinsic, where the mask is taken
 from the combination of the '``mask``' and '``evl``' operands in the usual VP
 way. Certain '``llvm.masked.gather``' operands do not have corresponding
 operands in '``llvm.vp.gather``': the '``passthru``' operand is implicitly
-``undef``; the '``alignment``' operand is taken as the ``align`` parameter, if
+``poison``; the '``alignment``' operand is taken as the ``align`` parameter, if
 provided. The default alignment is taken as the ABI alignment of the source
 addresses as specified by the :ref:`datalayout string<langref_datalayout>`.
 
@@ -20427,7 +20434,7 @@ Examples:
      %r = call <8 x i8> @llvm.vp.gather.v8i8.v8p0(<8 x ptr>  align 8 %ptrs, <8 x i1> %mask, i32 %evl)
      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
-     %also.r = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> %ptrs, i32 8, <8 x i1> %mask, <8 x i8> undef)
+     %also.r = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> %ptrs, i32 8, <8 x i1> %mask, <8 x i8> poison)
 
 
 .. _int_vp_scatter:
@@ -20527,7 +20534,7 @@ converts the remaining bits to return type. Since the source size must be larger
 than the destination size, '``llvm.vp.trunc``' cannot be a *no-op cast*. It will
 always truncate bits. The conversion is performed on lane positions below the
 explicit vector length and where the vector mask is true.  Masked-off lanes are
-undefined.
+``poison``.
 
 Examples:
 """""""""
@@ -20538,7 +20545,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = trunc <4 x i32> %a to <4 x i16>
-      %also.r = select <4 x i1> %mask, <4 x i16> %t, <4 x i16> undef
+      %also.r = select <4 x i1> %mask, <4 x i16> %t, <4 x i16> poison
 
 
 .. _int_vp_zext:
@@ -20579,7 +20586,7 @@ The '``llvm.vp.zext``' intrinsic fill the high order bits of the value with zero
 bits until it reaches the size of the return type. When zero extending from i1,
 the result will always be either 0 or 1. The conversion is performed on lane
 positions below the explicit vector length and where the vector mask is true.
-Masked-off lanes are undefined.
+Masked-off lanes are ``poison``.
 
 Examples:
 """""""""
@@ -20590,7 +20597,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = zext <4 x i16> %a to <4 x i32>
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_sext:
@@ -20631,7 +20638,7 @@ The '``llvm.vp.sext``' intrinsic performs a sign extension by copying the sign
 bit (highest order bit) of the value until it reaches the size of the return
 type. When sign extending from i1, the result will always be either -1 or 0.
 The conversion is performed on lane positions below the explicit vector length
-and where the vector mask is true. Masked-off lanes are undefined.
+and where the vector mask is true. Masked-off lanes are ``poison``.
 
 Examples:
 """""""""
@@ -20642,7 +20649,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = sext <4 x i16> %a to <4 x i32>
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_fptrunc:
@@ -20687,7 +20694,7 @@ The '``llvm.vp.fptrunc``' intrinsic casts a ``value`` from a larger
 This instruction is assumed to execute in the default :ref:`floating-point
 environment <floatenv>`. The conversion is performed on lane positions below the
 explicit vector length and where the vector mask is true.  Masked-off lanes are
-undefined.
+``poison``.
 
 Examples:
 """""""""
@@ -20698,7 +20705,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fptrunc <4 x double> %a to <4 x float>
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_fpext:
@@ -20743,7 +20750,7 @@ The '``llvm.vp.fpext``' intrinsic extends the ``value`` from a smaller
 *no-op cast* because it always changes bits. Use ``bitcast`` to make a
 *no-op cast* for a floating-point cast.
 The conversion is performed on lane positions below the explicit vector length
-and where the vector mask is true.  Masked-off lanes are undefined.
+and where the vector mask is true.  Masked-off lanes are ``poison``.
 
 Examples:
 """""""""
@@ -20754,7 +20761,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fpext <4 x float> %a to <4 x double>
-      %also.r = select <4 x i1> %mask, <4 x double> %t, <4 x double> undef
+      %also.r = select <4 x i1> %mask, <4 x double> %t, <4 x double> poison
 
 
 .. _int_vp_fptoui:
@@ -20797,7 +20804,7 @@ Semantics:
 The '``llvm.vp.fptoui``' intrinsic converts its :ref:`floating-point
 <t_floating>` operand into the nearest (rounding towards zero) unsigned integer
 value where the lane position is below the explicit vector length and the
-vector mask is true.  Masked-off lanes are undefined. On enabled lanes where
+vector mask is true.  Masked-off lanes are ``poison``. On enabled lanes where
 conversion takes place and the value cannot fit in the return type, the result
 on that lane is a :ref:`poison value <poisonvalues>`.
 
@@ -20810,7 +20817,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fptoui <4 x float> %a to <4 x i32>
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_fptosi:
@@ -20853,7 +20860,7 @@ Semantics:
 The '``llvm.vp.fptosi``' intrinsic converts its :ref:`floating-point
 <t_floating>` operand into the nearest (rounding towards zero) signed integer
 value where the lane position is below the explicit vector length and the
-vector mask is true.  Masked-off lanes are undefined. On enabled lanes where
+vector mask is true.  Masked-off lanes are ``poison``. On enabled lanes where
 conversion takes place and the value cannot fit in the return type, the result
 on that lane is a :ref:`poison value <poisonvalues>`.
 
@@ -20866,7 +20873,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fptosi <4 x float> %a to <4 x i32>
-      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> undef
+      %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
 .. _int_vp_uitofp:
@@ -20911,7 +20918,7 @@ integer quantity and converts it to the corresponding floating-point value. If
 the value cannot be exactly represented, it is rounded using the default
 rounding mode.  The conversion is performed on lane positions below the
 explicit vector length and where the vector mask is true.  Masked-off lanes are
-undefined.
+``poison``.
 
 Examples:
 """""""""
@@ -20922,7 +20929,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = uitofp <4 x i32> %a to <4 x float>
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_sitofp:
@@ -20967,7 +20974,7 @@ integer quantity and converts it to the corresponding floating-point value. If
 the value cannot be exactly represented, it is rounded using the default
 rounding mode.  The conversion is performed on lane positions below the
 explicit vector length and where the vector mask is true.  Masked-off lanes are
-undefined.
+``poison``.
 
 Examples:
 """""""""
@@ -20978,7 +20985,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = sitofp <4 x i32> %a to <4 x float>
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
 
 
 .. _int_vp_ptrtoint:
@@ -21024,7 +21031,7 @@ If ``value`` is smaller than return type, then a zero extension is done. If
 the same size, then nothing is done (*no-op cast*) other than a type
 change.
 The conversion is performed on lane positions below the explicit vector length
-and where the vector mask is true.  Masked-off lanes are undefined.
+and where the vector mask is true.  Masked-off lanes are ``poison``.
 
 Examples:
 """""""""
@@ -21035,7 +21042,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = ptrtoint <4 x ptr> %a to <4 x i8>
-      %also.r = select <4 x i1> %mask, <4 x i8> %t, <4 x i8> undef
+      %also.r = select <4 x i1> %mask, <4 x i8> %t, <4 x i8> poison
 
 
 .. _int_vp_inttoptr:
@@ -21079,7 +21086,7 @@ integer ``value``. If ``value`` is larger than the size of a pointer, then a
 truncation is done. If ``value`` is smaller than the size of a pointer, then a
 zero extension is done. If they are the same size, nothing is done (*no-op cast*).
 The conversion is performed on lane positions below the explicit vector length
-and where the vector mask is true.  Masked-off lanes are undefined.
+and where the vector mask is true.  Masked-off lanes are ``poison``.
 
 Examples:
 """""""""
@@ -21090,7 +21097,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = inttoptr <4 x i32> %a to <4 x ptr>
-      %also.r = select <4 x i1> %mask, <4 x ptr> %t, <4 x ptr> undef
+      %also.r = select <4 x i1> %mask, <4 x ptr> %t, <4 x ptr> poison
 
 
 .. _int_vp_fcmp:
@@ -21137,7 +21144,7 @@ The '``llvm.vp.fcmp``' compares its first two operands according to the
 condition code given as the third operand. The operands are compared element by
 element on each enabled lane, where the the semantics of the comparison are
 defined :ref:`according to the condition code <fcmp_md_cc_sem>`. Masked-off
-lanes are undefined.
+lanes are ``poison``.
 
 Examples:
 """""""""
@@ -21148,7 +21155,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fcmp oeq <4 x float> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i1> %t, <4 x i1> undef
+      %also.r = select <4 x i1> %mask, <4 x i1> %t, <4 x i1> poison
 
 
 .. _int_vp_icmp:
@@ -21195,7 +21202,7 @@ The '``llvm.vp.icmp``' compares its first two operands according to the
 condition code given as the third operand. The operands are compared element by
 element on each enabled lane, where the the semantics of the comparison are
 defined :ref:`according to the condition code <icmp_md_cc_sem>`. Masked-off
-lanes are undefined.
+lanes are ``poison``.
 
 Examples:
 """""""""
@@ -21206,7 +21213,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = icmp ne <4 x i32> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x i1> %t, <4 x i1> undef
+      %also.r = select <4 x i1> %mask, <4 x i1> %t, <4 x i1> poison
 
 
 .. _int_mload_mstore:
@@ -21341,7 +21348,7 @@ The semantics of this operation are equivalent to a sequence of conditional scal
 
 ::
 
-       %res = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> %ptrs, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> undef)
+       %res = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> %ptrs, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x double> poison)
 
        ;; The gather with all-true mask is equivalent to the following instruction sequence
        %ptr0 = extractelement <4 x ptr> %ptrs, i32 0
@@ -21354,10 +21361,10 @@ The semantics of this operation are equivalent to a sequence of conditional scal
        %val2 = load double, ptr %ptr2, align 8
        %val3 = load double, ptr %ptr3, align 8
 
-       %vec0    = insertelement <4 x double>undef, %val0, 0
-       %vec01   = insertelement <4 x double>%vec0, %val1, 1
-       %vec012  = insertelement <4 x double>%vec01, %val2, 2
-       %vec0123 = insertelement <4 x double>%vec012, %val3, 3
+       %vec0    = insertelement <4 x double> poison, %val0, 0
+       %vec01   = insertelement <4 x double> %vec0, %val1, 1
+       %vec012  = insertelement <4 x double> %vec01, %val2, 2
+       %vec0123 = insertelement <4 x double> %vec012, %val3, 3
 
 .. _int_mscatter:
 
@@ -21459,7 +21466,7 @@ The '``llvm.masked.expandload``' intrinsic is designed for reading multiple scal
 
     ; Load several elements from array B and expand them in a vector.
     ; The number of loaded elements is equal to the number of '1' elements in the Mask.
-    %Tmp = call <8 x double> @llvm.masked.expandload.v8f64(ptr %Bptr, <8 x i1> %Mask, <8 x double> undef)
+    %Tmp = call <8 x double> @llvm.masked.expandload.v8f64(ptr %Bptr, <8 x i1> %Mask, <8 x double> poison)
     ; Store the result in A
     call void @llvm.masked.store.v8f64.p0(<8 x double> %Tmp, ptr %Aptr, i32 8, <8 x i1> %Mask)
 
@@ -21516,7 +21523,7 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 .. code-block:: llvm
 
     ; Load elements from A.
-    %Tmp = call <8 x double> @llvm.masked.load.v8f64.p0(ptr %Aptr, i32 8, <8 x i1> %Mask, <8 x double> undef)
+    %Tmp = call <8 x double> @llvm.masked.load.v8f64.p0(ptr %Aptr, i32 8, <8 x i1> %Mask, <8 x double> poison)
     ; Store all selected elements consecutively in array B
     call <void> @llvm.masked.compressstore.v8f64(<8 x double> %Tmp, ptr %Bptr, <8 x i1> %Mask)
 

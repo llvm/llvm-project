@@ -1379,11 +1379,11 @@ define void @foo4(double* nocapture %A, double* nocapture readonly %B, i32* noca
 ; AVX512-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[TRIGGER]], <8 x i64> [[VEC_IND]]
-; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP0]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef), !alias.scope !21
+; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*> [[TMP0]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison), !alias.scope !21
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp slt <8 x i32> [[WIDE_MASKED_GATHER]], <i32 100, i32 100, i32 100, i32 100, i32 100, i32 100, i32 100, i32 100>
 ; AVX512-NEXT:    [[TMP2:%.*]] = shl nuw nsw <8 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
 ; AVX512-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, double* [[B]], <8 x i64> [[TMP2]]
-; AVX512-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> [[TMP3]], i32 8, <8 x i1> [[TMP1]], <8 x double> undef), !alias.scope !24
+; AVX512-NEXT:    [[WIDE_MASKED_GATHER12:%.*]] = call <8 x double> @llvm.masked.gather.v8f64.v8p0f64(<8 x double*> [[TMP3]], i32 8, <8 x i1> [[TMP1]], <8 x double> poison), !alias.scope !24
 ; AVX512-NEXT:    [[TMP4:%.*]] = sitofp <8 x i32> [[WIDE_MASKED_GATHER]] to <8 x double>
 ; AVX512-NEXT:    [[TMP5:%.*]] = fadd <8 x double> [[WIDE_MASKED_GATHER12]], [[TMP4]]
 ; AVX512-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, double* [[A]], <8 x i64> [[VEC_IND]]

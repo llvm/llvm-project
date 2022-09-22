@@ -1,4 +1,8 @@
 ; RUN: mlir-translate -import-llvm %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-DBG
+
+; CHECK-DBG: #[[UNKNOWNLOC:.+]] = loc(unknown)
+; CHECK-DBG: #[[ZEROLOC:.+]] = loc("imported-bitcode":0:0)
 
 %struct.t = type {}
 %struct.s = type { %struct.t, i64 }
@@ -129,6 +133,7 @@ define internal spir_func void @spir_func_internal() {
 
 ; FIXME: function attributes.
 ; CHECK-LABEL: llvm.func internal @f1(%arg0: i64) -> i32 attributes {dso_local} {
+; CHECK-DBG: llvm.func internal @f1(%arg0: i64 loc(unknown)) -> i32 attributes {dso_local} {
 ; CHECK-DAG: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK-DAG: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : i32
 ; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : i1
@@ -137,6 +142,7 @@ define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
 ; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
   %aa = inttoptr i64 %a to i64*
+; CHECK-DBG: llvm.mlir.addressof @g2 : !llvm.ptr<f64> loc(#[[UNKNOWNLOC]])
 ; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
 ; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
 ; %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
@@ -145,6 +151,7 @@ entry:
   %bb = ptrtoint double* @g2 to i64
   %cc = getelementptr double, double* @g2, i32 2
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : i64 to i32
+; CHECK-DBG: llvm.trunc %arg0 : i64 to i32 loc(#[[ZEROLOC]])
   %b = trunc i64 %a to i32
 ; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (i32) -> f32
   %c = call float @fe(i32 %b)
@@ -168,6 +175,7 @@ if.end:
 ; CHECK: llvm.return %[[c43]]
   ret i32 43
 }
+; CHECK-DBG: } loc(#[[UNKNOWNLOC]])
 
 ; Test that instructions that dominate can be out of sequential order.
 ; CHECK-LABEL: llvm.func @f2(%arg0: i64) -> i64 {

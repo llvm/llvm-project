@@ -21,6 +21,7 @@ namespace llvm {
 
 template <typename T> class DomTreeNodeBase;
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
+class AssumptionCache;
 class StringRef;
 class AnalysisUsage;
 class TargetTransformInfo;
@@ -170,8 +171,8 @@ bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
 /// \p AllowSpeculation is whether values should be hoisted even if they are not
 /// guaranteed to execute in the loop, but are safe to speculatively execute.
 bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
-                 TargetLibraryInfo *, Loop *, MemorySSAUpdater &,
-                 ScalarEvolution *, ICFLoopSafetyInfo *,
+                 AssumptionCache *, TargetLibraryInfo *, Loop *,
+                 MemorySSAUpdater &, ScalarEvolution *, ICFLoopSafetyInfo *,
                  SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *, bool,
                  bool AllowSpeculation);
 
@@ -208,8 +209,8 @@ void breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 bool promoteLoopAccessesToScalars(
     const SmallSetVector<Value *, 8> &, SmallVectorImpl<BasicBlock *> &,
     SmallVectorImpl<Instruction *> &, SmallVectorImpl<MemoryAccess *> &,
-    PredIteratorCache &, LoopInfo *, DominatorTree *, const TargetLibraryInfo *,
-    Loop *, MemorySSAUpdater &, ICFLoopSafetyInfo *,
+    PredIteratorCache &, LoopInfo *, DominatorTree *, AssumptionCache *AC,
+    const TargetLibraryInfo *, Loop *, MemorySSAUpdater &, ICFLoopSafetyInfo *,
     OptimizationRemarkEmitter *, bool AllowSpeculation);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
