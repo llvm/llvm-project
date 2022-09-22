@@ -58,4 +58,115 @@ define void @add() #0 {
   ret void
 }
 
+; Assuming base_cost = 2
+; Assuming legalization_cost = (vec_len-1/VBITS)+1
+; Assuming extra cost of 8 for i8.
+; Assuming extra cost of 4 for i16.
+; The hard-coded expected cost is based on VBITS=128
+define void @sdiv() #0 {
+; CHECK-LABEL: function 'sdiv'
+
+; CHECK: cost of 5 for instruction:  %sdiv16.i8   = sdiv <2 x i8> undef, undef
+  %sdiv16.i8   = sdiv <2 x i8> undef, undef
+
+; CHECK: cost of 8 for instruction:  %sdiv32.i8   = sdiv <4 x i8> undef, undef
+  %sdiv32.i8   = sdiv <4 x i8> undef, undef
+
+; CHECK: cost of 5 for instruction:  %sdiv32.i16   = sdiv <2 x i16> undef, undef
+  %sdiv32.i16  = sdiv <2 x i16> undef, undef
+
+; CHECK: cost of 8 for instruction:  %sdiv64.i8   = sdiv <8 x i8> undef, undef
+  %sdiv64.i8   = sdiv <8 x i8> undef, undef
+
+; CHECK: cost of 5 for instruction:  %sdiv64.i16   = sdiv <4 x i16> undef, undef
+  %sdiv64.i16  = sdiv <4 x i16> undef, undef
+
+; CHECK: cost of 1 for instruction:  %sdiv64.i32   = sdiv <2 x i32> undef, undef
+  %sdiv64.i32  = sdiv <2 x i32> undef, undef
+
+; CHECK: cost of [[#mul(mul(div(128-1, VBITS)+1, 2), 8)]] for instruction:  %sdiv128.i8   = sdiv <16 x i8> undef, undef
+  %sdiv128.i8 = sdiv <16 x i8> undef, undef
+
+; CHECK: cost of [[#mul(mul(div(128-1, VBITS)+1, 2), 4)]] for instruction:  %sdiv128.i16   = sdiv <8 x i16> undef, undef
+  %sdiv128.i16 = sdiv <8 x i16> undef, undef
+
+; CHECK: cost of [[#mul(div(128-1, VBITS)+1, 2)]] for instruction:  %sdiv128.i64   = sdiv <2 x i64> undef, undef
+  %sdiv128.i64 = sdiv <2 x i64> undef, undef
+
+; CHECK: cost of [[#mul(mul(div(512-1, VBITS)+1, 2), 8)]] for instruction:  %sdiv512.i8   = sdiv <64 x i8> undef, undef
+  %sdiv512.i8  = sdiv <64 x i8> undef, undef
+
+; CHECK: cost of [[#mul(mul(div(512-1, VBITS)+1, 2), 4)]] for instruction:  %sdiv512.i16   = sdiv <32 x i16> undef, undef
+  %sdiv512.i16 = sdiv <32 x i16> undef, undef
+
+; CHECK: cost of [[#mul(div(512-1, VBITS)+1, 2)]] for instruction:  %sdiv512.i32   = sdiv <16 x i32> undef, undef
+  %sdiv512.i32 = sdiv <16 x i32> undef, undef
+
+; CHECK: cost of [[#mul(div(512-1, VBITS)+1, 2)]] for instruction:  %sdiv512.i64   = sdiv <8 x i64> undef, undef
+  %sdiv512.i64 = sdiv <8 x i64> undef, undef
+
+  ret void
+}
+
+; Assuming base_cost = 2
+; Assuming legalization_cost = (vec_len-1/VBITS)+1
+; Assuming extra cost of 8 for i8.
+; Assuming extra cost of 4 for i16.
+; The hard-coded expected cost is based on VBITS=128
+define void @udiv() #0 {
+; CHECK-LABEL: function 'udiv'
+
+; CHECK: cost of 5 for instruction:  %udiv16.i8   = udiv <2 x i8> undef, undef
+  %udiv16.i8   = udiv <2 x i8> undef, undef
+
+; CHECK: cost of 8 for instruction:  %udiv32.i8   = udiv <4 x i8> undef, undef
+  %udiv32.i8   = udiv <4 x i8> undef, undef
+
+; CHECK: cost of 5 for instruction:  %udiv32.i16   = udiv <2 x i16> undef, undef
+  %udiv32.i16  = udiv <2 x i16> undef, undef
+
+; CHECK: cost of 8 for instruction:  %udiv64.i8   = udiv <8 x i8> undef, undef
+  %udiv64.i8   = udiv <8 x i8> undef, undef
+
+; CHECK: cost of 5 for instruction:  %udiv64.i16   = udiv <4 x i16> undef, undef
+  %udiv64.i16  = udiv <4 x i16> undef, undef
+
+; CHECK: cost of 1 for instruction:  %udiv64.i32   = udiv <2 x i32> undef, undef
+  %udiv64.i32  = udiv <2 x i32> undef, undef
+
+; CHECK: cost of [[#mul(mul(div(128-1, VBITS)+1, 2), 8)]] for instruction:  %udiv128.i8   = udiv <16 x i8> undef, undef
+  %udiv128.i8 = udiv <16 x i8> undef, undef
+
+; CHECK: cost of [[#mul(mul(div(128-1, VBITS)+1, 2), 4)]] for instruction:  %udiv128.i16   = udiv <8 x i16> undef, undef
+  %udiv128.i16 = udiv <8 x i16> undef, undef
+
+; CHECK: cost of [[#mul(div(128-1, VBITS)+1, 2)]] for instruction:  %udiv128.i64   = udiv <2 x i64> undef, undef
+  %udiv128.i64 = udiv <2 x i64> undef, undef
+
+; CHECK: cost of [[#mul(mul(div(512-1, VBITS)+1, 2), 8)]] for instruction:  %udiv512.i8   = udiv <64 x i8> undef, undef
+  %udiv512.i8  = udiv <64 x i8> undef, undef
+
+; CHECK: cost of [[#mul(mul(div(512-1, VBITS)+1, 2), 4)]] for instruction:  %udiv512.i16   = udiv <32 x i16> undef, undef
+  %udiv512.i16 = udiv <32 x i16> undef, undef
+
+; CHECK: cost of [[#mul(div(512-1, VBITS)+1, 2)]] for instruction:  %udiv512.i32   = udiv <16 x i32> undef, undef
+  %udiv512.i32 = udiv <16 x i32> undef, undef
+
+; CHECK: cost of [[#mul(div(512-1, VBITS)+1, 2)]] for instruction:  %udiv512.i64   = udiv <8 x i64> undef, undef
+  %udiv512.i64 = udiv <8 x i64> undef, undef
+
+  ret void
+}
+
+; The hard-coded expected cost is based on VBITS=128
+define void @mul() #0 {
+; CHECK: cost of [[#div(128-1, VBITS)+1]] for instruction:  %mul128.i64  = mul <2 x i64> undef, undef
+  %mul128.i64 = mul <2 x i64> undef, undef
+
+; CHECK: cost of [[#div(512-1, VBITS)+1]] for instruction:  %mul512.i64 = mul <8 x i64> undef, undef
+  %mul512.i64 = mul <8 x i64> undef, undef
+
+   ret void
+ }
+
 attributes #0 = { "target-features"="+sve" }
