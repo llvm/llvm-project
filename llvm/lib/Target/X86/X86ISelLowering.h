@@ -1455,11 +1455,11 @@ namespace llvm {
 
     bool supportKCFIBundles() const override { return true; }
 
-    bool hasStackProbeSymbol(MachineFunction &MF) const override;
-    bool hasInlineStackProbe(MachineFunction &MF) const override;
-    StringRef getStackProbeSymbolName(MachineFunction &MF) const override;
+    bool hasStackProbeSymbol(const MachineFunction &MF) const override;
+    bool hasInlineStackProbe(const MachineFunction &MF) const override;
+    StringRef getStackProbeSymbolName(const MachineFunction &MF) const override;
 
-    unsigned getStackProbeSize(MachineFunction &MF) const;
+    unsigned getStackProbeSize(const MachineFunction &MF) const;
 
     bool hasVectorBlend() const override { return true; }
 
