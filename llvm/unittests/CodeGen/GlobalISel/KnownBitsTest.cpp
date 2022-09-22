@@ -1923,9 +1923,6 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
    %val:_(s64) = COPY $vgpr0_vgpr1
    %ptrval:_(p1) = COPY $vgpr0_vgpr1
 
-   %assert_align0:_(s64) = G_ASSERT_ALIGN %val, 0
-   %copy_assert_align0:_(s64) = COPY %assert_align0
-
    %assert_align1:_(s64) = G_ASSERT_ALIGN %val, 1
    %copy_assert_align1:_(s64) = COPY %assert_align1
 
@@ -1962,17 +1959,11 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
   };
 
   const unsigned NumSetupCopies = 5;
-  // Check zero align specially.
-  Res = GetKB(NumSetupCopies);
-  EXPECT_EQ(0u, Res.Zero.countTrailingOnes());
-  EXPECT_EQ(64u, Res.One.countTrailingZeros());
-  EXPECT_EQ(Align(1), Info.computeKnownAlignment(Copies[5]));
-
-  CheckBits(1, NumSetupCopies + 1);
-  CheckBits(2, NumSetupCopies + 2);
-  CheckBits(3, NumSetupCopies + 3);
-  CheckBits(4, NumSetupCopies + 4);
-  CheckBits(5, NumSetupCopies + 5);
+  CheckBits(1, NumSetupCopies);
+  CheckBits(2, NumSetupCopies + 1);
+  CheckBits(3, NumSetupCopies + 2);
+  CheckBits(4, NumSetupCopies + 3);
+  CheckBits(5, NumSetupCopies + 4);
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsUADDO) {
