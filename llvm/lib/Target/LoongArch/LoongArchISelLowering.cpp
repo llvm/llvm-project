@@ -1907,3 +1907,139 @@ bool LoongArchTargetLowering::isFMAFasterThanFMulAndFAdd(
 
   return false;
 }
+
+//===----------------------------------------------------------------------===//
+//                           LoongArch Inline Assembly Support
+//===----------------------------------------------------------------------===//
+
+LoongArchTargetLowering::ConstraintType
+LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
+  // LoongArch specific constraints in GCC: config/loongarch/constraints.md
+  //
+  // 'f':  A floating-point register (if available).
+  // 'k':  A memory operand whose address is formed by a base register and
+  //       (optionally scaled) index register.
+  // 'l':  A signed 16-bit constant.
+  // 'm':  A memory operand whose address is formed by a base register and
+  //       offset that is suitable for use in instructions with the same
+  //       addressing mode as st.w and ld.w.
+  // 'I':  A signed 12-bit constant (for arithmetic instructions).
+  // 'K':  An unsigned 12-bit constant (for logic instructions).
+  // "ZB": An address that is held in a general-purpose register. The offset is
+  //       zero.
+  // "ZC": A memory operand whose address is formed by a base register and
+  //       offset that is suitable for use in instructions with the same
+  //       addressing mode as ll.w and sc.w.
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'f':
+      return C_RegisterClass;
+    case 'l':
+    case 'I':
+    case 'K':
+      return C_Immediate;
+    }
+  }
+
+  // TODO: handle 'k", "ZB" and "ZC".
+
+  return TargetLowering::getConstraintType(Constraint);
+}
+
+std::pair<unsigned, const TargetRegisterClass *>
+LoongArchTargetLowering::getRegForInlineAsmConstraint(
+    const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
+  // First, see if this is a constraint that directly corresponds to a LoongArch
+  // register class.
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    case 'r':
+      // TODO: Support fixed vectors up to GRLen?
+      if (VT.isVector())
+        break;
+      return std::make_pair(0U, &LoongArch::GPRRegClass);
+    case 'f':
+      if (Subtarget.hasBasicF() && VT == MVT::f32)
+        return std::make_pair(0U, &LoongArch::FPR32RegClass);
+      if (Subtarget.hasBasicD() && VT == MVT::f64)
+        return std::make_pair(0U, &LoongArch::FPR64RegClass);
+      break;
+    default:
+      break;
+    }
+  }
+
+  // TargetLowering::getRegForInlineAsmConstraint uses the name of the TableGen
+  // record (e.g. the "R0" in `def R0`) to choose registers for InlineAsm
+  // constraints while the official register name is prefixed with a '$'. So we
+  // clip the '$' from the original constraint string (e.g. {$r0} to {r0}.)
+  // before it being parsed. And TargetLowering::getRegForInlineAsmConstraint is
+  // case insensitive, so no need to convert the constraint to upper case here.
+  //
+  // For now, no need to support ABI names (e.g. `$a0`) as clang will correctly
+  // decode the usage of register name aliases into their official names. And
+  // AFAIK, the not yet upstreamed `rustc` for LoongArch will always use
+  // official register names.
+  if (Constraint.startswith("{$r") || Constraint.startswith("{$f")) {
+    bool IsFP = Constraint[2] == 'f';
+    std::pair<StringRef, StringRef> Temp = Constraint.split('$');
+    std::pair<unsigned, const TargetRegisterClass *> R;
+    R = TargetLowering::getRegForInlineAsmConstraint(
+        TRI, join_items("", Temp.first, Temp.second), VT);
+    // Match those names to the widest floating point register type available.
+    if (IsFP) {
+      unsigned RegNo = R.first;
+      if (LoongArch::F0 <= RegNo && RegNo <= LoongArch::F31) {
+        if (Subtarget.hasBasicD() && (VT == MVT::f64 || VT == MVT::Other)) {
+          unsigned DReg = RegNo - LoongArch::F0 + LoongArch::F0_64;
+          return std::make_pair(DReg, &LoongArch::FPR64RegClass);
+        }
+      }
+    }
+    return R;
+  }
+
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
+void LoongArchTargetLowering::LowerAsmOperandForConstraint(
+    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SelectionDAG &DAG) const {
+  // Currently only support length 1 constraints.
+  if (Constraint.length() == 1) {
+    switch (Constraint[0]) {
+    case 'l':
+      // Validate & create a 16-bit signed immediate operand.
+      if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+        uint64_t CVal = C->getSExtValue();
+        if (isInt<16>(CVal))
+          Ops.push_back(
+              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getGRLenVT()));
+      }
+      return;
+    case 'I':
+      // Validate & create a 12-bit signed immediate operand.
+      if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+        uint64_t CVal = C->getSExtValue();
+        if (isInt<12>(CVal))
+          Ops.push_back(
+              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getGRLenVT()));
+      }
+      return;
+    case 'K':
+      // Validate & create a 12-bit unsigned immediate operand.
+      if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+        uint64_t CVal = C->getZExtValue();
+        if (isUInt<12>(CVal))
+          Ops.push_back(
+              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getGRLenVT()));
+      }
+      return;
+    default:
+      break;
+    }
+  }
+  TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
+}
