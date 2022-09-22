@@ -3281,6 +3281,7 @@ _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
+#  include <atomic>
 #  include <concepts>
 #  include <typeinfo>
 #  include <utility>
