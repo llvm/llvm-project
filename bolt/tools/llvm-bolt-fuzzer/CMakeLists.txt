@@ -4,6 +4,8 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_fuzzer(llvm-bolt-fuzzer
   llvm-bolt-fuzzer.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 
 if (TARGET llvm-bolt-fuzzer)
