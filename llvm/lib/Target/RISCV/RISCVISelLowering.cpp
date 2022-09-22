@@ -506,6 +506,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(
           {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
           VT, Custom);
+      setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
+                         Custom);
 
       // Expand all extending loads to types larger than this, and truncating
       // stores from types larger than this.
@@ -560,6 +562,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(
           {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
           VT, Custom);
+      setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
+                         Custom);
 
       setOperationAction(
           {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT, Legal);
@@ -773,6 +777,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT,
                             ISD::FP_TO_UINT},
                            VT, Custom);
+        setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
+                           Custom);
 
         // Operations below are different for between masks and other vectors.
         if (VT.getVectorElementType() == MVT::i1) {
@@ -1844,31 +1850,93 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   // nan case with a compare and a select.
   SDValue Src = Op.getOperand(0);
 
-  EVT DstVT = Op.getValueType();
+  MVT DstVT = Op.getSimpleValueType();
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
   bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
-  unsigned Opc;
-  if (SatVT == DstVT)
-    Opc = IsSigned ? RISCVISD::FCVT_X : RISCVISD::FCVT_XU;
-  else if (DstVT == MVT::i64 && SatVT == MVT::i32)
-    Opc = IsSigned ? RISCVISD::FCVT_W_RV64 : RISCVISD::FCVT_WU_RV64;
-  else
+
+  if (!DstVT.isVector()) {
+    unsigned Opc;
+    if (SatVT == DstVT)
+      Opc = IsSigned ? RISCVISD::FCVT_X : RISCVISD::FCVT_XU;
+    else if (DstVT == MVT::i64 && SatVT == MVT::i32)
+      Opc = IsSigned ? RISCVISD::FCVT_W_RV64 : RISCVISD::FCVT_WU_RV64;
+    else
+      return SDValue();
+    // FIXME: Support other SatVTs by clamping before or after the conversion.
+
+    SDLoc DL(Op);
+    SDValue FpToInt = DAG.getNode(
+        Opc, DL, DstVT, Src,
+        DAG.getTargetConstant(RISCVFPRndMode::RTZ, DL, Subtarget.getXLenVT()));
+
+    if (Opc == RISCVISD::FCVT_WU_RV64)
+      FpToInt = DAG.getZeroExtendInReg(FpToInt, DL, MVT::i32);
+
+    SDValue ZeroInt = DAG.getConstant(0, DL, DstVT);
+    return DAG.getSelectCC(DL, Src, Src, ZeroInt, FpToInt,
+                           ISD::CondCode::SETUO);
+  }
+
+  // Vectors.
+
+  MVT DstEltVT = DstVT.getVectorElementType();
+  MVT SrcVT = Src.getSimpleValueType();
+  MVT SrcEltVT = SrcVT.getVectorElementType();
+  unsigned SrcEltSize = SrcEltVT.getSizeInBits();
+  unsigned DstEltSize = DstEltVT.getSizeInBits();
+
+  // Only handle saturating to the destination type.
+  if (SatVT != DstEltVT)
     return SDValue();
-  // FIXME: Support other SatVTs by clamping before or after the conversion.
+
+  // FIXME: Don't support narrowing by more than 1 steps for now.
+  if (SrcEltSize > (2 * DstEltSize))
+    return SDValue();
+
+  MVT DstContainerVT = DstVT;
+  MVT SrcContainerVT = SrcVT;
+  if (DstVT.isFixedLengthVector()) {
+    DstContainerVT = getContainerForFixedLengthVector(DAG, DstVT, Subtarget);
+    SrcContainerVT = getContainerForFixedLengthVector(DAG, SrcVT, Subtarget);
+    assert(DstContainerVT.getVectorElementCount() ==
+               SrcContainerVT.getVectorElementCount() &&
+           "Expected same element count");
+    Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
+  }
 
   SDLoc DL(Op);
-  SDValue FpToInt = DAG.getNode(
-      Opc, DL, DstVT, Src,
-      DAG.getTargetConstant(RISCVFPRndMode::RTZ, DL, Subtarget.getXLenVT()));
 
-  // fcvt.wu.* sign extends bit 31 on RV64. FP_TO_UINT_SAT expects to zero
-  // extend.
-  if (Opc == RISCVISD::FCVT_WU_RV64)
-    FpToInt = DAG.getZeroExtendInReg(FpToInt, DL, MVT::i32);
+  SDValue Mask, VL;
+  std::tie(Mask, VL) =
+      getDefaultVLOps(DstVT, DstContainerVT, DL, DAG, Subtarget);
 
-  SDValue ZeroInt = DAG.getConstant(0, DL, DstVT);
-  return DAG.getSelectCC(DL, Src, Src, ZeroInt, FpToInt, ISD::CondCode::SETUO);
+  SDValue IsNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
+                              {Src, Src, DAG.getCondCode(ISD::SETNE),
+                               DAG.getUNDEF(Mask.getValueType()), Mask, VL});
+
+  // Need to widen by more than 1 step, promote the FP type, then do a widening
+  // convert.
+  if (DstEltSize > (2 * SrcEltSize)) {
+    assert(SrcContainerVT.getVectorElementType() == MVT::f16 && "Unexpected VT!");
+    MVT InterVT = SrcContainerVT.changeVectorElementType(MVT::f32);
+    Src = DAG.getNode(RISCVISD::FP_EXTEND_VL, DL, InterVT, Src, Mask, VL);
+  }
+
+  unsigned RVVOpc =
+      IsSigned ? RISCVISD::VFCVT_RTZ_X_F_VL : RISCVISD::VFCVT_RTZ_XU_F_VL;
+  SDValue Res = DAG.getNode(RVVOpc, DL, DstContainerVT, Src, Mask, VL);
+
+  SDValue SplatZero = DAG.getNode(
+      RISCVISD::VMV_V_X_VL, DL, DstContainerVT, DAG.getUNDEF(DstContainerVT),
+      DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+  Res = DAG.getNode(RISCVISD::VSELECT_VL, DL, DstContainerVT, IsNan, SplatZero,
+                    Res, VL);
+
+  if (DstVT.isFixedLengthVector())
+    Res = convertFromScalableVector(DstVT, Res, DAG, Subtarget);
+
+  return Res;
 }
 
 static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
