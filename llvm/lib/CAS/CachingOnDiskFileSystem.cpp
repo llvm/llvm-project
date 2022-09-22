@@ -56,6 +56,7 @@ public:
   /// the final path are passed to it as the search progresses.
   Expected<DirectoryEntry *> lookupPath(
       StringRef Path, bool FollowSymlinks = true, bool LookupOnDisk = true,
+      bool ForceDisableTracking = false,
       function_ref<void(DirectoryEntry &)> TrackNonRealPathEntries = nullptr);
 
   DirectoryEntry *makeDirectory(DirectoryEntry &Parent, StringRef TreePath);
@@ -112,6 +113,7 @@ public:
                                                 SmallVectorImpl<char> &Storage);
 
   void trackNewAccesses() final;
+  std::error_code excludeFromTracking(const Twine &Path) final;
   Expected<ObjectProxy> createTreeFromNewAccesses(
       llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
           RemapPath) final;
@@ -152,6 +154,7 @@ private:
 
   // Cached stats. Useful for tracking everything that has been stat'ed.
   SmallVector<DenseSet<const DirectoryEntry *>> TrackedAccesses;
+  SmallVector<DenseSet<const DirectoryEntry *>> ExcludedAccesses;
   mutable std::mutex TrackedAccessesMutex;
 
   IntrusiveRefCntPtr<FileSystemCache> Cache;
@@ -586,9 +589,10 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
 Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::lookupPath(
     StringRef Path, bool FollowSymlinks, bool LookupOnDisk,
+    bool ForceDisableTracking,
     function_ref<void(FileSystemCache::DirectoryEntry &)>
         TrackNonRealPathEntries) {
-  bool IsTrackingStats = isTrackingAccess();
+  bool IsTrackingStats = ForceDisableTracking ? false : isTrackingAccess();
   DiscoveryInstanceImpl DI(*this, TrackNonRealPathEntries, IsTrackingStats,
                            LookupOnDisk);
   Expected<DirectoryEntry *> ExpectedEntry =
@@ -631,18 +635,49 @@ void CachingOnDiskFileSystemImpl::trackNewAccesses() {
   std::lock_guard<std::mutex> Lock(TrackedAccessesMutex);
   TrackedAccesses.emplace_back();
   TrackedAccesses.back().reserve(128); // Seed with a bit of runway.
+  ExcludedAccesses.emplace_back();
+}
+
+std::error_code
+CachingOnDiskFileSystemImpl::excludeFromTracking(const Twine &Path) {
+  SmallString<128> Storage;
+  StringRef PathRef = Path.toStringRef(Storage);
+  DirectoryEntry *Entry = nullptr;
+  if (auto Err =
+          lookupPath(PathRef, /*FollowSymlinks=*/true, /*LookupOnDisk=*/true,
+                     /*ForceDisableTracking=*/true)
+              .moveInto(Entry))
+    return errorToErrorCode(std::move(Err));
+
+  std::lock_guard<std::mutex> Lock(TrackedAccessesMutex);
+  assert(!ExcludedAccesses.empty() && "missing tracking scope");
+  if (!ExcludedAccesses.empty())
+    ExcludedAccesses.back().insert(Entry);
+  return std::error_code();
 }
 
 Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
     llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
         RemapPath) {
   DenseSet<const DirectoryEntry *> TrackedAccesses;
+  DenseSet<const DirectoryEntry *> ExcludedAccesses;
   {
     std::lock_guard<std::mutex> Lock(TrackedAccessesMutex);
-    assert(!this->TrackedAccesses.empty() &&
+    assert(!this->TrackedAccesses.empty() && !this->ExcludedAccesses.empty() &&
            "createTreeFromNewAccesses must be paired with trackNewAccesses");
     TrackedAccesses = this->TrackedAccesses.pop_back_val();
+    ExcludedAccesses = this->ExcludedAccesses.pop_back_val();
   }
+
+  auto IsExcluded = [&](const DirectoryEntry *Entry) {
+    if (ExcludedAccesses.empty())
+      return false;
+    do {
+      if (ExcludedAccesses.contains(Entry))
+        return true;
+    } while ((Entry = Entry->getParent()));
+    return false;
+  };
 
   TreeSchema Schema(DB);
   if (TrackedAccesses.empty())
@@ -650,6 +685,9 @@ Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
 
   HierarchicalTreeBuilder Builder;
   for (const DirectoryEntry *Entry : TrackedAccesses) {
+    if (IsExcluded(Entry))
+      continue;
+
     StringRef Path = RemapPath ? RemapPath(*Entry) : Entry->getTreePath();
 
     // FIXME: If Entry is a symbol link, the spelling of its target should be
@@ -828,7 +866,8 @@ Error CachingOnDiskFileSystemImpl::TreeBuilder::push(const Twine &Path) {
   SmallVector<const DirectoryEntry *> NonRealPathEntries;
   Expected<const DirectoryEntry *> PathEntry =
       FS.lookupPath(PathRef, /*FollowSymlinks=*/false,
-                    /*LookupOnDisk=*/false, [&](const DirectoryEntry &Entry) {
+                    /*LookupOnDisk=*/false, /*ForceDisableTracking=*/false,
+                    [&](const DirectoryEntry &Entry) {
                       NonRealPathEntries.push_back(&Entry);
                     });
   if (!PathEntry)
@@ -857,7 +896,7 @@ Error CachingOnDiskFileSystemImpl::TreeBuilder::push(const Twine &Path) {
     if (Current->isSymlink()) {
       if (Expected<DirectoryEntry *> ExpectedEntry = FS.lookupPath(
               Current->getTreePath(),
-              /*FollowSymlinks=*/true,
+              /*FollowSymlinks=*/true, /*ForceDisableTracking=*/false,
               /*LookupOnDisk=*/false, [this](const DirectoryEntry &Entry) {
                 // Don't use pushSymlink() here since we
                 // want the final entry too.
