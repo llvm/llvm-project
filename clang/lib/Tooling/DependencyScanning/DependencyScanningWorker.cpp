@@ -253,6 +253,10 @@ private:
     // modules share their VFS.
     for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles)
       (void)FS->status(File);
+    // Exclude the module cache from tracking. The implicit build pcms should
+    // not be needed after scanning.
+    if (!CI.getHeaderSearchOpts().ModuleCachePath.empty())
+      (void)FS->excludeFromTracking(CI.getHeaderSearchOpts().ModuleCachePath);
     return WrapperFrontendAction::BeginInvocation(CI);
   }
 
@@ -464,6 +468,12 @@ public:
     Consumer.finalize(ScanInstance);
 
     if (CacheFS) {
+      // Exclude the module cache from tracking. The implicit build pcms should
+      // not be needed after scanning.
+      if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty())
+        (void)CacheFS->excludeFromTracking(
+            ScanInstance.getHeaderSearchOpts().ModuleCachePath);
+
       auto Tree = CacheFS->createTreeFromNewAccesses(RemapPath);
       if (Tree) {
         if (MDC)
