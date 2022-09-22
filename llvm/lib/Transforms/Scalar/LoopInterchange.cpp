@@ -573,11 +573,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops interchanged.\n");
     LoopsInterchanged++;
 
-    assert(InnerLoop->isLCSSAForm(*DT) &&
-           "Inner loop not left in LCSSA form after loop interchange!");
-    assert(OuterLoop->isLCSSAForm(*DT) &&
-           "Outer loop not left in LCSSA form after loop interchange!");
-
+    llvm::formLCSSARecursively(*OuterLoop, *DT, LI, SE);
     return true;
   }
 };
@@ -1354,9 +1350,11 @@ bool LoopInterchangeTransform::transform() {
     for (Instruction *InnerIndexVar : InnerIndexVarList)
       WorkList.insert(cast<Instruction>(InnerIndexVar));
     MoveInstructions();
+  }
 
-    // Splits the inner loops phi nodes out into a separate basic block.
-    BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
+  // Ensure the inner loop phi nodes have a separate basic block.
+  BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
+  if (InnerLoopHeader->getFirstNonPHI() != InnerLoopHeader->getTerminator()) {
     SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHI(), DT, LI);
     LLVM_DEBUG(dbgs() << "splitting InnerLoopHeader done\n");
   }
