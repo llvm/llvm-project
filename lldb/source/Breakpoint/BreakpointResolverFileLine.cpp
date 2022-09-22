@@ -261,8 +261,10 @@ void BreakpointResolverFileLine::DeduceSourceMapping(
     if (!new_mapping_from.empty() && !new_mapping_to.empty()) {
       LLDB_LOG(log, "generating auto source map from {0} to {1}",
                new_mapping_from, new_mapping_to);
-      target.GetSourcePathMap().AppendUnique(new_mapping_from, new_mapping_to,
-                                             /*notify*/ true);
+      if (target.GetSourcePathMap().AppendUnique(new_mapping_from,
+                                                 new_mapping_to,
+                                                 /*notify*/ true))
+        target.GetStatistics().IncreaseSourceMapDeduceCount();
     }
   }
 }
