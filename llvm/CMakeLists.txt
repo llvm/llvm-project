@@ -1010,7 +1010,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   file(COPY ${TENSORFLOW_AOT_PATH}/include DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow
     NO_SOURCE_PERMISSIONS
     PATTERN "google/*" EXCLUDE
-    PATTERN "*.pb.h" EXCLUDE) 
+    PATTERN "*.pb.h" EXCLUDE)
   include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
