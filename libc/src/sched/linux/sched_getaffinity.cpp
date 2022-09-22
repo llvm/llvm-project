@@ -21,7 +21,7 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(int, sched_getaffinity,
                    (pid_t tid, size_t cpuset_size, cpu_set_t *mask)) {
   long ret =
-      __llvm_libc::syscall(SYS_sched_getaffinity, tid, cpuset_size, mask);
+      __llvm_libc::syscall_impl(SYS_sched_getaffinity, tid, cpuset_size, mask);
   if (ret < 0) {
     errno = -ret;
     return -1;

@@ -21,8 +21,8 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(int, sigprocmask,
                    (int how, const sigset_t *__restrict set,
                     sigset_t *__restrict oldset)) {
-  int ret = __llvm_libc::syscall(SYS_rt_sigprocmask, how, set, oldset,
-                                 sizeof(sigset_t));
+  int ret = __llvm_libc::syscall_impl(SYS_rt_sigprocmask, how, set, oldset,
+                                      sizeof(sigset_t));
   if (!ret)
     return 0;
 

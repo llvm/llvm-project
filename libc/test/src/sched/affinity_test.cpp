@@ -19,7 +19,7 @@ TEST(LlvmLibcSchedAffinityTest, SmokeTest) {
   cpu_set_t mask;
   errno = 0;
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  pid_t tid = __llvm_libc::syscall(SYS_gettid);
+  pid_t tid = __llvm_libc::syscall_impl(SYS_gettid);
   ASSERT_GT(tid, pid_t(0));
   // We just get and set the same mask.
   ASSERT_THAT(__llvm_libc::sched_getaffinity(tid, sizeof(cpu_set_t), &mask),
@@ -30,7 +30,7 @@ TEST(LlvmLibcSchedAffinityTest, SmokeTest) {
 
 TEST(LlvmLibcSchedAffinityTest, BadMask) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  pid_t tid = __llvm_libc::syscall(SYS_gettid);
+  pid_t tid = __llvm_libc::syscall_impl(SYS_gettid);
 
   errno = 0;
   ASSERT_THAT(__llvm_libc::sched_getaffinity(tid, sizeof(cpu_set_t), nullptr),
