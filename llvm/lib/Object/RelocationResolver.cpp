@@ -433,6 +433,7 @@ static bool supportsRISCV(uint64_t Type) {
   case ELF::R_RISCV_32_PCREL:
   case ELF::R_RISCV_64:
   case ELF::R_RISCV_SET6:
+  case ELF::R_RISCV_SET8:
   case ELF::R_RISCV_SUB6:
   case ELF::R_RISCV_ADD8:
   case ELF::R_RISCV_SUB8:
@@ -465,6 +466,8 @@ static uint64_t resolveRISCV(uint64_t Type, uint64_t Offset, uint64_t S,
     return (A & 0xC0) | ((S + RA) & 0x3F);
   case ELF::R_RISCV_SUB6:
     return (A & 0xC0) | (((A & 0x3F) - (S + RA)) & 0x3F);
+  case ELF::R_RISCV_SET8:
+    return (S + RA) & 0xFF;
   case ELF::R_RISCV_ADD8:
     return (A + (S + RA)) & 0xFF;
   case ELF::R_RISCV_SUB8:
