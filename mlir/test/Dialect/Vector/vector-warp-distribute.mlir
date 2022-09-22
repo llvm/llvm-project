@@ -637,7 +637,7 @@ func.func @vector_extract_simple(%laneid: index) -> (f32) {
 func.func @lane_dependent_warp_propagate_read(
     %laneid: index, %src: memref<1x1024xf32>, %dest: memref<1x1024xf32>) {
   // CHECK-PROP-DAG: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-PROP-NOT: lane_dependent_warp_propagate_read
+  // CHECK-PROP-NOT: vector.warp_execute_on_lane_0
   // CHECK-PROP-DAG: %[[R0:.*]] = vector.transfer_read %arg1[%[[C0]], %[[ID]]], %{{.*}} : memref<1x1024xf32>, vector<1x1xf32>
   // CHECK-PROP: vector.transfer_write %[[R0]], {{.*}} : vector<1x1xf32>, memref<1x1024xf32>
   %c0 = arith.constant 0 : index
