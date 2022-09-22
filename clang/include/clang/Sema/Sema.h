@@ -6702,7 +6702,8 @@ public:
 
   bool FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
                                 DeclarationName Name, FunctionDecl *&Operator,
-                                bool Diagnose = true, bool WantSize = false);
+                                bool Diagnose = true, bool WantSize = false,
+                                bool WantAligned = false);
   FunctionDecl *FindUsualDeallocationFunction(SourceLocation StartLoc,
                                               bool CanProvideSize,
                                               bool Overaligned,

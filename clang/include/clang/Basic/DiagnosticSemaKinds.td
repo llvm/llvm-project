@@ -11373,7 +11373,16 @@ def err_coroutine_unusable_new : Error<
   "'operator new' provided by %0 is not usable with the function signature of %1"
 >;
 def err_coroutine_unfound_nothrow_new : Error <
-  "unable to find '::operator new(size_t, nothrow_t)' for %0"
+  "unable to find %select{'::operator new(size_t, nothrow_t)'|"
+  "'::operator new(size_t, align_val_t, nothrow_t)'}1 for %0"
+>;
+def warn_non_aligned_allocation_function : Warning <
+  "under -fcoro-aligned-allocation, the non-aligned allocation function "
+  "for the promise type %0 has higher precedence than the global aligned "
+  "allocation function">,
+  InGroup<CoroNonAlignedAllocationFunction>;
+def err_conflicting_aligned_options : Error <
+  "conflicting option '-fcoro-aligned-allocation' and '-fno-aligned-allocation'"
 >;
 } // end of coroutines issue category
 
