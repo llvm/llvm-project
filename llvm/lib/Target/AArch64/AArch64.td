@@ -857,6 +857,38 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureZCRegMove,
                                     FeatureZCZeroing]>;
 
+def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
+                                    "Apple A15", [
+                                    FeatureAlternateSExtLoadCVTF32Pattern,
+                                    FeatureArithmeticBccFusion,
+                                    FeatureArithmeticCbzFusion,
+                                    FeatureDisableLatencySchedHeuristic,
+                                    FeatureFuseAddress,
+                                    FeatureFuseAES,
+                                    FeatureFuseArithmeticLogic,
+                                    FeatureFuseCCSelect,
+                                    FeatureFuseCryptoEOR,
+                                    FeatureFuseLiterals,
+                                    FeatureZCRegMove,
+                                    FeatureZCZeroing
+                                    ]>;
+
+def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
+                                    "Apple A16", [
+                                    FeatureAlternateSExtLoadCVTF32Pattern,
+                                    FeatureArithmeticBccFusion,
+                                    FeatureArithmeticCbzFusion,
+                                    FeatureDisableLatencySchedHeuristic,
+                                    FeatureFuseAddress,
+                                    FeatureFuseAES,
+                                    FeatureFuseArithmeticLogic,
+                                    FeatureFuseCCSelect,
+                                    FeatureFuseCryptoEOR,
+                                    FeatureFuseLiterals,
+                                    FeatureZCRegMove,
+                                    FeatureZCZeroing
+                                    ]>;
+
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureExynosCheapAsMoveHandling,
@@ -1072,6 +1104,13 @@ def ProcessorFeatures {
                                      FeaturePredRes, FeatureCacheDeepPersist,
                                      FeatureFullFP16, FeatureFP16FML, FeatureSHA3,
                                      FeatureAltFPCmp];
+  list<SubtargetFeature> AppleA15 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
+                                     FeatureFullFP16, FeatureFP16FML];
+  list<SubtargetFeature> AppleA16 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
+                                     FeatureFullFP16, FeatureFP16FML,
+                                     FeatureHCX];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                      FeaturePerfMon];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
@@ -1229,10 +1268,16 @@ def : ProcessorModel<"apple-a13", CycloneModel, ProcessorFeatures.AppleA13,
                      [TuneAppleA13]>;
 def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
+def : ProcessorModel<"apple-a15", CycloneModel, ProcessorFeatures.AppleA15,
+                     [TuneAppleA15]>;
+def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
+                     [TuneAppleA16]>;
 
 // Mac CPUs
 def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
+def : ProcessorModel<"apple-m2", CycloneModel, ProcessorFeatures.AppleA15,
+                     [TuneAppleA15]>;
 
 // watch CPUs.
 def : ProcessorModel<"apple-s4", CycloneModel, ProcessorFeatures.AppleA12,
@@ -1241,8 +1286,8 @@ def : ProcessorModel<"apple-s5", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA14,
-                     [TuneAppleA14]>;
+def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA16,
+                     [TuneAppleA16]>;
 
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
