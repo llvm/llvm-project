@@ -87,10 +87,6 @@ let TargetPrefix = "riscv" in {
       : Intrinsic<[llvm_any_ty],
                   [LLVMMatchType<0>, LLVMMatchType<0>],
                   [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
-  class BitManipGPRGPRGRIntrinsics
-      : Intrinsic<[llvm_any_ty],
-                  [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-                  [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
   // Zbb
   def int_riscv_orc_b : BitManipGPRIntrinsics;
@@ -101,23 +97,6 @@ let TargetPrefix = "riscv" in {
 
   // Zbc
   def int_riscv_clmulr : BitManipGPRGPRIntrinsics;
-
-  // Zbe
-  def int_riscv_bcompress   : BitManipGPRGPRIntrinsics;
-  def int_riscv_bdecompress : BitManipGPRGPRIntrinsics;
-
-  // Zbf
-  def int_riscv_bfp  : BitManipGPRGPRIntrinsics;
-
-  // Zbr
-  def int_riscv_crc32_b : BitManipGPRIntrinsics;
-  def int_riscv_crc32_h : BitManipGPRIntrinsics;
-  def int_riscv_crc32_w : BitManipGPRIntrinsics;
-  def int_riscv_crc32_d : BitManipGPRIntrinsics;
-  def int_riscv_crc32c_b : BitManipGPRIntrinsics;
-  def int_riscv_crc32c_h : BitManipGPRIntrinsics;
-  def int_riscv_crc32c_w : BitManipGPRIntrinsics;
-  def int_riscv_crc32c_d : BitManipGPRIntrinsics;
 
   // Zbkb
   def int_riscv_brev8 : BitManipGPRIntrinsics;
