@@ -886,6 +886,8 @@ template<size_t N, class T>
 #include <version>
 
 // standard-mandated includes
+
+// [memory.syn]
 #include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

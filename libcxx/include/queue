@@ -232,6 +232,8 @@ template <class T, class Container, class Compare>
 #include <version>
 
 // standard-mandated includes
+
+// [queue.syn]
 #include <compare>
 #include <initializer_list>
 

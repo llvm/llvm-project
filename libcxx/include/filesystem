@@ -449,6 +449,8 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_direct
 #include <version>
 
 // standard-mandated includes
+
+// [fs.filesystem.syn]
 #include <compare>
 
 #if defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
