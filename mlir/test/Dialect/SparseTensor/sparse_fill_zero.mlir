@@ -5,16 +5,16 @@
 // CHECK-LABEL:   func.func @fill_zero_after_alloc(
 // CHECK-SAME:      %[[VAL_0:.*]]: !llvm.ptr<i8>,
 // CHECK-SAME:      %[[VAL_1:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f64
-// CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
-// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_7:.*]] = arith.constant false
-// CHECK:           %[[VAL_8:.*]] = arith.constant true
-// CHECK:           %[[VAL_9:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_10:.*]] = arith.constant 300 : index
-// CHECK:           %[[VAL_11:.*]] = arith.constant 1 : i8
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f64
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : i32
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : i32
+// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant false
+// CHECK-DAG:       %[[VAL_8:.*]] = arith.constant true
+// CHECK-DAG:       %[[VAL_9:.*]] = arith.constant 100 : index
+// CHECK-DAG:       %[[VAL_10:.*]] = arith.constant 300 : index
+// CHECK-DAG:       %[[VAL_11:.*]] = arith.constant 1 : i8
 // CHECK:           %[[VAL_12:.*]] = memref.alloca() : memref<2xi8>
 // CHECK:           %[[VAL_13:.*]] = memref.cast %[[VAL_12]] : memref<2xi8> to memref<?xi8>
 // CHECK:           memref.store %[[VAL_11]], %[[VAL_12]]{{\[}}%[[VAL_5]]] : memref<2xi8>
@@ -47,67 +47,67 @@
 // CHECK:           %[[VAL_33:.*]] = call @sparsePointers0(%[[VAL_1]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK:           %[[VAL_34:.*]] = call @sparseIndices0(%[[VAL_1]], %[[VAL_6]]) : (!llvm.ptr<i8>, index) -> memref<?xindex>
 // CHECK:           %[[VAL_35:.*]] = call @sparseValuesF64(%[[VAL_1]]) : (!llvm.ptr<i8>) -> memref<?xf64>
-// CHECK:           %[[VAL_36:.*]] = memref.alloca() : memref<2xindex>
-// CHECK:           %[[VAL_37:.*]] = memref.cast %[[VAL_36]] : memref<2xindex> to memref<?xindex>
-// CHECK:           %[[VAL_38:.*]] = memref.load %[[VAL_26]]{{\[}}%[[VAL_5]]] : memref<?xindex>
-// CHECK:           %[[VAL_39:.*]] = memref.load %[[VAL_26]]{{\[}}%[[VAL_6]]] : memref<?xindex>
-// CHECK:           scf.for %[[VAL_40:.*]] = %[[VAL_38]] to %[[VAL_39]] step %[[VAL_6]] {
-// CHECK:             %[[VAL_41:.*]] = memref.load %[[VAL_27]]{{\[}}%[[VAL_40]]] : memref<?xindex>
-// CHECK:             memref.store %[[VAL_41]], %[[VAL_36]]{{\[}}%[[VAL_5]]] : memref<2xindex>
-// CHECK:             %[[VAL_42:.*]] = memref.load %[[VAL_28]]{{\[}}%[[VAL_40]]] : memref<?xindex>
-// CHECK:             %[[VAL_43:.*]] = arith.addi %[[VAL_40]], %[[VAL_6]] : index
-// CHECK:             %[[VAL_44:.*]] = memref.load %[[VAL_28]]{{\[}}%[[VAL_43]]] : memref<?xindex>
-// CHECK:             %[[VAL_45:.*]] = memref.load %[[VAL_31]]{{\[}}%[[VAL_5]]] : memref<?xindex>
-// CHECK:             %[[VAL_46:.*]] = memref.load %[[VAL_31]]{{\[}}%[[VAL_6]]] : memref<?xindex>
-// CHECK:             %[[VAL_47:.*]]:3 = scf.while (%[[VAL_48:.*]] = %[[VAL_42]], %[[VAL_49:.*]] = %[[VAL_45]], %[[VAL_50:.*]] = %[[VAL_5]]) : (index, index, index) -> (index, index, index) {
-// CHECK:               %[[VAL_51:.*]] = arith.cmpi ult, %[[VAL_48]], %[[VAL_44]] : index
-// CHECK:               %[[VAL_52:.*]] = arith.cmpi ult, %[[VAL_49]], %[[VAL_46]] : index
-// CHECK:               %[[VAL_53:.*]] = arith.andi %[[VAL_51]], %[[VAL_52]] : i1
-// CHECK:               scf.condition(%[[VAL_53]]) %[[VAL_48]], %[[VAL_49]], %[[VAL_50]] : index, index, index
+// CHECK:           %[[VAL_36:.*]] = memref.load %[[VAL_26]]{{\[}}%[[VAL_5]]] : memref<?xindex>
+// CHECK:           %[[VAL_37:.*]] = memref.load %[[VAL_26]]{{\[}}%[[VAL_6]]] : memref<?xindex>
+// CHECK:           scf.for %[[VAL_38:.*]] = %[[VAL_36]] to %[[VAL_37]] step %[[VAL_6]] {
+// CHECK:             %[[VAL_39:.*]] = memref.load %[[VAL_27]]{{\[}}%[[VAL_38]]] : memref<?xindex>
+// CHECK:             %[[VAL_40:.*]] = memref.load %[[VAL_28]]{{\[}}%[[VAL_38]]] : memref<?xindex>
+// CHECK:             %[[VAL_41:.*]] = arith.addi %[[VAL_38]], %[[VAL_6]] : index
+// CHECK:             %[[VAL_42:.*]] = memref.load %[[VAL_28]]{{\[}}%[[VAL_41]]] : memref<?xindex>
+// CHECK:             %[[VAL_43:.*]] = memref.load %[[VAL_31]]{{\[}}%[[VAL_5]]] : memref<?xindex>
+// CHECK:             %[[VAL_44:.*]] = memref.load %[[VAL_31]]{{\[}}%[[VAL_6]]] : memref<?xindex>
+// CHECK:             %[[VAL_45:.*]]:3 = scf.while (%[[VAL_46:.*]] = %[[VAL_40]], %[[VAL_47:.*]] = %[[VAL_43]], %[[VAL_48:.*]] = %[[VAL_5]]) : (index, index, index) -> (index, index, index) {
+// CHECK:               %[[VAL_49:.*]] = arith.cmpi ult, %[[VAL_46]], %[[VAL_42]] : index
+// CHECK:               %[[VAL_50:.*]] = arith.cmpi ult, %[[VAL_47]], %[[VAL_44]] : index
+// CHECK:               %[[VAL_51:.*]] = arith.andi %[[VAL_49]], %[[VAL_50]] : i1
+// CHECK:               scf.condition(%[[VAL_51]]) %[[VAL_46]], %[[VAL_47]], %[[VAL_48]] : index, index, index
 // CHECK:             } do {
-// CHECK:             ^bb0(%[[VAL_54:.*]]: index, %[[VAL_55:.*]]: index, %[[VAL_56:.*]]: index):
-// CHECK:               %[[VAL_57:.*]] = memref.load %[[VAL_29]]{{\[}}%[[VAL_54]]] : memref<?xindex>
-// CHECK:               %[[VAL_58:.*]] = memref.load %[[VAL_32]]{{\[}}%[[VAL_55]]] : memref<?xindex>
-// CHECK:               %[[VAL_59:.*]] = arith.cmpi ult, %[[VAL_58]], %[[VAL_57]] : index
-// CHECK:               %[[VAL_60:.*]] = arith.select %[[VAL_59]], %[[VAL_58]], %[[VAL_57]] : index
-// CHECK:               %[[VAL_61:.*]] = arith.cmpi eq, %[[VAL_57]], %[[VAL_60]] : index
-// CHECK:               %[[VAL_62:.*]] = arith.cmpi eq, %[[VAL_58]], %[[VAL_60]] : index
-// CHECK:               %[[VAL_63:.*]] = arith.andi %[[VAL_61]], %[[VAL_62]] : i1
-// CHECK:               %[[VAL_64:.*]] = scf.if %[[VAL_63]] -> (index) {
-// CHECK:                 %[[VAL_65:.*]] = memref.load %[[VAL_30]]{{\[}}%[[VAL_54]]] : memref<?xf64>
-// CHECK:                 %[[VAL_66:.*]] = memref.load %[[VAL_33]]{{\[}}%[[VAL_55]]] : memref<?xindex>
-// CHECK:                 %[[VAL_67:.*]] = arith.addi %[[VAL_55]], %[[VAL_6]] : index
-// CHECK:                 %[[VAL_68:.*]] = memref.load %[[VAL_33]]{{\[}}%[[VAL_67]]] : memref<?xindex>
-// CHECK:                 %[[VAL_69:.*]] = scf.for %[[VAL_70:.*]] = %[[VAL_66]] to %[[VAL_68]] step %[[VAL_6]] iter_args(%[[VAL_71:.*]] = %[[VAL_56]]) -> (index) {
-// CHECK:                   %[[VAL_72:.*]] = memref.load %[[VAL_34]]{{\[}}%[[VAL_70]]] : memref<?xindex>
-// CHECK:                   %[[VAL_73:.*]] = memref.load %[[VAL_20]]{{\[}}%[[VAL_72]]] : memref<300xf64>
-// CHECK:                   %[[VAL_74:.*]] = memref.load %[[VAL_35]]{{\[}}%[[VAL_70]]] : memref<?xf64>
-// CHECK:                   %[[VAL_75:.*]] = arith.mulf %[[VAL_65]], %[[VAL_74]] : f64
-// CHECK:                   %[[VAL_76:.*]] = arith.addf %[[VAL_73]], %[[VAL_75]] : f64
-// CHECK:                   %[[VAL_77:.*]] = memref.load %[[VAL_22]]{{\[}}%[[VAL_72]]] : memref<300xi1>
-// CHECK:                   %[[VAL_78:.*]] = arith.cmpi eq, %[[VAL_77]], %[[VAL_7]] : i1
-// CHECK:                   %[[VAL_79:.*]] = scf.if %[[VAL_78]] -> (index) {
-// CHECK:                     memref.store %[[VAL_8]], %[[VAL_22]]{{\[}}%[[VAL_72]]] : memref<300xi1>
-// CHECK:                     memref.store %[[VAL_72]], %[[VAL_24]]{{\[}}%[[VAL_71]]] : memref<300xindex>
-// CHECK:                     %[[VAL_80:.*]] = arith.addi %[[VAL_71]], %[[VAL_6]] : index
-// CHECK:                     scf.yield %[[VAL_80]] : index
+// CHECK:             ^bb0(%[[VAL_52:.*]]: index, %[[VAL_53:.*]]: index, %[[VAL_54:.*]]: index):
+// CHECK:               %[[VAL_55:.*]] = memref.load %[[VAL_29]]{{\[}}%[[VAL_52]]] : memref<?xindex>
+// CHECK:               %[[VAL_56:.*]] = memref.load %[[VAL_32]]{{\[}}%[[VAL_53]]] : memref<?xindex>
+// CHECK:               %[[VAL_57:.*]] = arith.cmpi ult, %[[VAL_56]], %[[VAL_55]] : index
+// CHECK:               %[[VAL_58:.*]] = arith.select %[[VAL_57]], %[[VAL_56]], %[[VAL_55]] : index
+// CHECK:               %[[VAL_59:.*]] = arith.cmpi eq, %[[VAL_55]], %[[VAL_58]] : index
+// CHECK:               %[[VAL_60:.*]] = arith.cmpi eq, %[[VAL_56]], %[[VAL_58]] : index
+// CHECK:               %[[VAL_61:.*]] = arith.andi %[[VAL_59]], %[[VAL_60]] : i1
+// CHECK:               %[[VAL_62:.*]] = scf.if %[[VAL_61]] -> (index) {
+// CHECK:                 %[[VAL_63:.*]] = memref.load %[[VAL_30]]{{\[}}%[[VAL_52]]] : memref<?xf64>
+// CHECK:                 %[[VAL_64:.*]] = memref.load %[[VAL_33]]{{\[}}%[[VAL_53]]] : memref<?xindex>
+// CHECK:                 %[[VAL_65:.*]] = arith.addi %[[VAL_53]], %[[VAL_6]] : index
+// CHECK:                 %[[VAL_66:.*]] = memref.load %[[VAL_33]]{{\[}}%[[VAL_65]]] : memref<?xindex>
+// CHECK:                 %[[VAL_67:.*]] = scf.for %[[VAL_68:.*]] = %[[VAL_64]] to %[[VAL_66]] step %[[VAL_6]] iter_args(%[[VAL_69:.*]] = %[[VAL_54]]) -> (index) {
+// CHECK:                   %[[VAL_70:.*]] = memref.load %[[VAL_34]]{{\[}}%[[VAL_68]]] : memref<?xindex>
+// CHECK:                   %[[VAL_71:.*]] = memref.load %[[VAL_20]]{{\[}}%[[VAL_70]]] : memref<300xf64>
+// CHECK:                   %[[VAL_72:.*]] = memref.load %[[VAL_35]]{{\[}}%[[VAL_68]]] : memref<?xf64>
+// CHECK:                   %[[VAL_73:.*]] = arith.mulf %[[VAL_63]], %[[VAL_72]] : f64
+// CHECK:                   %[[VAL_74:.*]] = arith.addf %[[VAL_71]], %[[VAL_73]] : f64
+// CHECK:                   %[[VAL_75:.*]] = memref.load %[[VAL_22]]{{\[}}%[[VAL_70]]] : memref<300xi1>
+// CHECK:                   %[[VAL_76:.*]] = arith.cmpi eq, %[[VAL_75]], %[[VAL_7]] : i1
+// CHECK:                   %[[VAL_77:.*]] = scf.if %[[VAL_76]] -> (index) {
+// CHECK:                     memref.store %[[VAL_8]], %[[VAL_22]]{{\[}}%[[VAL_70]]] : memref<300xi1>
+// CHECK:                     memref.store %[[VAL_70]], %[[VAL_24]]{{\[}}%[[VAL_69]]] : memref<300xindex>
+// CHECK:                     %[[VAL_78:.*]] = arith.addi %[[VAL_69]], %[[VAL_6]] : index
+// CHECK:                     scf.yield %[[VAL_78]] : index
 // CHECK:                   } else {
-// CHECK:                     scf.yield %[[VAL_71]] : index
+// CHECK:                     scf.yield %[[VAL_69]] : index
 // CHECK:                   }
-// CHECK:                   memref.store %[[VAL_76]], %[[VAL_20]]{{\[}}%[[VAL_72]]] : memref<300xf64>
-// CHECK:                   scf.yield %[[VAL_81:.*]] : index
+// CHECK:                   memref.store %[[VAL_74]], %[[VAL_20]]{{\[}}%[[VAL_70]]] : memref<300xf64>
+// CHECK:                   scf.yield %[[VAL_79:.*]] : index
 // CHECK:                 }
-// CHECK:                 scf.yield %[[VAL_82:.*]] : index
+// CHECK:                 scf.yield %[[VAL_80:.*]] : index
 // CHECK:               } else {
-// CHECK:                 scf.yield %[[VAL_56]] : index
+// CHECK:                 scf.yield %[[VAL_54]] : index
 // CHECK:               }
-// CHECK:               %[[VAL_83:.*]] = arith.addi %[[VAL_54]], %[[VAL_6]] : index
-// CHECK:               %[[VAL_84:.*]] = arith.select %[[VAL_61]], %[[VAL_83]], %[[VAL_54]] : index
-// CHECK:               %[[VAL_85:.*]] = arith.addi %[[VAL_55]], %[[VAL_6]] : index
-// CHECK:               %[[VAL_86:.*]] = arith.select %[[VAL_62]], %[[VAL_85]], %[[VAL_55]] : index
-// CHECK:               scf.yield %[[VAL_84]], %[[VAL_86]], %[[VAL_87:.*]] : index, index, index
+// CHECK:               %[[VAL_81:.*]] = arith.addi %[[VAL_52]], %[[VAL_6]] : index
+// CHECK:               %[[VAL_82:.*]] = arith.select %[[VAL_59]], %[[VAL_81]], %[[VAL_52]] : index
+// CHECK:               %[[VAL_83:.*]] = arith.addi %[[VAL_53]], %[[VAL_6]] : index
+// CHECK:               %[[VAL_84:.*]] = arith.select %[[VAL_60]], %[[VAL_83]], %[[VAL_53]] : index
+// CHECK:               scf.yield %[[VAL_82]], %[[VAL_84]], %[[VAL_85:.*]] : index, index, index
 // CHECK:             }
-// CHECK:             func.call @expInsertF64(%[[VAL_19]], %[[VAL_37]], %[[VAL_21]], %[[VAL_23]], %[[VAL_25]], %[[VAL_88:.*]]#2) : (!llvm.ptr<i8>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index) -> ()
+// CHECK:             %[[VAL_86:.*]] = memref.alloca() : memref<2xindex>
+// CHECK:             %[[VAL_87:.*]] = memref.cast %[[VAL_86]] : memref<2xindex> to memref<?xindex>
+// CHECK:             memref.store %[[VAL_39]], %[[VAL_86]]{{\[}}%[[VAL_5]]] : memref<2xindex>
+// CHECK:             func.call @expInsertF64(%[[VAL_19]], %[[VAL_87]], %[[VAL_21]], %[[VAL_23]], %[[VAL_25]], %[[VAL_88:.*]]#2) : (!llvm.ptr<i8>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index) -> ()
 // CHECK:           }
 // CHECK:           memref.dealloc %[[VAL_20]] : memref<300xf64>
 // CHECK:           memref.dealloc %[[VAL_22]] : memref<300xi1>
