@@ -9665,6 +9665,15 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     return;
   }
 
+  // A store of a loop varying value to a loop invariant address only
+  // needs only the last copy of the store.
+  if (isa<StoreInst>(UI) && !getOperand(1)->getDef()) {
+    auto Lane = VPLane::getLastLaneForVF(State.VF);
+    State.ILV->scalarizeInstruction(UI, this, VPIteration(State.UF - 1, Lane), IsPredicated,
+                                    State);
+    return;
+  }
+
   // Generate scalar instances for all VF lanes of all UF parts.
   assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
   const unsigned EndLane = State.VF.getKnownMinValue();
