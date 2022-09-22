@@ -580,6 +580,12 @@ public:
 
   bool isVScaleKnownToBeAPowerOfTwo() const override;
 
+  bool isLegalScaleForGatherScatter(uint64_t Scale,
+                                    uint64_t ElemSize) const override {
+    // Scaled addressing not supported on indexed load/stores
+    return Scale == 1;
+  }
+
 private:
   /// RISCVCCAssignFn - This target-specific function extends the default
   /// CCValAssign with additional information used to lower RISC-V calling
