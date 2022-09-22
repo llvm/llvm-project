@@ -876,3 +876,26 @@ func.func @buffer_type_of_collapse_shape(%arg0: tensor<f64>) {
   }
   return
 }
+
+// -----
+
+// This is a regression test. Just check that the IR bufferizes.
+  
+// CHECK-LABEL: func @non_block_argument_yield
+func.func @non_block_argument_yield() {
+  %true = arith.constant true 
+  %0 = bufferization.alloc_tensor() : tensor<i32>
+  %1 = scf.while (%arg0 = %0) : (tensor<i32>) -> (tensor<i32>) {
+    scf.condition(%true) %arg0 : tensor<i32>
+  } do {
+  ^bb0(%arg0: tensor<i32>):
+    %ret = scf.while (%arg1 = %0) : (tensor<i32>) -> (tensor<i32>) {
+      scf.condition(%true) %arg1 : tensor<i32>
+    } do {
+    ^bb0(%arg7: tensor<i32>):
+      scf.yield %0 : tensor<i32>
+    }
+    scf.yield %ret : tensor<i32>
+  }
+  return
+}

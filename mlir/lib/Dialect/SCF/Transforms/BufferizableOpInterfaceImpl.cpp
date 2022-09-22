@@ -891,7 +891,7 @@ struct WhileOpInterface
     assert(value.getType().isa<TensorType>() && "expected tensor type");
 
     // Case 1: Block argument of the "before" region.
-    if (auto bbArg = value.cast<BlockArgument>()) {
+    if (auto bbArg = value.dyn_cast<BlockArgument>()) {
       if (bbArg.getOwner()->getParent() == &whileOp.getBefore()) {
         Value initArg = whileOp.getInits()[bbArg.getArgNumber()];
         auto yieldOp = whileOp.getYieldOp();
