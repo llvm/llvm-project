@@ -11,6 +11,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -22,13 +24,11 @@ namespace cas {
 class CASID;
 
 /// Context for CAS identifiers.
-///
-/// FIXME: Rename to ObjectContext.
-class CASIDContext {
+class CASContext {
   virtual void anchor();
 
 public:
-  virtual ~CASIDContext() = default;
+  virtual ~CASContext() = default;
 
   /// Get an identifer for the schema used by this CAS context. Two CAS
   /// instances should return \c true for this identifier if and only if their
@@ -37,9 +37,6 @@ public:
   virtual StringRef getHashSchemaIdentifier() const = 0;
 
 protected:
-  /// Get the hash for \p ID. Implementation for \a CASID::getHash().
-  virtual ArrayRef<uint8_t> getHashImpl(const CASID &ID) const = 0;
-
   /// Print \p ID to \p OS.
   virtual void printIDImpl(raw_ostream &OS, const CASID &ID) const = 0;
 
@@ -71,65 +68,57 @@ public:
   }
   std::string toString() const;
 
-  ArrayRef<uint8_t> getHash() const { return getContext().getHashImpl(*this); }
+  ArrayRef<uint8_t> getHash() const {
+    return arrayRefFromStringRef<uint8_t>(Hash);
+  }
 
-  friend bool operator==(CASID LHS, CASID RHS) {
-    // If it's the same CAS (or both nullptr), then the IDs are directly
-    // comparable.
+  friend bool operator==(const CASID &LHS, const CASID &RHS) {
     if (LHS.Context == RHS.Context)
-      return LHS.InternalID == RHS.InternalID;
+      return LHS.Hash == RHS.Hash;
 
-    // Check if one CAS is nullptr, indicating a tombstone or empty key for
-    // DenseMap, and return false if so.
+    // EmptyKey or TombstoneKey.
     if (!LHS.Context || !RHS.Context)
       return false;
 
-    // Check if the schemas match.
-    if (LHS.Context->getHashSchemaIdentifier() !=
-        RHS.Context->getHashSchemaIdentifier())
-      return false;
-
-    // Compare the hashes.
-    return LHS.getHash() == RHS.getHash();
+    // CASIDs are equal when they have the same hash schema and same hash value.
+    return LHS.Context->getHashSchemaIdentifier() ==
+               RHS.Context->getHashSchemaIdentifier() &&
+           LHS.Hash == RHS.Hash;
   }
 
-  friend bool operator!=(CASID LHS, CASID RHS) { return !(LHS == RHS); }
+  friend bool operator!=(const CASID &LHS, const CASID &RHS) {
+    return !(LHS == RHS);
+  }
 
-  friend hash_code hash_value(CASID ID) {
+  friend hash_code hash_value(const CASID &ID) {
     ArrayRef<uint8_t> Hash = ID.getHash();
     return hash_combine_range(Hash.begin(), Hash.end());
   }
 
-  const CASIDContext &getContext() const {
+  const CASContext &getContext() const {
     assert(Context && "Tombstone or empty key for DenseMap?");
     return *Context;
   }
 
-  /// Get the internal ID. Asserts that \p ExpectedContext is the Context that
-  /// this ID comes from, to help catch usage errors.
-  uint64_t getInternalID(const CASIDContext &ExpectedContext) const {
-    assert(&ExpectedContext == Context);
-    return InternalID;
+  static CASID getDenseMapEmptyKey() {
+    return CASID(nullptr, DenseMapInfo<StringRef>::getEmptyKey());
   }
-
-  static CASID getDenseMapEmptyKey() { return CASID(-1ULL, nullptr); }
-  static CASID getDenseMapTombstoneKey() { return CASID(-2ULL, nullptr); }
-
-  static CASID getFromInternalID(const CASIDContext &Context,
-                                 uint64_t InternalID) {
-    return CASID(InternalID, &Context);
+  static CASID getDenseMapTombstoneKey() {
+    return CASID(nullptr, DenseMapInfo<StringRef>::getTombstoneKey());
   }
 
   CASID() = delete;
 
+  static CASID create(const CASContext *Context, StringRef Hash) {
+    return CASID(Context, Hash);
+  }
+
 private:
-  CASID(uint64_t InternalID, const CASIDContext *Context)
-      : InternalID(InternalID), Context(Context) {}
+  CASID(const CASContext *Context, StringRef Hash)
+      : Context(Context), Hash(Hash) {}
 
-  bool equalsImpl(CASID RHS) const;
-
-  uint64_t InternalID = 0;
-  const CASIDContext *Context = nullptr;
+  const CASContext *Context;
+  SmallString<32> Hash;
 };
 
 } // namespace cas

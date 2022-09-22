@@ -16,7 +16,8 @@ using namespace llvm::cas;
 
 TestingAndDir createInMemory(int I) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
-  return TestingAndDir{std::move(CAS), createInMemoryActionCache, None};
+  std::unique_ptr<ActionCache> Cache = createInMemoryActionCache();
+  return TestingAndDir{std::move(CAS), std::move(Cache), None};
 }
 
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
@@ -27,15 +28,10 @@ TestingAndDir createOnDisk(int I) {
   unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
   std::unique_ptr<ObjectStore> CAS;
   EXPECT_THAT_ERROR(createOnDiskCAS(Temp.path()).moveInto(CAS), Succeeded());
-  std::string TempPath = Temp.path().str();
-  auto CreateFn = [&,
-                   TempPath](ObjectStore &CAS) -> std::unique_ptr<ActionCache> {
-    std::unique_ptr<ActionCache> Cache;
-    EXPECT_THAT_ERROR(createOnDiskActionCache(CAS, TempPath).moveInto(Cache),
-                      Succeeded());
-    return Cache;
-  };
-  return TestingAndDir{std::move(CAS), CreateFn, std::move(Temp)};
+  std::unique_ptr<ActionCache> Cache;
+  EXPECT_THAT_ERROR(createOnDiskActionCache(Temp.path()).moveInto(Cache),
+                    Succeeded());
+  return TestingAndDir{std::move(CAS), std::move(Cache), std::move(Temp)};
 }
 INSTANTIATE_TEST_SUITE_P(OnDiskCAS, CASTest, ::testing::Values(createOnDisk));
 #endif /* LLVM_ENABLE_ONDISK_CAS */

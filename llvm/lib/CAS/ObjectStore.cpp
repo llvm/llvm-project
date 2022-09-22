@@ -14,7 +14,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-void CASIDContext::anchor() {}
+void CASContext::anchor() {}
 void ObjectStore::anchor() {}
 
 LLVM_DUMP_METHOD void CASID::dump() const { print(dbgs()); }
@@ -73,7 +73,7 @@ void ObjectStore::readRefs(ObjectHandle Node,
   }));
 }
 
-Expected<ObjectProxy> ObjectStore::getProxy(CASID ID) {
+Expected<ObjectProxy> ObjectStore::getProxy(const CASID &ID) {
   Optional<ObjectRef> Ref = getReference(ID);
   if (!Ref)
     return createUnknownObjectError(ID);
@@ -85,7 +85,7 @@ Expected<ObjectProxy> ObjectStore::getProxy(CASID ID) {
   return ObjectProxy::load(*this, *H);
 }
 
-Expected<Optional<ObjectProxy>> ObjectStore::getProxyOrNone(CASID ID) {
+Expected<Optional<ObjectProxy>> ObjectStore::getProxyOrNone(const CASID &ID) {
   Optional<ObjectRef> Ref = getReference(ID);
   if (!Ref)
     return None;
@@ -107,7 +107,7 @@ Expected<ObjectProxy> ObjectStore::getProxy(Expected<ObjectHandle> H) {
   return ObjectProxy::load(*this, *H);
 }
 
-Error ObjectStore::createUnknownObjectError(CASID ID) {
+Error ObjectStore::createUnknownObjectError(const CASID &ID) {
   return createStringError(std::make_error_code(std::errc::invalid_argument),
                            "unknown object '" + ID.toString() + "'");
 }

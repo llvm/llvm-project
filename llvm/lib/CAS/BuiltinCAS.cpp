@@ -18,6 +18,7 @@ using namespace llvm::cas;
 using namespace llvm::cas::builtin;
 
 static StringRef getCASIDPrefix() { return "llvmcas://"; }
+void BuiltinCASContext::anchor() {}
 
 Expected<CASID> BuiltinCAS::parseID(StringRef Reference) {
   if (!Reference.consume_front(getCASIDPrefix()))
@@ -37,13 +38,15 @@ Expected<CASID> BuiltinCAS::parseID(StringRef Reference) {
   return parseIDImpl(arrayRefFromStringRef(Binary));
 }
 
-void BuiltinCAS::printIDImpl(raw_ostream &OS, const CASID &ID) const {
-  assert(&ID.getContext() == this);
-  assert(ID.getHash().size() == sizeof(HashType));
-
+void BuiltinCASContext::printIDImpl(raw_ostream &OS, const CASID &ID) const {
   SmallString<64> Hash;
   toHex(ID.getHash(), /*LowerCase=*/true, Hash);
   OS << getCASIDPrefix() << Hash;
+}
+
+const BuiltinCASContext &BuiltinCASContext::getDefaultContext() {
+  static BuiltinCASContext DefaultContext;
+  return DefaultContext;
 }
 
 static size_t getPageSize() {

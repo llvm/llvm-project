@@ -166,11 +166,13 @@ void DependencyScanningCASFilesystem::scanForDirectives(
   }
 
   // Check the result cache.
-  if (Optional<ObjectRef> OutputRef =
+  if (Optional<CASID> OutputID =
           reportAsFatalIfError(Cache.get(*InputID))) {
-    reportAsFatalIfError(
-        loadDepDirectives(CAS, *OutputRef, Tokens, Directives));
-    return;
+    if (Optional<ObjectRef> OutputRef = CAS.getReference(*OutputID)) {
+      reportAsFatalIfError(
+          loadDepDirectives(CAS, *OutputRef, Tokens, Directives));
+      return;
+    }
   }
 
   StringRef InputData =
@@ -181,7 +183,7 @@ void DependencyScanningCASFilesystem::scanForDirectives(
     // Failure. Cache empty directives.
     Tokens.clear();
     Directives.clear();
-    reportAsFatalIfError(Cache.put(*InputID, *EmptyBlobID));
+    reportAsFatalIfError(Cache.put(*InputID, CAS.getID(*EmptyBlobID)));
     return;
   }
 
@@ -189,7 +191,7 @@ void DependencyScanningCASFilesystem::scanForDirectives(
   cas::ObjectRef DirectivesID =
       reportAsFatalIfError(storeDepDirectives(CAS, Directives));
   // Cache the computation.
-  reportAsFatalIfError(Cache.put(*InputID, DirectivesID));
+  reportAsFatalIfError(Cache.put(*InputID, CAS.getID(DirectivesID)));
 }
 
 Expected<StringRef>

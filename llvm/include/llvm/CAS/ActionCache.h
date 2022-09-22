@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
 #include "llvm/Support/Error.h"
 
@@ -47,52 +48,42 @@ class ActionCache {
 
 public:
   /// Get a previously computed result for \p ActionKey.
-  Expected<Optional<ObjectRef>> get(const CacheKey &ActionKey) const {
+  Expected<Optional<CASID>> get(const CacheKey &ActionKey) const {
     return getImpl(arrayRefFromStringRef(ActionKey.getKey()));
   }
 
   /// Cache \p Result for the \p ActionKey computation.
-  Error put(const CacheKey &ActionKey, const ObjectRef &Result) {
+  Error put(const CacheKey &ActionKey, const CASID &Result) {
+    assert(Result.getContext().getHashSchemaIdentifier() ==
+               getContext().getHashSchemaIdentifier() &&
+           "Hash schema mismatch");
     return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result);
   }
-
-  /// Cache \p Result using \p ObjectRef as a key.
-  Error put(const ObjectRef &RefKey, const ObjectRef &Result) {
-    CacheKey ActionKey(CAS, RefKey);
-    return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result);
-  }
-
-  /// Get or compute a result for \p ActionKey. Equivalent to calling \a get()
-  /// (followed by \a compute() and \a put() on failure).
-  Expected<ObjectRef> getOrCompute(const CacheKey &ActionKey,
-                                   function_ref<Expected<ObjectRef>()> Compute);
 
   virtual ~ActionCache() = default;
 
 protected:
-  virtual Expected<Optional<ObjectRef>>
+  virtual Expected<Optional<CASID>>
   getImpl(ArrayRef<uint8_t> ResolvedKey) const = 0;
-  virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey,
-                        const ObjectRef &Result) = 0;
+  virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result) = 0;
 
-  ActionCache(ObjectStore &CAS) : CAS(CAS) {}
+  ActionCache(const CASContext &Context) : Context(Context) {}
 
-  ObjectStore &getCAS() const { return CAS; }
+  const CASContext &getContext() const { return Context; }
 
 private:
-  ObjectStore &CAS;
+  const CASContext &Context;
 };
 
 /// Create an action cache in memory.
-std::unique_ptr<ActionCache> createInMemoryActionCache(ObjectStore &CAS);
+std::unique_ptr<ActionCache> createInMemoryActionCache();
 
 /// Get a reasonable default on-disk path for a persistent ActionCache for the
 /// current user.
 std::string getDefaultOnDiskActionCachePath();
 
 /// Create an action cache on disk.
-Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(ObjectStore &CAS,
-                                                               StringRef Path);
+Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(StringRef Path);
 } // end namespace llvm::cas
 
 #endif // LLVM_CAS_CASACTIONCACHE_H

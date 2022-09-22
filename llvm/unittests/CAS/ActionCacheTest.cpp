@@ -20,50 +20,54 @@ using namespace llvm::cas;
 
 TEST_P(CASTest, ActionCacheHit) {
   std::unique_ptr<ObjectStore> CAS = createObjectStore();
-  std::unique_ptr<ActionCache> Cache = createActionCache(*CAS);
+  std::unique_ptr<ActionCache> Cache = createActionCache();
 
   Optional<ObjectProxy> ID;
   ASSERT_THAT_ERROR(CAS->createProxy(None, "1").moveInto(ID), Succeeded());
-  ASSERT_THAT_ERROR(Cache->put(*ID, ID->getRef()), Succeeded());
-  Optional<ObjectRef> Result;
-  ASSERT_THAT_ERROR(Cache->get(*ID).moveInto(Result), Succeeded());
+  Optional<CASID> ResultID;
+  ASSERT_THAT_ERROR(Cache->put(*ID, *ID), Succeeded());
+  ASSERT_THAT_ERROR(Cache->get(*ID).moveInto(ResultID), Succeeded());
+  ASSERT_TRUE(ResultID);
+  Optional<ObjectRef> Result = CAS->getReference(*ResultID);
   ASSERT_TRUE(Result);
   ASSERT_EQ(*ID, *Result);
 }
 
 TEST_P(CASTest, ActionCacheMiss) {
   std::unique_ptr<ObjectStore> CAS = createObjectStore();
-  std::unique_ptr<ActionCache> Cache = createActionCache(*CAS);
+  std::unique_ptr<ActionCache> Cache = createActionCache();
 
   Optional<ObjectProxy> ID1, ID2;
   ASSERT_THAT_ERROR(CAS->createProxy(None, "1").moveInto(ID1), Succeeded());
   ASSERT_THAT_ERROR(CAS->createProxy(None, "2").moveInto(ID2), Succeeded());
-  ASSERT_THAT_ERROR(Cache->put(*ID1, ID2->getRef()), Succeeded());
+  ASSERT_THAT_ERROR(Cache->put(*ID1, *ID2), Succeeded());
   // This is a cache miss for looking up a key doesn't exist.
-  Optional<ObjectRef> Result1;
+  Optional<CASID> Result1;
   ASSERT_THAT_ERROR(Cache->get(*ID2).moveInto(Result1), Succeeded());
   ASSERT_FALSE(Result1);
 
-  ASSERT_THAT_ERROR(Cache->put(*ID2, ID1->getRef()), Succeeded());
+  ASSERT_THAT_ERROR(Cache->put(*ID2, *ID1), Succeeded());
   // Cache hit after adding the value.
-  Optional<ObjectRef> Result2;
+  Optional<CASID> Result2;
   ASSERT_THAT_ERROR(Cache->get(*ID2).moveInto(Result2), Succeeded());
   ASSERT_TRUE(Result2);
-  ASSERT_EQ(*ID1, *Result2);
+  Optional<ObjectRef> Ref = CAS->getReference(*Result2);
+  ASSERT_TRUE(Ref);
+  ASSERT_EQ(*ID1, *Ref);
 }
 
 TEST_P(CASTest, ActionCacheRewrite) {
   std::unique_ptr<ObjectStore> CAS = createObjectStore();
-  std::unique_ptr<ActionCache> Cache = createActionCache(*CAS);
+  std::unique_ptr<ActionCache> Cache = createActionCache();
 
   Optional<ObjectProxy> ID1, ID2;
   ASSERT_THAT_ERROR(CAS->createProxy(None, "1").moveInto(ID1), Succeeded());
   ASSERT_THAT_ERROR(CAS->createProxy(None, "2").moveInto(ID2), Succeeded());
-  ASSERT_THAT_ERROR(Cache->put(*ID1, ID1->getRef()), Succeeded());
+  ASSERT_THAT_ERROR(Cache->put(*ID1, *ID1), Succeeded());
   // Writing to the same key with different value is error.
-  ASSERT_THAT_ERROR(Cache->put(*ID1, ID2->getRef()), Failed());
+  ASSERT_THAT_ERROR(Cache->put(*ID1, *ID2), Failed());
   // Writing the same value multiple times to the same key is fine.
-  ASSERT_THAT_ERROR(Cache->put(*ID1, ID1->getRef()), Succeeded());
+  ASSERT_THAT_ERROR(Cache->put(*ID1, *ID1), Succeeded());
 }
 
 TEST(OnDiskActionCache, ActionCacheResultInvalid) {
@@ -77,19 +81,21 @@ TEST(OnDiskActionCache, ActionCacheResultInvalid) {
   ASSERT_THAT_ERROR(CAS2->createProxy(None, "1").moveInto(ID3), Succeeded());
 
   std::unique_ptr<ActionCache> Cache1 =
-      cantFail(createOnDiskActionCache(*CAS1, Temp.path()));
+      cantFail(createOnDiskActionCache(Temp.path()));
   // Test put and get.
-  ASSERT_THAT_ERROR(Cache1->put(*ID1, ID2->getRef()), Succeeded());
-  Optional<ObjectRef> Result;
+  ASSERT_THAT_ERROR(Cache1->put(*ID1, *ID2), Succeeded());
+  Optional<CASID> Result;
   ASSERT_THAT_ERROR(Cache1->get(*ID1).moveInto(Result), Succeeded());
   ASSERT_TRUE(Result);
 
   // Create OnDiskCAS from the same location but a different underlying CAS.
   std::unique_ptr<ActionCache> Cache2 =
-      cantFail(createOnDiskActionCache(*CAS2, Temp.path()));
+      cantFail(createOnDiskActionCache(Temp.path()));
   // Loading an key that points to an invalid object.
-  Optional<ObjectRef> Result2;
-  ASSERT_THAT_ERROR(Cache2->get(*ID3).moveInto(Result2), Failed());
+  Optional<CASID> Result2;
+  // Get will work but the resulting CASID doesn't exist in ObjectStore.
+  ASSERT_THAT_ERROR(Cache2->get(*ID3).moveInto(Result2), Succeeded());
+  ASSERT_FALSE(CAS2->getReference(*Result2));
   // Write a different value will cause error.
-  ASSERT_THAT_ERROR(Cache2->put(*ID3, ID3->getRef()), Failed());
+  ASSERT_THAT_ERROR(Cache2->put(*ID3, *ID3), Failed());
 }

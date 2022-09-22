@@ -29,12 +29,13 @@
 // Check for a handling error if the CAS is removed but not action cache.
 // First need to ignest the input file so the compile cache can be constructed.
 // RUN: llvm-cas --ingest --cas %t/cas.new --data %s
-// RUN: not %clang -cc1 -triple x86_64-apple-macos11 \
+// RUN: %clang -cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fcas-path %t/cas.new -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Rcompile-job-cache -emit-obj %s -o output.o 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CACHE-ERROR
+// RUN:   | FileCheck %s --check-prefix=CACHE-RESULT
 // RUN: ls %t/output.o
 //
 // CACHE-HIT: remark: compile job cache hit
 // CACHE-MISS-NOT: remark: compile job cache hit
-// CACHE-ERROR: fatal error: caching backend error:
+// CACHE-RESULT: remark: compile job cache miss
+// CACHE-RESULT-SAME: result not found

@@ -730,12 +730,12 @@ class OnDiskCAS : public BuiltinCAS {
 public:
   static StringRef getIndexTableName() {
     static const std::string Name =
-        ("llvm.cas.index[" + getHashName() + "]").str();
+        ("llvm.cas.index[" + BuiltinCASContext::getHashName() + "]").str();
     return Name;
   }
   static StringRef getDataPoolTableName() {
     static const std::string Name =
-        ("llvm.cas.data[" + getHashName() + "]").str();
+        ("llvm.cas.data[" + BuiltinCASContext::getHashName() + "]").str();
     return Name;
   }
 
@@ -817,23 +817,13 @@ public:
   Optional<FileOffset> getIndexOffset(InternalRef Ref) const;
 
   CASID getID(const IndexProxy &I) const {
-    return getIDFromIndexOffset(I.Offset);
+    StringRef Hash = toStringRef(I.Hash);
+    return CASID::create(&getContext(), Hash);
   }
 
   Optional<ObjectRef> getReference(const CASID &ID) const final;
-  Optional<ObjectRef> getReference(ArrayRef<uint8_t> Hash) const final;
   ObjectRef getReference(ObjectHandle Handle) const final {
     return getExternalReference(getInternalHandle(Handle).getRef());
-  }
-
-  ArrayRef<uint8_t> getHashImpl(const CASID &ID) const final {
-    assert(&ID.getContext() == this && "Expected ID from this CASIDContext");
-    OnDiskHashMappedTrie::const_pointer P = getInternalIndexPointer(ID);
-    assert(P && "Expected to recover pointer from CASID");
-    return P->Hash;
-  }
-  CASID getIDFromIndexOffset(FileOffset Offset) const {
-    return CASID::getFromInternalID(*this, Offset.get());
   }
 
   OnDiskHashMappedTrie::const_pointer
@@ -868,9 +858,6 @@ private:
   }
   Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
-
-  StringRef getPathForID(StringRef BaseDir, CASID ID,
-                         SmallVectorImpl<char> &Storage);
 
   Expected<std::unique_ptr<MemoryBuffer>> openFile(StringRef Path);
   Expected<std::unique_ptr<MemoryBuffer>> openFileWithID(StringRef BaseDir,
@@ -1426,27 +1413,11 @@ Optional<ObjectRef> OnDiskCAS::getReference(const CASID &ID) const {
   return None;
 }
 
-Optional<ObjectRef> OnDiskCAS::getReference(ArrayRef<uint8_t> Hash) const {
-  OnDiskHashMappedTrie::const_pointer P = Index.find(Hash);
-  if (!P)
-    return None;
-  IndexProxy I = getIndexProxyFromPointer(P);
-  if (Optional<InternalRef> Ref = makeInternalRef(I.Offset, I.Ref.load()))
-    return getExternalReference(*Ref);
-  return None;
-}
-
 OnDiskHashMappedTrie::const_pointer
 OnDiskCAS::getInternalIndexPointer(const CASID &ID) const {
-  // Recover the pointer from the FileOffset if ID comes from this CAS.
-  if (&ID.getContext() == this) {
-    OnDiskHashMappedTrie::const_pointer P =
-        Index.recoverFromFileOffset(FileOffset(ID.getInternalID(*this)));
-    assert(P && "Expected valid index pointer from direct lookup");
-    return P;
-  }
-
-  // Fallback to a normal lookup.
+  assert(ID.getContext().getHashSchemaIdentifier() ==
+             getContext().getHashSchemaIdentifier() &&
+         "Expected ID from same hash schema");
   return Index.find(ID.getHash());
 }
 
@@ -1478,9 +1449,12 @@ Optional<FileOffset> OnDiskCAS::getIndexOffset(InternalRef Ref) const {
 }
 
 CASID OnDiskCAS::getID(InternalRef Ref) const {
-  Optional<FileOffset> I = getIndexOffset(Ref);
-  assert(I);
-  return getIDFromIndexOffset(*I);
+  Optional<IndexProxy> I = getIndexProxyFromRef(Ref);
+  if (!I)
+    report_fatal_error(
+        "OnDiskCAS: corrupt internal reference to unknown object");
+  StringRef Hash = toStringRef(I->Hash);
+  return CASID::create(&getContext(), Hash);
 }
 
 ArrayRef<char> OnDiskCAS::getDataConst(ObjectHandle Node) const {

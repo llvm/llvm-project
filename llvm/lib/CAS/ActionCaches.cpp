@@ -39,11 +39,11 @@ private:
 
 class InMemoryActionCache final : public ActionCache {
 public:
-  InMemoryActionCache(ObjectStore &CAS);
+  InMemoryActionCache()
+      : ActionCache(builtin::BuiltinCASContext::getDefaultContext()) {}
 
-  Error putImpl(ArrayRef<uint8_t> ActionKey, const ObjectRef &Result) final;
-  Expected<Optional<ObjectRef>>
-  getImpl(ArrayRef<uint8_t> ActionKey) const final;
+  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result) final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey) const final;
 
 private:
   using DataT = CacheEntry<sizeof(HashType)>;
@@ -55,12 +55,10 @@ private:
 #if LLVM_ENABLE_ONDISK_CAS
 class OnDiskActionCache final : public ActionCache {
 public:
-  Error putImpl(ArrayRef<uint8_t> ActionKey, const ObjectRef &Result) final;
-  Expected<Optional<ObjectRef>>
-  getImpl(ArrayRef<uint8_t> ActionKey) const final;
+  Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result) final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey) const final;
 
-  static Expected<std::unique_ptr<OnDiskActionCache>> create(ObjectStore &CAS,
-                                                             StringRef Path);
+  static Expected<std::unique_ptr<OnDiskActionCache>> create(StringRef Path);
 
 private:
   static StringRef getHashName() { return "BLAKE3"; }
@@ -73,8 +71,7 @@ private:
   static constexpr StringLiteral ActionCacheFile = "actions";
   static constexpr StringLiteral FilePrefix = "v1.";
 
-  OnDiskActionCache(ObjectStore &CAS, StringRef RootPath,
-                    OnDiskHashMappedTrie ActionCache);
+  OnDiskActionCache(StringRef RootPath, OnDiskHashMappedTrie ActionCache);
 
   std::string Path;
   OnDiskHashMappedTrie Cache;
@@ -89,46 +86,28 @@ static std::string hashToString(ArrayRef<uint8_t> Hash) {
   return Str.str().str();
 }
 
-static Error createResultCachePoisonedError(StringRef Key, ObjectStore &CAS,
-                                            ObjectRef Output,
+static Error createResultCachePoisonedError(StringRef Key,
+                                            const CASContext &Context,
+                                            CASID Output,
                                             ArrayRef<uint8_t> ExistingOutput) {
-  std::string OutID = CAS.getID(Output).toString();
-  Optional<ObjectRef> ExistingRef = CAS.getReference(ExistingOutput);
-  std::string Existing = ExistingRef ? CAS.getID(*ExistingRef).toString()
-                                     : hashToString(ExistingOutput);
+  std::string Existing =
+      CASID::create(&Context, toStringRef(ExistingOutput)).toString();
   return createStringError(std::make_error_code(std::errc::invalid_argument),
-                           "cache poisoned for '" + Key + "' (new='" + OutID +
-                               "' vs. existing '" + Existing + "')");
+                           "cache poisoned for '" + Key + "' (new='" +
+                               Output.toString() + "' vs. existing '" +
+                               Existing + "')");
 }
 
-static Error createResultCacheUnknownObjectError(StringRef Key,
-                                                 StringRef Hash) {
-  return createStringError(
-      std::make_error_code(std::errc::no_such_device_or_address),
-      "the result object for key '" + Key + "' does not exist in CAS: '" +
-          Hash + "'");
-}
-
-// TODO: Check the hash schema is the same between action cache and CAS. If we
-// can derive that from static type information, that would be even better.
-InMemoryActionCache::InMemoryActionCache(ObjectStore &CAS) : ActionCache(CAS) {}
-
-Expected<Optional<ObjectRef>>
+Expected<Optional<CASID>>
 InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key) const {
   auto Result = Cache.find(Key);
   if (!Result)
     return None;
-  return getCAS().getReference(Result->Data.getValue());
-  Optional<ObjectRef> Out = getCAS().getReference(Result->Data.getValue());
-  if (!Out)
-    return createResultCacheUnknownObjectError(
-        hashToString(Key), hashToString(Result->Data.getValue()));
-  return *Out;
+  return CASID::create(&getContext(), toStringRef(Result->Data.getValue()));
 }
 
-Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key,
-                                   const ObjectRef &Result) {
-  DataT Expected(getCAS().getID(Result).getHash());
+Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result) {
+  DataT Expected(Result.getHash());
   const InMemoryCacheT::value_type &Cached = *Cache.insertLazy(
       Key, [&](auto ValueConstructor) { ValueConstructor.emplace(Expected); });
 
@@ -136,7 +115,7 @@ Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key,
   if (Expected.getValue() == Observed.getValue())
     return Error::success();
 
-  return createResultCachePoisonedError(hashToString(Key), getCAS(), Result,
+  return createResultCachePoisonedError(hashToString(Key), getContext(), Result,
                                         Observed.getValue());
 }
 
@@ -153,8 +132,8 @@ std::string getDefaultOnDiskActionCachePath() {
   return Path.str().str();
 }
 
-std::unique_ptr<ActionCache> createInMemoryActionCache(ObjectStore &CAS) {
-  return std::make_unique<InMemoryActionCache>(CAS);
+std::unique_ptr<ActionCache> createInMemoryActionCache() {
+  return std::make_unique<InMemoryActionCache>();
 }
 
 } // namespace cas
@@ -164,12 +143,12 @@ std::unique_ptr<ActionCache> createInMemoryActionCache(ObjectStore &CAS) {
 constexpr StringLiteral OnDiskActionCache::ActionCacheFile;
 constexpr StringLiteral OnDiskActionCache::FilePrefix;
 
-OnDiskActionCache::OnDiskActionCache(ObjectStore &CAS, StringRef Path,
-                                     OnDiskHashMappedTrie Cache)
-    : ActionCache(CAS), Path(Path.str()), Cache(std::move(Cache)) {}
+OnDiskActionCache::OnDiskActionCache(StringRef Path, OnDiskHashMappedTrie Cache)
+    : ActionCache(builtin::BuiltinCASContext::getDefaultContext()),
+      Path(Path.str()), Cache(std::move(Cache)) {}
 
 Expected<std::unique_ptr<OnDiskActionCache>>
-OnDiskActionCache::create(ObjectStore &CAS, StringRef AbsPath) {
+OnDiskActionCache::create(StringRef AbsPath) {
   if (std::error_code EC = sys::fs::create_directories(AbsPath))
     return createFileError(AbsPath, EC);
 
@@ -187,10 +166,10 @@ OnDiskActionCache::create(ObjectStore &CAS, StringRef AbsPath) {
     return std::move(E);
 
   return std::unique_ptr<OnDiskActionCache>(
-      new OnDiskActionCache(CAS, AbsPath, std::move(*ActionCache)));
+      new OnDiskActionCache(AbsPath, std::move(*ActionCache)));
 }
 
-Expected<Optional<ObjectRef>>
+Expected<Optional<CASID>>
 OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
   // Check the result cache.
   OnDiskHashMappedTrie::const_pointer ActionP = Cache.find(Key);
@@ -198,17 +177,11 @@ OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
     return None;
 
   const DataT *Output = reinterpret_cast<const DataT *>(ActionP->Data.data());
-  Optional<ObjectRef> Out = getCAS().getReference(Output->getValue());
-  if (!Out)
-    return createResultCacheUnknownObjectError(
-        hashToString(Key), hashToString(Output->getValue()));
-
-  return *Out;
+  return CASID::create(&getContext(), toStringRef(Output->getValue()));
 }
 
-Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
-                                 const ObjectRef &Result) {
-  DataT Expected(getCAS().getID(Result).getHash());
+Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result) {
+  DataT Expected(Result.getHash());
   OnDiskHashMappedTrie::pointer ActionP = Cache.insertLazy(
       Key, [&](FileOffset TentativeOffset,
                OnDiskHashMappedTrie::ValueProxy TentativeValue) {
@@ -221,16 +194,15 @@ Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
   if (Expected.getValue() == Observed->getValue())
     return Error::success();
 
-  return createResultCachePoisonedError(hashToString(Key), getCAS(), Result,
+  return createResultCachePoisonedError(hashToString(Key), getContext(), Result,
                                         Observed->getValue());
 }
 
 namespace llvm {
 namespace cas {
 
-Expected<std::unique_ptr<ActionCache>>
-createOnDiskActionCache(ObjectStore &CAS, StringRef Path) {
-  return OnDiskActionCache::create(CAS, Path);
+Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(StringRef Path) {
+  return OnDiskActionCache::create(Path);
 }
 
 } // namespace cas
@@ -240,8 +212,7 @@ createOnDiskActionCache(ObjectStore &CAS, StringRef Path) {
 namespace llvm {
 namespace cas {
 
-Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(ObjectStore &CAS,
-                                                               StringRef Path) {
+Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(StringRef Path) {
   return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
 }
 

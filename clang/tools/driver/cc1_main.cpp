@@ -37,6 +37,7 @@
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/CASOutputBackend.h"
+#include "llvm/CAS/CASReference.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
@@ -461,20 +462,30 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
     const llvm::cas::CASID &ResultCacheKey) {
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
-  Expected<Optional<llvm::cas::ObjectRef>> Result = Cache->get(ResultCacheKey);
+  Expected<Optional<llvm::cas::CASID>> Result = Cache->get(ResultCacheKey);
   if (!Result)
     return Result.takeError();
 
-  if (Optional<llvm::cas::ObjectRef> ResultRef = *Result) {
-    Diags.Report(diag::remark_compile_job_cache_hit)
-        << ResultCacheKey.toString() << CAS->getID(*ResultRef).toString();
-    Optional<int> Status =
-        replayCachedResult(*ResultRef, /*JustComputedResult=*/false);
-    assert(Status && "Expected a status for a cache hit");
-    assert(*Status == 0 && "Expected success status for a cache hit");
-    return true;
+  if (!*Result) {
+    Diags.Report(diag::remark_compile_job_cache_miss)
+        << ResultCacheKey.toString();
+    return false;
   }
-  return false;
+
+  Optional<llvm::cas::ObjectRef> ResultRef = CAS->getReference(**Result);
+  if (!ResultRef) {
+    Diags.Report(diag::remark_compile_job_cache_miss_result_not_found)
+        << ResultCacheKey.toString() << "result not in CAS";
+    return false;
+  }
+
+  Diags.Report(diag::remark_compile_job_cache_hit)
+      << ResultCacheKey.toString() << CAS->getID(*ResultRef).toString();
+  Optional<int> Status =
+      replayCachedResult(*ResultRef, /*JustComputedResult=*/false);
+  assert(Status && "Expected a status for a cache hit");
+  assert(*Status == 0 && "Expected success status for a cache hit");
+  return true;
 }
 
 Optional<int> CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
@@ -494,10 +505,13 @@ Optional<int> CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
   if (!ReplayedResult)
     return reportCachingBackendError(Clang.getDiagnostics(),
                                      ReplayedResult.takeError());
+
+  if (DisableCachedCompileJobReplay)
+    Diags.Report(diag::remark_compile_job_cache_skipped)
+        << ResultCacheKey->toString();
+
   if (*ReplayedResult)
     return 0;
-  Diags.Report(diag::remark_compile_job_cache_miss)
-      << ResultCacheKey->toString();
 
   if (CacheBackend->prepareOutputCollection())
     return 1;
@@ -692,7 +706,7 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
   Expected<cas::ObjectRef> Result = CachedResultBuilder.build(*CAS);
   if (!Result)
     llvm::report_fatal_error(Result.takeError());
-  if (llvm::Error E = Cache->put(ResultCacheKey, *Result))
+  if (llvm::Error E = Cache->put(ResultCacheKey, CAS->getID(*Result)))
     llvm::report_fatal_error(std::move(E));
 
   // Replay / decanonicalize as necessary.

@@ -53,7 +53,7 @@ llvm::Optional<llvm::cas::CASID> canonicalizeAndCreateCacheKey(
 /// Print the structure of the cache key given by \p Key to \p OS. Returns an
 /// error if the key object does not exist in \p CAS, or is malformed.
 llvm::Error printCompileJobCacheKey(llvm::cas::ObjectStore &CAS,
-                                    llvm::cas::CASID Key,
+                                    const llvm::cas::CASID &Key,
                                     llvm::raw_ostream &OS);
 
 } // namespace clang

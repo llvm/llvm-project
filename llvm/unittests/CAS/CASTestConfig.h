@@ -19,9 +19,7 @@
 
 struct TestingAndDir {
   std::unique_ptr<llvm::cas::ObjectStore> CAS;
-  std::function<std::unique_ptr<llvm::cas::ActionCache>(
-      llvm::cas::ObjectStore &)>
-      CreateCacheFn;
+  std::unique_ptr<llvm::cas::ActionCache> Cache;
   llvm::Optional<llvm::unittest::TempDir> Temp;
 };
 
@@ -38,10 +36,11 @@ protected:
       Dirs.push_back(std::move(*TD.Temp));
     return std::move(TD.CAS);
   }
-  std::unique_ptr<llvm::cas::ActionCache>
-  createActionCache(llvm::cas::ObjectStore &CAS) {
-    auto TD = GetParam()(*NextCASIndex);
-    return TD.CreateCacheFn(CAS);
+  std::unique_ptr<llvm::cas::ActionCache> createActionCache() {
+    auto TD = GetParam()(++(*NextCASIndex));
+    if (TD.Temp)
+      Dirs.push_back(std::move(*TD.Temp));
+    return std::move(TD.Cache);
   }
   void SetUp() { NextCASIndex = 0; }
   void TearDown() {

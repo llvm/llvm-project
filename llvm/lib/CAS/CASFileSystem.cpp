@@ -343,7 +343,8 @@ CASFileSystem::lookupPath(StringRef Path, bool FollowSymlinks) {
 }
 
 static Expected<std::unique_ptr<CASFileSystem>>
-initializeCASFileSystem(std::unique_ptr<CASFileSystem> FS, CASID RootID) {
+initializeCASFileSystem(std::unique_ptr<CASFileSystem> FS,
+                        const CASID &RootID) {
   Optional<ObjectRef> Root = FS->getCAS().getReference(RootID);
   if (!Root)
     return createStringError(inconvertibleErrorCode(),
