@@ -37,14 +37,10 @@ def riscv_clzw   : SDNode<"RISCVISD::CLZW",   SDT_RISCVIntUnaryOpW>;
 def riscv_ctzw   : SDNode<"RISCVISD::CTZW",   SDT_RISCVIntUnaryOpW>;
 def riscv_rolw   : SDNode<"RISCVISD::ROLW",   SDT_RISCVIntBinOpW>;
 def riscv_rorw   : SDNode<"RISCVISD::RORW",   SDT_RISCVIntBinOpW>;
-def riscv_grev   : SDNode<"RISCVISD::GREV",   SDTIntBinOp>;
-def riscv_grevw  : SDNode<"RISCVISD::GREVW",  SDT_RISCVIntBinOpW>;
-def riscv_gorc   : SDNode<"RISCVISD::GORC",   SDTIntBinOp>;
-def riscv_gorcw  : SDNode<"RISCVISD::GORCW",  SDT_RISCVIntBinOpW>;
-def riscv_shfl   : SDNode<"RISCVISD::SHFL",   SDTIntBinOp>;
-def riscv_shflw  : SDNode<"RISCVISD::SHFLW",  SDT_RISCVIntBinOpW>;
-def riscv_unshfl : SDNode<"RISCVISD::UNSHFL", SDTIntBinOp>;
-def riscv_unshflw: SDNode<"RISCVISD::UNSHFLW",SDT_RISCVIntBinOpW>;
+def riscv_brev8  : SDNode<"RISCVISD::BREV8",  SDTIntUnaryOp>;
+def riscv_orc_b  : SDNode<"RISCVISD::ORC_B",  SDTIntUnaryOp>;
+def riscv_zip    : SDNode<"RISCVISD::ZIP",    SDTIntUnaryOp>;
+def riscv_unzip  : SDNode<"RISCVISD::UNZIP",  SDTIntUnaryOp>;
 def riscv_bfp    : SDNode<"RISCVISD::BFP",    SDTIntBinOp>;
 def riscv_bfpw   : SDNode<"RISCVISD::BFPW",   SDT_RISCVIntBinOpW>;
 def riscv_bcompress    : SDNode<"RISCVISD::BCOMPRESS",   SDTIntBinOp>;
@@ -654,21 +650,17 @@ def : Pat<(and GPR:$r, BCLRIANDIMask:$i),
 } // Predicates = [HasStdExtZbs]
 
 let Predicates = [HasStdExtZbb] in {
-// We treat orc.b as a separate instruction, so match it directly. We also
-// lower the Zbb orc.b intrinsic to this.
-def : Pat<(riscv_gorc GPR:$rs1, 7), (ORC_B GPR:$rs1)>;
+def : Pat<(riscv_orc_b GPR:$rs1), (ORC_B GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbkb] in {
-// We treat brev8 as a separate instruction, so match it directly. We also
-// use this for brev8 when lowering bitreverse with Zbkb.
-def : Pat<(riscv_grev GPR:$rs1, 7), (BREV8 GPR:$rs1)>;
+def : Pat<(riscv_brev8 GPR:$rs1), (BREV8 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbkb]
 
 let Predicates = [HasStdExtZbkb, IsRV32] in {
 // We treat zip and unzip as separate instructions, so match it directly.
-def : Pat<(i32 (riscv_shfl GPR:$rs1, 15)), (ZIP_RV32 GPR:$rs1)>;
-def : Pat<(i32 (riscv_unshfl GPR:$rs1, 15)), (UNZIP_RV32 GPR:$rs1)>;
+def : Pat<(i32 (riscv_zip GPR:$rs1)), (ZIP_RV32 GPR:$rs1)>;
+def : Pat<(i32 (riscv_unzip GPR:$rs1)), (UNZIP_RV32 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbkb, IsRV32]
 
 let Predicates = [HasStdExtZbb] in {

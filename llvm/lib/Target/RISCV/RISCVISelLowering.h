@@ -108,15 +108,12 @@ enum NodeType : unsigned {
   // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
   // (returns (Lo, Hi)). It takes a chain operand.
   READ_CYCLE_WIDE,
-  // Generalized Reverse and Generalized Or-Combine - directly matching the
-  // semantics of the named RISC-V instructions. Lowered as custom nodes as
-  // TableGen chokes when faced with commutative permutations in deeply-nested
-  // DAGs. Each node takes an input operand and a control operand and outputs a
-  // bit-manipulated version of input. All operands are i32 or XLenVT.
-  GREV,
-  GORC,
-  SHFL,
-  UNSHFL,
+  // brev8, orc.b, zip, and unzip from Zbb and Zbkb. All operands are i32 or
+  // XLenVT.
+  BREV8,
+  ORC_B,
+  ZIP,
+  UNZIP,
   // Bit Compress/Decompress implement the generic bit extract and bit deposit
   // functions. This operation is also referred to as bit gather/scatter, bit
   // pack/unpack, parallel extract/deposit, compress/expand, or right
