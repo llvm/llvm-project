@@ -4500,7 +4500,7 @@ static void ProcessVSRuntimeLibrary(const ArgList &Args,
     llvm_unreachable("Unexpected option ID.");
   }
 
-  if (Args.hasArg(options::OPT__SLASH_Zl)) {
+  if (Args.hasArg(options::OPT_fms_omit_default_lib)) {
     CmdArgs.push_back("-D_VC_NODEFAULTLIB");
   } else {
     CmdArgs.push_back(FlagForCRT.data());
