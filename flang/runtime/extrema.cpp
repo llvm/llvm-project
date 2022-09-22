@@ -301,7 +301,8 @@ void RTNAME(MinlocDim)(Descriptor &result, const Descriptor &x, int kind,
 
 // MAXVAL and MINVAL
 
-template <TypeCategory CAT, int KIND, bool IS_MAXVAL> struct MaxOrMinIdentity {
+template <TypeCategory CAT, int KIND, bool IS_MAXVAL, typename Enable = void>
+struct MaxOrMinIdentity {
   using Type = CppTypeFor<CAT, KIND>;
   static constexpr Type Value() {
     return IS_MAXVAL ? std::numeric_limits<Type>::lowest()
@@ -317,6 +318,44 @@ struct MaxOrMinIdentity<TypeCategory::Integer, 16, IS_MAXVAL> {
     return IS_MAXVAL ? Type{1} << 127 : ~Type{0} >> 1;
   }
 };
+
+#if HAS_FLOAT128
+// std::numeric_limits<> may not support __float128.
+//
+// Usage of GCC quadmath.h's FLT128_MAX is complicated by the fact that
+// even GCC complains about 'Q' literal suffix under -Wpedantic.
+// We just recreate FLT128_MAX ourselves.
+//
+// This specialization must engage only when
+// CppTypeFor<TypeCategory::Real, 16> is __float128.
+template <bool IS_MAXVAL>
+struct MaxOrMinIdentity<TypeCategory::Real, 16, IS_MAXVAL,
+    typename std::enable_if_t<
+        std::is_same_v<CppTypeFor<TypeCategory::Real, 16>, __float128>>> {
+  using Type = __float128;
+  static Type Value() {
+    // Create a buffer to store binary representation of __float128 constant.
+    constexpr std::size_t alignment =
+        std::max(alignof(Type), alignof(std::uint64_t));
+    alignas(alignment) char data[sizeof(Type)];
+
+    // First, verify that our interpretation of __float128 format is correct,
+    // e.g. by checking at least one known constant.
+    *reinterpret_cast<Type *>(data) = Type(1.0);
+    if (*reinterpret_cast<std::uint64_t *>(data) != 0 ||
+        *(reinterpret_cast<std::uint64_t *>(data) + 1) != 0x3FFF000000000000) {
+      Terminator terminator{__FILE__, __LINE__};
+      terminator.Crash("not yet implemented: no full support for __float128");
+    }
+
+    // Recreate FLT128_MAX.
+    *reinterpret_cast<std::uint64_t *>(data) = 0xFFFFFFFFFFFFFFFF;
+    *(reinterpret_cast<std::uint64_t *>(data) + 1) = 0x7FFEFFFFFFFFFFFF;
+    Type max = *reinterpret_cast<Type *>(data);
+    return IS_MAXVAL ? -max : max;
+  }
+};
+#endif // HAS_FLOAT128
 
 template <TypeCategory CAT, int KIND, bool IS_MAXVAL>
 class NumericExtremumAccumulator {
