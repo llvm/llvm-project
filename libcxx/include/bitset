@@ -125,6 +125,8 @@ template <size_t N> struct hash<std::bitset<N>>;
 #include <version>
 
 // standard-mandated includes
+
+// [bitset.syn]
 #include <iosfwd>
 #include <string>
 
