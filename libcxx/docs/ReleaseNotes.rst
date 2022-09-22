@@ -141,11 +141,11 @@ Deprecations and Removals
   or upgrade to C++11 or later. It is possible to re-enable ``std::function`` in C++03 by defining
   ``_LIBCPP_ENABLE_CXX03_FUNCTION``. This option will be removed in LLVM 16.
 
-- ``unary_function`` and ``binary_function`` are no longer available in C++17 and C++20.
-  They can be re-enabled by defining ``_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION``.
-  They are also marked as ``[[deprecated]]`` in C++11 and later. To disable deprecation warnings
-  you have to define ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS``. Note that this disables
-  all deprecation warnings.
+- ``unary_function`` and ``binary_function`` are now marked as ``[[deprecated]]`` in C++11 and later.
+  Deprecation warnings can be disabled by defining ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS``, however
+  this disables all deprecation warnings, not only those for ``unary_function`` and ``binary_function``.
+  Also note that starting in LLVM 16, ``unary_function`` and ``binary_function`` will be removed entirely
+  (not only deprecated) in C++17 and above, as mandated by the Standard.
 
 - The contents of ``<codecvt>``, ``wstring_convert`` and ``wbuffer_convert`` have been marked as deprecated.
   To disable deprecation warnings you have to define ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS``. Note that this

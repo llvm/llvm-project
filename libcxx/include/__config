@@ -1101,6 +1101,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
 #  endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
 
+// Leave the deprecation notices in by default, but don't remove unary_function and
+// binary_function entirely just yet. That way, folks will have one release to act
+// on the deprecation warnings.
+#  ifndef _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
+#    define _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
+#  endif
+
 #  if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES)
 #    define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 #    define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION
