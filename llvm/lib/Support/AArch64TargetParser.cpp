@@ -78,36 +78,11 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
 
 bool AArch64::getArchFeatures(AArch64::ArchKind AK,
                               std::vector<StringRef> &Features) {
-  if (AK == ArchKind::ARMV8A)
-    Features.push_back("+v8a");
-  if (AK == ArchKind::ARMV8_1A)
-    Features.push_back("+v8.1a");
-  if (AK == ArchKind::ARMV8_2A)
-    Features.push_back("+v8.2a");
-  if (AK == ArchKind::ARMV8_3A)
-    Features.push_back("+v8.3a");
-  if (AK == ArchKind::ARMV8_4A)
-    Features.push_back("+v8.4a");
-  if (AK == ArchKind::ARMV8_5A)
-    Features.push_back("+v8.5a");
-  if (AK == AArch64::ArchKind::ARMV8_6A)
-    Features.push_back("+v8.6a");
-  if (AK == AArch64::ArchKind::ARMV8_7A)
-    Features.push_back("+v8.7a");
-  if (AK == AArch64::ArchKind::ARMV8_8A)
-    Features.push_back("+v8.8a");
-  if (AK == AArch64::ArchKind::ARMV9A)
-    Features.push_back("+v9a");
-  if (AK == AArch64::ArchKind::ARMV9_1A)
-    Features.push_back("+v9.1a");
-  if (AK == AArch64::ArchKind::ARMV9_2A)
-    Features.push_back("+v9.2a");
-  if (AK == AArch64::ArchKind::ARMV9_3A)
-    Features.push_back("+v9.3a");
-  if(AK == AArch64::ArchKind::ARMV8R)
-    Features.push_back("+v8r");
-
-  return AK != ArchKind::INVALID;
+  if (AK == ArchKind::INVALID)
+    return false;
+  Features.push_back(
+      AArch64ARCHNames[static_cast<unsigned>(AK)].getArchFeature());
+  return true;
 }
 
 StringRef AArch64::getArchName(AArch64::ArchKind AK) {
