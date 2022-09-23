@@ -8201,7 +8201,7 @@ VPRecipeBase *VPRecipeBuilder::tryToOptimizeInductionPHI(
         Phi, Operands[0], Step, *II,
         LoopVectorizationPlanner::getDecisionAndClampRange(
             [&](ElementCount VF) {
-              return !VF.isScalable() && CM.isScalarAfterVectorization(Phi, VF);
+              return CM.isScalarAfterVectorization(Phi, VF);
             },
             Range));
   }
@@ -9421,7 +9421,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
   PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0));
 
-  if (onlyScalarsGenerated()) {
+  if (onlyScalarsGenerated(State.VF)) {
     // This is the normalized GEP that starts counting at zero.
     Value *PtrInd = State.Builder.CreateSExtOrTrunc(
         CanonicalIV, IndDesc.getStep()->getType());

@@ -1047,8 +1047,9 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-bool VPWidenPointerInductionRecipe::onlyScalarsGenerated() {
-  return IsScalarAfterVectorization;
+bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {
+  return IsScalarAfterVectorization &&
+         (!VF.isScalable() || vputils::onlyFirstLaneUsed(this));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
