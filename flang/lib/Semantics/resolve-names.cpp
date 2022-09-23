@@ -831,7 +831,8 @@ public:
   bool BeginMpSubprogram(const parser::Name &);
   void PushBlockDataScope(const parser::Name &);
   void EndSubprogram(std::optional<parser::CharBlock> stmtSource = std::nullopt,
-      const std::optional<parser::LanguageBindingSpec> * = nullptr);
+      const std::optional<parser::LanguageBindingSpec> * = nullptr,
+      const ProgramTree::EntryStmtList * = nullptr);
 
 protected:
   // Set when we see a stmt function that is really an array element assignment
@@ -849,6 +850,9 @@ private:
   SubprogramDetails &PostSubprogramStmt(const parser::Name &);
   void CreateEntry(const parser::EntryStmt &stmt, Symbol &subprogram);
   void PostEntryStmt(const parser::EntryStmt &stmt);
+  void HandleLanguageBinding(Symbol *,
+      std::optional<parser::CharBlock> stmtSource,
+      const std::optional<parser::LanguageBindingSpec> *);
 };
 
 class DeclarationVisitor : public ArraySpecVisitor,
@@ -3457,20 +3461,24 @@ void SubprogramVisitor::CreateEntry(
           ? Symbol::Flag::Function
           : Symbol::Flag::Subroutine};
   Attrs attrs;
-  if (Symbol * extant{FindSymbol(outer, entryName)}) {
-    if (!HandlePreviousCalls(entryName, *extant, subpFlag)) {
-      if (outer.IsTopLevel()) {
-        Say2(entryName,
-            "'%s' is already defined as a global identifier"_err_en_US, *extant,
-            "Previous definition of '%s'"_en_US);
-      } else {
-        SayAlreadyDeclared(entryName, *extant);
-      }
-      return;
-    }
-    attrs = extant->attrs();
-  }
   const auto &suffix{std::get<std::optional<parser::Suffix>>(stmt.t)};
+  bool hasGlobalBindingName{outer.IsGlobal() && suffix && suffix->binding &&
+      suffix->binding->v.has_value()};
+  if (!hasGlobalBindingName) {
+    if (Symbol * extant{FindSymbol(outer, entryName)}) {
+      if (!HandlePreviousCalls(entryName, *extant, subpFlag)) {
+        if (outer.IsTopLevel()) {
+          Say2(entryName,
+              "'%s' is already defined as a global identifier"_err_en_US,
+              *extant, "Previous definition of '%s'"_en_US);
+        } else {
+          SayAlreadyDeclared(entryName, *extant);
+        }
+        return;
+      }
+      attrs = extant->attrs();
+    }
+  }
   bool badResultName{false};
   std::optional<SourceName> distinctResultName;
   if (suffix && suffix->resultName &&
@@ -3496,17 +3504,27 @@ void SubprogramVisitor::CreateEntry(
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
   }
-  Symbol *entrySymbol{FindInScope(outer, entryName.source)};
-  if (entrySymbol) {
-    if (auto *generic{entrySymbol->detailsIf<GenericDetails>()}) {
-      if (auto *specific{generic->specific()}) {
-        // Forward reference to ENTRY from a generic interface
-        entrySymbol = specific;
-        entrySymbol->attrs() |= attrs;
-      }
-    }
+  Symbol *entrySymbol{nullptr};
+  if (hasGlobalBindingName) {
+    // Hide the entry's symbol in a new anonymous global scope so
+    // that its name doesn't clash with anything.
+    Symbol &symbol{MakeSymbol(outer, context().GetTempName(outer), Attrs{})};
+    symbol.set_details(MiscDetails{MiscDetails::Kind::ScopeName});
+    Scope &hidden{outer.MakeScope(Scope::Kind::Global, &symbol)};
+    entrySymbol = &MakeSymbol(hidden, entryName.source, attrs);
   } else {
-    entrySymbol = &MakeSymbol(outer, entryName.source, attrs);
+    entrySymbol = FindInScope(outer, entryName.source);
+    if (entrySymbol) {
+      if (auto *generic{entrySymbol->detailsIf<GenericDetails>()}) {
+        if (auto *specific{generic->specific()}) {
+          // Forward reference to ENTRY from a generic interface
+          entrySymbol = specific;
+          entrySymbol->attrs() |= attrs;
+        }
+      }
+    } else {
+      entrySymbol = &MakeSymbol(outer, entryName.source, attrs);
+    }
   }
   SubprogramDetails entryDetails;
   entryDetails.set_entryScope(currScope());
@@ -3696,20 +3714,37 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
   return true;
 }
 
-void SubprogramVisitor::EndSubprogram(
+void SubprogramVisitor::HandleLanguageBinding(Symbol *symbol,
     std::optional<parser::CharBlock> stmtSource,
     const std::optional<parser::LanguageBindingSpec> *binding) {
-  if (binding && *binding && currScope().symbol()) {
+  if (binding && *binding && symbol) {
     // Finally process the BIND(C,NAME=name) now that symbols in the name
-    // expression will resolve local names.
+    // expression will resolve to local names if needed.
     auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
     auto originalStmtSource{messageHandler().currStmtSource()};
     messageHandler().set_currStmtSource(stmtSource);
     BeginAttrs();
     Walk(**binding);
-    SetBindNameOn(*currScope().symbol());
-    currScope().symbol()->attrs() |= EndAttrs();
+    SetBindNameOn(*symbol);
+    symbol->attrs() |= EndAttrs();
     messageHandler().set_currStmtSource(originalStmtSource);
+  }
+}
+
+void SubprogramVisitor::EndSubprogram(
+    std::optional<parser::CharBlock> stmtSource,
+    const std::optional<parser::LanguageBindingSpec> *binding,
+    const ProgramTree::EntryStmtList *entryStmts) {
+  HandleLanguageBinding(currScope().symbol(), stmtSource, binding);
+  if (entryStmts) {
+    for (const auto &ref : *entryStmts) {
+      const parser::EntryStmt &entryStmt{*ref};
+      if (const auto &suffix{
+              std::get<std::optional<parser::Suffix>>(entryStmt.t)}) {
+        const auto &name{std::get<parser::Name>(entryStmt.t)};
+        HandleLanguageBinding(name.symbol, name.source, &suffix->binding);
+      }
+    }
   }
   PopScope();
 }
@@ -7607,7 +7642,7 @@ void ResolveNamesVisitor::EndScopeForNode(const ProgramTree &node) {
           [](const auto *) {},
       },
       node.stmt());
-  EndSubprogram(stmtSource, binding);
+  EndSubprogram(stmtSource, binding, &node.entryStmts());
 }
 
 // Some analyses and checks, such as the processing of initializers of
