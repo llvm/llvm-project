@@ -7,17 +7,17 @@ define i32 @foo(i1 %cond) {
   %b = alloca i32, align 4
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i32 0
-  store i32 0, i32* %a, align 4
+  store i32 0, ptr %a, align 4
 ; CHECK: 2 = MemoryDef(1)
 ; CHECK-NEXT: store i32 1
-  store i32 1, i32* %b, align 4
+  store i32 1, ptr %b, align 4
 
 ; CHECK: MemoryUse(1)
 ; CHECK-NEXT: %1 = load i32
-  %1 = load i32, i32* %a, align 4
+  %1 = load i32, ptr %a, align 4
 ; CHECK: MemoryUse(2)
 ; CHECK-NEXT: %2 = load i32
-  %2 = load i32, i32* %b, align 4
+  %2 = load i32, ptr %b, align 4
 
   %3 = add i32 %1, %2
   ret i32 %3
