@@ -221,7 +221,9 @@ export namespace std {
 
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
+#  endif
     using std::chrono::time_zone;
+#  if 0
 
     // [time.zone.zonedtraits], class template zoned_traits
     using std::chrono::zoned_traits;
@@ -233,10 +235,12 @@ export namespace std {
 
     // [time.zone.leap], leap second support
     using std::chrono::leap_second;
+#  endif
 
     // [time.zone.link], class time_zone_link
     using std::chrono::time_zone_link;
 
+#  if 0
     // [time.format], formatting
     using std::chrono::local_time_format;
 #  endif

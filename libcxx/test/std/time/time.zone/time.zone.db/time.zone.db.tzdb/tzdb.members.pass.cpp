@@ -37,7 +37,13 @@ int main(int, const char**) {
   tzdb.version = "version";
   assert(tzdb.version == "version");
 
-  // TODO TZDB add the other data members
+  std::vector<std::chrono::time_zone>& zones = tzdb.zones;
+  zones.clear(); // is it a non-const member?
+
+  std::vector<std::chrono::time_zone_link>& links = tzdb.links;
+  links.clear(); // is it a non-const member?
+
+  // TODO TZDB add the leap data member
 
   return 0;
 }
