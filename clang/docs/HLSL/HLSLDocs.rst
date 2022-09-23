@@ -11,5 +11,6 @@ HLSL Design and Implementation
 .. toctree::
    :maxdepth: 1
 
+   HLSLIRReference
    ResourceTypes
    EntryFunctions
