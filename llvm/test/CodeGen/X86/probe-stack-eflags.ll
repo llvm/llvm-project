@@ -13,7 +13,7 @@ define i32 @f(i32 %a, i32 %b) #0 {
 ; CHECK:       # %bb.0: # %bb13.i
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $8, %rsp
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb16.i
