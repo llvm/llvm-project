@@ -329,7 +329,10 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitArrayInitIndexExpr(
     const ArrayInitIndexExpr *E) {
-  assert(ArrayIndex);
+  // ArrayIndex might not be set if a ArrayInitIndexExpr is being evaluated
+  // stand-alone, e.g. via EvaluateAsInt().
+  if (!ArrayIndex)
+    return false;
   QualType IndexType = E->getType();
   APInt Value(getIntWidth(IndexType), *ArrayIndex);
   return this->emitConst(classifyPrim(IndexType), 0, Value, E);
@@ -608,9 +611,15 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
   if (const auto *InitList = dyn_cast<InitListExpr>(Initializer)) {
     unsigned ElementIndex = 0;
     for (const Expr *Init : InitList->inits()) {
-      QualType InitType = Init->getType();
-
-      if (InitType->isArrayType()) {
+      if (Optional<PrimType> T = classify(Init->getType())) {
+        // Visit the primitive element like normal.
+        if (!this->emitDupPtr(Init))
+          return false;
+        if (!this->visit(Init))
+          return false;
+        if (!this->emitInitElem(*T, ElementIndex, Init))
+          return false;
+      } else {
         // Advance the pointer currently on the stack to the given
         // dimension and narrow().
         if (!this->emitDupPtr(Init))
@@ -621,21 +630,12 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
           return false;
         if (!this->emitNarrowPtr(Init))
           return false;
-        if (!visitArrayInitializer(Init))
+
+        if (!visitInitializer(Init))
           return false;
+      }
         if (!this->emitPopPtr(Init))
           return false;
-      } else if (Optional<PrimType> T = classify(InitType)) {
-        // Visit the primitive element like normal.
-        if (!this->emitDupPtr(Init))
-          return false;
-        if (!this->visit(Init))
-          return false;
-        if (!this->emitInitElemPop(*T, ElementIndex, Init))
-          return false;
-      } else {
-        assert(false && "Unhandled type in array initializer initlist");
-      }
 
       ++ElementIndex;
     }
@@ -650,19 +650,34 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     size_t Size = AILE->getArraySize().getZExtValue();
     Optional<PrimType> ElemT = classify(SubExpr->getType());
 
-    if (!ElemT)
-      return false;
-
+    // So, every iteration, we execute an assignment here
+    // where the LHS is on the stack (the target array)
+    // and the RHS is our SubExpr.
     for (size_t I = 0; I != Size; ++I) {
       ArrayIndexScope<Emitter> IndexScope(this, I);
-      if (!this->emitDupPtr(SubExpr))
+
+      if (!this->emitDupPtr(SubExpr)) // LHS
         return false;
 
-      if (!this->visit(SubExpr))
-        return false;
+      if (ElemT) {
+        if (!this->visit(SubExpr))
+          return false;
+        if (!this->emitInitElem(*ElemT, I, Initializer))
+          return false;
+      } else {
+        // Narrow to our array element and recurse into visitInitializer()
+        if (!this->emitConstUint64(I, SubExpr))
+          return false;
 
-      if (!this->emitInitElem(*ElemT, I, Initializer))
-        return false;
+        if (!this->emitAddOffsetUint64(SubExpr))
+          return false;
+
+        if (!this->emitNarrowPtr(SubExpr))
+          return false;
+
+        if (!visitInitializer(SubExpr))
+          return false;
+      }
 
       if (!this->emitPopPtr(Initializer))
         return false;
