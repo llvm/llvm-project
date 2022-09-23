@@ -747,29 +747,31 @@ static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
   return II && II->getIntrinsicID() == IID;
 }
 
-/// Returns the behavior when calling the given call site.
-FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
-  if (Call->doesNotAccessMemory())
-    // Can't do better than this.
+static FunctionModRefBehavior getModRefBehaviorFromAttrs(AttributeSet Attrs) {
+  if (Attrs.hasAttribute(Attribute::ReadNone))
     return FunctionModRefBehavior::none();
 
-  // If the callsite knows it only reads memory, don't return worse
-  // than that.
   ModRefInfo MR = ModRefInfo::ModRef;
-  if (Call->onlyReadsMemory())
+  if (Attrs.hasAttribute(Attribute::ReadOnly))
     MR = ModRefInfo::Ref;
-  else if (Call->onlyWritesMemory())
+  else if (Attrs.hasAttribute(Attribute::WriteOnly))
     MR = ModRefInfo::Mod;
 
-  FunctionModRefBehavior Min(MR);
-  if (Call->onlyAccessesArgMemory())
-    Min = FunctionModRefBehavior::argMemOnly(MR);
-  else if (Call->onlyAccessesInaccessibleMemory())
-    Min = FunctionModRefBehavior::inaccessibleMemOnly(MR);
-  else if (Call->onlyAccessesInaccessibleMemOrArgMem())
-    Min = FunctionModRefBehavior::inaccessibleOrArgMemOnly(MR);
+  if (Attrs.hasAttribute(Attribute::ArgMemOnly))
+    return FunctionModRefBehavior::argMemOnly(MR);
+  if (Attrs.hasAttribute(Attribute::InaccessibleMemOnly))
+    return FunctionModRefBehavior::inaccessibleMemOnly(MR);
+  if (Attrs.hasAttribute(Attribute::InaccessibleMemOrArgMemOnly))
+    return FunctionModRefBehavior::inaccessibleOrArgMemOnly(MR);
+  return FunctionModRefBehavior(MR);
+}
 
-  if (const Function *F = Call->getCalledFunction()) {
+/// Returns the behavior when calling the given call site.
+FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
+  FunctionModRefBehavior Min =
+      getModRefBehaviorFromAttrs(Call->getAttributes().getFnAttrs());
+
+  if (const Function *F = dyn_cast<Function>(Call->getCalledOperand())) {
     FunctionModRefBehavior FMRB = getBestAAResults().getModRefBehavior(F);
     // Operand bundles on the call may also read or write memory, in addition
     // to the behavior of the called function.
@@ -786,24 +788,16 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
-  // If the function declares it doesn't access memory, we can't do better.
-  if (F->doesNotAccessMemory())
-    return FunctionModRefBehavior::none();
+  switch (F->getIntrinsicID()) {
+  case Intrinsic::experimental_guard:
+  case Intrinsic::experimental_deoptimize:
+    // These intrinsics can read arbitrary memory, and additionally modref
+    // inaccessible memory to model control dependence.
+    return FunctionModRefBehavior::readOnly() |
+           FunctionModRefBehavior::inaccessibleMemOnly(ModRefInfo::ModRef);
+  }
 
-  // If the function declares it only reads memory, go with that.
-  ModRefInfo MR = ModRefInfo::ModRef;
-  if (F->onlyReadsMemory())
-    MR = ModRefInfo::Ref;
-  else if (F->onlyWritesMemory())
-    MR = ModRefInfo::Mod;
-
-  if (F->onlyAccessesArgMemory())
-    return FunctionModRefBehavior::argMemOnly(MR);
-  if (F->onlyAccessesInaccessibleMemory())
-    return FunctionModRefBehavior::inaccessibleMemOnly(MR);
-  if (F->onlyAccessesInaccessibleMemOrArgMem())
-    return FunctionModRefBehavior::inaccessibleOrArgMemOnly(MR);
-  return FunctionModRefBehavior(MR);
+  return getModRefBehaviorFromAttrs(F->getAttributes().getFnAttrs());
 }
 
 /// Returns true if this is a writeonly (i.e Mod only) parameter.
@@ -979,19 +973,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
                                  AAQI) == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
   }
-
-  // Guard intrinsics are marked as arbitrarily writing so that proper control
-  // dependencies are maintained but they never mods any particular memory
-  // location.
-  //
-  // *Unlike* assumes, guard intrinsics are modeled as reading memory since the
-  // heap state at the point the guard is issued needs to be consistent in case
-  // the guard invokes the "deopt" continuation.
-  if (isIntrinsicCall(Call, Intrinsic::experimental_guard))
-    return ModRefInfo::Ref;
-  // The same applies to deoptimize which is essentially a guard(false).
-  if (isIntrinsicCall(Call, Intrinsic::experimental_deoptimize))
-    return ModRefInfo::Ref;
 
   // Like assumes, invariant.start intrinsics were also marked as arbitrarily
   // writing so that proper control dependencies are maintained but they never

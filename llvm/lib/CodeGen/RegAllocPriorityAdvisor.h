@@ -68,6 +68,7 @@ public:
   virtual std::unique_ptr<RegAllocPriorityAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
   AdvisorMode getAdvisorMode() const { return Mode; }
+  virtual void logRewardIfNeeded(const MachineFunction &MF, float Reward){};
 
 protected:
   // This analysis preserves everything, and subclasses may have additional

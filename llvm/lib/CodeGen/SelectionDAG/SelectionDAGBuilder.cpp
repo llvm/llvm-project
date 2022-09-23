@@ -4437,16 +4437,16 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
   if (BasePtr->getType()->isVectorTy() || !IndexVal->getType()->isVectorTy())
     return false;
 
+  uint64_t ScaleVal = DL.getTypeAllocSize(GEP->getResultElementType());
+
+  // Target may not support the required addressing mode.
+  if (ScaleVal != 1 &&
+      !TLI.isLegalScaleForGatherScatter(ScaleVal, ElemSize))
+    return false;
+
   Base = SDB->getValue(BasePtr);
   Index = SDB->getValue(IndexVal);
   IndexType = ISD::SIGNED_SCALED;
-
-  // MGATHER/MSCATTER are only required to support scaling by one or by the
-  // element size. Other scales may be produced using target-specific DAG
-  // combines.
-  uint64_t ScaleVal = DL.getTypeAllocSize(GEP->getResultElementType());
-  if (ScaleVal != ElemSize && ScaleVal != 1)
-    return false;
 
   Scale =
       DAG.getTargetConstant(ScaleVal, SDB->getCurSDLoc(), TLI.getPointerTy(DL));
@@ -7340,11 +7340,6 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     const ConstrainedFPIntrinsic &FPI) {
   SDLoc sdl = getCurSDLoc();
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), FPI.getType(), ValueVTs);
-  ValueVTs.push_back(MVT::Other); // Out chain
-
   // We do not need to serialize constrained FP intrinsics against
   // each other or against (nonvolatile) loads, so they can be
   // chained like loads.
@@ -7388,7 +7383,9 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     }
   };
 
-  SDVTList VTs = DAG.getVTList(ValueVTs);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), FPI.getType());
+  SDVTList VTs = DAG.getVTList(VT, MVT::Other);
   fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
 
   SDNodeFlags Flags;
@@ -7410,8 +7407,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     Opcode = ISD::STRICT_FMA;
     // Break fmuladd into fmul and fadd.
     if (TM.Options.AllowFPOpFusion == FPOpFusion::Strict ||
-        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(),
-                                        ValueVTs[0])) {
+        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
       Opers.pop_back();
       SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers, Flags);
       pushOutChain(Mul, EB);

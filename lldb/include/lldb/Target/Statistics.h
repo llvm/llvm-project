@@ -133,6 +133,7 @@ public:
   void SetLaunchOrAttachTime();
   void SetFirstPrivateStopTime();
   void SetFirstPublicStopTime();
+  void IncreaseSourceMapDeduceCount();
 
   StatsDuration &GetCreateTime() { return m_create_time; }
   StatsSuccessFail &GetExpressionStats() { return m_expr_eval; }
@@ -146,6 +147,7 @@ protected:
   StatsSuccessFail m_expr_eval{"expressionEvaluation"};
   StatsSuccessFail m_frame_var{"frameVariable"};
   std::vector<intptr_t> m_module_identifiers;
+  uint32_t m_source_map_deduce_count = 0;
   void CollectStats(Target &target);
 };
 

@@ -2244,6 +2244,8 @@ Specify Visual Studio C runtime library. "static" and "static_dbg" correspond
 to the cl flags /MT and /MTd which use the multithread, static version. "dll"
 and "dll_dbg" correspond to the cl flags /MD and /MDd which use the multithread,
 dll version.}]>;
+def fms_omit_default_lib : Joined<["-"], "fms-omit-default-lib">,
+  Group<f_Group>, Flags<[NoXarchOption, CoreOption]>;
 defm delayed_template_parsing : BoolFOption<"delayed-template-parsing",
   LangOpts<"DelayedTemplateParsing">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Parse templated function definitions at the end of the translation unit">,
@@ -2671,10 +2673,10 @@ def cuda_host_only : Flag<["--"], "cuda-host-only">, Alias<offload_host_only>,
 def cuda_compile_host_device : Flag<["--"], "cuda-compile-host-device">, Alias<offload_host_device>,
   HelpText<"Compile CUDA code for both host and device (default). Has no "
            "effect on non-CUDA compilations.">;
-def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
+def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[HelpHidden]>,
   HelpText<"Use the new driver for OpenMP offloading.">;
-def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">, Flags<[CC1Option]>, Group<Action_Group>,
-  Alias<no_offload_new_driver>, HelpText<"Don't use the new driver for OpenMP offloading.">;
+def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">, Flags<[HelpHidden]>,
+  HelpText<"Don't use the new driver for OpenMP offloading.">;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">,
   MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
@@ -6971,7 +6973,7 @@ def _SLASH_volatile_ms  : Option<["/", "-"], "volatile:ms", KIND_FLAG>,
   HelpText<"Volatile loads and stores have acquire and release semantics">;
 def _SLASH_clang : CLJoined<"clang:">,
   HelpText<"Pass <arg> to the clang driver">, MetaVarName<"<arg>">;
-def _SLASH_Zl : CLFlag<"Zl">,
+def _SLASH_Zl : CLFlag<"Zl">, Alias<fms_omit_default_lib>,
   HelpText<"Do not let object file auto-link default libraries">;
 
 def _SLASH_Yc : CLJoined<"Yc">,

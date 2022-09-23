@@ -114,21 +114,6 @@ enum NodeType : unsigned {
   ORC_B,
   ZIP,
   UNZIP,
-  // Bit Compress/Decompress implement the generic bit extract and bit deposit
-  // functions. This operation is also referred to as bit gather/scatter, bit
-  // pack/unpack, parallel extract/deposit, compress/expand, or right
-  // compress/right expand.
-  BCOMPRESS,
-  BCOMPRESSW,
-  BDECOMPRESS,
-  BDECOMPRESSW,
-  // The bit field place (bfp) instruction places up to XLEN/2 LSB bits from rs2
-  // into the value in rs1. The upper bits of rs2 control the length of the bit
-  // field and target position. The layout of rs2 is chosen in a way that makes
-  // it possible to construct rs2 easily using pack[h] instructions and/or
-  // andi/lui.
-  BFP,
-  BFPW,
   // Vector Extension
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation. The first operand is
@@ -594,6 +579,12 @@ public:
                                           MCContext &Ctx) const override;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override;
+
+  bool isLegalScaleForGatherScatter(uint64_t Scale,
+                                    uint64_t ElemSize) const override {
+    // Scaled addressing not supported on indexed load/stores
+    return Scale == 1;
+  }
 
 private:
   /// RISCVCCAssignFn - This target-specific function extends the default

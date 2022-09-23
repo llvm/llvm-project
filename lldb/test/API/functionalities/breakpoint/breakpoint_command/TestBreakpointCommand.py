@@ -445,6 +445,18 @@ class BreakpointCommandTestCase(TestBase):
         self.assertEquals(entry[1], replacement,
             "source map entry 'replacement' does not match")
 
+    def verify_source_map_deduce_statistics(self, target, expected_count):
+        stream = lldb.SBStream()
+        res = target.GetStatistics().GetAsJSON(stream)
+        self.assertTrue(res.Success())
+        debug_stats = json.loads(stream.GetData())
+        self.assertEqual('targets' in debug_stats, True,
+                'Make sure the "targets" key in in target.GetStatistics()')
+        target_stats = debug_stats['targets'][0]
+        self.assertNotEqual(target_stats, None)
+        self.assertEqual(target_stats['sourceMapDeduceCount'], expected_count)
+
+
     @skipIf(oslist=["windows"])
     @no_debug_info_test
     def test_breakpoints_auto_source_map_relative(self):
@@ -471,6 +483,7 @@ class BreakpointCommandTestCase(TestBase):
 
         source_map_json = self.get_source_map_json()
         self.assertEquals(len(source_map_json), 0, "source map should be empty initially")
+        self.verify_source_map_deduce_statistics(target, 0)
 
         # Verify auto deduced source map when file path in debug info
         # is a suffix of request breakpoint file path
@@ -483,6 +496,7 @@ class BreakpointCommandTestCase(TestBase):
         source_map_json = self.get_source_map_json()
         self.assertEquals(len(source_map_json), 1, "source map should not be empty")
         self.verify_source_map_entry_pair(source_map_json[0], ".", "/x/y")
+        self.verify_source_map_deduce_statistics(target, 1)
 
         # Reset source map.
         self.runCmd("settings clear target.source-map")

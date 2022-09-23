@@ -132,7 +132,7 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
     /// Character LEN is a runtime value.
     bool hasDynamicLen() { return getLen() == unknownLen(); }
 
-    /// Character LEN is a compile-time cpnstant value.
+    /// Character LEN is a compile-time constant value.
     bool hasConstantLen() { return !hasDynamicLen(); }
   }];
 }

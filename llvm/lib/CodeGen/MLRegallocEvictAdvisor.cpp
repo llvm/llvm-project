@@ -98,6 +98,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
+    AU.addRequired<RegAllocPriorityAdvisorAnalysis>();
     AU.addRequired<MachineBlockFrequencyInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -458,6 +459,11 @@ public:
     if (I == LogMap.end())
       return nullptr;
     return I->second.get();
+  }
+
+  void logRewardIfNeeded(const MachineFunction &MF, float Reward) override {
+    if (auto *Log = this->getLogger(MF))
+      Log->logFloatFinalReward(Reward);
   }
 
 private:
@@ -1061,12 +1067,12 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
 }
 
 bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
-  if (auto *DevModeAnalysis = dyn_cast<DevelopmentModeEvictionAdvisorAnalysis>(
-          &getAnalysis<RegAllocEvictionAdvisorAnalysis>()))
-    if (auto *Log = DevModeAnalysis->getLogger(MF))
-      Log->logFloatFinalReward(static_cast<float>(
-          calculateRegAllocScore(MF, getAnalysis<MachineBlockFrequencyInfo>())
-              .getScore()));
+  float Reward = static_cast<float>(
+      calculateRegAllocScore(MF, getAnalysis<MachineBlockFrequencyInfo>())
+          .getScore());
+
+  getAnalysis<RegAllocEvictionAdvisorAnalysis>().logRewardIfNeeded(MF, Reward);
+  getAnalysis<RegAllocPriorityAdvisorAnalysis>().logRewardIfNeeded(MF, Reward);
 
   return false;
 }

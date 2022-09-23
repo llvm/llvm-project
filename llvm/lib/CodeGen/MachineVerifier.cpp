@@ -1725,6 +1725,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_ASSERT_ALIGN: {
+    if (MI->getOperand(2).getImm() < 1)
+      report("alignment immediate must be >= 1", MI);
+    break;
+  }
   default:
     break;
   }

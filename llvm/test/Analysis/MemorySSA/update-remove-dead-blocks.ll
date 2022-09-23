@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @a = external global i32, align 4
 @c = external global [1 x i32], align 4
 
-define i32* @test() {
+define ptr @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 0, label [[ENTRY_SPLIT:%.*]] [
@@ -33,8 +33,8 @@ define i32* @test() {
 ; CHECK-NEXT:    br label [[FOR_BODY3]]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[STOREMERGE_LCSSA:%.*]] = phi i64 [ poison, [[FOR_COND2_2_FOR_BODY3_CRIT_EDGE]] ], [ poison, [[FOR_BODY3SPLIT]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1 x i32], [1 x i32]* @c, i64 0, i64 [[STOREMERGE_LCSSA]]
-; CHECK-NEXT:    ret i32* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1 x i32], ptr @c, i64 0, i64 [[STOREMERGE_LCSSA]]
+; CHECK-NEXT:    ret ptr [[ARRAYIDX]]
 ;
 entry:                                                ; preds = %entry
   br label %for.cond
@@ -44,8 +44,8 @@ for.cond:                                         ; preds = %cleanup, %entry
   br label %for.cond2.1
 
 for.body3:                                        ; preds = %for.cond2.2, %for.cond2.1
-  %arrayidx = getelementptr inbounds [1 x i32], [1 x i32]* @c, i64 0, i64 %storemerge
-  ret i32* %arrayidx
+  %arrayidx = getelementptr inbounds [1 x i32], ptr @c, i64 0, i64 %storemerge
+  ret ptr %arrayidx
 
 cleanup:                                          ; preds = %for.end5, %if.then
   %inc7 = add nsw i64 %storemerge, 1
@@ -58,7 +58,7 @@ for.inc.1:                                        ; preds = %for.end.1
   br i1 false, label %for.body.2, label %cleanup
 
 for.body.2:                                       ; preds = %for.inc.1
-  store i32 0, i32* @a, align 4
+  store i32 0, ptr @a, align 4
   br label %for.cond2.2
 
 for.cond2.2:                                      ; preds = %for.body.2

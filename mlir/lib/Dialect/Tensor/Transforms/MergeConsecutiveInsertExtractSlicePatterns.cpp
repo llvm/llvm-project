@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -16,31 +15,6 @@
 
 using namespace mlir;
 using namespace mlir::tensor;
-
-/// Adds each corresponding pair of offsets in `offsets1` and `offsets2` and
-/// returns the results.
-static SmallVector<OpFoldResult> mergeOffsets(Location loc,
-                                              ArrayRef<OpFoldResult> offsets1,
-                                              ArrayRef<OpFoldResult> offsets2,
-                                              OpBuilder &builder) {
-  SmallVector<OpFoldResult> foldedOffsets;
-  assert(offsets1.size() == offsets2.size());
-  foldedOffsets.reserve(offsets1.size());
-
-  AffineExpr dim1, dim2;
-  bindDims(builder.getContext(), dim1, dim2);
-
-  for (const auto &pair : llvm::zip(offsets1, offsets2)) {
-    auto offset0 =
-        getValueOrCreateConstantIndexOp(builder, loc, std::get<0>(pair));
-    auto offset1 =
-        getValueOrCreateConstantIndexOp(builder, loc, std::get<1>(pair));
-    auto foldedOffset =
-        makeComposedAffineApply(builder, loc, dim1 + dim2, {offset0, offset1});
-    foldedOffsets.push_back(foldedOffset.getResult());
-  }
-  return foldedOffsets;
-}
 
 namespace {
 /// Merges consecutive tensor.extract_slice ops into one.
@@ -53,24 +27,15 @@ struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
     if (!prevOp)
       return failure();
 
-    if (!prevOp.hasUnitStride() || !nextOp.hasUnitStride())
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    if (failed(mergeOffsetsSizesAndStrides(rewriter, nextOp.getLoc(), prevOp,
+                                           nextOp, prevOp.getDroppedDims(),
+                                           newOffsets, newSizes, newStrides)))
       return failure();
 
-    auto prevResultType = prevOp.getType().cast<ShapedType>();
-    if (prevOp.getSourceType().getRank() != prevResultType.getRank())
-      return rewriter.notifyMatchFailure(
-          prevOp, "rank-reducing producder case unimplemented");
-
-    Location loc = nextOp.getLoc();
-
-    SmallVector<OpFoldResult> prevOffsets = prevOp.getMixedOffsets();
-    SmallVector<OpFoldResult> nextOffsets = nextOp.getMixedOffsets();
-    SmallVector<OpFoldResult> foldedOffsets =
-        mergeOffsets(loc, prevOffsets, nextOffsets, rewriter);
-
-    rewriter.replaceOpWithNewOp<ExtractSliceOp>(
-        nextOp, nextOp.getType(), prevOp.getSource(), foldedOffsets,
-        nextOp.getMixedSizes(), nextOp.getMixedStrides());
+    rewriter.replaceOpWithNewOp<ExtractSliceOp>(nextOp, nextOp.getType(),
+                                                prevOp.getSource(), newOffsets,
+                                                newSizes, newStrides);
     return success();
   }
 };

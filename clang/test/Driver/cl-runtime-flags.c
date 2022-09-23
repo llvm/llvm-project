@@ -97,6 +97,9 @@
 
 // RUN: %clang_cl -### /Zl -- %s 2>&1 | FileCheck -check-prefix=CHECK-MTZl %s
 // RUN: %clang_cl -### /MT /Zl -- %s 2>&1 | FileCheck -check-prefix=CHECK-MTZl %s
+// RUN: %clang -### --target=x86_64-windows-msvc -fms-runtime-lib=static \
+// RUN:   -fms-omit-default-lib -- %s 2>&1 | FileCheck \
+// RUN:   -check-prefix=CHECK-MTZl %s
 // CHECK-MTZl-NOT: "-D_DEBUG"
 // CHECK-MTZl: "-D_MT"
 // CHECK-MTZl-NOT: "-D_DLL"

@@ -1285,6 +1285,33 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
                                 getDeclContextDescriptor(AliasDecl));
 }
 
+/// Convert an AccessSpecifier into the corresponding DINode flag.
+/// As an optimization, return 0 if the access specifier equals the
+/// default for the containing type.
+static llvm::DINode::DIFlags getAccessFlag(AccessSpecifier Access,
+                                           const RecordDecl *RD) {
+  AccessSpecifier Default = clang::AS_none;
+  if (RD && RD->isClass())
+    Default = clang::AS_private;
+  else if (RD && (RD->isStruct() || RD->isUnion()))
+    Default = clang::AS_public;
+
+  if (Access == Default)
+    return llvm::DINode::FlagZero;
+
+  switch (Access) {
+  case clang::AS_private:
+    return llvm::DINode::FlagPrivate;
+  case clang::AS_protected:
+    return llvm::DINode::FlagProtected;
+  case clang::AS_public:
+    return llvm::DINode::FlagPublic;
+  case clang::AS_none:
+    return llvm::DINode::FlagZero;
+  }
+  llvm_unreachable("unexpected access enumerator");
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
                                       llvm::DIFile *Unit) {
   llvm::DIType *Underlying =
@@ -1300,10 +1327,16 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
   uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
   // Typedefs are derived from some other type.
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(Ty->getDecl());
+
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
+  const DeclContext *DC = Ty->getDecl()->getDeclContext();
+  if (isa<RecordDecl>(DC))
+    Flags = getAccessFlag(Ty->getDecl()->getAccess(), cast<RecordDecl>(DC));
+
   return DBuilder.createTypedef(Underlying, Ty->getDecl()->getName(),
                                 getOrCreateFile(Loc), getLineNumber(Loc),
                                 getDeclContextDescriptor(Ty->getDecl()), Align,
-                                Annotations);
+                                Flags, Annotations);
 }
 
 static unsigned getDwarfCC(CallingConv CC) {
@@ -1395,33 +1428,6 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   llvm::DIType *F = DBuilder.createSubroutineType(
       EltTypeArray, Flags, getDwarfCC(Ty->getCallConv()));
   return F;
-}
-
-/// Convert an AccessSpecifier into the corresponding DINode flag.
-/// As an optimization, return 0 if the access specifier equals the
-/// default for the containing type.
-static llvm::DINode::DIFlags getAccessFlag(AccessSpecifier Access,
-                                           const RecordDecl *RD) {
-  AccessSpecifier Default = clang::AS_none;
-  if (RD && RD->isClass())
-    Default = clang::AS_private;
-  else if (RD && (RD->isStruct() || RD->isUnion()))
-    Default = clang::AS_public;
-
-  if (Access == Default)
-    return llvm::DINode::FlagZero;
-
-  switch (Access) {
-  case clang::AS_private:
-    return llvm::DINode::FlagPrivate;
-  case clang::AS_protected:
-    return llvm::DINode::FlagProtected;
-  case clang::AS_public:
-    return llvm::DINode::FlagPublic;
-  case clang::AS_none:
-    return llvm::DINode::FlagZero;
-  }
-  llvm_unreachable("unexpected access enumerator");
 }
 
 llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,

@@ -570,6 +570,21 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/""
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return op operands that have a corresponding argument in the basic block.
+        By default, the block should have an argument for each operand, but there
+        are expection. For example, in `map` output operand isn't used in
+        the block.
+      }],
+      /*retTy=*/"OpOperandVector",
+      /*methodName=*/"getOpOperandsMatchingBBargs",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getInputAndOutputOperands();
+      }]
+    >,
     //===------------------------------------------------------------------===//
     // Linalg generalization hooks.
     //===------------------------------------------------------------------===//

@@ -445,7 +445,7 @@ CMAKE_DEPENDENT_OPTION(CLANG_PLUGIN_SUPPORT
   "HAVE_CLANG_PLUGIN_SUPPORT" OFF)
 
 # If libstdc++ is statically linked, clang-repl needs to statically link libstdc++
-# itself, which is not possible in many platforms because of current limitations in 
+# itself, which is not possible in many platforms because of current limitations in
 # JIT stack. (more platforms need to be supported by JITLink)
 if(NOT LLVM_STATIC_LINK_CXX_STDLIB)
   set(HAVE_CLANG_REPL_SUPPORT ON)
@@ -881,6 +881,118 @@ if (CLANG_ENABLE_BOOTSTRAP)
 
     ExternalProject_Add_StepTargets(${NEXT_CLANG_STAGE} ${target})
   endforeach()
+endif()
+
+if (CLANG_BOLT_INSTRUMENT)
+  set(CLANG_PATH ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
+  set(CLANGXX_PATH ${CLANG_PATH}++)
+  set(CLANG_INSTRUMENTED ${CLANG_PATH}-bolt.inst)
+  set(CLANGXX_INSTRUMENTED ${CLANGXX_PATH}-bolt.inst)
+  set(CLANG_OPTIMIZED ${CLANG_PATH}-bolt)
+  set(CLANGXX_OPTIMIZED ${CLANGXX_PATH}-bolt)
+
+  # Instrument clang with BOLT
+  add_custom_target(clang-instrumented
+    DEPENDS ${CLANG_INSTRUMENTED}
+  )
+  add_custom_command(OUTPUT ${CLANG_INSTRUMENTED}
+    DEPENDS clang llvm-bolt
+    COMMAND llvm-bolt ${CLANG_PATH} -o ${CLANG_INSTRUMENTED}
+      -instrument --instrumentation-file-append-pid
+      --instrumentation-file=${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
+    COMMENT "Instrumenting clang binary with BOLT"
+    VERBATIM
+  )
+
+  # Make a symlink from clang-bolt.inst to clang++-bolt.inst
+  add_custom_target(clang++-instrumented
+    DEPENDS ${CLANGXX_INSTRUMENTED}
+  )
+  add_custom_command(OUTPUT ${CLANGXX_INSTRUMENTED}
+    DEPENDS clang-instrumented
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      ${CLANG_INSTRUMENTED}
+      ${CLANGXX_INSTRUMENTED}
+    COMMENT "Creating symlink from BOLT instrumented clang to clang++"
+    VERBATIM
+  )
+
+  # Build specified targets with instrumented Clang to collect the profile
+  set(STAMP_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt-instrumented-clang-stamps/)
+  set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/bolt-instrumented-clang-bins/)
+  set(build_configuration "$<CONFIG>")
+  include(ExternalProject)
+  ExternalProject_Add(bolt-instrumentation-profile
+    DEPENDS clang++-instrumented
+    PREFIX bolt-instrumentation-profile
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}
+    STAMP_DIR ${STAMP_DIR}
+    BINARY_DIR ${BINARY_DIR}
+    EXCLUDE_FROM_ALL 1
+    CMAKE_ARGS
+                ${CLANG_BOLT_INSTRUMENT_EXTRA_CMAKE_FLAGS}
+                # We shouldn't need to set this here, but INSTALL_DIR doesn't
+                # seem to work, so instead I'm passing this through
+                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+                -DCMAKE_C_COMPILER=${CLANG_INSTRUMENTED}
+                -DCMAKE_CXX_COMPILER=${CLANGXX_INSTRUMENTED}
+                -DCMAKE_ASM_COMPILER=${CLANG_INSTRUMENTED}
+                -DCMAKE_ASM_COMPILER_ID=Clang
+                -DCMAKE_BUILD_TYPE=Release
+                -DLLVM_ENABLE_PROJECTS=${CLANG_BOLT_INSTRUMENT_PROJECTS}
+                -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD}
+    BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR}
+                                   --config ${build_configuration}
+                                   --target ${CLANG_BOLT_INSTRUMENT_TARGETS}
+    INSTALL_COMMAND ""
+    STEP_TARGETS configure build
+    USES_TERMINAL_CONFIGURE 1
+    USES_TERMINAL_BUILD 1
+    USES_TERMINAL_INSTALL 1
+  )
+
+  # Merge profiles into one using merge-fdata
+  add_custom_target(clang-bolt-profile
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
+  )
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
+    DEPENDS merge-fdata bolt-instrumentation-profile-build
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${Python3_EXECUTABLE}
+      ${CMAKE_CURRENT_SOURCE_DIR}/utils/perf-training/perf-helper.py merge-fdata
+      $<TARGET_FILE:merge-fdata> ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
+      ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Preparing BOLT profile"
+    VERBATIM
+  )
+
+  # Optimize original (pre-bolt) Clang using the collected profile
+  add_custom_target(clang-bolt
+    DEPENDS ${CLANG_OPTIMIZED}
+  )
+  add_custom_command(OUTPUT ${CLANG_OPTIMIZED}
+    DEPENDS clang-bolt-profile
+    COMMAND llvm-bolt ${CLANG_PATH}
+      -o ${CLANG_OPTIMIZED}
+      -data ${CMAKE_CURRENT_BINARY_DIR}/prof.fdata
+      -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions
+      -split-all-cold -split-eh -dyno-stats -icf=1 -use-gnu-stack
+    COMMENT "Optimizing Clang with BOLT"
+    VERBATIM
+  )
+
+  # Make a symlink from clang-bolt to clang++-bolt
+  add_custom_target(clang++-bolt
+    DEPENDS ${CLANGXX_OPTIMIZED}
+  )
+  add_custom_command(OUTPUT ${CLANGXX_OPTIMIZED}
+    DEPENDS clang-bolt
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      ${CLANG_OPTIMIZED}
+      ${CLANGXX_OPTIMIZED}
+    COMMENT "Creating symlink from BOLT optimized clang to clang++"
+    VERBATIM
+  )
 endif()
 
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)

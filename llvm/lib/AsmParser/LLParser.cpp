@@ -217,6 +217,44 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     return error(ForwardRefBlockAddresses.begin()->first.Loc,
                  "expected function name in blockaddress");
 
+  auto ResolveForwardRefDSOLocalEquivalents = [&](const ValID &GVRef,
+                                                  GlobalValue *FwdRef) {
+    GlobalValue *GV = nullptr;
+    if (GVRef.Kind == ValID::t_GlobalName) {
+      GV = M->getNamedValue(GVRef.StrVal);
+    } else if (GVRef.UIntVal < NumberedVals.size()) {
+      GV = dyn_cast<GlobalValue>(NumberedVals[GVRef.UIntVal]);
+    }
+
+    if (!GV)
+      return error(GVRef.Loc, "unknown function '" + GVRef.StrVal +
+                                  "' referenced by dso_local_equivalent");
+
+    if (!GV->getValueType()->isFunctionTy())
+      return error(GVRef.Loc,
+                   "expected a function, alias to function, or ifunc "
+                   "in dso_local_equivalent");
+
+    auto *Equiv = DSOLocalEquivalent::get(GV);
+    FwdRef->replaceAllUsesWith(Equiv);
+    FwdRef->eraseFromParent();
+    return false;
+  };
+
+  // If there are entries in ForwardRefDSOLocalEquivalentIDs/Names at this
+  // point, they are references after the function was defined.  Resolve those
+  // now.
+  for (auto &Iter : ForwardRefDSOLocalEquivalentIDs) {
+    if (ResolveForwardRefDSOLocalEquivalents(Iter.first, Iter.second))
+      return true;
+  }
+  for (auto &Iter : ForwardRefDSOLocalEquivalentNames) {
+    if (ResolveForwardRefDSOLocalEquivalents(Iter.first, Iter.second))
+      return true;
+  }
+  ForwardRefDSOLocalEquivalentNames.clear();
+  ForwardRefDSOLocalEquivalentNames.clear();
+
   for (const auto &NT : NumberedTypes)
     if (NT.second.second.isValid())
       return error(NT.second.second,
@@ -3443,7 +3481,22 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       GV = M->getNamedValue(Fn.StrVal);
     }
 
-    assert(GV && "Could not find a corresponding global variable");
+    if (!GV) {
+      // Make a placeholder global variable as a placeholder for this reference.
+      auto &FwdRefMap = (Fn.Kind == ValID::t_GlobalID)
+                            ? ForwardRefDSOLocalEquivalentIDs
+                            : ForwardRefDSOLocalEquivalentNames;
+      GlobalValue *&FwdRef = FwdRefMap.try_emplace(Fn, nullptr).first->second;
+      if (!FwdRef) {
+        FwdRef = new GlobalVariable(*M, Type::getInt8Ty(Context), false,
+                                    GlobalValue::InternalLinkage, nullptr, "",
+                                    nullptr, GlobalValue::NotThreadLocal);
+      }
+
+      ID.ConstantVal = FwdRef;
+      ID.Kind = ValID::t_Constant;
+      return false;
+    }
 
     if (!GV->getValueType()->isFunctionTy())
       return error(Fn.Loc, "expected a function, alias to function, or ifunc "

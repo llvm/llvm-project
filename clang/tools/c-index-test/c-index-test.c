@@ -1002,7 +1002,10 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
              clang_getCString(Name), line, column);
       clang_disposeString(Name);
 
-      if (Cursor.kind == CXCursor_FunctionDecl) {
+      if (Cursor.kind == CXCursor_FunctionDecl
+          || Cursor.kind == CXCursor_StructDecl
+          || Cursor.kind == CXCursor_ClassDecl
+          || Cursor.kind == CXCursor_ClassTemplatePartialSpecialization) {
         /* Collect the template parameter kinds from the base template. */
         int NumTemplateArgs = clang_Cursor_getNumTemplateArguments(Cursor);
         int I;

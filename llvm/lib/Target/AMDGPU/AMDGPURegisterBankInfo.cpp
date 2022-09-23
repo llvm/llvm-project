@@ -4573,7 +4573,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
-    case Intrinsic::amdgcn_ds_ordered_swap: {
+    case Intrinsic::amdgcn_ds_ordered_swap:
+    case Intrinsic::amdgcn_ds_fadd_v2bf16: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
       unsigned M0Bank = getRegBankID(MI.getOperand(2).getReg(), MRI,

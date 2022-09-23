@@ -150,6 +150,7 @@ protected:
   bool HasAtomicFaddRtnInsts = false;
   bool HasAtomicFaddNoRtnInsts = false;
   bool HasAtomicPkFaddNoRtnInsts = false;
+  bool HasFlatAtomicFaddF32Inst = false;
   bool SupportsSRAMECC = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
@@ -191,6 +192,7 @@ protected:
   bool HasFlatSegmentOffsetBug = false;
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
+  bool HasGFX11FullVGPRs = false;
   bool HasVOPDInsts = false;
 
   // Dummy feature to use for assembler in tablegen.
@@ -746,6 +748,8 @@ public:
 
   bool hasAtomicPkFaddNoRtnInsts() const { return HasAtomicPkFaddNoRtnInsts; }
 
+  bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
+
   bool hasNoSdstCMPX() const {
     return HasNoSdstCMPX;
   }
@@ -1067,6 +1071,8 @@ public:
   /// Return true if the target's EXP instruction supports the NULL export
   /// target.
   bool hasNullExportTarget() const { return !GFX11Insts; }
+
+  bool hasGFX11FullVGPRs() const { return HasGFX11FullVGPRs; }
 
   bool hasVOPDInsts() const { return HasVOPDInsts; }
 

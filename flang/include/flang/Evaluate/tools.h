@@ -15,6 +15,8 @@
 #include "flang/Common/unwrap.h"
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/symbol.h"
@@ -938,7 +940,7 @@ bool IsAllocatableDesignator(const Expr<SomeType> &);
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
-bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD=
+bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
 bool IsNullObjectPointer(const Expr<SomeType> &);
 bool IsNullProcedurePointer(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
@@ -1026,8 +1028,14 @@ private:
 };
 
 template <typename T>
-bool IsExpandableScalar(const Expr<T> &expr, bool admitPureCall = false) {
-  return !UnexpandabilityFindingVisitor{admitPureCall}(expr);
+bool IsExpandableScalar(const Expr<T> &expr, FoldingContext &context,
+    const Shape &shape, bool admitPureCall = false) {
+  if (UnexpandabilityFindingVisitor{admitPureCall}(expr)) {
+    auto extents{AsConstantExtents(context, shape)};
+    return extents && GetSize(*extents) == 1;
+  } else {
+    return true;
+  }
 }
 
 // Common handling for procedure pointer compatibility of left- and right-hand

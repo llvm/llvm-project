@@ -67,7 +67,9 @@ SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
           Options.get("WarnOnSizeOfIntegerExpression", false)),
       WarnOnSizeOfThis(Options.get("WarnOnSizeOfThis", true)),
       WarnOnSizeOfCompareToConstant(
-          Options.get("WarnOnSizeOfCompareToConstant", true)) {}
+          Options.get("WarnOnSizeOfCompareToConstant", true)),
+      WarnOnSizeOfPointerToAggregate(
+          Options.get("WarnOnSizeOfPointerToAggregate", true)) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);
@@ -76,6 +78,8 @@ void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfThis", WarnOnSizeOfThis);
   Options.store(Opts, "WarnOnSizeOfCompareToConstant",
                 WarnOnSizeOfCompareToConstant);
+  Options.store(Opts, "WarnOnSizeOfPointerToAggregate",
+                WarnOnSizeOfPointerToAggregate);
 }
 
 void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
@@ -135,46 +139,48 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Detect sizeof(ptr) where ptr points to an aggregate (i.e. sizeof(&S)).
   // Do not find it if RHS of a 'sizeof(arr) / sizeof(arr[0])' expression.
-  const auto ArrayExpr =
-      ignoringParenImpCasts(hasType(hasCanonicalType(arrayType())));
-  const auto ArrayCastExpr = expr(anyOf(
-      unaryOperator(hasUnaryOperand(ArrayExpr), unless(hasOperatorName("*"))),
-      binaryOperator(hasEitherOperand(ArrayExpr)),
-      castExpr(hasSourceExpression(ArrayExpr))));
-  const auto PointerToArrayExpr = ignoringParenImpCasts(
-      hasType(hasCanonicalType(pointerType(pointee(arrayType())))));
+  if (WarnOnSizeOfPointerToAggregate) {
+    const auto ArrayExpr =
+        ignoringParenImpCasts(hasType(hasCanonicalType(arrayType())));
+    const auto ArrayCastExpr = expr(anyOf(
+        unaryOperator(hasUnaryOperand(ArrayExpr), unless(hasOperatorName("*"))),
+        binaryOperator(hasEitherOperand(ArrayExpr)),
+        castExpr(hasSourceExpression(ArrayExpr))));
+    const auto PointerToArrayExpr = ignoringParenImpCasts(
+        hasType(hasCanonicalType(pointerType(pointee(arrayType())))));
 
-  const auto StructAddrOfExpr = unaryOperator(
-      hasOperatorName("&"), hasUnaryOperand(ignoringParenImpCasts(
-                                hasType(hasCanonicalType(recordType())))));
-  const auto PointerToStructType =
-      hasUnqualifiedDesugaredType(pointerType(pointee(recordType())));
-  const auto PointerToStructExpr = ignoringParenImpCasts(expr(
-      hasType(hasCanonicalType(PointerToStructType)), unless(cxxThisExpr())));
+    const auto StructAddrOfExpr = unaryOperator(
+        hasOperatorName("&"), hasUnaryOperand(ignoringParenImpCasts(
+                                  hasType(hasCanonicalType(recordType())))));
+    const auto PointerToStructType =
+        hasUnqualifiedDesugaredType(pointerType(pointee(recordType())));
+    const auto PointerToStructExpr = ignoringParenImpCasts(expr(
+        hasType(hasCanonicalType(PointerToStructType)), unless(cxxThisExpr())));
 
-  const auto ArrayOfPointersExpr = ignoringParenImpCasts(
-      hasType(hasCanonicalType(arrayType(hasElementType(pointerType()))
-                                   .bind("type-of-array-of-pointers"))));
-  const auto ArrayOfSamePointersExpr =
-      ignoringParenImpCasts(hasType(hasCanonicalType(
-          arrayType(equalsBoundNode("type-of-array-of-pointers")))));
-  const auto ZeroLiteral = ignoringParenImpCasts(integerLiteral(equals(0)));
-  const auto ArrayOfSamePointersZeroSubscriptExpr =
-      ignoringParenImpCasts(arraySubscriptExpr(hasBase(ArrayOfSamePointersExpr),
-                                               hasIndex(ZeroLiteral)));
-  const auto ArrayLengthExprDenom =
-      expr(hasParent(expr(ignoringParenImpCasts(binaryOperator(
-               hasOperatorName("/"), hasLHS(ignoringParenImpCasts(sizeOfExpr(
-                                         has(ArrayOfPointersExpr)))))))),
-           sizeOfExpr(has(ArrayOfSamePointersZeroSubscriptExpr)));
+    const auto ArrayOfPointersExpr = ignoringParenImpCasts(
+        hasType(hasCanonicalType(arrayType(hasElementType(pointerType()))
+                                     .bind("type-of-array-of-pointers"))));
+    const auto ArrayOfSamePointersExpr =
+        ignoringParenImpCasts(hasType(hasCanonicalType(
+            arrayType(equalsBoundNode("type-of-array-of-pointers")))));
+    const auto ZeroLiteral = ignoringParenImpCasts(integerLiteral(equals(0)));
+    const auto ArrayOfSamePointersZeroSubscriptExpr =
+        ignoringParenImpCasts(arraySubscriptExpr(
+            hasBase(ArrayOfSamePointersExpr), hasIndex(ZeroLiteral)));
+    const auto ArrayLengthExprDenom =
+        expr(hasParent(expr(ignoringParenImpCasts(binaryOperator(
+                 hasOperatorName("/"), hasLHS(ignoringParenImpCasts(sizeOfExpr(
+                                           has(ArrayOfPointersExpr)))))))),
+             sizeOfExpr(has(ArrayOfSamePointersZeroSubscriptExpr)));
 
-  Finder->addMatcher(expr(anyOf(sizeOfExpr(has(ignoringParenImpCasts(anyOf(
-                                    ArrayCastExpr, PointerToArrayExpr,
-                                    StructAddrOfExpr, PointerToStructExpr)))),
-                                sizeOfExpr(has(PointerToStructType))),
-                          unless(ArrayLengthExprDenom))
-                         .bind("sizeof-pointer-to-aggregate"),
-                     this);
+    Finder->addMatcher(expr(anyOf(sizeOfExpr(has(ignoringParenImpCasts(anyOf(
+                                      ArrayCastExpr, PointerToArrayExpr,
+                                      StructAddrOfExpr, PointerToStructExpr)))),
+                                  sizeOfExpr(has(PointerToStructType))),
+                            unless(ArrayLengthExprDenom))
+                           .bind("sizeof-pointer-to-aggregate"),
+                       this);
+  }
 
   // Detect expression like: sizeof(expr) <= k for a suspicious constant 'k'.
   if (WarnOnSizeOfCompareToConstant) {

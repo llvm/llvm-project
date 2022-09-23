@@ -302,7 +302,7 @@ void benchmarkMain() {
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
-  InitializeNativeExegesisTarget();
+  InitializeAllExegesisTargets();
 
   const LLVMState State = ExitOnErr(LLVMState::Create("", CpuName));
 
@@ -411,10 +411,11 @@ static void analysisMain() {
         "and --analysis-inconsistencies-output-file must be specified");
   }
 
-  InitializeNativeTarget();
-  InitializeNativeTargetAsmPrinter();
-  InitializeNativeTargetDisassembler();
-  InitializeNativeExegesisTarget();
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+  InitializeAllDisassemblers();
+  InitializeAllExegesisTargets();
 
   auto MemoryBuffer = ExitOnFileError(
       BenchmarkFile,

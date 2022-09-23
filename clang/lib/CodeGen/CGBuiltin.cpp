@@ -2978,7 +2978,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Ordered comparisons: we know the arguments to these are matching scalar
     // floating point values.
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
-    // FIXME: for strictfp/IEEE-754 we need to not trap on SNaN here.
     Value *LHS = EmitScalarExpr(E->getArg(0));
     Value *RHS = EmitScalarExpr(E->getArg(1));
 
@@ -19187,22 +19186,8 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_clmul:
   case RISCV::BI__builtin_riscv_clmulh:
   case RISCV::BI__builtin_riscv_clmulr:
-  case RISCV::BI__builtin_riscv_bcompress_32:
-  case RISCV::BI__builtin_riscv_bcompress_64:
-  case RISCV::BI__builtin_riscv_bdecompress_32:
-  case RISCV::BI__builtin_riscv_bdecompress_64:
-  case RISCV::BI__builtin_riscv_bfp_32:
-  case RISCV::BI__builtin_riscv_bfp_64:
   case RISCV::BI__builtin_riscv_xperm4:
   case RISCV::BI__builtin_riscv_xperm8:
-  case RISCV::BI__builtin_riscv_crc32_b:
-  case RISCV::BI__builtin_riscv_crc32_h:
-  case RISCV::BI__builtin_riscv_crc32_w:
-  case RISCV::BI__builtin_riscv_crc32_d:
-  case RISCV::BI__builtin_riscv_crc32c_b:
-  case RISCV::BI__builtin_riscv_crc32c_h:
-  case RISCV::BI__builtin_riscv_crc32c_w:
-  case RISCV::BI__builtin_riscv_crc32c_d:
   case RISCV::BI__builtin_riscv_brev8:
   case RISCV::BI__builtin_riscv_zip_32:
   case RISCV::BI__builtin_riscv_unzip_32: {
@@ -19233,48 +19218,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_clmulr:
       ID = Intrinsic::riscv_clmulr;
-      break;
-
-    // Zbe
-    case RISCV::BI__builtin_riscv_bcompress_32:
-    case RISCV::BI__builtin_riscv_bcompress_64:
-      ID = Intrinsic::riscv_bcompress;
-      break;
-    case RISCV::BI__builtin_riscv_bdecompress_32:
-    case RISCV::BI__builtin_riscv_bdecompress_64:
-      ID = Intrinsic::riscv_bdecompress;
-      break;
-
-    // Zbf
-    case RISCV::BI__builtin_riscv_bfp_32:
-    case RISCV::BI__builtin_riscv_bfp_64:
-      ID = Intrinsic::riscv_bfp;
-      break;
-
-    // Zbr
-    case RISCV::BI__builtin_riscv_crc32_b:
-      ID = Intrinsic::riscv_crc32_b;
-      break;
-    case RISCV::BI__builtin_riscv_crc32_h:
-      ID = Intrinsic::riscv_crc32_h;
-      break;
-    case RISCV::BI__builtin_riscv_crc32_w:
-      ID = Intrinsic::riscv_crc32_w;
-      break;
-    case RISCV::BI__builtin_riscv_crc32_d:
-      ID = Intrinsic::riscv_crc32_d;
-      break;
-    case RISCV::BI__builtin_riscv_crc32c_b:
-      ID = Intrinsic::riscv_crc32c_b;
-      break;
-    case RISCV::BI__builtin_riscv_crc32c_h:
-      ID = Intrinsic::riscv_crc32c_h;
-      break;
-    case RISCV::BI__builtin_riscv_crc32c_w:
-      ID = Intrinsic::riscv_crc32c_w;
-      break;
-    case RISCV::BI__builtin_riscv_crc32c_d:
-      ID = Intrinsic::riscv_crc32c_d;
       break;
 
     // Zbkx

@@ -19,6 +19,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -107,6 +108,13 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
   const StringRef ShaderAttrKindStr = "hlsl.shader";
   Fn->addFnAttr(ShaderAttrKindStr,
                 ShaderAttr->ConvertShaderTypeToStr(ShaderAttr->getType()));
+  if (HLSLNumThreadsAttr *NumThreadsAttr = FD->getAttr<HLSLNumThreadsAttr>()) {
+    const StringRef NumThreadsKindStr = "hlsl.numthreads";
+    std::string NumThreadsStr =
+        formatv("{0},{1},{2}", NumThreadsAttr->getX(), NumThreadsAttr->getY(),
+                NumThreadsAttr->getZ());
+    Fn->addFnAttr(NumThreadsKindStr, NumThreadsStr);
+  }
 }
 
 llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
