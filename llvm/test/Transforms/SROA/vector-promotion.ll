@@ -628,19 +628,3 @@ entry:
   %add2 = add i32 %add, %add1
   ret i32 %add2
 }
-
-; This used to hit an assert after commit de3445e0ef15c4.
-; Added as regression test to verify that we handle this without crashing.
-define i1 @test15() {
-; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <2 x i64>, align 32
-; CHECK-NEXT:    store <2 x i64> <i64 0, i64 -1>, ptr [[A_SROA_0]], align 32
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load i1, ptr [[A_SROA_0]], align 32
-; CHECK-NEXT:    ret i1 [[A_SROA_0_0_A_SROA_0_0_L]]
-;
-  %a = alloca <8 x i32>
-  store <2 x i64> <i64 0, i64 -1>, ptr %a
-  %l = load i1, ptr %a, align 1
-  ret i1 %l
-
-}
