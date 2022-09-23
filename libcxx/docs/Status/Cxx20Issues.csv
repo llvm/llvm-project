@@ -241,7 +241,7 @@
 "`3316 <https://wg21.link/LWG3316>`__","Correctly define epoch for ``utc_clock``\  / ``utc_timepoint``\ ","Prague","","","|chrono|"
 "`3317 <https://wg21.link/LWG3317>`__","Incorrect ``operator<<``\  for floating-point durations","Prague","","","|chrono|"
 "`3318 <https://wg21.link/LWG3318>`__","Clarify whether clocks can represent time before their epoch","Prague","","","|chrono|"
-"`3319 <https://wg21.link/LWG3319>`__","Properly reference specification of IANA time zone database","Prague","","","|chrono|"
+"`3319 <https://wg21.link/LWG3319>`__","Properly reference specification of IANA time zone database","Prague","|Nothing To Do|","","|chrono|"
 "`3320 <https://wg21.link/LWG3320>`__","``span::cbegin/cend``\  methods produce different results than ``std::[ranges::]cbegin/cend``\ ","Prague","|Complete|",""
 "`3321 <https://wg21.link/LWG3321>`__","``uninitialized_construct_using_allocator``\  should use ``construct_at``\ ","Prague","|Complete|","16.0"
 "`3323 <https://wg21.link/LWG3323>`__","``*has-tuple-element*``\  helper concept needs ``convertible_to``\ ","Prague","|Complete|","16.0","|ranges|"

@@ -369,6 +369,13 @@ which no dialect declares as such (See the second form described above).
 * ``byteswap``
 * ``cbrt``
 * ``ceil``
+* ``chrono::tzdb_list::begin``
+* ``chrono::tzdb_list::cbegin``
+* ``chrono::tzdb_list::cend``
+* ``chrono::tzdb_list::end``
+* ``chrono::get_tzdb_list``
+* ``chrono::get_tzdb``
+* ``chrono::remote_version``
 * ``clamp``
 * ``copysign``
 * ``count_if``
