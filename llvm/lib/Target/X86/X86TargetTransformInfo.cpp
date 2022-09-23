@@ -288,9 +288,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   // Vector multiply by pow2 will be simplified to shifts.
-  if (ISD == ISD::MUL && Op2Info.isConstant() && Op2Info.isPowerOf2())
-    return getArithmeticInstrCost(Instruction::Shl, Ty, CostKind,
-                                  Op1Info.getNoProps(), Op2Info.getNoProps());
+  // Vector multiply by -pow2 will be simplified to shifts/negates.
+  if (ISD == ISD::MUL && Op2Info.isConstant() &&
+      (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2())) {
+    InstructionCost Cost =
+        getArithmeticInstrCost(Instruction::Shl, Ty, CostKind,
+                               Op1Info.getNoProps(), Op2Info.getNoProps());
+    if (Op2Info.isNegatedPowerOf2())
+      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind);
+    return Cost;
+  }
 
   // On X86, vector signed division by constants power-of-two are
   // normally expanded to the sequence SRA + SRL + ADD + SRA.
