@@ -2596,7 +2596,6 @@ cc_library(
     srcs = glob([
         "tools/llvm-exegesis/lib/*.cpp",
         "tools/llvm-exegesis/lib/AArch64/*.cpp",
-        "tools/llvm-exegesis/lib/Mips/*.cpp",
         "tools/llvm-exegesis/lib/PowerPC/*.cpp",
         "tools/llvm-exegesis/lib/X86/*.cpp",
         "tools/llvm-exegesis/lib/X86/*.h",
