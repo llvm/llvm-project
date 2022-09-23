@@ -1821,7 +1821,7 @@ protected:
              // When there are non-address bits the last range will not extend
              // to LLDB_INVALID_ADDRESS but to the max virtual address.
              // This prevents us looping forever if that is the case.
-             (abi && (abi->FixAnyAddress(addr) == addr))) {
+             (!abi || (abi->FixAnyAddress(addr) == addr))) {
         lldb_private::MemoryRegionInfo region_info;
         error = process_sp->GetMemoryRegionInfo(addr, region_info);
 
