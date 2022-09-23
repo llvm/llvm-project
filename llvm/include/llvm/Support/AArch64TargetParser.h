@@ -86,8 +86,8 @@ const ARM::ArchNames<ArchKind> AArch64ARCHNames[] = {
    sizeof(NAME) - 1,                                                           \
    CPU_ATTR,                                                                   \
    sizeof(CPU_ATTR) - 1,                                                       \
-   SUB_ARCH,                                                                   \
-   sizeof(SUB_ARCH) - 1,                                                       \
+   "+" SUB_ARCH,                                                               \
+   sizeof(SUB_ARCH),                                                           \
    ARM::FPUKind::ARCH_FPU,                                                     \
    ARCH_BASE_EXT,                                                              \
    AArch64::ArchKind::ID,                                                      \
