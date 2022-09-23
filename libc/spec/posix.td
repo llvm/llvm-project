@@ -211,6 +211,13 @@ def POSIX : StandardSpec<"POSIX"> {
              ArgSpec<OffTType>]
         >,
         FunctionSpec<
+            "mprotect",
+            RetValSpec<IntType>,
+            [ArgSpec<VoidPtr>,
+             ArgSpec<SizeTType>,
+             ArgSpec<IntType>]
+        >,
+        FunctionSpec<
             "munmap",
             RetValSpec<IntType>,
             [ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
