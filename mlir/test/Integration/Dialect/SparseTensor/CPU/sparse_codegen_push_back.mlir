@@ -1,3 +1,6 @@
+// FIXME: re-enable when sanitizer issue is resolved
+// UNSUPPORTED: asan
+//
 // RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=false | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
