@@ -24,6 +24,7 @@
 
 #include "PdbUtil.h"
 #include "UdtRecordCompleter.h"
+#include "SymbolFileNativePDB.h"
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;
@@ -94,59 +95,6 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
 };
 } // namespace
 
-static llvm::Optional<PdbCompilandSymId> FindSymbolScope(PdbIndex &index,
-                                                         PdbCompilandSymId id) {
-  CVSymbol sym = index.ReadSymbolRecord(id);
-  if (symbolOpensScope(sym.kind())) {
-    // If this exact symbol opens a scope, we can just directly access its
-    // parent.
-    id.offset = getScopeParentOffset(sym);
-    // Global symbols have parent offset of 0.  Return llvm::None to indicate
-    // this.
-    if (id.offset == 0)
-      return llvm::None;
-    return id;
-  }
-
-  // Otherwise we need to start at the beginning and iterate forward until we
-  // reach (or pass) this particular symbol
-  CompilandIndexItem &cii = index.compilands().GetOrCreateCompiland(id.modi);
-  const CVSymbolArray &syms = cii.m_debug_stream.getSymbolArray();
-
-  auto begin = syms.begin();
-  auto end = syms.at(id.offset);
-  std::vector<PdbCompilandSymId> scope_stack;
-
-  while (begin != end) {
-    if (begin.offset() > id.offset) {
-      // We passed it.  We couldn't even find this symbol record.
-      lldbassert(false && "Invalid compiland symbol id!");
-      return llvm::None;
-    }
-
-    // We haven't found the symbol yet.  Check if we need to open or close the
-    // scope stack.
-    if (symbolOpensScope(begin->kind())) {
-      // We can use the end offset of the scope to determine whether or not
-      // we can just outright skip this entire scope.
-      uint32_t scope_end = getScopeEndOffset(*begin);
-      if (scope_end < id.offset) {
-        begin = syms.at(scope_end);
-      } else {
-        // The symbol we're looking for is somewhere in this scope.
-        scope_stack.emplace_back(id.modi, begin.offset());
-      }
-    } else if (symbolEndsScope(begin->kind())) {
-      scope_stack.pop_back();
-    }
-    ++begin;
-  }
-  if (scope_stack.empty())
-    return llvm::None;
-  // We have a match!  Return the top of the stack
-  return scope_stack.back();
-}
-
 static clang::TagTypeKind TranslateUdtKind(const TagRecord &cr) {
   switch (cr.Kind) {
   case TypeRecordKind::Class:
@@ -207,65 +155,11 @@ TranslateCallingConvention(llvm::codeview::CallingConvention conv) {
   }
 }
 
-static llvm::Optional<CVTagRecord>
-GetNestedTagDefinition(const NestedTypeRecord &Record,
-                       const CVTagRecord &parent, TpiStream &tpi) {
-  // An LF_NESTTYPE is essentially a nested typedef / using declaration, but it
-  // is also used to indicate the primary definition of a nested class.  That is
-  // to say, if you have:
-  // struct A {
-  //   struct B {};
-  //   using C = B;
-  // };
-  // Then in the debug info, this will appear as:
-  // LF_STRUCTURE `A::B` [type index = N]
-  // LF_STRUCTURE `A`
-  //   LF_NESTTYPE [name = `B`, index = N]
-  //   LF_NESTTYPE [name = `C`, index = N]
-  // In order to accurately reconstruct the decl context hierarchy, we need to
-  // know which ones are actual definitions and which ones are just aliases.
-
-  // If it's a simple type, then this is something like `using foo = int`.
-  if (Record.Type.isSimple())
-    return llvm::None;
-
-  CVType cvt = tpi.getType(Record.Type);
-
-  if (!IsTagRecord(cvt))
-    return llvm::None;
-
-  // If it's an inner definition, then treat whatever name we have here as a
-  // single component of a mangled name.  So we can inject it into the parent's
-  // mangled name to see if it matches.
-  CVTagRecord child = CVTagRecord::create(cvt);
-  std::string qname = std::string(parent.asTag().getUniqueName());
-  if (qname.size() < 4 || child.asTag().getUniqueName().size() < 4)
-    return llvm::None;
-
-  // qname[3] is the tag type identifier (struct, class, union, etc).  Since the
-  // inner tag type is not necessarily the same as the outer tag type, re-write
-  // it to match the inner tag type.
-  qname[3] = child.asTag().getUniqueName()[3];
-  std::string piece;
-  if (qname[3] == 'W')
-    piece = "4";
-  piece += Record.Name;
-  piece.push_back('@');
-  qname.insert(4, std::move(piece));
-  if (qname != child.asTag().UniqueName)
-    return llvm::None;
-
-  return std::move(child);
-}
-
 static bool IsAnonymousNamespaceName(llvm::StringRef name) {
   return name == "`anonymous namespace'" || name == "`anonymous-namespace'";
 }
 
-PdbAstBuilder::PdbAstBuilder(ObjectFile &obj, PdbIndex &index, TypeSystemClang &clang)
-    : m_index(index), m_clang(clang) {
-  BuildParentMap();
-}
+PdbAstBuilder::PdbAstBuilder(TypeSystemClang &clang) : m_clang(clang) {}
 
 lldb_private::CompilerDeclContext PdbAstBuilder::GetTranslationUnitDecl() {
   return ToCompilerDeclContext(*m_clang.GetTranslationUnitDecl());
@@ -273,6 +167,8 @@ lldb_private::CompilerDeclContext PdbAstBuilder::GetTranslationUnitDecl() {
 
 std::pair<clang::DeclContext *, std::string>
 PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
   // FIXME: Move this to GetDeclContextContainingUID.
   if (!record.hasUniqueName())
     return CreateDeclInfoForUndecoratedName(record.Name);
@@ -297,8 +193,8 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
   // If this type doesn't have a parent type in the debug info, then the best we
   // can do is to say that it's either a series of namespaces (if the scope is
   // non-empty), or the translation unit (if the scope is empty).
-  auto parent_iter = m_parent_types.find(ti);
-  if (parent_iter == m_parent_types.end()) {
+  llvm::Optional<TypeIndex> parent_index = pdb->GetParentType(ti);
+  if (!parent_index) {
     if (scopes.empty())
       return {context, uname};
 
@@ -322,126 +218,12 @@ PdbAstBuilder::CreateDeclInfoForType(const TagRecord &record, TypeIndex ti) {
   // recurse into our lazy type creation / AST reconstruction logic to get an
   // LLDB TypeSP for the parent.  This will cause the AST to automatically get
   // the right DeclContext created for any parent.
-  clang::QualType parent_qt = GetOrCreateType(parent_iter->second);
+  clang::QualType parent_qt = GetOrCreateType(*parent_index);
   if (parent_qt.isNull())
     return {nullptr, ""};
 
   context = clang::TagDecl::castToDeclContext(parent_qt->getAsTagDecl());
   return {context, uname};
-}
-
-void PdbAstBuilder::BuildParentMap() {
-  LazyRandomTypeCollection &types = m_index.tpi().typeCollection();
-
-  llvm::DenseMap<TypeIndex, TypeIndex> forward_to_full;
-  llvm::DenseMap<TypeIndex, TypeIndex> full_to_forward;
-
-  struct RecordIndices {
-    TypeIndex forward;
-    TypeIndex full;
-  };
-
-  llvm::StringMap<RecordIndices> record_indices;
-
-  for (auto ti = types.getFirst(); ti; ti = types.getNext(*ti)) {
-    CVType type = types.getType(*ti);
-    if (!IsTagRecord(type))
-      continue;
-
-    CVTagRecord tag = CVTagRecord::create(type);
-
-    RecordIndices &indices = record_indices[tag.asTag().getUniqueName()];
-    if (tag.asTag().isForwardRef())
-      indices.forward = *ti;
-    else
-      indices.full = *ti;
-
-    if (indices.full != TypeIndex::None() &&
-        indices.forward != TypeIndex::None()) {
-      forward_to_full[indices.forward] = indices.full;
-      full_to_forward[indices.full] = indices.forward;
-    }
-
-    // We're looking for LF_NESTTYPE records in the field list, so ignore
-    // forward references (no field list), and anything without a nested class
-    // (since there won't be any LF_NESTTYPE records).
-    if (tag.asTag().isForwardRef() || !tag.asTag().containsNestedClass())
-      continue;
-
-    struct ProcessTpiStream : public TypeVisitorCallbacks {
-      ProcessTpiStream(PdbIndex &index, TypeIndex parent,
-                       const CVTagRecord &parent_cvt,
-                       llvm::DenseMap<TypeIndex, TypeIndex> &parents)
-          : index(index), parents(parents), parent(parent),
-            parent_cvt(parent_cvt) {}
-
-      PdbIndex &index;
-      llvm::DenseMap<TypeIndex, TypeIndex> &parents;
-
-      unsigned unnamed_type_index = 1;
-      TypeIndex parent;
-      const CVTagRecord &parent_cvt;
-
-      llvm::Error visitKnownMember(CVMemberRecord &CVR,
-                                   NestedTypeRecord &Record) override {
-        std::string unnamed_type_name;
-        if (Record.Name.empty()) {
-          unnamed_type_name =
-              llvm::formatv("<unnamed-type-$S{0}>", unnamed_type_index).str();
-          Record.Name = unnamed_type_name;
-          ++unnamed_type_index;
-        }
-        llvm::Optional<CVTagRecord> tag =
-            GetNestedTagDefinition(Record, parent_cvt, index.tpi());
-        if (!tag)
-          return llvm::ErrorSuccess();
-
-        parents[Record.Type] = parent;
-        return llvm::ErrorSuccess();
-      }
-    };
-
-    CVType field_list_cvt = m_index.tpi().getType(tag.asTag().FieldList);
-    ProcessTpiStream process(m_index, *ti, tag, m_parent_types);
-    FieldListRecord field_list;
-    if (llvm::Error error = TypeDeserializer::deserializeAs<FieldListRecord>(
-            field_list_cvt, field_list))
-      llvm::consumeError(std::move(error));
-    if (llvm::Error error = visitMemberRecordStream(field_list.Data, process))
-      llvm::consumeError(std::move(error));
-  }
-
-  // Now that we know the forward -> full mapping of all type indices, we can
-  // re-write all the indices.  At the end of this process, we want a mapping
-  // consisting of fwd -> full and full -> full for all child -> parent indices.
-  // We can re-write the values in place, but for the keys, we must save them
-  // off so that we don't modify the map in place while also iterating it.
-  std::vector<TypeIndex> full_keys;
-  std::vector<TypeIndex> fwd_keys;
-  for (auto &entry : m_parent_types) {
-    TypeIndex key = entry.first;
-    TypeIndex value = entry.second;
-
-    auto iter = forward_to_full.find(value);
-    if (iter != forward_to_full.end())
-      entry.second = iter->second;
-
-    iter = forward_to_full.find(key);
-    if (iter != forward_to_full.end())
-      fwd_keys.push_back(key);
-    else
-      full_keys.push_back(key);
-  }
-  for (TypeIndex fwd : fwd_keys) {
-    TypeIndex full = forward_to_full[fwd];
-    m_parent_types[full] = m_parent_types[fwd];
-  }
-  for (TypeIndex full : full_keys) {
-    TypeIndex fwd = full_to_forward[full];
-    m_parent_types[fwd] = m_parent_types[full];
-  }
-
-  // Now that
 }
 
 static bool isLocalVariableType(SymbolKind K) {
@@ -457,7 +239,10 @@ static bool isLocalVariableType(SymbolKind K) {
 }
 
 clang::Decl *PdbAstBuilder::GetOrCreateSymbolForId(PdbCompilandSymId id) {
-  CVSymbol cvs = m_index.ReadSymbolRecord(id);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVSymbol cvs = index.ReadSymbolRecord(id);
 
   if (isLocalVariableType(cvs.kind())) {
     clang::DeclContext *scope = GetParentDeclContext(id);
@@ -534,6 +319,9 @@ clang::DeclContext *PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
 
 std::pair<clang::DeclContext *, std::string>
 PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
   MSVCUndecoratedNameParser parser(name);
   llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
 
@@ -547,7 +335,7 @@ PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
   llvm::StringRef scope_name = specs.back().GetFullName();
 
   // It might be a class name, try that first.
-  std::vector<TypeIndex> types = m_index.tpi().findRecordsByName(scope_name);
+  std::vector<TypeIndex> types = index.tpi().findRecordsByName(scope_name);
   while (!types.empty()) {
     clang::QualType qt = GetOrCreateType(types.back());
     if (qt.isNull())
@@ -569,24 +357,27 @@ PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
 clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
   // We must do this *without* calling GetOrCreate on the current uid, as
   // that would be an infinite recursion.
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex& index = pdb->GetIndex();
   switch (uid.kind()) {
   case PdbSymUidKind::CompilandSym: {
     llvm::Optional<PdbCompilandSymId> scope =
-        FindSymbolScope(m_index, uid.asCompilandSym());
+        pdb->FindSymbolScope(uid.asCompilandSym());
     if (scope)
       return GetOrCreateDeclContextForUid(*scope);
 
-    CVSymbol sym = m_index.ReadSymbolRecord(uid.asCompilandSym());
+    CVSymbol sym = index.ReadSymbolRecord(uid.asCompilandSym());
     return CreateDeclInfoForUndecoratedName(getSymbolName(sym)).first;
   }
   case PdbSymUidKind::Type: {
     // It could be a namespace, class, or global.  We don't support nested
     // functions yet.  Anyway, we just need to consult the parent type map.
     PdbTypeSymId type_id = uid.asTypeSym();
-    auto iter = m_parent_types.find(type_id.index);
-    if (iter == m_parent_types.end())
+    llvm::Optional<TypeIndex> parent_index = pdb->GetParentType(type_id.index);
+    if (!parent_index)
       return FromCompilerDeclContext(GetTranslationUnitDecl());
-    return GetOrCreateDeclContextForUid(PdbTypeSymId(iter->second));
+    return GetOrCreateDeclContextForUid(PdbTypeSymId(*parent_index));
   }
   case PdbSymUidKind::FieldListMember:
     // In this case the parent DeclContext is the one for the class that this
@@ -599,7 +390,7 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
     // that up in the TPI stream.  If it's found, it's a type, othewrise it's
     // a series of namespaces.
     // FIXME: do this.
-    CVSymbol global = m_index.ReadSymbolRecord(uid.asGlobalSym());
+    CVSymbol global = index.ReadSymbolRecord(uid.asGlobalSym());
     switch (global.kind()) {
     case SymbolKind::S_GDATA32:
     case SymbolKind::S_LDATA32:
@@ -651,19 +442,21 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
     return true;
 
   PdbTypeSymId type_id = PdbSymUid(status.uid).asTypeSym();
-
-  lldbassert(IsTagRecord(type_id, m_index.tpi()));
+  PdbIndex &index = static_cast<SymbolFileNativePDB *>(
+                        m_clang.GetSymbolFile()->GetBackingSymbolFile())
+                        ->GetIndex();
+  lldbassert(IsTagRecord(type_id, index.tpi()));
 
   clang::QualType tag_qt = m_clang.getASTContext().getTypeDeclType(&tag);
   TypeSystemClang::SetHasExternalStorage(tag_qt.getAsOpaquePtr(), false);
 
   TypeIndex tag_ti = type_id.index;
-  CVType cvt = m_index.tpi().getType(tag_ti);
+  CVType cvt = index.tpi().getType(tag_ti);
   if (cvt.kind() == LF_MODIFIER)
     tag_ti = LookThroughModifierRecord(cvt);
 
-  PdbTypeSymId best_ti = GetBestPossibleDecl(tag_ti, m_index.tpi());
-  cvt = m_index.tpi().getType(best_ti.index);
+  PdbTypeSymId best_ti = GetBestPossibleDecl(tag_ti, index.tpi());
+  cvt = index.tpi().getType(best_ti.index);
   lldbassert(IsTagRecord(cvt));
 
   if (IsForwardRefUdt(cvt)) {
@@ -673,7 +466,7 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
   }
 
   TypeIndex field_list_ti = GetFieldListIndex(cvt);
-  CVType field_list_cvt = m_index.tpi().getType(field_list_ti);
+  CVType field_list_cvt = index.tpi().getType(field_list_ti);
   if (field_list_cvt.kind() != LF_FIELDLIST)
     return false;
   FieldListRecord field_list;
@@ -684,7 +477,7 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
   // Visit all members of this class, then perform any finalization necessary
   // to complete the class.
   CompilerType ct = ToCompilerType(tag_qt);
-  UdtRecordCompleter completer(best_ti, ct, tag, *this, m_index,
+  UdtRecordCompleter completer(best_ti, ct, tag, *this, index,
                                m_cxx_record_map);
   llvm::Error error =
       llvm::codeview::visitMemberRecordStream(field_list.Data, completer);
@@ -900,7 +693,10 @@ PdbAstBuilder::GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
   if (!scope)
     return nullptr;
 
-  CVSymbol sym = m_index.ReadSymbolRecord(var_id);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVSymbol sym = index.ReadSymbolRecord(var_id);
   return CreateVariableDecl(PdbSymUid(var_id), sym, *scope);
 }
 
@@ -908,7 +704,10 @@ clang::VarDecl *PdbAstBuilder::GetOrCreateVariableDecl(PdbGlobalSymId var_id) {
   if (clang::Decl *decl = TryGetDecl(var_id))
     return llvm::dyn_cast<clang::VarDecl>(decl);
 
-  CVSymbol sym = m_index.ReadSymbolRecord(var_id);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVSymbol sym = index.ReadSymbolRecord(var_id);
   auto context = FromCompilerDeclContext(GetTranslationUnitDecl());
   return CreateVariableDecl(PdbSymUid(var_id), sym, *context);
 }
@@ -918,7 +717,10 @@ PdbAstBuilder::GetOrCreateTypedefDecl(PdbGlobalSymId id) {
   if (clang::Decl *decl = TryGetDecl(id))
     return llvm::dyn_cast<clang::TypedefNameDecl>(decl);
 
-  CVSymbol sym = m_index.ReadSymbolRecord(id);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVSymbol sym = index.ReadSymbolRecord(id);
   lldbassert(sym.kind() == S_UDT);
   UDTSym udt = llvm::cantFail(SymbolDeserializer::deserializeAs<UDTSym>(sym));
 
@@ -950,7 +752,10 @@ clang::QualType PdbAstBuilder::CreateType(PdbTypeSymId type) {
   if (type.index.isSimple())
     return CreateSimpleType(type.index);
 
-  CVType cvt = m_index.tpi().getType(type.index);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVType cvt = index.tpi().getType(type.index);
 
   if (cvt.kind() == LF_MODIFIER) {
     ModifierRecord modifier;
@@ -1006,7 +811,10 @@ clang::QualType PdbAstBuilder::GetOrCreateType(PdbTypeSymId type) {
   if (iter != m_uid_to_type.end())
     return iter->second;
 
-  PdbTypeSymId best_type = GetBestPossibleDecl(type, m_index.tpi());
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  PdbTypeSymId best_type = GetBestPossibleDecl(type, index.tpi());
 
   clang::QualType qt;
   if (best_type.index != type.index) {
@@ -1026,7 +834,7 @@ clang::QualType PdbAstBuilder::GetOrCreateType(PdbTypeSymId type) {
     return {};
 
   m_uid_to_type[toOpaqueUid(type)] = qt;
-  if (IsTagRecord(type, m_index.tpi())) {
+  if (IsTagRecord(type, index.tpi())) {
     clang::TagDecl *tag = qt->getAsTagDecl();
     lldbassert(m_decl_to_status.count(tag) == 0);
 
@@ -1045,6 +853,9 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
                                   bool is_inline, clang::DeclContext *parent) {
   clang::FunctionDecl *function_decl = nullptr;
   if (parent->isRecord()) {
+    SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+        m_clang.GetSymbolFile()->GetBackingSymbolFile());
+    PdbIndex &index = pdb->GetIndex();
     clang::QualType parent_qt = llvm::cast<clang::TypeDecl>(parent)
                                     ->getTypeForDecl()
                                     ->getCanonicalTypeInternal();
@@ -1058,29 +869,29 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
       }
     }
 
-    CVType cvt = m_index.tpi().getType(func_ti);
+    CVType cvt = index.tpi().getType(func_ti);
     MemberFunctionRecord func_record(static_cast<TypeRecordKind>(cvt.kind()));
     llvm::cantFail(TypeDeserializer::deserializeAs<MemberFunctionRecord>(
         cvt, func_record));
     TypeIndex class_index = func_record.getClassType();
 
-    CVType parent_cvt = m_index.tpi().getType(class_index);
+    CVType parent_cvt = index.tpi().getType(class_index);
     TagRecord tag_record = CVTagRecord::create(parent_cvt).asTag();
     // If it's a forward reference, try to get the real TypeIndex.
     if (tag_record.isForwardRef()) {
       llvm::Expected<TypeIndex> eti =
-          m_index.tpi().findFullDeclForForwardRef(class_index);
+          index.tpi().findFullDeclForForwardRef(class_index);
       if (eti) {
-        tag_record = CVTagRecord::create(m_index.tpi().getType(*eti)).asTag();
+        tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
       }
     }
     if (!tag_record.FieldList.isSimple()) {
-      CVType field_list_cvt = m_index.tpi().getType(tag_record.FieldList);
+      CVType field_list_cvt = index.tpi().getType(tag_record.FieldList);
       FieldListRecord field_list;
       if (llvm::Error error = TypeDeserializer::deserializeAs<FieldListRecord>(
               field_list_cvt, field_list))
         llvm::consumeError(std::move(error));
-      CreateMethodDecl process(m_index, m_clang, func_ti, function_decl,
+      CreateMethodDecl process(index, m_clang, func_ti, function_decl,
                                parent_opaque_ty, func_name, func_ct);
       if (llvm::Error err = visitMemberRecordStream(field_list.Data, process))
         llvm::consumeError(std::move(err));
@@ -1107,8 +918,11 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
 
 clang::FunctionDecl *
 PdbAstBuilder::GetOrCreateInlinedFunctionDecl(PdbCompilandSymId inlinesite_id) {
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
   CompilandIndexItem *cii =
-      m_index.compilands().GetCompiland(inlinesite_id.modi);
+      index.compilands().GetCompiland(inlinesite_id.modi);
   CVSymbol sym = cii->m_debug_stream.readSymbolAtOffset(inlinesite_id.offset);
   InlineSiteSym inline_site(static_cast<SymbolRecordKind>(sym.kind()));
   cantFail(SymbolDeserializer::deserializeAs<InlineSiteSym>(sym, inline_site));
@@ -1145,7 +959,10 @@ clang::FunctionDecl *
 PdbAstBuilder::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
                                         PdbCompilandSymId func_sid) {
   lldbassert(func_tid.is_ipi);
-  CVType func_cvt = m_index.ipi().getType(func_tid.index);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVType func_cvt = index.ipi().getType(func_tid.index);
   llvm::StringRef func_name;
   TypeIndex func_ti;
   clang::DeclContext *parent = nullptr;
@@ -1167,7 +984,7 @@ PdbAstBuilder::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
     func_ti = fir.getFunctionType();
     parent = FromCompilerDeclContext(GetTranslationUnitDecl());
     if (!fir.ParentScope.isNoneType()) {
-      CVType parent_cvt = m_index.ipi().getType(fir.ParentScope);
+      CVType parent_cvt = index.ipi().getType(fir.ParentScope);
       if (parent_cvt.kind() == LF_STRING_ID) {
         StringIdRecord sir;
         cantFail(
@@ -1205,7 +1022,10 @@ PdbAstBuilder::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
     context_name = tag->getQualifiedNameAsString();
   }
 
-  CVSymbol cvs = m_index.ReadSymbolRecord(func_id);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVSymbol cvs = index.ReadSymbolRecord(func_id);
   ProcSym proc(static_cast<SymbolRecordKind>(cvs.kind()));
   llvm::cantFail(SymbolDeserializer::deserializeAs<ProcSym>(cvs, proc));
 
@@ -1245,7 +1065,10 @@ PdbAstBuilder::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
 void PdbAstBuilder::CreateFunctionParameters(PdbCompilandSymId func_id,
                                              clang::FunctionDecl &function_decl,
                                              uint32_t param_count) {
-  CompilandIndexItem *cii = m_index.compilands().GetCompiland(func_id.modi);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CompilandIndexItem *cii = index.compilands().GetCompiland(func_id.modi);
   CVSymbolArray scope =
       cii->m_debug_stream.getSymbolArrayForScope(func_id.offset);
 
@@ -1340,7 +1163,10 @@ clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
 clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
   clang::QualType element_type = GetOrCreateType(ar.ElementType);
 
-  uint64_t element_size = GetSizeOfType({ar.ElementType}, m_index.tpi());
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  uint64_t element_size = GetSizeOfType({ar.ElementType}, index.tpi());
   if (element_type.isNull() || element_size == 0)
     return {};
   uint64_t element_count = ar.Size / element_size;
@@ -1353,7 +1179,10 @@ clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
 clang::QualType PdbAstBuilder::CreateFunctionType(
     TypeIndex args_type_idx, TypeIndex return_type_idx,
     llvm::codeview::CallingConvention calling_convention) {
-  TpiStream &stream = m_index.tpi();
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  TpiStream &stream = index.tpi();
   CVType args_cvt = stream.getType(args_type_idx);
   ArgListRecord args;
   llvm::cantFail(
@@ -1405,8 +1234,11 @@ static bool isBlockDecl(clang::DeclContext &context) {
 
 void PdbAstBuilder::ParseAllNamespacesPlusChildrenOf(
     llvm::Optional<llvm::StringRef> parent) {
-  TypeIndex ti{m_index.tpi().TypeIndexBegin()};
-  for (const CVType &cvt : m_index.tpi().typeArray()) {
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  TypeIndex ti{index.tpi().TypeIndexBegin()};
+  for (const CVType &cvt : index.tpi().typeArray()) {
     PdbTypeSymId tid{ti};
     ++ti;
 
@@ -1439,9 +1271,9 @@ void PdbAstBuilder::ParseAllNamespacesPlusChildrenOf(
     }
   }
 
-  uint32_t module_count = m_index.dbi().modules().getModuleCount();
+  uint32_t module_count = index.dbi().modules().getModuleCount();
   for (uint16_t modi = 0; modi < module_count; ++modi) {
-    CompilandIndexItem &cii = m_index.compilands().GetOrCreateCompiland(modi);
+    CompilandIndexItem &cii = index.compilands().GetOrCreateCompiland(modi);
     const CVSymbolArray &symbols = cii.m_debug_stream.getSymbolArray();
     auto iter = symbols.begin();
     while (iter != symbols.end()) {
@@ -1495,11 +1327,14 @@ static CVSymbolArray skipFunctionParameters(clang::Decl &decl,
 }
 
 void PdbAstBuilder::ParseBlockChildren(PdbCompilandSymId block_id) {
-  CVSymbol sym = m_index.ReadSymbolRecord(block_id);
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+  CVSymbol sym = index.ReadSymbolRecord(block_id);
   lldbassert(sym.kind() == S_GPROC32 || sym.kind() == S_LPROC32 ||
              sym.kind() == S_BLOCK32 || sym.kind() == S_INLINESITE);
   CompilandIndexItem &cii =
-      m_index.compilands().GetOrCreateCompiland(block_id.modi);
+      index.compilands().GetOrCreateCompiland(block_id.modi);
   CVSymbolArray symbols =
       cii.m_debug_stream.getSymbolArrayForScope(block_id.offset);
 
