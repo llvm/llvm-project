@@ -18,8 +18,10 @@
 
 using namespace llvm;
 
-llvm::cl::opt<bool> YkNoFallThrough(
-    "yk-no-fallthrough", cl::Hidden, cl::init(false),
+bool YkNoFallThrough;
+llvm::cl::opt<bool, true> YkNoFallThroughParser(
+    "yk-no-fallthrough", cl::Hidden, cl::location(YkNoFallThrough),
+    cl::init(false),
     cl::desc("Always emit a branch even if fallthrough is possible. This "
              "is required for the yk JIT, so that the machine IR has the "
              "same block structure as the high-level IR"));

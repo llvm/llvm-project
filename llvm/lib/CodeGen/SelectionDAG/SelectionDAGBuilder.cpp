@@ -129,7 +129,7 @@ static cl::opt<unsigned> SwitchPeelThreshold(
              "switch statement. A value greater than 100 will void this "
              "optimization"));
 
-extern cl::opt<bool> YkNoFallThrough;
+extern bool YkNoFallThrough;
 
 // Limit the width of DAG chains. This is important in general to prevent
 // DAG-based analysis from blowing up. For example, alias analysis and

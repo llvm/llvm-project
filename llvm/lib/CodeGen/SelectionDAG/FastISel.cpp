@@ -110,7 +110,7 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-extern cl::opt<bool> YkNoFallThrough;
+extern bool YkNoFallThrough;
 
 #define DEBUG_TYPE "isel"
 
