@@ -2605,13 +2605,9 @@ cc_library(
         for t in llvm_target_exegesis
     ]),
     hdrs = glob(["tools/llvm-exegesis/lib/*.h"]),
-    copts = llvm_copts + ["-DHAVE_LIBPFM=1"],
+    copts = llvm_copts,
     features = ["-header_modules"],
     strip_include_prefix = "tools/llvm-exegesis/lib",
-    tags = [
-        "manual",  # External dependency (libpfm4)
-        "nobuildkite",  # TODO(chandlerc): Add support for fetching and building libpfm4 and enable this.
-    ],
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -3082,13 +3078,8 @@ cc_binary(
     srcs = [
         "tools/llvm-exegesis/llvm-exegesis.cpp",
     ],
-    copts = llvm_copts + ["-DHAVE_LIBPFM=0"],
-    linkopts = ["-lpfm"],
+    copts = llvm_copts,
     stamp = 0,
-    tags = [
-        "manual",  # External dependency (libpfm4 through Exegesis)
-        "nobuildkite",  # TODO(chandlerc): Enable when the library builds.
-    ],
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
