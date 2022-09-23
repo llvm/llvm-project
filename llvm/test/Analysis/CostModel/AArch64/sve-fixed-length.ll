@@ -60,9 +60,8 @@ define void @add() #0 {
 
 ; Assuming base_cost = 2
 ; Assuming legalization_cost = (vec_len-1/VBITS)+1
-; Assuming extra cost of 8 for i8.
-; Assuming extra cost of 4 for i16.
-; The hard-coded expected cost is based on VBITS=128
+; For fixed-length vectors >= 128, if element type is i8, multiply the cost by 8.
+; For fixed-length vectors >= 128, if element type is i16, multiply the cost by 4.
 define void @sdiv() #0 {
 ; CHECK-LABEL: function 'sdiv'
 
@@ -110,9 +109,8 @@ define void @sdiv() #0 {
 
 ; Assuming base_cost = 2
 ; Assuming legalization_cost = (vec_len-1/VBITS)+1
-; Assuming extra cost of 8 for i8.
-; Assuming extra cost of 4 for i16.
-; The hard-coded expected cost is based on VBITS=128
+; For fixed-length vectors >= 128, if element type is i8, multiply the cost by 8.
+; For fixed-length vectors >= 128, if element type is i16, multiply the cost by 4.
 define void @udiv() #0 {
 ; CHECK-LABEL: function 'udiv'
 
