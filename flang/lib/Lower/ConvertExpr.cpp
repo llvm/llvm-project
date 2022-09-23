@@ -3856,6 +3856,9 @@ public:
     // FIXME: If the lhs is in an explicit iteration space, the assignment may
     // be to an array of allocatable arrays rather than a single allocatable
     // array.
+    if (explicitSpaceIsActive() && lhs.Rank() > 0)
+      TODO(loc, "assignment to whole allocatable array inside FORALL");
+
     fir::MutableBoxValue mutableBox =
         Fortran::lower::createMutableBox(loc, converter, lhs, symMap);
     if (rhs.Rank() > 0)
@@ -7174,7 +7177,9 @@ private:
         if (components.hasExtendCoorRef()) {
           auto eleBoxTy =
               fir::applyPathToType(innerArg.getType(), iters.iterVec());
-          assert(eleBoxTy && eleBoxTy.isa<fir::BoxType>());
+          if (!eleBoxTy || !eleBoxTy.isa<fir::BoxType>())
+            TODO(loc, "assignment in a FORALL involving a designator with a "
+                      "POINTER or ALLOCATABLE component part-ref");
           auto arrayOp = builder.create<fir::ArrayAccessOp>(
               loc, builder.getRefType(eleBoxTy), innerArg, iters.iterVec(),
               fir::factory::getTypeParams(loc, builder, load));
@@ -7245,7 +7250,9 @@ private:
       }
       if (components.hasExtendCoorRef()) {
         auto eleBoxTy = fir::applyPathToType(load.getType(), iters.iterVec());
-        assert(eleBoxTy && eleBoxTy.isa<fir::BoxType>());
+        if (!eleBoxTy || !eleBoxTy.isa<fir::BoxType>())
+          TODO(loc, "assignment in a FORALL involving a designator with a "
+                    "POINTER or ALLOCATABLE component part-ref");
         auto access = builder.create<fir::ArrayAccessOp>(
             loc, builder.getRefType(eleBoxTy), load, iters.iterVec(),
             fir::factory::getTypeParams(loc, builder, load));
