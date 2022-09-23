@@ -728,9 +728,9 @@ defm FLAT_ATOMIC_FMAX        : FLAT_Atomic_Pseudo <"flat_atomic_fmax",
 } // End SubtargetPredicate = isGFX7GFX10GFX11
 
 // GFX940-, GFX11-only flat instructions.
-let SubtargetPredicate = isGFX940GFX11Plus in {
+let SubtargetPredicate = HasFlatAtomicFaddF32Inst in {
   defm FLAT_ATOMIC_ADD_F32       : FLAT_Atomic_Pseudo<"flat_atomic_add_f32",     VGPR_32, f32>;
-} // End SubtargetPredicate = isGFX940GFX11Plus
+} // End SubtargetPredicate = HasFlatAtomicFaddF32Inst
 
 defm GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
 defm GLOBAL_LOAD_SBYTE    : FLAT_Global_Load_Pseudo <"global_load_sbyte", VGPR_32>;
@@ -1476,10 +1476,13 @@ defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_MIN_F64", "int_amdgcn_flat_atomic_f
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_MAX_F64", "int_amdgcn_flat_atomic_fmax", f64>;
 }
 
+let OtherPredicates = [HasFlatAtomicFaddF32Inst] in {
+defm : FlatSignedAtomicPat <"FLAT_ATOMIC_ADD_F32", "atomic_load_fadd_flat", f32>;
+defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_ADD_F32", "int_amdgcn_flat_atomic_fadd", f32>;
+}
+
 let OtherPredicates = [isGFX940Plus] in {
-defm : FlatSignedAtomicPat <"FLAT_ATOMIC_ADD_F32",    "atomic_load_fadd_flat",       f32>;
 defm : FlatSignedAtomicPat <"FLAT_ATOMIC_PK_ADD_F16", "atomic_load_fadd_v2f16_flat", v2f16>;
-defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_ADD_F32",     "int_amdgcn_flat_atomic_fadd",        f32>;
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_PK_ADD_F16",  "int_amdgcn_flat_atomic_fadd",        v2f16>;
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_PK_ADD_BF16", "int_amdgcn_flat_atomic_fadd_v2bf16", v2i16>;
 defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "int_amdgcn_global_atomic_fadd_v2bf16", v2i16>;
