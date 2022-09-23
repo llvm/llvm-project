@@ -1830,9 +1830,6 @@ protected:
           addr = region_info.GetRange().GetRangeEnd();
         }
       }
-
-      // Even if we read nothing, don't error for --all
-      error.Clear();
     } else {
       lldb_private::MemoryRegionInfo region_info;
       error = process_sp->GetMemoryRegionInfo(load_addr, region_info);
