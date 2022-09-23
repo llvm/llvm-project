@@ -103,7 +103,7 @@ public:
       lldb_private::SymbolContextList &sc_list) override;
 
   lldb_private::Status
-  GetFrameVariableError(lldb_private::StackFrame &frame) override;
+  CalculateFrameVariableError(lldb_private::StackFrame &frame) override;
 
   void
   FindGlobalVariables(lldb_private::ConstString name,
