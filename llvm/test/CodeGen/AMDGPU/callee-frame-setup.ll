@@ -218,7 +218,7 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 
 ; GCN-LABEL: {{^}}spill_only_csr_sgpr:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_or_saveexec_b64
+; GCN-NEXT: s_xor_saveexec_b64
 ; MUBUF-NEXT: buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; FLATSCR-NEXT: scratch_store_dword off, v0, s32 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec,
@@ -227,7 +227,7 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 ; GCN-NEXT: ; clobber s42
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: v_readlane_b32 s42, v0, 0
-; GCN-NEXT: s_or_saveexec_b64
+; GCN-NEXT: s_xor_saveexec_b64
 ; MUBUF-NEXT: buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; FLATSCR-NEXT: scratch_load_dword v0, off, s32 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec,
@@ -273,7 +273,7 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; Use a copy to a free SGPR instead of introducing a second CSR VGPR.
 ; GCN-LABEL: {{^}}last_lane_vgpr_for_fp_csr:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GCN-NEXT: s_xor_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF-NEXT:   buffer_store_dword [[CSR_VGPR:v[0-9]+]], off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; FLATSCR-NEXT: scratch_store_dword off, [[CSR_VGPR:v[0-9]+]], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
@@ -294,7 +294,7 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; FLATSCR:      s_add_i32 s32, s32, 16
 ; FLATSCR:      s_add_i32 s32, s32, -16
 ; GCN-NEXT: s_mov_b32 s33, [[TMP_SGPR]]
-; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GCN-NEXT: s_xor_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF-NEXT:   buffer_load_dword [[CSR_VGPR]], off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; FLATSCR-NEXT: scratch_load_dword [[CSR_VGPR]], off, s32 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
@@ -319,7 +319,7 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; Use a copy to a free SGPR instead of introducing a second CSR VGPR.
 ; GCN-LABEL: {{^}}no_new_vgpr_for_fp_csr:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GCN-NEXT: s_xor_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF-NEXT:   buffer_store_dword [[CSR_VGPR:v[0-9]+]], off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; FLATSCR-NEXT: scratch_store_dword off, [[CSR_VGPR:v[0-9]+]], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
@@ -343,7 +343,7 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; MUBUF-NEXT:   s_addk_i32 s32, 0xfc00
 ; FLATSCR-NEXT: s_add_i32 s32, s32, -16
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
-; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GCN-NEXT: s_xor_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF-NEXT:   buffer_load_dword [[CSR_VGPR]], off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; FLATSCR-NEXT: scratch_load_dword [[CSR_VGPR]], off, s32 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
@@ -393,7 +393,7 @@ define void @realign_stack_no_fp_elim() #1 {
 
 ; GCN-LABEL: {{^}}no_unused_non_csr_sgpr_for_fp:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GCN-NEXT: s_xor_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF-NEXT:   buffer_store_dword [[CSR_VGPR:v[0-9]+]], off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; FLATSCR-NEXT: scratch_store_dword off, [[CSR_VGPR:v[0-9]+]], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
@@ -413,7 +413,7 @@ define void @realign_stack_no_fp_elim() #1 {
 ; MUBUF:   s_addk_i32 s32, 0xfd00
 ; FLATSCR: s_add_i32 s32, s32, -12
 ; GCN-NEXT: s_mov_b32 s33, vcc_lo
-; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GCN-NEXT: s_xor_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF-NEXT:   buffer_load_dword [[CSR_VGPR]], off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; FLATSCR-NEXT: scratch_load_dword [[CSR_VGPR]], off, s32 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
@@ -587,7 +587,7 @@ define void @callee_need_to_spill_fp_to_memory() #3 {
 ; need to spill the FP to memory if there are no free lanes in the reserved
 ; VGPR.
 ; GCN-LABEL: {{^}}callee_need_to_spill_fp_to_memory_full_reserved_vgpr:
-; MUBUF:   s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; MUBUF:   s_xor_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF:   s_mov_b64 exec, [[COPY_EXEC1]]
 ; MUBUF:   v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
 ; MUBUF:   buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:[[OFF:[0-9]+]]
@@ -597,7 +597,7 @@ define void @callee_need_to_spill_fp_to_memory() #3 {
 ; GCN-NOT: v_readlane_b32 s33, v40
 ; MUBUF:   buffer_load_dword [[TMP_VGPR2:v[0-9]+]], off, s[0:3], s32 offset:[[OFF]]
 ; MUBUF:   v_readfirstlane_b32 s33, [[TMP_VGPR2]]
-; MUBUF:   s_or_saveexec_b64 [[COPY_EXEC2:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; MUBUF:   s_xor_saveexec_b64 [[COPY_EXEC2:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; MUBUF:   s_mov_b64 exec, [[COPY_EXEC2]]
 ; GCN:     s_setpc_b64
 define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() #3 {
@@ -659,7 +659,7 @@ define void @callee_need_to_spill_fp_to_reg() #1 {
 ; If the size of the offset exceeds the MUBUF offset field we need another
 ; scratch VGPR to hold the offset.
 ; GCN-LABEL: {{^}}spill_fp_to_memory_scratch_reg_needed_mubuf_offset
-; MUBUF: s_or_saveexec_b64 s[4:5], -1
+; MUBUF: s_xor_saveexec_b64 s[4:5], -1
 ; MUBUF-NEXT: s_add_i32 [[SCRATCH_SGPR:s[0-9]+]], s32, 0x40100
 ; MUBUF-NEXT: buffer_store_dword v39, off, s[0:3], [[SCRATCH_SGPR]] ; 4-byte Folded Spill
 ; MUBUF: v_mov_b32_e32 v0, s33
