@@ -80,8 +80,6 @@ public:
     return false;
   }
 
-  using EmulateInstruction::GetRegisterInfo;
-
   llvm::Optional<lldb_private::RegisterInfo>
   GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num) override;
 
