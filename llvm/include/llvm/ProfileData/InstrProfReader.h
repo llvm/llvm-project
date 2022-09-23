@@ -118,6 +118,9 @@ public:
   /// Return true if the profile only instruments function entries.
   virtual bool functionEntryOnly() const = 0;
 
+  /// Return true if profile includes a memory profile.
+  virtual bool hasMemoryProfile() const = 0;
+
   /// Returns a BitsetEnum describing the attributes of the profile. To check
   /// individual attributes prefer using the helpers above.
   virtual InstrProfKind getProfileKind() const = 0;
@@ -233,6 +236,11 @@ public:
     return static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly);
   }
 
+  bool hasMemoryProfile() const override {
+    // TODO: Add support for text format memory profiles.
+    return false;
+  }
+
   InstrProfKind getProfileKind() const override { return ProfileKind; }
 
   /// Read the header.
@@ -320,6 +328,12 @@ public:
 
   bool functionEntryOnly() const override {
     return (Version & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
+  }
+
+  bool hasMemoryProfile() const override {
+    // Memory profiles have a separate raw format, so this should never be set.
+    assert(!(Version & VARIANT_MASK_MEMPROF));
+    return false;
   }
 
   /// Returns a BitsetEnum describing the attributes of the raw instr profile.
@@ -466,6 +480,7 @@ struct InstrProfReaderIndexBase {
   virtual bool instrEntryBBEnabled() const = 0;
   virtual bool hasSingleByteCoverage() const = 0;
   virtual bool functionEntryOnly() const = 0;
+  virtual bool hasMemoryProfile() const = 0;
   virtual InstrProfKind getProfileKind() const = 0;
   virtual Error populateSymtab(InstrProfSymtab &) = 0;
 };
@@ -530,6 +545,10 @@ public:
 
   bool functionEntryOnly() const override {
     return (FormatVersion & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
+  }
+
+  bool hasMemoryProfile() const override {
+    return (FormatVersion & VARIANT_MASK_MEMPROF) != 0;
   }
 
   InstrProfKind getProfileKind() const override;
@@ -604,6 +623,8 @@ public:
   }
 
   bool functionEntryOnly() const override { return Index->functionEntryOnly(); }
+
+  bool hasMemoryProfile() const override { return Index->hasMemoryProfile(); }
 
   /// Returns a BitsetEnum describing the attributes of the indexed instr
   /// profile.
