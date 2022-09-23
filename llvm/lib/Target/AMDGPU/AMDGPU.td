@@ -695,6 +695,12 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "Does not need SW waitstates"
 >;
 
+def FeatureGFX11FullVGPRs : SubtargetFeature<"gfx11-full-vgprs",
+  "HasGFX11FullVGPRs",
+  "true",
+  "GFX11 with 50% more physical VGPRs and 50% larger allocation granule than GFX10"
+>;
+
 class SubtargetFeatureNSAMaxSize <int Value> : SubtargetFeature <
   "nsa-max-size-"#Value,
   "NSAMaxSize",
@@ -1297,11 +1303,12 @@ def FeatureISAVersion11_Common : FeatureSet<
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureUserSGPRInit16Bug])>;
+    [FeatureGFX11FullVGPRs,
+     FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [])>;
+    [FeatureGFX11FullVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
