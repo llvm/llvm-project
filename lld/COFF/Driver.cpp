@@ -1919,25 +1919,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (config->mingw || config->debugDwarf)
     config->warnLongSectionNames = false;
 
-  config->lldmapFile = getMapFile(args, OPT_lldmap, OPT_lldmap_file);
-  config->mapFile = getMapFile(args, OPT_map, OPT_map_file);
-
-  if (config->mapFile != "" && args.hasArg(OPT_map_info)) {
-    for (auto *arg : args.filtered(OPT_map_info)) {
-      std::string s = StringRef(arg->getValue()).lower();
-      if (s == "exports")
-        config->mapInfo = true;
-      else
-        error("unknown option: /mapinfo:" + s);
-    }
-  }
-
-  if (config->lldmapFile != "" && config->lldmapFile == config->mapFile) {
-    warn("/lldmap and /map have the same output file '" + config->mapFile +
-         "'.\n>>> ignoring /lldmap");
-    config->lldmapFile.clear();
-  }
-
   if (config->incremental && args.hasArg(OPT_profile)) {
     warn("ignoring '/incremental' due to '/profile' specification");
     config->incremental = false;
@@ -2141,6 +2122,25 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto e = tryCreateFile(config->outputFile)) {
     error("cannot open output file " + config->outputFile + ": " + e.message());
     return;
+  }
+
+  config->lldmapFile = getMapFile(args, OPT_lldmap, OPT_lldmap_file);
+  config->mapFile = getMapFile(args, OPT_map, OPT_map_file);
+
+  if (config->mapFile != "" && args.hasArg(OPT_map_info)) {
+    for (auto *arg : args.filtered(OPT_map_info)) {
+      std::string s = StringRef(arg->getValue()).lower();
+      if (s == "exports")
+        config->mapInfo = true;
+      else
+        error("unknown option: /mapinfo:" + s);
+    }
+  }
+
+  if (config->lldmapFile != "" && config->lldmapFile == config->mapFile) {
+    warn("/lldmap and /map have the same output file '" + config->mapFile +
+         "'.\n>>> ignoring /lldmap");
+    config->lldmapFile.clear();
   }
 
   if (shouldCreatePDB) {
