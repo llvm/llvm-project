@@ -213,7 +213,6 @@ class HipBinBase {
   virtual const string& getCompilerPath() const = 0;
   virtual void printCompilerInfo() const = 0;
   virtual string getCompilerVersion() = 0;
-  virtual string getCompilerIncludePath() = 0;
   virtual const PlatformInfo& getPlatformInfo() const = 0;
   virtual string getCppConfig() = 0;
   virtual void checkHipconfig() = 0;
