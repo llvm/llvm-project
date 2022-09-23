@@ -760,7 +760,8 @@ static void genLiteralParser(StringRef value, MethodBody &body) {
               .Case("]", "RSquare()")
               .Case("?", "Question()")
               .Case("+", "Plus()")
-              .Case("*", "Star()");
+              .Case("*", "Star()")
+              .Case("...", "Ellipsis()");
 }
 
 /// Generate the storage code required for parsing the given element.

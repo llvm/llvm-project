@@ -593,6 +593,9 @@ public:
   /// Parse a `]` token if present.
   virtual ParseResult parseOptionalRSquare() = 0;
 
+  /// Parse a `...` token.
+  virtual ParseResult parseEllipsis() = 0;
+
   /// Parse a `...` token if present;
   virtual ParseResult parseOptionalEllipsis() = 0;
 
