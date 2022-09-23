@@ -102,6 +102,12 @@ public:
     IAD_Intel,
   };
 
+  enum DebugSrcHashKind {
+    DSH_MD5,
+    DSH_SHA1,
+    DSH_SHA256,
+  };
+
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
   // {"labels", "all", "list=<file>", "none"}.

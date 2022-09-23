@@ -4389,6 +4389,11 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
     }
   }
 
+  if (const Arg *A = Args.getLastArg(options::OPT_gsrc_hash_EQ)) {
+    StringRef v = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString("-gsrc-hash=" + v));
+  }
+
   if (Args.hasFlag(options::OPT_fdebug_ranges_base_address,
                    options::OPT_fno_debug_ranges_base_address, false)) {
     CmdArgs.push_back("-fdebug-ranges-base-address");

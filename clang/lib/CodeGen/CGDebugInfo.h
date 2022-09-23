@@ -631,7 +631,7 @@ private:
 
   /// Compute the file checksum debug info for input file ID.
   Optional<llvm::DIFile::ChecksumKind>
-  computeChecksum(FileID FID, SmallString<32> &Checksum) const;
+  computeChecksum(FileID FID, SmallString<64> &Checksum) const;
 
   /// Get the source of the given file ID.
   Optional<StringRef> getSource(const SourceManager &SM, FileID FID);

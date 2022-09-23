@@ -341,6 +341,9 @@ CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should
                                        ///< contain explicit imports for
                                        ///< anonymous namespaces
 
+/// Set debug info source file hashing algorithm.
+ENUM_CODEGENOPT(DebugSrcHash, DebugSrcHashKind, 2, DSH_MD5)
+
 CODEGENOPT(SplitDwarfInlining, 1, 1) ///< Whether to include inlining info in the
                                      ///< skeleton CU to allow for symbolication
                                      ///< of inline stack frames without .dwo files.
