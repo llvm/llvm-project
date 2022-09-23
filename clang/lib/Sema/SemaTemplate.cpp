@@ -1716,6 +1716,8 @@ public:
   }
 
   Decl *TransformDecl(SourceLocation Loc, Decl *D) {
+    if (!D)
+      return D;
     // FIXME : This is possibly an incomplete list, but it is unclear what other
     // Decl kinds could be used to refer to the template parameters.  This is a
     // best guess so far based on examples currently available, but the
