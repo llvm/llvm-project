@@ -121,6 +121,7 @@ chrono cstddef
 chrono cstdint
 chrono cstring
 chrono ctime
+chrono forward_list
 chrono limits
 chrono locale
 chrono optional
