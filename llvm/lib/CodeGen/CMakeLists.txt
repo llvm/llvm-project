@@ -2,7 +2,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
 
-  set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>")
+  set(LLVM_RAEVICT_MODEL_CURRENT_URL "<UNSPECIFIED>" CACHE STRING "URL to download the LLVM register allocator eviction model")
 
   if (DEFINED LLVM_HAVE_TF_AOT)
     tf_find_and_compile(
