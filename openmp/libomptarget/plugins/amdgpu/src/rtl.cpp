@@ -437,6 +437,7 @@ struct EnvironmentVariables {
   int TeamThreadLimit;
   int MaxTeamsDefault;
   int DynamicMemSize;
+  int MaxHWQueues;
 };
 
 template <uint32_t wavesize>
@@ -467,14 +468,21 @@ struct HSALifetime {
 // Handle scheduling of multiple hsa_queue's per device to
 // multiple threads (one scheduler per device)
 class HSAQueueScheduler {
+
 public:
-  HSAQueueScheduler() : Current(0) {}
+  HSAQueueScheduler(int maxHWQueues) : MaxHWQueues(maxHWQueues), Current(0) {
+    HSAQueues.resize(maxHWQueues);
+  }
 
   HSAQueueScheduler(const HSAQueueScheduler &) = delete;
 
   HSAQueueScheduler(HSAQueueScheduler &&Q) {
+    MaxHWQueues = Q.MaxHWQueues;
+    HSAQueues.resize(MaxHWQueues);
+
     Current = Q.Current.load();
-    for (uint8_t I = 0; I < NUM_QUEUES_PER_DEVICE; I++) {
+
+    for (uint8_t I = 0; I < MaxHWQueues; I++) {
       HSAQueues[I] = Q.HSAQueues[I];
       Q.HSAQueues[I] = nullptr;
     }
@@ -482,7 +490,7 @@ public:
 
   // \return false if any HSA queue creation fails
   bool createQueues(hsa_agent_t HSAAgent, uint32_t QueueSize) {
-    for (uint8_t I = 0; I < NUM_QUEUES_PER_DEVICE; I++) {
+    for (uint8_t I = 0; I < MaxHWQueues; I++) {
       hsa_queue_t *Q = nullptr;
       hsa_status_t Rc =
           hsa_queue_create(HSAAgent, QueueSize, HSA_QUEUE_TYPE_MULTI,
@@ -497,7 +505,7 @@ public:
   }
 
   ~HSAQueueScheduler() {
-    for (uint8_t I = 0; I < NUM_QUEUES_PER_DEVICE; I++) {
+    for (uint8_t I = 0; I < MaxHWQueues; I++) {
       if (HSAQueues[I]) {
         hsa_status_t Err = hsa_queue_destroy(HSAQueues[I]);
         if (Err != HSA_STATUS_SUCCESS)
@@ -509,12 +517,12 @@ public:
   // \return next queue to use for device
   hsa_queue_t *next() {
     return HSAQueues[(Current.fetch_add(1, std::memory_order_relaxed)) %
-                     NUM_QUEUES_PER_DEVICE];
+                     MaxHWQueues];
   }
 
   /// Enable/disable queue profiling for OMPT trace records
   void enableQueueProfiling(int enable) {
-    for (uint8_t i = 0; i < NUM_QUEUES_PER_DEVICE; ++i) {
+    for (uint8_t i = 0; i < MaxHWQueues; ++i) {
       hsa_status_t err =
           hsa_amd_profiling_set_profiler_enabled(HSAQueues[i], enable);
       if (err != HSA_STATUS_SUCCESS)
@@ -523,17 +531,18 @@ public:
   }
 
   // Get the Number of Queues per Device
-  int getNumQueues() { return NUM_QUEUES_PER_DEVICE; }
+  int getNumQueues() { return HSAQueues.size(); }
 
 private:
   // Number of queues per device
-  enum : uint8_t { NUM_QUEUES_PER_DEVICE = 4 };
-  hsa_queue_t *HSAQueues[NUM_QUEUES_PER_DEVICE] = {};
+  int MaxHWQueues;
+  std::vector<hsa_queue_t *> HSAQueues;
   std::atomic<uint8_t> Current;
 };
 
 /// Class containing all the device information
 class RTLDeviceInfoTy : HSALifetime {
+  enum : uint8_t { NUM_QUEUES_PER_DEVICE = 4 };
   std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
 
   struct QueueDeleter {
@@ -1249,6 +1258,9 @@ public:
     ompt_device_callbacks.prepare_devices(NumberOfDevices);
 #endif
 
+    // Get environment variable for hardware queues
+    Env.MaxHWQueues = readEnv("GPU_MAX_HW_QUEUES", NUM_QUEUES_PER_DEVICE);
+
     for (int I = 0; I < NumberOfDevices; I++) {
       uint32_t QueueSize = 0;
       {
@@ -1265,7 +1277,7 @@ public:
       }
 
       {
-        HSAQueueScheduler QSched;
+        HSAQueueScheduler QSched(Env.MaxHWQueues);
         if (!QSched.createQueues(HSAAgents[I], QueueSize))
           return;
         HSAQueueSchedulers.emplace_back(std::move(QSched));
