@@ -834,7 +834,8 @@ def MapNestedForeachThreadToGpuThreads :
     }];
 
   let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$blockDim);
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$blockDim,
+                   DefaultValuedAttr<BoolAttr, "true">:$syncAfterDistribute);
   let results = (outs PDL_Operation:$result);
 
   let assemblyFormat = "$target attr-dict";

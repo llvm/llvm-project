@@ -1277,8 +1277,8 @@ mlir::WalkResult mlir::linalg::rewriteMapNestedForeachThreadToGpuThreads(
     const SmallVector<int64_t> &blockDim, bool syncAfterDistribute) {
   auto walkResult = target->walk([&](scf::ForeachThreadOp foreachThreadOp) {
     rewriter.setInsertionPoint(foreachThreadOp);
-    if (failed(rewriteOneForeachThreadToGpuThreads(rewriter, foreachThreadOp,
-                                                   blockDim, true)))
+    if (failed(rewriteOneForeachThreadToGpuThreads(
+            rewriter, foreachThreadOp, blockDim, syncAfterDistribute)))
       return WalkResult::interrupt();
     return WalkResult::advance();
   });
@@ -1354,7 +1354,7 @@ transform::MapNestedForeachThreadToGpuThreads::applyToOne(
   SimpleRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
   auto walkResult = mlir::linalg::rewriteMapNestedForeachThreadToGpuThreads(
-      rewriter, target, blockDim, true);
+      rewriter, target, blockDim, getSyncAfterDistribute());
   if (walkResult.wasInterrupted())
     return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
 
