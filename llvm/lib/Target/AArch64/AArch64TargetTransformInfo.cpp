@@ -2057,7 +2057,8 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         Opcode, Ty, CostKind, Op1Info, Op2Info);
     if (Ty->isVectorTy()) {
       if (TLI->isOperationLegalOrCustom(ISD, LT.second) && ST->hasSVE()) {
-        // SDIV/UDIV operations are lowered, then we can have less costs.
+        // SDIV/UDIV operations are lowered using SVE, then we can have less
+        // costs.
         if (isa<FixedVectorType>(Ty) &&
             cast<FixedVectorType>(Ty)->getPrimitiveSizeInBits().getFixedSize() <
                 128) {
