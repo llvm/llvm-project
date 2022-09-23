@@ -1376,8 +1376,18 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         TRI->getCommonSubClass(DefRC, DstRC);
       if (CommonRC != nullptr) {
         NewRC = CommonRC;
+
+        // Instruction might contain "undef %0:subreg" as use operand:
+        //   %0:subreg = instr op_1, ..., op_N, undef %0:subreg, op_N+2, ...
+        //
+        // Need to check all operands.
+        for (MachineOperand &MO : NewMI.operands()) {
+          if (MO.isReg() && MO.getReg() == DstReg && MO.getSubReg() == DstIdx) {
+            MO.setSubReg(0);
+          }
+        }
+
         DstIdx = 0;
-        DefMO.setSubReg(0);
         DefMO.setIsUndef(false); // Only subregs can have def+undef.
       }
     }
