@@ -2540,10 +2540,6 @@ cc_library(
         # lld uses Microsoft mt.exe instead, which is not cross-platform.
         "-lxml2",
     ],
-    tags = [
-        "manual",  # External dependency (libxml)
-        "nobuildkite",  # TODO(gcmn): Fix remote execution and re-enable
-    ],
     deps = [
         ":Support",
         ":config",
@@ -3410,10 +3406,6 @@ cc_binary(
     ]),
     copts = llvm_copts,
     stamp = 0,
-    tags = [
-        "manual",  # TODO(gcmn): External dependency (through WindowsManifest)
-        "nobuildkite",  # TODO(gcmn): Re-enable when WindowsManifest builds
-    ],
     deps = [
         ":MtTableGen",
         ":Option",
