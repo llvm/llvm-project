@@ -395,6 +395,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime_r
     libc.src.time.mktime
     libc.src.time.nanosleep
+    libc.src.time.clock_gettime
   )
 endif()
 

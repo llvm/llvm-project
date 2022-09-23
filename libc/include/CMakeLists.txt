@@ -91,7 +91,9 @@ add_gen_header(
   GEN_HDR time.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.time_macros
     .llvm-libc-types.time_t
+    .llvm-libc-types.clockid_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec
 )
