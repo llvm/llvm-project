@@ -415,6 +415,7 @@ C++20 Feature Support
   name is found via ordinary lookup so typedefs are found.
 - Implemented `P0634r3 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0634r3.html>`_,
   which removes the requirement for the ``typename`` keyword in certain contexts.
+- Implemented The Equality Operator You Are Looking For (`P2468 <http://wg21.link/p2468r2>`_).
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
