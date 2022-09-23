@@ -43,7 +43,7 @@ public:
 
   Scope(LocalVectorTy &&Descriptors) : Descriptors(std::move(Descriptors)) {}
 
-  llvm::iterator_range<LocalVectorTy::iterator> locals() {
+  llvm::iterator_range<LocalVectorTy::const_iterator> locals() const {
     return llvm::make_range(Descriptors.begin(), Descriptors.end());
   }
 
@@ -102,18 +102,21 @@ public:
   bool hasRVO() const { return HasRVO; }
 
   /// Range over the scope blocks.
-  llvm::iterator_range<llvm::SmallVector<Scope, 2>::iterator> scopes() {
+  llvm::iterator_range<llvm::SmallVector<Scope, 2>::const_iterator>
+  scopes() const {
     return llvm::make_range(Scopes.begin(), Scopes.end());
   }
 
   /// Range over argument types.
-  using arg_reverse_iterator = SmallVectorImpl<PrimType>::reverse_iterator;
-  llvm::iterator_range<arg_reverse_iterator> args_reverse() {
+  using arg_reverse_iterator =
+      SmallVectorImpl<PrimType>::const_reverse_iterator;
+  llvm::iterator_range<arg_reverse_iterator> args_reverse() const {
     return llvm::make_range(ParamTypes.rbegin(), ParamTypes.rend());
   }
 
   /// Returns a specific scope.
   Scope &getScope(unsigned Idx) { return Scopes[Idx]; }
+  const Scope &getScope(unsigned Idx) const { return Scopes[Idx]; }
 
   /// Returns the source information at a given PC.
   SourceInfo getSource(CodePtr PC) const;
