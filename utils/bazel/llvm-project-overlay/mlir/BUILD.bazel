@@ -2440,6 +2440,7 @@ cc_library(
         "include/mlir/Dialect/Affine/LoopFusionUtils.h",
         "include/mlir/Dialect/Affine/LoopUtils.h",
         "include/mlir/Dialect/Affine/Utils.h",
+        "include/mlir/Dialect/Affine/ViewLikeInterfaceUtils.h",
     ],
     includes = ["include"],
     deps = [
@@ -2453,6 +2454,7 @@ cc_library(
         ":SCFDialect",
         ":Support",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -5067,6 +5069,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AffineUtils",
         ":ArithmeticDialect",
         ":ArithmeticUtils",
         ":BufferizationDialect",
