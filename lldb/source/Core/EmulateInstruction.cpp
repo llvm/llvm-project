@@ -82,9 +82,9 @@ bool EmulateInstruction::ReadRegister(const RegisterInfo *reg_info,
 bool EmulateInstruction::ReadRegister(lldb::RegisterKind reg_kind,
                                       uint32_t reg_num,
                                       RegisterValue &reg_value) {
-  RegisterInfo reg_info;
-  if (GetRegisterInfo(reg_kind, reg_num, reg_info))
-    return ReadRegister(&reg_info, reg_value);
+  llvm::Optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  if (reg_info)
+    return ReadRegister(&(*reg_info), reg_value);
   return false;
 }
 
@@ -123,9 +123,9 @@ bool EmulateInstruction::WriteRegister(const Context &context,
                                        lldb::RegisterKind reg_kind,
                                        uint32_t reg_num,
                                        const RegisterValue &reg_value) {
-  RegisterInfo reg_info;
-  if (GetRegisterInfo(reg_kind, reg_num, reg_info))
-    return WriteRegister(context, &reg_info, reg_value);
+  llvm::Optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  if (reg_info)
+    return WriteRegister(context, &(*reg_info), reg_value);
   return false;
 }
 
@@ -133,11 +133,11 @@ bool EmulateInstruction::WriteRegisterUnsigned(const Context &context,
                                                lldb::RegisterKind reg_kind,
                                                uint32_t reg_num,
                                                uint64_t uint_value) {
-  RegisterInfo reg_info;
-  if (GetRegisterInfo(reg_kind, reg_num, reg_info)) {
+  llvm::Optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
+  if (reg_info) {
     RegisterValue reg_value;
-    if (reg_value.SetUInt(uint_value, reg_info.byte_size))
-      return WriteRegister(context, &reg_info, reg_value);
+    if (reg_value.SetUInt(uint_value, reg_info->byte_size))
+      return WriteRegister(context, &(*reg_info), reg_value);
   }
   return false;
 }
