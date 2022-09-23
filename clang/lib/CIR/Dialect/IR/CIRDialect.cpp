@@ -1420,6 +1420,27 @@ void CstArrayAttr::print(::mlir::AsmPrinter &printer) const {
   printer << ">";
 }
 
+::mlir::Attribute ASTFunctionDeclAttr::parse(::mlir::AsmParser &parser,
+                                             ::mlir::Type type) {
+  // We cannot really parse anything AST related at this point
+  // since we have no serialization/JSON story.
+  return mlir::Attribute();
+}
+
+void ASTFunctionDeclAttr::print(::mlir::AsmPrinter &printer) const {
+  // Nothing to print besides the mnemonics.
+}
+
+LogicalResult ASTFunctionDeclAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::clang::FunctionDecl *decl) {
+  if (!decl) {
+    emitError() << "expected non-null AST declaration";
+    return failure();
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//

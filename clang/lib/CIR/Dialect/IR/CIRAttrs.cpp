@@ -23,6 +23,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+// ClangIR holds back AST references when available.
+#include "clang/AST/Decl.h"
+
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 
