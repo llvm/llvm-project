@@ -494,7 +494,7 @@ bool InitThisFieldActive(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 /// 1) Pops the value from the stack
 /// 2) Pops a pointer from the stack
-/// 3) Writes the value to field I of the pointer
+/// 3) Pushes the value to field I of the pointer on the stack
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const T &Value = S.Stk.pop<T>();
@@ -548,6 +548,8 @@ inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+/// 1) Pops a Pointer from the stack
+/// 2) Pushes Pointer.atField(Off) on the stack
 inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Field))
