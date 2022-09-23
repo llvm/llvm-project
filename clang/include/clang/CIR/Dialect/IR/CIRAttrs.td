@@ -27,6 +27,10 @@ class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
   let mnemonic = attrMnemonic;
 }
 
+//===----------------------------------------------------------------------===//
+// NullAttr
+//===----------------------------------------------------------------------===//
+
 def NullAttr : CIR_Attr<"Null", "null", [TypedAttrInterface]> {
   let summary = "A simple attr to represent nullptr";
   let description = [{
@@ -37,6 +41,10 @@ def NullAttr : CIR_Attr<"Null", "null", [TypedAttrInterface]> {
 
   let assemblyFormat = [{}];
 }
+
+//===----------------------------------------------------------------------===//
+// CstArrayAttr
+//===----------------------------------------------------------------------===//
 
 def CstArrayAttr : CIR_Attr<"CstArray", "cst_array", [TypedAttrInterface]> {
   let summary = "A constant array from ArrayAttr or StringRefAttr";
@@ -70,5 +78,32 @@ def CstArrayAttr : CIR_Attr<"CstArray", "cst_array", [TypedAttrInterface]> {
   // Enable verifier.
   let genVerifyDecl = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// AST Wrappers
+//===----------------------------------------------------------------------===//
+
+class ASTDecl<string name, list<Trait> traits = []>
+  : CIR_Attr<!strconcat("AST", name), "ast", traits> {
+  string clang_name = !strconcat("clang::", name);
+
+  let summary = !strconcat("Wraps a ", clang_name, " AST node.");
+  let description = [{
+    Operations optionally refer to this node, they could be available depending
+    on the CIR lowering stage. Whether it's attached to the appropriated
+    CIR operation is delegated to the operation verifier.
+
+    This always implies a non-null AST reference (verified).
+  }];
+  let parameters = (ins !strconcat(clang_name, " *"):$astDecl);
+
+  // Printing and parsing available in CIRDialect.cpp
+  let hasCustomAssemblyFormat = 1;
+
+  // Enable verifier.
+  let genVerifyDecl = 1;
+}
+
+def ASTFunctionDeclAttr : ASTDecl<"FunctionDecl">;
 
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS
