@@ -236,6 +236,7 @@ add_llvm_component_library(LLVMSupport
   X86TargetParser.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
+  Yk.cpp
   raw_os_ostream.cpp
   raw_ostream.cpp
   regcomp.c

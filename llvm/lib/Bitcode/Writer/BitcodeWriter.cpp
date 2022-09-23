@@ -98,6 +98,8 @@ static cl::opt<bool> WriteRelBFToSummary(
 
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 
+extern bool YkAllocLLVMBCSection;
+
 namespace {
 
 /// These are manifest constants used by the bitcode writer. They do not need to
@@ -4992,11 +4994,32 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
       ModuleData = ArrayRef<uint8_t>((const uint8_t *)Buf.getBufferStart(),
                                      Buf.getBufferSize());
   }
+
+  GlobalValue::LinkageTypes SymLinkage = GlobalValue::PrivateLinkage;
+
+  // For the YK JIT we prepend a header containing the size of the bitcode.
+  // This is required in order to load bitcode from memory.
+  std::vector<uint8_t> YkModuleData;
+  if (YkAllocLLVMBCSection) {
+    // Write length field.
+    size_t ModuleDataSize = ModuleData.size();
+    uint8_t *Bytes = reinterpret_cast<uint8_t *>(&ModuleDataSize);
+    for (size_t I = 0; I < sizeof(ModuleDataSize); I++)
+      YkModuleData.push_back(Bytes[I]);
+
+    // Append bitcode.
+    std::move(ModuleData.begin(), ModuleData.end(),
+              std::back_inserter(YkModuleData));
+    ModuleData = YkModuleData;
+
+    // Ensure the symbol is exported in the resulting binary.
+    SymLinkage = GlobalValue::ExternalLinkage;
+  }
+
   llvm::Constant *ModuleConstant =
       llvm::ConstantDataArray::get(M.getContext(), ModuleData);
   llvm::GlobalVariable *GV = new llvm::GlobalVariable(
-      M, ModuleConstant->getType(), true, llvm::GlobalValue::PrivateLinkage,
-      ModuleConstant);
+      M, ModuleConstant->getType(), true, SymLinkage, ModuleConstant);
   GV->setSection(getSectionNameForBitcode(T));
   // Set alignment to 1 to prevent padding between two contributions from input
   // sections after linking.
