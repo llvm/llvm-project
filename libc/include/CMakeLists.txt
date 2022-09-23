@@ -203,6 +203,7 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-types.off_t
     .llvm-libc-types.ssize_t
+    .llvm-libc-macros.sys_mman_macros
 )
 
 add_gen_header(

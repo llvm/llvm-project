@@ -1,4 +1,4 @@
-//===-- POSIX header mman.h -----------------------------------------------===//
+//===-- Macros defined in sys/mman.h header file --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SYS_MMAN_H
-#define LLVM_LIBC_SYS_MMAN_H
+#ifndef __LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H
+#define __LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H
 
-#include <__llvm-libc-common.h>
+#ifdef __unix__
+#include "linux/sys-mman-macros.h"
+#endif
 
-#include <llvm-libc-macros/sys-mman-macros.h>
-
-%%public_api()
-
-#endif // LLVM_LIBC_SYS_MMAN_H
+#endif // __LLVM_LIBC_MACROS_SYS_MMAN_MACROS_H
