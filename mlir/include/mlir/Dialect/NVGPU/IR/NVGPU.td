@@ -21,6 +21,7 @@
 #define NVGPU
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 def NVGPU_Dialect : Dialect {
@@ -36,16 +37,29 @@ def NVGPU_Dialect : Dialect {
   let useDefaultTypePrinterParser = 1;
 }
 
-/// Device-side synchronization token.
-def NVGPU_DeviceAsyncToken : DialectType<
-  NVGPU_Dialect, CPred<"$_self.isa<::mlir::nvgpu::DeviceAsyncTokenType>()">,
-   "device async token type">,
-   BuildableType<
-     "mlir::nvgpu::DeviceAsyncTokenType::get($_builder.getContext())">;
+//===----------------------------------------------------------------------===//
+// NVGPU Type Definitions
+//===----------------------------------------------------------------------===//
 
+class NVGPU_Type<string name, string typeMnemonic,
+        list<Trait> traits = []> : TypeDef<NVGPU_Dialect, name, traits> {
+  let mnemonic = typeMnemonic;
+}
+
+def NVGPU_DeviceAsyncToken : NVGPU_Type<"DeviceAsyncToken",  
+                                        "device.async.token", []> {
+  let summary = "device async token type";
+  let description = [{
+    `nvgpu.device.async.token` is a type returned by an asynchronous operation
+    that runs on the GPU (device). It is used to establish an SSA-based link
+    between the async operation (e.g. DeviceAsyncCopy) and operations that
+    group or synchronize the async operations (e.g. DeviceAsyncCreateGroupOp,
+    DeviceAsyncWaitOp).
+  }];
+}
 
 //===----------------------------------------------------------------------===//
-// NVGPU Op definitions
+// NVGPU Op Definitions
 //===----------------------------------------------------------------------===//
 
 class NVGPU_Op<string mnemonic, list<Trait> traits = []> :
