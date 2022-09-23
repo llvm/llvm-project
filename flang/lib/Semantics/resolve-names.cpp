@@ -2254,6 +2254,7 @@ Symbol *ScopeHandler::FindSymbol(const Scope &scope, const parser::Name &name) {
   if (scope.IsDerivedType()) {
     if (Symbol * symbol{scope.FindComponent(name.source)}) {
       if (!symbol->has<ProcBindingDetails>() &&
+          !symbol->has<GenericDetails>() &&
           !symbol->test(Symbol::Flag::ParentComp)) {
         return Resolve(name, symbol);
       }
