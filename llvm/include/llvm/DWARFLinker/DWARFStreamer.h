@@ -37,6 +37,7 @@ enum class OutputFileType {
 ///   InitializeAllAsmPrinters();
 
 class MCCodeEmitter;
+class DWARFDebugMacro;
 
 /// The Dwarf streaming logic.
 ///
@@ -165,6 +166,18 @@ public:
     return DebugInfoSectionSize;
   }
 
+  uint64_t getDebugMacInfoSectionSize() const override {
+    return MacInfoSectionSize;
+  }
+
+  uint64_t getDebugMacroSectionSize() const override {
+    return MacroSectionSize;
+  }
+
+  void emitMacroTables(DWARFContext *Context,
+                       const Offset2UnitMap &UnitMacroMap,
+                       OffsetsStringPool &StringPool) override;
+
 private:
   inline void error(const Twine &Error, StringRef Context = "") {
     if (ErrorHandler)
@@ -175,6 +188,10 @@ private:
     if (WarningHandler)
       WarningHandler(Warning, Context, nullptr);
   }
+
+  void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
+                          const Offset2UnitMap &UnitMacroMap,
+                          OffsetsStringPool &StringPool, uint64_t &OutOffset);
 
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
@@ -202,6 +219,8 @@ private:
   uint64_t LineSectionSize = 0;
   uint64_t FrameSectionSize = 0;
   uint64_t DebugInfoSectionSize = 0;
+  uint64_t MacInfoSectionSize = 0;
+  uint64_t MacroSectionSize = 0;
 
   /// Keep track of emitted CUs and their Unique ID.
   struct EmittedUnit {
