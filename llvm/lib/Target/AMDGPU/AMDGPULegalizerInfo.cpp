@@ -5767,24 +5767,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_struct_buffer_atomic_fmin:
   case Intrinsic::amdgcn_raw_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
-    return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
-  case Intrinsic::amdgcn_struct_buffer_atomic_fadd: {
-    Register DstReg = MI.getOperand(0).getReg();
-    if (!MRI.use_empty(DstReg) &&
-        !AMDGPU::hasAtomicFaddRtnForTy(ST, MRI.getType(DstReg))) {
-      Function &F = B.getMF().getFunction();
-      DiagnosticInfoUnsupported NoFpRet(
-          F, "return versions of fp atomics not supported", B.getDebugLoc(),
-          DS_Error);
-      F.getContext().diagnose(NoFpRet);
-      B.buildUndef(DstReg);
-      MI.eraseFromParent();
-      return true;
-    }
-
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
     return legalizeBufferAtomic(MI, B, IntrID);
-  }
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:

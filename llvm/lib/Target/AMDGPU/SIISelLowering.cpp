@@ -7530,14 +7530,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       Opcode = AMDGPUISD::BUFFER_ATOMIC_XOR;
       break;
     case Intrinsic::amdgcn_buffer_atomic_fadd:
-      if (!Op.getValue(0).use_empty() && !hasAtomicFaddRtnForTy(Op)) {
-        DiagnosticInfoUnsupported
-          NoFpRet(DAG.getMachineFunction().getFunction(),
-                  "return versions of fp atomics not supported",
-                  DL.getDebugLoc(), DS_Error);
-        DAG.getContext()->diagnose(NoFpRet);
-        return SDValue();
-      }
       Opcode = AMDGPUISD::BUFFER_ATOMIC_FADD;
       break;
     default:
@@ -7808,19 +7800,13 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     DAG.setNodeMemRefs(NewNode, {MemRef});
     return SDValue(NewNode, 0);
   }
-  case Intrinsic::amdgcn_global_atomic_fadd:
-    if (!Op.getValue(0).use_empty() && !Subtarget->hasGFX90AInsts()) {
-      DiagnosticInfoUnsupported
-        NoFpRet(DAG.getMachineFunction().getFunction(),
-                "return versions of fp atomics not supported",
-                DL.getDebugLoc(), DS_Error);
-      DAG.getContext()->diagnose(NoFpRet);
-      return SDValue();
-    }
-    [[fallthrough]];
+  case Intrinsic::amdgcn_global_atomic_fadd: {
+    if (!Subtarget->hasAtomicFaddNoRtnInsts())
+      return makeV_ILLEGAL(Op, DAG);
+    return SDValue();
+  }
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
-  case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -7831,16 +7817,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     };
     unsigned Opcode = 0;
     switch (IntrID) {
-    case Intrinsic::amdgcn_global_atomic_fadd:
-      if (!Subtarget->hasAtomicFaddNoRtnInsts())
-        return makeV_ILLEGAL(Op, DAG);
-      [[fallthrough]];
-    case Intrinsic::amdgcn_flat_atomic_fadd: {
-      EVT VT = Op.getOperand(3).getValueType();
-      return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
-                           DAG.getVTList(VT, MVT::Other), Ops,
-                           M->getMemOperand());
-    }
     case Intrinsic::amdgcn_global_atomic_fmin:
     case Intrinsic::amdgcn_flat_atomic_fmin: {
       Opcode = AMDGPUISD::ATOMIC_LOAD_FMIN;

@@ -95,7 +95,7 @@ define amdgpu_ps void @global_atomic_fadd_f64_no_rtn_flat_intrinsic(double addrs
   ; GFX90A_GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A_GFX940-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX90A_GFX940-NEXT:   FLAT_ATOMIC_ADD_F64 [[REG_SEQUENCE]], [[REG_SEQUENCE1]], 0, 0, implicit $exec, implicit $flat_scr :: (volatile dereferenceable load store (s64) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F64 [[REG_SEQUENCE]], [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s64) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
   %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p1f64.f64(double addrspace(1)* %ptr, double %data)
   ret void
@@ -112,9 +112,9 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_flat_intrinsic(double addrsp
   ; GFX90A_GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX90A_GFX940-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX90A_GFX940-NEXT:   [[FLAT_ATOMIC_ADD_F64_RTN:%[0-9]+]]:vreg_64_align2 = FLAT_ATOMIC_ADD_F64_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE1]], 0, 1, implicit $exec, implicit $flat_scr :: (volatile dereferenceable load store (s64) on %ir.ptr, addrspace 1)
-  ; GFX90A_GFX940-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[FLAT_ATOMIC_ADD_F64_RTN]].sub0
-  ; GFX90A_GFX940-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[FLAT_ATOMIC_ADD_F64_RTN]].sub1
+  ; GFX90A_GFX940-NEXT:   [[GLOBAL_ATOMIC_ADD_F64_RTN:%[0-9]+]]:vreg_64_align2 = GLOBAL_ATOMIC_ADD_F64_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE1]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX940-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_ATOMIC_ADD_F64_RTN]].sub0
+  ; GFX90A_GFX940-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_ATOMIC_ADD_F64_RTN]].sub1
   ; GFX90A_GFX940-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
   ; GFX90A_GFX940-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
   ; GFX90A_GFX940-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
@@ -135,8 +135,8 @@ define amdgpu_ps void @global_atomic_fadd_f64_saddr_no_rtn_flat_intrinsic(double
   ; GFX90A_GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX90A_GFX940-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX90A_GFX940-NEXT:   [[COPY4:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
-  ; GFX90A_GFX940-NEXT:   FLAT_ATOMIC_ADD_F64 [[COPY4]], [[REG_SEQUENCE1]], 0, 0, implicit $exec, implicit $flat_scr :: (volatile dereferenceable load store (s64) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX90A_GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F64_SADDR [[V_MOV_B32_e32_]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (volatile dereferenceable load store (s64) on %ir.ptr, addrspace 1)
   ; GFX90A_GFX940-NEXT:   S_ENDPGM 0
   %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p1f64.f64(double addrspace(1)* %ptr, double %data)
   ret void
@@ -153,13 +153,13 @@ define amdgpu_ps double @global_atomic_fadd_f64_saddr_rtn_flat_intrinsic(double 
   ; GFX90A_GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX90A_GFX940-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A_GFX940-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1
-  ; GFX90A_GFX940-NEXT:   [[COPY4:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
-  ; GFX90A_GFX940-NEXT:   [[FLAT_ATOMIC_ADD_F64_RTN:%[0-9]+]]:vreg_64_align2 = FLAT_ATOMIC_ADD_F64_RTN [[COPY4]], [[REG_SEQUENCE1]], 0, 1, implicit $exec, implicit $flat_scr :: (volatile dereferenceable load store (s64) on %ir.ptr, addrspace 1)
-  ; GFX90A_GFX940-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[FLAT_ATOMIC_ADD_F64_RTN]].sub0
-  ; GFX90A_GFX940-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[FLAT_ATOMIC_ADD_F64_RTN]].sub1
-  ; GFX90A_GFX940-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
+  ; GFX90A_GFX940-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GFX90A_GFX940-NEXT:   [[GLOBAL_ATOMIC_ADD_F64_SADDR_RTN:%[0-9]+]]:vreg_64_align2 = GLOBAL_ATOMIC_ADD_F64_SADDR_RTN [[V_MOV_B32_e32_]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], 0, 1, implicit $exec :: (volatile dereferenceable load store (s64) on %ir.ptr, addrspace 1)
+  ; GFX90A_GFX940-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_ATOMIC_ADD_F64_SADDR_RTN]].sub0
+  ; GFX90A_GFX940-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_ATOMIC_ADD_F64_SADDR_RTN]].sub1
+  ; GFX90A_GFX940-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
   ; GFX90A_GFX940-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX90A_GFX940-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY6]], implicit $exec
+  ; GFX90A_GFX940-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; GFX90A_GFX940-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
   ; GFX90A_GFX940-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p1f64.f64(double addrspace(1)* %ptr, double %data)
