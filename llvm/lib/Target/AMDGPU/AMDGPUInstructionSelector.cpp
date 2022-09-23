@@ -1852,8 +1852,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, false);
   case Intrinsic::amdgcn_s_barrier:
     return selectSBarrier(I);
-  case Intrinsic::amdgcn_global_atomic_fadd:
-    return selectGlobalAtomicFadd(I, I.getOperand(2), I.getOperand(3));
   case Intrinsic::amdgcn_raw_buffer_load_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
     return selectBufferLoadLds(I);
@@ -2471,13 +2469,6 @@ void AMDGPUInstructionSelector::initM0(MachineInstr &I) const {
 
 bool AMDGPUInstructionSelector::selectG_LOAD_STORE_ATOMICRMW(
   MachineInstr &I) const {
-  if (I.getOpcode() == TargetOpcode::G_ATOMICRMW_FADD) {
-    const LLT PtrTy = MRI->getType(I.getOperand(1).getReg());
-    unsigned AS = PtrTy.getAddressSpace();
-    if (AS == AMDGPUAS::GLOBAL_ADDRESS)
-      return selectGlobalAtomicFadd(I, I.getOperand(1), I.getOperand(2));
-  }
-
   initM0(I);
   return selectImpl(I, *CoverageInfo);
 }
@@ -3043,133 +3034,6 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectAMDGPU_BUFFER_ATOMIC_FADD(
-  MachineInstr &MI) const {
-  const Register DefReg = MI.getOperand(0).getReg();
-  LLT DefTy = MRI->getType(DefReg);
-  if (AMDGPU::hasAtomicFaddRtnForTy(STI, DefTy))
-    return selectImpl(MI, *CoverageInfo);
-
-  MachineBasicBlock *MBB = MI.getParent();
-  const DebugLoc &DL = MI.getDebugLoc();
-
-  if (!MRI->use_nodbg_empty(DefReg)) {
-    Function &F = MBB->getParent()->getFunction();
-    DiagnosticInfoUnsupported
-      NoFpRet(F, "return versions of fp atomics not supported",
-              MI.getDebugLoc(), DS_Error);
-    F.getContext().diagnose(NoFpRet);
-    return false;
-  }
-
-  // FIXME: This is only needed because tablegen requires number of dst operands
-  // in match and replace pattern to be the same. Otherwise patterns can be
-  // exported from SDag path.
-  MachineOperand &VDataIn = MI.getOperand(1);
-  MachineOperand &VIndex = MI.getOperand(3);
-  MachineOperand &VOffset = MI.getOperand(4);
-  MachineOperand &SOffset = MI.getOperand(5);
-  int16_t Offset = MI.getOperand(6).getImm();
-
-  bool HasVOffset = !isOperandImmEqual(VOffset, 0, *MRI);
-  bool HasVIndex = !isOperandImmEqual(VIndex, 0, *MRI);
-
-  unsigned Opcode;
-  if (HasVOffset) {
-    Opcode = HasVIndex ? AMDGPU::BUFFER_ATOMIC_ADD_F32_BOTHEN
-                       : AMDGPU::BUFFER_ATOMIC_ADD_F32_OFFEN;
-  } else {
-    Opcode = HasVIndex ? AMDGPU::BUFFER_ATOMIC_ADD_F32_IDXEN
-                       : AMDGPU::BUFFER_ATOMIC_ADD_F32_OFFSET;
-  }
-
-  if (MRI->getType(VDataIn.getReg()).isVector()) {
-    switch (Opcode) {
-    case AMDGPU::BUFFER_ATOMIC_ADD_F32_BOTHEN:
-      Opcode = AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_BOTHEN;
-      break;
-    case AMDGPU::BUFFER_ATOMIC_ADD_F32_OFFEN:
-      Opcode = AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_OFFEN;
-      break;
-    case AMDGPU::BUFFER_ATOMIC_ADD_F32_IDXEN:
-      Opcode = AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_IDXEN;
-      break;
-    case AMDGPU::BUFFER_ATOMIC_ADD_F32_OFFSET:
-      Opcode = AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_OFFSET;
-      break;
-    }
-  }
-
-  auto I = BuildMI(*MBB, MI, DL, TII.get(Opcode));
-  I.add(VDataIn);
-
-  if (Opcode == AMDGPU::BUFFER_ATOMIC_ADD_F32_BOTHEN ||
-      Opcode == AMDGPU::BUFFER_ATOMIC_PK_ADD_F16_BOTHEN) {
-    Register IdxReg = MRI->createVirtualRegister(TRI.getVGPR64Class());
-    BuildMI(*MBB, &*I, DL, TII.get(AMDGPU::REG_SEQUENCE), IdxReg)
-      .addReg(VIndex.getReg())
-      .addImm(AMDGPU::sub0)
-      .addReg(VOffset.getReg())
-      .addImm(AMDGPU::sub1);
-
-    I.addReg(IdxReg);
-  } else if (HasVIndex) {
-    I.add(VIndex);
-  } else if (HasVOffset) {
-    I.add(VOffset);
-  }
-
-  I.add(MI.getOperand(2)); // rsrc
-  I.add(SOffset);
-  I.addImm(Offset);
-  I.addImm(MI.getOperand(7).getImm()); // cpol
-  I.cloneMemRefs(MI);
-
-  MI.eraseFromParent();
-
-  return true;
-}
-
-bool AMDGPUInstructionSelector::selectGlobalAtomicFadd(
-  MachineInstr &MI, MachineOperand &AddrOp, MachineOperand &DataOp) const {
-
-  if (STI.hasGFX90AInsts()) {
-    // gfx90a adds return versions of the global atomic fadd instructions so no
-    // special handling is required.
-    return selectImpl(MI, *CoverageInfo);
-  }
-
-  MachineBasicBlock *MBB = MI.getParent();
-  const DebugLoc &DL = MI.getDebugLoc();
-
-  if (!MRI->use_nodbg_empty(MI.getOperand(0).getReg())) {
-    Function &F = MBB->getParent()->getFunction();
-    DiagnosticInfoUnsupported
-      NoFpRet(F, "return versions of fp atomics not supported",
-              MI.getDebugLoc(), DS_Error);
-    F.getContext().diagnose(NoFpRet);
-    return false;
-  }
-
-  // FIXME: This is only needed because tablegen requires number of dst operands
-  // in match and replace pattern to be the same. Otherwise patterns can be
-  // exported from SDag path.
-  auto Addr = selectFlatOffsetImpl(AddrOp, SIInstrFlags::FlatGlobal);
-
-  Register Data = DataOp.getReg();
-  const unsigned Opc = MRI->getType(Data).isVector() ?
-    AMDGPU::GLOBAL_ATOMIC_PK_ADD_F16 : AMDGPU::GLOBAL_ATOMIC_ADD_F32;
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc))
-    .addReg(Addr.first)
-    .addReg(Data)
-    .addImm(Addr.second)
-    .addImm(0) // cpol
-    .cloneMemRefs(MI);
-
-  MI.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-}
-
 bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
@@ -3583,8 +3447,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   }
   case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
     return selectBVHIntrinsic(I);
-  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
-    return selectAMDGPU_BUFFER_ATOMIC_FADD(I);
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);
