@@ -727,11 +727,12 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
   OperandValueProperties OpProps = OP_None;
 
   if (isa<ConstantInt>(V) || isa<ConstantFP>(V)) {
-    if (const auto *CI = dyn_cast<ConstantInt>(V))
+    if (const auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->getValue().isPowerOf2())
         OpProps = OP_PowerOf2;
       else if (CI->getValue().isNegatedPowerOf2())
         OpProps = OP_NegatedPowerOf2;
+    }
     return {OK_UniformConstantValue, OpProps};
   }
 
@@ -750,11 +751,12 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
     OpInfo = OK_NonUniformConstantValue;
     if (Splat) {
       OpInfo = OK_UniformConstantValue;
-      if (auto *CI = dyn_cast<ConstantInt>(Splat))
+      if (auto *CI = dyn_cast<ConstantInt>(Splat)) {
         if (CI->getValue().isPowerOf2())
           OpProps = OP_PowerOf2;
         else if (CI->getValue().isNegatedPowerOf2())
           OpProps = OP_NegatedPowerOf2;
+      }
     } else if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
       bool AllPow2 = true, AllNegPow2 = true;
       for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
