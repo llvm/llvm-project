@@ -316,7 +316,7 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
   if (!yield)
     return op->emitError() << regionName
                            << " region must end with sparse_tensor.yield";
-  if (yield.getOperand().getType() != outputType)
+  if (!yield.getResult() || yield.getResult().getType() != outputType)
     return op->emitError() << regionName << " region yield type mismatch";
 
   return success();
@@ -410,7 +410,7 @@ LogicalResult ConcatenateOp::verify() {
         "Failed to concatentate tensors with rank={0} on dimension={1}.", rank,
         concatDim));
 
-  for (size_t i = 0; i < getInputs().size(); i++) {
+  for (size_t i = 0, e = getInputs().size(); i < e; i++) {
     Value input = getInputs()[i];
     auto inputRank = input.getType().cast<RankedTensorType>().getRank();
     if (inputRank != rank)
@@ -452,6 +452,28 @@ LogicalResult ConcatenateOp::verify() {
   return success();
 }
 
+LogicalResult ForeachOp::verify() {
+  auto t = getTensor().getType().cast<RankedTensorType>();
+  auto args = getBody()->getArguments();
+
+  if (static_cast<size_t>(t.getRank()) + 1 != args.size())
+    return emitError("Unmatched number of arguments in the block");
+
+  for (int64_t i = 0, e = t.getRank(); i < e; i++)
+    if (args[i].getType() != IndexType::get(getContext()))
+      emitError(
+          llvm::formatv("Expecting Index type for argument at index {0}", i));
+
+  auto elemTp = t.getElementType();
+  auto valueTp = args.back().getType();
+  if (elemTp != valueTp)
+    emitError(llvm::formatv("Unmatched element type between input tensor and "
+                            "block argument, expected:{0}, got: {1}",
+                            elemTp, valueTp));
+
+  return success();
+}
+
 LogicalResult ReduceOp::verify() {
   Type inputType = getX().getType();
   LogicalResult regionResult = success();
@@ -487,11 +509,12 @@ LogicalResult YieldOp::verify() {
   // Check for compatible parent.
   auto *parentOp = (*this)->getParentOp();
   if (isa<BinaryOp>(parentOp) || isa<UnaryOp>(parentOp) ||
-      isa<ReduceOp>(parentOp) || isa<SelectOp>(parentOp))
+      isa<ReduceOp>(parentOp) || isa<SelectOp>(parentOp) ||
+      isa<ForeachOp>(parentOp))
     return success();
 
   return emitOpError("expected parent op to be sparse_tensor unary, binary, "
-                     "reduce, or select");
+                     "reduce, select or foreach");
 }
 
 //===----------------------------------------------------------------------===//
