@@ -12,6 +12,7 @@
 
 #include "flang/Lower/IO.h"
 #include "flang/Common/uint128.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
@@ -321,6 +322,26 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
               builder.getNamedGlobal(converter.mangleName(s) + suffix)) {
         descAddr = builder.create<fir::AddrOfOp>(loc, desc.resultType(),
                                                  desc.getSymbol());
+      } else if (Fortran::semantics::FindCommonBlockContaining(s) &&
+                 IsAllocatableOrPointer(s)) {
+        mlir::Type symType = converter.genType(s);
+        const Fortran::semantics::Symbol *commonBlockSym =
+            Fortran::semantics::FindCommonBlockContaining(s);
+        std::string commonBlockName = converter.mangleName(*commonBlockSym);
+        fir::GlobalOp commonGlobal = builder.getNamedGlobal(commonBlockName);
+        mlir::Value commonBlockAddr = builder.create<fir::AddrOfOp>(
+            loc, commonGlobal.resultType(), commonGlobal.getSymbol());
+        mlir::IntegerType i8Ty = builder.getIntegerType(8);
+        mlir::Type i8Ptr = builder.getRefType(i8Ty);
+        mlir::Type seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));
+        mlir::Value base = builder.createConvert(loc, seqTy, commonBlockAddr);
+        std::size_t byteOffset = s.GetUltimate().offset();
+        mlir::Value offs = builder.createIntegerConstant(
+            loc, builder.getIndexType(), byteOffset);
+        mlir::Value varAddr = builder.create<fir::CoordinateOp>(
+            loc, i8Ptr, base, mlir::ValueRange{offs});
+        descAddr =
+            builder.createConvert(loc, builder.getRefType(symType), varAddr);
       } else {
         const auto expr = Fortran::evaluate::AsGenericExpr(s);
         fir::ExtendedValue exv = converter.genExprAddr(*expr, stmtCtx);
