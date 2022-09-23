@@ -20163,6 +20163,8 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
     case 't':
       if (VT == MVT::Other)
         break;
+      if (VT == MVT::f16 || VT == MVT::bf16)
+        return RCPair(0U, &ARM::HPRRegClass);
       if (VT == MVT::f32 || VT == MVT::i32)
         return RCPair(0U, &ARM::SPRRegClass);
       if (VT.getSizeInBits() == 64)
