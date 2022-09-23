@@ -72,7 +72,6 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(float* %ptr, float 
   ; GFX940-NEXT:   S_ENDPGM 0
   ; GFX11-LABEL: name: flat_atomic_fadd_f32_no_rtn_atomicrmw
   ; GFX11: bb.0 (%ir-block.0):
-  ; GFX11-NEXT:   successors: %bb.1(0x80000000)
   ; GFX11-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -80,27 +79,7 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(float* %ptr, float 
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; GFX11-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.ptr)
-  ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.1.atomicrmw.start:
-  ; GFX11-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
-  ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_]], %bb.0, %4, %bb.1
-  ; GFX11-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[FLAT_LOAD_DWORD]], %bb.0, %3, %bb.1
-  ; GFX11-NEXT:   %13:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[PHI1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed %13, %subreg.sub0, [[PHI1]], %subreg.sub1
-  ; GFX11-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-  ; GFX11-NEXT:   [[FLAT_ATOMIC_CMPSWAP_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_CMPSWAP_RTN [[COPY3]], killed [[COPY5]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic monotonic (s32) on %ir.2)
-  ; GFX11-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[FLAT_ATOMIC_CMPSWAP_RTN]], [[PHI1]], implicit $exec
-  ; GFX11-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK killed [[V_CMP_EQ_U32_e64_]], [[PHI]], implicit-def dead $scc
-  ; GFX11-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GFX11-NEXT:   S_BRANCH %bb.2
-  ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.2.atomicrmw.end:
-  ; GFX11-NEXT:   [[PHI2:%[0-9]+]]:sreg_32 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX11-NEXT:   SI_END_CF [[PHI2]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX11-NEXT:   FLAT_ATOMIC_ADD_F32 killed [[COPY3]], [[COPY]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr)
   ; GFX11-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd float* %ptr, float %data syncscope("wavefront") monotonic
   ret void
@@ -121,7 +100,6 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(float* %ptr, float %d
   ; GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ; GFX11-LABEL: name: flat_atomic_fadd_f32_rtn_atomicrmw
   ; GFX11: bb.0 (%ir-block.0):
-  ; GFX11-NEXT:   successors: %bb.1(0x80000000)
   ; GFX11-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -129,29 +107,8 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(float* %ptr, float %d
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; GFX11-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY4]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.ptr)
-  ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.1.atomicrmw.start:
-  ; GFX11-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
-  ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   [[PHI:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_]], %bb.0, %4, %bb.1
-  ; GFX11-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[FLAT_LOAD_DWORD]], %bb.0, %3, %bb.1
-  ; GFX11-NEXT:   %14:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[PHI1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed %14, %subreg.sub0, [[PHI1]], %subreg.sub1
-  ; GFX11-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
-  ; GFX11-NEXT:   [[FLAT_ATOMIC_CMPSWAP_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_CMPSWAP_RTN [[COPY3]], killed [[COPY5]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic monotonic (s32) on %ir.2)
-  ; GFX11-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[FLAT_ATOMIC_CMPSWAP_RTN]], [[PHI1]], implicit $exec
-  ; GFX11-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK killed [[V_CMP_EQ_U32_e64_]], [[PHI]], implicit-def dead $scc
-  ; GFX11-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GFX11-NEXT:   S_BRANCH %bb.2
-  ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.2.atomicrmw.end:
-  ; GFX11-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[FLAT_ATOMIC_CMPSWAP_RTN]], %bb.1
-  ; GFX11-NEXT:   [[PHI3:%[0-9]+]]:sreg_32 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX11-NEXT:   SI_END_CF [[PHI3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; GFX11-NEXT:   $vgpr0 = COPY [[PHI2]]
+  ; GFX11-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN killed [[COPY3]], [[COPY]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr)
+  ; GFX11-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_ADD_F32_RTN]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   %ret = atomicrmw fadd float* %ptr, float %data syncscope("wavefront") monotonic
   ret float %ret

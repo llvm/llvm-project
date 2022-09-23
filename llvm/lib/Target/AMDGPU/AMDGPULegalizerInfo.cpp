@@ -1341,12 +1341,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
   if (ST.hasAtomicFaddInsts())
     Atomic.legalFor({{S32, GlobalPtr}});
+  if (ST.hasFlatAtomicFaddF32Inst())
+    Atomic.legalFor({{S32, FlatPtr}});
 
   if (ST.hasGFX90AInsts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
     // TODO: Move atomic expansion into legalizer
-    // TODO: Also supports <2 x f16>
     Atomic.legalFor({
         {S32, GlobalPtr},
         {S64, GlobalPtr},
