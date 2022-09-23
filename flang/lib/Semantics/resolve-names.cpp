@@ -550,6 +550,7 @@ public:
   // Search for name in a derived type scope and its parents.
   Symbol *FindInTypeOrParents(const Scope &, const parser::Name &);
   Symbol *FindInTypeOrParents(const parser::Name &);
+  Symbol *FindSeparateModuleProcedureInterface(const parser::Name &);
   void EraseSymbol(const parser::Name &);
   void EraseSymbol(const Symbol &symbol) { currScope().erase(symbol.name()); }
   // Make a new symbol with the name and attrs of an existing one
@@ -608,7 +609,7 @@ public:
       // update the existing symbol
       symbol->attrs() |= attrs;
       if constexpr (std::is_same_v<SubprogramDetails, D>) {
-        // Dummy argument defined by explicit interface
+        // Dummy argument defined by explicit interface?
         details.set_isDummy(IsDummy(*symbol));
       }
       symbol->set_details(std::move(details));
@@ -3631,14 +3632,28 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
   }
 }
 
-// A subprogram declared with MODULE PROCEDURE
-bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
+Symbol *ScopeHandler::FindSeparateModuleProcedureInterface(
+    const parser::Name &name) {
   auto *symbol{FindSymbol(name)};
   if (symbol && symbol->has<SubprogramNameDetails>()) {
     symbol = FindSymbol(currScope().parent(), name);
   }
+  if (symbol) {
+    if (auto *generic{symbol->detailsIf<GenericDetails>()}) {
+      symbol = generic->specific();
+    }
+  }
   if (!IsSeparateModuleProcedureInterface(symbol)) {
     Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
+    symbol = nullptr;
+  }
+  return symbol;
+}
+
+// A subprogram declared with MODULE PROCEDURE
+bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
+  Symbol *symbol{FindSeparateModuleProcedureInterface(name)};
+  if (!symbol) {
     return false;
   }
   if (symbol->owner() == currScope() && symbol->scope()) {
@@ -3682,21 +3697,11 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
   }
   Symbol *moduleInterface{nullptr};
   if (hasModulePrefix && !inInterfaceBlock()) {
-    moduleInterface = FindSymbol(currScope(), name);
-    if (IsSeparateModuleProcedureInterface(moduleInterface)) {
+    moduleInterface = FindSeparateModuleProcedureInterface(name);
+    if (moduleInterface && &moduleInterface->owner() == &currScope()) {
       // Subprogram is MODULE FUNCTION or MODULE SUBROUTINE with an interface
       // previously defined in the same scope.
       currScope().erase(moduleInterface->name());
-    } else {
-      moduleInterface = nullptr;
-    }
-    if (!moduleInterface) {
-      moduleInterface = FindSymbol(currScope().parent(), name);
-      if (!IsSeparateModuleProcedureInterface(moduleInterface)) {
-        Say(name,
-            "'%s' was not declared a separate module procedure"_err_en_US);
-        return false;
-      }
     }
   }
   Symbol &newSymbol{PushSubprogramScope(name, subpFlag, bindingSpec)};
@@ -3865,9 +3870,24 @@ void SubprogramVisitor::PushBlockDataScope(const parser::Name &name) {
 Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
   // Search for the name but don't resolve it
   if (auto *symbol{currScope().FindSymbol(name.source)}) {
-    if (auto *details{symbol->detailsIf<GenericDetails>()}) {
-      // found generic, want subprogram
+    if (symbol->has<SubprogramNameDetails>()) {
+      if (inInterfaceBlock()) {
+        // Subtle: clear any MODULE flag so that the new interface
+        // symbol doesn't inherit it and ruin the ability to check it.
+        symbol->attrs().reset(Attr::MODULE);
+      }
+    } else if (auto *details{symbol->detailsIf<GenericDetails>()}) {
+      // found generic, want specific procedure
       auto *specific{details->specific()};
+      if (specific && inInterfaceBlock() &&
+          specific->has<SubprogramNameDetails>() &&
+          specific->attrs().test(Attr::MODULE)) {
+        // The shadowed procedure is a separate module procedure that is
+        // actually defined later in this (sub)module.
+        // Define its interface now as a new symbol.
+        details->clear_specific();
+        specific = nullptr;
+      }
       if (!specific) {
         specific =
             &currScope().MakeSymbol(name.source, Attrs{}, SubprogramDetails{});
@@ -3880,8 +3900,8 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
       } else if (isGeneric()) {
         SayAlreadyDeclared(name, *specific);
       }
-      if (!specific->has<SubprogramDetails>()) {
-        specific->set_details(SubprogramDetails{});
+      if (specific->has<SubprogramNameDetails>()) {
+        specific->set_details(Details{SubprogramDetails{}});
       }
       return specific;
     }
@@ -7565,6 +7585,9 @@ void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
       node.IsModule() ? SubprogramKind::Module : SubprogramKind::Internal};
   for (auto &child : node.children()) {
     auto &symbol{MakeSymbol(child.name(), SubprogramNameDetails{kind, child})};
+    if (child.HasModulePrefix()) {
+      symbol.attrs().set(Attr::MODULE);
+    }
     auto childKind{child.GetKind()};
     if (childKind == ProgramTree::Kind::Function) {
       symbol.set(Symbol::Flag::Function);
@@ -7578,6 +7601,9 @@ void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
       auto &symbol{
           MakeSymbol(std::get<parser::Name>(entryStmt->t), std::move(details))};
       symbol.set(child.GetSubpFlag());
+      if (child.HasModulePrefix()) {
+        symbol.attrs().set(Attr::MODULE);
+      }
     }
   }
   for (const auto &generic : node.genericSpecs()) {
