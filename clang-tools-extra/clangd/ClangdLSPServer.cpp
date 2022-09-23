@@ -606,7 +606,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   // Per LSP, codeActionProvider can be either boolean or CodeActionOptions.
   // CodeActionOptions is only valid if the client supports action literal
   // via textDocument.codeAction.codeActionLiteralSupport.
-  llvm::json::Value CodeActionProvider = true;
   ServerCaps["codeActionProvider"] =
       Params.capabilities.CodeActionStructure
           ? llvm::json::Object{{"codeActionKinds",
