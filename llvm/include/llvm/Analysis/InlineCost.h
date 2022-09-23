@@ -90,16 +90,16 @@ class InlineCost {
   enum SentinelValues { AlwaysInlineCost = INT_MIN, NeverInlineCost = INT_MAX };
 
   /// The estimated cost of inlining this callsite.
-  const int Cost = 0;
+  int Cost = 0;
 
   /// The adjusted threshold against which this cost was computed.
-  const int Threshold = 0;
+  int Threshold = 0;
 
   /// Must be set for Always and Never instances.
-  const char *const Reason = nullptr;
+  const char *Reason = nullptr;
 
   /// The cost-benefit pair computed by cost-benefit analysis.
-  const Optional<CostBenefitPair> CostBenefit = None;
+  Optional<CostBenefitPair> CostBenefit = None;
 
   // Trivial constructor, interesting logic in the factory functions below.
   InlineCost(int Cost, int Threshold, const char *Reason = nullptr,
