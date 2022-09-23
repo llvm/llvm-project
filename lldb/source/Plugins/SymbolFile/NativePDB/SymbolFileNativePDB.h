@@ -19,6 +19,7 @@
 
 #include "CompileUnitIndex.h"
 #include "PdbIndex.h"
+#include "PdbAstBuilder.h"
 
 namespace clang {
 class TagDecl;
@@ -37,7 +38,6 @@ struct UnionRecord;
 namespace lldb_private {
 
 namespace npdb {
-class PdbAstBuilder;
 
 class SymbolFileNativePDB : public SymbolFileCommon {
   friend class UdtRecordCompleter;
@@ -137,6 +137,8 @@ public:
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
 
+  llvm::Optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
+
   void FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
                  uint32_t max_matches,
                  llvm::DenseSet<SymbolFile *> &searched_symbol_files,
@@ -158,7 +160,12 @@ public:
   llvm::pdb::PDBFile &GetPDBFile() { return m_index->pdb(); }
   const llvm::pdb::PDBFile &GetPDBFile() const { return m_index->pdb(); }
 
+  PdbIndex &GetIndex() { return *m_index; };
+
   void DumpClangAST(Stream &s) override;
+
+  llvm::Optional<llvm::codeview::TypeIndex>
+  GetParentType(llvm::codeview::TypeIndex ti);
 
 private:
   struct LineTableEntryComparator {
@@ -179,6 +186,8 @@ private:
     std::vector<lldb_private::LineTable::Entry> line_entries;
     InlineSite(PdbCompilandSymId parent_id) : parent_id(parent_id){};
   };
+
+  void BuildParentMap();
 
   uint32_t CalculateNumCompileUnits() override;
 
@@ -262,8 +271,6 @@ private:
   std::unique_ptr<llvm::pdb::PDBFile> m_file_up;
   std::unique_ptr<PdbIndex> m_index;
 
-  std::unique_ptr<PdbAstBuilder> m_ast;
-
   llvm::DenseMap<lldb::user_id_t, lldb::VariableSP> m_global_vars;
   llvm::DenseMap<lldb::user_id_t, lldb::VariableSP> m_local_variables;
   llvm::DenseMap<lldb::user_id_t, lldb::BlockSP> m_blocks;
@@ -271,6 +278,8 @@ private:
   llvm::DenseMap<lldb::user_id_t, lldb::CompUnitSP> m_compilands;
   llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;
   llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
+  llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
+      m_parent_types;
 };
 
 } // namespace npdb
