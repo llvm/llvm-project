@@ -1188,15 +1188,22 @@ void CheckHelper::CheckGeneric(
 void CheckHelper::CheckSpecificsAreDistinguishable(
     const Symbol &generic, const GenericDetails &details) {
   GenericKind kind{details.kind()};
-  const SymbolVector &specifics{details.specificProcs()};
-  std::size_t count{specifics.size()};
-  if (count < 2 || !kind.IsName()) {
+  if (!kind.IsName()) {
     return;
   }
   DistinguishabilityHelper helper{context_};
-  for (const Symbol &specific : specifics) {
+  for (const Symbol &specific : details.specificProcs()) {
     if (const Procedure * procedure{Characterize(specific)}) {
-      helper.Add(generic, kind, specific, *procedure);
+      if (procedure->HasExplicitInterface()) {
+        helper.Add(generic, kind, specific, *procedure);
+      } else {
+        if (auto *msg{messages_.Say(specific.name(),
+                "Specific procedure '%s' of generic interface '%s' must have an explicit interface"_err_en_US,
+                specific.name(), generic.name())}) {
+          msg->Attach(
+              generic.name(), "Definition of '%s'"_en_US, generic.name());
+        }
+      }
     }
   }
   helper.Check(generic.owner());
