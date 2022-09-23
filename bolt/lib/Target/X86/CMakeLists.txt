@@ -9,6 +9,8 @@ add_llvm_library(LLVMBOLTTargetX86
   X86MCPlusBuilder.cpp
   X86MCSymbolizer.cpp
 
+  DISABLE_LLVM_LINK_LLVM_DYLIB
+
   DEPENDS
   X86CommonTableGen
   )
