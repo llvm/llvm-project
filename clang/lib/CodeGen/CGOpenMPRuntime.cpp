@@ -8547,49 +8547,92 @@ private:
       }
     }
 
-    // Look at the use_device_ptr clause information and mark the existing map
-    // entries as such. If there is no map information for an entry in the
-    // use_device_ptr list, we create one with map type 'alloc' and zero size
-    // section. It is the user fault if that was not mapped before. If there is
-    // no map information and the pointer is a struct member, then we defer the
-    // emission of that entry until the whole struct has been processed.
+    // Look at the use_device_ptr and use_device_addr clauses information and
+    // mark the existing map entries as such. If there is no map information for
+    // an entry in the use_device_ptr and use_device_addr list, we create one
+    // with map type 'alloc' and zero size section. It is the user fault if that
+    // was not mapped before. If there is no map information and the pointer is
+    // a struct member, then we defer the emission of that entry until the whole
+    // struct has been processed.
     llvm::MapVector<CanonicalDeclPtr<const Decl>,
                     SmallVector<DeferredDevicePtrEntryTy, 4>>
         DeferredInfo;
-    MapCombinedInfoTy UseDevicePtrCombinedInfo;
+    MapCombinedInfoTy UseDeviceDataCombinedInfo;
 
-    for (const auto *Cl : Clauses) {
-      const auto *C = dyn_cast<OMPUseDevicePtrClause>(Cl);
-      if (!C)
-        continue;
-      for (const auto L : C->component_lists()) {
-        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
-            std::get<1>(L);
-        assert(!Components.empty() &&
-               "Not expecting empty list of components!");
-        const ValueDecl *VD = Components.back().getAssociatedDeclaration();
-        VD = cast<ValueDecl>(VD->getCanonicalDecl());
-        const Expr *IE = Components.back().getAssociatedExpression();
-        // If the first component is a member expression, we have to look into
-        // 'this', which maps to null in the map of map information. Otherwise
-        // look directly for the information.
-        auto It = Info.find(isa<MemberExpr>(IE) ? nullptr : VD);
+    auto &&UseDeviceDataCombinedInfoGen =
+        [&UseDeviceDataCombinedInfo](const ValueDecl *VD, llvm::Value *Ptr,
+                                     CodeGenFunction &CGF) {
+          UseDeviceDataCombinedInfo.Exprs.push_back(VD);
+          UseDeviceDataCombinedInfo.BasePointers.emplace_back(Ptr, VD);
+          UseDeviceDataCombinedInfo.Pointers.push_back(Ptr);
+          UseDeviceDataCombinedInfo.Sizes.push_back(
+              llvm::Constant::getNullValue(CGF.Int64Ty));
+          UseDeviceDataCombinedInfo.Types.push_back(OMP_MAP_RETURN_PARAM);
+          UseDeviceDataCombinedInfo.Mappers.push_back(nullptr);
+        };
 
-        // We potentially have map information for this declaration already.
-        // Look for the first set of components that refer to it.
-        if (It != Info.end()) {
-          bool Found = false;
-          for (auto &Data : It->second) {
-            auto *CI = llvm::find_if(Data, [VD](const MapInfo &MI) {
-              return MI.Components.back().getAssociatedDeclaration() == VD;
-            });
-            // If we found a map entry, signal that the pointer has to be
-            // returned and move on to the next declaration. Exclude cases where
-            // the base pointer is mapped as array subscript, array section or
-            // array shaping. The base address is passed as a pointer to base in
-            // this case and cannot be used as a base for use_device_ptr list
-            // item.
-            if (CI != Data.end()) {
+    auto &&MapInfoGen =
+        [&DeferredInfo, &UseDeviceDataCombinedInfoGen,
+         &InfoGen](CodeGenFunction &CGF, const Expr *IE, const ValueDecl *VD,
+                   OMPClauseMappableExprCommon::MappableExprComponentListRef
+                       Components,
+                   bool IsImplicit, bool IsDevAddr) {
+          // We didn't find any match in our map information - generate a zero
+          // size array section - if the pointer is a struct member we defer
+          // this action until the whole struct has been processed.
+          if (isa<MemberExpr>(IE)) {
+            // Insert the pointer into Info to be processed by
+            // generateInfoForComponentList. Because it is a member pointer
+            // without a pointee, no entry will be generated for it, therefore
+            // we need to generate one after the whole struct has been
+            // processed. Nonetheless, generateInfoForComponentList must be
+            // called to take the pointer into account for the calculation of
+            // the range of the partial struct.
+            InfoGen(nullptr, Other, Components, OMPC_MAP_unknown, llvm::None,
+                    llvm::None, /*ReturnDevicePointer=*/false, IsImplicit,
+                    nullptr, nullptr, IsDevAddr);
+            DeferredInfo[nullptr].emplace_back(IE, VD, IsDevAddr);
+          } else {
+            llvm::Value *Ptr;
+            if (IsDevAddr) {
+              if (IE->isGLValue())
+                Ptr = CGF.EmitLValue(IE).getPointer(CGF);
+              else
+                Ptr = CGF.EmitScalarExpr(IE);
+            } else {
+              Ptr = CGF.EmitLoadOfScalar(CGF.EmitLValue(IE), IE->getExprLoc());
+            }
+            UseDeviceDataCombinedInfoGen(VD, Ptr, CGF);
+          }
+        };
+
+    auto &&IsMapInfoExist = [&Info](CodeGenFunction &CGF, const ValueDecl *VD,
+                                    const Expr *IE, bool IsDevAddr) -> bool {
+      // We potentially have map information for this declaration already.
+      // Look for the first set of components that refer to it. If found,
+      // return true.
+      // If the first component is a member expression, we have to look into
+      // 'this', which maps to null in the map of map information. Otherwise
+      // look directly for the information.
+      auto It = Info.find(isa<MemberExpr>(IE) ? nullptr : VD);
+      if (It != Info.end()) {
+        bool Found = false;
+        for (auto &Data : It->second) {
+          auto *CI = llvm::find_if(Data, [VD](const MapInfo &MI) {
+            return MI.Components.back().getAssociatedDeclaration() == VD;
+          });
+          // If we found a map entry, signal that the pointer has to be
+          // returned and move on to the next declaration. Exclude cases where
+          // the base pointer is mapped as array subscript, array section or
+          // array shaping. The base address is passed as a pointer to base in
+          // this case and cannot be used as a base for use_device_ptr list
+          // item.
+          if (CI != Data.end()) {
+            if (IsDevAddr) {
+              CI->ReturnDevicePointer = true;
+              Found = true;
+              break;
+            } else {
               auto PrevCI = std::next(CI->Components.rbegin());
               const auto *VarD = dyn_cast<VarDecl>(VD);
               if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
@@ -8604,51 +8647,45 @@ private:
               }
             }
           }
-          if (Found)
-            continue;
         }
-
-        // We didn't find any match in our map information - generate a zero
-        // size array section - if the pointer is a struct member we defer this
-        // action until the whole struct has been processed.
-        if (isa<MemberExpr>(IE)) {
-          // Insert the pointer into Info to be processed by
-          // generateInfoForComponentList. Because it is a member pointer
-          // without a pointee, no entry will be generated for it, therefore
-          // we need to generate one after the whole struct has been processed.
-          // Nonetheless, generateInfoForComponentList must be called to take
-          // the pointer into account for the calculation of the range of the
-          // partial struct.
-          InfoGen(nullptr, Other, Components, OMPC_MAP_unknown, llvm::None,
-                  llvm::None, /*ReturnDevicePointer=*/false, C->isImplicit(),
-                  nullptr);
-          DeferredInfo[nullptr].emplace_back(IE, VD, /*ForDeviceAddr=*/false);
-        } else {
-          llvm::Value *Ptr =
-              CGF.EmitLoadOfScalar(CGF.EmitLValue(IE), IE->getExprLoc());
-          UseDevicePtrCombinedInfo.Exprs.push_back(VD);
-          UseDevicePtrCombinedInfo.BasePointers.emplace_back(Ptr, VD);
-          UseDevicePtrCombinedInfo.Pointers.push_back(Ptr);
-          UseDevicePtrCombinedInfo.Sizes.push_back(
-              llvm::Constant::getNullValue(CGF.Int64Ty));
-          UseDevicePtrCombinedInfo.Types.push_back(OMP_MAP_RETURN_PARAM);
-          UseDevicePtrCombinedInfo.Mappers.push_back(nullptr);
-        }
+        return Found;
       }
-    }
+      return false;
+    };
 
-    // Look at the use_device_addr clause information and mark the existing map
+    // Look at the use_device_ptr clause information and mark the existing map
     // entries as such. If there is no map information for an entry in the
-    // use_device_addr list, we create one with map type 'alloc' and zero size
+    // use_device_ptr list, we create one with map type 'alloc' and zero size
     // section. It is the user fault if that was not mapped before. If there is
     // no map information and the pointer is a struct member, then we defer the
     // emission of that entry until the whole struct has been processed.
+    for (const auto *Cl : Clauses) {
+      const auto *C = dyn_cast<OMPUseDevicePtrClause>(Cl);
+      if (!C)
+        continue;
+      for (const auto L : C->component_lists()) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<1>(L);
+        assert(!Components.empty() &&
+               "Not expecting empty list of components!");
+        const ValueDecl *VD = Components.back().getAssociatedDeclaration();
+        VD = cast<ValueDecl>(VD->getCanonicalDecl());
+        const Expr *IE = Components.back().getAssociatedExpression();
+        if (IsMapInfoExist(CGF, VD, IE, /*IsDevAddr=*/false))
+          continue;
+        MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
+                   /*IsDevAddr=*/false);
+      }
+    }
+
     llvm::SmallDenseSet<CanonicalDeclPtr<const Decl>, 4> Processed;
     for (const auto *Cl : Clauses) {
       const auto *C = dyn_cast<OMPUseDeviceAddrClause>(Cl);
       if (!C)
         continue;
       for (const auto L : C->component_lists()) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<1>(L);
         assert(!std::get<1>(L).empty() &&
                "Not expecting empty list of components!");
         const ValueDecl *VD = std::get<1>(L).back().getAssociatedDeclaration();
@@ -8656,60 +8693,10 @@ private:
           continue;
         VD = cast<ValueDecl>(VD->getCanonicalDecl());
         const Expr *IE = std::get<1>(L).back().getAssociatedExpression();
-        // If the first component is a member expression, we have to look into
-        // 'this', which maps to null in the map of map information. Otherwise
-        // look directly for the information.
-        auto It = Info.find(isa<MemberExpr>(IE) ? nullptr : VD);
-
-        // We potentially have map information for this declaration already.
-        // Look for the first set of components that refer to it.
-        if (It != Info.end()) {
-          bool Found = false;
-          for (auto &Data : It->second) {
-            auto *CI = llvm::find_if(Data, [VD](const MapInfo &MI) {
-              return MI.Components.back().getAssociatedDeclaration() == VD;
-            });
-            // If we found a map entry, signal that the pointer has to be
-            // returned and move on to the next declaration.
-            if (CI != Data.end()) {
-              CI->ReturnDevicePointer = true;
-              Found = true;
-              break;
-            }
-          }
-          if (Found)
-            continue;
-        }
-
-        // We didn't find any match in our map information - generate a zero
-        // size array section - if the pointer is a struct member we defer this
-        // action until the whole struct has been processed.
-        if (isa<MemberExpr>(IE)) {
-          // Insert the pointer into Info to be processed by
-          // generateInfoForComponentList. Because it is a member pointer
-          // without a pointee, no entry will be generated for it, therefore
-          // we need to generate one after the whole struct has been processed.
-          // Nonetheless, generateInfoForComponentList must be called to take
-          // the pointer into account for the calculation of the range of the
-          // partial struct.
-          InfoGen(nullptr, Other, std::get<1>(L), OMPC_MAP_unknown, llvm::None,
-                  llvm::None, /*ReturnDevicePointer=*/false, C->isImplicit(),
-                  nullptr, nullptr, /*ForDeviceAddr=*/true);
-          DeferredInfo[nullptr].emplace_back(IE, VD, /*ForDeviceAddr=*/true);
-        } else {
-          llvm::Value *Ptr;
-          if (IE->isGLValue())
-            Ptr = CGF.EmitLValue(IE).getPointer(CGF);
-          else
-            Ptr = CGF.EmitScalarExpr(IE);
-          CombinedInfo.Exprs.push_back(VD);
-          CombinedInfo.BasePointers.emplace_back(Ptr, VD);
-          CombinedInfo.Pointers.push_back(Ptr);
-          CombinedInfo.Sizes.push_back(
-              llvm::Constant::getNullValue(CGF.Int64Ty));
-          CombinedInfo.Types.push_back(OMP_MAP_RETURN_PARAM);
-          CombinedInfo.Mappers.push_back(nullptr);
-        }
+        if (IsMapInfoExist(CGF, VD, IE, /*IsDevAddr=*/true))
+          continue;
+        MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
+                   /*IsDevAddr=*/true);
       }
     }
 
@@ -8798,7 +8785,7 @@ private:
       CombinedInfo.append(CurInfo);
     }
     // Append data for use_device_ptr clauses.
-    CombinedInfo.append(UseDevicePtrCombinedInfo);
+    CombinedInfo.append(UseDeviceDataCombinedInfo);
   }
 
 public:

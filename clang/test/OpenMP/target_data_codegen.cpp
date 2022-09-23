@@ -596,15 +596,18 @@ void test_close_modifier(int arg) {
 }
 #endif
 ///==========================================================================///
-// RUN: %clang_cc1 -no-opaque-pointers -DCK7 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK7 --check-prefix CK7-64
-// RUN: %clang_cc1 -no-opaque-pointers -DCK7 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK7 --check-prefix CK7-64
+// RUN: %clang_cc1 -no-opaque-pointers -DCK7 -verify -fopenmp -fopenmp-targets=x86_64 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK7 --check-prefix CK7-64
+// RUN: %clang_cc1 -no-opaque-pointers -DCK7 -fopenmp -fopenmp-targets=x86_64 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-targets=x86_64 -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK7 --check-prefix CK7-64
 
-// RUN: %clang_cc1 -no-opaque-pointers -DCK7 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY7 %s
-// RUN: %clang_cc1 -no-opaque-pointers -DCK7 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY7 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK7 -verify -fopenmp-simd -fopenmp-targets=x86_64 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY7 %s
+// RUN: %clang_cc1 -no-opaque-pointers -DCK7 -fopenmp-simd -fopenmp-targets=x86_64 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-targets=x86_64 -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY7 %s
 // SIMD-ONLY7-NOT: {{__kmpc|__tgt}}
 #ifdef CK7
+// CK7: private unnamed_addr constant [2 x i64] [i64 64, i64 64]
+// CK7: private unnamed_addr constant [2 x i64] [i64 3, i64 64]
+// CK7-NOT: private unnamed_addr constant [2 x i64] [i64 64, i64 3]
 // CK7: test_device_ptr_addr
 void test_device_ptr_addr(int arg) {
   int *p;
@@ -612,6 +615,16 @@ void test_device_ptr_addr(int arg) {
   // CK7: add nsw i32
   #pragma omp target data use_device_ptr(p) use_device_addr(arg)
   { ++arg, ++(*p); }
+
+  short x[10];
+  short *xp = &x[0];
+
+  x[1] = 111;
+
+  #pragma omp target data map(tofrom: x) use_device_addr(xp[1:3])
+  {
+    xp[1] = 222;
+  }
 }
 #endif
 ///==========================================================================///
