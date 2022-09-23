@@ -622,6 +622,13 @@ def FeatureAtomicPkFaddNoRtnInsts
   [FeatureFlatGlobalInsts]
 >;
 
+def FeatureFlatAtomicFaddF32Inst
+  : SubtargetFeature<"flat-atomic-fadd-f32-inst",
+  "HasFlatAtomicFaddF32Inst",
+  "true",
+  "Has flat_atomic_add_f32 instruction"
+>;
+
 def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   "SupportsSRAMECC",
   "true",
@@ -1142,6 +1149,7 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicPkFaddNoRtnInsts,
+   FeatureFlatAtomicFaddF32Inst,
    FeatureSupportsSRAMECC,
    FeaturePackedTID,
    FeatureArchitectedFlatScratch,
@@ -1281,6 +1289,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
+   FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -1509,11 +1518,6 @@ def isGFX908orGFX90A :
 def isGFX940Plus :
   Predicate<"Subtarget->hasGFX940Insts()">,
   AssemblerPredicate<(all_of FeatureGFX940Insts)>;
-
-def isGFX940GFX11Plus :
-  Predicate<"Subtarget->hasGFX940Insts() ||"
-            "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
-  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
 
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
@@ -1751,6 +1755,9 @@ def HasAtomicFaddNoRtnInsts : Predicate<"Subtarget->hasAtomicFaddNoRtnInsts()">,
 def HasAtomicPkFaddNoRtnInsts
   : Predicate<"Subtarget->hasAtomicPkFaddNoRtnInsts()">,
   AssemblerPredicate<(all_of FeatureAtomicPkFaddNoRtnInsts)>;
+def HasFlatAtomicFaddF32Inst
+  : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
+  AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
 
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
