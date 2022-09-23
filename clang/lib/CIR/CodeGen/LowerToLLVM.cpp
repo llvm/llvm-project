@@ -225,6 +225,37 @@ public:
   }
 };
 
+class CIRUnaryOpLowering : public mlir::OpRewritePattern<mlir::cir::UnaryOp> {
+public:
+  using OpRewritePattern<mlir::cir::UnaryOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::UnaryOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Type type = op.getInput().getType();
+    assert(type.isa<mlir::IntegerType>() && "operand type not supported yet");
+
+    switch (op.getKind()) {
+    case mlir::cir::UnaryOpKind::Inc: {
+      auto One = rewriter.create<mlir::arith::ConstantOp>(
+          op.getLoc(), type, mlir::IntegerAttr::get(type, 1));
+      rewriter.replaceOpWithNewOp<mlir::arith::AddIOp>(op, op.getType(),
+                                                       op.getInput(), One);
+      break;
+    }
+    case mlir::cir::UnaryOpKind::Dec: {
+      auto One = rewriter.create<mlir::arith::ConstantOp>(
+          op.getLoc(), type, mlir::IntegerAttr::get(type, 1));
+      rewriter.replaceOpWithNewOp<mlir::arith::SubIOp>(op, op.getType(),
+                                                       op.getInput(), One);
+      break;
+    }
+    }
+
+    return mlir::LogicalResult::success();
+  }
+};
+
 class CIRBinOpLowering : public mlir::OpRewritePattern<mlir::cir::BinOp> {
 public:
   using OpRewritePattern<mlir::cir::BinOp>::OpRewritePattern;
@@ -479,8 +510,8 @@ public:
 
 void populateCIRToMemRefConversionPatterns(mlir::RewritePatternSet &patterns) {
   patterns.add<CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
-               CIRConstantLowering, CIRBinOpLowering, CIRCmpOpLowering,
-               CIRBrOpLowering>(patterns.getContext());
+               CIRConstantLowering, CIRUnaryOpLowering, CIRBinOpLowering,
+               CIRCmpOpLowering, CIRBrOpLowering>(patterns.getContext());
 }
 
 void ConvertCIRToLLVMPass::runOnOperation() {
