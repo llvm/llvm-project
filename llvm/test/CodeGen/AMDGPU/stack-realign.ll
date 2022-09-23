@@ -261,7 +261,8 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
 ; If there are no free SGPRs or VGPRs available we must spill the BP to memory.
 
 ; GCN-LABEL: no_free_regs_spill_bp_to_mem
-; GCN: s_or_saveexec_b64 s[4:5], -1
+; GCN: s_xor_saveexec_b64 s[4:5], -1
+; GCN: buffer_store_dword v39, off, s[0:3], s32
 ; GCN: v_mov_b32_e32 v0, s34
 ; GCN: buffer_store_dword v0, off, s[0:3], s32
 ; GCN: v_mov_b32_e32 v0, s33
@@ -294,7 +295,7 @@ define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i
 ; scratch VGPR to hold the offset.
 
 ; GCN-LABEL: spill_bp_to_memory_scratch_reg_needed_mubuf_offset
-; GCN: s_or_saveexec_b64 s[4:5], -1
+; GCN: s_xor_saveexec_b64 s[4:5], -1
 ; GCN-NEXT: s_add_i32 s6, s32, 0x42100
 ; GCN-NEXT: buffer_store_dword v39, off, s[0:3], s6 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, s[4:5]

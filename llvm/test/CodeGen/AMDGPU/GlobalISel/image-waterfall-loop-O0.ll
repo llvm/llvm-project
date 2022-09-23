@@ -7,7 +7,7 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
-; CHECK-NEXT:    s_or_saveexec_b32 s4, -1
+; CHECK-NEXT:    s_xor_saveexec_b32 s4, -1
 ; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v15, v1
@@ -145,7 +145,7 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s4
-; CHECK-NEXT:    s_or_saveexec_b32 s4, -1
+; CHECK-NEXT:    s_xor_saveexec_b32 s4, -1
 ; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:44 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

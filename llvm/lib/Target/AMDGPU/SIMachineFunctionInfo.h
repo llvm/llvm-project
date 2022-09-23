@@ -530,7 +530,7 @@ public:
     VGPRForAGPRCopy = NewVGPRForAGPRCopy;
   }
 
-  bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
+  bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
 
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
@@ -618,6 +618,11 @@ public:
 
   void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
                         Align Alignment = Align(4));
+
+  void splitWWMSpillRegisters(
+      MachineFunction &MF,
+      SmallVectorImpl<std::pair<Register, int>> &CalleeSavedRegs,
+      SmallVectorImpl<std::pair<Register, int>> &ScratchRegs) const;
 
   ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
     return SpillAGPR;
