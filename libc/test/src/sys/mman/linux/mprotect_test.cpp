@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/signal.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/mprotect.h"
 #include "src/sys/mman/munmap.h"
@@ -14,6 +13,7 @@
 #include "utils/UnitTest/Test.h"
 
 #include <errno.h>
+#include <signal.h>
 #include <sys/mman.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
