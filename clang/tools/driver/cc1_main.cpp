@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RemoteCache/Client.h"
 #include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
@@ -49,6 +50,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -277,6 +279,94 @@ private:
   Optional<llvm::cas::ObjectRef> DependenciesOutput;
 };
 
+/// An \p OutputBackend that just records the list of output paths/names.
+class CollectingOutputBackend : public llvm::vfs::ProxyOutputBackend {
+  SmallVector<std::string> OutputNames;
+
+public:
+  CollectingOutputBackend()
+      : llvm::vfs::ProxyOutputBackend(llvm::vfs::makeNullOutputBackend()) {}
+
+  ArrayRef<std::string> getOutputs() const { return OutputNames; }
+
+  /// Add an association of a "kind" string with a particular output path.
+  /// When the output for \p Path is encountered it will be associated with
+  /// the \p Kind string instead of its path.
+  void addKindMap(StringRef Kind, StringRef Path) {
+    KindMaps.push_back({Saver.save(Kind), Saver.save(Path)});
+  }
+
+private:
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver{Alloc};
+
+  struct KindMap {
+    StringRef Kind;
+    StringRef Path;
+  };
+  SmallVector<KindMap> KindMaps;
+
+  /// Returns the "kind" name for the path if one was added for it, otherwise
+  /// returns the \p Path itself.
+  StringRef tryRemapPath(StringRef Path) const {
+    for (const KindMap &Map : KindMaps) {
+      if (Map.Path == Path)
+        return Map.Kind;
+    }
+    return Path;
+  }
+
+  Expected<std::unique_ptr<llvm::vfs::OutputFileImpl>>
+  createFileImpl(StringRef Path,
+                 Optional<llvm::vfs::OutputConfig> Config) override {
+    StringRef Name = tryRemapPath(Path);
+    OutputNames.push_back(Name.str());
+    return ProxyOutputBackend::createFileImpl(Path, std::move(Config));
+  }
+
+  IntrusiveRefCntPtr<llvm::vfs::OutputBackend> cloneImpl() const override {
+    return IntrusiveRefCntPtr<CollectingOutputBackend>(
+        const_cast<CollectingOutputBackend *>(this));
+  }
+};
+
+/// Store and retrieve compilation artifacts using \p remote_cache::CASDBClient
+/// and \p remote_cache::KeyValueDBClient.
+class RemoteCachingOutputs : public CachingOutputs {
+public:
+  RemoteCachingOutputs(CompilerInstance &Clang,
+                       remote_cache::ClientServices Clients)
+      : CachingOutputs(Clang) {
+    RemoteKVClient = std::move(Clients.KVDB);
+    RemoteCASClient = std::move(Clients.CASDB);
+    CollectingOutputs = llvm::makeIntrusiveRefCnt<CollectingOutputBackend>();
+  }
+
+private:
+  Expected<bool>
+  tryReplayCachedResult(const llvm::cas::CASID &ResultCacheKey) override;
+
+  bool prepareOutputCollection() override;
+
+  Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
+                             bool SkipCache) override;
+
+  Expected<bool>
+  replayCachedResult(const llvm::cas::CASID &ResultCacheKey,
+                     const remote_cache::KeyValueDBClient::ValueTy &CompResult);
+
+  void tryReleaseLLBuildExecutionLane();
+
+  static StringRef getOutputKindName(OutputKind Kind);
+  /// \returns \p None if \p Name doesn't match one of the output kind names.
+  static Optional<OutputKind> getOutputKindForName(StringRef Name);
+
+  std::unique_ptr<remote_cache::KeyValueDBClient> RemoteKVClient;
+  std::unique_ptr<remote_cache::CASDBClient> RemoteCASClient;
+  IntrusiveRefCntPtr<CollectingOutputBackend> CollectingOutputs;
+  bool TriedReleaseLLBuildExecutionLane = false;
+};
+
 // Manage caching and replay of compile jobs.
 //
 // The high-level model is:
@@ -416,7 +506,20 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
 
   DisableCachedCompileJobReplay = CacheOpts.DisableCachedCompileJobReplay;
 
-  CacheBackend = std::make_unique<ObjectStoreCachingOutputs>(Clang, CAS, Cache);
+  if (!CacheOpts.CompilationCachingServicePath.empty()) {
+    Expected<remote_cache::ClientServices> Clients =
+        remote_cache::createCompilationCachingRemoteClient(
+            CacheOpts.CompilationCachingServicePath);
+    if (!Clients)
+      return reportCachingBackendError(Clang.getDiagnostics(),
+                                       Clients.takeError());
+    CacheBackend =
+        std::make_unique<RemoteCachingOutputs>(Clang, std::move(*Clients));
+  } else {
+    CacheBackend =
+        std::make_unique<ObjectStoreCachingOutputs>(Clang, CAS, Cache);
+  }
+
   return None;
 }
 
@@ -842,6 +945,263 @@ ObjectStoreCachingOutputs::replayCachedResult(llvm::cas::ObjectRef ResultID,
   if (JustComputedResult)
     return None;
   return 0;
+}
+
+Expected<bool> RemoteCachingOutputs::tryReplayCachedResult(
+    const llvm::cas::CASID &ResultCacheKey) {
+  DiagnosticsEngine &Diags = Clang.getDiagnostics();
+
+  RemoteKVClient->getValueQueue().getValueAsync(ResultCacheKey.getHash());
+  Expected<remote_cache::KeyValueDBClient::GetValueAsyncQueue::Response>
+      Response = RemoteKVClient->getValueQueue().receiveNext();
+  if (!Response)
+    return Response.takeError();
+  if (!Response->Value) {
+    Diags.Report(diag::remark_compile_job_cache_miss)
+        << ResultCacheKey.toString();
+    return false;
+  }
+
+  Expected<bool> ReplayedResult =
+      replayCachedResult(ResultCacheKey, *Response->Value);
+  if (!ReplayedResult)
+    return ReplayedResult.takeError();
+
+  // diag::remark_compile_job_cache_hit is emitted in \p replayCachedResult.
+
+  return ReplayedResult;
+}
+
+static constexpr llvm::StringLiteral MainOutputKindName = "<output>";
+static constexpr llvm::StringLiteral SerializedDiagnosticsKindName =
+    "<serial-diags>";
+static constexpr llvm::StringLiteral StderrDiagnosticsKindName =
+    "<stderr-diags>";
+static constexpr llvm::StringLiteral DependenciesOutputKindName =
+    "<dependencies>";
+
+StringRef RemoteCachingOutputs::getOutputKindName(OutputKind Kind) {
+  switch (Kind) {
+  case OutputKind::MainOutput:
+    return MainOutputKindName;
+  case OutputKind::SerializedDiagnostics:
+    return SerializedDiagnosticsKindName;
+  case OutputKind::Stderr:
+    return StderrDiagnosticsKindName;
+  case OutputKind::Dependencies:
+    return DependenciesOutputKindName;
+  }
+}
+
+Optional<CachingOutputs::OutputKind>
+RemoteCachingOutputs::getOutputKindForName(StringRef Name) {
+  return llvm::StringSwitch<Optional<OutputKind>>(Name)
+      .Case(MainOutputKindName, OutputKind::MainOutput)
+      .Case(SerializedDiagnosticsKindName, OutputKind::SerializedDiagnostics)
+      .Case(StderrDiagnosticsKindName, OutputKind::Stderr)
+      .Case(DependenciesOutputKindName, OutputKind::Dependencies)
+      .Default(None);
+}
+
+Expected<bool> RemoteCachingOutputs::replayCachedResult(
+    const llvm::cas::CASID &ResultCacheKey,
+    const remote_cache::KeyValueDBClient::ValueTy &CompResult) {
+  // It would be nice to release the llbuild execution lane while we wait to
+  // receive remote data, but if some data are missing (e.g. due to garbage
+  // collection), we'll fallback to normal compilation and it would be badness
+  // to do it outside the execution lanes.
+  // FIXME: Consider enhancing the llbuild interaction to allow "requesting
+  // back" an execution lane, then we would release the execution lane here and
+  // if we need to fallback to normal compilation we'd ask and wait for an
+  // execution lane before continuing it.
+
+  // Disable the existing DiagnosticConsumer, we'll both print to stderr
+  // directly and also potentially output a serialized diagnostics file, in
+  // which case we don't want the outer DiagnosticConsumer to overwrite it and
+  // lose the compilation diagnostics.
+  // See FIXME in CompileJobCache::tryReplayCachedResult() about improving how
+  // we handle diagnostics for caching purposes.
+  Clang.getDiagnosticClient().finish();
+  // Insert a text printer so that the caching remarks can be printed.
+  DiagnosticsEngine &Diags = Clang.getDiagnostics();
+  Diags.setClient(new TextDiagnosticPrinter(
+                      llvm::errs(), &Clang.getInvocation().getDiagnosticOpts()),
+                  /*ShouldOwnClient=*/true);
+
+  // Replay outputs.
+
+  auto &LoadQueue = RemoteCASClient->loadQueue();
+  struct CallCtx : public remote_cache::AsyncCallerContext {
+    StringRef OutputName;
+    StringRef CASID;
+    bool IsStderr;
+    CallCtx(StringRef OutputName, StringRef CASID, bool IsStderr)
+        : OutputName(OutputName), CASID(CASID), IsStderr(IsStderr) {}
+  };
+  auto makeCtx =
+      [](StringRef OutputName, StringRef CASID,
+         bool IsStderr =
+             false) -> std::shared_ptr<remote_cache::AsyncCallerContext> {
+    return std::make_shared<CallCtx>(OutputName, CASID, IsStderr);
+  };
+
+  for (const auto &Entry : CompResult) {
+    StringRef OutputName = Entry.first();
+    const std::string &CASID = Entry.second;
+
+    Optional<OutputKind> OutKind = getOutputKindForName(OutputName);
+    StringRef Path = OutKind ? getPathForOutputKind(*OutKind) : OutputName;
+
+    if (OutKind && *OutKind == OutputKind::Stderr) {
+      LoadQueue.loadAsync(CASID, /*OutFilePath*/ None,
+                          makeCtx(OutputName, CASID, /*IsStderr*/ true));
+      continue;
+    }
+    if (Path.empty()) {
+      // The output may be always generated but not needed with this invocation,
+      // like the serialized diagnostics file.
+      continue;
+    }
+    LoadQueue.loadAsync(CASID, Path.str(), makeCtx(OutputName, CASID));
+  }
+
+  bool HasMissingOutput = false;
+  Optional<std::string> StderrDiags;
+
+  while (LoadQueue.hasPending()) {
+    auto Response = LoadQueue.receiveNext();
+    if (!Response)
+      return Response.takeError();
+    const CallCtx &Ctx = *static_cast<CallCtx *>(Response->CallCtx.get());
+    if (Response->KeyNotFound) {
+      std::string PrintedRemoteCASID = llvm::encodeBase64(Ctx.CASID);
+      Diags.Report(diag::remark_compile_job_cache_backend_output_not_found)
+          << Ctx.OutputName << ResultCacheKey.toString() << PrintedRemoteCASID;
+      HasMissingOutput = true;
+      continue;
+    }
+    if (HasMissingOutput)
+      continue;
+
+    if (Ctx.IsStderr)
+      StderrDiags = std::move(Response->BlobData);
+  }
+
+  if (HasMissingOutput)
+    return false;
+
+  StringRef MainOutputName = getOutputKindName(OutputKind::MainOutput);
+  auto MainOutputI = CompResult.find(MainOutputName);
+  assert(MainOutputI != CompResult.end());
+  std::string PrintedRemoteMainOutputCASID =
+      llvm::encodeBase64(MainOutputI->second);
+  Diags.Report(diag::remark_compile_job_cache_hit)
+      << ResultCacheKey.toString()
+      << (Twine(MainOutputName) + ": " + PrintedRemoteMainOutputCASID).str();
+
+  if (StderrDiags)
+    llvm::errs() << *StderrDiags;
+
+  return true;
+}
+
+bool RemoteCachingOutputs::prepareOutputCollection() {
+  // Set up the output backend so we can save / cache the result after.
+  for (OutputKind K : cas::CompileJobCacheResult::getAllOutputKinds()) {
+    StringRef OutPath = getPathForOutputKind(K);
+    if (!OutPath.empty())
+      CollectingOutputs->addKindMap(getOutputKindName(K), OutPath);
+  }
+
+  // FIXME: Handle collecting the dependencies as well.
+  return prepareOutputCollectionCommon(CollectingOutputs);
+}
+
+Error RemoteCachingOutputs::finishComputedResult(
+    const llvm::cas::CASID &ResultCacheKey, bool SkipCache) {
+  if (SkipCache)
+    return Error::success();
+
+  // Release the llbuild execution lane while we wait to upload data to remote
+  // cache.
+  tryReleaseLLBuildExecutionLane();
+
+  auto &SaveQueue = RemoteCASClient->saveQueue();
+  struct CallCtx : public remote_cache::AsyncCallerContext {
+    StringRef OutputName;
+    CallCtx(StringRef OutputName) : OutputName(OutputName) {}
+  };
+  auto makeCtx = [](StringRef OutputName)
+      -> std::shared_ptr<remote_cache::AsyncCallerContext> {
+    return std::make_shared<CallCtx>(OutputName);
+  };
+
+  if (!SerialDiagsOutput) {
+    // Not requested to get a serialized diagnostics file but we generated it
+    // and will store it regardless so that the key is independent of the
+    // presence of '--serialize-diagnostics'.
+    SaveQueue.saveDataAsync(
+        SerialDiagsBuf.str().str(),
+        makeCtx(getOutputKindName(OutputKind::SerializedDiagnostics)));
+  }
+
+  // FIXME: Save dependencies output.
+
+  if (!ResultDiags.empty()) {
+    SaveQueue.saveDataAsync(ResultDiags.str().str(),
+                            makeCtx(getOutputKindName(OutputKind::Stderr)));
+  }
+
+  for (StringRef OutputName : CollectingOutputs->getOutputs()) {
+    Optional<OutputKind> OutKind = getOutputKindForName(OutputName);
+    StringRef Path = OutKind ? getPathForOutputKind(*OutKind) : OutputName;
+    assert(!Path.empty());
+    SmallString<256> AbsPath{Path};
+    llvm::sys::fs::make_absolute(AbsPath);
+    SaveQueue.saveFileAsync(AbsPath.str().str(), makeCtx(OutputName));
+  }
+
+  // Cache the result.
+
+  remote_cache::KeyValueDBClient::ValueTy CompResult;
+  while (SaveQueue.hasPending()) {
+    auto Response = SaveQueue.receiveNext();
+    if (!Response)
+      return Response.takeError();
+    StringRef OutputName =
+        static_cast<CallCtx *>(Response->CallCtx.get())->OutputName;
+    CompResult[OutputName] = Response->CASID;
+  }
+
+  RemoteKVClient->putValueQueue().putValueAsync(ResultCacheKey.getHash(),
+                                                CompResult);
+  auto Response = RemoteKVClient->putValueQueue().receiveNext();
+  if (!Response)
+    return Response.takeError();
+
+  return Error::success();
+}
+
+void RemoteCachingOutputs::tryReleaseLLBuildExecutionLane() {
+  if (TriedReleaseLLBuildExecutionLane)
+    return;
+  TriedReleaseLLBuildExecutionLane = true;
+  if (const char *LLTaskID = getenv("LLBUILD_TASK_ID")) {
+    // Use the llbuild protocol to request to release the execution lane for
+    // this task.
+    const char *LLControlFD = getenv("LLBUILD_CONTROL_FD");
+    if (!LLControlFD)
+      llvm::report_fatal_error("'LLBUILD_CONTROL_FD' env var is not set!");
+    int LLCtrlFD;
+    bool HasErr = StringRef(LLControlFD).getAsInteger(10, LLCtrlFD);
+    if (HasErr)
+      llvm::report_fatal_error(Twine("failed converting 'LLBUILD_CONTROL_FD' "
+                                     "to an integer, it was: ") +
+                               LLControlFD);
+    llvm::raw_fd_ostream FDOS(LLCtrlFD, /*shouldClose*/ false);
+    FDOS << "llbuild.1\n" << LLTaskID << '\n';
+    FDOS.flush();
+  }
 }
 
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {

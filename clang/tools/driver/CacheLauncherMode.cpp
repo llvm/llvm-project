@@ -161,6 +161,11 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
         Args.push_back(Saver.save("-fdepscan-prefix-map=" + PrefixMap).data());
       }
     }
+    if (const char *ServicePath =
+            ::getenv("LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH")) {
+      Args.append({"-Xclang", "-fcompilation-caching-service-path", "-Xclang",
+                   ServicePath});
+    }
     if (const char *CASPath = ::getenv("LLVM_CACHE_CAS_PATH")) {
       llvm::SmallString<256> CASArg(CASPath);
       llvm::sys::path::append(CASArg, "cas");

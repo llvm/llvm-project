@@ -487,6 +487,9 @@ public:
   /// The name of the product the input files belong too.
   std::string ProductName;
 
+  /// Socket path for remote caching service.
+  std::string CompilationCachingServicePath;
+
   /// Args to pass to the plugins
   std::map<std::string, std::vector<std::string>> PluginArgs;
 

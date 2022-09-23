@@ -116,6 +116,9 @@ canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
   // Canonicalize settings for caching, extracting settings that affect the
   // compilation even if will clear them during the main compilation.
   FrontendOpts.CacheCompileJob = false;
+  Opts.CompilationCachingServicePath =
+      std::move(FrontendOpts.CompilationCachingServicePath);
+  FrontendOpts.CompilationCachingServicePath.clear();
   Opts.DisableCachedCompileJobReplay =
       FrontendOpts.DisableCachedCompileJobReplay;
   FrontendOpts.DisableCachedCompileJobReplay = false;

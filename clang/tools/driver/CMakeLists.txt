@@ -1,3 +1,9 @@
+if(LLVM_CAS_ENABLE_REMOTE_CACHE)
+  add_subdirectory(RemoteCache)
+else()
+  add_subdirectory(NullRemoteCache)
+endif()
+
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
@@ -38,6 +44,12 @@ add_clang_tool(clang
   GENERATE_DRIVER
   )
 
+if(LLVM_CAS_ENABLE_REMOTE_CACHE)
+  set(REMOTE_CACHE_TARGET clangRemoteCache)
+else()
+  set(REMOTE_CACHE_TARGET clangNullRemoteCache)
+endif()
+
 clang_target_link_libraries(clang
   PRIVATE
   clangAPINotes
@@ -49,6 +61,7 @@ clang_target_link_libraries(clang
   clangFrontend
   clangFrontendTool
   clangSerialization
+  ${REMOTE_CACHE_TARGET}
   )
 
 if(WIN32 AND NOT CYGWIN)

@@ -1,0 +1,49 @@
+//===--- compilation_caching_kv.proto - Key/Value service definition ------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.apple.dt.compilation_cache_service";
+option java_outer_classname = "CompilationCachingProto";
+option objc_class_prefix = "CCS";
+
+package compilation_cache_service.keyvalue.v1;
+
+// Interface exported by the service.
+service KeyValueDB {
+  rpc GetValue(GetValueRequest) returns (GetValueResponse) {}
+  rpc PutValue(PutValueRequest) returns (PutValueResponse) {}
+}
+
+message Value { map<string, bytes> entries = 1; }
+
+message GetValueRequest { bytes key = 1; }
+
+message GetValueResponse {
+  enum Outcome {
+    ERROR = 0; // if unset, we'll get error
+
+    KEY_NOT_FOUND = 1;
+    SUCCESS = 2;
+  }
+  Outcome outcome = 1;
+  oneof contents {
+    ResponseError error = 2;
+    Value value = 3;
+  }
+}
+
+message PutValueRequest {
+  bytes key = 1;
+  Value value = 2;
+}
+
+message PutValueResponse { optional ResponseError error = 1; }
+
+message ResponseError { string description = 1; }

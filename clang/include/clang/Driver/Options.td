@@ -6596,6 +6596,11 @@ defm cache_disable_replay : BoolFOption<"cache-disable-replay",
     PosFlag<SetTrue, [], "Disable replaying a cached compile job">,
     NegFlag<SetFalse>>;
 
+def fcompilation_caching_service_path : Separate<["-"], "fcompilation-caching-service-path">,
+    Group<f_Group>, MetaVarName<"<pathname>">,
+    HelpText<"Specify the socket path for connecting to a remote caching service">,
+    MarshallingInfoString<FrontendOpts<"CompilationCachingServicePath">>;
+
 } // let Flags = [CC1Option, NoDriverOption]
 
 def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>,

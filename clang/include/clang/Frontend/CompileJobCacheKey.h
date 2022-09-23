@@ -32,6 +32,8 @@ class DiagnosticsEngine;
 /// Caching-related options for a given \c CompilerInvocation that are
 /// canonicalized away by the cache key.  See \c canonicalizeAndCreateCacheKey.
 struct CompileJobCachingOptions {
+  /// See \c FrontendOptions::CompilationCachingServicePath.
+  std::string CompilationCachingServicePath;
   /// See \c FrontendOptions::DisableCachedCompileJobReplay.
   bool DisableCachedCompileJobReplay;
 };
