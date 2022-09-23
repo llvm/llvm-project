@@ -511,6 +511,13 @@ bool CallBase::hasReadingOperandBundles() const {
          getIntrinsicID() != Intrinsic::assume;
 }
 
+bool CallBase::hasClobberingOperandBundles() const {
+  return hasOperandBundlesOtherThan(
+             {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
+              LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+         getIntrinsicID() != Intrinsic::assume;
+}
+
 //===----------------------------------------------------------------------===//
 //                        CallInst Implementation
 //===----------------------------------------------------------------------===//
