@@ -191,6 +191,11 @@ struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
     // Compute total byte size.
     auto dstByteSize =
         rewriter.create<LLVM::MulOp>(loc, dstNumElements, sizeInBytes);
+    // Since the src and dst memref are guarantee to have the same
+    // element type by the verifier, it is safe here to reuse the
+    // type size computed from dst memref.
+    auto srcByteSize =
+        rewriter.create<LLVM::MulOp>(loc, srcNumElements, sizeInBytes);
     // Allocate a new buffer.
     auto [dstRawPtr, dstAlignedPtr] =
         allocateBuffer(rewriter, loc, dstByteSize, op);
@@ -202,7 +207,7 @@ struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
       return rewriter.create<LLVM::BitcastOp>(loc, getVoidPtrType(), ptr);
     };
     rewriter.create<LLVM::MemcpyOp>(loc, toVoidPtr(dstAlignedPtr),
-                                    toVoidPtr(srcAlignedPtr), dstByteSize,
+                                    toVoidPtr(srcAlignedPtr), srcByteSize,
                                     isVolatile);
     // Deallocate the old buffer.
     LLVM::LLVMFuncOp freeFunc =
