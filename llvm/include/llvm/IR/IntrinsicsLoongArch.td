@@ -30,4 +30,7 @@ multiclass MaskedAtomicRMWIntrinsics {
 }
 
 defm int_loongarch_masked_atomicrmw_xchg : MaskedAtomicRMWIntrinsics;
+defm int_loongarch_masked_atomicrmw_add : MaskedAtomicRMWIntrinsics;
+defm int_loongarch_masked_atomicrmw_sub : MaskedAtomicRMWIntrinsics;
+defm int_loongarch_masked_atomicrmw_nand : MaskedAtomicRMWIntrinsics;
 } // TargetPrefix = "loongarch"
