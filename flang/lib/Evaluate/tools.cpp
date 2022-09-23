@@ -784,11 +784,8 @@ bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
   }
 }
 
-bool IsBareNullPointer(const Expr<SomeType> *expr) {
-  return expr && std::holds_alternative<NullPointer>(expr->u);
-}
+// IsNullPointer() & variations
 
-// IsNullObjectPointetr, IsNullProcedurePointer(), IsNullPointer()
 template <bool IS_PROC_PTR> struct IsNullPointerHelper {
   template <typename A> bool operator()(const A &) const { return false; }
   bool operator()(const ProcedureRef &call) const {
@@ -811,6 +808,27 @@ template <bool IS_PROC_PTR> struct IsNullPointerHelper {
               characteristics::Procedure::Attr::NullPointer);
     }
   }
+  template <typename T> bool operator()(const Designator<T> &x) const {
+    if (const auto *component{std::get_if<Component>(&x.u)}) {
+      if (const auto *baseSym{std::get_if<SymbolRef>(&component->base().u)}) {
+        const Symbol &base{**baseSym};
+        if (const auto *object{
+                base.detailsIf<semantics::ObjectEntityDetails>()}) {
+          // TODO: nested component and array references
+          if (IsNamedConstant(base) && object->init()) {
+            if (auto structCons{
+                    GetScalarConstantValue<SomeDerived>(*object->init())}) {
+              auto iter{structCons->values().find(component->GetLastSymbol())};
+              if (iter != structCons->values().end()) {
+                return (*this)(iter->second.value());
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
   bool operator()(const NullPointer &) const { return true; }
   template <typename T> bool operator()(const Parentheses<T> &x) const {
     return (*this)(x.left());
@@ -823,11 +841,17 @@ template <bool IS_PROC_PTR> struct IsNullPointerHelper {
 bool IsNullObjectPointer(const Expr<SomeType> &expr) {
   return IsNullPointerHelper<false>{}(expr);
 }
+
 bool IsNullProcedurePointer(const Expr<SomeType> &expr) {
   return IsNullPointerHelper<true>{}(expr);
 }
+
 bool IsNullPointer(const Expr<SomeType> &expr) {
   return IsNullObjectPointer(expr) || IsNullProcedurePointer(expr);
+}
+
+bool IsBareNullPointer(const Expr<SomeType> *expr) {
+  return expr && std::holds_alternative<NullPointer>(expr->u);
 }
 
 // GetSymbolVector()
