@@ -260,6 +260,11 @@ END_REGISTER_VP(vp_minnum, VP_FMINNUM)
 // llvm.vp.maxnum(x, y, mask,vlen)
 BEGIN_REGISTER_VP(vp_maxnum, 2, 3, VP_FMAXNUM, -1)
 END_REGISTER_VP(vp_maxnum, VP_FMAXNUM)
+
+// llvm.vp.ceil(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_ceil, 1, 2, VP_FCEIL, -1)
+END_REGISTER_VP(vp_ceil, VP_FCEIL)
+
 ///// } Floating-Point Arithmetic
 
 ///// Type Casts {
