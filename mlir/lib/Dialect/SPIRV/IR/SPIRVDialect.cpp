@@ -106,7 +106,7 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
     // Replace the values directly with the return operands.
     assert(valuesToRepl.size() == 1 &&
            "spv.ReturnValue expected to only handle one result");
-    valuesToRepl.front().replaceAllUsesWith(retValOp.value());
+    valuesToRepl.front().replaceAllUsesWith(retValOp.getValue());
   }
 };
 } // namespace

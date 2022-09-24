@@ -65,7 +65,7 @@ def SPV_BranchOp : SPV_Op<"Branch", [
 
   let extraClassDeclaration = [{
     /// Returns the block arguments.
-    operand_range getBlockArguments() { return targetOperands(); }
+    operand_range getBlockArguments() { return getTargetOperands(); }
   }];
 
   let autogenSerialization = 0;
@@ -161,22 +161,22 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
 
     /// Returns the number of arguments to the true target block.
     unsigned getNumTrueBlockArguments() {
-      return trueTargetOperands().size();
+      return getTrueTargetOperands().size();
     }
 
     /// Returns the number of arguments to the false target block.
     unsigned getNumFalseBlockArguments() {
-      return falseTargetOperands().size();
+      return getFalseTargetOperands().size();
     }
 
     // Iterator and range support for true target block arguments.
     operand_range getTrueBlockArguments() {
-      return trueTargetOperands();
+      return getTrueTargetOperands();
     }
 
     // Iterator and range support for false target block arguments.
     operand_range getFalseBlockArguments() {
-      return falseTargetOperands();
+      return getFalseTargetOperands();
     }
 
   private:

@@ -69,12 +69,12 @@ static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
       builder.getIntegerAttr(targetType, targetBits / sourceBits);
   auto idx = builder.create<spirv::ConstantOp>(loc, targetType, attr);
   auto lastDim = op->getOperand(op.getNumOperands() - 1);
-  auto indices = llvm::to_vector<4>(op.indices());
+  auto indices = llvm::to_vector<4>(op.getIndices());
   // There are two elements if this is a 1-D tensor.
   assert(indices.size() == 2);
   indices.back() = builder.create<spirv::SDivOp>(loc, lastDim, idx);
-  Type t = typeConverter.convertType(op.component_ptr().getType());
-  return builder.create<spirv::AccessChainOp>(loc, t, op.base_ptr(), indices);
+  Type t = typeConverter.convertType(op.getComponentPtr().getType());
+  return builder.create<spirv::AccessChainOp>(loc, t, op.getBasePtr(), indices);
 }
 
 /// Returns the shifted `targetBits`-bit value with the given offset.
@@ -371,7 +371,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // Assume that getElementPtr() works linearizely. If it's a scalar, the method
   // still returns a linearized accessing. If the accessing is not linearized,
   // there will be offset issues.
-  assert(accessChainOp.indices().size() == 2);
+  assert(accessChainOp.getIndices().size() == 2);
   Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
                                                    srcBits, dstBits, rewriter);
   Value spvLoadOp = rewriter.create<spirv::LoadOp>(
@@ -507,7 +507,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   // 6) store 32-bit value back
   // The step 1 to step 3 are done by AtomicAnd as one atomic step, and the step
   // 4 to step 6 are done by AtomicOr as another atomic step.
-  assert(accessChainOp.indices().size() == 2);
+  assert(accessChainOp.getIndices().size() == 2);
   Value lastDim = accessChainOp->getOperand(accessChainOp.getNumOperands() - 1);
   Value offset = getOffsetForBitwidth(loc, lastDim, srcBits, dstBits, rewriter);
 
