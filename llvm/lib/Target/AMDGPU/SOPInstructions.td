@@ -588,6 +588,13 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 } // End isCommutable = 1
 } // End Defs = [SCC]
 
+let SubtargetPredicate = isGFX12Plus in {
+  def S_ADD_U64 : SOP2_64<"s_add_u64",
+    [(set SReg_64:$sdst, (UniformBinFrag<add> i64:$src0, i64:$src1))]>{
+    let isCommutable = 1;
+  }
+} // End SubtargetPredicate = isGFX12Plus
+
 // This pattern is restricted to certain subtargets (practically GFX8Plus)
 // because isel sometimes produces an sreg_64 copy to SCC as a by-product
 // of this pattern, and only for subtargets with hasScalarCompareEq64
@@ -2044,6 +2051,7 @@ defm S_MUL_HI_I32      : SOP2_Real_gfx11_gfx12<0x02e>;
 defm S_CSELECT_B32     : SOP2_Real_gfx11_gfx12<0x030>;
 defm S_CSELECT_B64     : SOP2_Real_gfx11_gfx12<0x031>;
 defm S_PACK_HL_B32_B16 : SOP2_Real_gfx11_gfx12<0x035>;
+defm S_ADD_U64         : SOP2_Real_gfx12<0x053>;
 
 //===----------------------------------------------------------------------===//
 // SOP2 - GFX1150, GFX12

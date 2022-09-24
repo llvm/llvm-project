@@ -1,9 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC,PREGFX12 %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC,PREGFX12 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC,PREGFX12 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC,PREGFX12 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC,PREGFX12 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC,GFX12 %s
 
 ; FUNC-LABEL: {{^}}s_add_i32:
 ; GCN: s_add_i32 s[[REG:[0-9]+]], {{s[0-9]+, s[0-9]+}}
@@ -117,8 +117,9 @@ define amdgpu_kernel void @v_add_imm_i32(i32 addrspace(1)* %out, i32 addrspace(1
 }
 
 ; FUNC-LABEL: {{^}}add64:
-; GCN: s_add_u32
-; GCN: s_addc_u32
+; PREGFX12: s_add_u32
+; PREGFX12: s_addc_u32
+; GFX12: s_add_u64
 define amdgpu_kernel void @add64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
   %add = add i64 %a, %b
@@ -143,8 +144,9 @@ entry:
 
 ; Test i64 add inside a branch.
 ; FUNC-LABEL: {{^}}add64_in_branch:
-; GCN: s_add_u32
-; GCN: s_addc_u32
+; PREGFX12: s_add_u32
+; PREGFX12: s_addc_u32
+; GFX12: s_add_u64
 define amdgpu_kernel void @add64_in_branch(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %a, i64 %b, i64 %c) {
 entry:
   %0 = icmp eq i64 %a, 0

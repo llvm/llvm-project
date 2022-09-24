@@ -10,20 +10,17 @@ define amdgpu_kernel void @copy_flat(<4 x i32>* nocapture %d, <4 x i32>* nocaptu
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCN-NEXT:  ; %bb.1: ; %for.body.preheader
 ; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GCN-NEXT:    .p2align 6
 ; GCN-NEXT:  .LBB0_2: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCN-NEXT:    s_prefetch_data s[2:3], 0xb0, null, 0
-; GCN-NEXT:    s_add_u32 s2, s2, 16
 ; GCN-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
-; GCN-NEXT:    flat_load_b128 v[0:3], v[0:1]
-; GCN-NEXT:    s_addc_u32 s3, s3, 0
 ; GCN-NEXT:    s_add_i32 s4, s4, -1
-; GCN-NEXT:    s_add_u32 s0, s0, 16
-; GCN-NEXT:    s_addc_u32 s1, s1, 0
+; GCN-NEXT:    flat_load_b128 v[0:3], v[0:1]
+; GCN-NEXT:    s_add_u64 s[2:3], s[2:3], 16
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    s_add_u64 s[0:1], s[0:1], 16
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_store_b128 v[4:5], v[0:3]
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
@@ -52,28 +49,27 @@ for.end:                                          ; preds = %for.body, %entry
 define amdgpu_kernel void @copy_global(<4 x i32> addrspace(1)* nocapture %d, <4 x i32> addrspace(1)* nocapture readonly %s, i32 %n) {
 ; GCN-LABEL: copy_global:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCN-NEXT:    s_load_b32 s6, s[0:1], 0x34
+; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_eq_u32 s4, 0
+; GCN-NEXT:    s_cmp_eq_u32 s6, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB1_3
 ; GCN-NEXT:  ; %bb.1: ; %for.body.preheader
 ; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_movk_i32 s4, 0xb0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_u32 s2, s2, 0xb0
-; GCN-NEXT:    s_addc_u32 s3, s3, 0
+; GCN-NEXT:    s_add_u64 s[2:3], s[2:3], s[4:5]
 ; GCN-NEXT:  .LBB1_2: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    global_load_b128 v[1:4], v0, s[2:3] offset:-176
 ; GCN-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
-; GCN-NEXT:    s_add_u32 s2, s2, 16
-; GCN-NEXT:    s_addc_u32 s3, s3, 0
-; GCN-NEXT:    s_add_i32 s4, s4, -1
+; GCN-NEXT:    s_add_i32 s6, s6, -1
+; GCN-NEXT:    s_add_u64 s[2:3], s[2:3], 16
+; GCN-NEXT:    s_cmp_lg_u32 s6, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_store_b128 v0, v[1:4], s[0:1]
-; GCN-NEXT:    s_add_u32 s0, s0, 16
-; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    s_add_u64 s[0:1], s[0:1], 16
 ; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GCN-NEXT:  .LBB1_3: ; %for.end
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -107,22 +103,19 @@ define amdgpu_kernel void @copy_constant(<4 x i32> addrspace(1)* nocapture %d, <
 ; GCN-NEXT:  ; %bb.1: ; %for.body.preheader
 ; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    .p2align 6
 ; GCN-NEXT:  .LBB2_2: ; %for.body
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_b128 s[8:11], s[2:3], 0x0
 ; GCN-NEXT:    s_prefetch_data s[2:3], 0xb0, null, 0
-; GCN-NEXT:    s_add_u32 s2, s2, 16
-; GCN-NEXT:    s_addc_u32 s3, s3, 0
 ; GCN-NEXT:    s_add_i32 s4, s4, -1
+; GCN-NEXT:    s_add_u64 s[2:3], s[2:3], 16
+; GCN-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_dual_mov_b32 v1, s8 :: v_dual_mov_b32 v2, s9
 ; GCN-NEXT:    v_dual_mov_b32 v3, s10 :: v_dual_mov_b32 v4, s11
 ; GCN-NEXT:    global_store_b128 v0, v[1:4], s[0:1]
-; GCN-NEXT:    s_add_u32 s0, s0, 16
-; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    s_cmp_lg_u32 s4, 0
+; GCN-NEXT:    s_add_u64 s[0:1], s[0:1], 16
 ; GCN-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GCN-NEXT:  .LBB2_3: ; %for.end
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
