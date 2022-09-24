@@ -133,7 +133,7 @@ void handle_sizeof_void(unsigned flag) {
   void* q;
   
   if (!flag) {
-    if (sizeof(*q) == 1)
+    if (sizeof(*q) == 1) // expected-warning {{ISO C does not allow indirection on operand of type 'void *'}}
       return;
     // Infeasibe.
     *p = 1; // no-warning
