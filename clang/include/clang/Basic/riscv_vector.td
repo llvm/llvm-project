@@ -193,7 +193,7 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // The policy scheme for unmasked intrinsic IR.
   // It could be NonePolicy, HasPassthruOperand or HasPolicyOperand.
   // HasPassthruOperand: Has a passthru operand to decide tail policy. If it is
-  // undef, tail policy is tail agnostic, otherwise policy is tail undisturbed.
+  // poison, tail policy is tail agnostic, otherwise policy is tail undisturbed.
   // HasPolicyOperand: Has a policy operand. 1 is tail agnostic and 0 is tail
   // undisturbed.
   PolicyScheme UnMaskedPolicyScheme = NonePolicy;
@@ -628,7 +628,7 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
       ManualCodegen = [{
       {
         if (DefaultPolicy == TAIL_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         IntrinsicTypes = {ResultType, Ops[3]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
         Value *NewVL = Ops[2];
@@ -649,7 +649,7 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         // Move mask to right before vl.
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
         IntrinsicTypes = {ResultType, Ops[4]->getType()};
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
@@ -853,7 +853,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
       SmallVector<llvm::Value*, 10> Operands;
       if (DefaultPolicy == TAIL_AGNOSTIC) {
         for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(llvm::UndefValue::get(ResultType));
+          Operands.push_back(llvm::PoisonValue::get(ResultType));
         Operands.push_back(Ops[NF]);
         Operands.push_back(Ops[NF + 1]);
       } else {
@@ -884,7 +884,7 @@ multiclass RVVUnitStridedSegLoad<string op> {
       SmallVector<llvm::Value*, 12> Operands;
       if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
         for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(llvm::UndefValue::get(ResultType));
+          Operands.push_back(llvm::PoisonValue::get(ResultType));
         Operands.push_back(Ops[NF + 1]);
         Operands.push_back(Ops[NF]);
         Operands.push_back(Ops[NF + 2]);
@@ -945,7 +945,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       Value *NewVL;
       if (DefaultPolicy == TAIL_AGNOSTIC) {
         for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(llvm::UndefValue::get(ResultType));
+          Operands.push_back(llvm::PoisonValue::get(ResultType));
         Operands.push_back(Ops[NF]);
         Operands.push_back(Ops[NF + 2]);
         NewVL = Ops[NF + 1];
@@ -980,7 +980,7 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       Value *NewVL;
       if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
         for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(llvm::UndefValue::get(ResultType));
+          Operands.push_back(llvm::PoisonValue::get(ResultType));
         Operands.push_back(Ops[NF + 1]);
         Operands.push_back(Ops[NF]);
         Operands.push_back(Ops[NF + 3]);
@@ -1043,7 +1043,7 @@ multiclass RVVStridedSegLoad<string op> {
       SmallVector<llvm::Value*, 12> Operands;
       if (DefaultPolicy == TAIL_AGNOSTIC) {
         for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(llvm::UndefValue::get(ResultType));
+          Operands.push_back(llvm::PoisonValue::get(ResultType));
         Operands.push_back(Ops[NF]);
         Operands.push_back(Ops[NF + 1]);
         Operands.push_back(Ops[NF + 2]);
@@ -1076,7 +1076,7 @@ multiclass RVVStridedSegLoad<string op> {
       SmallVector<llvm::Value*, 12> Operands;
       if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
         for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(llvm::UndefValue::get(ResultType));
+          Operands.push_back(llvm::PoisonValue::get(ResultType));
         Operands.push_back(Ops[NF + 1]);
         Operands.push_back(Ops[NF + 2]);
         Operands.push_back(Ops[NF]);
@@ -1133,7 +1133,7 @@ multiclass RVVIndexedSegLoad<string op> {
       SmallVector<llvm::Value*, 12> Operands;
       if (DefaultPolicy == TAIL_AGNOSTIC) {
         for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(llvm::UndefValue::get(ResultType));
+          Operands.push_back(llvm::PoisonValue::get(ResultType));
         Operands.push_back(Ops[NF]);
         Operands.push_back(Ops[NF + 1]);
         Operands.push_back(Ops[NF + 2]);
@@ -1167,7 +1167,7 @@ multiclass RVVIndexedSegLoad<string op> {
       SmallVector<llvm::Value*, 12> Operands;
       if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
         for (unsigned I = 0; I < NF; ++I)
-          Operands.push_back(llvm::UndefValue::get(ResultType));
+          Operands.push_back(llvm::PoisonValue::get(ResultType));
         Operands.push_back(Ops[NF + 1]);
         Operands.push_back(Ops[NF + 2]);
         Operands.push_back(Ops[NF]);
@@ -1363,7 +1363,7 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
       ManualCodegen = [{
       {
         if (DefaultPolicy == TAIL_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
         // passthru, op1, op2, vl
@@ -1375,7 +1375,7 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
         Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
@@ -1396,7 +1396,7 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
       ManualCodegen = [{
       {
         if (DefaultPolicy == TAIL_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
         Ops.insert(Ops.begin() + 2,
                    llvm::Constant::getAllOnesValue(ElemTy));
@@ -1411,7 +1411,7 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
         Ops.insert(Ops.begin() + 2,
                    llvm::Constant::getAllOnesValue(ElemTy));
@@ -1453,7 +1453,7 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
       ManualCodegen = [{
       {
         if (DefaultPolicy == TAIL_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         // op1, po2, vl
         IntrinsicTypes = {ResultType,
                           Ops[1]->getType(), Ops[2]->getType()};
@@ -1465,7 +1465,7 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         Ops.insert(Ops.begin() + 2, Ops[1]);
         Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
         // maskedoff, op1, op2, mask, vl
@@ -1489,7 +1489,7 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
       ManualCodegen = [{
       {
         if (DefaultPolicy == TAIL_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
         // passtru, op1, op2, vl
@@ -1504,7 +1504,7 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
         Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
@@ -1532,7 +1532,7 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
       ManualCodegen = [{
       {
         if (DefaultPolicy == TAIL_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType()));
         // passthru, op1, xlen, vl
         IntrinsicTypes = {ResultType,
@@ -1546,7 +1546,7 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
-          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType()));
         Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
         // maskedoff, op1, xlen, mask, vl
@@ -1904,9 +1904,9 @@ let HasMasked = false,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-      // insert undef passthru
+      // insert poison passthru
       if (DefaultPolicy == TAIL_AGNOSTIC)
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "csil",
@@ -2048,9 +2048,9 @@ let HasMasked = false,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-      // insert undef passthru
+      // insert poison passthru
       if (DefaultPolicy == TAIL_AGNOSTIC)
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
@@ -2248,9 +2248,9 @@ let IsPrototypeDefaultTU = true,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-      // insert undef passthru
+      // insert poison passthru
       if (DefaultPolicy == TAIL_AGNOSTIC)
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops.back()->getType()};
     }] in {
   // signed and floating type
@@ -2288,7 +2288,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vundefined", SupportOverloading = false,
       MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
-        return llvm::UndefValue::get(ResultType);
+        return llvm::PoisonValue::get(ResultType);
       }] in {
     def vundefined : RVVBuiltin<"v", "v", "csilxfd">;
     def vundefined_u : RVVBuiltin<"Uv", "Uv", "csil">;
@@ -2320,7 +2320,7 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       ManualCodegen = [{
         ID = Intrinsic::vector_insert;
         IntrinsicTypes = {ResultType, Ops[0]->getType()};
-        Ops.push_back(llvm::UndefValue::get(ResultType));
+        Ops.push_back(llvm::PoisonValue::get(ResultType));
         std::swap(Ops[0], Ops[1]);
         Ops.push_back(ConstantInt::get(Int64Ty, 0));
         return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Ops, "");
