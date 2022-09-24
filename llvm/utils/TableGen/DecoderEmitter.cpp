@@ -1982,8 +1982,12 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
   } else {
     std::map<std::string, std::vector<OperandInfo>> NumberedInsnOperands;
     std::set<std::string> NumberedInsnOperandsNoTie;
-    if (Target.getInstructionSet()->getValueAsBit(
-            "decodePositionallyEncodedOperands")) {
+    bool SupportPositionalDecoding =
+        Target.getInstructionSet()->getValueAsBit(
+            "useDeprecatedPositionallyEncodedOperands") &&
+        Target.getInstructionSet()->getValueAsBit(
+            "decodePositionallyEncodedOperands");
+    if (SupportPositionalDecoding) {
       const std::vector<RecordVal> &Vals = Def.getValues();
       unsigned NumberedOp = 0;
 
@@ -2127,33 +2131,35 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
 
     // For each operand, see if we can figure out where it is encoded.
     for (const auto &Op : InOutOperands) {
-      if (!NumberedInsnOperands[std::string(Op.second)].empty()) {
-        llvm::append_range(InsnOperands,
-                           NumberedInsnOperands[std::string(Op.second)]);
-        continue;
-      }
-      if (!NumberedInsnOperands[TiedNames[std::string(Op.second)]].empty()) {
-        if (!NumberedInsnOperandsNoTie.count(
-                TiedNames[std::string(Op.second)])) {
-          // Figure out to which (sub)operand we're tied.
-          unsigned i =
-              CGI.Operands.getOperandNamed(TiedNames[std::string(Op.second)]);
-          int tiedTo = CGI.Operands[i].getTiedRegister();
-          if (tiedTo == -1) {
-            i = CGI.Operands.getOperandNamed(Op.second);
-            tiedTo = CGI.Operands[i].getTiedRegister();
-          }
-
-          if (tiedTo != -1) {
-            std::pair<unsigned, unsigned> SO =
-                CGI.Operands.getSubOperandNumber(tiedTo);
-
-            InsnOperands.push_back(
-                NumberedInsnOperands[TiedNames[std::string(Op.second)]]
-                                    [SO.second]);
-          }
+      if (SupportPositionalDecoding) {
+        if (!NumberedInsnOperands[std::string(Op.second)].empty()) {
+          llvm::append_range(InsnOperands,
+                             NumberedInsnOperands[std::string(Op.second)]);
+          continue;
         }
-        continue;
+        if (!NumberedInsnOperands[TiedNames[std::string(Op.second)]].empty()) {
+          if (!NumberedInsnOperandsNoTie.count(
+                  TiedNames[std::string(Op.second)])) {
+            // Figure out to which (sub)operand we're tied.
+            unsigned i =
+                CGI.Operands.getOperandNamed(TiedNames[std::string(Op.second)]);
+            int tiedTo = CGI.Operands[i].getTiedRegister();
+            if (tiedTo == -1) {
+              i = CGI.Operands.getOperandNamed(Op.second);
+              tiedTo = CGI.Operands[i].getTiedRegister();
+            }
+
+            if (tiedTo != -1) {
+              std::pair<unsigned, unsigned> SO =
+                  CGI.Operands.getSubOperandNumber(tiedTo);
+
+              InsnOperands.push_back(
+                  NumberedInsnOperands[TiedNames[std::string(Op.second)]]
+                                      [SO.second]);
+            }
+          }
+          continue;
+        }
       }
 
       // At this point, we can locate the decoder field, but we need to know how
