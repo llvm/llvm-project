@@ -387,7 +387,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_JAL: {
-    if (config->zce_tbljal && (read16le(loc) & 0xfc03) == 0xa002)
+    if (config->riscvTbljal && (read16le(loc) & 0xfc03) == 0xa002)
       return;
 
     checkInt(loc, val, 21, rel);
@@ -633,7 +633,7 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
     }
 
     int tblEntryIndex = -1;
-    if (config->zce_tbljal) {
+    if (config->riscvTbljal) {
       if (rd == 0)
         tblEntryIndex = in.riscvTableJumpSection->getEntryZero(*r.sym);
       else if (rd == X_RA)
@@ -876,7 +876,7 @@ void elf::riscvFinalizeRelax(int passes) {
             write16le(p, aux.writes[writesIdx++]);
             break;
           case R_RISCV_JAL:
-            if (config->zce_tbljal &&
+            if (config->riscvTbljal &&
                 (aux.writes[writesIdx] & 0xfc03) == 0xa002) {
               skip = 2;
               write16le(p, aux.writes[writesIdx++]);

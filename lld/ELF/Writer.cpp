@@ -454,7 +454,7 @@ template <class ELFT> void elf::createSyntheticSections() {
     add(*in.ppc64LongBranchTarget);
   }
 
-  if (config->emachine == EM_RISCV && config->zce_tbljal) {
+  if (config->emachine == EM_RISCV && config->riscvTbljal) {
     in.riscvTableJumpSection = std::make_unique<TableJumpSection>();
     add(*in.riscvTableJumpSection);
 
@@ -2921,7 +2921,7 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
   for (OutputSection *sec : outputSections)
     if (sec->flags & SHF_ALLOC) {
       sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
-      if (config->emachine == EM_RISCV && config->zce_tbljal)
+      if (config->emachine == EM_RISCV && config->riscvTbljal)
         in.riscvTableJumpSection->writeTo(Out::bufferStart + sec->offset);
     }
 }
