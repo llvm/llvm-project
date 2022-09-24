@@ -1380,7 +1380,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     // Special treatment because of member pointers
     SourceLocation SavedLoc = ConsumeToken();
     PreferredType.enterUnary(Actions, Tok.getLocation(), tok::amp, SavedLoc);
-    Res = ParseCastExpression(AnyCastExpr, true);
+
+    Res = ParseCastExpression(AnyCastExpr, /*isAddressOfOperand=*/true);
     if (!Res.isInvalid()) {
       Expr *Arg = Res.get();
       Res = Actions.ActOnUnaryOp(getCurScope(), SavedLoc, SavedKind, Arg);
@@ -1405,7 +1406,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Res = ParseCastExpression(AnyCastExpr);
     if (!Res.isInvalid()) {
       Expr *Arg = Res.get();
-      Res = Actions.ActOnUnaryOp(getCurScope(), SavedLoc, SavedKind, Arg);
+      Res = Actions.ActOnUnaryOp(getCurScope(), SavedLoc, SavedKind, Arg,
+                                 isAddressOfOperand);
       if (Res.isInvalid())
         Res = Actions.CreateRecoveryExpr(SavedLoc, Arg->getEndLoc(), Arg);
     }
