@@ -94,16 +94,16 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
     return nullptr;
 
   spirv::ModuleOp firstModule = inputModules.front();
-  auto addressingModel = firstModule.addressing_model();
-  auto memoryModel = firstModule.memory_model();
-  auto vceTriple = firstModule.vce_triple();
+  auto addressingModel = firstModule.getAddressingModel();
+  auto memoryModel = firstModule.getMemoryModel();
+  auto vceTriple = firstModule.getVceTriple();
 
   // First check whether there are conflicts between addressing/memory model.
   // Return early if so.
   for (auto module : inputModules) {
-    if (module.addressing_model() != addressingModel ||
-        module.memory_model() != memoryModel ||
-        module.vce_triple() != vceTriple) {
+    if (module.getAddressingModel() != addressingModel ||
+        module.getMemoryModel() != memoryModel ||
+        module.getVceTriple() != vceTriple) {
       module.emitError("input modules differ in addressing model, memory "
                        "model, and/or VCE triple");
       return nullptr;

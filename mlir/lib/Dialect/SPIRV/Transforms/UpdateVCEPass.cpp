@@ -151,7 +151,7 @@ void UpdateVCEPass::runOnOperation() {
     // Special treatment for global variables, whose type requirements are
     // conveyed by type attributes.
     if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
-      valueTypes.push_back(globalVar.type());
+      valueTypes.push_back(globalVar.getType());
 
     // Requirements from values' types
     SmallVector<ArrayRef<spirv::Extension>, 4> typeExtensions;

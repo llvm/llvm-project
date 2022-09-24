@@ -1414,7 +1414,7 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
   auto specConstOperationOp =
       opBuilder.create<spirv::SpecConstantOperationOp>(loc, resultType);
 
-  Region &body = specConstOperationOp.body();
+  Region &body = specConstOperationOp.getBody();
   // Move the new block into SpecConstantOperation's body.
   body.getBlocks().splice(body.end(), curBlock->getParent()->getBlocks(),
                           Region::iterator(enclosedBlock));
@@ -1983,17 +1983,17 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
       assert((branchCondOp.getTrueBlock() == target ||
               branchCondOp.getFalseBlock() == target) &&
              "expected target to be either the true or false target");
-      if (target == branchCondOp.trueTarget())
+      if (target == branchCondOp.getTrueTarget())
         opBuilder.create<spirv::BranchConditionalOp>(
-            branchCondOp.getLoc(), branchCondOp.condition(), blockArgs,
+            branchCondOp.getLoc(), branchCondOp.getCondition(), blockArgs,
             branchCondOp.getFalseBlockArguments(),
-            branchCondOp.branch_weightsAttr(), branchCondOp.trueTarget(),
-            branchCondOp.falseTarget());
+            branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueTarget(),
+            branchCondOp.getFalseTarget());
       else
         opBuilder.create<spirv::BranchConditionalOp>(
-            branchCondOp.getLoc(), branchCondOp.condition(),
+            branchCondOp.getLoc(), branchCondOp.getCondition(),
             branchCondOp.getTrueBlockArguments(), blockArgs,
-            branchCondOp.branch_weightsAttr(), branchCondOp.getTrueBlock(),
+            branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueBlock(),
             branchCondOp.getFalseBlock());
 
       branchCondOp.erase();
