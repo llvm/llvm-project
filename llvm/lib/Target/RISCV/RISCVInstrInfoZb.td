@@ -374,8 +374,10 @@ def BEXTI : RVBShift_ri<0b01001, 0b101, OPC_OP_IMM, "bexti">,
 // the draft bit manipulation specification they were included in. However, we
 // use the mnemonics given to them in the ratified Zbkx extension.
 let Predicates = [HasStdExtZbkx] in {
-def XPERM4 : ALU_rr<0b0010100, 0b010, "xperm4">, Sched<[]>;
-def XPERM8 : ALU_rr<0b0010100, 0b100, "xperm8">, Sched<[]>;
+def XPERM4 : ALU_rr<0b0010100, 0b010, "xperm4">,
+             Sched<[WriteXPERM, ReadXPERM, ReadXPERM]>;
+def XPERM8 : ALU_rr<0b0010100, 0b100, "xperm8">,
+             Sched<[WriteXPERM, ReadXPERM, ReadXPERM]>;
 } // Predicates = [HasStdExtZbkx]
 
 let Predicates = [HasStdExtZbb] in {
@@ -464,13 +466,13 @@ def ORC_B : RVBUnary<0b0010100, 0b00111, 0b101, OPC_OP_IMM, "orc.b">,
 
 let Predicates = [HasStdExtZbkb] in
 def BREV8 : RVBUnary<0b0110100, 0b00111, 0b101, OPC_OP_IMM, "brev8">,
-            Sched<[]>;
+            Sched<[WriteBREV8, ReadBREV8]>;
 
 let Predicates = [HasStdExtZbkb, IsRV32] in {
 def ZIP_RV32   : RVBUnary<0b0000100, 0b01111, 0b001, OPC_OP_IMM, "zip">,
-                 Sched<[]>;
+                 Sched<[WriteZIP, ReadZIP]>;
 def UNZIP_RV32 : RVBUnary<0b0000100, 0b01111, 0b101, OPC_OP_IMM, "unzip">,
-                 Sched<[]>;
+                 Sched<[WriteZIP, ReadZIP]>;
 } // Predicates = [HasStdExtZbkb, IsRV32]
 
 
