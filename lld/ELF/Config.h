@@ -275,6 +275,7 @@ struct Config {
   bool relocatable;
   bool relrGlibc = false;
   bool relrPackDynRelocs = false;
+  bool riscvTbljal;
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
   bool singleRoRx;
@@ -301,7 +302,6 @@ struct Config {
   bool writeAddends;
   bool zCombreloc;
   bool zCopyreloc;
-  bool zce_tbljal;
   bool zForceBti;
   bool zForceIbt;
   bool zGlobal;

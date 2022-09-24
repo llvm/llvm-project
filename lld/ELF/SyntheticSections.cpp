@@ -1298,7 +1298,7 @@ void TableJumpSection::writeEntries(
 }
 
 bool TableJumpSection::isNeeded() const {
-  return config->zce_tbljal;
+  return config->riscvTbljal;
 }
 
 static StringRef getIgotPltName() {
