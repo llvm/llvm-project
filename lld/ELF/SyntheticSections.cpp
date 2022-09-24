@@ -1297,9 +1297,7 @@ void TableJumpSection::writeEntries(
   }
 }
 
-bool TableJumpSection::isNeeded() const {
-  return config->riscvTbljal;
-}
+bool TableJumpSection::isNeeded() const { return config->riscvTbljal; }
 
 static StringRef getIgotPltName() {
   // On ARM the IgotPltSection is part of the GotSection.
