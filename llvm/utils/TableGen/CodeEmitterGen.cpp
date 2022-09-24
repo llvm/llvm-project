@@ -105,7 +105,10 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
   // operand number. Non-matching operands are assumed to be in
   // order.
   unsigned OpIdx;
-  if (CGI.Operands.hasOperandNamed(VarName, OpIdx)) {
+  std::pair<unsigned, unsigned> SubOp;
+  if (CGI.Operands.hasSubOperandAlias(VarName, SubOp)) {
+    OpIdx = CGI.Operands[SubOp.first].MIOperandNo + SubOp.second;
+  } else if (CGI.Operands.hasOperandNamed(VarName, OpIdx)) {
     // Get the machine operand number for the indicated operand.
     OpIdx = CGI.Operands[OpIdx].MIOperandNo;
     assert(!CGI.Operands.isFlatOperandNotEmitted(OpIdx) &&
@@ -133,7 +136,7 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
 
     OpIdx = NumberedOp++;
   }
-  
+
   std::pair<unsigned, unsigned> SO = CGI.Operands.getSubOperandNumber(OpIdx);
   std::string &EncoderMethodName = CGI.Operands[SO.first].EncoderMethodName;
 
