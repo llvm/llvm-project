@@ -64,9 +64,6 @@ def SPV_BranchOp : SPV_Op<"Branch", [
   let skipDefaultBuilders = 1;
 
   let extraClassDeclaration = [{
-    /// Returns the branch target block.
-    Block *getTarget() { return target(); }
-
     /// Returns the block arguments.
     operand_range getBlockArguments() { return targetOperands(); }
   }];
@@ -236,14 +233,14 @@ def SPV_FunctionCallOp : SPV_Op<"FunctionCall", [
   );
 
   let results = (outs
-    Optional<SPV_Type>:$result
+    Optional<SPV_Type>:$return_value
   );
 
   let autogenSerialization = 0;
 
   let assemblyFormat = [{
     $callee `(` $arguments `)` attr-dict `:`
-    functional-type($arguments, results)
+      functional-type($arguments, results)
   }];
 }
 

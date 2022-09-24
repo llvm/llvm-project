@@ -311,10 +311,6 @@ def SPV_FuncOp : SPV_Op<"func", [
   let autogenSerialization = 0;
 
   let extraClassDeclaration = [{
-    /// Returns the type of this function.
-    /// FIXME: Remove when SPIRV uses prefixed accessors.
-    FunctionType getFunctionType() { return function_type(); }
-
     /// Returns the argument types of this function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
