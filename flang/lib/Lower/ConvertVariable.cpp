@@ -189,17 +189,41 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     return fir::factory::createUnallocatedBox(builder, loc, boxType,
                                               /*nonDeferredParams=*/llvm::None);
   // Pointer initial data target, and NULL(mold).
-  if (const Fortran::semantics::Symbol *sym =
-          Fortran::evaluate::GetFirstSymbol(initialTarget)) {
+  for (const auto &sym : Fortran::evaluate::CollectSymbols(initialTarget)) {
     // Length parameters processing will need care in global initializer
     // context.
-    if (hasDerivedTypeWithLengthParameters(*sym))
+    if (hasDerivedTypeWithLengthParameters(sym))
       TODO(loc, "initial-data-target with derived type length parameters");
 
-    auto var = Fortran::lower::pft::Variable(*sym, /*global=*/true);
+    auto var = Fortran::lower::pft::Variable(sym, /*global=*/true);
     Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
                                         storeMap);
   }
+
+  // Handle NULL(mold) as a special case. Return an unallocated box of MOLD
+  // type. The return box is correctly created as a fir.box<fir.ptr<T>> where
+  // T is extracted from the MOLD argument.
+  if (const Fortran::evaluate::ProcedureRef *procRef =
+          Fortran::evaluate::GetProcedureRef(initialTarget)) {
+    const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+        procRef->proc().GetSpecificIntrinsic();
+    if (intrinsic && intrinsic->name == "null") {
+      assert(procRef->arguments().size() == 1 &&
+             "Expecting mold argument for NULL intrinsic");
+      const auto *argExpr = procRef->arguments()[0].value().UnwrapExpr();
+      assert(argExpr);
+      const Fortran::semantics::Symbol *sym =
+          Fortran::evaluate::GetFirstSymbol(*argExpr);
+      fir::ExtendedValue exv =
+          globalOpSymMap.lookupSymbol(sym).toExtendedValue();
+      const auto *mold = exv.getBoxOf<fir::MutableBoxValue>();
+      fir::BoxType boxType = mold->getBoxTy();
+      mlir::Value box =
+          fir::factory::createUnallocatedBox(builder, loc, boxType, {});
+      return box;
+    }
+  }
+
   mlir::Value box;
   if (initialTarget.Rank() > 0) {
     box = fir::getBase(Fortran::lower::createSomeArrayBox(
