@@ -10,6 +10,7 @@
 #include "fold-implementation.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/initial-image.h"
+#include "flang/Evaluate/tools.h"
 
 namespace Fortran::evaluate {
 
@@ -91,6 +92,14 @@ Expr<SomeDerived> FoldOperation(
             isConstant &= expr.Rank() > 0;
           } else {
             isConstant &= *valueShape == *componentShape;
+          }
+          if (*valueShape == *componentShape) {
+            if (auto lbounds{AsConstantExtents(
+                    context, GetLBOUNDs(context, NamedEntity{symbol}))}) {
+              expr =
+                  ArrayConstantBoundChanger{std::move(*lbounds)}.ChangeLbounds(
+                      std::move(expr));
+            }
           }
         }
       }

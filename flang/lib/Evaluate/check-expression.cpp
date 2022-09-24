@@ -9,6 +9,7 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/intrinsics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Semantics/symbol.h"
@@ -362,32 +363,6 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
     return IsNullProcedurePointer(expr);
   }
 }
-
-class ArrayConstantBoundChanger {
-public:
-  ArrayConstantBoundChanger(ConstantSubscripts &&lbounds)
-      : lbounds_{std::move(lbounds)} {}
-
-  template <typename A> A ChangeLbounds(A &&x) const {
-    return std::move(x); // default case
-  }
-  template <typename T> Constant<T> ChangeLbounds(Constant<T> &&x) {
-    x.set_lbounds(std::move(lbounds_));
-    return std::move(x);
-  }
-  template <typename T> Expr<T> ChangeLbounds(Parentheses<T> &&x) {
-    return ChangeLbounds(
-        std::move(x.left())); // Constant<> can be parenthesized
-  }
-  template <typename T> Expr<T> ChangeLbounds(Expr<T> &&x) {
-    return common::visit(
-        [&](auto &&x) { return Expr<T>{ChangeLbounds(std::move(x))}; },
-        std::move(x.u)); // recurse until we hit a constant
-  }
-
-private:
-  ConstantSubscripts &&lbounds_;
-};
 
 // Converts, folds, and then checks type, rank, and shape of an
 // initialization expression for a named constant, a non-pointer
