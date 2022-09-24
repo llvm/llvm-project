@@ -1527,13 +1527,16 @@ void Fortran::lower::mapSymbolAttributes(
         auto charLen = x.charLen();
         if (replace) {
           Fortran::lower::SymbolBox symBox = symMap.lookupSymbol(sym);
-          std::pair<mlir::Value, mlir::Value> unboxchar =
-              charHelp.createUnboxChar(symBox.getAddr());
-          mlir::Value boxAddr = unboxchar.first;
-          // Set/override LEN with a constant
-          mlir::Value len = builder.createIntegerConstant(loc, idxTy, charLen);
-          symMap.addCharSymbol(sym, boxAddr, len, true);
-          return;
+          if (symBox) {
+            std::pair<mlir::Value, mlir::Value> unboxchar =
+                charHelp.createUnboxChar(symBox.getAddr());
+            mlir::Value boxAddr = unboxchar.first;
+            // Set/override LEN with a constant
+            mlir::Value len =
+                builder.createIntegerConstant(loc, idxTy, charLen);
+            symMap.addCharSymbol(sym, boxAddr, len, true);
+            return;
+          }
         }
         mlir::Value len = builder.createIntegerConstant(loc, idxTy, charLen);
         if (preAlloc) {

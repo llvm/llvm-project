@@ -2753,6 +2753,17 @@ public:
     // function return value.
     assert(call.getNumResults() == 1 &&
            "Expected exactly one result in FUNCTION call");
+
+    // Call a BIND(C) function that return a char.
+    if (caller.characterize().IsBindC() &&
+        funcType.getResults()[0].isa<fir::CharacterType>()) {
+      fir::CharacterType charTy =
+          funcType.getResults()[0].dyn_cast<fir::CharacterType>();
+      mlir::Value len = builder.createIntegerConstant(
+          loc, builder.getCharacterLengthType(), charTy.getLen());
+      return fir::CharBoxValue{call.getResult(0), len};
+    }
+
     return call.getResult(0);
   }
 
