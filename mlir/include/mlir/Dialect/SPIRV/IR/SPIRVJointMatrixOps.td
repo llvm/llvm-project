@@ -39,7 +39,7 @@ def SPV_INTELJointMatrixWorkItemLengthOp : SPV_IntelVendorOp<"JointMatrixWorkIte
     ```
   }];
 
-  let assemblyFormat = "attr-dict `:` $type";
+  let assemblyFormat = "attr-dict `:` $joint_matrix_type";
 
   let availability = [
     MinVersion<SPV_V_1_0>,
@@ -49,7 +49,7 @@ def SPV_INTELJointMatrixWorkItemLengthOp : SPV_IntelVendorOp<"JointMatrixWorkIte
   ];
 
   let arguments = (ins
-    TypeAttr:$type
+    TypeAttr:$joint_matrix_type
   );
 
   let results = (outs
