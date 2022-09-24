@@ -645,13 +645,14 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
         // remove > 0 means the inst has been write to jal
         // rewrite the last item.
         if (remove)
-          sec.relaxAux->writes.back() = (0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
+          sec.relaxAux->writes.back() =
+              (0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
         else
-          sec.relaxAux->writes.push_back(0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
+          sec.relaxAux->writes.push_back(
+              0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
         remove = 6;
       }
     }
-
   }
 }
 
@@ -870,16 +871,16 @@ void elf::riscvFinalizeRelax(int passes) {
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;
-          case R_RISCV_RVC_JUMP: 
+          case R_RISCV_RVC_JUMP:
             skip = 2;
             write16le(p, aux.writes[writesIdx++]);
             break;
           case R_RISCV_JAL:
-            if (config->zce_tbljal && (aux.writes[writesIdx] & 0xfc03) == 0xa002){
+            if (config->zce_tbljal &&
+                (aux.writes[writesIdx] & 0xfc03) == 0xa002) {
               skip = 2;
               write16le(p, aux.writes[writesIdx++]);
-            }
-            else{
+            } else {
               skip = 4;
               write32le(p, aux.writes[writesIdx++]);
             }
