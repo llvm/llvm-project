@@ -2060,12 +2060,19 @@ void FuncResultStack::CompleteFunctionResultType() {
   // If the function has a type in the prefix, process it now.
   FuncInfo *info{Top()};
   if (info && &info->scope == &scopeHandler_.currScope()) {
-    if (info->parsedType) {
+    if (info->parsedType && info->resultSymbol) {
       scopeHandler_.messageHandler().set_currStmtSource(info->source);
       if (const auto *type{
               scopeHandler_.ProcessTypeSpec(*info->parsedType, true)}) {
-        if (!scopeHandler_.context().HasError(info->resultSymbol)) {
-          info->resultSymbol->SetType(*type);
+        Symbol &symbol{*info->resultSymbol};
+        if (!scopeHandler_.context().HasError(symbol)) {
+          if (symbol.GetType()) {
+            scopeHandler_.Say(symbol.name(),
+                "Function cannot have both an explicit type prefix and a RESULT suffix"_err_en_US);
+            scopeHandler_.context().SetError(symbol);
+          } else {
+            symbol.SetType(*type);
+          }
         }
       }
       info->parsedType = nullptr;
