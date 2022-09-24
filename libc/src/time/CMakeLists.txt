@@ -66,3 +66,17 @@ add_entrypoint_object(
     libc.include.time
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  nanosleep
+  SRCS
+    nanosleep.cpp
+  HDRS
+    nanosleep.h
+  DEPENDS
+    libc.include.errno
+    libc.include.time
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
