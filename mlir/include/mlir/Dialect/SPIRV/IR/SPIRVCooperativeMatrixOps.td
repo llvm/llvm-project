@@ -39,7 +39,7 @@ def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
     ```
   }];
 
-  let assemblyFormat = "attr-dict `:` $type";
+  let assemblyFormat = "attr-dict `:` $cooperative_matrix_type";
 
   let availability = [
     MinVersion<SPV_V_1_0>,
@@ -49,7 +49,7 @@ def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
   ];
 
   let arguments = (ins
-    TypeAttr:$type
+    TypeAttr:$cooperative_matrix_type
   );
 
   let results = (outs
