@@ -305,11 +305,17 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
     unsigned DiagID;
     auto ArgString = A->getAsString(Args);
     std::string Nearest;
-    if (getOpts().findNearest(
-          ArgString, Nearest, IncludedFlagsBitmask, ExcludedFlagsBitmask) > 1) {
-      DiagID = IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl
-                          : diag::err_drv_unknown_argument;
-      Diags.Report(DiagID) << ArgString;
+    if (getOpts().findNearest(ArgString, Nearest, IncludedFlagsBitmask,
+                              ExcludedFlagsBitmask) > 1) {
+      if (getOpts().findNearest(ArgString, Nearest, options::CC1Option) == 0 &&
+          !IsCLMode()) {
+        DiagID = diag::err_drv_unknown_argument_with_suggestion;
+        Diags.Report(DiagID) << ArgString << "-Xclang " + Nearest;
+      } else {
+        DiagID = IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl
+                            : diag::err_drv_unknown_argument;
+        Diags.Report(DiagID) << ArgString;
+      }
     } else {
       DiagID = IsCLMode()
                    ? diag::warn_drv_unknown_argument_clang_cl_with_suggestion
