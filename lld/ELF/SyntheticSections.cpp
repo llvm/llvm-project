@@ -1245,17 +1245,17 @@ void TableJumpSection::finalizeContents() {
   std::copy(entriesZero.begin(), entriesZero.end(),
             std::back_inserter(finalizedEntriesZero));
   std::sort(finalizedEntriesZero.begin(), finalizedEntriesZero.end(), cmp);
+  if (finalizedEntriesZero.size() > maxSizeZero)
+    finalizedEntriesZero.resize(maxSizeZero);
+
   std::copy(entriesRa.begin(), entriesRa.end(),
             std::back_inserter(finalizedEntriesRa));
   std::sort(finalizedEntriesRa.begin(), finalizedEntriesRa.end(), cmp);
+  if (finalizedEntriesRa.size() > maxSizeRa)
+    finalizedEntriesRa.resize(maxSizeRa);
 }
 
 size_t TableJumpSection::getSize() const {
-  if (size == 0)
-    return 256 * xlen; // TODO: This is the maximum size shrink this. This is
-                       // being caused by getSize being called to allocate space
-                       // for the section before the tbljal optimisation is
-                       // performed to add entries to the table.
   if (!entriesRa.empty()) {
     return (startRa + entriesRa.size()) * xlen;
   }
@@ -1298,9 +1298,7 @@ void TableJumpSection::writeEntries(
 }
 
 bool TableJumpSection::isNeeded() const {
-  // TODO: Make this function correctly. Currently discards section with
-  // entries.
-  return getSize() != 0;
+  return config->zce_tbljal;
 }
 
 static StringRef getIgotPltName() {

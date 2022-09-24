@@ -405,7 +405,7 @@ private:
   std::map<std::string, int> entriesRa;
   std::vector<std::pair<std::string, int>> finalizedEntriesRa;
 
-  // TODO: Make use of these in cost function.
+  // used in finalizeContents function.
   const size_t maxSizeZero = 64;
   const size_t maxSizeRa = 192;
 
