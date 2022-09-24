@@ -51,8 +51,8 @@ static AliasedResourceMap collectAliasedResources(spirv::ModuleOp moduleOp) {
   AliasedResourceMap aliasedResources;
   moduleOp->walk([&aliasedResources](spirv::GlobalVariableOp varOp) {
     if (varOp->getAttrOfType<UnitAttr>("aliased")) {
-      Optional<uint32_t> set = varOp.descriptor_set();
-      Optional<uint32_t> binding = varOp.binding();
+      Optional<uint32_t> set = varOp.getDescriptorSet();
+      Optional<uint32_t> binding = varOp.getBinding();
       if (set && binding)
         aliasedResources[{*set, *binding}].push_back(varOp);
     }
@@ -222,16 +222,16 @@ bool ResourceAliasAnalysis::shouldUnify(Operation *op) const {
   }
   if (auto addressOp = dyn_cast<spirv::AddressOfOp>(op)) {
     auto moduleOp = addressOp->getParentOfType<spirv::ModuleOp>();
-    auto *varOp = SymbolTable::lookupSymbolIn(moduleOp, addressOp.variable());
+    auto *varOp = SymbolTable::lookupSymbolIn(moduleOp, addressOp.getVariable());
     return shouldUnify(varOp);
   }
 
   if (auto acOp = dyn_cast<spirv::AccessChainOp>(op))
-    return shouldUnify(acOp.base_ptr().getDefiningOp());
+    return shouldUnify(acOp.getBasePtr().getDefiningOp());
   if (auto loadOp = dyn_cast<spirv::LoadOp>(op))
-    return shouldUnify(loadOp.ptr().getDefiningOp());
+    return shouldUnify(loadOp.getPtr().getDefiningOp());
   if (auto storeOp = dyn_cast<spirv::StoreOp>(op))
-    return shouldUnify(storeOp.ptr().getDefiningOp());
+    return shouldUnify(storeOp.getPtr().getDefiningOp());
 
   return false;
 }
@@ -265,7 +265,7 @@ void ResourceAliasAnalysis::recordIfUnifiable(
   // Collect the element types for all resources in the current set.
   SmallVector<spirv::SPIRVType> elementTypes;
   for (spirv::GlobalVariableOp resource : resources) {
-    Type elementType = getRuntimeArrayElementType(resource.type());
+    Type elementType = getRuntimeArrayElementType(resource.getType());
     if (!elementType)
       return; // Unexpected resource variable type.
 
@@ -326,7 +326,7 @@ struct ConvertAddressOf : public ConvertAliasResource<spirv::AddressOfOp> {
     // Rewrite the AddressOf op to get the address of the canoncical resource.
     auto moduleOp = addressOp->getParentOfType<spirv::ModuleOp>();
     auto srcVarOp = cast<spirv::GlobalVariableOp>(
-        SymbolTable::lookupSymbolIn(moduleOp, addressOp.variable()));
+        SymbolTable::lookupSymbolIn(moduleOp, addressOp.getVariable()));
     auto dstVarOp = analysis.getCanonicalResource(srcVarOp);
     rewriter.replaceOpWithNewOp<spirv::AddressOfOp>(addressOp, dstVarOp);
     return success();
@@ -339,13 +339,13 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
   LogicalResult
   matchAndRewrite(spirv::AccessChainOp acOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto addressOp = acOp.base_ptr().getDefiningOp<spirv::AddressOfOp>();
+    auto addressOp = acOp.getBasePtr().getDefiningOp<spirv::AddressOfOp>();
     if (!addressOp)
       return rewriter.notifyMatchFailure(acOp, "base ptr not addressof op");
 
     auto moduleOp = acOp->getParentOfType<spirv::ModuleOp>();
     auto srcVarOp = cast<spirv::GlobalVariableOp>(
-        SymbolTable::lookupSymbolIn(moduleOp, addressOp.variable()));
+        SymbolTable::lookupSymbolIn(moduleOp, addressOp.getVariable()));
     auto dstVarOp = analysis.getCanonicalResource(srcVarOp);
 
     spirv::SPIRVType srcElemType = analysis.getElementType(srcVarOp);
@@ -356,7 +356,7 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       // We have the same bitwidth for source and destination element types.
       // Thie indices keep the same.
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
-          acOp, adaptor.base_ptr(), adaptor.indices());
+          acOp, adaptor.getBasePtr(), adaptor.getIndices());
       return success();
     }
 
@@ -375,7 +375,7 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       auto ratioValue = rewriter.create<spirv::ConstantOp>(
           loc, i32Type, rewriter.getI32IntegerAttr(ratio));
 
-      auto indices = llvm::to_vector<4>(acOp.indices());
+      auto indices = llvm::to_vector<4>(acOp.getIndices());
       Value oldIndex = indices.back();
       indices.back() =
           rewriter.create<spirv::SDivOp>(loc, i32Type, oldIndex, ratioValue);
@@ -383,7 +383,7 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
           rewriter.create<spirv::SModOp>(loc, i32Type, oldIndex, ratioValue));
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
-          acOp, adaptor.base_ptr(), indices);
+          acOp, adaptor.getBasePtr(), indices);
       return success();
     }
 
@@ -399,13 +399,13 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       auto ratioValue = rewriter.create<spirv::ConstantOp>(
           loc, i32Type, rewriter.getI32IntegerAttr(ratio));
 
-      auto indices = llvm::to_vector<4>(acOp.indices());
+      auto indices = llvm::to_vector<4>(acOp.getIndices());
       Value oldIndex = indices.back();
       indices.back() =
           rewriter.create<spirv::IMulOp>(loc, i32Type, oldIndex, ratioValue);
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
-          acOp, adaptor.base_ptr(), indices);
+          acOp, adaptor.getBasePtr(), indices);
       return success();
     }
 
@@ -420,13 +420,13 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
   LogicalResult
   matchAndRewrite(spirv::LoadOp loadOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto srcPtrType = loadOp.ptr().getType().cast<spirv::PointerType>();
+    auto srcPtrType = loadOp.getPtr().getType().cast<spirv::PointerType>();
     auto srcElemType = srcPtrType.getPointeeType().cast<spirv::SPIRVType>();
-    auto dstPtrType = adaptor.ptr().getType().cast<spirv::PointerType>();
+    auto dstPtrType = adaptor.getPtr().getType().cast<spirv::PointerType>();
     auto dstElemType = dstPtrType.getPointeeType().cast<spirv::SPIRVType>();
 
     Location loc = loadOp.getLoc();
-    auto newLoadOp = rewriter.create<spirv::LoadOp>(loc, adaptor.ptr());
+    auto newLoadOp = rewriter.create<spirv::LoadOp>(loc, adaptor.getPtr());
     if (srcElemType == dstElemType) {
       rewriter.replaceOp(loadOp, newLoadOp->getResults());
       return success();
@@ -434,7 +434,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
 
     if (areSameBitwidthScalarType(srcElemType, dstElemType)) {
       auto castOp = rewriter.create<spirv::BitcastOp>(loc, srcElemType,
-                                                      newLoadOp.value());
+                                                      newLoadOp.getValue());
       rewriter.replaceOp(loadOp, castOp->getResults());
 
       return success();
@@ -457,19 +457,19 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       components.reserve(ratio);
       components.push_back(newLoadOp);
 
-      auto acOp = adaptor.ptr().getDefiningOp<spirv::AccessChainOp>();
+      auto acOp = adaptor.getPtr().getDefiningOp<spirv::AccessChainOp>();
       if (!acOp)
         return rewriter.notifyMatchFailure(loadOp, "ptr not spv.AccessChain");
 
       auto i32Type = rewriter.getI32Type();
       Value oneValue = spirv::ConstantOp::getOne(i32Type, loc, rewriter);
-      auto indices = llvm::to_vector<4>(acOp.indices());
+      auto indices = llvm::to_vector<4>(acOp.getIndices());
       for (int i = 1; i < ratio; ++i) {
         // Load all subsequent components belonging to this element.
         indices.back() = rewriter.create<spirv::IAddOp>(
             loc, i32Type, indices.back(), oneValue);
         auto componentAcOp = rewriter.create<spirv::AccessChainOp>(
-            loc, acOp.base_ptr(), indices);
+            loc, acOp.getBasePtr(), indices);
         // Assuming little endian, this reads lower-ordered bits of the number
         // to lower-numbered components of the vector.
         components.push_back(
@@ -504,19 +504,19 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
   matchAndRewrite(spirv::StoreOp storeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcElemType =
-        storeOp.ptr().getType().cast<spirv::PointerType>().getPointeeType();
+        storeOp.getPtr().getType().cast<spirv::PointerType>().getPointeeType();
     auto dstElemType =
-        adaptor.ptr().getType().cast<spirv::PointerType>().getPointeeType();
+        adaptor.getPtr().getType().cast<spirv::PointerType>().getPointeeType();
     if (!srcElemType.isIntOrFloat() || !dstElemType.isIntOrFloat())
       return rewriter.notifyMatchFailure(storeOp, "not scalar type");
     if (!areSameBitwidthScalarType(srcElemType, dstElemType))
       return rewriter.notifyMatchFailure(storeOp, "different bitwidth");
 
     Location loc = storeOp.getLoc();
-    Value value = adaptor.value();
+    Value value = adaptor.getValue();
     if (srcElemType != dstElemType)
       value = rewriter.create<spirv::BitcastOp>(loc, dstElemType, value);
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, adaptor.ptr(), value,
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, adaptor.getPtr(), value,
                                                 storeOp->getAttrs());
     return success();
   }

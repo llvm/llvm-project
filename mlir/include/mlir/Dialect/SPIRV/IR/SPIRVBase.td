@@ -72,10 +72,6 @@ def SPIRV_Dialect : Dialect {
     void printAttribute(
         Attribute attr, DialectAsmPrinter &printer) const override;
   }];
-
-  // TODO(https://github.com/llvm/llvm-project/issues/57887): Switch to
-  // _Prefixed accessors.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 //===----------------------------------------------------------------------===//

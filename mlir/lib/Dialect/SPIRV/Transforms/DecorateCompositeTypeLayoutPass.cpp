@@ -40,7 +40,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     SmallVector<NamedAttribute, 4> globalVarAttrs;
 
-    auto ptrType = op.type().cast<spirv::PointerType>();
+    auto ptrType = op.getType().cast<spirv::PointerType>();
     auto structType = VulkanLayoutUtils::decorateType(
         ptrType.getPointeeType().cast<spirv::StructType>());
 
@@ -71,11 +71,11 @@ public:
   LogicalResult matchAndRewrite(spirv::AddressOfOp op,
                                 PatternRewriter &rewriter) const override {
     auto spirvModule = op->getParentOfType<spirv::ModuleOp>();
-    auto varName = op.variableAttr();
+    auto varName = op.getVariableAttr();
     auto varOp = spirvModule.lookupSymbol<spirv::GlobalVariableOp>(varName);
 
     rewriter.replaceOpWithNewOp<spirv::AddressOfOp>(
-        op, varOp.type(), SymbolRefAttr::get(varName.getAttr()));
+        op, varOp.getType(), SymbolRefAttr::get(varName.getAttr()));
     return success();
   }
 };
@@ -121,12 +121,12 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   target.addLegalOp<func::FuncOp>();
   target.addDynamicallyLegalOp<spirv::GlobalVariableOp>(
       [](spirv::GlobalVariableOp op) {
-        return VulkanLayoutUtils::isLegalType(op.type());
+        return VulkanLayoutUtils::isLegalType(op.getType());
       });
 
   // Change the type for the direct users.
   target.addDynamicallyLegalOp<spirv::AddressOfOp>([](spirv::AddressOfOp op) {
-    return VulkanLayoutUtils::isLegalType(op.pointer().getType());
+    return VulkanLayoutUtils::isLegalType(op.getPointer().getType());
   });
 
   // Change the type for the indirect users.
@@ -134,7 +134,8 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
                                spirv::StoreOp>([&](Operation *op) {
     for (Value operand : op->getOperands()) {
       auto addrOp = operand.getDefiningOp<spirv::AddressOfOp>();
-      if (addrOp && !VulkanLayoutUtils::isLegalType(addrOp.pointer().getType()))
+      if (addrOp &&
+          !VulkanLayoutUtils::isLegalType(addrOp.getPointer().getType()))
         return false;
     }
     return true;

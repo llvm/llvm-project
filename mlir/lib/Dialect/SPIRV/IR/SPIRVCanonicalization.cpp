@@ -88,19 +88,19 @@ struct CombineChainedAccessChain
   LogicalResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
                                 PatternRewriter &rewriter) const override {
     auto parentAccessChainOp = dyn_cast_or_null<spirv::AccessChainOp>(
-        accessChainOp.base_ptr().getDefiningOp());
+        accessChainOp.getBasePtr().getDefiningOp());
 
     if (!parentAccessChainOp) {
       return failure();
     }
 
     // Combine indices.
-    SmallVector<Value, 4> indices(parentAccessChainOp.indices());
-    indices.append(accessChainOp.indices().begin(),
-                   accessChainOp.indices().end());
+    SmallVector<Value, 4> indices(parentAccessChainOp.getIndices());
+    indices.append(accessChainOp.getIndices().begin(),
+                   accessChainOp.getIndices().end());
 
     rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
-        accessChainOp, parentAccessChainOp.base_ptr(), indices);
+        accessChainOp, parentAccessChainOp.getBasePtr(), indices);
 
     return success();
   }
@@ -126,23 +126,24 @@ void spirv::BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::CompositeExtractOp::fold(ArrayRef<Attribute> operands) {
-  if (auto insertOp = composite().getDefiningOp<spirv::CompositeInsertOp>()) {
-    if (indices() == insertOp.indices())
-      return insertOp.object();
+  if (auto insertOp =
+          getComposite().getDefiningOp<spirv::CompositeInsertOp>()) {
+    if (getIndices() == insertOp.getIndices())
+      return insertOp.getObject();
   }
 
   if (auto constructOp =
-          composite().getDefiningOp<spirv::CompositeConstructOp>()) {
+          getComposite().getDefiningOp<spirv::CompositeConstructOp>()) {
     auto type = constructOp.getType().cast<spirv::CompositeType>();
-    if (indices().size() == 1 &&
-        constructOp.constituents().size() == type.getNumElements()) {
-      auto i = indices().begin()->cast<IntegerAttr>();
-      return constructOp.constituents()[i.getValue().getSExtValue()];
+    if (getIndices().size() == 1 &&
+        constructOp.getConstituents().size() == type.getNumElements()) {
+      auto i = getIndices().begin()->cast<IntegerAttr>();
+      return constructOp.getConstituents()[i.getValue().getSExtValue()];
     }
   }
 
   auto indexVector =
-      llvm::to_vector<8>(llvm::map_range(indices(), [](Attribute attr) {
+      llvm::to_vector<8>(llvm::map_range(getIndices(), [](Attribute attr) {
         return static_cast<unsigned>(attr.cast<IntegerAttr>().getInt());
       }));
   return extractCompositeElement(operands[0], indexVector);
@@ -154,7 +155,7 @@ OpFoldResult spirv::CompositeExtractOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult spirv::ConstantOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.empty() && "spv.Constant has no operands");
-  return value();
+  return getValue();
 }
 
 //===----------------------------------------------------------------------===//
@@ -164,8 +165,8 @@ OpFoldResult spirv::ConstantOp::fold(ArrayRef<Attribute> operands) {
 OpFoldResult spirv::IAddOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 2 && "spv.IAdd expects two operands");
   // x + 0 = x
-  if (matchPattern(operand2(), m_Zero()))
-    return operand1();
+  if (matchPattern(getOperand2(), m_Zero()))
+    return getOperand1();
 
   // According to the SPIR-V spec:
   //
@@ -183,11 +184,11 @@ OpFoldResult spirv::IAddOp::fold(ArrayRef<Attribute> operands) {
 OpFoldResult spirv::IMulOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 2 && "spv.IMul expects two operands");
   // x * 0 == 0
-  if (matchPattern(operand2(), m_Zero()))
-    return operand2();
+  if (matchPattern(getOperand2(), m_Zero()))
+    return getOperand2();
   // x * 1 = x
-  if (matchPattern(operand2(), m_One()))
-    return operand1();
+  if (matchPattern(getOperand2(), m_One()))
+    return getOperand1();
 
   // According to the SPIR-V spec:
   //
@@ -204,7 +205,7 @@ OpFoldResult spirv::IMulOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult spirv::ISubOp::fold(ArrayRef<Attribute> operands) {
   // x - x = 0
-  if (operand1() == operand2())
+  if (getOperand1() == getOperand2())
     return Builder(getContext()).getIntegerAttr(getType(), 0);
 
   // According to the SPIR-V spec:
@@ -226,7 +227,7 @@ OpFoldResult spirv::LogicalAndOp::fold(ArrayRef<Attribute> operands) {
   if (Optional<bool> rhs = getScalarOrSplatBoolAttr(operands.back())) {
     // x && true = x
     if (rhs.value())
-      return operand1();
+      return getOperand1();
 
     // x && false = false
     if (!rhs.value())
@@ -262,7 +263,7 @@ OpFoldResult spirv::LogicalOrOp::fold(ArrayRef<Attribute> operands) {
 
     // x || false = x
     if (!rhs.value())
-      return operand1();
+      return getOperand1();
   }
 
   return Attribute();
@@ -339,8 +340,8 @@ struct ConvertSelectionOpToSelect
         cast<spirv::StoreOp>(trueBlock->front())->getAttrs();
 
     auto selectOp = rewriter.create<spirv::SelectOp>(
-        selectionOp.getLoc(), trueValue.getType(), brConditionalOp.condition(),
-        trueValue, falseValue);
+        selectionOp.getLoc(), trueValue.getType(),
+        brConditionalOp.getCondition(), trueValue, falseValue);
     rewriter.create<spirv::StoreOp>(selectOp.getLoc(), ptrValue,
                                     selectOp.getResult(), storeOpAttributes);
 
@@ -371,13 +372,13 @@ private:
   // Returns a source value for the given block.
   Value getSrcValue(Block *block) const {
     auto storeOp = cast<spirv::StoreOp>(block->front());
-    return storeOp.value();
+    return storeOp.getValue();
   }
 
   // Returns a destination value for the given block.
   Value getDstPtr(Block *block) const {
     auto storeOp = cast<spirv::StoreOp>(block->front());
-    return storeOp.ptr();
+    return storeOp.getPtr();
   }
 };
 
@@ -406,14 +407,14 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
   // "Before version 1.4, Result Type must be a pointer, scalar, or vector.
   // Starting with version 1.4, Result Type can additionally be a composite type
   // other than a vector."
-  bool isScalarOrVector = trueBrStoreOp.value()
+  bool isScalarOrVector = trueBrStoreOp.getValue()
                               .getType()
                               .cast<spirv::SPIRVType>()
                               .isScalarOrVector();
 
   // Check that each `spv.Store` uses the same pointer, memory access
   // attributes and a valid type of the value.
-  if ((trueBrStoreOp.ptr() != falseBrStoreOp.ptr()) ||
+  if ((trueBrStoreOp.getPtr() != falseBrStoreOp.getPtr()) ||
       !isSameAttrList(trueBrStoreOp, falseBrStoreOp) || !isScalarOrVector) {
     return failure();
   }

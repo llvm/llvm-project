@@ -174,7 +174,7 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, OpAdaptor adaptor,
   // Create the block for the header.
   auto *header = new Block();
   // Insert the header.
-  loopOp.body().getBlocks().insert(getBlockIt(loopOp.body(), 1), header);
+  loopOp.getBody().getBlocks().insert(getBlockIt(loopOp.getBody(), 1), header);
 
   // Create the new induction variable to use.
   Value adapLowerBound = adaptor.getLowerBound();
@@ -197,13 +197,13 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, OpAdaptor adaptor,
 
   // Move the blocks from the forOp into the loopOp. This is the body of the
   // loopOp.
-  rewriter.inlineRegionBefore(forOp->getRegion(0), loopOp.body(),
-                              getBlockIt(loopOp.body(), 2));
+  rewriter.inlineRegionBefore(forOp->getRegion(0), loopOp.getBody(),
+                              getBlockIt(loopOp.getBody(), 2));
 
   SmallVector<Value, 8> args(1, adaptor.getLowerBound());
   args.append(adaptor.getInitArgs().begin(), adaptor.getInitArgs().end());
   // Branch into it from the entry.
-  rewriter.setInsertionPointToEnd(&(loopOp.body().front()));
+  rewriter.setInsertionPointToEnd(&(loopOp.getBody().front()));
   rewriter.create<spirv::BranchOp>(loc, header, args);
 
   // Generate the rest of the loop header.
@@ -252,12 +252,12 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, OpAdaptor adaptor,
   auto selectionOp =
       rewriter.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
   auto *mergeBlock =
-      rewriter.createBlock(&selectionOp.body(), selectionOp.body().end());
+      rewriter.createBlock(&selectionOp.getBody(), selectionOp.getBody().end());
   rewriter.create<spirv::MergeOp>(loc);
 
   OpBuilder::InsertionGuard guard(rewriter);
   auto *selectionHeaderBlock =
-      rewriter.createBlock(&selectionOp.body().front());
+      rewriter.createBlock(&selectionOp.getBody().front());
 
   // Inline `then` region before the merge block and branch to it.
   auto &thenRegion = ifOp.getThenRegion();
@@ -367,12 +367,12 @@ WhileOpConversion::matchAndRewrite(scf::WhileOp whileOp, OpAdaptor adaptor,
     return failure();
 
   // Move the while before block as the initial loop header block.
-  rewriter.inlineRegionBefore(beforeRegion, loopOp.body(),
-                              getBlockIt(loopOp.body(), 1));
+  rewriter.inlineRegionBefore(beforeRegion, loopOp.getBody(),
+                              getBlockIt(loopOp.getBody(), 1));
 
   // Move the while after block as the initial loop body block.
-  rewriter.inlineRegionBefore(afterRegion, loopOp.body(),
-                              getBlockIt(loopOp.body(), 2));
+  rewriter.inlineRegionBefore(afterRegion, loopOp.getBody(),
+                              getBlockIt(loopOp.getBody(), 2));
 
   // Jump from the loop entry block to the loop header block.
   rewriter.setInsertionPointToEnd(&entryBlock);
