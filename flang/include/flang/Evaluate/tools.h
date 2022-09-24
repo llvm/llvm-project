@@ -946,6 +946,8 @@ bool IsNullProcedurePointer(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
 bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
 
+const ProcedureRef *GetProcedureRef(const Expr<SomeType> &);
+
 // Can Expr be passed as absent to an optional dummy argument.
 // See 15.5.2.12 point 1 for more details.
 bool MayBePassedAsAbsentOptional(const Expr<SomeType> &, FoldingContext &);
