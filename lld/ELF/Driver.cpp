@@ -1443,7 +1443,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->whyExtract = args.getLastArgValue(OPT_why_extract);
   config->zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
-  config->riscvTbljal = args.hasArg(OPT_riscv_bljal);
+  config->riscvTbljal = args.hasArg(OPT_riscv_tbljal);
   config->zForceBti = hasZOption(args, "force-bti");
   config->zForceIbt = hasZOption(args, "force-ibt");
   config->zGlobal = hasZOption(args, "global");
