@@ -89,9 +89,6 @@ static uint32_t rtype(uint32_t op, uint32_t rd, uint32_t rs1, uint32_t rs2) {
 static uint32_t utype(uint32_t op, uint32_t rd, uint32_t imm) {
   return op | (rd << 7) | (imm << 12);
 }
-static uint16_t tbljumptype(uint8_t imm) {
-  return 0b10 | (imm << 2) | (0b101 << 13);
-}
 
 // Extract bits v[begin:end], where range is inclusive, and begin must be < 63.
 static uint32_t extractBits(uint64_t v, uint32_t begin, uint32_t end) {
@@ -359,9 +356,6 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_RVC_JUMP: {
-    if (config->zce_tbljal && (read16le(loc) & 0xfc03) == 0xa002)
-      return;
-
     checkInt(loc, val, 12, rel);
     checkAlignment(loc, val, 2, rel);
     uint16_t insn = read16le(loc) & 0xE003;
@@ -393,6 +387,9 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 
   case R_RISCV_JAL: {
+    if (config->zce_tbljal && (read16le(loc) & 0xfc03) == 0xa002)
+      return;
+
     checkInt(loc, val, 21, rel);
     checkAlignment(loc, val, 2, rel);
 
@@ -643,10 +640,18 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
         tblEntryIndex = in.riscvTableJumpSection->getEntryRa(*r.sym);
 
       if (tblEntryIndex >= 0) {
-        sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
+        sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
+
+        // remove > 0 means the inst has been write to jal
+        // rewrite the last item.
+        if (remove)
+          sec.relaxAux->writes.back() = (0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
+        else
+          sec.relaxAux->writes.push_back(0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
         remove = 6;
       }
     }
+
   }
 }
 
@@ -865,26 +870,19 @@ void elf::riscvFinalizeRelax(int passes) {
           case R_RISCV_RELAX:
             // Used by relaxTlsLe to indicate the relocation is ignored.
             break;
-          case R_RISCV_RVC_JUMP: {
-            const uint32_t rd =
-                extractBits(read32le(old.data() + r.offset + 4), 11, 7);
-            int tblEntryIndex = -1;
-            if (config->zce_tbljal && rd == 0)
-              tblEntryIndex = in.riscvTableJumpSection->getEntryZero(*r.sym);
-            else if (config->zce_tbljal && rd == X_RA)
-              tblEntryIndex = in.riscvTableJumpSection->getEntryRa(*r.sym);
-
+          case R_RISCV_RVC_JUMP: 
             skip = 2;
-            if (config->zce_tbljal && tblEntryIndex >= 0) {
-              write16le(p, tbljumptype(tblEntryIndex));
-            } else {
+            write16le(p, aux.writes[writesIdx++]);
+            break;
+          case R_RISCV_JAL:
+            if (config->zce_tbljal && (aux.writes[writesIdx] & 0xfc03) == 0xa002){
+              skip = 2;
               write16le(p, aux.writes[writesIdx++]);
             }
-            break;
-          }
-          case R_RISCV_JAL:
-            skip = 4;
-            write32le(p, aux.writes[writesIdx++]);
+            else{
+              skip = 4;
+              write32le(p, aux.writes[writesIdx++]);
+            }
             break;
           case R_RISCV_32:
             // Used by relaxTlsLe to write a uint32_t then suppress the handling
