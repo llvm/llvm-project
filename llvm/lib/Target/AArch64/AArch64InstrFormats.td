@@ -2483,27 +2483,23 @@ class BaseAddSubRegPseudo<RegisterClass regtype,
 class BaseAddSubSReg<bit isSub, bit setFlags, RegisterClass regtype,
                      arith_shifted_reg shifted_regtype, string asm,
                      SDPatternOperator OpNode>
-    : I<(outs regtype:$Rd), (ins regtype:$Rn, shifted_regtype:$Rm),
-        asm, "\t$Rd, $Rn, $Rm", "",
-        [(set regtype:$Rd, (OpNode regtype:$Rn, shifted_regtype:$Rm))]>,
+    : I<(outs regtype:$Rd), (ins regtype:$Rn, (shifted_regtype $Rm, $shift):$Rm_and_shift),
+        asm, "\t$Rd, $Rn, $Rm_and_shift", "",
+        [(set regtype:$Rd, (OpNode regtype:$Rn, shifted_regtype:$Rm_and_shift))]>,
       Sched<[WriteISReg, ReadI, ReadISReg]> {
-  // The operands are in order to match the 'addr' MI operands, so we
-  // don't need an encoder method and by-name matching. Just use the default
-  // in-order handling. Since we're using by-order, make sure the names
-  // do not match.
-  bits<5> dst;
-  bits<5> src1;
-  bits<5> src2;
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
   bits<8> shift;
   let Inst{30}    = isSub;
   let Inst{29}    = setFlags;
   let Inst{28-24} = 0b01011;
   let Inst{23-22} = shift{7-6};
   let Inst{21}    = 0;
-  let Inst{20-16} = src2;
+  let Inst{20-16} = Rm;
   let Inst{15-10} = shift{5-0};
-  let Inst{9-5}   = src1;
-  let Inst{4-0}   = dst;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
 
   let DecoderMethod = "DecodeThreeAddrSRegInstruction";
 }
@@ -2511,22 +2507,22 @@ class BaseAddSubSReg<bit isSub, bit setFlags, RegisterClass regtype,
 class BaseAddSubEReg<bit isSub, bit setFlags, RegisterClass dstRegtype,
                      RegisterClass src1Regtype, Operand src2Regtype,
                      string asm, SDPatternOperator OpNode>
-    : I<(outs dstRegtype:$R1),
-        (ins src1Regtype:$R2, src2Regtype:$R3),
-        asm, "\t$R1, $R2, $R3", "",
-        [(set dstRegtype:$R1, (OpNode src1Regtype:$R2, src2Regtype:$R3))]>,
+    : I<(outs dstRegtype:$Rd),
+        (ins src1Regtype:$Rn, (src2Regtype $Rm, $extend):$Rm_and_extend),
+        asm, "\t$Rd, $Rn, $Rm_and_extend", "",
+        [(set dstRegtype:$Rd, (OpNode src1Regtype:$Rn, src2Regtype:$Rm_and_extend))]>,
       Sched<[WriteIEReg, ReadI, ReadIEReg]> {
   bits<5> Rd;
   bits<5> Rn;
   bits<5> Rm;
-  bits<6> ext;
+  bits<6> extend;
   let Inst{30}    = isSub;
   let Inst{29}    = setFlags;
   let Inst{28-24} = 0b01011;
   let Inst{23-21} = 0b001;
   let Inst{20-16} = Rm;
-  let Inst{15-13} = ext{5-3};
-  let Inst{12-10} = ext{2-0};
+  let Inst{15-13} = extend{5-3};
+  let Inst{12-10} = extend{2-0};
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Rd;
 
@@ -2913,25 +2909,21 @@ class BaseLogicalImm<bits<2> opc, RegisterClass dregtype,
 class BaseLogicalSReg<bits<2> opc, bit N, RegisterClass regtype,
                       logical_shifted_reg shifted_regtype, string asm,
                       list<dag> pattern>
-    : I<(outs regtype:$Rd), (ins regtype:$Rn, shifted_regtype:$Rm),
-        asm, "\t$Rd, $Rn, $Rm", "", pattern>,
+    : I<(outs regtype:$Rd), (ins regtype:$Rn, (shifted_regtype $Rm, $shift):$Rm_and_shift),
+        asm, "\t$Rd, $Rn, $Rm_and_shift", "", pattern>,
       Sched<[WriteISReg, ReadI, ReadISReg]> {
-  // The operands are in order to match the 'addr' MI operands, so we
-  // don't need an encoder method and by-name matching. Just use the default
-  // in-order handling. Since we're using by-order, make sure the names
-  // do not match.
-  bits<5> dst;
-  bits<5> src1;
-  bits<5> src2;
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
   bits<8> shift;
   let Inst{30-29} = opc;
   let Inst{28-24} = 0b01010;
   let Inst{23-22} = shift{7-6};
   let Inst{21}    = N;
-  let Inst{20-16} = src2;
+  let Inst{20-16} = Rm;
   let Inst{15-10} = shift{5-0};
-  let Inst{9-5}   = src1;
-  let Inst{4-0}   = dst;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
 
   let DecoderMethod = "DecodeThreeAddrSRegInstruction";
 }
@@ -3002,12 +2994,12 @@ multiclass LogicalReg<bits<2> opc, bit N, string mnemonic,
 
   def Wrs : BaseLogicalSReg<opc, N, GPR32, logical_shifted_reg32, mnemonic,
                             [(set GPR32:$Rd, (OpNode GPR32:$Rn,
-                                                 logical_shifted_reg32:$Rm))]> {
+                                                 logical_shifted_reg32:$Rm_and_shift))]> {
     let Inst{31} = 0;
   }
   def Xrs : BaseLogicalSReg<opc, N, GPR64, logical_shifted_reg64, mnemonic,
                             [(set GPR64:$Rd, (OpNode GPR64:$Rn,
-                                                 logical_shifted_reg64:$Rm))]> {
+                                                 logical_shifted_reg64:$Rm_and_shift))]> {
     let Inst{31} = 1;
   }
 
@@ -3025,11 +3017,11 @@ multiclass LogicalRegS<bits<2> opc, bit N, string mnemonic,
   def Xrr : BaseLogicalRegPseudo<GPR64, OpNode>;
 
   def Wrs : BaseLogicalSReg<opc, N, GPR32, logical_shifted_reg32, mnemonic,
-            [(set GPR32:$Rd, (OpNode GPR32:$Rn, logical_shifted_reg32:$Rm))]> {
+            [(set GPR32:$Rd, (OpNode GPR32:$Rn, logical_shifted_reg32:$Rm_and_shift))]> {
     let Inst{31} = 0;
   }
   def Xrs : BaseLogicalSReg<opc, N, GPR64, logical_shifted_reg64, mnemonic,
-            [(set GPR64:$Rd, (OpNode GPR64:$Rn, logical_shifted_reg64:$Rm))]> {
+            [(set GPR64:$Rd, (OpNode GPR64:$Rn, logical_shifted_reg64:$Rm_and_shift))]> {
     let Inst{31} = 1;
   }
   } // Defs = [NZCV]

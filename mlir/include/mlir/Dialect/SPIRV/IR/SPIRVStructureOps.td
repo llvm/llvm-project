@@ -311,10 +311,6 @@ def SPV_FuncOp : SPV_Op<"func", [
   let autogenSerialization = 0;
 
   let extraClassDeclaration = [{
-    /// Returns the type of this function.
-    /// FIXME: Remove when SPIRV uses prefixed accessors.
-    FunctionType getFunctionType() { return function_type(); }
-
     /// Returns the argument types of this function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
@@ -398,9 +394,9 @@ def SPV_GlobalVariableOp : SPV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
                    CArg<"FlatSymbolRefAttr", "nullptr">:$initializer),
     [{
       $_state.addAttribute("type", type);
-      $_state.addAttribute(sym_nameAttrName($_state.name), sym_name);
+      $_state.addAttribute(getSymNameAttrName($_state.name), sym_name);
       if (initializer)
-        $_state.addAttribute(initializerAttrName($_state.name), initializer);
+        $_state.addAttribute(getInitializerAttrName($_state.name), initializer);
     }]>,
     OpBuilder<(ins "TypeAttr":$type, "ArrayRef<NamedAttribute>":$namedAttrs),
     [{
@@ -416,9 +412,9 @@ def SPV_GlobalVariableOp : SPV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
                     CArg<"FlatSymbolRefAttr", "{}">:$initializer),
     [{
       $_state.addAttribute("type", TypeAttr::get(type));
-      $_state.addAttribute(sym_nameAttrName($_state.name), $_builder.getStringAttr(sym_name));
+      $_state.addAttribute(getSymNameAttrName($_state.name), $_builder.getStringAttr(sym_name));
       if (initializer)
-        $_state.addAttribute(initializerAttrName($_state.name), initializer);
+        $_state.addAttribute(getInitializerAttrName($_state.name), initializer);
     }]>
   ];
 
@@ -428,7 +424,7 @@ def SPV_GlobalVariableOp : SPV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
 
   let extraClassDeclaration = [{
     ::mlir::spirv::StorageClass storageClass() {
-      return this->type().cast<::mlir::spirv::PointerType>().getStorageClass();
+      return this->getType().cast<::mlir::spirv::PointerType>().getStorageClass();
     }
   }];
 }
@@ -513,7 +509,7 @@ def SPV_ModuleOp : SPV_Op<"module",
 
     bool isOptionalSymbol() { return true; }
 
-    Optional<StringRef> getName() { return sym_name(); }
+    Optional<StringRef> getName() { return getSymName(); }
 
     static StringRef getVCETripleAttrName() { return "vce_triple"; }
   }];

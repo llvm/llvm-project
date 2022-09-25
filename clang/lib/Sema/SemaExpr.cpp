@@ -14493,7 +14493,8 @@ static void RecordModifiableNonNullParam(Sema &S, const Expr *Exp) {
 
 /// CheckIndirectionOperand - Type check unary indirection (prefix '*').
 static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
-                                        SourceLocation OpLoc) {
+                                        SourceLocation OpLoc,
+                                        bool IsAfterAmp = false) {
   if (Op->isTypeDependent())
     return S.Context.DependentTy;
 
@@ -14530,18 +14531,15 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
     return QualType();
   }
 
-  // Note that per both C89 and C99, indirection is always legal, even if Result
-  // is an incomplete type or void.  It would be possible to warn about
-  // dereferencing a void pointer, but it's completely well-defined, and such a
-  // warning is unlikely to catch any mistakes. In C++, indirection is not valid
-  // for pointers to 'void' but is fine for any other pointer type:
-  //
-  // C++ [expr.unary.op]p1:
-  //   [...] the expression to which [the unary * operator] is applied shall
-  //   be a pointer to an object type, or a pointer to a function type
-  if (S.getLangOpts().CPlusPlus && Result->isVoidType())
-    S.Diag(OpLoc, diag::ext_typecheck_indirection_through_void_pointer)
-      << OpTy << Op->getSourceRange();
+  if (Result->isVoidType()) {
+    // C++ [expr.unary.op]p1:
+    //   [...] the expression to which [the unary * operator] is applied shall
+    //   be a pointer to an object type, or a pointer to a function type
+    LangOptions LO = S.getLangOpts();
+    if (LO.CPlusPlus || !(LO.C99 && IsAfterAmp))
+      S.Diag(OpLoc, diag::ext_typecheck_indirection_through_void_pointer)
+          << LO.CPlusPlus << OpTy << Op->getSourceRange();
+  }
 
   // Dereferences are usually l-values...
   VK = VK_LValue;
@@ -15530,8 +15528,8 @@ static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
 }
 
 ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
-                                      UnaryOperatorKind Opc,
-                                      Expr *InputExpr) {
+                                      UnaryOperatorKind Opc, Expr *InputExpr,
+                                      bool IsAfterAmp) {
   ExprResult Input = InputExpr;
   ExprValueKind VK = VK_PRValue;
   ExprObjectKind OK = OK_Ordinary;
@@ -15581,7 +15579,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   case UO_Deref: {
     Input = DefaultFunctionArrayLvalueConversion(Input.get());
     if (Input.isInvalid()) return ExprError();
-    resultType = CheckIndirectionOperand(*this, Input.get(), VK, OpLoc);
+    resultType =
+        CheckIndirectionOperand(*this, Input.get(), VK, OpLoc, IsAfterAmp);
     break;
   }
   case UO_Plus:
@@ -15801,7 +15800,8 @@ bool Sema::isQualifiedMemberAccess(Expr *E) {
 }
 
 ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
-                              UnaryOperatorKind Opc, Expr *Input) {
+                              UnaryOperatorKind Opc, Expr *Input,
+                              bool IsAfterAmp) {
   // First things first: handle placeholders so that the
   // overloaded-operator check considers the right type.
   if (const BuiltinType *pty = Input->getType()->getAsPlaceholderType()) {
@@ -15840,13 +15840,14 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
     return CreateOverloadedUnaryOp(OpLoc, Opc, Functions, Input);
   }
 
-  return CreateBuiltinUnaryOp(OpLoc, Opc, Input);
+  return CreateBuiltinUnaryOp(OpLoc, Opc, Input, IsAfterAmp);
 }
 
 // Unary Operators.  'Tok' is the token for the operator.
-ExprResult Sema::ActOnUnaryOp(Scope *S, SourceLocation OpLoc,
-                              tok::TokenKind Op, Expr *Input) {
-  return BuildUnaryOp(S, OpLoc, ConvertTokenKindToUnaryOpcode(Op), Input);
+ExprResult Sema::ActOnUnaryOp(Scope *S, SourceLocation OpLoc, tok::TokenKind Op,
+                              Expr *Input, bool IsAfterAmp) {
+  return BuildUnaryOp(S, OpLoc, ConvertTokenKindToUnaryOpcode(Op), Input,
+                      IsAfterAmp);
 }
 
 /// ActOnAddrLabel - Parse the GNU address of label extension: "&&foo".

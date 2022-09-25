@@ -37,6 +37,9 @@ def StructDirentPtr : PtrType<StructDirent>;
 def StructDirentPtrPtr : PtrType<StructDirentPtr>;
 def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 
+def StructTimeSpec : NamedType<"struct timespec">;
+def StructTimeSpecPtr : PtrType<StructTimeSpec>;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -919,6 +922,23 @@ def POSIX : StandardSpec<"POSIX"> {
       ]
   >;
 
+  HeaderSpec Time = HeaderSpec<
+      "time.h",
+      [], // Macros
+      [StructTimeSpec], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "nanosleep",
+              RetValSpec<IntType>,
+              [
+	      	      ArgSpec<StructTimeSpecPtr>,
+	      	      ArgSpec<StructTimeSpecPtr>,
+	            ]
+          >,
+      ]
+  >;
+
   let Headers = [
     CType,
     Dirent,
@@ -932,6 +952,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysResource,
     SysStat,
     SysUtsName,
+    Time,
     UniStd,
     String
   ];

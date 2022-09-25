@@ -12,8 +12,9 @@
 #include <llvm-libc-types/time_t.h>
 
 struct timespec {
-  time_t tv_sec;
-  long tv_nsec;
+  time_t tv_sec; /* Seconds.  */
+  /* TODO: BIG_ENDIAN may require padding. */
+  long tv_nsec; /* Nanoseconds.  */
 };
 
 #endif // __LLVM_LIBC_TYPES_TIMESPEC_H__

@@ -210,6 +210,8 @@ Improvements to Clang's diagnostics
   ``LL`` suffix.
 - Clang now correctly diagnoses index that refers past the last possible element
   of FAM-like arrays.
+- Clang now correctly diagnoses a warning when defercencing a void pointer in C mode.
+  This fixes `Issue 53631 <https://github.com/llvm/llvm-project/issues/53631>`_
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

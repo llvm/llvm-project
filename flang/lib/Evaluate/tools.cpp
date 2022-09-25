@@ -784,6 +784,10 @@ bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
   }
 }
 
+const ProcedureRef *GetProcedureRef(const Expr<SomeType> &expr) {
+  return UnwrapProcedureRef(expr);
+}
+
 // IsNullPointer() & variations
 
 template <bool IS_PROC_PTR> struct IsNullPointerHelper {

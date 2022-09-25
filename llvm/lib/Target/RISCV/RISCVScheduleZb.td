@@ -34,20 +34,13 @@ def WriteSingleBit   : SchedWrite; // BCLR/BSET/BINV/BEXT
 def WriteSingleBitImm: SchedWrite; // BCLRI/BSETI/BINVI/BEXTI
 
 // Zbkb extension
+def WriteBREV8       : SchedWrite; // brev8
 def WritePACK        : SchedWrite; // pack/packh
 def WritePACK32      : SchedWrite; // packw
-def WritePACKU       : SchedWrite; // packu
-def WritePACKU32     : SchedWrite; // packuw
+def WriteZIP         : SchedWrite; // zip/unzip
 
-// Zbr extension
-def WriteCRCB        : SchedWrite; // crc32.b
-def WriteCRCH        : SchedWrite; // crc32.h
-def WriteCRCW        : SchedWrite; // crc32.w
-def WriteCRCD        : SchedWrite; // crc32.d
-def WriteCRCCB       : SchedWrite; // crc32c.b
-def WriteCRCCH       : SchedWrite; // crc32c.h
-def WriteCRCCW       : SchedWrite; // crc32c.w
-def WriteCRCCD       : SchedWrite; // crc32c.d
+// Zbkx extension
+def WriteXPERM       : SchedWrite; // xperm4/xperm8
 
 /// Define scheduler resources associated with use operands.
 
@@ -77,20 +70,13 @@ def ReadSingleBit   : SchedRead; // BCLR/BSET/BINV/BEXT
 def ReadSingleBitImm: SchedRead; // BCLRI/BSETI/BINVI/BEXTI
 
 // Zbkb extension
+def ReadBREV8       : SchedRead; // brev8
 def ReadPACK        : SchedRead; // pack/packh
 def ReadPACK32      : SchedRead; // packw
-def ReadPACKU       : SchedRead; // packu
-def ReadPACKU32     : SchedRead; // packuw
+def ReadZIP         : SchedRead; // zip/unzip
 
-// Zbr extension
-def ReadCRCB        : SchedRead; // crc32.b
-def ReadCRCH        : SchedRead; // crc32.h
-def ReadCRCW        : SchedRead; // crc32.w
-def ReadCRCD        : SchedRead; // crc32.d
-def ReadCRCCB       : SchedRead; // crc32c.b
-def ReadCRCCH       : SchedRead; // crc32c.h
-def ReadCRCCW       : SchedRead; // crc32c.w
-def ReadCRCCD       : SchedRead; // crc32c.d
+// Zbkx extension
+def ReadXPERM       : SchedRead; // xperm4/xperm8
 
 /// Define default scheduler resources for B.
 
@@ -154,36 +140,22 @@ def : ReadAdvance<ReadSingleBitImm, 0>;
 
 multiclass UnsupportedSchedZbkb {
 let Unsupported = true in {
+def : WriteRes<WriteBREV8, []>;
 def : WriteRes<WritePACK, []>;
 def : WriteRes<WritePACK32, []>;
-def : WriteRes<WritePACKU, []>;
-def : WriteRes<WritePACKU32, []>;
+def : WriteRes<WriteZIP, []>;
 
+def : ReadAdvance<ReadBREV8, 0>;
 def : ReadAdvance<ReadPACK, 0>;
 def : ReadAdvance<ReadPACK32, 0>;
-def : ReadAdvance<ReadPACKU, 0>;
-def : ReadAdvance<ReadPACKU32, 0>;
+def : ReadAdvance<ReadZIP, 0>;
 }
 }
 
-multiclass UnsupportedSchedZbr {
+multiclass UnsupportedSchedZbkx {
 let Unsupported = true in {
-def : WriteRes<WriteCRCB, []>;
-def : WriteRes<WriteCRCH, []>;
-def : WriteRes<WriteCRCW, []>;
-def : WriteRes<WriteCRCD, []>;
-def : WriteRes<WriteCRCCB, []>;
-def : WriteRes<WriteCRCCH, []>;
-def : WriteRes<WriteCRCCW, []>;
-def : WriteRes<WriteCRCCD, []>;
+def : WriteRes<WriteXPERM, []>;
 
-def : ReadAdvance<ReadCRCB, 0>;
-def : ReadAdvance<ReadCRCH, 0>;
-def : ReadAdvance<ReadCRCW, 0>;
-def : ReadAdvance<ReadCRCD, 0>;
-def : ReadAdvance<ReadCRCCB, 0>;
-def : ReadAdvance<ReadCRCCH, 0>;
-def : ReadAdvance<ReadCRCCW, 0>;
-def : ReadAdvance<ReadCRCCD, 0>;
+def : ReadAdvance<ReadXPERM, 0>;
 }
 }

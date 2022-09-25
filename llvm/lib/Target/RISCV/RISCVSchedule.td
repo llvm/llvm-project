@@ -230,5 +230,5 @@ def : ReadAdvance<ReadFSqrt16, 0>;
 }
 
 // Include the scheduler resources for other instruction extensions.
-include "RISCVScheduleB.td"
+include "RISCVScheduleZb.td"
 include "RISCVScheduleV.td"

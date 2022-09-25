@@ -21,9 +21,11 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "riscv-gather-scatter-lowering"
 
@@ -138,6 +140,12 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   auto *StartC = dyn_cast<Constant>(Start);
   if (StartC)
     return matchStridedConstant(StartC);
+
+  // Base case, start is a stepvector
+  if (match(Start, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+    auto *Ty = Start->getType()->getScalarType();
+    return std::make_pair(ConstantInt::get(Ty, 0), ConstantInt::get(Ty, 1));
+  }
 
   // Not a constant, maybe it's a strided constant with a splat added to it.
   auto *BO = dyn_cast<BinaryOperator>(Start);
@@ -482,11 +490,9 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && II->getIntrinsicID() == Intrinsic::masked_gather &&
-          isa<FixedVectorType>(II->getType())) {
+      if (II && II->getIntrinsicID() == Intrinsic::masked_gather) {
         Gathers.push_back(II);
-      } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter &&
-                 isa<FixedVectorType>(II->getArgOperand(0)->getType())) {
+      } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter) {
         Scatters.push_back(II);
       }
     }

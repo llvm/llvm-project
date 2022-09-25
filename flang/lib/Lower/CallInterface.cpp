@@ -556,7 +556,7 @@ public:
     // Handle result
     if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
             &result = procedure.functionResult)
-      handleImplicitResult(*result);
+      handleImplicitResult(*result, procedure.IsBindC());
     else if (interface.side().hasAlternateReturns())
       addFirResult(mlir::IndexType::get(&mlirContext),
                    FirPlaceHolder::resultEntityPosition, Property::Value);
@@ -582,18 +582,18 @@ public:
 
   void buildExplicitInterface(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
+    bool isBindC = procedure.IsBindC();
     // Handle result
     if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
             &result = procedure.functionResult) {
       if (result->CanBeReturnedViaImplicitInterface())
-        handleImplicitResult(*result);
+        handleImplicitResult(*result, isBindC);
       else
         handleExplicitResult(*result);
     } else if (interface.side().hasAlternateReturns()) {
       addFirResult(mlir::IndexType::get(&mlirContext),
                    FirPlaceHolder::resultEntityPosition, Property::Value);
     }
-    bool isBindC = procedure.IsBindC();
     // Handle arguments
     const auto &argumentEntities =
         getEntityContainer(interface.side().getCallDescription());
@@ -671,7 +671,8 @@ public:
 
 private:
   void handleImplicitResult(
-      const Fortran::evaluate::characteristics::FunctionResult &result) {
+      const Fortran::evaluate::characteristics::FunctionResult &result,
+      bool isBindC) {
     if (result.IsProcedurePointer())
       TODO(interface.converter.getCurrentLocation(),
            "procedure pointer result not yet handled");
@@ -681,7 +682,13 @@ private:
     Fortran::evaluate::DynamicType dynamicType = typeAndShape->type();
     // Character result allocated by caller and passed as hidden arguments
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-      handleImplicitCharacterResult(dynamicType);
+      if (isBindC) {
+        mlir::Type mlirType = translateDynamicType(dynamicType);
+        addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                     Property::Value);
+      } else {
+        handleImplicitCharacterResult(dynamicType);
+      }
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Derived) {
       // Derived result need to be allocated by the caller and the result value

@@ -88,13 +88,13 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   // instructions in this function.
   funcOp.walk([&](spirv::AddressOfOp addressOfOp) {
     auto var =
-        module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.variable());
+        module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.getVariable());
     // TODO: Per SPIR-V spec: "Before version 1.4, the interface’s
     // storage classes are limited to the Input and Output storage classes.
     // Starting with version 1.4, the interface’s storage classes are all
     // storage classes used in declaring all global variables referenced by the
     // entry point’s call tree." We should consider the target environment here.
-    switch (var.type().cast<spirv::PointerType>().getStorageClass()) {
+    switch (var.getType().cast<spirv::PointerType>().getStorageClass()) {
     case spirv::StorageClass::Input:
     case spirv::StorageClass::Output:
       interfaceVarSet.insert(var.getOperation());
@@ -105,7 +105,7 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   });
   for (auto &var : interfaceVarSet) {
     interfaceVars.push_back(SymbolRefAttr::get(
-        funcOp.getContext(), cast<spirv::GlobalVariableOp>(var).sym_name()));
+        funcOp.getContext(), cast<spirv::GlobalVariableOp>(var).getSymName()));
   }
   return success();
 }
@@ -223,7 +223,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), rewriter);
       auto loadPtr = rewriter.create<spirv::AccessChainOp>(
-          funcOp.getLoc(), replacement, zero.constant());
+          funcOp.getLoc(), replacement, zero.getConstant());
       replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr);
     }
     signatureConverter.remapInput(argType.index(), replacement);

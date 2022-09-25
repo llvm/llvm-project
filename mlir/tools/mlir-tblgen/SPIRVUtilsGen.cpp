@@ -1360,7 +1360,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
         os << formatv("    {0}::{1} tblgen_attrVal = this->{2}() & "
                       "static_cast<{0}::{1}>(1 << i);\n",
                       enumAttr.getCppNamespace(), enumAttr.getEnumClassName(),
-                      namedAttr.name);
+                      srcOp.getGetterName(namedAttr.name));
         os << formatv(
             "    if (static_cast<{0}>(tblgen_attrVal) == 0) continue;\n",
             enumAttr.getUnderlyingType());
@@ -1368,7 +1368,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
         // For IntEnumAttr, we just need to query the value as a whole.
         os << "  {\n";
         os << formatv("    auto tblgen_attrVal = this->{0}();\n",
-                      namedAttr.name);
+                      srcOp.getGetterName(namedAttr.name));
       }
       os << formatv("    auto tblgen_instance = {0}::{1}(tblgen_attrVal);\n",
                     enumAttr.getCppNamespace(), avail.getQueryFnName());
