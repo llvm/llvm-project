@@ -580,6 +580,22 @@ multiclass flat_addr_space_atomic_op {
     }
 }
 
+multiclass local_addr_space_atomic_op {
+  def "_noret_local_addrspace" :
+    PatFrag<(ops node:$ptr, node:$data),
+            (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>{
+      let HasNoUse = true;
+      let AddressSpaces = LoadAddress_local.AddrSpaces;
+      let IsAtomic = 1;
+    }
+    def "_local_addrspace" :
+    PatFrag<(ops node:$ptr, node:$data),
+            (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>{
+      let AddressSpaces = LoadAddress_local.AddrSpaces;
+      let IsAtomic = 1;
+    }
+}
+
 defm int_amdgcn_flat_atomic_fadd : flat_addr_space_atomic_op;
 defm int_amdgcn_flat_atomic_fadd_v2bf16 : noret_op;
 defm int_amdgcn_flat_atomic_fmin : noret_op;
@@ -589,6 +605,7 @@ defm int_amdgcn_flat_atomic_fadd : global_addr_space_atomic_op;
 defm int_amdgcn_global_atomic_fadd_v2bf16 : noret_op;
 defm int_amdgcn_global_atomic_fmin : noret_op;
 defm int_amdgcn_global_atomic_fmax : noret_op;
+defm int_amdgcn_flat_atomic_fadd : local_addr_space_atomic_op;
 defm int_amdgcn_ds_fadd_v2bf16 : noret_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
