@@ -24,7 +24,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTMEMREFTOLLVM
+#define GEN_PASS_DEF_MEMREFTOLLVMCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -2108,9 +2108,9 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
 }
 
 namespace {
-struct MemRefToLLVMPass
-    : public impl::ConvertMemRefToLLVMBase<MemRefToLLVMPass> {
-  MemRefToLLVMPass() = default;
+struct MemRefToLLVMConversionPass
+    : public impl::MemRefToLLVMConversionPassBase<MemRefToLLVMConversionPass> {
+  using MemRefToLLVMConversionPassBase::MemRefToLLVMConversionPassBase;
 
   void runOnOperation() override {
     Operation *op = getOperation();
@@ -2137,7 +2137,3 @@ struct MemRefToLLVMPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createMemRefToLLVMPass() {
-  return std::make_unique<MemRefToLLVMPass>();
-}
