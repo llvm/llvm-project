@@ -3666,15 +3666,24 @@ SubstTemplateTypeParmType::getReplacedParameter() const {
 }
 
 SubstTemplateTypeParmPackType::SubstTemplateTypeParmPackType(
-    QualType Canon, Decl *AssociatedDecl, unsigned Index,
+    QualType Canon, Decl *AssociatedDecl, unsigned Index, bool Final,
     const TemplateArgument &ArgPack)
     : Type(SubstTemplateTypeParmPack, Canon,
            TypeDependence::DependentInstantiation |
                TypeDependence::UnexpandedPack),
-      Arguments(ArgPack.pack_begin()), AssociatedDecl(AssociatedDecl) {
+      Arguments(ArgPack.pack_begin()),
+      AssociatedDeclAndFinal(AssociatedDecl, Final) {
   SubstTemplateTypeParmPackTypeBits.Index = Index;
   SubstTemplateTypeParmPackTypeBits.NumArgs = ArgPack.pack_size();
   assert(AssociatedDecl != nullptr);
+}
+
+Decl *SubstTemplateTypeParmPackType::getAssociatedDecl() const {
+  return AssociatedDeclAndFinal.getPointer();
+}
+
+bool SubstTemplateTypeParmPackType::getFinal() const {
+  return AssociatedDeclAndFinal.getInt();
 }
 
 const TemplateTypeParmDecl *
@@ -3691,15 +3700,16 @@ TemplateArgument SubstTemplateTypeParmPackType::getArgumentPack() const {
 }
 
 void SubstTemplateTypeParmPackType::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getAssociatedDecl(), getIndex(), getArgumentPack());
+  Profile(ID, getAssociatedDecl(), getIndex(), getFinal(), getArgumentPack());
 }
 
 void SubstTemplateTypeParmPackType::Profile(llvm::FoldingSetNodeID &ID,
                                             const Decl *AssociatedDecl,
-                                            unsigned Index,
+                                            unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack) {
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
+  ID.AddBoolean(Final);
   ID.AddInteger(ArgPack.pack_size());
   for (const auto &P : ArgPack.pack_elements())
     ID.AddPointer(P.getAsType().getAsOpaquePtr());
