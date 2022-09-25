@@ -1006,12 +1006,14 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
   for_each(AMDGPU::SGPR_32RegClass.getRegisters(), ProcessReg);
 }
 
-// Activate all lanes, returns saved exec.
+// Activate only the inactive lanes when \p EnableInactiveLanes is true.
+// Otherwise, activate all lanes. It returns the saved exec.
 static Register buildScratchExecCopy(LivePhysRegs &LiveRegs,
                                      MachineFunction &MF,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     const DebugLoc &DL, bool IsProlog) {
+                                     const DebugLoc &DL, bool IsProlog,
+                                     bool EnableInactiveLanes) {
   Register ScratchExecCopy;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -1028,10 +1030,13 @@ static Register buildScratchExecCopy(LivePhysRegs &LiveRegs,
 
   LiveRegs.addReg(ScratchExecCopy);
 
-  const unsigned OrSaveExec =
-      ST.isWave32() ? AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
-  auto SaveExec = BuildMI(MBB, MBBI, DL, TII->get(OrSaveExec), ScratchExecCopy)
-    .addImm(-1);
+  const unsigned SaveExecOpc =
+      ST.isWave32() ? (EnableInactiveLanes ? AMDGPU::S_XOR_SAVEEXEC_B32
+                                           : AMDGPU::S_OR_SAVEEXEC_B32)
+                    : (EnableInactiveLanes ? AMDGPU::S_XOR_SAVEEXEC_B64
+                                           : AMDGPU::S_OR_SAVEEXEC_B64);
+  auto SaveExec =
+      BuildMI(MBB, MBBI, DL, TII->get(SaveExecOpc), ScratchExecCopy).addImm(-1);
   SaveExec->getOperand(3).setIsDead(); // Mark SCC as dead.
 
   return ScratchExecCopy;
@@ -1077,24 +1082,46 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   if (NeedsFrameMoves)
     emitPrologueEntryCFI(MBB, MBBI, DL);
 
-  // Spill Whole-Wave Mode VGPRs.
-  for (const auto &Reg : FuncInfo->getWWMSpills()) {
-    Register VGPR = Reg.first;
-    int FI = Reg.second;
-    if (!ScratchExecCopy)
+  // Spill Whole-Wave Mode VGPRs. Save only the inactive lanes of the scratch
+  // registers. However, save all lanes of callee-saved VGPRs. Due to this, we
+  // might end up flipping the EXEC bits twice.
+  SmallVector<std::pair<Register, int>, 2> WWMCalleeSavedRegs, WWMScratchRegs;
+  FuncInfo->splitWWMSpillRegisters(MF, WWMCalleeSavedRegs, WWMScratchRegs);
+  if (!WWMScratchRegs.empty())
+    ScratchExecCopy =
+        buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL,
+                             /*IsProlog*/ true, /*EnableInactiveLanes*/ true);
+
+  auto StoreWWMRegisters =
+      [&](SmallVectorImpl<std::pair<Register, int>> &WWMRegs) {
+        for (const auto &Reg : WWMRegs) {
+          Register VGPR = Reg.first;
+          int FI = Reg.second;
+          buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
+                           VGPR, FI);
+          if (NeedsFrameMoves)
+            // We spill the entire VGPR, so we can get away with just cfi_offset
+            buildCFI(MBB, MBBI, DL,
+                     MCCFIInstruction::createOffset(
+                         nullptr, MCRI->getDwarfRegNum(VGPR, false),
+                         MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
+        }
+      };
+
+  StoreWWMRegisters(WWMScratchRegs);
+  if (!WWMCalleeSavedRegs.empty()) {
+    if (ScratchExecCopy) {
+      unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+      MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+      BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
+    } else {
       ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL,
-                                             /*IsProlog*/ true);
-
-    buildPrologSpill(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR, FI);
-
-    if (NeedsFrameMoves)
-      // We spill the entire VGPR, so we can get away with just cfi_offset
-      buildCFI(MBB, MBBI, DL,
-               MCCFIInstruction::createOffset(
-                   nullptr, MCRI->getDwarfRegNum(VGPR, false),
-                   MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
+                                             /*IsProlog*/ true,
+                                             /*EnableInactiveLanes*/ false);
+    }
   }
 
+  StoreWWMRegisters(WWMCalleeSavedRegs);
   if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
@@ -1256,18 +1283,41 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                MachineInstr::FrameDestroy);
   }
 
+  // Restore Whole-Wave Mode VGPRs. Restore only the inactive lanes of the
+  // scratch registers. However, restore all lanes of callee-saved VGPRs. Due to
+  // this, we might end up flipping the EXEC bits twice.
   Register ScratchExecCopy;
-  for (const auto &Reg : FuncInfo->getWWMSpills()) {
-    Register VGPR = Reg.first;
-    int FI = Reg.second;
-    if (!ScratchExecCopy)
-      ScratchExecCopy =
-          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false);
+  SmallVector<std::pair<Register, int>, 2> WWMCalleeSavedRegs, WWMScratchRegs;
+  FuncInfo->splitWWMSpillRegisters(MF, WWMCalleeSavedRegs, WWMScratchRegs);
+  if (!WWMScratchRegs.empty())
+    ScratchExecCopy =
+        buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false,
+                             /*EnableInactiveLanes*/ true);
 
-    buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL, VGPR,
-                       FI);
+  auto RestoreWWMRegisters =
+      [&](SmallVectorImpl<std::pair<Register, int>> &WWMRegs) {
+        for (const auto &Reg : WWMRegs) {
+          Register VGPR = Reg.first;
+          int FI = Reg.second;
+          buildEpilogRestore(ST, TRI, *FuncInfo, LiveRegs, MF, MBB, MBBI, DL,
+                             VGPR, FI);
+        }
+      };
+
+  RestoreWWMRegisters(WWMScratchRegs);
+  if (!WWMCalleeSavedRegs.empty()) {
+    if (ScratchExecCopy) {
+      unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+      MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+      BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
+    } else {
+      ScratchExecCopy =
+          buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL, /*IsProlog*/ false,
+                               /*EnableInactiveLanes*/ false);
+    }
   }
 
+  RestoreWWMRegisters(WWMCalleeSavedRegs);
   if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
