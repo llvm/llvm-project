@@ -315,8 +315,8 @@ declare void @clobber_memory(float*)
 ; based on pr25892_lite
 define i8* @zero_memset_after_malloc(i64 %size) {
 ; CHECK-LABEL: @zero_memset_after_malloc(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALLOC:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
+; CHECK-NEXT:    ret i8* [[CALLOC]]
 ;
   %call = call i8* @malloc(i64 %size) inaccessiblememonly
   call void @llvm.memset.p0i8.i64(i8* %call, i8 0, i64 %size, i1 false)
@@ -326,7 +326,7 @@ define i8* @zero_memset_after_malloc(i64 %size) {
 ; based on pr25892_lite
 define i8* @zero_memset_after_malloc_with_intermediate_clobbering(i64 %size) {
 ; CHECK-LABEL: @zero_memset_after_malloc_with_intermediate_clobbering(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 [[SIZE:%.*]]) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALL]] to float*
 ; CHECK-NEXT:    call void @clobber_memory(float* [[BC]])
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 [[SIZE]], i1 false)
@@ -342,7 +342,7 @@ define i8* @zero_memset_after_malloc_with_intermediate_clobbering(i64 %size) {
 ; based on pr25892_lite
 define i8* @zero_memset_after_malloc_with_different_sizes(i64 %size) {
 ; CHECK-LABEL: @zero_memset_after_malloc_with_different_sizes(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 [[SIZE:%.*]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[SIZE2:%.*]] = add nsw i64 [[SIZE]], -1
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALL]], i8 0, i64 [[SIZE2]], i1 false)
 ; CHECK-NEXT:    ret i8* [[CALL]]
@@ -380,7 +380,7 @@ define i8* @notmalloc_memset(i64 %size, i8*(i64)* %notmalloc) {
 ; This should not create recursive call to calloc.
 define i8* @calloc(i64 %nmemb, i64 %size) inaccessiblememonly {
 ; CHECK-LABEL: @calloc(
-; CHECK:       entry:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SIZE:%.*]], [[NMEMB:%.*]]
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 16 i8* @malloc(i64 [[MUL]])
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8* [[CALL]], null
@@ -407,12 +407,12 @@ if.end:                                           ; preds = %if.then, %entry
 
 define float* @pr25892(i64 %size) {
 ; CHECK-LABEL: @pr25892(
-; CHECK:       entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALL]], null
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALLOC:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALLOC]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALL]] to float*
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALLOC]] to float*
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float* [ [[BC]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
@@ -433,12 +433,12 @@ cleanup:
 
 define float* @pr25892_with_extra_store(i64 %size) {
 ; CHECK-LABEL: @pr25892_with_extra_store(
-; CHECK:       entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALL]], null
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALLOC:%.*]] = call i8* @calloc(i64 1, i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALLOC]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALL]] to float*
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALLOC]] to float*
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float* [ [[BC]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
@@ -460,9 +460,9 @@ cleanup:
 
 ; This should not create a calloc
 define i8* @malloc_with_no_nointer_null_check(i64 %0, i32 %1) {
-; CHECK-LABEL: @malloc_with_no_nointer_null_check
-; CHECK:       entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 [[TMP0:%.*]])
+; CHECK-LABEL: @malloc_with_no_nointer_null_check(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 [[TMP0:%.*]]) #[[ATTR7]]
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[TMP1:%.*]], 32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
@@ -487,7 +487,7 @@ cleanup:
 ; PR50143
 define i8* @store_zero_after_calloc_inaccessiblememonly() {
 ; CHECK-LABEL: @store_zero_after_calloc_inaccessiblememonly(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 1, i64 10) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 1, i64 10) #[[ATTR7]]
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 1, i64 10)  inaccessiblememonly
@@ -580,7 +580,7 @@ define i8* @partial_zero_memset_and_store_with_dyn_index_after_calloc(i8 %v, i64
 
 define i8* @zero_memset_after_calloc_inaccessiblememonly()  {
 ; CHECK-LABEL: @zero_memset_after_calloc_inaccessiblememonly(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @calloc(i64 10000, i64 4) #[[ATTR7]]
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call i8* @calloc(i64 10000, i64 4) inaccessiblememonly
@@ -632,7 +632,7 @@ define i8* @memset_pattern16_after_calloc(i8* %pat) {
 ; GCC calloc-1.c test case should create calloc
 define i8* @test_malloc_memset_to_calloc(i64* %0) {
 ; CHECK-LABEL: @test_malloc_memset_to_calloc(
-; CHECK:       entry:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @n, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[CALLOC:%.*]] = call i8* @calloc(i64 1, i64 [[TMP2]])
@@ -641,14 +641,14 @@ define i8* @test_malloc_memset_to_calloc(i64* %0) {
 ; CHECK-NEXT:    store i64 [[TMP4]], i64* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8* [[CALLOC]], null
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
-; CHECK:       if.then:                                          ; preds = %entry
+; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    store i64 [[TMP6]], i64* [[TMP0]], align 8
 ; CHECK-NEXT:    store i32 2, i32* @a, align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32*, i32** @b, align 8
 ; CHECK-NEXT:    store i32 3, i32* [[TMP7]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:                                           ; preds = %if.then, %entry
+; CHECK:       if.end:
 ; CHECK-NEXT:    ret i8* [[CALLOC]]
 ;
 entry:
