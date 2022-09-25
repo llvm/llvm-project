@@ -8964,7 +8964,8 @@ Sema::BuildExprRequirement(
     auto *Param = cast<TemplateTypeParmDecl>(TPL->getParam(0));
 
     TemplateArgumentList TAL(TemplateArgumentList::OnStack, Args);
-    MultiLevelTemplateArgumentList MLTAL(Param, TAL.asArray());
+    MultiLevelTemplateArgumentList MLTAL(Param, TAL.asArray(),
+                                         /*Final=*/false);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
     Expr *IDC = Param->getTypeConstraint()->getImmediatelyDeclaredConstraint();
     ExprResult Constraint = SubstExpr(IDC, MLTAL);

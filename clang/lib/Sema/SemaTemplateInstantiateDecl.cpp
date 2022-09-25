@@ -4552,8 +4552,8 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   //
   // template<typename T>
   // A<T> Foo(int a = A<T>::FooImpl());
-  MultiLevelTemplateArgumentList TemplateArgs
-    = getTemplateInstantiationArgs(FD, nullptr, /*RelativeToPrimary=*/true);
+  MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
+      FD, /*Final=*/false, nullptr, /*RelativeToPrimary=*/true);
 
   if (SubstDefaultArgument(CallLoc, Param, TemplateArgs, /*ForCallExpr*/ true))
     return true;
@@ -4591,8 +4591,8 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   Sema::ContextRAII savedContext(*this, Decl);
   LocalInstantiationScope Scope(*this);
 
-  MultiLevelTemplateArgumentList TemplateArgs =
-    getTemplateInstantiationArgs(Decl, nullptr, /*RelativeToPrimary*/true);
+  MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
+      Decl, /*Final=*/false, nullptr, /*RelativeToPrimary*/ true);
 
   // FIXME: We can't use getTemplateInstantiationPattern(false) in general
   // here, because for a non-defining friend declaration in a class template,
@@ -4766,7 +4766,8 @@ Sema::InstantiateFunctionDeclaration(FunctionTemplateDecl *FTD,
     return nullptr;
 
   ContextRAII SavedContext(*this, FD);
-  MultiLevelTemplateArgumentList MArgs(FTD, Args->asArray());
+  MultiLevelTemplateArgumentList MArgs(FTD, Args->asArray(),
+                                       /*Final=*/false);
 
   return cast_or_null<FunctionDecl>(SubstDecl(FD, FD->getParent(), MArgs));
 }
@@ -5032,8 +5033,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    MultiLevelTemplateArgumentList TemplateArgs =
-      getTemplateInstantiationArgs(Function, nullptr, false, PatternDecl);
+    MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
+        Function, /*Final=*/false, nullptr, false, PatternDecl);
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.
@@ -5125,13 +5126,13 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   if (auto *PartialSpec =
           dyn_cast<VarTemplatePartialSpecializationDecl>(FromVar)) {
     IsMemberSpec = PartialSpec->isMemberSpecialization();
-    MultiLevelList.addOuterTemplateArguments(PartialSpec,
-                                             TemplateArgList.asArray());
+    MultiLevelList.addOuterTemplateArguments(
+        PartialSpec, TemplateArgList.asArray(), /*Final=*/false);
   } else {
     assert(VarTemplate == FromVar->getDescribedVarTemplate());
     IsMemberSpec = VarTemplate->isMemberSpecialization();
-    MultiLevelList.addOuterTemplateArguments(VarTemplate,
-                                             TemplateArgList.asArray());
+    MultiLevelList.addOuterTemplateArguments(
+        VarTemplate, TemplateArgList.asArray(), /*Final=*/false);
   }
   if (!IsMemberSpec)
     FromVar = FromVar->getFirstDecl();
