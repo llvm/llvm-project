@@ -70,7 +70,7 @@ define i32 @reduce_i64(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2 = call i64 @llvm.vector.reduce.mul.v2i64(<2 x i64> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4 = call i64 @llvm.vector.reduce.mul.v4i64(<4 x i64> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V8 = call i64 @llvm.vector.reduce.mul.v8i64(<8 x i64> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16 = call i64 @llvm.vector.reduce.mul.v16i64(<16 x i64> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V16 = call i64 @llvm.vector.reduce.mul.v16i64(<16 x i64> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V1  = call i64 @llvm.vector.reduce.mul.v1i64(<1 x i64> undef)
