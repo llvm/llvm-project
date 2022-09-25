@@ -226,6 +226,7 @@ struct __passthrough_type<basic_string_view<_CharT, _Traits>> {
 };
 
 template <class _Iter, class _Sent, subrange_kind _Kind>
+  requires requires{typename subrange<_Iter>;}
 struct __passthrough_type<subrange<_Iter, _Sent, _Kind>> {
   using type = subrange<_Iter>;
 };
