@@ -25,13 +25,13 @@ define fastcc void @callee_no_fp() #0 {
 ; CHECK-LABEL: callee_no_fp:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
-; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
 ; CHECK-NEXT:    v_writelane_b32 v2, exec_lo, 0
 ; CHECK-NEXT:    v_writelane_b32 v2, exec_hi, 1
-; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    v_writelane_b32 v1, s30, 0
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v1, s31, 1
@@ -89,14 +89,15 @@ define dso_local fastcc void @func_needs_fp() unnamed_addr #0 {
 ; CHECK-NEXT:    .type func_needs_fp$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
+; CHECK-NEXT:    s_mov_b32 s16, s33
+; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v41, exec_lo, 0
 ; CHECK-NEXT:    v_writelane_b32 v41, exec_hi, 1
-; CHECK-NEXT:    v_writelane_b32 v41, s33, 2
-; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    v_writelane_b32 v41, s16, 2
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1

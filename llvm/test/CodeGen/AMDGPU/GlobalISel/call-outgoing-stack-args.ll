@@ -235,12 +235,13 @@ define void @func_caller_stack() {
 ; MUBUF-LABEL: func_caller_stack:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MUBUF-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; MUBUF-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; MUBUF-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; MUBUF-NEXT:    s_mov_b64 exec, s[4:5]
-; MUBUF-NEXT:    v_writelane_b32 v41, s33, 0
+; MUBUF-NEXT:    s_mov_b32 s4, s33
 ; MUBUF-NEXT:    s_mov_b32 s33, s32
+; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; MUBUF-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; MUBUF-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; MUBUF-NEXT:    s_mov_b64 exec, s[6:7]
+; MUBUF-NEXT:    v_writelane_b32 v41, s4, 0
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
@@ -258,24 +259,26 @@ define void @func_caller_stack() {
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
+; MUBUF-NEXT:    v_readlane_b32 s4, v41, 0
+; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; MUBUF-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; MUBUF-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; MUBUF-NEXT:    s_mov_b64 exec, s[6:7]
 ; MUBUF-NEXT:    s_addk_i32 s32, 0xfc00
-; MUBUF-NEXT:    v_readlane_b32 s33, v41, 0
-; MUBUF-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; MUBUF-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
-; MUBUF-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; MUBUF-NEXT:    s_mov_b64 exec, s[4:5]
+; MUBUF-NEXT:    s_mov_b32 s33, s4
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: func_caller_stack:
 ; FLATSCR:       ; %bb.0:
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FLATSCR-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; FLATSCR-NEXT:    scratch_store_dword off, v40, s32 ; 4-byte Folded Spill
-; FLATSCR-NEXT:    scratch_store_dword off, v41, s32 offset:4 ; 4-byte Folded Spill
-; FLATSCR-NEXT:    s_mov_b64 exec, s[0:1]
-; FLATSCR-NEXT:    v_writelane_b32 v41, s33, 0
+; FLATSCR-NEXT:    s_mov_b32 s0, s33
 ; FLATSCR-NEXT:    s_mov_b32 s33, s32
+; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
+; FLATSCR-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
+; FLATSCR-NEXT:    scratch_store_dword off, v41, s33 offset:4 ; 4-byte Folded Spill
+; FLATSCR-NEXT:    s_mov_b64 exec, s[2:3]
+; FLATSCR-NEXT:    v_writelane_b32 v41, s0, 0
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
@@ -293,12 +296,13 @@ define void @func_caller_stack() {
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
+; FLATSCR-NEXT:    v_readlane_b32 s0, v41, 0
+; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
+; FLATSCR-NEXT:    scratch_load_dword v40, off, s33 ; 4-byte Folded Reload
+; FLATSCR-NEXT:    scratch_load_dword v41, off, s33 offset:4 ; 4-byte Folded Reload
+; FLATSCR-NEXT:    s_mov_b64 exec, s[2:3]
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, -16
-; FLATSCR-NEXT:    v_readlane_b32 s33, v41, 0
-; FLATSCR-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; FLATSCR-NEXT:    scratch_load_dword v40, off, s32 ; 4-byte Folded Reload
-; FLATSCR-NEXT:    scratch_load_dword v41, off, s32 offset:4 ; 4-byte Folded Reload
-; FLATSCR-NEXT:    s_mov_b64 exec, s[0:1]
+; FLATSCR-NEXT:    s_mov_b32 s33, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
   call void @external_void_func_v16i32_v16i32_v4i32(<16 x i32> undef, <16 x i32> undef, <4 x i32> <i32 9, i32 10, i32 11, i32 12>)
@@ -309,12 +313,13 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; MUBUF-LABEL: func_caller_byval:
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; MUBUF-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; MUBUF-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; MUBUF-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; MUBUF-NEXT:    s_mov_b64 exec, s[4:5]
-; MUBUF-NEXT:    v_writelane_b32 v41, s33, 0
+; MUBUF-NEXT:    s_mov_b32 s4, s33
 ; MUBUF-NEXT:    s_mov_b32 s33, s32
+; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; MUBUF-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; MUBUF-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; MUBUF-NEXT:    s_mov_b64 exec, s[6:7]
+; MUBUF-NEXT:    v_writelane_b32 v41, s4, 0
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
@@ -379,24 +384,26 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
 ; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
+; MUBUF-NEXT:    v_readlane_b32 s4, v41, 0
+; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; MUBUF-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; MUBUF-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; MUBUF-NEXT:    s_mov_b64 exec, s[6:7]
 ; MUBUF-NEXT:    s_addk_i32 s32, 0xfc00
-; MUBUF-NEXT:    v_readlane_b32 s33, v41, 0
-; MUBUF-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; MUBUF-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
-; MUBUF-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; MUBUF-NEXT:    s_mov_b64 exec, s[4:5]
+; MUBUF-NEXT:    s_mov_b32 s33, s4
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; FLATSCR-LABEL: func_caller_byval:
 ; FLATSCR:       ; %bb.0:
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FLATSCR-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; FLATSCR-NEXT:    scratch_store_dword off, v40, s32 ; 4-byte Folded Spill
-; FLATSCR-NEXT:    scratch_store_dword off, v41, s32 offset:4 ; 4-byte Folded Spill
-; FLATSCR-NEXT:    s_mov_b64 exec, s[0:1]
-; FLATSCR-NEXT:    v_writelane_b32 v41, s33, 0
+; FLATSCR-NEXT:    s_mov_b32 s0, s33
 ; FLATSCR-NEXT:    s_mov_b32 s33, s32
+; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
+; FLATSCR-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
+; FLATSCR-NEXT:    scratch_store_dword off, v41, s33 offset:4 ; 4-byte Folded Spill
+; FLATSCR-NEXT:    s_mov_b64 exec, s[2:3]
+; FLATSCR-NEXT:    v_writelane_b32 v41, s0, 0
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 0
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
@@ -430,12 +437,13 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) {
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
+; FLATSCR-NEXT:    v_readlane_b32 s0, v41, 0
+; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
+; FLATSCR-NEXT:    scratch_load_dword v40, off, s33 ; 4-byte Folded Reload
+; FLATSCR-NEXT:    scratch_load_dword v41, off, s33 offset:4 ; 4-byte Folded Reload
+; FLATSCR-NEXT:    s_mov_b64 exec, s[2:3]
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, -16
-; FLATSCR-NEXT:    v_readlane_b32 s33, v41, 0
-; FLATSCR-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; FLATSCR-NEXT:    scratch_load_dword v40, off, s32 ; 4-byte Folded Reload
-; FLATSCR-NEXT:    scratch_load_dword v41, off, s32 offset:4 ; 4-byte Folded Reload
-; FLATSCR-NEXT:    s_mov_b64 exec, s[0:1]
+; FLATSCR-NEXT:    s_mov_b32 s33, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
   call void @external_void_func_byval(ptr addrspace(5) byval([16 x i32]) %argptr)

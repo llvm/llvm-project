@@ -8,12 +8,13 @@ define internal fastcc void @widget() {
 ; GFX90A-LABEL: widget:
 ; GFX90A:       ; %bb.0: ; %bb
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GFX90A-NEXT:    s_mov_b64 exec, s[16:17]
-; GFX90A-NEXT:    v_writelane_b32 v41, s33, 0
+; GFX90A-NEXT:    s_mov_b32 s16, s33
 ; GFX90A-NEXT:    s_mov_b32 s33, s32
+; GFX90A-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX90A-NEXT:    s_mov_b64 exec, s[18:19]
+; GFX90A-NEXT:    v_writelane_b32 v41, s16, 0
 ; GFX90A-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX90A-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-NEXT:    v_writelane_b32 v40, s31, 1

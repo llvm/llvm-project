@@ -38,6 +38,15 @@ public:
                                 RegScavenger *RS = nullptr) const;
   void determinePrologEpilogSGPRSaves(MachineFunction &MF,
                                       BitVector &SavedRegs) const;
+  void emitCSRSpillStores(MachineFunction &MF, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI, DebugLoc &DL,
+                          LivePhysRegs &LiveRegs, Register FrameReg,
+                          Register FramePtrRegScratchCopy,
+                          const bool NeedsFrameMoves) const;
+  void emitCSRSpillRestores(MachineFunction &MF, MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI, DebugLoc &DL,
+                            LivePhysRegs &LiveRegs, Register FrameReg,
+                            Register FramePtrRegScratchCopy) const;
   bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,

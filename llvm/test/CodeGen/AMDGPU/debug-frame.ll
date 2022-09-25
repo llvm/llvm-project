@@ -59,10 +59,12 @@ entry:
 ; CHECK: .cfi_startproc
 
 ; SGPR33 = 65
-; CHECK: v_mov_b32_e32 [[TMP_VGPR:v[0-9]+]], s33
-; GFX900: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
-; GFX90A-V2A-DIS: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
-; GFX90A-V2A-EN: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s32 offset:320 ; 4-byte Folded Spill
+; CHECK: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
+; CHECK: s_mov_b32 s33, s32
+; CHECK: v_mov_b32_e32 [[TMP_VGPR:v[0-9]+]], [[FP_SCRATCH_COPY]]
+; GFX900: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
+; GFX90A-V2A-EN: buffer_store_dword [[TMP_VGPR]], off, s[0:3], s33 offset:320 ; 4-byte Folded Spill
 
 ; GFX900: .cfi_offset 65, 28672
 ; GFX90A-V2A-DIS: .cfi_offset 65, 28672
@@ -540,20 +542,22 @@ declare hidden void @ex() #0
 
 ; CHECK-NOT: .cfi_{{.*}}
 
+; CHECK: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
+; CHECK: s_mov_b32 s33, s32
 ; WAVE64: s_or_saveexec_b64 [[EXEC_MASK:s\[[0-9]+:[0-9]+\]]], -1
 ; WAVE32: s_or_saveexec_b32 [[EXEC_MASK:s[0-9]+]], -1
-; CHECK-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK-NEXT: buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; VGPR40_wave64 = 2600
 ; WAVE64-NEXT: .cfi_offset 2600, 0
 ; VGPR40_wave32 = 1576
 ; WAVE32-NEXT: .cfi_offset 1576, 0
-; CHECK-NEXT: buffer_store_dword v41, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT: buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; WAVE64: s_mov_b64 exec, [[EXEC_MASK]]
 ; WAVE32: s_mov_b32 exec_lo, [[EXEC_MASK]]
 
 ; CHECK-NOT: .cfi_{{.*}}
 
-; CHECK: v_writelane_b32 v41, s33, 0
+; CHECK: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
 
 ; DW_CFA_expression [0x10] SGPR33 ULEB128(65)=[0x41]
 ;   BLOCK_LENGTH ULEB128(5)=[0x05]
@@ -573,16 +577,16 @@ declare hidden void @ex() #0
 
 ; CHECK-NOT: .cfi_{{.*}}
 
-; CHECK: s_mov_b32 s33, s32
 ; SGPR33 = 65
 ; CHECK-NEXT: .cfi_def_cfa_register 65
 
 ; CHECK-NOT: .cfi_{{.*}}
 
 ; CHECK: s_addk_i32 s32,
-; CHECK: v_readlane_b32 s33, v41, 0
+; CHECK: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v41, 0
 ; SGPR32 = 64
 ; CHECK: .cfi_def_cfa_register 64
+; CHECK-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 
 ; CHECK-NOT: .cfi_{{.*}}
 

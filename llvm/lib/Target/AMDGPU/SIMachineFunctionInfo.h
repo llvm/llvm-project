@@ -618,6 +618,14 @@ public:
     PrologEpilogSGPRSpills.erase(I);
   }
 
+  const PrologEpilogSGPRSaveRestoreInfo &
+  getPrologEpilogSGPRSaveRestoreInfo(Register Reg) const {
+    auto I = PrologEpilogSGPRSpills.find(Reg);
+    assert(I != PrologEpilogSGPRSpills.end());
+
+    return I->second;
+  }
+
   ArrayRef<SIRegisterInfo::SpilledReg>
   getPrologEpilogSGPRSpillToVGPRLanes(int FrameIndex) const {
     auto I = PrologEpilogSGPRSpillToVGPRLanes.find(FrameIndex);

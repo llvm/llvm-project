@@ -141,11 +141,11 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; MUBUF-NEXT:    buffer_load_dword v7, v2, s[0:3], 0 offen offset:4 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_add_i32 s32, s32, 0xffe00000
-; MUBUF-NEXT:    s_mov_b32 s33, s5
 ; MUBUF-NEXT:    v_add_co_u32_e32 v2, vcc, v4, v6
 ; MUBUF-NEXT:    v_addc_co_u32_e32 v3, vcc, v5, v7, vcc
 ; MUBUF-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
+; MUBUF-NEXT:    s_mov_b32 s33, s5
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -180,11 +180,11 @@ define void @func_local_stack_offset_uses_sp(i64 addrspace(1)* %out) {
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], off, s0 offset:64 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_addk_i32 s32, 0x8000
-; FLATSCR-NEXT:    s_mov_b32 s33, s2
 ; FLATSCR-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v4
 ; FLATSCR-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc
 ; FLATSCR-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_mov_b32 s33, s2
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
