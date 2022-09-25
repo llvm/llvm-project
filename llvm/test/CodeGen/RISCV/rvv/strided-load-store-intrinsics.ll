@@ -110,3 +110,26 @@ define void @strided_store_i8_reverse(ptr %p, <32 x i8> %v, <32 x i1> %m) {
   ret void
 }
 
+declare void @llvm.riscv.masked.strided.store.nxv1i64.p0.i64(<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>)
+
+declare <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscale x 1 x i64>, ptr, i64, <vscale x 1 x i1>)
+
+define <vscale x 1 x i64> @strided_load_vscale_i64(ptr %p, i64 %stride, <vscale x 1 x i1> %m) {
+; CHECK-LABEL: strided_load_vscale_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vlse64.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscale x 1 x i64> undef, ptr %p, i64 %stride, <vscale x 1 x i1> %m)
+  ret <vscale x 1 x i64> %res
+}
+
+define void @strided_store_vscale_i64(ptr %p, <vscale x 1 x i64> %v, i64 %stride, <vscale x 1 x i1> %m) {
+; CHECK-LABEL: strided_store_vscale_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsse64.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
+  call void @llvm.riscv.masked.strided.store.nxv1i64.p0.i64(<vscale x 1 x i64> %v, ptr %p, i64 %stride, <vscale x 1 x i1> %m)
+  ret void
+}
