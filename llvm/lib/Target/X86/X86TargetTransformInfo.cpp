@@ -3106,7 +3106,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
   static const CostKindTblEntry SLMCostTbl[] = {
     // slm pcmpeq/pcmpgt throughput is 2
-    { ISD::SETCC,   MVT::v2i64,   { 2 } },
+    { ISD::SETCC,   MVT::v2i64,   { 2, 5, 1, 2 } },
     // slm pblendvb/blendvpd/blendvps throughput is 4
     { ISD::SELECT,  MVT::v2f64,   { 4, 4, 1, 3 } }, // vblendvpd
     { ISD::SELECT,  MVT::v4f32,   { 4, 4, 1, 3 } }, // vblendvps
