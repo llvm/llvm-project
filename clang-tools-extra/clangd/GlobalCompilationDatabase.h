@@ -15,6 +15,7 @@
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
@@ -171,12 +172,17 @@ getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
 /// using an in-memory mapping.
 class OverlayCDB : public DelegatingCDB {
 public:
+  // Makes adjustments to a tooling::CompileCommand which will be used to
+  // process a file (possibly different from the one in the command).
+  using CommandMangler = llvm::unique_function<void(tooling::CompileCommand &,
+                                                    StringRef File) const>;
+
   // Base may be null, in which case no entries are inherited.
   // FallbackFlags are added to the fallback compile command.
   // Adjuster is applied to all commands, fallback or not.
   OverlayCDB(const GlobalCompilationDatabase *Base,
              std::vector<std::string> FallbackFlags = {},
-             tooling::ArgumentsAdjuster Adjuster = nullptr);
+             CommandMangler Mangler = nullptr);
 
   llvm::Optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
@@ -190,7 +196,7 @@ public:
 private:
   mutable std::mutex Mutex;
   llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
-  tooling::ArgumentsAdjuster ArgsAdjuster;
+  CommandMangler Mangler;
   std::vector<std::string> FallbackFlags;
 };
 

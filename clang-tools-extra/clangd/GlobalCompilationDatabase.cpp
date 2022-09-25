@@ -740,8 +740,8 @@ DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
 
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
-                       tooling::ArgumentsAdjuster Adjuster)
-    : DelegatingCDB(Base), ArgsAdjuster(std::move(Adjuster)),
+                       CommandMangler Mangler)
+    : DelegatingCDB(Base), Mangler(std::move(Mangler)),
       FallbackFlags(std::move(FallbackFlags)) {}
 
 llvm::Optional<tooling::CompileCommand>
@@ -757,8 +757,8 @@ OverlayCDB::getCompileCommand(PathRef File) const {
     Cmd = DelegatingCDB::getCompileCommand(File);
   if (!Cmd)
     return llvm::None;
-  if (ArgsAdjuster)
-    Cmd->CommandLine = ArgsAdjuster(Cmd->CommandLine, File);
+  if (Mangler)
+    Mangler(*Cmd, File);
   return Cmd;
 }
 
@@ -767,8 +767,8 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
-  if (ArgsAdjuster)
-    Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, File);
+  if (Mangler)
+    Mangler(Cmd, File);
   return Cmd;
 }
 

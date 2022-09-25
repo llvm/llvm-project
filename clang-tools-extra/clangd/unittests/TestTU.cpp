@@ -64,7 +64,7 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   Argv.push_back(FullFilename);
 
   auto Mangler = CommandMangler::forTests();
-  Mangler.adjust(Inputs.CompileCommand.CommandLine, FullFilename);
+  Mangler(Inputs.CompileCommand, FullFilename);
   Inputs.CompileCommand.Filename = FullFilename;
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;
