@@ -198,9 +198,6 @@ check-generated-output)
 
     # Reject code with trailing whitespace
     ! grep -rn '[[:blank:]]$' libcxx/include libcxx/src libcxx/test libcxx/benchmarks || false
-
-    # Reject patches that introduce dependency cycles in the headers.
-    python3 libcxx/utils/graph_header_deps.py >/dev/null
 ;;
 generic-cxx03)
     clean
