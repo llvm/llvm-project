@@ -145,20 +145,22 @@ void testPrintPassPipeline() {
   mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
 
   // Print the top level pass manager
-  // CHECK: Top-level: builtin.module(func.func(print-op-stats{json=false}))
+  //      CHECK: Top-level: builtin.module(
+  // CHECK-SAME:   builtin.module(func.func(print-op-stats{json=false}))
+  // CHECK-SAME: )
   fprintf(stderr, "Top-level: ");
   mlirPrintPassPipeline(mlirPassManagerGetAsOpPassManager(pm), printToStderr,
                         NULL);
   fprintf(stderr, "\n");
 
   // Print the pipeline nested one level down
-  // CHECK: Nested Module: func.func(print-op-stats{json=false})
+  // CHECK: Nested Module: builtin.module(func.func(print-op-stats{json=false}))
   fprintf(stderr, "Nested Module: ");
   mlirPrintPassPipeline(nestedModulePm, printToStderr, NULL);
   fprintf(stderr, "\n");
 
   // Print the pipeline nested two levels down
-  // CHECK: Nested Module>Func: print-op-stats
+  // CHECK: Nested Module>Func: func.func(print-op-stats{json=false})
   fprintf(stderr, "Nested Module>Func: ");
   mlirPrintPassPipeline(nestedFuncPm, printToStderr, NULL);
   fprintf(stderr, "\n");
@@ -197,8 +199,10 @@ void testParsePassPipeline() {
     exit(EXIT_FAILURE);
   }
 
-  // CHECK: Round-trip: builtin.module(func.func(print-op-stats{json=false}),
-  // func.func(print-op-stats{json=false}))
+  //      CHECK: Round-trip: builtin.module(builtin.module(
+  // CHECK-SAME:   func.func(print-op-stats{json=false}),
+  // CHECK-SAME:   func.func(print-op-stats{json=false})
+  // CHECK-SAME: ))
   fprintf(stderr, "Round-trip: ");
   mlirPrintPassPipeline(mlirPassManagerGetAsOpPassManager(pm), printToStderr,
                         NULL);
