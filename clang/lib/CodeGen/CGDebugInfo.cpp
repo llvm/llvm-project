@@ -48,6 +48,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SHA1.h"
+#include "llvm/Support/SHA256.h"
 #include "llvm/Support/TimeProfiler.h"
 using namespace clang;
 using namespace clang::CodeGen;
@@ -344,7 +346,7 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
 }
 
 Optional<llvm::DIFile::ChecksumKind>
-CGDebugInfo::computeChecksum(FileID FID, SmallString<32> &Checksum) const {
+CGDebugInfo::computeChecksum(FileID FID, SmallString<64> &Checksum) const {
   Checksum.clear();
 
   if (!CGM.getCodeGenOpts().EmitCodeView &&
@@ -356,10 +358,18 @@ CGDebugInfo::computeChecksum(FileID FID, SmallString<32> &Checksum) const {
   if (!MemBuffer)
     return None;
 
-  llvm::toHex(
-      llvm::MD5::hash(llvm::arrayRefFromStringRef(MemBuffer->getBuffer())),
-      /*LowerCase*/ true, Checksum);
-  return llvm::DIFile::CSK_MD5;
+  auto Data = llvm::arrayRefFromStringRef(MemBuffer->getBuffer());
+  switch (CGM.getCodeGenOpts().getDebugSrcHash()) {
+  case clang::CodeGenOptions::DSH_MD5:
+    llvm::toHex(llvm::MD5::hash(Data), /*LowerCase=*/true, Checksum);
+    return llvm::DIFile::CSK_MD5;
+  case clang::CodeGenOptions::DSH_SHA1:
+    llvm::toHex(llvm::SHA1::hash(Data), /*LowerCase=*/true, Checksum);
+    return llvm::DIFile::CSK_SHA1;
+  case clang::CodeGenOptions::DSH_SHA256:
+    llvm::toHex(llvm::SHA256::hash(Data), /*LowerCase=*/true, Checksum);
+    return llvm::DIFile::CSK_SHA256;
+  }
 }
 
 Optional<StringRef> CGDebugInfo::getSource(const SourceManager &SM,
@@ -406,7 +416,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
       return cast<llvm::DIFile>(V);
   }
 
-  SmallString<32> Checksum;
+  SmallString<64> Checksum;
 
   Optional<llvm::DIFile::ChecksumKind> CSKind = computeChecksum(FID, Checksum);
   Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
@@ -500,7 +510,7 @@ StringRef CGDebugInfo::getCurrentDirname() {
 }
 
 void CGDebugInfo::CreateCompileUnit() {
-  SmallString<32> Checksum;
+  SmallString<64> Checksum;
   Optional<llvm::DIFile::ChecksumKind> CSKind;
   Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
 
