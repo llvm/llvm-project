@@ -2230,6 +2230,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::star:
     case tok::kw_const:
     case tok::kw_constexpr:
+    case tok::kw_consteval:
     case tok::comma:
     case tok::greater:
     case tok::identifier:
@@ -2237,6 +2238,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::coloncolon:
     case tok::kw_mutable:
     case tok::kw_noexcept:
+    case tok::kw_static:
       nextToken();
       break;
     // Specialization of a template with an integer parameter can contain
