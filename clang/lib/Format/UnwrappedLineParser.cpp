@@ -3530,9 +3530,9 @@ void UnwrappedLineParser::parseConstraintExpression() {
       // concept C = bool(...);
       // and bool is the only type, all other types as cast must be inside a
       // cast to bool an thus are handled by the other cases.
-      nextToken();
-      if (FormatTok->isNot(tok::l_paren))
+      if (Tokens->peekNextToken()->isNot(tok::l_paren))
         return;
+      nextToken();
       parseParens();
       break;
 
