@@ -32,10 +32,7 @@ define i8 @sle_xy_smin_fval(i8 %x, i8 %y) {
 
 define i8 @sgt_xy_smin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sgt_xy_smin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sgt i8 %x, %y
   %m = call i8 @llvm.smin.i8(i8 %x, i8 %y)
@@ -45,10 +42,7 @@ define i8 @sgt_xy_smin_fval(i8 %x, i8 %y) {
 
 define i8 @sge_xy_smin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sge_xy_smin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sge i8 %x, %y
   %m = call i8 @llvm.smin.i8(i8 %y, i8 %x)
@@ -121,10 +115,7 @@ define i8 @eq_xy_smin_fval(i8 %x, i8 %y) {
 
 define i8 @ne_xy_smin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ne_xy_smin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ne i8 %x, %y
   %m = call i8 @llvm.smin.i8(i8 %y, i8 %x)
@@ -136,10 +127,7 @@ define i8 @ne_xy_smin_fval(i8 %x, i8 %y) {
 
 define i8 @slt_yx_smin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @slt_yx_smin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp slt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp slt i8 %y, %x
   %m = call i8 @llvm.smin.i8(i8 %x, i8 %y)
@@ -149,10 +137,7 @@ define i8 @slt_yx_smin_fval(i8 %x, i8 %y) {
 
 define i8 @sle_yx_smin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sle_yx_smin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sle i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sle i8 %y, %x
   %m = call i8 @llvm.smin.i8(i8 %y, i8 %x)
@@ -247,10 +232,7 @@ define i8 @eq_yx_smin_fval(i8 %x, i8 %y) {
 
 define i8 @ne_yx_smin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ne_yx_smin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ne i8 %y, %x
   %m = call i8 @llvm.smin.i8(i8 %y, i8 %x)
@@ -262,10 +244,7 @@ define i8 @ne_yx_smin_fval(i8 %x, i8 %y) {
 
 define i8 @slt_xy_smin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @slt_xy_smin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp slt i8 %x, %y
   %m = call i8 @llvm.smin.i8(i8 %x, i8 %y)
@@ -275,10 +254,7 @@ define i8 @slt_xy_smin_tval(i8 %x, i8 %y) {
 
 define i8 @sle_xy_smin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sle_xy_smin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sle i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sle i8 %x, %y
   %m = call i8 @llvm.smin.i8(i8 %y, i8 %x)
@@ -362,10 +338,7 @@ define i8 @uge_xy_smin_tval(i8 %x, i8 %y) {
 
 define i8 @eq_xy_smin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_xy_smin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp eq i8 %x, %y
   %m = call i8 @llvm.smin.i8(i8 %x, i8 %y)
@@ -410,10 +383,7 @@ define i8 @sle_yx_smin_tval(i8 %x, i8 %y) {
 
 define i8 @sgt_yx_smin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sgt_yx_smin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sgt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sgt i8 %y, %x
   %m = call i8 @llvm.smin.i8(i8 %x, i8 %y)
@@ -423,10 +393,7 @@ define i8 @sgt_yx_smin_tval(i8 %x, i8 %y) {
 
 define i8 @sge_yx_smin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sge_yx_smin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sge i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sge i8 %y, %x
   %m = call i8 @llvm.smin.i8(i8 %y, i8 %x)
@@ -488,10 +455,7 @@ define i8 @uge_yx_smin_tval(i8 %x, i8 %y) {
 
 define i8 @eq_yx_smin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_yx_smin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp eq i8 %y, %x
   %m = call i8 @llvm.smin.i8(i8 %x, i8 %y)
@@ -514,10 +478,7 @@ define i8 @ne_yx_smin_tval(i8 %x, i8 %y) {
 
 define i8 @slt_xy_smax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @slt_xy_smax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp slt i8 %x, %y
   %m = call i8 @llvm.smax.i8(i8 %x, i8 %y)
@@ -527,10 +488,7 @@ define i8 @slt_xy_smax_fval(i8 %x, i8 %y) {
 
 define i8 @sle_xy_smax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sle_xy_smax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sle i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sle i8 %x, %y
   %m = call i8 @llvm.smax.i8(i8 %y, i8 %x)
@@ -625,10 +583,7 @@ define i8 @eq_xy_smax_fval(i8 %x, i8 %y) {
 
 define i8 @ne_xy_smax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ne_xy_smax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ne i8 %x, %y
   %m = call i8 @llvm.smax.i8(i8 %y, i8 %x)
@@ -662,10 +617,7 @@ define i8 @sle_yx_smax_fval(i8 %x, i8 %y) {
 
 define i8 @sgt_yx_smax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sgt_yx_smax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sgt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sgt i8 %y, %x
   %m = call i8 @llvm.smax.i8(i8 %x, i8 %y)
@@ -675,10 +627,7 @@ define i8 @sgt_yx_smax_fval(i8 %x, i8 %y) {
 
 define i8 @sge_yx_smax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sge_yx_smax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sge i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sge i8 %y, %x
   %m = call i8 @llvm.smax.i8(i8 %y, i8 %x)
@@ -751,10 +700,7 @@ define i8 @eq_yx_smax_fval(i8 %x, i8 %y) {
 
 define i8 @ne_yx_smax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ne_yx_smax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ne i8 %y, %x
   %m = call i8 @llvm.smax.i8(i8 %y, i8 %x)
@@ -788,10 +734,7 @@ define i8 @sle_xy_smax_tval(i8 %x, i8 %y) {
 
 define i8 @sgt_xy_smax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sgt_xy_smax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sgt i8 %x, %y
   %m = call i8 @llvm.smax.i8(i8 %x, i8 %y)
@@ -801,10 +744,7 @@ define i8 @sgt_xy_smax_tval(i8 %x, i8 %y) {
 
 define i8 @sge_xy_smax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sge_xy_smax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sge i8 %x, %y
   %m = call i8 @llvm.smax.i8(i8 %y, i8 %x)
@@ -866,10 +806,7 @@ define i8 @uge_xy_smax_tval(i8 %x, i8 %y) {
 
 define i8 @eq_xy_smax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_xy_smax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp eq i8 %x, %y
   %m = call i8 @llvm.smax.i8(i8 %x, i8 %y)
@@ -892,10 +829,7 @@ define i8 @ne_xy_smax_tval(i8 %x, i8 %y) {
 
 define i8 @slt_yx_smax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @slt_yx_smax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp slt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp slt i8 %y, %x
   %m = call i8 @llvm.smax.i8(i8 %x, i8 %y)
@@ -905,10 +839,7 @@ define i8 @slt_yx_smax_tval(i8 %x, i8 %y) {
 
 define i8 @sle_yx_smax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sle_yx_smax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp sle i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp sle i8 %y, %x
   %m = call i8 @llvm.smax.i8(i8 %y, i8 %x)
@@ -992,10 +923,7 @@ define i8 @uge_yx_smax_tval(i8 %x, i8 %y) {
 
 define i8 @eq_yx_smax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_yx_smax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp eq i8 %y, %x
   %m = call i8 @llvm.smax.i8(i8 %x, i8 %y)
@@ -1092,10 +1020,7 @@ define i8 @ule_xy_umin_fval(i8 %x, i8 %y) {
 
 define i8 @ugt_xy_umin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ugt_xy_umin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ugt i8 %x, %y
   %m = call i8 @llvm.umin.i8(i8 %x, i8 %y)
@@ -1105,10 +1030,7 @@ define i8 @ugt_xy_umin_fval(i8 %x, i8 %y) {
 
 define i8 @uge_xy_umin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @uge_xy_umin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp uge i8 %x, %y
   %m = call i8 @llvm.umin.i8(i8 %y, i8 %x)
@@ -1129,10 +1051,7 @@ define i8 @eq_xy_umin_fval(i8 %x, i8 %y) {
 
 define i8 @ne_xy_umin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ne_xy_umin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ne i8 %x, %y
   %m = call i8 @llvm.umin.i8(i8 %y, i8 %x)
@@ -1196,10 +1115,7 @@ define i8 @sge_yx_umin_fval(i8 %x, i8 %y) {
 
 define i8 @ult_yx_umin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ult_yx_umin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ult i8 %y, %x
   %m = call i8 @llvm.umin.i8(i8 %x, i8 %y)
@@ -1209,10 +1125,7 @@ define i8 @ult_yx_umin_fval(i8 %x, i8 %y) {
 
 define i8 @ule_yx_umin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ule_yx_umin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ule i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ule i8 %y, %x
   %m = call i8 @llvm.umin.i8(i8 %y, i8 %x)
@@ -1255,10 +1168,7 @@ define i8 @eq_yx_umin_fval(i8 %x, i8 %y) {
 
 define i8 @ne_yx_umin_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ne_yx_umin_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ne i8 %y, %x
   %m = call i8 @llvm.umin.i8(i8 %y, i8 %x)
@@ -1322,10 +1232,7 @@ define i8 @sge_xy_umin_tval(i8 %x, i8 %y) {
 
 define i8 @ult_xy_umin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ult_xy_umin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ult i8 %x, %y
   %m = call i8 @llvm.umin.i8(i8 %x, i8 %y)
@@ -1335,10 +1242,7 @@ define i8 @ult_xy_umin_tval(i8 %x, i8 %y) {
 
 define i8 @ule_xy_umin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ule_xy_umin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ule i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ule i8 %x, %y
   %m = call i8 @llvm.umin.i8(i8 %y, i8 %x)
@@ -1370,10 +1274,7 @@ define i8 @uge_xy_umin_tval(i8 %x, i8 %y) {
 
 define i8 @eq_xy_umin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_xy_umin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp eq i8 %x, %y
   %m = call i8 @llvm.umin.i8(i8 %x, i8 %y)
@@ -1470,10 +1371,7 @@ define i8 @ule_yx_umin_tval(i8 %x, i8 %y) {
 
 define i8 @ugt_yx_umin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ugt_yx_umin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ugt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ugt i8 %y, %x
   %m = call i8 @llvm.umin.i8(i8 %x, i8 %y)
@@ -1483,10 +1381,7 @@ define i8 @ugt_yx_umin_tval(i8 %x, i8 %y) {
 
 define i8 @uge_yx_umin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @uge_yx_umin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp uge i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp uge i8 %y, %x
   %m = call i8 @llvm.umin.i8(i8 %y, i8 %x)
@@ -1496,10 +1391,7 @@ define i8 @uge_yx_umin_tval(i8 %x, i8 %y) {
 
 define i8 @eq_yx_umin_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_yx_umin_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp eq i8 %y, %x
   %m = call i8 @llvm.umin.i8(i8 %x, i8 %y)
@@ -1574,10 +1466,7 @@ define i8 @sge_xy_umax_fval(i8 %x, i8 %y) {
 
 define i8 @ult_xy_umax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ult_xy_umax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ult i8 %x, %y
   %m = call i8 @llvm.umax.i8(i8 %x, i8 %y)
@@ -1587,10 +1476,7 @@ define i8 @ult_xy_umax_fval(i8 %x, i8 %y) {
 
 define i8 @ule_xy_umax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ule_xy_umax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ule i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ule i8 %x, %y
   %m = call i8 @llvm.umax.i8(i8 %y, i8 %x)
@@ -1633,10 +1519,7 @@ define i8 @eq_xy_umax_fval(i8 %x, i8 %y) {
 
 define i8 @ne_xy_umax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ne_xy_umax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ne i8 %x, %y
   %m = call i8 @llvm.umax.i8(i8 %y, i8 %x)
@@ -1722,10 +1605,7 @@ define i8 @ule_yx_umax_fval(i8 %x, i8 %y) {
 
 define i8 @ugt_yx_umax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ugt_yx_umax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ugt i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ugt i8 %y, %x
   %m = call i8 @llvm.umax.i8(i8 %x, i8 %y)
@@ -1735,10 +1615,7 @@ define i8 @ugt_yx_umax_fval(i8 %x, i8 %y) {
 
 define i8 @uge_yx_umax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @uge_yx_umax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp uge i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp uge i8 %y, %x
   %m = call i8 @llvm.umax.i8(i8 %y, i8 %x)
@@ -1759,10 +1636,7 @@ define i8 @eq_yx_umax_fval(i8 %x, i8 %y) {
 
 define i8 @ne_yx_umax_fval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ne_yx_umax_fval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ne i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ne i8 %y, %x
   %m = call i8 @llvm.umax.i8(i8 %y, i8 %x)
@@ -1848,10 +1722,7 @@ define i8 @ule_xy_umax_tval(i8 %x, i8 %y) {
 
 define i8 @ugt_xy_umax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ugt_xy_umax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ugt i8 %x, %y
   %m = call i8 @llvm.umax.i8(i8 %x, i8 %y)
@@ -1861,10 +1732,7 @@ define i8 @ugt_xy_umax_tval(i8 %x, i8 %y) {
 
 define i8 @uge_xy_umax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @uge_xy_umax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp uge i8 %x, %y
   %m = call i8 @llvm.umax.i8(i8 %y, i8 %x)
@@ -1874,10 +1742,7 @@ define i8 @uge_xy_umax_tval(i8 %x, i8 %y) {
 
 define i8 @eq_xy_umax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_xy_umax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp eq i8 %x, %y
   %m = call i8 @llvm.umax.i8(i8 %x, i8 %y)
@@ -1952,10 +1817,7 @@ define i8 @sge_yx_umax_tval(i8 %x, i8 %y) {
 
 define i8 @ult_yx_umax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ult_yx_umax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ult i8 %y, %x
   %m = call i8 @llvm.umax.i8(i8 %x, i8 %y)
@@ -1965,10 +1827,7 @@ define i8 @ult_yx_umax_tval(i8 %x, i8 %y) {
 
 define i8 @ule_yx_umax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ule_yx_umax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp ule i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[X]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp ule i8 %y, %x
   %m = call i8 @llvm.umax.i8(i8 %y, i8 %x)
@@ -2000,10 +1859,7 @@ define i8 @uge_yx_umax_tval(i8 %x, i8 %y) {
 
 define i8 @eq_yx_umax_tval(i8 %x, i8 %y) {
 ; CHECK-LABEL: @eq_yx_umax_tval(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
   %i = icmp eq i8 %y, %x
   %m = call i8 @llvm.umax.i8(i8 %x, i8 %y)
@@ -2047,6 +1903,36 @@ define i8 @ne_yx_umax_tval_wrong_op(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %i = icmp ne i8 %y, %x
+  %m = call i8 @llvm.umax.i8(i8 %z, i8 %x)
+  %r = select i1 %i, i8 %m, i8 %x
+  ret i8 %r
+}
+
+; negative test - wrong cmp op
+
+define i8 @eq_yz_umax_tval(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @eq_yz_umax_tval(
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Y]], i8 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %i = icmp eq i8 %y, %z
+  %m = call i8 @llvm.umax.i8(i8 %y, i8 %x)
+  %r = select i1 %i, i8 %m, i8 %x
+  ret i8 %r
+}
+
+; negative test - wrong max op
+
+define i8 @eq_yx_umax_tval_wrong_op(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @eq_yx_umax_tval_wrong_op(
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[Z:%.*]], i8 [[X]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[M]], i8 [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %i = icmp eq i8 %y, %x
   %m = call i8 @llvm.umax.i8(i8 %z, i8 %x)
   %r = select i1 %i, i8 %m, i8 %x
   ret i8 %r

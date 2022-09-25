@@ -4259,9 +4259,26 @@ static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
 
   if (auto *MMI = dyn_cast<MinMaxIntrinsic>(FVal)) {
     ICmpInst::Predicate MMPred = MMI->getPredicate();
+    // (X >  Y) ? X : max(X, Y) --> max(X, Y)
+    // (X >= Y) ? X : max(X, Y) --> max(X, Y)
+    // (X == Y) ? X : max(X, Y) --> max(X, Y)
+    // (X <  Y) ? X : min(X, Y) --> min(X, Y)
+    // (X <= Y) ? X : min(X, Y) --> min(X, Y)
+    // (X == Y) ? X : min(X, Y) --> min(X, Y)
     if (MMPred == Pred || MMPred == CmpInst::getStrictPredicate(Pred) ||
         Pred == ICmpInst::ICMP_EQ)
       return MMI;
+
+    // (X <  Y) ? X : max(X, Y) --> X
+    // (X <= Y) ? X : max(X, Y) --> X
+    // (X != Y) ? X : max(X, Y) --> X
+    // (X >  Y) ? X : min(X, Y) --> X
+    // (X >= Y) ? X : min(X, Y) --> X
+    // (X != Y) ? X : min(X, Y) --> X
+    ICmpInst::Predicate InvPred = CmpInst::getInversePredicate(Pred);
+    if (MMPred == InvPred || MMPred == CmpInst::getStrictPredicate(InvPred) ||
+        Pred == ICmpInst::ICMP_NE)
+      return X;
   }
 
   return nullptr;
