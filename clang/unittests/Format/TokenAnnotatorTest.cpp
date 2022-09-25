@@ -837,6 +837,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
 
+  Tokens = annotate("[]() consteval {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[]() mutable {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[]() static {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
   Tokens = annotate("[]() -> auto {}");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
