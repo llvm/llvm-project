@@ -5162,16 +5162,20 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
 
     MVT VT = Op->getSimpleValueType(0);
-    MVT ContainerVT = getContainerForFixedLengthVector(VT);
+    MVT ContainerVT = VT;
+    if (VT.isFixedLengthVector())
+      ContainerVT = getContainerForFixedLengthVector(VT);
 
     SDValue PassThru = Op.getOperand(2);
     if (!IsUnmasked) {
       MVT MaskVT = getMaskTypeFor(ContainerVT);
-      Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
-      PassThru = convertToScalableVector(ContainerVT, PassThru, DAG, Subtarget);
+      if (VT.isFixedLengthVector()) {
+        Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
+        PassThru = convertToScalableVector(ContainerVT, PassThru, DAG, Subtarget);
+      }
     }
 
-    SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+    SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
     SDValue IntID = DAG.getTargetConstant(
         IsUnmasked ? Intrinsic::riscv_vlse : Intrinsic::riscv_vlse_mask, DL,
@@ -5198,7 +5202,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
                                 Load->getMemoryVT(), Load->getMemOperand());
     SDValue Chain = Result.getValue(1);
-    Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
+    if (VT.isFixedLengthVector())
+      Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
     return DAG.getMergeValues({Result, Chain}, DL);
   }
   case Intrinsic::riscv_seg2_load:
@@ -5262,15 +5267,18 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     SDValue Val = Op.getOperand(2);
     MVT VT = Val.getSimpleValueType();
-    MVT ContainerVT = getContainerForFixedLengthVector(VT);
-
-    Val = convertToScalableVector(ContainerVT, Val, DAG, Subtarget);
+    MVT ContainerVT = VT;
+    if (VT.isFixedLengthVector()) {
+      ContainerVT = getContainerForFixedLengthVector(VT);
+      Val = convertToScalableVector(ContainerVT, Val, DAG, Subtarget);
+    }
     if (!IsUnmasked) {
       MVT MaskVT = getMaskTypeFor(ContainerVT);
-      Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
+      if (VT.isFixedLengthVector())
+        Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
     }
 
-    SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+    SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
     SDValue IntID = DAG.getTargetConstant(
         IsUnmasked ? Intrinsic::riscv_vsse : Intrinsic::riscv_vsse_mask, DL,
