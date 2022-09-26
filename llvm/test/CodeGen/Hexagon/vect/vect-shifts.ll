@@ -236,4 +236,421 @@ b0:
   ret <2 x i32> %v0
 }
 
+define <4 x i8> @f15(<4 x i8> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f15:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = extractu(r0,#8,#16)
+; CHECK-NEXT:     r2 = extractu(r0,#8,#24)
+; CHECK-NEXT:     r3 = sxtb(r0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r4 = extract(r0,#8,#8)
+; CHECK-NEXT:     r3 = extractu(r3,#8,#1)
+; CHECK-NEXT:     r2 = sxtb(r2)
+; CHECK-NEXT:     r1 = sxtb(r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = asl(r4,#6)
+; CHECK-NEXT:     r2 = asl(r2,#4)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = extractu(r1,#8,#3)
+; CHECK-NEXT:     r0 = or(r3,and(r0,##65280))
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = or(r1,and(r2,##65280))
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = combine(r2.l,r0.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = ashr <4 x i8> %a0, <i8 1, i8 2, i8 3, i8 4>
+  ret <4 x i8> %v0
+}
+
+define <4 x i8> @f16(<4 x i8> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f16:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = extractu(r0,#8,#8)
+; CHECK-NEXT:     r2 = extractu(r0,#8,#24)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 = extractu(r0,#7,#1)
+; CHECK-NEXT:     r4 = extractu(r0,#5,#19)
+; CHECK-NEXT:     r1 = and(r1,#252)
+; CHECK-NEXT:     r2 = and(r2,#240)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 |= asl(r1,#6)
+; CHECK-NEXT:     r4 |= asl(r2,#4)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = combine(r4.l,r3.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = lshr <4 x i8> %a0, <i8 1, i8 2, i8 3, i8 4>
+  ret <4 x i8> %v0
+}
+
+define <4 x i8> @f17(<4 x i8> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f17:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = extractu(r0,#8,#16)
+; CHECK-NEXT:     r2 = extractu(r0,#8,#8)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 = extractu(r0,#8,#24)
+; CHECK-NEXT:     r1 = and(#248,asl(r1,#3))
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = and(#254,asl(r0,#1))
+; CHECK-NEXT:     r1 = insert(r3,#4,#12)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = insert(r2,#6,#10)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = combine(r1.l,r0.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = shl <4 x i8> %a0, <i8 1, i8 2, i8 3, i8 4>
+  ret <4 x i8> %v0
+}
+
+define <8 x i8> @f18(<8 x i8> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f18:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3:2 = extractu(r1:0,#8,#48)
+; CHECK-NEXT:     r5:4 = extractu(r1:0,#8,#24)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r7:6 = extractu(r1:0,#8,#16)
+; CHECK-NEXT:     r5 = extract(r0,#8,#8)
+; CHECK-NEXT:     r3 = sxtb(r0)
+; CHECK-NEXT:     r2 = sxtb(r2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r7 = extract(r1,#8,#8)
+; CHECK-NEXT:     r9:8 = extractu(r1:0,#8,#32)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1:0 = extractu(r1:0,#8,#56)
+; CHECK-NEXT:     r3 = extractu(r3,#8,#1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5 = asl(r5,#6)
+; CHECK-NEXT:     r6 = sxtb(r8)
+; CHECK-NEXT:     r1 = sxtb(r4)
+; CHECK-NEXT:     r4 = sxtb(r6)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5 = or(r3,and(r5,##65280))
+; CHECK-NEXT:     r3 = asl(r7,#5)
+; CHECK-NEXT:     r0 = sxtb(r0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r6 = extractu(r6,#8,#2)
+; CHECK-NEXT:     r1 = asl(r1,#4)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r4 = extractu(r4,#8,#3)
+; CHECK-NEXT:     r7 = asl(r0,#7)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = extractu(r2,#8,#4)
+; CHECK-NEXT:     r1 = or(r4,and(r1,##65280))
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 = or(r6,and(r3,##65280))
+; CHECK-NEXT:     r7 = or(r2,and(r7,##65280))
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = combine(r1.l,r5.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     r1 = combine(r7.l,r3.l)
+; CHECK-NEXT:    }
+b0:
+  %v0 = ashr <8 x i8> %a0, <i8 1, i8 2, i8 3, i8 4, i8 2, i8 3, i8 4, i8 1>
+  ret <8 x i8> %v0
+}
+
+define <8 x i8> @f19(<8 x i8> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f19:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3:2 = extractu(r1:0,#8,#8)
+; CHECK-NEXT:     r5:4 = extractu(r1:0,#8,#24)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 = extractu(r1,#4,#20)
+; CHECK-NEXT:     r5 = extractu(r0,#7,#1)
+; CHECK-NEXT:     r2 = and(r2,#252)
+; CHECK-NEXT:     r4 = and(r4,#240)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r6 = extractu(r0,#5,#19)
+; CHECK-NEXT:     r9:8 = extractu(r1:0,#8,#40)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r7 = extractu(r1,#6,#2)
+; CHECK-NEXT:     r1:0 = extractu(r1:0,#8,#56)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5 |= asl(r2,#6)
+; CHECK-NEXT:     r6 |= asl(r4,#4)
+; CHECK-NEXT:     r1 = and(r8,#248)
+; CHECK-NEXT:     r11 = and(r0,#254)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r7 |= asl(r1,#5)
+; CHECK-NEXT:     r3 |= asl(r11,#7)
+; CHECK-NEXT:     r0 = combine(r6.l,r5.l)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = combine(r3.l,r7.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = lshr <8 x i8> %a0, <i8 1, i8 2, i8 3, i8 4, i8 2, i8 3, i8 4, i8 1>
+  ret <8 x i8> %v0
+}
+
+define <8 x i8> @f20(<8 x i8> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f20:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5:4 = extractu(r1:0,#8,#16)
+; CHECK-NEXT:     r3:2 = extractu(r1:0,#8,#48)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r4 = and(#248,asl(r4,#3))
+; CHECK-NEXT:     r15:14 = extractu(r1:0,#8,#32)
+; CHECK-NEXT:     r5 = r0
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r13:12 = extractu(r1:0,#8,#24)
+; CHECK-NEXT:     r7:6 = extractu(r1:0,#8,#56)
+; CHECK-NEXT:     r3 = r4
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = and(#240,asl(r2,#4))
+; CHECK-NEXT:     r9:8 = extractu(r1:0,#8,#8)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5 = and(#254,asl(r5,#1))
+; CHECK-NEXT:     r4 = insert(r14,#6,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1:0 = extractu(r1:0,#8,#40)
+; CHECK-NEXT:     r3 = insert(r12,#4,#12)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r5 = insert(r8,#6,#10)
+; CHECK-NEXT:     r4 = insert(r0,#5,#11)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = insert(r6,#7,#9)
+; CHECK-NEXT:     r0 = combine(r3.l,r5.l)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = combine(r2.l,r4.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = shl <8 x i8> %a0, <i8 1, i8 2, i8 3, i8 4, i8 2, i8 3, i8 4, i8 1>
+  ret <8 x i8> %v0
+}
+
+define <2 x i16> @f21(<2 x i16> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f21:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = extract(r0,#15,#1)
+; CHECK-NEXT:     r1 = lsr(r0,#16)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = sxth(r1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = asr(r1,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = combine(r1.l,r2.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = ashr <2 x i16> %a0, <i16 1, i16 2>
+  ret <2 x i16> %v0
+}
+
+define <2 x i16> @f22(<2 x i16> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f22:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = extractu(r0,#16,#16)
+; CHECK-NEXT:     r2 = extractu(r0,#15,#1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = extractu(r1,#14,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = combine(r1.l,r2.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = lshr <2 x i16> %a0, <i16 1, i16 2>
+  ret <2 x i16> %v0
+}
+
+define <2 x i16> @f23(<2 x i16> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f23:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1:0 = bitsplit(r0,#16)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = asl(r0,#1)
+; CHECK-NEXT:     r1 = asl(r1,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = combine(r1.l,r0.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = shl <2 x i16> %a0, <i16 1, i16 2>
+  ret <2 x i16> %v0
+}
+
+define <4 x i16> @f24(<4 x i16> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f24:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3:2 = extractu(r1:0,#16,#16)
+; CHECK-NEXT:     r5:4 = extractu(r1:0,#16,#48)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 = extract(r0,#15,#1)
+; CHECK-NEXT:     r1 = extract(r1,#13,#3)
+; CHECK-NEXT:     r2 = sxth(r2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r4 = extract(r4,#12,#4)
+; CHECK-NEXT:     r0 = asr(r2,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = combine(r0.l,r3.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     r1 = combine(r4.l,r1.l)
+; CHECK-NEXT:    }
+b0:
+  %v0 = ashr <4 x i16> %a0, <i16 1, i16 2, i16 3, i16 4>
+  ret <4 x i16> %v0
+}
+
+define <4 x i16> @f25(<4 x i16> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f25:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3:2 = extractu(r1:0,#16,#48)
+; CHECK-NEXT:     r5:4 = extractu(r1:0,#16,#16)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3 = extractu(r0,#15,#1)
+; CHECK-NEXT:     r0 = extractu(r4,#14,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = extractu(r1,#13,#3)
+; CHECK-NEXT:     r2 = extractu(r2,#12,#4)
+; CHECK-NEXT:     r0 = combine(r0.l,r3.l)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = combine(r2.l,r1.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = lshr <4 x i16> %a0, <i16 1, i16 2, i16 3, i16 4>
+  ret <4 x i16> %v0
+}
+
+define <4 x i16> @f26(<4 x i16> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f26:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r3:2 = extractu(r1:0,#16,#48)
+; CHECK-NEXT:     r5:4 = extractu(r1:0,#16,#16)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1:0 = extractu(r1:0,#16,#32)
+; CHECK-NEXT:     r4 = asl(r4,#2)
+; CHECK-NEXT:     r3 = zxth(r0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = asl(r3,#1)
+; CHECK-NEXT:     r5 = asl(r0,#3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = asl(r2,#4)
+; CHECK-NEXT:     r0 = combine(r4.l,r1.l)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = combine(r2.l,r5.l)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = shl <4 x i16> %a0, <i16 1, i16 2, i16 3, i16 4>
+  ret <4 x i16> %v0
+}
+
+define <2 x i32> @f27(<2 x i32> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f27:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = asr(r0,#1)
+; CHECK-NEXT:     r1 = asr(r1,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = ashr <2 x i32> %a0, <i32 1, i32 2>
+  ret <2 x i32> %v0
+}
+
+define <2 x i32> @f28(<2 x i32> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f28:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = lsr(r0,#1)
+; CHECK-NEXT:     r1 = lsr(r1,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = lshr <2 x i32> %a0, <i32 1, i32 2>
+  ret <2 x i32> %v0
+}
+
+define <2 x i32> @f29(<2 x i32> %a0) unnamed_addr #0 {
+; CHECK-LABEL: f29:
+; CHECK:       // %bb.0: // %b0
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = asl(r0,#1)
+; CHECK-NEXT:     r1 = asl(r1,#2)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+b0:
+  %v0 = shl <2 x i32> %a0, <i32 1, i32 2>
+  ret <2 x i32> %v0
+}
+
 attributes #0 = { nounwind }
