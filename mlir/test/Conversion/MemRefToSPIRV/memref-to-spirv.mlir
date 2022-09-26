@@ -11,7 +11,7 @@ module attributes {
         StorageBuffer16BitAccess, StorageUniform16, StoragePushConstant16,
         StorageBuffer8BitAccess, UniformAndStorageBuffer8BitAccess, StoragePushConstant8
       ],
-      [SPIRV_KHR_16bit_storage, SPIRV_KHR_8bit_storage, SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+      [SPV_KHR_16bit_storage, SPV_KHR_8bit_storage, SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @load_store_zero_rank_float
@@ -219,7 +219,7 @@ func.func @store_i1(%dst: memref<4xi1, #spirv.storage_class<CrossWorkgroup>>, %i
 // TODO: Test i64 types.
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @load_i1
@@ -419,7 +419,7 @@ func.func @store_f32(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>, %v
 module attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Int16, StorageBuffer16BitAccess, Shader],
-    [SPIRV_KHR_storage_buffer_storage_class, SPIRV_KHR_16bit_storage]>, #spirv.resource_limits<>>
+    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_16bit_storage]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @load_i8

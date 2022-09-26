@@ -17,25 +17,25 @@
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class SPIRV_BitBinaryOp<string mnemonic, list<Trait> traits = []> :
-      // All the operands type used in bit instructions are SPIRV_Integer.
-      SPIRV_BinaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
+class SPV_BitBinaryOp<string mnemonic, list<Trait> traits = []> :
+      // All the operands type used in bit instructions are SPV_Integer.
+      SPV_BinaryOp<mnemonic, SPV_Integer, SPV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])> {
+                               [NoSideEffect, SameOperandsAndResultType])> {                                 
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-class SPIRV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
-      SPIRV_Op<mnemonic, !listconcat(traits,
+class SPV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
+      SPV_Op<mnemonic, !listconcat(traits,
              [NoSideEffect, AllTypesMatch<["base", "result"]>])> {
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$base,
-    SPIRV_Integer:$offset,
-    SPIRV_Integer:$count
+    SPV_ScalarOrVectorOf<SPV_Integer>:$base,
+    SPV_Integer:$offset,
+    SPV_Integer:$count
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+    SPV_ScalarOrVectorOf<SPV_Integer>:$result
   );
 
   let hasVerifier = 0;
@@ -45,13 +45,13 @@ class SPIRV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
   }];
 }
 
-class SPIRV_BitUnaryOp<string mnemonic, list<Trait> traits = []> :
-      SPIRV_UnaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
+class SPV_BitUnaryOp<string mnemonic, list<Trait> traits = []> :
+      SPV_UnaryOp<mnemonic, SPV_Integer, SPV_Integer,
                    !listconcat(traits,
                                [NoSideEffect, SameOperandsAndResultType])>;
 
-class SPIRV_ShiftOp<string mnemonic, list<Trait> traits = []> :
-      SPIRV_BinaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
+class SPV_ShiftOp<string mnemonic, list<Trait> traits = []> :
+      SPV_BinaryOp<mnemonic, SPV_Integer, SPV_Integer,
                    !listconcat(traits,
                                [NoSideEffect, SameOperandsAndResultShape,
                                 AllTypesMatch<["operand1", "result"]>])> {
@@ -63,7 +63,7 @@ class SPIRV_ShiftOp<string mnemonic, list<Trait> traits = []> :
 
 // -----
 
-def SPIRV_BitCountOp : SPIRV_BitUnaryOp<"BitCount", []> {
+def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
   let summary = "Count the number of set bits in an object.";
 
   let description = [{
@@ -100,7 +100,7 @@ def SPIRV_BitCountOp : SPIRV_BitUnaryOp<"BitCount", []> {
 
 // -----
 
-def SPIRV_BitFieldInsertOp : SPIRV_Op<"BitFieldInsert",
+def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
     [NoSideEffect, AllTypesMatch<["base", "insert", "result"]>]> {
   let summary = [{
     Make a copy of an object, with a modified bit field that comes from
@@ -149,21 +149,21 @@ def SPIRV_BitFieldInsertOp : SPIRV_Op<"BitFieldInsert",
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_BitInstructions, SPIRV_C_Shader]>
+    Capability<[SPV_C_BitInstructions, SPV_C_Shader]>
   ];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$base,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$insert,
-    SPIRV_Integer:$offset,
-    SPIRV_Integer:$count
+    SPV_ScalarOrVectorOf<SPV_Integer>:$base,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$insert,
+    SPV_Integer:$offset,
+    SPV_Integer:$count
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+    SPV_ScalarOrVectorOf<SPV_Integer>:$result
   );
 
   let hasVerifier = 0;
@@ -175,7 +175,7 @@ def SPIRV_BitFieldInsertOp : SPIRV_Op<"BitFieldInsert",
 
 // -----
 
-def SPIRV_BitFieldSExtractOp : SPIRV_BitFieldExtractOp<"BitFieldSExtract",
+def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract",
                                                    [SignedOp]> {
   let summary = "Extract a bit field from an object, with sign extension.";
 
@@ -221,16 +221,16 @@ def SPIRV_BitFieldSExtractOp : SPIRV_BitFieldExtractOp<"BitFieldSExtract",
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_BitInstructions, SPIRV_C_Shader]>
+    Capability<[SPV_C_BitInstructions, SPV_C_Shader]>
   ];
 }
 
 // -----
 
-def SPIRV_BitFieldUExtractOp : SPIRV_BitFieldExtractOp<"BitFieldUExtract",
+def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract",
                                                    [UnsignedOp]> {
   let summary = "Extract a bit field from an object, without sign extension.";
 
@@ -258,16 +258,16 @@ def SPIRV_BitFieldUExtractOp : SPIRV_BitFieldExtractOp<"BitFieldUExtract",
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_BitInstructions, SPIRV_C_Shader]>
+    Capability<[SPV_C_BitInstructions, SPV_C_Shader]>
   ];
 }
 
 // -----
 
-def SPIRV_BitReverseOp : SPIRV_BitUnaryOp<"BitReverse", []> {
+def SPV_BitReverseOp : SPV_BitUnaryOp<"BitReverse", []> {
   let summary = "Reverse the bits in an object.";
 
   let description = [{
@@ -298,16 +298,16 @@ def SPIRV_BitReverseOp : SPIRV_BitUnaryOp<"BitReverse", []> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_BitInstructions, SPIRV_C_Shader]>
+    Capability<[SPV_C_BitInstructions, SPV_C_Shader]>
   ];
 }
 
 // -----
 
-def SPIRV_BitwiseAndOp : SPIRV_BitBinaryOp<"BitwiseAnd",
+def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd",
                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if both Operand 1 and Operand 2 are 1. Result is 0 if either
@@ -342,7 +342,7 @@ def SPIRV_BitwiseAndOp : SPIRV_BitBinaryOp<"BitwiseAnd",
 
 // -----
 
-def SPIRV_BitwiseOrOp : SPIRV_BitBinaryOp<"BitwiseOr",
+def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr",
                                       [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if either Operand 1 or Operand 2 is 1. Result is 0 if both
@@ -377,7 +377,7 @@ def SPIRV_BitwiseOrOp : SPIRV_BitBinaryOp<"BitwiseOr",
 
 // -----
 
-def SPIRV_BitwiseXorOp : SPIRV_BitBinaryOp<"BitwiseXor",
+def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor",
                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if exactly one of Operand 1 or Operand 2 is 1. Result is 0
@@ -412,7 +412,7 @@ def SPIRV_BitwiseXorOp : SPIRV_BitBinaryOp<"BitwiseXor",
 
 // -----
 
-def SPIRV_ShiftLeftLogicalOp : SPIRV_ShiftOp<"ShiftLeftLogical",
+def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
                                          [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base left by the number of bits specified in Shift.
@@ -457,7 +457,7 @@ def SPIRV_ShiftLeftLogicalOp : SPIRV_ShiftOp<"ShiftLeftLogical",
 
 // -----
 
-def SPIRV_ShiftRightArithmeticOp : SPIRV_ShiftOp<"ShiftRightArithmetic",
+def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
                                              [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base right by the number of bits specified in Shift.
@@ -499,7 +499,7 @@ def SPIRV_ShiftRightArithmeticOp : SPIRV_ShiftOp<"ShiftRightArithmetic",
 
 // -----
 
-def SPIRV_ShiftRightLogicalOp : SPIRV_ShiftOp<"ShiftRightLogical",
+def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
                                           [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base right by the number of bits specified in Shift.
@@ -542,7 +542,7 @@ def SPIRV_ShiftRightLogicalOp : SPIRV_ShiftOp<"ShiftRightLogical",
 
 // -----
 
-def SPIRV_NotOp : SPIRV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
+def SPV_NotOp : SPV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
   let summary = "Complement the bits of Operand.";
 
   let description = [{

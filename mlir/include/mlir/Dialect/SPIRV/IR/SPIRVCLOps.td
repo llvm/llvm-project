@@ -20,28 +20,28 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for all OpenCL ops.
-class SPIRV_CLOp<string mnemonic, int opcode, list<Trait> traits = []> :
-  SPIRV_ExtInstOp<mnemonic, "CL", "OpenCL.std", opcode, traits> {
+class SPV_CLOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPV_ExtInstOp<mnemonic, "CL", "OpenCL.std", opcode, traits> {
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Kernel]>
+    Capability<[SPV_C_Kernel]>
   ];
 }
 
 // Base class for OpenCL unary ops.
-class SPIRV_CLUnaryOp<string mnemonic, int opcode, Type resultType,
-                      Type operandType, list<Trait> traits = []> :
-  SPIRV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+class SPV_CLUnaryOp<string mnemonic, int opcode, Type resultType,
+                     Type operandType, list<Trait> traits = []> :
+  SPV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<operandType>:$operand
+    SPV_ScalarOrVectorOf<operandType>:$operand
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<resultType>:$result
+    SPV_ScalarOrVectorOf<resultType>:$result
   );
 
   let assemblyFormat = "$operand `:` type($operand) attr-dict";
@@ -51,23 +51,23 @@ class SPIRV_CLUnaryOp<string mnemonic, int opcode, Type resultType,
 
 // Base class for OpenCL Unary arithmetic ops where return type matches
 // the operand type.
-class SPIRV_CLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
-                                list<Trait> traits = []> :
-  SPIRV_CLUnaryOp<mnemonic, opcode, type, type,
+class SPV_CLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
+                               list<Trait> traits = []> :
+  SPV_CLUnaryOp<mnemonic, opcode, type, type,
                  traits # [SameOperandsAndResultType]>;
 
 // Base class for OpenCL binary ops.
-class SPIRV_CLBinaryOp<string mnemonic, int opcode, Type resultType,
-                       Type operandType, list<Trait> traits = []> :
-  SPIRV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+class SPV_CLBinaryOp<string mnemonic, int opcode, Type resultType,
+                      Type operandType, list<Trait> traits = []> :
+  SPV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<operandType>:$lhs,
-    SPIRV_ScalarOrVectorOf<operandType>:$rhs
+    SPV_ScalarOrVectorOf<operandType>:$lhs,
+    SPV_ScalarOrVectorOf<operandType>:$rhs
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<resultType>:$result
+    SPV_ScalarOrVectorOf<resultType>:$result
   );
 
   let hasVerifier = 0;
@@ -75,26 +75,26 @@ class SPIRV_CLBinaryOp<string mnemonic, int opcode, Type resultType,
 
 // Base class for OpenCL Binary arithmetic ops where operand types and
 // return type matches.
-class SPIRV_CLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
-                                 list<Trait> traits = []> :
-  SPIRV_CLBinaryOp<mnemonic, opcode, type, type,
+class SPV_CLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
+                                list<Trait> traits = []> :
+  SPV_CLBinaryOp<mnemonic, opcode, type, type,
                   traits # [SameOperandsAndResultType]> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 // Base class for OpenCL binary ops.
-class SPIRV_CLTernaryOp<string mnemonic, int opcode, Type resultType,
+class SPV_CLTernaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPIRV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<operandType>:$x,
-    SPIRV_ScalarOrVectorOf<operandType>:$y,
-    SPIRV_ScalarOrVectorOf<operandType>:$z
+    SPV_ScalarOrVectorOf<operandType>:$x,
+    SPV_ScalarOrVectorOf<operandType>:$y,
+    SPV_ScalarOrVectorOf<operandType>:$z
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<resultType>:$result
+    SPV_ScalarOrVectorOf<resultType>:$result
   );
 
   let hasVerifier = 0;
@@ -102,9 +102,9 @@ class SPIRV_CLTernaryOp<string mnemonic, int opcode, Type resultType,
 
 // Base class for OpenCL Ternary arithmetic ops where operand types and
 // return type matches.
-class SPIRV_CLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
-                                  list<Trait> traits = []> :
-  SPIRV_CLTernaryOp<mnemonic, opcode, type, type,
+class SPV_CLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
+                                list<Trait> traits = []> :
+  SPV_CLTernaryOp<mnemonic, opcode, type, type,
                   traits # [SameOperandsAndResultType]> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
@@ -113,7 +113,7 @@ class SPIRV_CLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
 
 // -----
 
-def SPIRV_CLCeilOp : SPIRV_CLUnaryArithmeticOp<"ceil", 12, SPIRV_Float> {
+def SPV_CLCeilOp : SPV_CLUnaryArithmeticOp<"ceil", 12, SPV_Float> {
   let summary = [{
     Round x to integral value using the round to positive infinity rounding
     mode.
@@ -146,7 +146,7 @@ def SPIRV_CLCeilOp : SPIRV_CLUnaryArithmeticOp<"ceil", 12, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLCosOp : SPIRV_CLUnaryArithmeticOp<"cos", 14, SPIRV_Float> {
+def SPV_CLCosOp : SPV_CLUnaryArithmeticOp<"cos", 14, SPV_Float> {
   let summary = "Compute the cosine of x radians.";
 
   let description = [{
@@ -176,7 +176,7 @@ def SPIRV_CLCosOp : SPIRV_CLUnaryArithmeticOp<"cos", 14, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLErfOp : SPIRV_CLUnaryArithmeticOp<"erf", 18, SPIRV_Float> {
+def SPV_CLErfOp : SPV_CLUnaryArithmeticOp<"erf", 18, SPV_Float> {
   let summary = [{
     Error function of x encountered in integrating the normal distribution.
   }];
@@ -208,7 +208,7 @@ def SPIRV_CLErfOp : SPIRV_CLUnaryArithmeticOp<"erf", 18, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLExpOp : SPIRV_CLUnaryArithmeticOp<"exp", 19, SPIRV_Float> {
+def SPV_CLExpOp : SPV_CLUnaryArithmeticOp<"exp", 19, SPV_Float> {
   let summary = "Exponentiation of Operand 1";
 
   let description = [{
@@ -238,7 +238,7 @@ def SPIRV_CLExpOp : SPIRV_CLUnaryArithmeticOp<"exp", 19, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLFAbsOp : SPIRV_CLUnaryArithmeticOp<"fabs", 23, SPIRV_Float> {
+def SPV_CLFAbsOp : SPV_CLUnaryArithmeticOp<"fabs", 23, SPV_Float> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -268,7 +268,7 @@ def SPIRV_CLFAbsOp : SPIRV_CLUnaryArithmeticOp<"fabs", 23, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
+def SPV_CLFloorOp : SPV_CLUnaryArithmeticOp<"floor", 25, SPV_Float> {
   let summary = [{
     Round x to the integral value using the round to negative infinity
     rounding mode.
@@ -301,7 +301,7 @@ def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
+def SPV_CLFmaOp : SPV_CLTernaryArithmeticOp<"fma", 26, SPV_Float> {
   let summary = [{
     Compute the correctly rounded floating-point representation of the sum
     of c with the infinitely precise product of a and b. Rounding of
@@ -332,17 +332,17 @@ def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLFMaxOp : SPIRV_CLBinaryArithmeticOp<"fmax", 27, SPIRV_Float> {
+def SPV_CLFMaxOp : SPV_CLBinaryArithmeticOp<"fmax", 27, SPV_Float> {
   let summary = "Return maximum of two floating-point operands";
 
   let description = [{
     Returns y if x < y, otherwise it returns x. If one argument is a NaN,
     Fmax returns the other argument. If both arguments are NaNs, Fmax returns a NaN.
 
-    Result Type, x and y must be floating-point or vector(2,3,4,8,16)
+    Result Type, x and y must be floating-point or vector(2,3,4,8,16) 
     of floating-point values.
 
-    All of the operands, including the Result Type operand,
+    All of the operands, including the Result Type operand, 
     must be of the same type.
 
     <!-- End of AutoGen section -->
@@ -363,11 +363,11 @@ def SPIRV_CLFMaxOp : SPIRV_CLBinaryArithmeticOp<"fmax", 27, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
+def SPV_CLFMinOp : SPV_CLBinaryArithmeticOp<"fmin", 28, SPV_Float> {
   let summary = "Return minimum of two floating-point operands";
 
   let description = [{
-    Returns y if y < x, otherwise it returns x. If one argument is a NaN, Fmin returns the other argument.
+    Returns y if y < x, otherwise it returns x. If one argument is a NaN, Fmin returns the other argument. 
     If both arguments are NaNs, Fmin returns a NaN.
 
     Result Type,x and y must be floating-point or vector(2,3,4,8,16) of floating-point values.
@@ -393,7 +393,7 @@ def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLLogOp : SPIRV_CLUnaryArithmeticOp<"log", 37, SPIRV_Float> {
+def SPV_CLLogOp : SPV_CLUnaryArithmeticOp<"log", 37, SPV_Float> {
   let summary = "Compute the natural logarithm of x.";
 
   let description = [{
@@ -423,7 +423,7 @@ def SPIRV_CLLogOp : SPIRV_CLUnaryArithmeticOp<"log", 37, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLPowOp : SPIRV_CLBinaryArithmeticOp<"pow", 48, SPIRV_Float> {
+def SPV_CLPowOp : SPV_CLBinaryArithmeticOp<"pow", 48, SPV_Float> {
   let summary = "Compute x to the power y.";
 
   let description = [{
@@ -454,7 +454,7 @@ def SPIRV_CLPowOp : SPIRV_CLBinaryArithmeticOp<"pow", 48, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLRoundOp : SPIRV_CLUnaryArithmeticOp<"round", 55, SPIRV_Float> {
+def SPV_CLRoundOp : SPV_CLUnaryArithmeticOp<"round", 55, SPV_Float> {
   let summary = [{
     Return the integral value nearest to x rounding halfway cases away from
     zero, regardless of the current rounding direction.
@@ -486,7 +486,7 @@ def SPIRV_CLRoundOp : SPIRV_CLUnaryArithmeticOp<"round", 55, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
+def SPV_CLRsqrtOp : SPV_CLUnaryArithmeticOp<"rsqrt", 56, SPV_Float> {
   let summary = "Compute inverse square root of x.";
 
   let description = [{
@@ -516,7 +516,7 @@ def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLSinOp : SPIRV_CLUnaryArithmeticOp<"sin", 57, SPIRV_Float> {
+def SPV_CLSinOp : SPV_CLUnaryArithmeticOp<"sin", 57, SPV_Float> {
   let summary = "Compute sine of x radians.";
 
   let description = [{
@@ -546,7 +546,7 @@ def SPIRV_CLSinOp : SPIRV_CLUnaryArithmeticOp<"sin", 57, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLSqrtOp : SPIRV_CLUnaryArithmeticOp<"sqrt", 61, SPIRV_Float> {
+def SPV_CLSqrtOp : SPV_CLUnaryArithmeticOp<"sqrt", 61, SPV_Float> {
   let summary = "Compute square root of x.";
 
   let description = [{
@@ -576,7 +576,7 @@ def SPIRV_CLSqrtOp : SPIRV_CLUnaryArithmeticOp<"sqrt", 61, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLTanhOp : SPIRV_CLUnaryArithmeticOp<"tanh", 63, SPIRV_Float> {
+def SPV_CLTanhOp : SPV_CLUnaryArithmeticOp<"tanh", 63, SPV_Float> {
   let summary = "Compute hyperbolic tangent of x radians.";
 
   let description = [{
@@ -606,7 +606,7 @@ def SPIRV_CLTanhOp : SPIRV_CLUnaryArithmeticOp<"tanh", 63, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
+def SPV_CLSAbsOp : SPV_CLUnaryArithmeticOp<"s_abs", 141, SPV_Integer> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -636,7 +636,7 @@ def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_CLSMaxOp : SPIRV_CLBinaryArithmeticOp<"s_max", 156, SPIRV_Integer> {
+def SPV_CLSMaxOp : SPV_CLBinaryArithmeticOp<"s_max", 156, SPV_Integer> {
   let summary = "Return maximum of two signed integer operands";
 
   let description = [{
@@ -663,7 +663,7 @@ def SPIRV_CLSMaxOp : SPIRV_CLBinaryArithmeticOp<"s_max", 156, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
+def SPV_CLUMaxOp : SPV_CLBinaryArithmeticOp<"u_max", 157, SPV_Integer> {
   let summary = "Return maximum of two unsigned integer operands";
 
   let description = [{
@@ -688,7 +688,7 @@ def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
   }];
 }
 
-def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
+def SPV_CLSMinOp : SPV_CLBinaryArithmeticOp<"s_min", 158, SPV_Integer> {
   let summary = "Return minimum of two signed integer operands";
 
   let description = [{
@@ -715,7 +715,7 @@ def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_CLUMinOp : SPIRV_CLBinaryArithmeticOp<"u_min", 159, SPIRV_Integer> {
+def SPV_CLUMinOp : SPV_CLBinaryArithmeticOp<"u_min", 159, SPV_Integer> {
   let summary = "Return minimum of two unsigned integer operands";
 
   let description = [{

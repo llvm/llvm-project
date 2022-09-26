@@ -11,7 +11,7 @@ spirv.module Logical GLSL450 {}
 spirv.module @foo Logical GLSL450 {}
 
 // CHECK: module
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_16bit_storage]> {}
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]> {}
 
 // CHECK: module
 spirv.module Logical GLSL450 {

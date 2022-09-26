@@ -34,7 +34,7 @@ func.func @spv_entry_point() attributes {
 // -----
 
 func.func @spv_entry_point() attributes {
-  // expected-error @+2 {{failed to parse SPIRV_EntryPointABIAttr parameter 'local_size' which is to be a `DenseIntElementsAttr`}}
+  // expected-error @+2 {{failed to parse SPV_EntryPointABIAttr parameter 'local_size' which is to be a `DenseIntElementsAttr`}}
   // expected-error @+1 {{invalid kind of attribute specified}}
   spirv.entry_point_abi = #spirv.entry_point_abi<local_size = 64>
 } { return }
@@ -107,10 +107,10 @@ func.func @interface_var(
 
 func.func @target_env() attributes {
   // CHECK:      spirv.target_env = #spirv.target_env<
-  // CHECK-SAME:   #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>,
+  // CHECK-SAME:   #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
   // CHECK-SAME:   #spirv.resource_limits<max_compute_workgroup_size = [128, 64, 64]>>
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>,
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
     #spirv.resource_limits<
       max_compute_workgroup_size = [128, 64, 64]
     >>
@@ -151,7 +151,7 @@ func.func @target_env_vendor_id_device_type_device_id() attributes {
 func.func @target_env_extra_fields() attributes {
   // expected-error @+3 {{expected '>'}}
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>,
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
     #spirv.resource_limits<>,
     more_stuff
   >
@@ -161,7 +161,7 @@ func.func @target_env_extra_fields() attributes {
 
 func.func @target_env_cooperative_matrix() attributes{
   // CHECK:      spirv.target_env = #spirv.target_env<
-  // CHECK-SAME:   SPIRV_NV_cooperative_matrix
+  // CHECK-SAME:   SPV_NV_cooperative_matrix
   // CHECK-SAME: #spirv.coop_matrix_props<
   // CHECK-SAME:   m_size = 8, n_size = 8, k_size = 32,
   // CHECK-SAME:   a_type = i8, b_type = i8, c_type = i32,
@@ -171,8 +171,8 @@ func.func @target_env_cooperative_matrix() attributes{
   // CHECK-SAME:   a_type = f16, b_type = f16, c_type = f16,
   // CHECK-SAME:   result_type = f16, scope = <Subgroup>>
   spirv.target_env = #spirv.target_env<
-  #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class,
-                            SPIRV_NV_cooperative_matrix]>,
+  #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class,
+                            SPV_NV_cooperative_matrix]>,
   #spirv.resource_limits<
     cooperative_matrix_properties_nv = [#spirv.coop_matrix_props<
       m_size = 8,
@@ -231,8 +231,8 @@ func.func @vce_wrong_extension_type() attributes {
 // -----
 
 func.func @vce_wrong_extension() attributes {
-  // expected-error @+1 {{unknown extension: SPIRV_Something}}
-  vce = #spirv.vce<v1.0, [Shader], [SPIRV_Something]>
+  // expected-error @+1 {{unknown extension: SPV_Something}}
+  vce = #spirv.vce<v1.0, [Shader], [SPV_Something]>
 } { return }
 
 // -----
@@ -245,6 +245,6 @@ func.func @vce_wrong_capability() attributes {
 // -----
 
 func.func @vce() attributes {
-  // CHECK: #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>
-  vce = #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>
+  // CHECK: #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>
+  vce = #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>
 } { return }

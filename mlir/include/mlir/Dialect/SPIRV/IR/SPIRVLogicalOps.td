@@ -17,10 +17,10 @@
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class SPIRV_LogicalBinaryOp<string mnemonic, Type operandsType,
-                            list<Trait> traits = []> :
-      // Result type is SPIRV_Bool.
-      SPIRV_BinaryOp<mnemonic, SPIRV_Bool, operandsType,
+class SPV_LogicalBinaryOp<string mnemonic, Type operandsType,
+                    list<Trait> traits = []> :
+      // Result type is SPV_Bool.
+      SPV_BinaryOp<mnemonic, SPV_Bool, operandsType,
                    !listconcat(traits, [
                      NoSideEffect, SameTypeOperands,
                      SameOperandsAndResultShape,
@@ -37,10 +37,10 @@ class SPIRV_LogicalBinaryOp<string mnemonic, Type operandsType,
   ];
 }
 
-class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
+class SPV_LogicalUnaryOp<string mnemonic, Type operandType,
                          list<Trait> traits = []> :
-      // Result type is SPIRV_Bool.
-      SPIRV_UnaryOp<mnemonic, SPIRV_Bool, operandType,
+      // Result type is SPV_Bool.
+      SPV_UnaryOp<mnemonic, SPV_Bool, operandType,
                   !listconcat(traits, [
                      NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
                      TypesMatchWith<"type of result to correspond to the `i1` "
@@ -58,7 +58,7 @@ class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
 
 // -----
 
-def SPIRV_FOrdEqualOp : SPIRV_LogicalBinaryOp<"FOrdEqual", SPIRV_Float, [Commutative]> {
+def SPV_FOrdEqualOp : SPV_LogicalBinaryOp<"FOrdEqual", SPV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being ordered and equal.";
 
   let description = [{
@@ -89,7 +89,7 @@ def SPIRV_FOrdEqualOp : SPIRV_LogicalBinaryOp<"FOrdEqual", SPIRV_Float, [Commuta
 
 // -----
 
-def SPIRV_FOrdGreaterThanOp : SPIRV_LogicalBinaryOp<"FOrdGreaterThan", SPIRV_Float, []> {
+def SPV_FOrdGreaterThanOp : SPV_LogicalBinaryOp<"FOrdGreaterThan", SPV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are ordered and Operand 1 is
     greater than  Operand 2.
@@ -123,7 +123,7 @@ def SPIRV_FOrdGreaterThanOp : SPIRV_LogicalBinaryOp<"FOrdGreaterThan", SPIRV_Flo
 
 // -----
 
-def SPIRV_FOrdGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"FOrdGreaterThanEqual", SPIRV_Float, []> {
+def SPV_FOrdGreaterThanEqualOp : SPV_LogicalBinaryOp<"FOrdGreaterThanEqual", SPV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are ordered and Operand 1 is
     greater than or equal to Operand 2.
@@ -157,7 +157,7 @@ def SPIRV_FOrdGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"FOrdGreaterThanEqual",
 
 // -----
 
-def SPIRV_FOrdLessThanOp : SPIRV_LogicalBinaryOp<"FOrdLessThan", SPIRV_Float, []> {
+def SPV_FOrdLessThanOp : SPV_LogicalBinaryOp<"FOrdLessThan", SPV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are ordered and Operand 1 is less
     than Operand 2.
@@ -191,7 +191,7 @@ def SPIRV_FOrdLessThanOp : SPIRV_LogicalBinaryOp<"FOrdLessThan", SPIRV_Float, []
 
 // -----
 
-def SPIRV_FOrdLessThanEqualOp : SPIRV_LogicalBinaryOp<"FOrdLessThanEqual", SPIRV_Float, []> {
+def SPV_FOrdLessThanEqualOp : SPV_LogicalBinaryOp<"FOrdLessThanEqual", SPV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are ordered and Operand 1 is less
     than or equal to Operand 2.
@@ -225,7 +225,7 @@ def SPIRV_FOrdLessThanEqualOp : SPIRV_LogicalBinaryOp<"FOrdLessThanEqual", SPIRV
 
 // -----
 
-def SPIRV_FOrdNotEqualOp : SPIRV_LogicalBinaryOp<"FOrdNotEqual", SPIRV_Float, [Commutative]> {
+def SPV_FOrdNotEqualOp : SPV_LogicalBinaryOp<"FOrdNotEqual", SPV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being ordered and not equal.";
 
   let description = [{
@@ -256,7 +256,7 @@ def SPIRV_FOrdNotEqualOp : SPIRV_LogicalBinaryOp<"FOrdNotEqual", SPIRV_Float, [C
 
 // -----
 
-def SPIRV_FUnordEqualOp : SPIRV_LogicalBinaryOp<"FUnordEqual", SPIRV_Float, [Commutative]> {
+def SPV_FUnordEqualOp : SPV_LogicalBinaryOp<"FUnordEqual", SPV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being unordered or equal.";
 
   let description = [{
@@ -287,7 +287,7 @@ def SPIRV_FUnordEqualOp : SPIRV_LogicalBinaryOp<"FUnordEqual", SPIRV_Float, [Com
 
 // -----
 
-def SPIRV_FUnordGreaterThanOp : SPIRV_LogicalBinaryOp<"FUnordGreaterThan", SPIRV_Float, []> {
+def SPV_FUnordGreaterThanOp : SPV_LogicalBinaryOp<"FUnordGreaterThan", SPV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are unordered or Operand 1 is
     greater than  Operand 2.
@@ -321,7 +321,7 @@ def SPIRV_FUnordGreaterThanOp : SPIRV_LogicalBinaryOp<"FUnordGreaterThan", SPIRV
 
 // -----
 
-def SPIRV_FUnordGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"FUnordGreaterThanEqual", SPIRV_Float, []> {
+def SPV_FUnordGreaterThanEqualOp : SPV_LogicalBinaryOp<"FUnordGreaterThanEqual", SPV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are unordered or Operand 1 is
     greater than or equal to Operand 2.
@@ -355,7 +355,7 @@ def SPIRV_FUnordGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"FUnordGreaterThanEqu
 
 // -----
 
-def SPIRV_FUnordLessThanOp : SPIRV_LogicalBinaryOp<"FUnordLessThan", SPIRV_Float, []> {
+def SPV_FUnordLessThanOp : SPV_LogicalBinaryOp<"FUnordLessThan", SPV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are unordered or Operand 1 is less
     than Operand 2.
@@ -389,7 +389,7 @@ def SPIRV_FUnordLessThanOp : SPIRV_LogicalBinaryOp<"FUnordLessThan", SPIRV_Float
 
 // -----
 
-def SPIRV_FUnordLessThanEqualOp : SPIRV_LogicalBinaryOp<"FUnordLessThanEqual", SPIRV_Float, []> {
+def SPV_FUnordLessThanEqualOp : SPV_LogicalBinaryOp<"FUnordLessThanEqual", SPV_Float, []> {
   let summary = [{
     Floating-point comparison if operands are unordered or Operand 1 is less
     than or equal to Operand 2.
@@ -423,7 +423,7 @@ def SPIRV_FUnordLessThanEqualOp : SPIRV_LogicalBinaryOp<"FUnordLessThanEqual", S
 
 // -----
 
-def SPIRV_FUnordNotEqualOp : SPIRV_LogicalBinaryOp<"FUnordNotEqual", SPIRV_Float, [Commutative]> {
+def SPV_FUnordNotEqualOp : SPV_LogicalBinaryOp<"FUnordNotEqual", SPV_Float, [Commutative]> {
   let summary = "Floating-point comparison for being unordered or not equal.";
 
   let description = [{
@@ -454,8 +454,8 @@ def SPIRV_FUnordNotEqualOp : SPIRV_LogicalBinaryOp<"FUnordNotEqual", SPIRV_Float
 
 // -----
 
-def SPIRV_IEqualOp : SPIRV_LogicalBinaryOp<"IEqual",
-                                       SPIRV_Integer,
+def SPV_IEqualOp : SPV_LogicalBinaryOp<"IEqual",
+                                       SPV_Integer,
                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer comparison for equality.";
 
@@ -487,8 +487,8 @@ def SPIRV_IEqualOp : SPIRV_LogicalBinaryOp<"IEqual",
 
 // -----
 
-def SPIRV_INotEqualOp : SPIRV_LogicalBinaryOp<"INotEqual",
-                                          SPIRV_Integer,
+def SPV_INotEqualOp : SPV_LogicalBinaryOp<"INotEqual",
+                                          SPV_Integer,
                                           [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer comparison for inequality.";
 
@@ -520,7 +520,7 @@ def SPIRV_INotEqualOp : SPIRV_LogicalBinaryOp<"INotEqual",
 
 // -----
 
-def SPIRV_IsInfOp : SPIRV_LogicalUnaryOp<"IsInf", SPIRV_Float, []> {
+def SPV_IsInfOp : SPV_LogicalUnaryOp<"IsInf", SPV_Float, []> {
   let summary = "Result is true if x is an IEEE Inf, otherwise result is false";
 
   let description = [{
@@ -551,7 +551,7 @@ def SPIRV_IsInfOp : SPIRV_LogicalUnaryOp<"IsInf", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_IsNanOp : SPIRV_LogicalUnaryOp<"IsNan", SPIRV_Float, []> {
+def SPV_IsNanOp : SPV_LogicalUnaryOp<"IsNan", SPV_Float, []> {
   let summary = [{
     Result is true if x is an IEEE NaN, otherwise result is false.
   }];
@@ -584,8 +584,8 @@ def SPIRV_IsNanOp : SPIRV_LogicalUnaryOp<"IsNan", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_LogicalAndOp : SPIRV_LogicalBinaryOp<"LogicalAnd",
-                                           SPIRV_Bool,
+def SPV_LogicalAndOp : SPV_LogicalBinaryOp<"LogicalAnd",
+                                           SPV_Bool,
                                            [Commutative,
                                             UsableInSpecConstantOp]> {
   let summary = [{
@@ -622,8 +622,8 @@ def SPIRV_LogicalAndOp : SPIRV_LogicalBinaryOp<"LogicalAnd",
 
 // -----
 
-def SPIRV_LogicalEqualOp : SPIRV_LogicalBinaryOp<"LogicalEqual",
-                                             SPIRV_Bool,
+def SPV_LogicalEqualOp : SPV_LogicalBinaryOp<"LogicalEqual",
+                                             SPV_Bool,
                                              [Commutative,
                                               UsableInSpecConstantOp]> {
   let summary = [{
@@ -658,8 +658,8 @@ def SPIRV_LogicalEqualOp : SPIRV_LogicalBinaryOp<"LogicalEqual",
 
 // -----
 
-def SPIRV_LogicalNotOp : SPIRV_LogicalUnaryOp<"LogicalNot",
-                                          SPIRV_Bool,
+def SPV_LogicalNotOp : SPV_LogicalUnaryOp<"LogicalNot",
+                                          SPV_Bool,
                                           [UsableInSpecConstantOp]> {
   let summary = [{
     Result is true if Operand is false.  Result is false if Operand is true.
@@ -691,8 +691,8 @@ def SPIRV_LogicalNotOp : SPIRV_LogicalUnaryOp<"LogicalNot",
 
 // -----
 
-def SPIRV_LogicalNotEqualOp : SPIRV_LogicalBinaryOp<"LogicalNotEqual",
-                                                SPIRV_Bool,
+def SPV_LogicalNotEqualOp : SPV_LogicalBinaryOp<"LogicalNotEqual",
+                                                SPV_Bool,
                                                 [Commutative,
                                                  UsableInSpecConstantOp]> {
   let summary = [{
@@ -727,8 +727,8 @@ def SPIRV_LogicalNotEqualOp : SPIRV_LogicalBinaryOp<"LogicalNotEqual",
 
 // -----
 
-def SPIRV_LogicalOrOp : SPIRV_LogicalBinaryOp<"LogicalOr",
-                                          SPIRV_Bool,
+def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr",
+                                          SPV_Bool,
                                           [Commutative,
                                            UsableInSpecConstantOp]> {
   let summary = [{
@@ -765,7 +765,7 @@ def SPIRV_LogicalOrOp : SPIRV_LogicalBinaryOp<"LogicalOr",
 
 // -----
 
-def SPIRV_OrderedOp : SPIRV_LogicalBinaryOp<"Ordered", SPIRV_Float, [Commutative]> {
+def SPV_OrderedOp : SPV_LogicalBinaryOp<"Ordered", SPV_Float, [Commutative]> {
   let summary = [{
     Result is true if both x == x and y == y are true, where IEEE comparison
     is used, otherwise result is false.
@@ -798,17 +798,17 @@ def SPIRV_OrderedOp : SPIRV_LogicalBinaryOp<"Ordered", SPIRV_Float, [Commutative
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Kernel]>
+    Capability<[SPV_C_Kernel]>
   ];
 }
 
 // -----
 
-def SPIRV_SGreaterThanOp : SPIRV_LogicalBinaryOp<"SGreaterThan",
-                                             SPIRV_Integer,
+def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan",
+                                             SPV_Integer,
                                              [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is greater than  Operand 2.
@@ -842,8 +842,8 @@ def SPIRV_SGreaterThanOp : SPIRV_LogicalBinaryOp<"SGreaterThan",
 
 // -----
 
-def SPIRV_SGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"SGreaterThanEqual",
-                                                  SPIRV_Integer,
+def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual",
+                                                  SPV_Integer,
                                                   [UsableInSpecConstantOp,
                                                    SignedOp]> {
   let summary = [{
@@ -879,8 +879,8 @@ def SPIRV_SGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"SGreaterThanEqual",
 
 // -----
 
-def SPIRV_SLessThanOp : SPIRV_LogicalBinaryOp<"SLessThan",
-                                          SPIRV_Integer,
+def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan",
+                                          SPV_Integer,
                                           [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is less than Operand 2.
@@ -914,8 +914,8 @@ def SPIRV_SLessThanOp : SPIRV_LogicalBinaryOp<"SLessThan",
 
 // -----
 
-def SPIRV_SLessThanEqualOp : SPIRV_LogicalBinaryOp<"SLessThanEqual",
-                                               SPIRV_Integer,
+def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual",
+                                               SPV_Integer,
                                                [UsableInSpecConstantOp,
                                                 SignedOp]> {
   let summary = [{
@@ -951,7 +951,7 @@ def SPIRV_SLessThanEqualOp : SPIRV_LogicalBinaryOp<"SLessThanEqual",
 
 // -----
 
-def SPIRV_SelectOp : SPIRV_Op<"Select",
+def SPV_SelectOp : SPV_Op<"Select",
     [NoSideEffect,
      AllTypesMatch<["true_value", "false_value", "result"]>,
      UsableInSpecConstantOp]> {
@@ -999,13 +999,13 @@ def SPIRV_SelectOp : SPIRV_Op<"Select",
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Bool>:$condition,
-    SPIRV_SelectType:$true_value,
-    SPIRV_SelectType:$false_value
+    SPV_ScalarOrVectorOf<SPV_Bool>:$condition,
+    SPV_SelectType:$true_value,
+    SPV_SelectType:$false_value
   );
 
   let results = (outs
-    SPIRV_SelectType:$result
+    SPV_SelectType:$result
   );
 
   let assemblyFormat = [{
@@ -1015,8 +1015,8 @@ def SPIRV_SelectOp : SPIRV_Op<"Select",
 
 // -----
 
-def SPIRV_UGreaterThanOp : SPIRV_LogicalBinaryOp<"UGreaterThan",
-                                             SPIRV_Integer,
+def SPV_UGreaterThanOp : SPV_LogicalBinaryOp<"UGreaterThan",
+                                             SPV_Integer,
                                              [UnsignedOp,
                                               UsableInSpecConstantOp]> {
   let summary = [{
@@ -1051,8 +1051,8 @@ def SPIRV_UGreaterThanOp : SPIRV_LogicalBinaryOp<"UGreaterThan",
 
 // -----
 
-def SPIRV_UGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"UGreaterThanEqual",
-                                                  SPIRV_Integer,
+def SPV_UGreaterThanEqualOp : SPV_LogicalBinaryOp<"UGreaterThanEqual",
+                                                  SPV_Integer,
                                                   [UnsignedOp,
                                                    UsableInSpecConstantOp]> {
   let summary = [{
@@ -1088,8 +1088,8 @@ def SPIRV_UGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"UGreaterThanEqual",
 
 // -----
 
-def SPIRV_ULessThanOp : SPIRV_LogicalBinaryOp<"ULessThan",
-                                          SPIRV_Integer,
+def SPV_ULessThanOp : SPV_LogicalBinaryOp<"ULessThan",
+                                          SPV_Integer,
                                           [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = [{
     Unsigned-integer comparison if Operand 1 is less than Operand 2.
@@ -1123,7 +1123,7 @@ def SPIRV_ULessThanOp : SPIRV_LogicalBinaryOp<"ULessThan",
 
 // -----
 
-def SPIRV_UnorderedOp : SPIRV_LogicalBinaryOp<"Unordered", SPIRV_Float, [Commutative]> {
+def SPV_UnorderedOp : SPV_LogicalBinaryOp<"Unordered", SPV_Float, [Commutative]> {
   let summary = [{
     Result is true if either x or y is an IEEE NaN, otherwise result is
     false.
@@ -1156,17 +1156,17 @@ def SPIRV_UnorderedOp : SPIRV_LogicalBinaryOp<"Unordered", SPIRV_Float, [Commuta
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Kernel]>
+    Capability<[SPV_C_Kernel]>
   ];
 }
 
 // -----
 
-def SPIRV_ULessThanEqualOp : SPIRV_LogicalBinaryOp<"ULessThanEqual",
-                                               SPIRV_Integer,
+def SPV_ULessThanEqualOp : SPV_LogicalBinaryOp<"ULessThanEqual",
+                                               SPV_Integer,
                                                [UnsignedOp,
                                                 UsableInSpecConstantOp]> {
   let summary = [{

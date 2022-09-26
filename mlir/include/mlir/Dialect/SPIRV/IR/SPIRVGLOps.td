@@ -21,28 +21,28 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for all OpenGL ops.
-class SPIRV_GLOp<string mnemonic, int opcode, list<Trait> traits = []> :
-  SPIRV_ExtInstOp<mnemonic, "GL", "GLSL.std.450", opcode, traits> {
+class SPV_GLOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPV_ExtInstOp<mnemonic, "GL", "GLSL.std.450", opcode, traits> {
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Shader]>
+    Capability<[SPV_C_Shader]>
   ];
 }
 
 // Base class for GL unary ops.
-class SPIRV_GLUnaryOp<string mnemonic, int opcode, Type resultType,
+class SPV_GLUnaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<operandType>:$operand
+    SPV_ScalarOrVectorOf<operandType>:$operand
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<resultType>:$result
+    SPV_ScalarOrVectorOf<resultType>:$result
   );
 
   let hasVerifier = 0;
@@ -50,25 +50,25 @@ class SPIRV_GLUnaryOp<string mnemonic, int opcode, Type resultType,
 
 // Base class for GL Unary arithmetic ops where return type matches
 // the operand type.
-class SPIRV_GLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
+class SPV_GLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
                                 list<Trait> traits = []> :
-  SPIRV_GLUnaryOp<mnemonic, opcode, type, type,
+  SPV_GLUnaryOp<mnemonic, opcode, type, type,
                   traits # [SameOperandsAndResultType]> {
   let assemblyFormat = "$operand `:` type($operand) attr-dict";
 }
 
 // Base class for GL binary ops.
-class SPIRV_GLBinaryOp<string mnemonic, int opcode, Type resultType,
+class SPV_GLBinaryOp<string mnemonic, int opcode, Type resultType,
                         Type operandType, list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<operandType>:$lhs,
-    SPIRV_ScalarOrVectorOf<operandType>:$rhs
+    SPV_ScalarOrVectorOf<operandType>:$lhs,
+    SPV_ScalarOrVectorOf<operandType>:$rhs
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<resultType>:$result
+    SPV_ScalarOrVectorOf<resultType>:$result
   );
 
   let hasVerifier = 0;
@@ -76,26 +76,26 @@ class SPIRV_GLBinaryOp<string mnemonic, int opcode, Type resultType,
 
 // Base class for GL Binary arithmetic ops where operand types and
 // return type matches.
-class SPIRV_GLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
+class SPV_GLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
                                  list<Trait> traits = []> :
-  SPIRV_GLBinaryOp<mnemonic, opcode, type, type,
+  SPV_GLBinaryOp<mnemonic, opcode, type, type,
                    traits # [SameOperandsAndResultType]> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 // Base class for GL ternary ops.
-class SPIRV_GLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
+class SPV_GLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
                         list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<type>:$x,
-    SPIRV_ScalarOrVectorOf<type>:$y,
-    SPIRV_ScalarOrVectorOf<type>:$z
+    SPV_ScalarOrVectorOf<type>:$x,
+    SPV_ScalarOrVectorOf<type>:$y,
+    SPV_ScalarOrVectorOf<type>:$z
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<type>:$result
+    SPV_ScalarOrVectorOf<type>:$result
   );
 
   let hasCustomAssemblyFormat = 1;
@@ -104,7 +104,7 @@ class SPIRV_GLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
 
 // -----
 
-def SPIRV_GLFAbsOp : SPIRV_GLUnaryArithmeticOp<"FAbs", 4, SPIRV_Float> {
+def SPV_GLFAbsOp : SPV_GLUnaryArithmeticOp<"FAbs", 4, SPV_Float> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -134,7 +134,7 @@ def SPIRV_GLFAbsOp : SPIRV_GLUnaryArithmeticOp<"FAbs", 4, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLSAbsOp : SPIRV_GLUnaryArithmeticOp<"SAbs", 5, SPIRV_Integer> {
+def SPV_GLSAbsOp : SPV_GLUnaryArithmeticOp<"SAbs", 5, SPV_Integer> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -163,7 +163,7 @@ def SPIRV_GLSAbsOp : SPIRV_GLUnaryArithmeticOp<"SAbs", 5, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLCeilOp : SPIRV_GLUnaryArithmeticOp<"Ceil", 9, SPIRV_Float> {
+def SPV_GLCeilOp : SPV_GLUnaryArithmeticOp<"Ceil", 9, SPV_Float> {
   let summary = "Rounds up to the next whole number";
 
   let description = [{
@@ -194,7 +194,7 @@ def SPIRV_GLCeilOp : SPIRV_GLUnaryArithmeticOp<"Ceil", 9, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLCosOp : SPIRV_GLUnaryArithmeticOp<"Cos", 14, SPIRV_Float16or32> {
+def SPV_GLCosOp : SPV_GLUnaryArithmeticOp<"Cos", 14, SPV_Float16or32> {
   let summary = "Cosine of operand in radians";
 
   let description = [{
@@ -226,7 +226,7 @@ def SPIRV_GLCosOp : SPIRV_GLUnaryArithmeticOp<"Cos", 14, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLSinOp : SPIRV_GLUnaryArithmeticOp<"Sin", 13, SPIRV_Float16or32> {
+def SPV_GLSinOp : SPV_GLUnaryArithmeticOp<"Sin", 13, SPV_Float16or32> {
   let summary = "Sine of operand in radians";
 
   let description = [{
@@ -258,7 +258,7 @@ def SPIRV_GLSinOp : SPIRV_GLUnaryArithmeticOp<"Sin", 13, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLTanOp : SPIRV_GLUnaryArithmeticOp<"Tan", 15, SPIRV_Float16or32> {
+def SPV_GLTanOp : SPV_GLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
   let summary = "Tangent of operand in radians";
 
   let description = [{
@@ -290,7 +290,7 @@ def SPIRV_GLTanOp : SPIRV_GLUnaryArithmeticOp<"Tan", 15, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLAsinOp : SPIRV_GLUnaryArithmeticOp<"Asin", 16, SPIRV_Float16or32> {
+def SPV_GLAsinOp : SPV_GLUnaryArithmeticOp<"Asin", 16, SPV_Float16or32> {
   let summary = "Arc Sine of operand in radians";
 
   let description = [{
@@ -324,7 +324,7 @@ def SPIRV_GLAsinOp : SPIRV_GLUnaryArithmeticOp<"Asin", 16, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLAcosOp : SPIRV_GLUnaryArithmeticOp<"Acos", 17, SPIRV_Float16or32> {
+def SPV_GLAcosOp : SPV_GLUnaryArithmeticOp<"Acos", 17, SPV_Float16or32> {
   let summary = "Arc Cosine of operand in radians";
 
   let description = [{
@@ -358,7 +358,7 @@ def SPIRV_GLAcosOp : SPIRV_GLUnaryArithmeticOp<"Acos", 17, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLAtanOp : SPIRV_GLUnaryArithmeticOp<"Atan", 18, SPIRV_Float16or32> {
+def SPV_GLAtanOp : SPV_GLUnaryArithmeticOp<"Atan", 18, SPV_Float16or32> {
   let summary = "Arc Tangent of operand in radians";
 
   let description = [{
@@ -392,7 +392,7 @@ def SPIRV_GLAtanOp : SPIRV_GLUnaryArithmeticOp<"Atan", 18, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLExpOp : SPIRV_GLUnaryArithmeticOp<"Exp", 27, SPIRV_Float16or32> {
+def SPV_GLExpOp : SPV_GLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
   let summary = "Exponentiation of Operand 1";
 
   let description = [{
@@ -424,7 +424,7 @@ def SPIRV_GLExpOp : SPIRV_GLUnaryArithmeticOp<"Exp", 27, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLFloorOp : SPIRV_GLUnaryArithmeticOp<"Floor", 8, SPIRV_Float> {
+def SPV_GLFloorOp : SPV_GLUnaryArithmeticOp<"Floor", 8, SPV_Float> {
   let summary = "Rounds down to the next whole number";
 
   let description = [{
@@ -455,7 +455,7 @@ def SPIRV_GLFloorOp : SPIRV_GLUnaryArithmeticOp<"Floor", 8, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLRoundOp: SPIRV_GLUnaryArithmeticOp<"Round", 1, SPIRV_Float> {
+def SPV_GLRoundOp: SPV_GLUnaryArithmeticOp<"Round", 1, SPV_Float> {
   let summary = "Rounds to the whole number";
 
   let description = [{
@@ -485,7 +485,7 @@ def SPIRV_GLRoundOp: SPIRV_GLUnaryArithmeticOp<"Round", 1, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLInverseSqrtOp : SPIRV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPIRV_Float> {
+def SPV_GLInverseSqrtOp : SPV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPV_Float> {
   let summary = "Reciprocal of sqrt(operand)";
 
   let description = [{
@@ -515,7 +515,7 @@ def SPIRV_GLInverseSqrtOp : SPIRV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPIRV_F
 
 // -----
 
-def SPIRV_GLLogOp : SPIRV_GLUnaryArithmeticOp<"Log", 28, SPIRV_Float16or32> {
+def SPV_GLLogOp : SPV_GLUnaryArithmeticOp<"Log", 28, SPV_Float16or32> {
   let summary = "Natural logarithm of the operand";
 
   let description = [{
@@ -548,7 +548,7 @@ def SPIRV_GLLogOp : SPIRV_GLUnaryArithmeticOp<"Log", 28, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLFMaxOp : SPIRV_GLBinaryArithmeticOp<"FMax", 40, SPIRV_Float> {
+def SPV_GLFMaxOp : SPV_GLBinaryArithmeticOp<"FMax", 40, SPV_Float> {
   let summary = "Return maximum of two floating-point operands";
 
   let description = [{
@@ -579,7 +579,7 @@ def SPIRV_GLFMaxOp : SPIRV_GLBinaryArithmeticOp<"FMax", 40, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLUMaxOp : SPIRV_GLBinaryArithmeticOp<"UMax", 41, SPIRV_Integer> {
+def SPV_GLUMaxOp : SPV_GLBinaryArithmeticOp<"UMax", 41, SPV_Integer> {
   let summary = "Return maximum of two unsigned integer operands";
 
   let description = [{
@@ -609,7 +609,7 @@ def SPIRV_GLUMaxOp : SPIRV_GLBinaryArithmeticOp<"UMax", 41, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLSMaxOp : SPIRV_GLBinaryArithmeticOp<"SMax", 42, SPIRV_Integer> {
+def SPV_GLSMaxOp : SPV_GLBinaryArithmeticOp<"SMax", 42, SPV_Integer> {
   let summary = "Return maximum of two signed integer operands";
 
   let description = [{
@@ -639,7 +639,7 @@ def SPIRV_GLSMaxOp : SPIRV_GLBinaryArithmeticOp<"SMax", 42, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLFMinOp : SPIRV_GLBinaryArithmeticOp<"FMin", 37, SPIRV_Float> {
+def SPV_GLFMinOp : SPV_GLBinaryArithmeticOp<"FMin", 37, SPV_Float> {
   let summary = "Return minimum of two floating-point operands";
 
   let description = [{
@@ -670,7 +670,7 @@ def SPIRV_GLFMinOp : SPIRV_GLBinaryArithmeticOp<"FMin", 37, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLUMinOp : SPIRV_GLBinaryArithmeticOp<"UMin", 38, SPIRV_Integer> {
+def SPV_GLUMinOp : SPV_GLBinaryArithmeticOp<"UMin", 38, SPV_Integer> {
   let summary = "Return minimum of two unsigned integer operands";
 
   let description = [{
@@ -700,7 +700,7 @@ def SPIRV_GLUMinOp : SPIRV_GLBinaryArithmeticOp<"UMin", 38, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLSMinOp : SPIRV_GLBinaryArithmeticOp<"SMin", 39, SPIRV_Integer> {
+def SPV_GLSMinOp : SPV_GLBinaryArithmeticOp<"SMin", 39, SPV_Integer> {
   let summary = "Return minimum of two signed integer operands";
 
   let description = [{
@@ -730,7 +730,7 @@ def SPIRV_GLSMinOp : SPIRV_GLBinaryArithmeticOp<"SMin", 39, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLPowOp : SPIRV_GLBinaryArithmeticOp<"Pow", 26, SPIRV_Float16or32> {
+def SPV_GLPowOp : SPV_GLBinaryArithmeticOp<"Pow", 26, SPV_Float16or32> {
   let summary = "Return x raised to the y power of two operands";
 
   let description = [{
@@ -764,7 +764,7 @@ def SPIRV_GLPowOp : SPIRV_GLBinaryArithmeticOp<"Pow", 26, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLFSignOp : SPIRV_GLUnaryArithmeticOp<"FSign", 6, SPIRV_Float> {
+def SPV_GLFSignOp : SPV_GLUnaryArithmeticOp<"FSign", 6, SPV_Float> {
   let summary = "Returns the sign of the operand";
 
   let description = [{
@@ -794,7 +794,7 @@ def SPIRV_GLFSignOp : SPIRV_GLUnaryArithmeticOp<"FSign", 6, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLSSignOp : SPIRV_GLUnaryArithmeticOp<"SSign", 7, SPIRV_Integer> {
+def SPV_GLSSignOp : SPV_GLUnaryArithmeticOp<"SSign", 7, SPV_Integer> {
   let summary = "Returns the sign of the operand";
 
   let description = [{
@@ -823,7 +823,7 @@ def SPIRV_GLSSignOp : SPIRV_GLUnaryArithmeticOp<"SSign", 7, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLSqrtOp : SPIRV_GLUnaryArithmeticOp<"Sqrt", 31, SPIRV_Float> {
+def SPV_GLSqrtOp : SPV_GLUnaryArithmeticOp<"Sqrt", 31, SPV_Float> {
   let summary = "Returns the square root of the operand";
 
   let description = [{
@@ -853,7 +853,7 @@ def SPIRV_GLSqrtOp : SPIRV_GLUnaryArithmeticOp<"Sqrt", 31, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLSinhOp : SPIRV_GLUnaryArithmeticOp<"Sinh", 19, SPIRV_Float16or32> {
+def SPV_GLSinhOp : SPV_GLUnaryArithmeticOp<"Sinh", 19, SPV_Float16or32> {
   let summary = "Hyperbolic sine of operand in radians";
 
   let description = [{
@@ -885,7 +885,7 @@ def SPIRV_GLSinhOp : SPIRV_GLUnaryArithmeticOp<"Sinh", 19, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLCoshOp : SPIRV_GLUnaryArithmeticOp<"Cosh", 20, SPIRV_Float16or32> {
+def SPV_GLCoshOp : SPV_GLUnaryArithmeticOp<"Cosh", 20, SPV_Float16or32> {
   let summary = "Hyperbolic cosine of operand in radians";
 
   let description = [{
@@ -917,7 +917,7 @@ def SPIRV_GLCoshOp : SPIRV_GLUnaryArithmeticOp<"Cosh", 20, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLTanhOp : SPIRV_GLUnaryArithmeticOp<"Tanh", 21, SPIRV_Float16or32> {
+def SPV_GLTanhOp : SPV_GLUnaryArithmeticOp<"Tanh", 21, SPV_Float16or32> {
   let summary = "Hyperbolic tangent of operand in radians";
 
   let description = [{
@@ -949,7 +949,7 @@ def SPIRV_GLTanhOp : SPIRV_GLUnaryArithmeticOp<"Tanh", 21, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLFClampOp : SPIRV_GLTernaryArithmeticOp<"FClamp", 43, SPIRV_Float> {
+def SPV_GLFClampOp : SPV_GLTernaryArithmeticOp<"FClamp", 43, SPV_Float> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -979,7 +979,7 @@ def SPIRV_GLFClampOp : SPIRV_GLTernaryArithmeticOp<"FClamp", 43, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLUClampOp : SPIRV_GLTernaryArithmeticOp<"UClamp", 44, SPIRV_Integer> {
+def SPV_GLUClampOp : SPV_GLTernaryArithmeticOp<"UClamp", 44, SPV_Integer> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -1008,7 +1008,7 @@ def SPIRV_GLUClampOp : SPIRV_GLTernaryArithmeticOp<"UClamp", 44, SPIRV_Integer> 
 
 // -----
 
-def SPIRV_GLSClampOp : SPIRV_GLTernaryArithmeticOp<"SClamp", 45, SPIRV_Integer> {
+def SPV_GLSClampOp : SPV_GLTernaryArithmeticOp<"SClamp", 45, SPV_Integer> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -1037,7 +1037,7 @@ def SPIRV_GLSClampOp : SPIRV_GLTernaryArithmeticOp<"SClamp", 45, SPIRV_Integer> 
 
 // -----
 
-def SPIRV_GLFmaOp : SPIRV_GLTernaryArithmeticOp<"Fma", 50, SPIRV_Float> {
+def SPV_GLFmaOp : SPV_GLTernaryArithmeticOp<"Fma", 50, SPV_Float> {
   let summary = "Computes a * b + c.";
 
   let description = [{
@@ -1077,7 +1077,7 @@ def SPIRV_GLFmaOp : SPIRV_GLTernaryArithmeticOp<"Fma", 50, SPIRV_Float> {
 
 // ----
 
-def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [NoSideEffect]> {
+def SPV_GLFrexpStructOp : SPV_GLOp<"FrexpStruct", 52, [NoSideEffect]> {
   let summary = "Splits x into two components such that x = significand * 2^exponent";
 
   let description = [{
@@ -1118,11 +1118,11 @@ def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$operand
+    SPV_ScalarOrVectorOf<SPV_Float>:$operand
   );
 
   let results = (outs
-    SPIRV_AnyStruct:$result
+    SPV_AnyStruct:$result
   );
 
   let assemblyFormat = [{
@@ -1130,8 +1130,8 @@ def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [NoSideEffect]> {
   }];
 }
 
-def SPIRV_GLLdexpOp :
-  SPIRV_GLOp<"Ldexp", 53, [
+def SPV_GLLdexpOp :
+  SPV_GLOp<"Ldexp", 53, [
       NoSideEffect, AllTypesMatch<["x", "y"]>]> {
   let summary = "Builds y such that y = significand * 2^exponent";
 
@@ -1169,12 +1169,12 @@ def SPIRV_GLLdexpOp :
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$exp
+    SPV_ScalarOrVectorOf<SPV_Float>:$x,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$exp
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$y
+    SPV_ScalarOrVectorOf<SPV_Float>:$y
   );
 
   let assemblyFormat = [{
@@ -1182,8 +1182,8 @@ def SPIRV_GLLdexpOp :
   }];
 }
 
-def SPIRV_GLFMixOp :
-  SPIRV_GLOp<"FMix", 46, [
+def SPV_GLFMixOp :
+  SPV_GLOp<"FMix", 46, [
       NoSideEffect, AllTypesMatch<["x", "y", "a", "result"]>]> {
   let summary = "Builds the linear blend of x and y";
 
@@ -1205,13 +1205,13 @@ def SPIRV_GLFMixOp :
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$x,
-    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$y,
-    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$a
+    SPV_ScalarOrVectorOf<SPV_Float>:$x,
+    SPV_ScalarOrVectorOf<SPV_Float>:$y,
+    SPV_ScalarOrVectorOf<SPV_Float>:$a
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$result
+    SPV_ScalarOrVectorOf<SPV_Float>:$result
   );
 
   let assemblyFormat = [{
@@ -1221,7 +1221,7 @@ def SPIRV_GLFMixOp :
   let hasVerifier = 0;
 }
 
-def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> {
+def SPV_GLFindUMsbOp : SPV_GLUnaryArithmeticOp<"FindUMsb", 75, SPV_Int32> {
   let summary = "Unsigned-integer most-significant bit";
 
   let description = [{
