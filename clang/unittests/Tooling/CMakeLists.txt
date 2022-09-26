@@ -13,6 +13,7 @@ add_clang_unittest(ToolingTests
   CommentHandlerTest.cpp
   CompilationDatabaseTest.cpp
   DependencyScannerTest.cpp
+  DependencyScanningCASFilesystemTest.cpp
   DiagnosticsYamlTest.cpp
   ExecutionTest.cpp
   FixItTest.cpp

@@ -354,15 +354,9 @@ DependencyScanningCASFilesystem::openFileForRead(const Twine &Path) {
 }
 
 Optional<ArrayRef<dependency_directives_scan::Directive>>
-DependencyScanningCASFilesystem::getDirectiveTokens(const Twine &Path) const {
-  SmallString<256> PathStorage;
-  StringRef PathRef = Path.toStringRef(PathStorage);
-  auto I = Entries.find(PathRef);
-  if (I == Entries.end())
-    return None;
-
-  const FileEntry &Entry = I->second;
-  if (Entry.DepDirectives.empty())
-    return None;
-  return llvm::makeArrayRef(Entry.DepDirectives);
+DependencyScanningCASFilesystem::getDirectiveTokens(const Twine &Path) {
+  LookupPathResult Result = lookupPath(Path);
+  if (Result.Entry && !Result.Entry->DepDirectives.empty())
+    return llvm::makeArrayRef(Result.Entry->DepDirectives);
+  return None;
 }

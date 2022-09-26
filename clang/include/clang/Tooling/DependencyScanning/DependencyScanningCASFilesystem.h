@@ -69,7 +69,7 @@ public:
   /// \returns The scanned preprocessor directive tokens of the file that are
   /// used to speed up preprocessing, if available.
   Optional<ArrayRef<dependency_directives_scan::Directive>>
-  getDirectiveTokens(const Twine &Path) const;
+  getDirectiveTokens(const Twine &Path);
 
 private:
   /// Check whether the file should be scanned for preprocessor directives.
