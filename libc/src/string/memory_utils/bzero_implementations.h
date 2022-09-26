@@ -6,14 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/bzero.h"
-#include "src/__support/common.h"
-#include "src/string/memory_utils/bzero_implementations.h"
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BZERO_IMPLEMENTATIONS_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BZERO_IMPLEMENTATIONS_H
+
+#include "src/string/memory_utils/memset_implementations.h"
+
+#include <stddef.h> // size_t
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(void, bzero, (void *ptr, size_t count)) {
-  inline_bzero(reinterpret_cast<char *>(ptr), count);
+inline static void inline_bzero(char *dst, size_t count) {
+  inline_memset(dst, 0, count);
 }
 
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BZERO_IMPLEMENTATIONS_H
