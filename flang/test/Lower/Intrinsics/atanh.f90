@@ -20,3 +20,19 @@ end function
 
 ! ALL-LABEL: @_QPtest_real8
 ! ALL: {{%[A-Za-z0-9._]+}} = fir.call @atanh({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+
+function test_complex4(x)
+  complex :: x, test_complex4
+  test_complex4 = atanh(x)
+end function
+
+! ALL-LABEL: @_QPtest_complex4
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @catanhf({{%[A-Za-z0-9._]+}}) : (!fir.complex<4>) -> !fir.complex<4>
+
+function test_complex8(x)
+  complex(kind=8) :: x, test_real8
+  test_complex8 = atanh(x)
+end function
+
+! ALL-LABEL: @_QPtest_complex8
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @catanh({{%[A-Za-z0-9._]+}}) : (!fir.complex<8>) -> !fir.complex<8>
