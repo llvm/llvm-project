@@ -2975,6 +2975,11 @@ void UnwrappedLineParser::parseNew() {
 
   if (Style.isCSharp()) {
     do {
+      // Handle constructor invocation, e.g. `new(field: value)`.
+      if (FormatTok->is(tok::l_paren))
+        parseParens();
+
+      // Handle array initialization syntax, e.g. `new[] {10, 20, 30}`.
       if (FormatTok->is(tok::l_brace))
         parseBracedList();
 
