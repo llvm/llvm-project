@@ -1,6 +1,6 @@
 // RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [JointMatrixINTEL], [SPV_INTEL_joint_matrix]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [JointMatrixINTEL], [SPIRV_INTEL_joint_matrix]> {
   // CHECK-LABEL: @joint_matrix_load
   spirv.func @joint_matrix_load(%ptr : !spirv.ptr<i32, Workgroup>, %stride : i32) "None" {
     // CHECK: {{%.*}} = spirv.INTEL.JointMatrixLoad <Subgroup> <RowMajor> {{%.*}}, {{%.*}} : (!spirv.ptr<i32, Workgroup>, i32) -> !spirv.jointmatrix<16x8xi32, RowMajor, Workgroup>

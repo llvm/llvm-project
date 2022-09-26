@@ -5,7 +5,7 @@
 // CHECK: call @vulkanLaunch(%[[index]], %[[index]], %[[index]], %[[resource]]) {spirv_blob = "{{.*}}", spirv_entry_point = "kernel"}
 
 module attributes {gpu.container_module} {
-  spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]> {
+  spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]> {
     spirv.GlobalVariable @kernel_arg_0 bind(0, 0) : !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32, stride=4> [0])>, StorageBuffer>
     spirv.func @kernel() "None" attributes {workgroup_attributions = 0 : i64} {
       %0 = spirv.mlir.addressof @kernel_arg_0 : !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32, stride=4> [0])>, StorageBuffer>
