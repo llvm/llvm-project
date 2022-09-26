@@ -60,6 +60,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, GRLenVT, Custom);
 
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
   if (Subtarget.is64Bit())
     setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
@@ -176,6 +178,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return lowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::SHL_PARTS:
     return lowerShiftLeftParts(Op, DAG);
   case ISD::SRA_PARTS:
@@ -308,6 +312,20 @@ SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
     return SDValue(DAG.getMachineNode(ADDIOp, DL, Ty, AddrHi, GALo), 0);
   }
   report_fatal_error("Unable to lowerGlobalAddress");
+}
+
+SDValue LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
+                                                         SelectionDAG &DAG) const {
+  unsigned IntNo = Op.getConstantOperandVal(0);
+
+  switch (IntNo) {
+  default:
+    return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::thread_pointer: {
+    EVT PtrVT = getPointerTy(DAG.getDataLayout());
+    return DAG.getRegister(LoongArch::R2, PtrVT);
+  }
+  }
 }
 
 SDValue LoongArchTargetLowering::lowerShiftLeftParts(SDValue Op,
