@@ -853,10 +853,7 @@ ExprDependence clang::computeDependence(ConceptSpecializationExpr *E,
 
   ExprDependence D =
       ValueDependent ? ExprDependence::Value : ExprDependence::None;
-  auto Res = D | toExprDependence(TA);
-  if(!ValueDependent && E->getSatisfaction().ContainsErrors)
-    Res |= ExprDependence::Error;
-  return Res;
+  return D | toExprDependence(TA);
 }
 
 ExprDependence clang::computeDependence(ObjCArrayLiteral *E) {
