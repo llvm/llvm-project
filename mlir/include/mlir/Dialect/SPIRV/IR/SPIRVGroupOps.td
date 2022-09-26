@@ -17,9 +17,8 @@
 
 // -----
 
-def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
-                              [NoSideEffect,
-                               AllTypesMatch<["value", "result"]>]> {
+def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
+  [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Broadcast the Value of the invocation identified by the local id LocalId
     to the result of all invocations in the group.
@@ -70,20 +69,20 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Groups]>
+    Capability<[SPV_C_Groups]>
   ];
 
   let arguments = (ins
-    SPIRV_ScopeAttr:$execution_scope,
-    SPIRV_Type:$value,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$localid
+    SPV_ScopeAttr:$execution_scope,
+    SPV_Type:$value,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$localid
   );
 
   let results = (outs
-    SPIRV_Type:$result
+    SPV_Type:$result
   );
 
   let assemblyFormat = [{
@@ -93,8 +92,8 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
 
 // -----
 
-def SPIRV_KHRSubgroupBallotOp : SPIRV_KhrVendorOp<"SubgroupBallot", []> {
-  let summary = "See extension SPIRV_KHR_shader_ballot";
+def SPV_KHRSubgroupBallotOp : SPV_KhrVendorOp<"SubgroupBallot", []> {
+  let summary = "See extension SPV_KHR_shader_ballot";
 
   let description = [{
     Computes a bitfield value combining the Predicate value from all invocations
@@ -126,18 +125,18 @@ def SPIRV_KHRSubgroupBallotOp : SPIRV_KhrVendorOp<"SubgroupBallot", []> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPIRV_KHR_shader_ballot]>,
-    Capability<[SPIRV_C_SubgroupBallotKHR]>
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[SPV_KHR_shader_ballot]>,
+    Capability<[SPV_C_SubgroupBallotKHR]>
   ];
 
   let arguments = (ins
-    SPIRV_Bool:$predicate
+    SPV_Bool:$predicate
   );
 
   let results = (outs
-    SPIRV_Int32Vec4:$result
+    SPV_Int32Vec4:$result
   );
 
   let hasVerifier = 0;
@@ -147,8 +146,8 @@ def SPIRV_KHRSubgroupBallotOp : SPIRV_KhrVendorOp<"SubgroupBallot", []> {
 
 // -----
 
-def SPIRV_INTELSubgroupBlockReadOp : SPIRV_IntelVendorOp<"SubgroupBlockRead", []> {
-  let summary = "See extension SPIRV_INTEL_subgroups";
+def SPV_INTELSubgroupBlockReadOp : SPV_IntelVendorOp<"SubgroupBlockRead", []> {
+  let summary = "See extension SPV_INTEL_subgroups";
 
   let description = [{
     Reads one or more components of Result data for each invocation in the
@@ -181,25 +180,25 @@ def SPIRV_INTELSubgroupBlockReadOp : SPIRV_IntelVendorOp<"SubgroupBlockRead", []
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPIRV_INTEL_subgroups]>,
-    Capability<[SPIRV_C_SubgroupBufferBlockIOINTEL]>
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[SPV_INTEL_subgroups]>,
+    Capability<[SPV_C_SubgroupBufferBlockIOINTEL]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr
+    SPV_AnyPtr:$ptr
   );
 
   let results = (outs
-    SPIRV_Type:$value
+    SPV_Type:$value
   );
 }
 
 // -----
 
-def SPIRV_INTELSubgroupBlockWriteOp : SPIRV_IntelVendorOp<"SubgroupBlockWrite", []> {
-  let summary = "See extension SPIRV_INTEL_subgroups";
+def SPV_INTELSubgroupBlockWriteOp : SPV_IntelVendorOp<"SubgroupBlockWrite", []> {
+  let summary = "See extension SPV_INTEL_subgroups";
 
   let description = [{
     Writes one or more components of Data for each invocation in the subgroup
@@ -231,15 +230,15 @@ def SPIRV_INTELSubgroupBlockWriteOp : SPIRV_IntelVendorOp<"SubgroupBlockWrite", 
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPIRV_INTEL_subgroups]>,
-    Capability<[SPIRV_C_SubgroupBufferBlockIOINTEL]>
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[SPV_INTEL_subgroups]>,
+    Capability<[SPV_C_SubgroupBufferBlockIOINTEL]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
-    SPIRV_Type:$value
+    SPV_AnyPtr:$ptr,
+    SPV_Type:$value
   );
 
   let results = (outs);

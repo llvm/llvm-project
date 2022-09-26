@@ -4,7 +4,7 @@
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
   gpu.module @kernels {
     gpu.func @kernel_mul(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>, %arg2 : memref<4x4xf32>)

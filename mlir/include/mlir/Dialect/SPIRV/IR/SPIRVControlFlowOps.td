@@ -21,7 +21,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_BranchOp : SPIRV_Op<"Branch", [
+def SPV_BranchOp : SPV_Op<"Branch", [
     DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope, NoSideEffect,
     Terminator]> {
   let summary = "Unconditional branch to target block.";
@@ -45,7 +45,7 @@ def SPIRV_BranchOp : SPIRV_Op<"Branch", [
     ```
   }];
 
-  let arguments = (ins Variadic<SPIRV_Type>:$targetOperands);
+  let arguments = (ins Variadic<SPV_Type>:$targetOperands);
 
   let results = (outs);
 
@@ -77,7 +77,7 @@ def SPIRV_BranchOp : SPIRV_Op<"Branch", [
 
 // -----
 
-def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
+def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
     InFunctionScope, NoSideEffect, Terminator]> {
   let summary = [{
@@ -119,9 +119,9 @@ def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
   }];
 
   let arguments = (ins
-    SPIRV_Bool:$condition,
-    Variadic<SPIRV_Type>:$trueTargetOperands,
-    Variadic<SPIRV_Type>:$falseTargetOperands,
+    SPV_Bool:$condition,
+    Variadic<SPV_Type>:$trueTargetOperands,
+    Variadic<SPV_Type>:$falseTargetOperands,
     OptionalAttr<I32ArrayAttr>:$branch_weights
   );
 
@@ -194,7 +194,7 @@ def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
 
 // -----
 
-def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
+def SPV_FunctionCallOp : SPV_Op<"FunctionCall", [
     InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>]> {
   let summary = "Call a function.";
 
@@ -229,11 +229,11 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
 
   let arguments = (ins
     FlatSymbolRefAttr:$callee,
-    Variadic<SPIRV_Type>:$arguments
+    Variadic<SPV_Type>:$arguments
   );
 
   let results = (outs
-    Optional<SPIRV_Type>:$return_value
+    Optional<SPV_Type>:$return_value
   );
 
   let autogenSerialization = 0;
@@ -246,7 +246,7 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
 
 // -----
 
-def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
+def SPV_LoopOp : SPV_Op<"mlir.loop", [InFunctionScope]> {
   let summary = "Define a structured loop.";
 
   let description = [{
@@ -276,7 +276,7 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
   }];
 
   let arguments = (ins
-    SPIRV_LoopControlAttr:$loop_control
+    SPV_LoopControlAttr:$loop_control
   );
 
   let results = (outs);
@@ -313,7 +313,7 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
 
 // -----
 
-def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
+def SPV_MergeOp : SPV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
@@ -337,7 +337,7 @@ def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
 
 // -----
 
-def SPIRV_ReturnOp : SPIRV_Op<"Return", [InFunctionScope, NoSideEffect,
+def SPV_ReturnOp : SPV_Op<"Return", [InFunctionScope, NoSideEffect,
                                      Terminator]> {
   let summary = "Return with no value from a function with void return type.";
 
@@ -360,7 +360,7 @@ def SPIRV_ReturnOp : SPIRV_Op<"Return", [InFunctionScope, NoSideEffect,
 
 // -----
 
-def SPIRV_UnreachableOp : SPIRV_Op<"Unreachable", [InFunctionScope, Terminator]> {
+def SPV_UnreachableOp : SPV_Op<"Unreachable", [InFunctionScope, Terminator]> {
   let summary = "Behavior is undefined if this instruction is executed.";
 
   let description = [{
@@ -382,7 +382,7 @@ def SPIRV_UnreachableOp : SPIRV_Op<"Unreachable", [InFunctionScope, Terminator]>
 
 // -----
 
-def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, NoSideEffect,
+def SPV_ReturnValueOp : SPV_Op<"ReturnValue", [InFunctionScope, NoSideEffect,
                                                Terminator]> {
   let summary = "Return a value from a function.";
 
@@ -407,7 +407,7 @@ def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, NoSideEffect
   }];
 
   let arguments = (ins
-    SPIRV_Type:$value
+    SPV_Type:$value
   );
 
   let results = (outs);
@@ -415,7 +415,7 @@ def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, NoSideEffect
   let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
-def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
+def SPV_SelectionOp : SPV_Op<"mlir.selection", [InFunctionScope]> {
   let summary = "Define a structured selection.";
 
   let description = [{
@@ -439,7 +439,7 @@ def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
   }];
 
   let arguments = (ins
-    SPIRV_SelectionControlAttr:$selection_control
+    SPV_SelectionControlAttr:$selection_control
   );
 
   let results = (outs);

@@ -2,7 +2,7 @@
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   }
 {
   func.func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
@@ -27,7 +27,7 @@ module attributes {
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   }
 {
   func.func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
@@ -56,7 +56,7 @@ module attributes {
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   }
 {
   func.func @two_allocs() {
@@ -76,7 +76,7 @@ module attributes {
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   }
 {
   func.func @two_allocs_vector() {
@@ -97,7 +97,7 @@ module attributes {
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   }
 {
   // CHECK-LABEL: func @alloc_dynamic_size
@@ -113,7 +113,7 @@ module attributes {
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   }
 {
   // CHECK-LABEL: func @alloc_unsupported_memory_space
@@ -130,7 +130,7 @@ module attributes {
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   }
 {
   // CHECK-LABEL: func @dealloc_dynamic_size
@@ -145,7 +145,7 @@ module attributes {
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
   }
 {
   // CHECK-LABEL: func @dealloc_unsupported_memory_space

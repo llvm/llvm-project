@@ -26,7 +26,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Float16], []> {
 
 // -----
 
-// CHECK: [SPIRV_KHR_float_controls, SPIRV_KHR_subgroup_vote]
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_float_controls, SPIRV_KHR_subgroup_vote]> {
+// CHECK: [SPV_KHR_float_controls, SPV_KHR_subgroup_vote]
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_float_controls, SPV_KHR_subgroup_vote]> {
 }
 

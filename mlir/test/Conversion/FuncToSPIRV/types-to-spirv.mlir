@@ -267,7 +267,7 @@ func.func @large_vector(%arg0: vector<1024xi32>) { return }
 // Check memory spaces.
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: func @memref_mem_space
@@ -304,7 +304,7 @@ func.func @memref_1bit_type(
 // Reject memory spaces.
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: func @numeric_memref_mem_space1
@@ -425,7 +425,7 @@ func.func @memref_64bit_Output(%arg4: memref<16xf64, #spirv.storage_class<Output
 module attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [StoragePushConstant8, StoragePushConstant16, Int64, Float64],
-             [SPIRV_KHR_8bit_storage, SPIRV_KHR_16bit_storage]>, #spirv.resource_limits<>>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spirv.func @memref_8bit_PushConstant
@@ -466,7 +466,7 @@ func.func @memref_64bit_PushConstant(
 module attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [StorageBuffer8BitAccess, StorageBuffer16BitAccess, Int64, Float64],
-             [SPIRV_KHR_8bit_storage, SPIRV_KHR_16bit_storage]>, #spirv.resource_limits<>>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spirv.func @memref_8bit_StorageBuffer
@@ -507,7 +507,7 @@ func.func @memref_64bit_StorageBuffer(
 module attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [UniformAndStorageBuffer8BitAccess, StorageUniform16, Int64, Float64],
-             [SPIRV_KHR_8bit_storage, SPIRV_KHR_16bit_storage]>, #spirv.resource_limits<>>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spirv.func @memref_8bit_Uniform
@@ -547,7 +547,7 @@ func.func @memref_64bit_Uniform(
 // and extension is available.
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [StorageInputOutput16, Int64, Float64], [SPIRV_KHR_16bit_storage]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [StorageInputOutput16, Int64, Float64], [SPV_KHR_16bit_storage]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spirv.func @memref_16bit_Input
@@ -591,7 +591,7 @@ func.func @memref_64bit_Output(
 // Check that memref offset and strides affect the array size.
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [StorageBuffer16BitAccess], [SPIRV_KHR_16bit_storage]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [StorageBuffer16BitAccess], [SPV_KHR_16bit_storage]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spirv.func @memref_offset_strides

@@ -15,9 +15,9 @@
 
 // -----
 
-def SPIRV_INTELJointMatrixWorkItemLengthOp : SPIRV_IntelVendorOp<"JointMatrixWorkItemLength",
+def SPV_INTELJointMatrixWorkItemLengthOp : SPV_IntelVendorOp<"JointMatrixWorkItemLength",
   [NoSideEffect]> {
-  let summary = "See extension SPIRV_INTEL_joint_matrix";
+  let summary = "See extension SPV_INTEL_joint_matrix";
 
   let description = [{
     Return number of components owned by the current work-item in
@@ -42,10 +42,10 @@ def SPIRV_INTELJointMatrixWorkItemLengthOp : SPIRV_IntelVendorOp<"JointMatrixWor
   let assemblyFormat = "attr-dict `:` $joint_matrix_type";
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPIRV_INTEL_joint_matrix]>,
-    Capability<[SPIRV_C_JointMatrixINTEL]>
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[SPV_INTEL_joint_matrix]>,
+    Capability<[SPV_C_JointMatrixINTEL]>
   ];
 
   let arguments = (ins
@@ -53,15 +53,15 @@ def SPIRV_INTELJointMatrixWorkItemLengthOp : SPIRV_IntelVendorOp<"JointMatrixWor
   );
 
   let results = (outs
-    SPIRV_Int32:$result
+    SPV_Int32:$result
   );
   let hasVerifier = 0;
 }
 
 // -----
 
-def SPIRV_INTELJointMatrixLoadOp : SPIRV_IntelVendorOp<"JointMatrixLoad", []> {
-  let summary = "See extension SPIRV_INTEL_joint_matrix";
+def SPV_INTELJointMatrixLoadOp : SPV_IntelVendorOp<"JointMatrixLoad", []> {
+  let summary = "See extension SPV_INTEL_joint_matrix";
 
   let description = [{
     Load a matrix through a pointer.
@@ -97,31 +97,31 @@ def SPIRV_INTELJointMatrixLoadOp : SPIRV_IntelVendorOp<"JointMatrixLoad", []> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPIRV_INTEL_joint_matrix]>,
-    Capability<[SPIRV_C_JointMatrixINTEL]>
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[SPV_INTEL_joint_matrix]>,
+    Capability<[SPV_C_JointMatrixINTEL]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$pointer,
-    SPIRV_Integer:$stride,
-    SPIRV_MatrixLayoutAttr:$layout,
-    SPIRV_ScopeAttr:$scope,
-    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
+    SPV_AnyPtr:$pointer,
+    SPV_Integer:$stride,
+    SPV_MatrixLayoutAttr:$layout,
+    SPV_ScopeAttr:$scope,
+    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment
   );
 
   let results = (outs
-    SPIRV_AnyJointMatrix:$result
+    SPV_AnyJointMatrix:$result
   );
 }
 
 // -----
 
-def SPIRV_INTELJointMatrixMadOp : SPIRV_IntelVendorOp<"JointMatrixMad",
+def SPV_INTELJointMatrixMadOp : SPV_IntelVendorOp<"JointMatrixMad",
   [NoSideEffect, AllTypesMatch<["c", "result"]>]> {
-  let summary = "See extension SPIRV_INTEL_joint_matrix";
+  let summary = "See extension SPV_INTEL_joint_matrix";
 
   let description = [{
     Multiply matrix A by matrix B and add matrix C to the result
@@ -162,28 +162,28 @@ def SPIRV_INTELJointMatrixMadOp : SPIRV_IntelVendorOp<"JointMatrixMad",
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPIRV_INTEL_joint_matrix]>,
-    Capability<[SPIRV_C_JointMatrixINTEL]>
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[SPV_INTEL_joint_matrix]>,
+    Capability<[SPV_C_JointMatrixINTEL]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyJointMatrix:$a,
-    SPIRV_AnyJointMatrix:$b,
-    SPIRV_AnyJointMatrix:$c,
-    SPIRV_ScopeAttr:$scope
+    SPV_AnyJointMatrix:$a,
+    SPV_AnyJointMatrix:$b,
+    SPV_AnyJointMatrix:$c,
+    SPV_ScopeAttr:$scope
   );
 
   let results = (outs
-    SPIRV_AnyJointMatrix:$result
+    SPV_AnyJointMatrix:$result
   );
 }
 
 // -----
 
-def SPIRV_INTELJointMatrixStoreOp : SPIRV_IntelVendorOp<"JointMatrixStore", []> {
-  let summary = "See extension SPIRV_INTEL_joint_matrix";
+def SPV_INTELJointMatrixStoreOp : SPV_IntelVendorOp<"JointMatrixStore", []> {
+  let summary = "See extension SPV_INTEL_joint_matrix";
 
   let description = [{
     Store a matrix through a pointer.
@@ -224,19 +224,19 @@ def SPIRV_INTELJointMatrixStoreOp : SPIRV_IntelVendorOp<"JointMatrixStore", []> 
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPIRV_INTEL_joint_matrix]>,
-    Capability<[SPIRV_C_JointMatrixINTEL]>
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[SPV_INTEL_joint_matrix]>,
+    Capability<[SPV_C_JointMatrixINTEL]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$pointer,
-    SPIRV_AnyJointMatrix:$object,
-    SPIRV_Integer:$stride,
-    SPIRV_MatrixLayoutAttr:$layout,
-    SPIRV_ScopeAttr:$scope,
-    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
+    SPV_AnyPtr:$pointer,
+    SPV_AnyJointMatrix:$object,
+    SPV_Integer:$stride,
+    SPV_MatrixLayoutAttr:$layout,
+    SPV_ScopeAttr:$scope,
+    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment
   );
 

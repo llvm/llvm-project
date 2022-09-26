@@ -19,7 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [NoSideEffect]> {
+def SPV_CompositeConstructOp : SPV_Op<"CompositeConstruct", [NoSideEffect]> {
   let summary = [{
     Construct a new composite object from a set of constituent objects.
   }];
@@ -58,11 +58,11 @@ def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [NoSideEffect]> 
   }];
 
   let arguments = (ins
-    Variadic<SPIRV_Type>:$constituents
+    Variadic<SPV_Type>:$constituents
   );
 
   let results = (outs
-    SPIRV_Composite:$result
+    SPV_Composite:$result
   );
 
   let assemblyFormat = [{
@@ -72,8 +72,8 @@ def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [NoSideEffect]> 
 
 // -----
 
-def SPIRV_CompositeExtractOp : SPIRV_Op<"CompositeExtract",
-                                        [NoSideEffect, UsableInSpecConstantOp]> {
+def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract",
+                                    [NoSideEffect, UsableInSpecConstantOp]> {
   let summary = "Extract a part of a composite object.";
 
   let description = [{
@@ -106,12 +106,12 @@ def SPIRV_CompositeExtractOp : SPIRV_Op<"CompositeExtract",
   }];
 
   let arguments = (ins
-    SPIRV_Composite:$composite,
+    SPV_Composite:$composite,
     I32ArrayAttr:$indices
   );
 
   let results = (outs
-    SPIRV_Type:$component
+    SPV_Type:$component
   );
 
   let builders = [
@@ -123,8 +123,8 @@ def SPIRV_CompositeExtractOp : SPIRV_Op<"CompositeExtract",
 
 // -----
 
-def SPIRV_CompositeInsertOp : SPIRV_Op<"CompositeInsert",
-                                       [NoSideEffect, UsableInSpecConstantOp]> {
+def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert",
+                                   [NoSideEffect, UsableInSpecConstantOp]> {
   let summary = [{
     Make a copy of a composite object, while modifying one part of it.
   }];
@@ -158,13 +158,13 @@ def SPIRV_CompositeInsertOp : SPIRV_Op<"CompositeInsert",
   }];
 
   let arguments = (ins
-    SPIRV_Type:$object,
-    SPIRV_Composite:$composite,
+    SPV_Type:$object,
+    SPV_Composite:$composite,
     I32ArrayAttr:$indices
   );
 
   let results = (outs
-    SPIRV_Composite:$result
+    SPV_Composite:$result
   );
 
   let builders = [
@@ -175,7 +175,7 @@ def SPIRV_CompositeInsertOp : SPIRV_Op<"CompositeInsert",
 
 // -----
 
-def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
+def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic", [
     NoSideEffect,
     TypesMatchWith<"type of 'result' matches element type of 'vector'",
                    "vector", "result",
@@ -206,12 +206,12 @@ def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
   }];
 
   let arguments = (ins
-    SPIRV_Vector:$vector,
-    SPIRV_Integer:$index
+    SPV_Vector:$vector,
+    SPV_Integer:$index
   );
 
   let results = (outs
-    SPIRV_Scalar:$result
+    SPV_Scalar:$result
   );
 
   let hasVerifier = 0;
@@ -223,7 +223,7 @@ def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
 
 // -----
 
-def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
+def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic", [
     NoSideEffect,
     TypesMatchWith<
       "type of 'component' matches element type of 'vector'",
@@ -269,13 +269,13 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
   }];
 
   let arguments = (ins
-    SPIRV_Vector:$vector,
-    SPIRV_Scalar:$component,
-    SPIRV_Integer:$index
+    SPV_Vector:$vector,
+    SPV_Scalar:$component,
+    SPV_Integer:$index
   );
 
   let results = (outs
-    SPIRV_Vector:$result
+    SPV_Vector:$result
   );
 
   let hasVerifier = 0;
@@ -287,7 +287,7 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
 
 // -----
 
-def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
+def SPV_VectorShuffleOp : SPV_Op<"VectorShuffle", [
     NoSideEffect, AllElementTypesMatch<["vector1", "vector2", "result"]>]> {
   let summary = [{
     Select arbitrary components from two vectors to make a new vector.
@@ -330,13 +330,13 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
   }];
 
   let arguments = (ins
-    SPIRV_Vector:$vector1,
-    SPIRV_Vector:$vector2,
+    SPV_Vector:$vector1,
+    SPV_Vector:$vector2,
     I32ArrayAttr:$components
   );
 
   let results = (outs
-    SPIRV_Vector:$result
+    SPV_Vector:$result
   );
 
   let assemblyFormat = [{
