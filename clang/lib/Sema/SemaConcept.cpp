@@ -529,9 +529,16 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
     return false;
   }
 
-  ContextRAII SavedContext{
-      *this, cast<DeclContext>(
-                 const_cast<FunctionDecl *>(FD)->getNonClosureContext())};
+  DeclContext *CtxToSave = const_cast<FunctionDecl *>(FD);
+
+  while (isLambdaCallOperator(CtxToSave) || FD->isTransparentContext()) {
+    if (isLambdaCallOperator(CtxToSave))
+      CtxToSave = CtxToSave->getParent()->getParent();
+    else
+      CtxToSave = CtxToSave->getNonTransparentContext();
+  }
+
+  ContextRAII SavedContext{*this, CtxToSave};
   LocalInstantiationScope Scope(*this, !ForOverloadResolution ||
                                            isLambdaCallOperator(FD));
   llvm::Optional<MultiLevelTemplateArgumentList> MLTAL =
