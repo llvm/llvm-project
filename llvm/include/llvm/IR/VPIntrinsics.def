@@ -248,6 +248,13 @@ BEGIN_REGISTER_VP(vp_fma, 3, 4, VP_FMA, -1)
 VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fma)
 END_REGISTER_VP(vp_fma, VP_FMA)
 
+// llvm.vp.minnum(x, y, mask,vlen)
+BEGIN_REGISTER_VP(vp_minnum, 2, 3, VP_FMINNUM, -1)
+END_REGISTER_VP(vp_minnum, VP_FMINNUM)
+
+// llvm.vp.maxnum(x, y, mask,vlen)
+BEGIN_REGISTER_VP(vp_maxnum, 2, 3, VP_FMAXNUM, -1)
+END_REGISTER_VP(vp_maxnum, VP_FMAXNUM)
 ///// } Floating-Point Arithmetic
 
 ///// Type Casts {
