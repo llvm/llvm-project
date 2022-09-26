@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
-; // Bitcode int this test case is reduced version of compiled code below:
+; // Bitcode in this test case is reduced version of compiled code below:
 ;__device__ inline void res(float x, float y, float *res) { *res = x + y; }
 ;
 ;__global__ void saxpy(int n, float a, float *x, float *y) {
@@ -42,12 +42,12 @@
 ; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
 ; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
 ; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
+; CHECK: .loc [[DEBUG_INFO_CU]] 8 13
 ; CHECK: mul.wide.u32    %rd{{.+}}, %r{{.+}}, 4;
 ; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
-; CHECK: .loc [[DEBUG_INFO_CU]] 8 13
 ; CHECK: ld.global.f32   %f{{.+}}, [%rd{{.+}}];
-; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 8 19
+; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
 ; CHECK: ld.global.f32   %f{{.+}}, [%rd{{.+}}];
 ; CHECK: .loc [[DEBUG_INFO_CU]] 3 82
 ; CHECK: fma.rn.f32      %f{{.+}}, %f{{.+}}, %f{{.+}}, %f{{.+}};
