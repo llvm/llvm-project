@@ -213,6 +213,9 @@ static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
 
 static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
                                         LoopInfo &LI, AAResults &AA) {
+  if (F.hasFnAttribute("disable-code-sinking"))
+    return false;
+
   bool MadeChange, EverMadeChange = false;
 
   do {
