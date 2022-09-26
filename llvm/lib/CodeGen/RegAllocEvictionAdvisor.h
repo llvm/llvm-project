@@ -177,7 +177,8 @@ public:
   virtual std::unique_ptr<RegAllocEvictionAdvisor>
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
   AdvisorMode getAdvisorMode() const { return Mode; }
-  virtual void logRewardIfNeeded(const MachineFunction &MF, float Reward){};
+  virtual void logRewardIfNeeded(const MachineFunction &MF,
+                                 llvm::function_ref<float()> GetReward){};
 
 protected:
   // This analysis preserves everything, and subclasses may have additional
