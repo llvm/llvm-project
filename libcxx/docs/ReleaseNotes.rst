@@ -50,6 +50,9 @@ Improvements and New Features
 
 Deprecations and Removals
 -------------------------
+- ``unary_function`` and ``binary_function`` are no longer provided in C++17 and newer Standard modes.
+  They can be re-enabled with ``_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION``.
+
 - Several incidental transitive includes have been removed from libc++. Those
   includes are removed based on the language version used. Incidental transitive
   inclusions of the following headers have been removed:
