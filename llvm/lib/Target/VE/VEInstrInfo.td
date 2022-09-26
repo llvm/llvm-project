@@ -1237,14 +1237,14 @@ defm CMPSL : RRNCm<"cmps.l", 0x6A, I64, i64>;
 
 // Section 8.4.17 - CMS (Compare and Select Maximum/Minimum Single)
 // cx: sx/zx, cw: max/min
-defm MAXSWSX : RRm<"maxs.w.sx", 0x78, I32, i32>;
+defm MAXSWSX : RRm<"maxs.w.sx", 0x78, I32, i32, smax>;
 let cx = 1 in defm MAXSWZX : RRm<"maxs.w.zx", 0x78, I32, i32>;
-let cw = 1 in defm MINSWSX : RRm<"mins.w.sx", 0x78, I32, i32>;
+let cw = 1 in defm MINSWSX : RRm<"mins.w.sx", 0x78, I32, i32, smin>;
 let cx = 1, cw = 1 in defm MINSWZX : RRm<"mins.w.zx", 0x78, I32, i32>;
 
 // Section 8.4.18 - CMX (Compare and Select Maximum/Minimum)
-defm MAXSL : RRm<"maxs.l", 0x68, I64, i64>;
-let cw = 1 in defm MINSL : RRm<"mins.l", 0x68, I64, i64>;
+defm MAXSL : RRm<"maxs.l", 0x68, I64, i64, smax>;
+let cw = 1 in defm MINSL : RRm<"mins.l", 0x68, I64, i64, smin>;
 
 } // isReMaterializable, isAsCheapAsAMove
 
@@ -2061,35 +2061,19 @@ def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOGT)),
           (FMAXDrr $LHS, $RHS)>;
 def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOGT)),
           (FMAXSrr $LHS, $RHS)>;
-def : Pat<(i64 (selectcc i64:$LHS, i64:$RHS, i64:$LHS, i64:$RHS, SETGT)),
-          (MAXSLrr $LHS, $RHS)>;
-def : Pat<(i32 (selectcc i32:$LHS, i32:$RHS, i32:$LHS, i32:$RHS, SETGT)),
-          (MAXSWSXrr $LHS, $RHS)>;
 def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOGE)),
           (FMAXDrr $LHS, $RHS)>;
 def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOGE)),
           (FMAXSrr $LHS, $RHS)>;
-def : Pat<(i64 (selectcc i64:$LHS, i64:$RHS, i64:$LHS, i64:$RHS, SETGE)),
-          (MAXSLrr $LHS, $RHS)>;
-def : Pat<(i32 (selectcc i32:$LHS, i32:$RHS, i32:$LHS, i32:$RHS, SETGE)),
-          (MAXSWSXrr $LHS, $RHS)>;
 
 def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOLT)),
           (FMINDrr $LHS, $RHS)>;
 def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOLT)),
           (FMINSrr $LHS, $RHS)>;
-def : Pat<(i64 (selectcc i64:$LHS, i64:$RHS, i64:$LHS, i64:$RHS, SETLT)),
-          (MINSLrr $LHS, $RHS)>;
-def : Pat<(i32 (selectcc i32:$LHS, i32:$RHS, i32:$LHS, i32:$RHS, SETLT)),
-          (MINSWSXrr $LHS, $RHS)>;
 def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOLE)),
           (FMINDrr $LHS, $RHS)>;
 def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOLE)),
           (FMINSrr $LHS, $RHS)>;
-def : Pat<(i64 (selectcc i64:$LHS, i64:$RHS, i64:$LHS, i64:$RHS, SETLE)),
-          (MINSLrr $LHS, $RHS)>;
-def : Pat<(i32 (selectcc i32:$LHS, i32:$RHS, i32:$LHS, i32:$RHS, SETLE)),
-          (MINSWSXrr $LHS, $RHS)>;
 
 // Helper classes to construct cmov patterns for the ease.
 //
