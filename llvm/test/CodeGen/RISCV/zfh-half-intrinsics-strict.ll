@@ -255,3 +255,45 @@ define iXLen @lround_f16(half %a) nounwind strictfp {
   %1 = call iXLen @llvm.experimental.constrained.lround.iXLen.f16(half %a, metadata !"fpexcept.strict") strictfp
   ret iXLen %1
 }
+
+declare i64 @llvm.experimental.constrained.llrint.i64.f16(half, metadata, metadata)
+
+define i64 @llrint_f16(half %a) nounwind strictfp {
+; RV32IZFH-LABEL: llrint_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call llrintf@plt
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: llrint_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fcvt.l.h a0, fa0
+; RV64IZFH-NEXT:    ret
+  %1 = call i64 @llvm.experimental.constrained.llrint.i64.f16(half %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret i64 %1
+}
+
+declare i64 @llvm.experimental.constrained.llround.i64.f16(half, metadata)
+
+define i64 @llround_f16(half %a) nounwind strictfp {
+; RV32IZFH-LABEL: llround_f16:
+; RV32IZFH:       # %bb.0:
+; RV32IZFH-NEXT:    addi sp, sp, -16
+; RV32IZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFH-NEXT:    fcvt.s.h fa0, fa0
+; RV32IZFH-NEXT:    call llroundf@plt
+; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFH-NEXT:    addi sp, sp, 16
+; RV32IZFH-NEXT:    ret
+;
+; RV64IZFH-LABEL: llround_f16:
+; RV64IZFH:       # %bb.0:
+; RV64IZFH-NEXT:    fcvt.l.h a0, fa0, rmm
+; RV64IZFH-NEXT:    ret
+  %1 = call i64 @llvm.experimental.constrained.llround.i64.f16(half %a, metadata !"fpexcept.strict") strictfp
+  ret i64 %1
+}
