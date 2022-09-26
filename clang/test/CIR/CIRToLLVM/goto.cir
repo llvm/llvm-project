@@ -1,8 +1,5 @@
 // RUN: cir-tool %s -canonicalize -cir-to-func -cir-to-memref -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-tool %s -canonicalize -cir-to-func -cir-to-memref -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
-
-// FIXME: after rebasing against July's 2022 mlir, we get "failed to legalize
-//        operation 'cf.br'" from -cir-to-llvm
 // XFAIL: *
 
 module {
