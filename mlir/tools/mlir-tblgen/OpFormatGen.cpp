@@ -1187,7 +1187,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     if (!elseElements.empty()) {
       body << " else {\n";
       ArrayRef<FormatElement *> elseElements =
-          optional->getElseElements(/*parsable=*/true);
+          optional->getElseElements(/*parseable=*/true);
       genElementParsers(elseElements.front(), elseElements,
                         /*thenGroup=*/false);
       body << "  }";
