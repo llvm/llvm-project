@@ -103,11 +103,7 @@ function(add_llvm_symbol_exports target_name export_file)
     # FIXME: Don't write the "local:" line on OpenBSD.
     # in the export file, also add a linker script to version LLVM symbols (form: LLVM_N.M)
     add_custom_command(OUTPUT ${native_export_file}
-      COMMAND echo "LLVM_${LLVM_VERSION_MAJOR} {" > ${native_export_file}
-      COMMAND grep -q "[[:alnum:]]" ${export_file} && echo "  global:" >> ${native_export_file} || :
-      COMMAND sed -e "s/$/;/" -e "s/^/    /" < ${export_file} >> ${native_export_file}
-      COMMAND echo "  local: *;" >> ${native_export_file}
-      COMMAND echo "};" >> ${native_export_file}
+      COMMAND "${Python3_EXECUTABLE}" ${LLVM_MAIN_SRC_DIR}/utils/add_llvm_symbol_exports.py ${LLVM_VERSION_MAJOR} ${export_file} ${native_export_file}
       DEPENDS ${export_file}
       VERBATIM
       COMMENT "Creating export file for ${target_name}")
