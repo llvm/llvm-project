@@ -370,6 +370,7 @@ CGDebugInfo::computeChecksum(FileID FID, SmallString<64> &Checksum) const {
     llvm::toHex(llvm::SHA256::hash(Data), /*LowerCase=*/true, Checksum);
     return llvm::DIFile::CSK_SHA256;
   }
+  llvm_unreachable("Unhandled DebugSrcHashKind enum");
 }
 
 Optional<StringRef> CGDebugInfo::getSource(const SourceManager &SM,
