@@ -18,8 +18,9 @@ class TestObjCStructArgument(TestBase):
         self.break_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @add_test_categories(['pyapi'])
-    @skipIf(debug_info=no_match(["gmodules"]), oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'arm64'])  # this test program only builds for ios with -gmodules
+    # this test program only builds for ios with -gmodules
+    @add_test_categories(['gmodules', 'pyapi'])
+    @skipIf(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'arm64'])
     def test_with_python_api(self):
         """Test passing structs to Objective-C methods."""
         self.build()
