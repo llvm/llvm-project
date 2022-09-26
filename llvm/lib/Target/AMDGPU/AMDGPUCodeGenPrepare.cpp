@@ -1423,7 +1423,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
 
   HasUnsafeFPMath = hasUnsafeFPMath(F);
 
-  AMDGPU::SIModeRegisterDefaults Mode(F);
+  AMDGPU::SIModeRegisterDefaults Mode(F, *ST);
   HasFP32Denormals = Mode.allFP32Denormals();
 
   bool MadeChange = false;

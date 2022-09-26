@@ -1142,6 +1142,12 @@ public:
   // \returns true if the target supports the pre-NGG legacy geometry path.
   bool hasLegacyGeometry() const { return getGeneration() < GFX11; }
 
+  // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
+  bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
+
+  // \returns true if the target has IEEE kernel descriptor mode bit
+  bool hasIEEEMode() const { return getGeneration() < GFX12; }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);

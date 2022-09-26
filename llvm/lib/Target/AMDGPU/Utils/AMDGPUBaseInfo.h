@@ -1046,7 +1046,7 @@ struct SIModeRegisterDefaults {
     FP64FP16InputDenormals(true),
     FP64FP16OutputDenormals(true) {}
 
-  SIModeRegisterDefaults(const Function &F);
+  SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
     SIModeRegisterDefaults Mode;

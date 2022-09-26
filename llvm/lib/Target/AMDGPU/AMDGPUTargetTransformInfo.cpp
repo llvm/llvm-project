@@ -289,7 +289,7 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
-  AMDGPU::SIModeRegisterDefaults Mode(F);
+  AMDGPU::SIModeRegisterDefaults Mode(F, *ST);
   HasFP32Denormals = Mode.allFP32Denormals();
   HasFP64FP16Denormals = Mode.allFP64FP16Denormals();
 }
@@ -1127,8 +1127,8 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
 
   // FIXME: dx10_clamp can just take the caller setting, but there seems to be
   // no way to support merge for backend defined attributes.
-  AMDGPU::SIModeRegisterDefaults CallerMode(*Caller);
-  AMDGPU::SIModeRegisterDefaults CalleeMode(*Callee);
+  AMDGPU::SIModeRegisterDefaults CallerMode(*Caller, *CallerST);
+  AMDGPU::SIModeRegisterDefaults CalleeMode(*Callee, *CalleeST);
   if (!CallerMode.isInlineCompatible(CalleeMode))
     return false;
 
