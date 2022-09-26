@@ -1172,8 +1172,8 @@ bool GotPltSection::isNeeded() const {
 }
 
 TableJumpSection::TableJumpSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_RISCV_ATTRIBUTES,
-                       config->wordsize, ".tbljalentries") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
+                       config->wordsize, "__tbljalvec_base$") {}
 
 void TableJumpSection::addEntryZero(const Symbol &symbol) {
   addEntry(symbol, entriesZero);
@@ -1195,11 +1195,7 @@ int TableJumpSection::getEntryRa(const Symbol &symbol) {
 
 void TableJumpSection::addEntry(const Symbol &symbol,
                                 std::map<std::string, int> &entriesList) {
-  if (entriesList.count(symbol.getName().str()) == 0) {
-    entriesList[symbol.getName().str()] = 1;
-  } else {
-    entriesList[symbol.getName().str()] += 1;
-  }
+  ++entriesList[symbol.getName().str()];
 }
 
 uint32_t TableJumpSection::getEntry(
