@@ -36,10 +36,10 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
     return {initTensor};
   }
 
-  SmallVector<StringRef> getLoopIteratorTypes(Operation *op) const {
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     auto padOp = cast<PadOp>(op);
-    SmallVector<StringRef> iteratorTypes(padOp.getResultType().getRank(),
-                                         getParallelIteratorTypeName());
+    SmallVector<utils::IteratorType> iteratorTypes(
+        padOp.getResultType().getRank(), utils::IteratorType::parallel);
     return iteratorTypes;
   }
 

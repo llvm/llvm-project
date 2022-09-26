@@ -2,21 +2,21 @@
 
 module attributes {
   gpu.container_module,
-  spv.target_env = #spv.target_env<#spv.vce<v1.4, [Shader, GroupNonUniformShuffle], []>, #spv.resource_limits<subgroup_size = 16>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Shader, GroupNonUniformShuffle], []>, #spirv.resource_limits<subgroup_size = 16>>
 } {
 
 gpu.module @kernels {
-  // CHECK-LABEL:  spv.func @shuffle_xor()
+  // CHECK-LABEL:  spirv.func @shuffle_xor()
   gpu.func @shuffle_xor() kernel
-    attributes {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
     %mask = arith.constant 8 : i32
     %width = arith.constant 16 : i32
     %val = arith.constant 42.0 : f32
 
-    // CHECK: %[[MASK:.+]] = spv.Constant 8 : i32
-    // CHECK: %[[VAL:.+]] = spv.Constant 4.200000e+01 : f32
-    // CHECK: %{{.+}} = spv.Constant true
-    // CHECK: %{{.+}} = spv.GroupNonUniformShuffleXor <Subgroup> %[[VAL]], %[[MASK]] : f32, i32
+    // CHECK: %[[MASK:.+]] = spirv.Constant 8 : i32
+    // CHECK: %[[VAL:.+]] = spirv.Constant 4.200000e+01 : f32
+    // CHECK: %{{.+}} = spirv.Constant true
+    // CHECK: %{{.+}} = spirv.GroupNonUniformShuffleXor <Subgroup> %[[VAL]], %[[MASK]] : f32, i32
     %result, %valid = gpu.shuffle xor %val, %mask, %width : f32
     gpu.return
   }
@@ -28,12 +28,12 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spv.target_env = #spv.target_env<#spv.vce<v1.4, [Shader, GroupNonUniformShuffle], []>, #spv.resource_limits<subgroup_size = 32>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Shader, GroupNonUniformShuffle], []>, #spirv.resource_limits<subgroup_size = 32>>
 } {
 
 gpu.module @kernels {
   gpu.func @shuffle_xor() kernel
-    attributes {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
     %mask = arith.constant 8 : i32
     %width = arith.constant 16 : i32
     %val = arith.constant 42.0 : f32

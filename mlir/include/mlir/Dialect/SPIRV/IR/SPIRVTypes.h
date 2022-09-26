@@ -271,7 +271,7 @@ public:
 ///
 /// would be represented in MLIR as:
 ///
-/// !spv.struct<A, (!spv.ptr<!spv.struct<A>, Generic>)>
+/// !spirv.struct<A, (!spirv.ptr<!spirv.struct<A>, Generic>)>
 ///
 /// In the above, expressing recursive struct types is accomplished by giving a
 /// recursive struct a unique identified and using that identifier in the struct

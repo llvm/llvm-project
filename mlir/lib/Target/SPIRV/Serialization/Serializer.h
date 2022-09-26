@@ -116,7 +116,7 @@ private:
   LogicalResult
   processSpecConstantOperationOp(spirv::SpecConstantOperationOp op);
 
-  /// SPIR-V dialect supports OpUndef using spv.UndefOp that produces a SSA
+  /// SPIR-V dialect supports OpUndef using spirv.UndefOp that produces a SSA
   /// value to use with other operations. The SPIR-V spec recommends that
   /// OpUndef be generated at module level. The serialization generates an
   /// OpUndef for each type needed at module level.
@@ -424,10 +424,10 @@ private:
   ///   ...
   /// ^parent1:
   ///   ...
-  ///   spv.Branch ^phi(%val0: i32)
+  ///   spirv.Branch ^phi(%val0: i32)
   /// ^parent2:
   ///   ...
-  ///   spv.Branch ^phi(%val1: i32)
+  ///   spirv.Branch ^phi(%val1: i32)
   /// ```
   ///
   /// When we are serializing the `^phi` block, we need to emit at the beginning

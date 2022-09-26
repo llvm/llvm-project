@@ -34,16 +34,16 @@ def SPV_MatrixTimesMatrixOp : SPV_Op<"MatrixTimesMatrix", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    matrix-times-matrix-op ::= ssa-id `=` `spv.MatrixTimesMatrix` ssa-use,
+    matrix-times-matrix-op ::= ssa-id `=` `spirv.MatrixTimesMatrix` ssa-use,
     ssa-use `:` matrix-type `,` matrix-type `->` matrix-type
     ```mlir
 
     #### Example:
 
     ```
-    %0 = spv.MatrixTimesMatrix %matrix_1, %matrix_2 :
-        !spv.matrix<4 x vector<3xf32>>, !spv.matrix<3 x vector<4xf32>> ->
-        !spv.matrix<4 x vector<4xf32>>
+    %0 = spirv.MatrixTimesMatrix %matrix_1, %matrix_2 :
+        !spirv.matrix<4 x vector<3xf32>>, !spirv.matrix<3 x vector<4xf32>> ->
+        !spirv.matrix<4 x vector<4xf32>>
     ```
   }];
 
@@ -85,7 +85,7 @@ def SPV_MatrixTimesScalarOp : SPV_Op<"MatrixTimesScalar", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    matrix-times-scalar-op ::= ssa-id `=` `spv.MatrixTimesScalar` ssa-use,
+    matrix-times-scalar-op ::= ssa-id `=` `spirv.MatrixTimesScalar` ssa-use,
     ssa-use `:` matrix-type `,` float-type `->` matrix-type
 
     ```
@@ -94,8 +94,8 @@ def SPV_MatrixTimesScalarOp : SPV_Op<"MatrixTimesScalar", [NoSideEffect]> {
 
     ```mlir
 
-    %0 = spv.MatrixTimesScalar %matrix, %scalar :
-    !spv.matrix<3 x vector<3xf32>>, f32 -> !spv.matrix<3 x vector<3xf32>>
+    %0 = spirv.MatrixTimesScalar %matrix, %scalar :
+    !spirv.matrix<3 x vector<3xf32>>, f32 -> !spirv.matrix<3 x vector<3xf32>>
 
     ```
   }];
@@ -148,7 +148,7 @@ def SPV_TransposeOp : SPV_Op<"Transpose", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    transpose-op ::= ssa-id `=` `spv.Transpose` ssa-use `:` matrix-type `->`
+    transpose-op ::= ssa-id `=` `spirv.Transpose` ssa-use `:` matrix-type `->`
     matrix-type
 
     ```mlir
@@ -156,8 +156,8 @@ def SPV_TransposeOp : SPV_Op<"Transpose", [NoSideEffect]> {
     #### Example:
 
     ```
-    %0 = spv.Transpose %matrix: !spv.matrix<2 x vector<3xf32>> ->
-    !spv.matrix<3 x vector<2xf32>>
+    %0 = spirv.Transpose %matrix: !spirv.matrix<2 x vector<3xf32>> ->
+    !spirv.matrix<3 x vector<2xf32>>
 
     ```
   }];

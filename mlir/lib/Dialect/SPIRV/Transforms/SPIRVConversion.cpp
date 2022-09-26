@@ -510,7 +510,7 @@ FuncOpConversion::matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
       return failure();
   }
 
-  // Create the converted spv.func op.
+  // Create the converted spirv.func op.
   auto newFuncOp = rewriter.create<spirv::FuncOp>(
       funcOp.getLoc(), funcOp.getName(),
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
@@ -545,7 +545,7 @@ void mlir::populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
                                                   spirv::BuiltIn builtin) {
   // Look through all global variables in the given `body` block and check if
-  // there is a spv.GlobalVariable that has the same `builtin` attribute.
+  // there is a spirv.GlobalVariable that has the same `builtin` attribute.
   for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
     if (auto builtinAttr = varOp->getAttrOfType<StringAttr>(
             spirv::SPIRVDialect::getAttributeName(

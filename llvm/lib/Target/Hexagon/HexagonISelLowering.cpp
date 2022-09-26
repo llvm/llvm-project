@@ -2354,12 +2354,6 @@ HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue S = getVectorShiftByInt(Op, DAG))
     Res = S;
 
-  MVT ResTy = ty(Res);
-  if (ResTy.getVectorElementType() != MVT::i8)
-    return Res;
-
-  // For shifts of i8, extend the inputs to i16, then truncate back to i8.
-  assert(ResTy.getVectorElementType() == MVT::i8);
   unsigned Opc = Res.getOpcode();
   switch (Opc) {
   case HexagonISD::VASR:
@@ -2371,6 +2365,12 @@ HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
   }
 
+  MVT ResTy = ty(Res);
+  if (ResTy.getVectorElementType() != MVT::i8)
+    return Res;
+
+  // For shifts of i8, extend the inputs to i16, then truncate back to i8.
+  assert(ResTy.getVectorElementType() == MVT::i8);
   SDValue Val = Res.getOperand(0), Amt = Res.getOperand(1);
 
   auto ShiftPartI8 = [&dl, &DAG, this](unsigned Opc, SDValue V, SDValue A) {

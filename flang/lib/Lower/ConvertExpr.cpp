@@ -3071,7 +3071,11 @@ public:
   /// the creation of the temp if the actual is a variable and \p byValue is
   /// true. It handles the cases where the actual may be absent, and all of the
   /// copying has to be conditional at runtime.
-  ExtValue prepareActualToBaseAddressLike(
+  /// If the actual argument may be dynamically absent, return an additional
+  /// boolean mlir::Value that if true means that the actual argument is
+  /// present.
+  std::pair<ExtValue, llvm::Optional<mlir::Value>>
+  prepareActualToBaseAddressLike(
       const Fortran::lower::SomeExpr &expr,
       const Fortran::lower::CallerInterface::PassedEntity &arg,
       CopyOutPairs &copyOutPairs, bool byValue) {
@@ -3092,21 +3096,23 @@ public:
         (byValue || (isArray && !Fortran::evaluate::IsSimplyContiguous(
                                     expr, converter.getFoldingContext())));
     const bool needsCopy = isStaticConstantByValue || variableNeedsCopy;
-    auto argAddr = [&]() -> ExtValue {
+    auto [argAddr, isPresent] =
+        [&]() -> std::pair<ExtValue, llvm::Optional<mlir::Value>> {
       if (!actualArgIsVariable && !needsCopy)
         // Actual argument is not a variable. Make sure a variable address is
         // not passed.
-        return genTempExtAddr(expr);
+        return {genTempExtAddr(expr), llvm::None};
       ExtValue baseAddr;
       if (arg.isOptional() && Fortran::evaluate::MayBePassedAsAbsentOptional(
                                   expr, converter.getFoldingContext())) {
         auto [actualArgBind, isPresent] = prepareActualThatMayBeAbsent(expr);
         const ExtValue &actualArg = actualArgBind;
         if (!needsCopy)
-          return actualArg;
+          return {actualArg, isPresent};
 
         if (isArray)
-          return genCopyIn(actualArg, arg, copyOutPairs, isPresent, byValue);
+          return {genCopyIn(actualArg, arg, copyOutPairs, isPresent, byValue),
+                  isPresent};
         // Scalars, create a temp, and use it conditionally at runtime if
         // the argument is present.
         ExtValue temp =
@@ -3127,25 +3133,26 @@ public:
                   builder.create<fir::ResultOp>(loc, absent);
                 })
                 .getResults()[0];
-        return fir::substBase(temp, selectAddr);
+        return {fir::substBase(temp, selectAddr), isPresent};
       }
       // Actual cannot be absent, the actual argument can safely be
       // copied-in/copied-out without any care if needed.
       if (isArray) {
         ExtValue box = genBoxArg(expr);
         if (needsCopy)
-          return genCopyIn(box, arg, copyOutPairs,
-                           /*restrictCopyAtRuntime=*/llvm::None, byValue);
+          return {genCopyIn(box, arg, copyOutPairs,
+                            /*restrictCopyAtRuntime=*/llvm::None, byValue),
+                  llvm::None};
         // Contiguous: just use the box we created above!
         // This gets "unboxed" below, if needed.
-        return box;
+        return {box, llvm::None};
       }
       // Actual argument is a non-optional, non-pointer, non-allocatable
       // scalar.
       ExtValue actualArg = genExtAddr(expr);
       if (needsCopy)
-        return createInMemoryScalarCopy(builder, loc, actualArg);
-      return actualArg;
+        return {createInMemoryScalarCopy(builder, loc, actualArg), llvm::None};
+      return {actualArg, llvm::None};
     }();
     // Scalar and contiguous expressions may be lowered to a fir.box,
     // either to account for potential polymorphism, or because lowering
@@ -3154,7 +3161,7 @@ public:
     // is passed, not one of the dynamic type), and the expr is known to
     // be simply contiguous, so it is safe to unbox it and pass the
     // address without making a copy.
-    return readIfBoxValue(argAddr);
+    return {readIfBoxValue(argAddr), isPresent};
   }
 
   /// Lower a non-elemental procedure reference.
@@ -3264,7 +3271,8 @@ public:
         const bool byValue = arg.passBy == PassBy::BaseAddressValueAttribute ||
                              arg.passBy == PassBy::CharBoxValueAttribute;
         ExtValue argAddr =
-            prepareActualToBaseAddressLike(*expr, arg, copyOutPairs, byValue);
+            prepareActualToBaseAddressLike(*expr, arg, copyOutPairs, byValue)
+                .first;
         if (arg.passBy == PassBy::BaseAddress ||
             arg.passBy == PassBy::BaseAddressValueAttribute) {
           caller.placeInput(arg, fir::getBase(argAddr));
@@ -3294,13 +3302,49 @@ public:
           caller.placeInput(arg, boxChar);
         }
       } else if (arg.passBy == PassBy::Box) {
-        // Before lowering to an address, handle the allocatable/pointer actual
-        // argument to optional fir.box dummy. It is legal to pass
-        // unallocated/disassociated entity to an optional. In this case, an
-        // absent fir.box must be created instead of a fir.box with a null value
-        // (Fortran 2018 15.5.2.12 point 1).
-        if (arg.isOptional() && Fortran::evaluate::IsAllocatableOrPointerObject(
-                                    *expr, converter.getFoldingContext())) {
+        if (arg.mustBeMadeContiguous() &&
+            !Fortran::evaluate::IsSimplyContiguous(
+                *expr, converter.getFoldingContext())) {
+          // If the expression is a PDT, or a polymorphic entity, or an assumed
+          // rank, it cannot currently be safely handled by
+          // prepareActualToBaseAddressLike that is intended to prepare
+          // arguments that can be passed as simple base address.
+          if (auto dynamicType = expr->GetType())
+            if (dynamicType->IsPolymorphic())
+              TODO(loc, "passing a polymorphic entity to an OPTIONAL "
+                        "CONTIGUOUS argument");
+          if (fir::isRecordWithTypeParameters(
+                  fir::unwrapSequenceType(fir::unwrapPassByRefType(argTy))))
+            TODO(loc, "passing to an OPTIONAL CONTIGUOUS derived type argument "
+                      "with length parameters");
+          if (Fortran::evaluate::IsAssumedRank(*expr))
+            TODO(loc, "passing an assumed rank entity to an OPTIONAL "
+                      "CONTIGUOUS argument");
+          // Assumed shape VALUE are currently TODO in the call interface
+          // lowering.
+          const bool byValue = false;
+          auto [argAddr, isPresentValue] =
+              prepareActualToBaseAddressLike(*expr, arg, copyOutPairs, byValue);
+          mlir::Value box = builder.createBox(loc, argAddr);
+          if (isPresentValue) {
+            mlir::Value convertedBox = builder.createConvert(loc, argTy, box);
+            auto absent = builder.create<fir::AbsentOp>(loc, argTy);
+            caller.placeInput(arg,
+                              builder.create<mlir::arith::SelectOp>(
+                                  loc, *isPresentValue, convertedBox, absent));
+          } else {
+            caller.placeInput(arg, builder.createBox(loc, argAddr));
+          }
+
+        } else if (arg.isOptional() &&
+                   Fortran::evaluate::IsAllocatableOrPointerObject(
+                       *expr, converter.getFoldingContext())) {
+          // Before lowering to an address, handle the allocatable/pointer
+          // actual argument to optional fir.box dummy. It is legal to pass
+          // unallocated/disassociated entity to an optional. In this case, an
+          // absent fir.box must be created instead of a fir.box with a null
+          // value (Fortran 2018 15.5.2.12 point 1).
+          //
           // Note that passing an absent allocatable to a non-allocatable
           // optional dummy argument is illegal (15.5.2.12 point 3 (8)). So
           // nothing has to be done to generate an absent argument in this case,

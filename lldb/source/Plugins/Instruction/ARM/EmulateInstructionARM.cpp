@@ -42,7 +42,8 @@ LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionARM, InstructionARM)
 // ITSession implementation
 //
 
-static bool GetARMDWARFRegisterInfo(unsigned reg_num, RegisterInfo &reg_info) {
+static llvm::Optional<RegisterInfo> GetARMDWARFRegisterInfo(unsigned reg_num) {
+  RegisterInfo reg_info;
   ::memset(&reg_info, 0, sizeof(RegisterInfo));
   ::memset(reg_info.kinds, LLDB_INVALID_REGNUM, sizeof(reg_info.kinds));
 
@@ -594,9 +595,9 @@ static bool GetARMDWARFRegisterInfo(unsigned reg_num, RegisterInfo &reg_info) {
     break;
 
   default:
-    return false;
+    return {};
   }
-  return true;
+  return reg_info;
 }
 
 // A8.6.50
@@ -782,9 +783,9 @@ bool EmulateInstructionARM::WriteBits32Unknown(int n) {
   return true;
 }
 
-bool EmulateInstructionARM::GetRegisterInfo(lldb::RegisterKind reg_kind,
-                                            uint32_t reg_num,
-                                            RegisterInfo &reg_info) {
+llvm::Optional<RegisterInfo>
+EmulateInstructionARM::GetRegisterInfo(lldb::RegisterKind reg_kind,
+                                       uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_num) {
     case LLDB_REGNUM_GENERIC_PC:
@@ -808,13 +809,13 @@ bool EmulateInstructionARM::GetRegisterInfo(lldb::RegisterKind reg_kind,
       reg_num = dwarf_cpsr;
       break;
     default:
-      return false;
+      return {};
     }
   }
 
   if (reg_kind == eRegisterKindDWARF)
-    return GetARMDWARFRegisterInfo(reg_num, reg_info);
-  return false;
+    return GetARMDWARFRegisterInfo(reg_num);
+  return {};
 }
 
 uint32_t EmulateInstructionARM::GetFramePointerRegisterNumber() const {

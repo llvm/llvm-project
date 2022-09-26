@@ -1140,16 +1140,20 @@ size_t Writer::addEntryToStringTable(StringRef str) {
 Optional<coff_symbol16> Writer::createSymbol(Defined *def) {
   coff_symbol16 sym;
   switch (def->kind()) {
-  case Symbol::DefinedAbsoluteKind:
-    sym.Value = def->getRVA();
+  case Symbol::DefinedAbsoluteKind: {
+    auto *da = dyn_cast<DefinedAbsolute>(def);
+    // Note: COFF symbol can only store 32-bit values, so 64-bit absolute
+    // values will be truncated.
+    sym.Value = da->getVA();
     sym.SectionNumber = IMAGE_SYM_ABSOLUTE;
     break;
-  case Symbol::DefinedSyntheticKind:
-    // Relative symbols are unrepresentable in a COFF symbol table.
-    return None;
+  }
   default: {
     // Don't write symbols that won't be written to the output to the symbol
     // table.
+    // We also try to write DefinedSynthetic as a normal symbol. Some of these
+    // symbols do point to an actual chunk, like __safe_se_handler_table. Others
+    // like __ImageBase are outside of sections and thus cannot be represented.
     Chunk *c = def->getChunk();
     if (!c)
       return None;

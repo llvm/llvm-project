@@ -80,6 +80,13 @@ bool isConstantIntValue(OpFoldResult ofr, int64_t value);
 /// no IndexAttr and that IndexType have no bitwidth.
 bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2);
 
+/// Helper function to convert a vector of `OpFoldResult`s into a vector of
+/// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold result
+/// if it casts to  a `Value` or create an index-type constant if it casts to
+/// `IntegerAttr`. No other attribute types are supported.
+SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
+                               ArrayRef<OpFoldResult> valueOrAttrVec);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_STATICVALUEUTILS_H

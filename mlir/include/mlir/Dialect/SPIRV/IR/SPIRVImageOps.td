@@ -52,8 +52,8 @@ def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
     ```
 
     ```mlir
-    %0 = spv.ImageDrefGather %1 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 -> vector<4xi32>
-    %0 = spv.ImageDrefGather %1 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 ["NonPrivateTexel"] : f32, f32 -> vector<4xi32>
+    %0 = spirv.ImageDrefGather %1 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 -> vector<4xi32>
+    %0 = spirv.ImageDrefGather %1 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 ["NonPrivateTexel"] : f32, f32 -> vector<4xi32>
     ```
   }];
 
@@ -116,9 +116,9 @@ def SPV_ImageQuerySizeOp : SPV_Op<"ImageQuerySize", [NoSideEffect]> {
     #### Example:
 
     ```mlir
-    %3 = spv.ImageQuerySize %0 : !spv.image<i32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> i32
-    %4 = spv.ImageQuerySize %1 : !spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> vector<2xi32>
-    %5 = spv.ImageQuerySize %2 : !spv.image<i32, Dim2D, NoDepth, Arrayed, SingleSampled, NoSampler, Unknown> -> vector<3xi32>
+    %3 = spirv.ImageQuerySize %0 : !spirv.image<i32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> i32
+    %4 = spirv.ImageQuerySize %1 : !spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> vector<2xi32>
+    %5 = spirv.ImageQuerySize %2 : !spirv.image<i32, Dim2D, NoDepth, Arrayed, SingleSampled, NoSampler, Unknown> -> vector<3xi32>
     ```
 
   }];
@@ -161,7 +161,7 @@ def SPV_ImageOp : SPV_Op<"Image",
     #### Example:
 
     ```mlir
-    %0 = spv.Image %1 : !spv.sampled_image<!spv.image<f32, Cube, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>
+    %0 = spirv.Image %1 : !spirv.sampled_image<!spirv.image<f32, Cube, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>
     ```
   }];
 

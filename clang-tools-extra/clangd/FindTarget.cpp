@@ -454,6 +454,10 @@ public:
             Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
         }
       }
+      void
+      VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *STTPT) {
+        Outer.add(STTPT->getReplacementType(), Flags);
+      }
       void VisitTemplateTypeParmType(const TemplateTypeParmType *TTPT) {
         Outer.add(TTPT->getDecl(), Flags);
       }

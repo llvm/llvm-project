@@ -140,7 +140,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::createBinaryShader(
   SmallVector<uint32_t, 0> binary;
   for (auto spirvModule : module.getOps<spirv::ModuleOp>()) {
     if (done)
-      return spirvModule.emitError("should only contain one 'spv.module' op");
+      return spirvModule.emitError("should only contain one 'spirv.module' op");
     done = true;
 
     if (failed(spirv::serialize(spirvModule, binary)))

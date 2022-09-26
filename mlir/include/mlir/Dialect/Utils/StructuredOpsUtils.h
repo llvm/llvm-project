@@ -23,6 +23,9 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
+// Pull in all enum type definitions and utility function declarations.
+#include "mlir/Dialect/Utils/DialectUtilsEnums.h.inc"
+
 namespace mlir {
 
 class OpBuilder;

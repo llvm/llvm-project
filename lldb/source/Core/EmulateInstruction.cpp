@@ -582,3 +582,12 @@ bool EmulateInstruction::CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) {
   unwind_plan.Clear();
   return false;
 }
+
+bool EmulateInstruction::GetRegisterInfo(lldb::RegisterKind reg_kind,
+                                         uint32_t reg_num,
+                                         RegisterInfo &reg_info) {
+  llvm::Optional<RegisterInfo> info = GetRegisterInfo(reg_kind, reg_num);
+  if (info)
+    reg_info = *info;
+  return info.has_value();
+}
