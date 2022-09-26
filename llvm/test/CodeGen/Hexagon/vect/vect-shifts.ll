@@ -240,29 +240,27 @@ define <4 x i8> @f15(<4 x i8> %a0) unnamed_addr #0 {
 ; CHECK-LABEL: f15:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = extractu(r0,#8,#16)
-; CHECK-NEXT:     r2 = extractu(r0,#8,#24)
+; CHECK-NEXT:     r1 = extract(r0,#8,#16)
+; CHECK-NEXT:     r2 = extract(r0,#8,#8)
 ; CHECK-NEXT:     r3 = sxtb(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = extract(r0,#8,#8)
-; CHECK-NEXT:     r3 = extractu(r3,#8,#1)
-; CHECK-NEXT:     r2 = sxtb(r2)
-; CHECK-NEXT:     r1 = sxtb(r1)
+; CHECK-NEXT:     r4 = extract(r0,#8,#24)
+; CHECK-NEXT:     r2 = asl(r2,#6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = asl(r4,#6)
-; CHECK-NEXT:     r2 = asl(r2,#4)
+; CHECK-NEXT:     r3 = extractu(r3,#8,#1)
+; CHECK-NEXT:     r0 = asl(r4,#4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = extractu(r1,#8,#3)
-; CHECK-NEXT:     r0 = or(r3,and(r0,##65280))
+; CHECK-NEXT:     r2 = or(r3,and(r2,##65280))
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = or(r1,and(r2,##65280))
+; CHECK-NEXT:     r0 = or(r1,and(r0,##65280))
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = combine(r2.l,r0.l)
+; CHECK-NEXT:     r0 = combine(r0.l,r2.l)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 b0:
@@ -472,11 +470,8 @@ define <2 x i16> @f21(<2 x i16> %a0) unnamed_addr #0 {
 ; CHECK-LABEL: f21:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r1 = extract(r0,#16,#16)
 ; CHECK-NEXT:     r2 = extract(r0,#15,#1)
-; CHECK-NEXT:     r1 = lsr(r0,#16)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = sxth(r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = asr(r1,#2)
