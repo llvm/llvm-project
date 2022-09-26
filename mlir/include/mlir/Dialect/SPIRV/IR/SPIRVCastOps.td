@@ -17,17 +17,17 @@
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
-                 list<Trait> traits = []> :
-      SPV_Op<mnemonic,
+class SPIRV_CastOp<string mnemonic, Type resultType, Type operandType,
+                   list<Trait> traits = []> :
+      SPIRV_Op<mnemonic,
              !listconcat(traits,
                          [NoSideEffect, SameOperandsAndResultShape])> {
   let arguments = (ins
-    SPV_ScalarOrVectorOrCoopMatrixOf<operandType>:$operand
+    SPIRV_ScalarOrVectorOrCoopMatrixOf<operandType>:$operand
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
+    SPIRV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
   );
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand) `to` type($result)
@@ -36,7 +36,7 @@ class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
 
 // -----
 
-def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
+def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [NoSideEffect]> {
   let summary = "Bit pattern-preserving type conversion.";
 
   let description = [{
@@ -78,11 +78,11 @@ def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    SPV_ScalarOrVectorOrPtr:$operand
+    SPIRV_ScalarOrVectorOrPtr:$operand
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOrPtr:$result
+    SPIRV_ScalarOrVectorOrPtr:$result
   );
 
   let assemblyFormat = [{
@@ -93,7 +93,7 @@ def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
 
 // -----
 
-def SPV_ConvertFToSOp : SPV_CastOp<"ConvertFToS", SPV_Integer, SPV_Float, []> {
+def SPIRV_ConvertFToSOp : SPIRV_CastOp<"ConvertFToS", SPIRV_Integer, SPIRV_Float, []> {
   let summary = [{
     Convert value numerically from floating point to signed integer, with
     round toward 0.0.
@@ -125,7 +125,7 @@ def SPV_ConvertFToSOp : SPV_CastOp<"ConvertFToS", SPV_Integer, SPV_Float, []> {
 
 // -----
 
-def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
+def SPIRV_ConvertFToUOp : SPIRV_CastOp<"ConvertFToU", SPIRV_Integer, SPIRV_Float, []> {
   let summary = [{
     Convert value numerically from floating point to unsigned integer, with
     round toward 0.0.
@@ -158,9 +158,9 @@ def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
 
 // -----
 
-def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF",
-                                   SPV_Float,
-                                   SPV_Integer,
+def SPIRV_ConvertSToFOp : SPIRV_CastOp<"ConvertSToF",
+                                   SPIRV_Float,
+                                   SPIRV_Integer,
                                    [SignedOp]> {
   let summary = [{
     Convert value numerically from signed integer to floating point.
@@ -192,9 +192,9 @@ def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF",
 
 // -----
 
-def SPV_ConvertUToFOp : SPV_CastOp<"ConvertUToF",
-                                   SPV_Float,
-                                   SPV_Integer,
+def SPIRV_ConvertUToFOp : SPIRV_CastOp<"ConvertUToF",
+                                   SPIRV_Float,
+                                   SPIRV_Integer,
                                    [UnsignedOp]> {
   let summary = [{
     Convert value numerically from unsigned integer to floating point.
@@ -226,9 +226,9 @@ def SPV_ConvertUToFOp : SPV_CastOp<"ConvertUToF",
 
 // -----
 
-def SPV_FConvertOp : SPV_CastOp<"FConvert",
-                                SPV_Float,
-                                SPV_Float,
+def SPIRV_FConvertOp : SPIRV_CastOp<"FConvert",
+                                SPIRV_Float,
+                                SPIRV_Float,
                                 [UsableInSpecConstantOp]> {
   let summary = [{
     Convert value numerically from one floating-point width to another
@@ -262,9 +262,9 @@ def SPV_FConvertOp : SPV_CastOp<"FConvert",
 
 // -----
 
-def SPV_SConvertOp : SPV_CastOp<"SConvert",
-                                SPV_Integer,
-                                SPV_Integer,
+def SPIRV_SConvertOp : SPIRV_CastOp<"SConvert",
+                                SPIRV_Integer,
+                                SPIRV_Integer,
                                 [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Convert signed width.  This is either a truncate or a sign extend.
@@ -297,9 +297,9 @@ def SPV_SConvertOp : SPV_CastOp<"SConvert",
 
 // -----
 
-def SPV_UConvertOp : SPV_CastOp<"UConvert",
-                                SPV_Integer,
-                                SPV_Integer,
+def SPIRV_UConvertOp : SPIRV_CastOp<"UConvert",
+                                SPIRV_Integer,
+                                SPIRV_Integer,
                                 [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = [{
     Convert unsigned width. This is either a truncate or a zero extend.
@@ -332,7 +332,7 @@ def SPV_UConvertOp : SPV_CastOp<"UConvert",
 }
 
 // -----
-def SPV_PtrCastToGenericOp : SPV_Op<"PtrCastToGeneric", [NoSideEffect]> {
+def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [NoSideEffect]> {
   let summary = "Convert a pointer’s Storage Class to Generic.";
 
   let description = [{
@@ -348,24 +348,24 @@ def SPV_PtrCastToGenericOp : SPV_Op<"PtrCastToGeneric", [NoSideEffect]> {
     #### Example:
 
     ```mlir
-    %1 = spirv.PtrCastToGenericOp %0 : !spirv.ptr<f32, CrossWorkGroup> to 
+    %1 = spirv.PtrCastToGenericOp %0 : !spirv.ptr<f32, CrossWorkGroup> to
          !spirv.ptr<f32, Generic>
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Kernel]>
+    Capability<[SPIRV_C_Kernel]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer
+    SPIRV_AnyPtr:$pointer
   );
 
   let results = (outs
-    SPV_AnyPtr:$result
+    SPIRV_AnyPtr:$result
   );
 
   let assemblyFormat = [{
@@ -375,7 +375,7 @@ def SPV_PtrCastToGenericOp : SPV_Op<"PtrCastToGeneric", [NoSideEffect]> {
 
 // -----
 
-def SPV_GenericCastToPtrOp : SPV_Op<"GenericCastToPtr", [NoSideEffect]> {
+def SPIRV_GenericCastToPtrOp : SPIRV_Op<"GenericCastToPtr", [NoSideEffect]> {
   let summary = "Convert a pointer’s Storage Class to a non-Generic class.";
 
   let description = [{
@@ -397,18 +397,18 @@ def SPV_GenericCastToPtrOp : SPV_Op<"GenericCastToPtr", [NoSideEffect]> {
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Kernel]>
+    Capability<[SPIRV_C_Kernel]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer
+    SPIRV_AnyPtr:$pointer
   );
 
   let results = (outs
-    SPV_AnyPtr:$result
+    SPIRV_AnyPtr:$result
   );
 
   let assemblyFormat = [{
@@ -418,7 +418,7 @@ def SPV_GenericCastToPtrOp : SPV_Op<"GenericCastToPtr", [NoSideEffect]> {
 
 // -----
 
-def SPV_GenericCastToPtrExplicitOp : SPV_Op<"GenericCastToPtrExplicit", [NoSideEffect]> {
+def SPIRV_GenericCastToPtrExplicitOp : SPIRV_Op<"GenericCastToPtrExplicit", [NoSideEffect]> {
   let summary = [{
     Attempts to explicitly convert Pointer to Storage storage-class pointer
     value.
@@ -450,18 +450,18 @@ def SPV_GenericCastToPtrExplicitOp : SPV_Op<"GenericCastToPtrExplicit", [NoSideE
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Kernel]>
+    Capability<[SPIRV_C_Kernel]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer
+    SPIRV_AnyPtr:$pointer
   );
 
   let results = (outs
-    SPV_AnyPtr:$result
+    SPIRV_AnyPtr:$result
   );
 
   let assemblyFormat = [{
