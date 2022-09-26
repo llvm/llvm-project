@@ -2,10 +2,10 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
-load("//llvm:template_rule.bzl", "template_rule")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -1949,13 +1949,13 @@ cc_binary(
     ],
 )
 
-template_rule(
+expand_template(
     name = "clang_main",
-    src = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
     out = "clang-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "clang",
     },
+    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_library(
