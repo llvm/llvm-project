@@ -1172,8 +1172,8 @@ bool GotPltSection::isNeeded() const {
 }
 
 TableJumpSection::TableJumpSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       config->wordsize, "__tbljalvec_base$") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, config->wordsize,
+                       "__tbljalvec_base$") {}
 
 void TableJumpSection::addCMJTEntryCandidate(const Symbol &symbol) {
   addEntry(symbol, CMJTEntryCandidates);

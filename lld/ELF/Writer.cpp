@@ -458,9 +458,10 @@ template <class ELFT> void elf::createSyntheticSections() {
     in.riscvTableJumpSection = std::make_unique<TableJumpSection>();
     add(*in.riscvTableJumpSection);
 
-    symtab->addSymbol(Defined{
-        /*file=*/nullptr, "__tbljalvec_base$", STB_GLOBAL, STT_NOTYPE, STT_NOTYPE,
-        /*value=*/0, /*size=*/0, in.riscvTableJumpSection.get()});
+    symtab->addSymbol(Defined{/*file=*/nullptr, "__tbljalvec_base$", STB_GLOBAL,
+                              STT_NOTYPE, STT_NOTYPE,
+                              /*value=*/0, /*size=*/0,
+                              in.riscvTableJumpSection.get()});
   }
 
   in.gotPlt = std::make_unique<GotPltSection>();

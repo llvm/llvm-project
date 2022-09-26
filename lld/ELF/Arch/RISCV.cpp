@@ -634,8 +634,8 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
 
     if (tblEntryIndex >= 0) {
       sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
-      sec.relaxAux->writes.push_back(
-            0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
+      sec.relaxAux->writes.push_back(0xa002 |
+                                     (tblEntryIndex << 2)); // cm.jt or cm.jalt
       remove = 6;
     } else if (isInt<21>(displace)) {
       sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
