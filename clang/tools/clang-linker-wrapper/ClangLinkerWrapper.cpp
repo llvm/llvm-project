@@ -295,8 +295,10 @@ Expected<StringRef> assemble(StringRef InputFile, const ArgList &Args,
   CmdArgs.push_back(Args.MakeArgString("-" + OptLevel));
   CmdArgs.push_back("--gpu-name");
   CmdArgs.push_back(Arch);
-  if (Args.hasArg(OPT_debug))
+  if (Args.hasArg(OPT_debug) && OptLevel[1] == '0')
     CmdArgs.push_back("-g");
+  else if (Args.hasArg(OPT_debug))
+    CmdArgs.push_back("-lineinfo");
   if (RDC)
     CmdArgs.push_back("-c");
 
