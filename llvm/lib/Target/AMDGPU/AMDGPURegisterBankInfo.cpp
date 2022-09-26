@@ -3749,28 +3749,43 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UBFX:
     if (isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
-    [[fallthrough]];
-
+    return getDefaultMappingVOP(MI);
   case AMDGPU::G_FADD:
   case AMDGPU::G_FSUB:
-  case AMDGPU::G_FPTOSI:
-  case AMDGPU::G_FPTOUI:
   case AMDGPU::G_FMUL:
   case AMDGPU::G_FMA:
   case AMDGPU::G_FFLOOR:
   case AMDGPU::G_FCEIL:
   case AMDGPU::G_FRINT:
-  case AMDGPU::G_SITOFP:
-  case AMDGPU::G_UITOFP:
-  case AMDGPU::G_FPTRUNC:
-  case AMDGPU::G_FPEXT:
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
-  case AMDGPU::G_INTRINSIC_TRUNC:
-    if (Subtarget.hasSALUFloatInsts() && isSALUMapping(MI))
+  case AMDGPU::G_INTRINSIC_TRUNC: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    if (Subtarget.hasSALUFloatInsts() && (Size == 32 || Size == 16) &&
+        isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
-    LLVM_FALLTHROUGH;
-
+    return getDefaultMappingVOP(MI);
+  }
+  case AMDGPU::G_FPTOSI:
+  case AMDGPU::G_FPTOUI:
+  case AMDGPU::G_SITOFP:
+  case AMDGPU::G_UITOFP: {
+    unsigned SizeDst = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    unsigned SizeSrc = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    if (Subtarget.hasSALUFloatInsts() && SizeDst == 32 && SizeSrc == 32 &&
+        isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  }
+  case AMDGPU::G_FPTRUNC:
+  case AMDGPU::G_FPEXT: {
+    unsigned SizeDst = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    unsigned SizeSrc = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    if (Subtarget.hasSALUFloatInsts() && SizeDst != 64 && SizeSrc != 64 &&
+        isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  }
   case AMDGPU::G_SADDSAT: // FIXME: Could lower sat ops for SALU
   case AMDGPU::G_SSUBSAT:
   case AMDGPU::G_UADDSAT:
