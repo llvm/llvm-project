@@ -139,7 +139,7 @@ struct CheckedInt {
   template <typename Enum,
             typename std::enable_if_t<std::is_enum<Enum>::value, bool> = 0>
   static CheckedInt from(Enum FromValue) {
-    using type = typename std::underlying_type<Enum>::type;
+    using type = std::underlying_type_t<Enum>;
     return from<type>(static_cast<type>(FromValue));
   }
 
@@ -175,7 +175,7 @@ struct CheckedInt {
   template <typename Enum,
             typename std::enable_if_t<std::is_enum<Enum>::value, bool> = 0>
   Enum to() const {
-    using type = typename std::underlying_type<Enum>::type;
+    using type = std::underlying_type_t<Enum>;
     return Enum(to<type>());
   }
 
