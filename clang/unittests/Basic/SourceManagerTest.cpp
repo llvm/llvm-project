@@ -171,6 +171,83 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(idLoc, macroExpEndLoc));
 }
 
+TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
+  const char *main = R"cpp(
+    #define ID(X) X
+    ID(
+      ID(a >> b)
+      c
+    )
+  )cpp";
+
+  SourceMgr.setMainFileID(
+      SourceMgr.createFileID(llvm::MemoryBuffer::getMemBuffer(main)));
+
+  TrivialModuleLoader ModLoader;
+  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                          Diags, LangOpts, &*Target);
+  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                  SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr,
+                  /*OwnsHeaderSearch =*/false);
+  PP.Initialize(*Target);
+  PP.EnterMainSourceFile();
+  llvm::SmallString<8> Scratch;
+
+  std::vector<Token> toks;
+  while (1) {
+    Token tok;
+    PP.Lex(tok);
+    if (tok.is(tok::eof))
+      break;
+    toks.push_back(tok);
+  }
+
+  // Make sure we got the tokens that we expected.
+  ASSERT_EQ(4U, toks.size()) << "a >> b c";
+  // Sanity check their order.
+  for (unsigned I = 0; I < toks.size() - 1; ++I) {
+    EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(toks[I].getLocation(),
+                                                    toks[I + 1].getLocation()));
+    EXPECT_FALSE(SourceMgr.isBeforeInTranslationUnit(toks[I + 1].getLocation(),
+                                                     toks[I].getLocation()));
+  }
+
+  // Split the >> into two > tokens, as happens when parsing nested templates.
+  unsigned RightShiftIndex = 1;
+  SourceLocation RightShift = toks[RightShiftIndex].getLocation();
+  EXPECT_EQ(">>", Lexer::getSpelling(SourceMgr.getSpellingLoc(RightShift),
+                                     Scratch, SourceMgr, LangOpts));
+  SourceLocation Greater1 = PP.SplitToken(RightShift, /*Length=*/1);
+  SourceLocation Greater2 = RightShift.getLocWithOffset(1);
+  EXPECT_TRUE(Greater1.isMacroID());
+  EXPECT_EQ(">", Lexer::getSpelling(SourceMgr.getSpellingLoc(Greater1), Scratch,
+                                    SourceMgr, LangOpts));
+  EXPECT_EQ(">", Lexer::getSpelling(SourceMgr.getSpellingLoc(Greater2), Scratch,
+                                    SourceMgr, LangOpts));
+  EXPECT_EQ(SourceMgr.getImmediateExpansionRange(Greater1).getBegin(),
+            RightShift);
+
+  for (unsigned I = 0; I < toks.size(); ++I) {
+    SCOPED_TRACE("Token " + std::to_string(I));
+    // Right-shift is the parent of Greater1, so it compares less.
+    EXPECT_EQ(
+        SourceMgr.isBeforeInTranslationUnit(toks[I].getLocation(), Greater1),
+        I <= RightShiftIndex);
+    EXPECT_EQ(
+        SourceMgr.isBeforeInTranslationUnit(toks[I].getLocation(), Greater2),
+        I <= RightShiftIndex);
+    EXPECT_EQ(
+        SourceMgr.isBeforeInTranslationUnit(Greater1, toks[I].getLocation()),
+        RightShiftIndex < I);
+    EXPECT_EQ(
+        SourceMgr.isBeforeInTranslationUnit(Greater2, toks[I].getLocation()),
+        RightShiftIndex < I);
+  }
+  EXPECT_TRUE(SourceMgr.isBeforeInTranslationUnit(Greater1, Greater2));
+  EXPECT_FALSE(SourceMgr.isBeforeInTranslationUnit(Greater2, Greater1));
+}
+
 TEST_F(SourceManagerTest, getColumnNumber) {
   const char *Source =
     "int x;\n"

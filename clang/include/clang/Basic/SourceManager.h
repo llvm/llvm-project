@@ -542,10 +542,10 @@ class InBeforeInTUCacheEntry {
   /// If these match up with a subsequent query, the result can be reused.
   FileID LQueryFID, RQueryFID;
 
-  /// True if LQueryFID was created before RQueryFID.
+  /// The relative order of FileIDs that the CommonFID *immediately* includes.
   ///
   /// This is used to compare macro expansion locations.
-  bool IsLQFIDBeforeRQFID;
+  bool LChildBeforeRChild;
 
   /// The file found in common between the two \#include traces, i.e.,
   /// the nearest common ancestor of the \#include tree.
@@ -559,12 +559,17 @@ class InBeforeInTUCacheEntry {
   unsigned LCommonOffset, RCommonOffset;
 
 public:
+  InBeforeInTUCacheEntry() = default;
+  InBeforeInTUCacheEntry(FileID L, FileID R) : LQueryFID(L), RQueryFID(R) {
+    assert(L != R);
+  }
+
   /// Return true if the currently cached values match up with
   /// the specified LHS/RHS query.
   ///
   /// If not, we can't use the cache.
-  bool isCacheValid(FileID LHS, FileID RHS) const {
-    return LQueryFID == LHS && RQueryFID == RHS;
+  bool isCacheValid() const {
+    return CommonFID.isValid();
   }
 
   /// If the cache is valid, compute the result given the
@@ -581,29 +586,28 @@ public:
     // one of the locations points at the inclusion/expansion point of the other
     // in which case its FileID will come before the other.
     if (LOffset == ROffset)
-      return IsLQFIDBeforeRQFID;
+      return LChildBeforeRChild;
 
     return LOffset < ROffset;
   }
 
   /// Set up a new query.
-  void setQueryFIDs(FileID LHS, FileID RHS, bool isLFIDBeforeRFID) {
+  /// If it matches the old query, we can keep the cached answer.
+  void setQueryFIDs(FileID LHS, FileID RHS) {
     assert(LHS != RHS);
-    LQueryFID = LHS;
-    RQueryFID = RHS;
-    IsLQFIDBeforeRQFID = isLFIDBeforeRFID;
-  }
-
-  void clear() {
-    LQueryFID = RQueryFID = FileID();
-    IsLQFIDBeforeRQFID = false;
+    if (LQueryFID != LHS || RQueryFID != RHS) {
+      LQueryFID = LHS;
+      RQueryFID = RHS;
+      CommonFID = FileID();
+    }
   }
 
   void setCommonLoc(FileID commonFID, unsigned lCommonOffset,
-                    unsigned rCommonOffset) {
+                    unsigned rCommonOffset, bool LParentBeforeRParent) {
     CommonFID = commonFID;
     LCommonOffset = lCommonOffset;
     RCommonOffset = rCommonOffset;
+    LChildBeforeRChild = LParentBeforeRParent;
   }
 };
 
