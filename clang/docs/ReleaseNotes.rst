@@ -212,6 +212,11 @@ Improvements to Clang's diagnostics
   of FAM-like arrays.
 - Clang now correctly diagnoses a warning when defercencing a void pointer in C mode.
   This fixes `Issue 53631 <https://github.com/llvm/llvm-project/issues/53631>`_
+- Clang will now diagnose an overload set where a candidate has a constraint that
+  refers to an expression with a previous error as nothing viable, so that it
+  doesn't generate strange cascading errors, particularly in cases where a
+  subsuming constraint fails, which would result in a less-specific overload to
+  be selected.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
