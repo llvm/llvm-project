@@ -1465,7 +1465,6 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
   } // AssemblerPredicate = Gen.AssemblerPredicate
 }
 
-// TODO: Use #Gen.Suffix or no?
 multiclass VOPC_Real_t16<GFXGen Gen, bits<9> op, string asm_name,
                          string OpName = NAME, string pseudo_mnemonic = ""> :
   VOPC_Real_with_name<Gen, op, OpName, asm_name, pseudo_mnemonic>;

@@ -1404,7 +1404,7 @@ multiclass VOP2_Real_NO_VOP3_with_name<GFXGen Gen, bits<6> op, string opName,
               VOP2_Real_dpp_with_name<Gen, op, opName, asmName>,
               VOP2_Real_dpp8_with_name<Gen, op, opName, asmName>;
   defvar ps = !cast<VOP2_Pseudo>(opName#"_e32");
-  def Gen.Suffix#"_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>; // TODO: update
+  def Gen.Suffix#"_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>;
 }
 
 multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
@@ -1436,6 +1436,12 @@ multiclass VOP2_Real_FULL_with_name_gfx12<bits<6> op, string opName,
                                          string asmName> :
   VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
 
+multiclass VOP2_Real_FULL_t16_with_name_gfx12<bits<6> op, string opName,
+                                              string asmName, string alias> {
+  defm NAME : VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
+  def _gfx12_2nd_alias : MnemonicAlias<alias, asmName>, Requires<[isGFX12Only]>;
+}
+
 defm V_CNDMASK_B32 : VOP2e_Real_gfx12<0x001, "V_CNDMASK_B32", "v_cndmask_b32">;
 defm V_ADD_CO_CI_U32 :
   VOP2be_Real_gfx12<0x020, "V_ADDC_U32", "v_add_co_ci_u32">;
@@ -1446,8 +1452,8 @@ defm V_SUBREV_CO_CI_U32 :
 
 defm V_MIN_NUM_F32 : VOP2_Real_FULL_with_name_gfx12<0x015, "V_MIN_F32", "v_min_num_f32">;
 defm V_MAX_NUM_F32 : VOP2_Real_FULL_with_name_gfx12<0x016, "V_MAX_F32", "v_max_num_f32">;
-defm V_MIN_NUM_F16 : VOP2_Real_FULL_with_name_gfx12<0x030, "V_MIN_F16", "v_min_num_f16">;
-defm V_MAX_NUM_F16 : VOP2_Real_FULL_with_name_gfx12<0x031, "V_MAX_F16", "v_max_num_f16">;
+defm V_MIN_NUM_F16 : VOP2_Real_FULL_t16_with_name_gfx12<0x030, "V_MIN_F16_t16", "v_min_num_f16", "v_min_f16">;
+defm V_MAX_NUM_F16 : VOP2_Real_FULL_t16_with_name_gfx12<0x031, "V_MAX_F16_t16", "v_max_num_f16", "v_max_f16">;
 
 let SubtargetPredicate = isGFX12Plus in {
   defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_gfx12>;
@@ -1510,6 +1516,10 @@ multiclass VOP2Only_Real_MADK_with_name_gfx11_gfx12<bits<6> op, string asmName,
   VOP2Only_Real_MADK_with_name<GFX11Gen, op, asmName, opName>,
   VOP2Only_Real_MADK_with_name<GFX12Gen, op, asmName, opName>;
 
+multiclass VOP2_Real_FULL_t16_gfx11<bits<6> op, string asmName,
+                                    string opName = NAME> :
+  VOP2_Real_FULL_with_name<GFX11Gen, op, opName, asmName>;
+
 multiclass VOP2_Real_FULL_t16_gfx11_gfx12<bits<6> op, string asmName,
                                           string opName = NAME> :
   VOP2_Real_FULL_with_name_gfx11_gfx12<op, opName, asmName>;
@@ -1545,8 +1555,8 @@ defm V_SUBREV_F16_t16      : VOP2_Real_FULL_t16_gfx11_gfx12<0x034, "v_subrev_f16
 defm V_MUL_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x035, "v_mul_f16">;
 defm V_FMAC_F16_t16        : VOP2_Real_FULL_t16_gfx11_gfx12<0x036, "v_fmac_f16">;
 defm V_LDEXP_F16_t16       : VOP2_Real_FULL_t16_gfx11_gfx12<0x03b, "v_ldexp_f16">;
-defm V_MAX_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x039, "v_max_f16">;
-defm V_MIN_F16_t16         : VOP2_Real_FULL_t16_gfx11_gfx12<0x03a, "v_min_f16">;
+defm V_MAX_F16_t16         : VOP2_Real_FULL_t16_gfx11<0x039, "v_max_f16">;
+defm V_MIN_F16_t16         : VOP2_Real_FULL_t16_gfx11<0x03a, "v_min_f16">;
 defm V_FMAMK_F16_t16       : VOP2Only_Real_MADK_with_name_gfx11_gfx12<0x037, "v_fmamk_f16">;
 defm V_FMAAK_F16_t16       : VOP2Only_Real_MADK_with_name_gfx11_gfx12<0x038, "v_fmaak_f16">;
 
