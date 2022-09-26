@@ -73,28 +73,29 @@ define amdgpu_ps float @else2(i32 %z, float %v) #0 {
   ; SI-NEXT: bb.1.Flow:
   ; SI-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI undef %15:vgpr_32, %bb.0, %4, %bb.3
+  ; SI-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI undef %16:vgpr_32, %bb.0, %5, %bb.3
+  ; SI-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI undef %16:vgpr_32, %bb.0, [[COPY]], %bb.3
   ; SI-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32 = SI_ELSE killed [[SI_IF]], %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.2
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.2.if:
   ; SI-NEXT:   successors: %bb.4(0x80000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   %3:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; SI-NEXT:   %4:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.4
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.3.else:
   ; SI-NEXT:   successors: %bb.1(0x80000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   %4:vgpr_32 = nofpexcept V_MUL_F32_e64 0, 1077936128, 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+  ; SI-NEXT:   %5:vgpr_32 = nofpexcept V_MUL_F32_e64 0, 1077936128, 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.1
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4.end:
-  ; SI-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.1, %3, %bb.2
-  ; SI-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, %3, %bb.2
+  ; SI-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[PHI1]], %bb.1, %4, %bb.2
+  ; SI-NEXT:   [[PHI3:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, %4, %bb.2
   ; SI-NEXT:   SI_END_CF killed [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; SI-NEXT:   %14:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[PHI1]], 0, killed [[PHI2]], 0, 0, implicit $mode, implicit $exec
-  ; SI-NEXT:   $vgpr0 = COPY killed %14
+  ; SI-NEXT:   %15:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[PHI2]], 0, killed [[PHI3]], 0, 0, implicit $mode, implicit $exec
+  ; SI-NEXT:   $vgpr0 = COPY killed %15
   ; SI-NEXT:   SI_RETURN_TO_EPILOG killed $vgpr0
 main_body:
   %cc = icmp sgt i32 %z, 5

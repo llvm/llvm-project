@@ -679,6 +679,9 @@ void StructurizeCFG::simplifyAffectedPhis() {
     Changed = false;
     SimplifyQuery Q(Func->getParent()->getDataLayout());
     Q.DT = DT;
+    // Setting CanUseUndef to true might extend value liveness, set it to false
+    // to achieve better register pressure.
+    Q.CanUseUndef = false;
     for (WeakVH VH : AffectedPhis) {
       if (auto Phi = dyn_cast_or_null<PHINode>(VH)) {
         if (auto NewValue = simplifyInstruction(Phi, Q)) {
