@@ -130,9 +130,9 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
 
     // In the combined module, rename all symbols that conflict with symbols
     // from the current input module. This renaming applies to all ops except
-    // for spv.funcs. This way, if the conflicting op in the input module is
-    // non-spv.func, we rename that symbol instead and maintain the spv.func in
-    // the combined module name as it is.
+    // for spirv.funcs. This way, if the conflicting op in the input module is
+    // non-spirv.func, we rename that symbol instead and maintain the spirv.func
+    // in the combined module name as it is.
     for (auto &op : *combinedModule.getBody()) {
       auto symbolOp = dyn_cast<SymbolOpInterface>(op);
       if (!symbolOp)
@@ -169,7 +169,7 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
     }
 
     // In the current input module, rename all symbols that conflict with
-    // symbols from the combined module. This includes renaming spv.funcs.
+    // symbols from the combined module. This includes renaming spirv.funcs.
     for (auto &op : *moduleClone->getBody()) {
       auto symbolOp = dyn_cast<SymbolOpInterface>(op);
       if (!symbolOp)

@@ -74,7 +74,7 @@ namespace {
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// spv.AccessChainOp
+// spirv.AccessChainOp
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -113,7 +113,7 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// spv.BitcastOp
+// spirv.BitcastOp
 //===----------------------------------------------------------------------===//
 
 void spirv::BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -122,7 +122,7 @@ void spirv::BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
-// spv.CompositeExtractOp
+// spirv.CompositeExtractOp
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::CompositeExtractOp::fold(ArrayRef<Attribute> operands) {
@@ -150,20 +150,20 @@ OpFoldResult spirv::CompositeExtractOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.Constant
+// spirv.Constant
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::ConstantOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "spv.Constant has no operands");
+  assert(operands.empty() && "spirv.Constant has no operands");
   return getValue();
 }
 
 //===----------------------------------------------------------------------===//
-// spv.IAdd
+// spirv.IAdd
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::IAddOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "spv.IAdd expects two operands");
+  assert(operands.size() == 2 && "spirv.IAdd expects two operands");
   // x + 0 = x
   if (matchPattern(getOperand2(), m_Zero()))
     return getOperand1();
@@ -178,11 +178,11 @@ OpFoldResult spirv::IAddOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.IMul
+// spirv.IMul
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::IMulOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "spv.IMul expects two operands");
+  assert(operands.size() == 2 && "spirv.IMul expects two operands");
   // x * 0 == 0
   if (matchPattern(getOperand2(), m_Zero()))
     return getOperand2();
@@ -200,7 +200,7 @@ OpFoldResult spirv::IMulOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.ISub
+// spirv.ISub
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::ISubOp::fold(ArrayRef<Attribute> operands) {
@@ -218,11 +218,11 @@ OpFoldResult spirv::ISubOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.LogicalAnd
+// spirv.LogicalAnd
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::LogicalAndOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "spv.LogicalAnd should take two operands");
+  assert(operands.size() == 2 && "spirv.LogicalAnd should take two operands");
 
   if (Optional<bool> rhs = getScalarOrSplatBoolAttr(operands.back())) {
     // x && true = x
@@ -238,7 +238,7 @@ OpFoldResult spirv::LogicalAndOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.LogicalNot
+// spirv.LogicalNot
 //===----------------------------------------------------------------------===//
 
 void spirv::LogicalNotOp::getCanonicalizationPatterns(
@@ -250,11 +250,11 @@ void spirv::LogicalNotOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// spv.LogicalOr
+// spirv.LogicalOr
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::LogicalOrOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 2 && "spv.LogicalOr should take two operands");
+  assert(operands.size() == 2 && "spirv.LogicalOr should take two operands");
 
   if (auto rhs = getScalarOrSplatBoolAttr(operands.back())) {
     if (rhs.value())
@@ -270,16 +270,16 @@ OpFoldResult spirv::LogicalOrOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.mlir.selection
+// spirv.mlir.selection
 //===----------------------------------------------------------------------===//
 
 namespace {
-// Blocks from the given `spv.mlir.selection` operation must satisfy the
+// Blocks from the given `spirv.mlir.selection` operation must satisfy the
 // following layout:
 //
 //       +-----------------------------------------------+
 //       | header block                                  |
-//       | spv.BranchConditionalOp %cond, ^case0, ^case1 |
+//       | spirv.BranchConditionalOp %cond, ^case0, ^case1 |
 //       +-----------------------------------------------+
 //                            /   \
 //                             ...
@@ -287,8 +287,8 @@ namespace {
 //
 //   +------------------------+    +------------------------+
 //   | case #0                |    | case #1                |
-//   | spv.Store %ptr %value0 |    | spv.Store %ptr %value1 |
-//   | spv.Branch ^merge      |    | spv.Branch ^merge      |
+//   | spirv.Store %ptr %value0 |    | spirv.Store %ptr %value1 |
+//   | spirv.Branch ^merge      |    | spirv.Branch ^merge      |
 //   +------------------------+    +------------------------+
 //
 //
@@ -307,7 +307,7 @@ struct ConvertSelectionOpToSelect
                                 PatternRewriter &rewriter) const override {
     auto *op = selectionOp.getOperation();
     auto &body = op->getRegion(0);
-    // Verifier allows an empty region for `spv.mlir.selection`.
+    // Verifier allows an empty region for `spirv.mlir.selection`.
     if (body.empty()) {
       return failure();
     }
@@ -345,7 +345,7 @@ struct ConvertSelectionOpToSelect
     rewriter.create<spirv::StoreOp>(selectOp.getLoc(), ptrValue,
                                     selectOp.getResult(), storeOpAttributes);
 
-    // `spv.mlir.selection` is not needed anymore.
+    // `spirv.mlir.selection` is not needed anymore.
     rewriter.eraseOp(op);
     return success();
   }
@@ -353,8 +353,8 @@ struct ConvertSelectionOpToSelect
 private:
   // Checks that given blocks follow the following rules:
   // 1. Each conditional block consists of two operations, the first operation
-  //    is a `spv.Store` and the last operation is a `spv.Branch`.
-  // 2. Each `spv.Store` uses the same pointer and the same memory attributes.
+  //    is a `spirv.Store` and the last operation is a `spirv.Branch`.
+  // 2. Each `spirv.Store` uses the same pointer and the same memory attributes.
   // 3. A control flow goes into the given merge block from the given
   //    conditional blocks.
   LogicalResult canCanonicalizeSelection(Block *trueBlock, Block *falseBlock,
@@ -402,7 +402,7 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
     return failure();
   }
 
-  // Checks that given type is valid for `spv.SelectOp`.
+  // Checks that given type is valid for `spirv.SelectOp`.
   // According to SPIR-V spec:
   // "Before version 1.4, Result Type must be a pointer, scalar, or vector.
   // Starting with version 1.4, Result Type can additionally be a composite type
@@ -412,7 +412,7 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
                               .cast<spirv::SPIRVType>()
                               .isScalarOrVector();
 
-  // Check that each `spv.Store` uses the same pointer, memory access
+  // Check that each `spirv.Store` uses the same pointer, memory access
   // attributes and a valid type of the value.
   if ((trueBrStoreOp.getPtr() != falseBrStoreOp.getPtr()) ||
       !isSameAttrList(trueBrStoreOp, falseBrStoreOp) || !isScalarOrVector) {

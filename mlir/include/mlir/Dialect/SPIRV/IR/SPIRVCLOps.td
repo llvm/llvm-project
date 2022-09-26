@@ -131,15 +131,15 @@ def SPV_CLCeilOp : SPV_CLUnaryArithmeticOp<"ceil", 12, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    ceil-op ::= ssa-id `=` `spv.CL.ceil` ssa-use `:`
+    ceil-op ::= ssa-id `=` `spirv.CL.ceil` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.ceil %0 : f32
-    %3 = spv.CL.ceil %1 : vector<3xf16>
+    %2 = spirv.CL.ceil %0 : f32
+    %3 = spirv.CL.ceil %1 : vector<3xf16>
     ```
   }];
 }
@@ -161,15 +161,15 @@ def SPV_CLCosOp : SPV_CLUnaryArithmeticOp<"cos", 14, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    cos-op ::= ssa-id `=` `spv.CL.cos` ssa-use `:`
+    cos-op ::= ssa-id `=` `spirv.CL.cos` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.cos %0 : f32
-    %3 = spv.CL.cos %1 : vector<3xf16>
+    %2 = spirv.CL.cos %0 : f32
+    %3 = spirv.CL.cos %1 : vector<3xf16>
     ```
   }];
 }
@@ -193,15 +193,15 @@ def SPV_CLErfOp : SPV_CLUnaryArithmeticOp<"erf", 18, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    erf-op ::= ssa-id `=` `spv.CL.erf` ssa-use `:`
+    erf-op ::= ssa-id `=` `spirv.CL.erf` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.erf %0 : f32
-    %3 = spv.CL.erf %1 : vector<3xf16>
+    %2 = spirv.CL.erf %0 : f32
+    %3 = spirv.CL.erf %1 : vector<3xf16>
     ```
   }];
 }
@@ -224,14 +224,14 @@ def SPV_CLExpOp : SPV_CLUnaryArithmeticOp<"exp", 19, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    exp-op ::= ssa-id `=` `spv.CL.exp` ssa-use `:`
+    exp-op ::= ssa-id `=` `spirv.CL.exp` ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.CL.exp %0 : f32
-    %3 = spv.CL.exp %1 : vector<3xf16>
+    %2 = spirv.CL.exp %0 : f32
+    %3 = spirv.CL.exp %1 : vector<3xf16>
     ```
   }];
 }
@@ -254,14 +254,14 @@ def SPV_CLFAbsOp : SPV_CLUnaryArithmeticOp<"fabs", 23, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    abs-op ::= ssa-id `=` `spv.CL.fabs` ssa-use `:`
+    abs-op ::= ssa-id `=` `spirv.CL.fabs` ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.CL.fabs %0 : f32
-    %3 = spv.CL.fabs %1 : vector<3xf16>
+    %2 = spirv.CL.fabs %0 : f32
+    %3 = spirv.CL.fabs %1 : vector<3xf16>
     ```
   }];
 }
@@ -286,15 +286,15 @@ def SPV_CLFloorOp : SPV_CLUnaryArithmeticOp<"floor", 25, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spv.CL.floor` ssa-use `:`
+    floor-op ::= ssa-id `=` `spirv.CL.floor` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.floor %0 : f32
-    %3 = spv.CL.ceifloorl %1 : vector<3xf16>
+    %2 = spirv.CL.floor %0 : f32
+    %3 = spirv.CL.ceifloorl %1 : vector<3xf16>
     ```
   }];
 }
@@ -319,13 +319,13 @@ def SPV_CLFmaOp : SPV_CLTernaryArithmeticOp<"fma", 26, SPV_Float> {
     <!-- End of AutoGen section -->
 
     ```
-    fma-op ::= ssa-id `=` `spv.CL.fma` ssa-use, ssa-use, ssa-use `:`
+    fma-op ::= ssa-id `=` `spirv.CL.fma` ssa-use, ssa-use, ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     ```
-    %0 = spv.CL.fma %a, %b, %c : f32
-    %1 = spv.CL.fma %a, %b, %c : vector<3xf16>
+    %0 = spirv.CL.fma %a, %b, %c : f32
+    %1 = spirv.CL.fma %a, %b, %c : vector<3xf16>
     ```
   }];
 }
@@ -349,14 +349,14 @@ def SPV_CLFMaxOp : SPV_CLBinaryArithmeticOp<"fmax", 27, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmax-op ::= ssa-id `=` `spv.CL.fmax` ssa-use `:`
+    fmax-op ::= ssa-id `=` `spirv.CL.fmax` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.CL.fmax %0, %1 : f32
-    %3 = spv.CL.fmax %0, %1 : vector<3xf16>
+    %2 = spirv.CL.fmax %0, %1 : f32
+    %3 = spirv.CL.fmax %0, %1 : vector<3xf16>
     ```
   }];
 }
@@ -379,14 +379,14 @@ def SPV_CLFMinOp : SPV_CLBinaryArithmeticOp<"fmin", 28, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmin-op ::= ssa-id `=` `spv.CL.fmin` ssa-use `:`
+    fmin-op ::= ssa-id `=` `spirv.CL.fmin` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.CL.fmin %0, %1 : f32
-    %3 = spv.CL.fmin %0, %1 : vector<3xf16>
+    %2 = spirv.CL.fmin %0, %1 : f32
+    %3 = spirv.CL.fmin %0, %1 : vector<3xf16>
     ```
   }];
 }
@@ -408,15 +408,15 @@ def SPV_CLLogOp : SPV_CLUnaryArithmeticOp<"log", 37, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    log-op ::= ssa-id `=` `spv.CL.log` ssa-use `:`
+    log-op ::= ssa-id `=` `spirv.CL.log` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.log %0 : f32
-    %3 = spv.CL.log %1 : vector<3xf16>
+    %2 = spirv.CL.log %0 : f32
+    %3 = spirv.CL.log %1 : vector<3xf16>
     ```
   }];
 }
@@ -440,14 +440,14 @@ def SPV_CLPowOp : SPV_CLBinaryArithmeticOp<"pow", 48, SPV_Float> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    pow-op ::= ssa-id `=` `spv.CL.pow` ssa-use `:`
+    pow-op ::= ssa-id `=` `spirv.CL.pow` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.CL.pow %0, %1 : f32
-    %3 = spv.CL.pow %0, %1 : vector<3xf16>
+    %2 = spirv.CL.pow %0, %1 : f32
+    %3 = spirv.CL.pow %0, %1 : vector<3xf16>
     ```
   }];
 }
@@ -472,14 +472,14 @@ def SPV_CLRoundOp : SPV_CLUnaryArithmeticOp<"round", 55, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    round-op ::= ssa-id `=` `spv.CL.round` ssa-use `:`
+    round-op ::= ssa-id `=` `spirv.CL.round` ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.CL.round %0 : f32
-    %3 = spv.CL.round %0 : vector<3xf16>
+    %2 = spirv.CL.round %0 : f32
+    %3 = spirv.CL.round %0 : vector<3xf16>
     ```
   }];
 }
@@ -501,15 +501,15 @@ def SPV_CLRsqrtOp : SPV_CLUnaryArithmeticOp<"rsqrt", 56, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    rsqrt-op ::= ssa-id `=` `spv.CL.rsqrt` ssa-use `:`
+    rsqrt-op ::= ssa-id `=` `spirv.CL.rsqrt` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.rsqrt %0 : f32
-    %3 = spv.CL.rsqrt %1 : vector<3xf16>
+    %2 = spirv.CL.rsqrt %0 : f32
+    %3 = spirv.CL.rsqrt %1 : vector<3xf16>
     ```
   }];
 }
@@ -531,15 +531,15 @@ def SPV_CLSinOp : SPV_CLUnaryArithmeticOp<"sin", 57, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    sin-op ::= ssa-id `=` `spv.CL.sin` ssa-use `:`
+    sin-op ::= ssa-id `=` `spirv.CL.sin` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.sin %0 : f32
-    %3 = spv.CL.sin %1 : vector<3xf16>
+    %2 = spirv.CL.sin %0 : f32
+    %3 = spirv.CL.sin %1 : vector<3xf16>
     ```
   }];
 }
@@ -561,15 +561,15 @@ def SPV_CLSqrtOp : SPV_CLUnaryArithmeticOp<"sqrt", 61, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    sqrt-op ::= ssa-id `=` `spv.CL.sqrt` ssa-use `:`
+    sqrt-op ::= ssa-id `=` `spirv.CL.sqrt` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.sqrt %0 : f32
-    %3 = spv.CL.sqrt %1 : vector<3xf16>
+    %2 = spirv.CL.sqrt %0 : f32
+    %3 = spirv.CL.sqrt %1 : vector<3xf16>
     ```
   }];
 }
@@ -591,15 +591,15 @@ def SPV_CLTanhOp : SPV_CLUnaryArithmeticOp<"tanh", 63, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    tanh-op ::= ssa-id `=` `spv.CL.tanh` ssa-use `:`
+    tanh-op ::= ssa-id `=` `spirv.CL.tanh` ssa-use `:`
                float-scalar-vector-type
     ```mlir
 
     #### Example:
 
     ```
-    %2 = spv.CL.tanh %0 : f32
-    %3 = spv.CL.tanh %1 : vector<3xf16>
+    %2 = spirv.CL.tanh %0 : f32
+    %3 = spirv.CL.tanh %1 : vector<3xf16>
     ```
   }];
 }
@@ -622,14 +622,14 @@ def SPV_CLSAbsOp : SPV_CLUnaryArithmeticOp<"s_abs", 141, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    abs-op ::= ssa-id `=` `spv.CL.s_abs` ssa-use `:`
+    abs-op ::= ssa-id `=` `spirv.CL.s_abs` ssa-use `:`
                integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.CL.s_abs %0 : i32
-    %3 = spv.CL.s_abs %1 : vector<3xi16>
+    %2 = spirv.CL.s_abs %0 : i32
+    %3 = spirv.CL.s_abs %1 : vector<3xi16>
     ```
   }];
 }
@@ -650,13 +650,13 @@ def SPV_CLSMaxOp : SPV_CLBinaryArithmeticOp<"s_max", 156, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spv.CL.s_max` ssa-use `:`
+    smax-op ::= ssa-id `=` `spirv.CL.s_max` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
     ```mlir
-    %2 = spv.CL.s_max %0, %1 : i32
-    %3 = spv.CL.s_max %0, %1 : vector<3xi16>
+    %2 = spirv.CL.s_max %0, %1 : i32
+    %3 = spirv.CL.s_max %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -677,13 +677,13 @@ def SPV_CLUMaxOp : SPV_CLBinaryArithmeticOp<"u_max", 157, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    umax-op ::= ssa-id `=` `spv.CL.u_max` ssa-use `:`
+    umax-op ::= ssa-id `=` `spirv.CL.u_max` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
     ```mlir
-    %2 = spv.CL.u_max %0, %1 : i32
-    %3 = spv.CL.u_max %0, %1 : vector<3xi16>
+    %2 = spirv.CL.u_max %0, %1 : i32
+    %3 = spirv.CL.u_max %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -702,13 +702,13 @@ def SPV_CLSMinOp : SPV_CLBinaryArithmeticOp<"s_min", 158, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spv.CL.s_min` ssa-use `:`
+    smin-op ::= ssa-id `=` `spirv.CL.s_min` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
     ```mlir
-    %2 = spv.CL.s_min %0, %1 : i32
-    %3 = spv.CL.s_min %0, %1 : vector<3xi16>
+    %2 = spirv.CL.s_min %0, %1 : i32
+    %3 = spirv.CL.s_min %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -729,13 +729,13 @@ def SPV_CLUMinOp : SPV_CLBinaryArithmeticOp<"u_min", 159, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    umin-op ::= ssa-id `=` `spv.CL.u_min` ssa-use `:`
+    umin-op ::= ssa-id `=` `spirv.CL.u_min` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
     ```mlir
-    %2 = spv.CL.u_min %0, %1 : i32
-    %3 = spv.CL.u_min %0, %1 : vector<3xi16>
+    %2 = spirv.CL.u_min %0, %1 : i32
+    %3 = spirv.CL.u_min %0, %1 : vector<3xi16>
     ```
   }];
 }

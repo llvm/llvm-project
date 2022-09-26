@@ -79,15 +79,15 @@ def SPV_AtomicAndOp : SPV_AtomicUpdateWithValueOp<"AtomicAnd", []> {
     memory-semantics ::= `"None"` | `"Acquire"` | "Release"` | ...
 
     atomic-and-op ::=
-        `spv.AtomicAnd` scope memory-semantics
+        `spirv.AtomicAnd` scope memory-semantics
                         ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicAnd "Device" "None" %pointer, %value :
-                       !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicAnd "Device" "None" %pointer, %value :
+                       !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -131,7 +131,7 @@ def SPV_AtomicCompareExchangeOp : SPV_Op<"AtomicCompareExchange", []> {
 
     ```
     atomic-compare-exchange-op ::=
-        `spv.AtomicCompareExchange` scope memory-semantics memory-semantics
+        `spirv.AtomicCompareExchange` scope memory-semantics memory-semantics
                                     ssa-use `,` ssa-use `,` ssa-use
                                     `:` spv-pointer-type
     ```mlir
@@ -139,9 +139,9 @@ def SPV_AtomicCompareExchangeOp : SPV_Op<"AtomicCompareExchange", []> {
     #### Example:
 
     ```
-    %0 = spv.AtomicCompareExchange "Workgroup" "Acquire" "None"
+    %0 = spirv.AtomicCompareExchange "Workgroup" "Acquire" "None"
                                     %pointer, %value, %comparator
-                                    : !spv.ptr<i32, WorkGroup>
+                                    : !spirv.ptr<i32, WorkGroup>
     ```
   }];
 
@@ -173,7 +173,7 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
 
     ```
     atomic-compare-exchange-weak-op ::=
-        `spv.AtomicCompareExchangeWeak` scope memory-semantics memory-semantics
+        `spirv.AtomicCompareExchangeWeak` scope memory-semantics memory-semantics
                                         ssa-use `,` ssa-use `,` ssa-use
                                         `:` spv-pointer-type
     ```
@@ -181,9 +181,9 @@ def SPV_AtomicCompareExchangeWeakOp : SPV_Op<"AtomicCompareExchangeWeak", []> {
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicCompareExchangeWeak "Workgroup" "Acquire" "None"
+    %0 = spirv.AtomicCompareExchangeWeak "Workgroup" "Acquire" "None"
                                        %pointer, %value, %comparator
-                                       : !spv.ptr<i32, WorkGroup>
+                                       : !spirv.ptr<i32, WorkGroup>
     ```
   }];
 
@@ -236,15 +236,15 @@ def SPV_AtomicExchangeOp : SPV_Op<"AtomicExchange", []> {
 
      ```
     atomic-exchange-op ::=
-        `spv.AtomicCompareExchange` scope memory-semantics
+        `spirv.AtomicCompareExchange` scope memory-semantics
                                     ssa-use `,` ssa-use `:` spv-pointer-type
     ```mlir
 
     #### Example:
 
     ```
-    %0 = spv.AtomicExchange "Workgroup" "Acquire" %pointer, %value,
-                            : !spv.ptr<i32, WorkGroup>
+    %0 = spirv.AtomicExchange "Workgroup" "Acquire" %pointer, %value,
+                            : !spirv.ptr<i32, WorkGroup>
     ```
   }];
 
@@ -290,15 +290,15 @@ def SPV_EXTAtomicFAddOp : SPV_ExtVendorOp<"AtomicFAdd", []> {
 
     ```
     atomic-fadd-op ::=
-        `spv.EXT.AtomicFAdd` scope memory-semantics
+        `spirv.EXT.AtomicFAdd` scope memory-semantics
                             ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.EXT.AtomicFAdd "Device" "None" %pointer, %value :
-                           !spv.ptr<f32, StorageBuffer>
+    %0 = spirv.EXT.AtomicFAdd "Device" "None" %pointer, %value :
+                           !spirv.ptr<f32, StorageBuffer>
     ```mlir
   }];
 
@@ -349,15 +349,15 @@ def SPV_AtomicIAddOp : SPV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
 
     ```
     atomic-iadd-op ::=
-        `spv.AtomicIAdd` scope memory-semantics
+        `spirv.AtomicIAdd` scope memory-semantics
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicIAdd "Device" "None" %pointer, %value :
-                        !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicIAdd "Device" "None" %pointer, %value :
+                        !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -389,15 +389,15 @@ def SPV_AtomicIDecrementOp : SPV_AtomicUpdateOp<"AtomicIDecrement", []> {
 
     ```
     atomic-idecrement-op ::=
-        `spv.AtomicIDecrement` scope memory-semantics ssa-use
+        `spirv.AtomicIDecrement` scope memory-semantics ssa-use
                                `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicIDecrement "Device" "None" %pointer :
-                              !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicIDecrement "Device" "None" %pointer :
+                              !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -428,15 +428,15 @@ def SPV_AtomicIIncrementOp : SPV_AtomicUpdateOp<"AtomicIIncrement", []> {
 
     ```
     atomic-iincrement-op ::=
-        `spv.AtomicIIncrement` scope memory-semantics ssa-use
+        `spirv.AtomicIIncrement` scope memory-semantics ssa-use
                                `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicIncrement "Device" "None" %pointer :
-                             !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicIncrement "Device" "None" %pointer :
+                             !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -470,15 +470,15 @@ def SPV_AtomicISubOp : SPV_AtomicUpdateWithValueOp<"AtomicISub", []> {
 
     ```
     atomic-isub-op ::=
-        `spv.AtomicISub` scope memory-semantics
+        `spirv.AtomicISub` scope memory-semantics
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicISub "Device" "None" %pointer, %value :
-                        !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicISub "Device" "None" %pointer, %value :
+                        !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -511,15 +511,15 @@ def SPV_AtomicOrOp : SPV_AtomicUpdateWithValueOp<"AtomicOr", []> {
 
     ```
     atomic-or-op ::=
-        `spv.AtomicOr` scope memory-semantics
+        `spirv.AtomicOr` scope memory-semantics
                        ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicOr "Device" "None" %pointer, %value :
-                      !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicOr "Device" "None" %pointer, %value :
+                      !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -553,15 +553,15 @@ def SPV_AtomicSMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicSMax", []> {
 
     ```
     atomic-smax-op ::=
-        `spv.AtomicSMax` scope memory-semantics
+        `spirv.AtomicSMax` scope memory-semantics
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicSMax "Device" "None" %pointer, %value :
-                        !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicSMax "Device" "None" %pointer, %value :
+                        !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -595,15 +595,15 @@ def SPV_AtomicSMinOp : SPV_AtomicUpdateWithValueOp<"AtomicSMin", []> {
 
     ```
     atomic-smin-op ::=
-        `spv.AtomicSMin` scope memory-semantics
+        `spirv.AtomicSMin` scope memory-semantics
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicSMin "Device" "None" %pointer, %value :
-                        !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicSMin "Device" "None" %pointer, %value :
+                        !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -637,15 +637,15 @@ def SPV_AtomicUMaxOp : SPV_AtomicUpdateWithValueOp<"AtomicUMax", [UnsignedOp]> {
 
     ```
     atomic-umax-op ::=
-        `spv.AtomicUMax` scope memory-semantics
+        `spirv.AtomicUMax` scope memory-semantics
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicUMax "Device" "None" %pointer, %value :
-                        !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicUMax "Device" "None" %pointer, %value :
+                        !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -679,15 +679,15 @@ def SPV_AtomicUMinOp : SPV_AtomicUpdateWithValueOp<"AtomicUMin", [UnsignedOp]> {
 
     ```
     atomic-umin-op ::=
-        `spv.AtomicUMin` scope memory-semantics
+        `spirv.AtomicUMin` scope memory-semantics
                          ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicUMin "Device" "None" %pointer, %value :
-                        !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicUMin "Device" "None" %pointer, %value :
+                        !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }
@@ -721,15 +721,15 @@ def SPV_AtomicXorOp : SPV_AtomicUpdateWithValueOp<"AtomicXor", []> {
 
     ```
     atomic-xor-op ::=
-        `spv.AtomicXor` scope memory-semantics
+        `spirv.AtomicXor` scope memory-semantics
                         ssa-use `,` ssa-use `:` spv-pointer-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.AtomicXor "Device" "None" %pointer, %value :
-                       !spv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicXor "Device" "None" %pointer, %value :
+                       !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }

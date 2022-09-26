@@ -68,7 +68,7 @@ public:
     spirv::VariableOp varOp;
     if (adaptor.getTensor().getDefiningOp<spirv::ConstantOp>()) {
       // We could use the initializer directly; but certain driver compilers
-      // have bugs dealing with that. So for now, use spv.Store for
+      // have bugs dealing with that. So for now, use spirv.Store for
       // initialization.
       varOp = rewriter.create<spirv::VariableOp>(loc, varType,
                                                  spirv::StorageClass::Function,

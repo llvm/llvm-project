@@ -85,15 +85,15 @@ def SPV_BitCountOp : SPV_BitUnaryOp<"BitCount", []> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    bitcount-op ::= ssa-id `=` `spv.BitCount` ssa-use
+    bitcount-op ::= ssa-id `=` `spirv.BitCount` ssa-use
                                `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %2 = spv.BitCount %0: i32
-    %3 = spv.BitCount %1: vector<4xi32>
+    %2 = spirv.BitCount %0: i32
+    %3 = spirv.BitCount %1: vector<4xi32>
     ```
   }];
 }
@@ -135,7 +135,7 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    bitfield-insert-op ::= ssa-id `=` `spv.BitFieldInsert` ssa-use `,` ssa-use
+    bitfield-insert-op ::= ssa-id `=` `spirv.BitFieldInsert` ssa-use `,` ssa-use
                                       `,` ssa-use `,` ssa-use
                                       `:` integer-scalar-vector-type
                                       `,` integer-type `,` integer-type
@@ -144,7 +144,7 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
     #### Example:
 
     ```mlir
-    %0 = spv.BitFieldInsert %base, %insert, %offset, %count : vector<3xi32>, i8, i8
+    %0 = spirv.BitFieldInsert %base, %insert, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
 
@@ -207,7 +207,7 @@ def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    bitfield-extract-s-op ::= ssa-id `=` `spv.BitFieldSExtract` ssa-use
+    bitfield-extract-s-op ::= ssa-id `=` `spirv.BitFieldSExtract` ssa-use
                                          `,` ssa-use `,` ssa-use
                                          `:` integer-scalar-vector-type
                                          `,` integer-type `,` integer-type
@@ -216,7 +216,7 @@ def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract",
     #### Example:
 
     ```mlir
-    %0 = spv.BitFieldSExtract %base, %offset, %count : vector<3xi32>, i8, i8
+    %0 = spirv.BitFieldSExtract %base, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
 
@@ -244,7 +244,7 @@ def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    bitfield-extract-u-op ::= ssa-id `=` `spv.BitFieldUExtract` ssa-use
+    bitfield-extract-u-op ::= ssa-id `=` `spirv.BitFieldUExtract` ssa-use
                                          `,` ssa-use `,` ssa-use
                                          `:` integer-scalar-vector-type
                                          `,` integer-type `,` integer-type
@@ -253,7 +253,7 @@ def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract",
     #### Example:
 
     ```mlir
-    %0 = spv.BitFieldUExtract %base, %offset, %count : vector<3xi32>, i8, i8
+    %0 = spirv.BitFieldUExtract %base, %offset, %count : vector<3xi32>, i8, i8
     ```
   }];
 
@@ -285,15 +285,15 @@ def SPV_BitReverseOp : SPV_BitUnaryOp<"BitReverse", []> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    bitreverse-op ::= ssa-id `=` `spv.BitReverse` ssa-use
+    bitreverse-op ::= ssa-id `=` `spirv.BitReverse` ssa-use
                                  `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %2 = spv.BitReverse %0 : i32
-    %3 = spv.BitReverse %1 : vector<4xi32>
+    %2 = spirv.BitReverse %0 : i32
+    %3 = spirv.BitReverse %1 : vector<4xi32>
     ```
   }];
 
@@ -327,15 +327,15 @@ def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    bitwise-and-op ::= ssa-id `=` `spv.BitwiseAnd` ssa-use, ssa-use
+    bitwise-and-op ::= ssa-id `=` `spirv.BitwiseAnd` ssa-use, ssa-use
                                   `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %2 = spv.BitwiseAnd %0, %1 : i32
-    %2 = spv.BitwiseAnd %0, %1 : vector<4xi32>
+    %2 = spirv.BitwiseAnd %0, %1 : i32
+    %2 = spirv.BitwiseAnd %0, %1 : vector<4xi32>
     ```
   }];
 }
@@ -362,15 +362,15 @@ def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    bitwise-or-op ::= ssa-id `=` `spv.BitwiseOr` ssa-use, ssa-use
+    bitwise-or-op ::= ssa-id `=` `spirv.BitwiseOr` ssa-use, ssa-use
                                   `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %2 = spv.BitwiseOr %0, %1 : i32
-    %2 = spv.BitwiseOr %0, %1 : vector<4xi32>
+    %2 = spirv.BitwiseOr %0, %1 : i32
+    %2 = spirv.BitwiseOr %0, %1 : vector<4xi32>
     ```
   }];
 }
@@ -397,15 +397,15 @@ def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    bitwise-xor-op ::= ssa-id `=` `spv.BitwiseXor` ssa-use, ssa-use
+    bitwise-xor-op ::= ssa-id `=` `spirv.BitwiseXor` ssa-use, ssa-use
                                   `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %2 = spv.BitwiseXor %0, %1 : i32
-    %2 = spv.BitwiseXor %0, %1 : vector<4xi32>
+    %2 = spirv.BitwiseXor %0, %1 : i32
+    %2 = spirv.BitwiseXor %0, %1 : vector<4xi32>
     ```
   }];
 }
@@ -440,7 +440,7 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    shift-left-logical-op ::= ssa-id `=` `spv.ShiftLeftLogical`
+    shift-left-logical-op ::= ssa-id `=` `spirv.ShiftLeftLogical`
                                           ssa-use `,` ssa-use `:`
                                           integer-scalar-vector-type `,`
                                           integer-scalar-vector-type
@@ -449,8 +449,8 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
     #### Example:
 
     ```mlir
-    %2 = spv.ShiftLeftLogical %0, %1 : i32, i16
-    %5 = spv.ShiftLeftLogical %3, %4 : vector<3xi32>, vector<3xi16>
+    %2 = spirv.ShiftLeftLogical %0, %1 : i32, i16
+    %5 = spirv.ShiftLeftLogical %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
 }
@@ -482,7 +482,7 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    shift-right-arithmetic-op ::= ssa-id `=` `spv.ShiftRightArithmetic`
+    shift-right-arithmetic-op ::= ssa-id `=` `spirv.ShiftRightArithmetic`
                                               ssa-use `,` ssa-use `:`
                                               integer-scalar-vector-type `,`
                                               integer-scalar-vector-type
@@ -491,8 +491,8 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
     #### Example:
 
     ```mlir
-    %2 = spv.ShiftRightArithmetic %0, %1 : i32, i16
-    %5 = spv.ShiftRightArithmetic %3, %4 : vector<3xi32>, vector<3xi16>
+    %2 = spirv.ShiftRightArithmetic %0, %1 : i32, i16
+    %5 = spirv.ShiftRightArithmetic %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
 }
@@ -525,7 +525,7 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    shift-right-logical-op ::= ssa-id `=` `spv.ShiftRightLogical`
+    shift-right-logical-op ::= ssa-id `=` `spirv.ShiftRightLogical`
                                            ssa-use `,` ssa-use `:`
                                            integer-scalar-vector-type `,`
                                            integer-scalar-vector-type
@@ -534,8 +534,8 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
     #### Example:
 
     ```mlir
-    %2 = spv.ShiftRightLogical %0, %1 : i32, i16
-    %5 = spv.ShiftRightLogical %3, %4 : vector<3xi32>, vector<3xi16>
+    %2 = spirv.ShiftRightLogical %0, %1 : i32, i16
+    %5 = spirv.ShiftRightLogical %3, %4 : vector<3xi32>, vector<3xi16>
     ```
   }];
 }
@@ -559,14 +559,14 @@ def SPV_NotOp : SPV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                   `vector<` integer-literal `x` integer-type `>`
-    not-op ::= ssa-id `=` `spv.BitNot` ssa-use `:` integer-scalar-vector-type
+    not-op ::= ssa-id `=` `spirv.BitNot` ssa-use `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %2 = spv.Not %0 : i32
-    %3 = spv.Not %1 : vector<4xi32>
+    %2 = spirv.Not %0 : i32
+    %3 = spirv.Not %1 : vector<4xi32>
     ```
   }];
 }
