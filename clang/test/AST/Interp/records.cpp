@@ -177,11 +177,7 @@ struct FourBoolPairs {
 constexpr FourBoolPairs LT;
 // Copy ctor
 constexpr FourBoolPairs LT2 = LT;
-// FIXME: The copy constructor call above
-//   works, but APValue we generate for it is
-//   not sufficiently correct, so the lvalue-to-rvalue
-//   conversion in ExprConstant.c runs into an assertion.
-//static_assert(LT2.v[0].first == false, "");
-//static_assert(LT2.v[0].second == false, "");
-//static_assert(LT2.v[2].first == true, "");
-//static_assert(LT2.v[2].second == false, "");
+static_assert(LT2.v[0].first == false, "");
+static_assert(LT2.v[0].second == false, "");
+static_assert(LT2.v[2].first == true, "");
+static_assert(LT2.v[2].second == false, "");
