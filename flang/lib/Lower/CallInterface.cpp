@@ -1061,6 +1061,27 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
     return true;
   return characteristics->GetIntent() == Fortran::common::Intent::Out;
 }
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous()
+    const {
+  if (!characteristics)
+    return true;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  if (!dummy)
+    return false;
+  const auto &shapeAttrs = dummy->type.attrs();
+  using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+  if (shapeAttrs.test(ShapeAttrs::AssumedRank) ||
+      shapeAttrs.test(ShapeAttrs::AssumedShape))
+    return dummy->attrs.test(
+        Fortran::evaluate::characteristics::DummyDataObject::Attr::Contiguous);
+  if (shapeAttrs.test(ShapeAttrs::DeferredShape))
+    return false;
+  // Explicit shape arrays are contiguous.
+  return dummy->type.Rank() > 0;
+}
 
 template <typename T>
 void Fortran::lower::CallInterface<T>::determineInterface(
