@@ -9,6 +9,15 @@
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
 
+# In opt mode, bazel by default builds both PIC and non-PIC object files for
+# tests vs binaries. We don't need this feature and it slows down opt builds
+# considerably.
+build --force_pic
+
+# Shared objects take up more space. With fast linkers and binaries that aren't
+# super large, the benefits of shared objects are minimal.
+build --dynamic_mode=off
+
 ###############################################################################
 # Options to select different strategies for linking potential dependent
 # libraries. The default leaves it disabled.
