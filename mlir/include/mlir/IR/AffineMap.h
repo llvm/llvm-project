@@ -327,6 +327,12 @@ public:
   /// Returns `*this` if `numResults` >= `this->getNumResults()`.
   AffineMap getMinorSubMap(unsigned numResults) const;
 
+  /// Get the largest known divisor of all map expressions.
+  /// For eg: for (d0, d1) -> (8*d0 + 4, 4*d1 + 2), the result is 2.
+  /// In the case of maps with no expressions or all zero constant expressions,
+  /// the largest known divisor is trivially the max uint64_t value.
+  uint64_t getLargestKnownDivisorOfMapExprs();
+
   friend ::llvm::hash_code hash_value(AffineMap arg);
 
   /// Methods supporting C API.
