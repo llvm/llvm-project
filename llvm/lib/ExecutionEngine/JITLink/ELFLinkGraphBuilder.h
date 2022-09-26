@@ -469,13 +469,6 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
                 " for external symbol " + *Name,
             inconvertibleErrorCode());
 
-      if (Sym.getVisibility() != ELF::STV_DEFAULT)
-        return make_error<StringError>(
-            "Invalid symbol visibility " +
-                Twine(static_cast<int>(Sym.getVisibility())) +
-                " for external symbol " + *Name,
-            inconvertibleErrorCode());
-
       // If L is Linkage::Weak that means this is a weakly referenced symbol.
       auto &GSym = G->addExternalSymbol(*Name, Sym.st_size,
                                         Sym.getBinding() == ELF::STB_WEAK);
