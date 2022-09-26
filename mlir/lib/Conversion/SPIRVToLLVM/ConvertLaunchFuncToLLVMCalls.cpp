@@ -105,7 +105,7 @@ static bool hasDescriptorSetAndBinding(spirv::GlobalVariableOp op) {
 
 /// Fills `globalVariableMap` with SPIR-V global variables that represent kernel
 /// arguments from the given SPIR-V module. We assume that the module contains a
-/// single entry point function. Hence, all `spv.GlobalVariable`s with a bind
+/// single entry point function. Hence, all `spirv.GlobalVariable`s with a bind
 /// attribute are kernel arguments.
 static LogicalResult getKernelGlobalVariables(
     spirv::ModuleOp module,

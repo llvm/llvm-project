@@ -64,16 +64,16 @@ def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    bitcast-op ::= ssa-id `=` `spv.Bitcast` ssa-use
+    bitcast-op ::= ssa-id `=` `spirv.Bitcast` ssa-use
                    `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.Bitcast %0 : f32 to i32
-    %1 = spv.Bitcast %0 : vector<2xf32> to i64
-    %1 = spv.Bitcast %0 : !spv.ptr<f32, Function> to !spv.ptr<i32, Function>
+    %1 = spirv.Bitcast %0 : f32 to i32
+    %1 = spirv.Bitcast %0 : vector<2xf32> to i64
+    %1 = spirv.Bitcast %0 : !spirv.ptr<f32, Function> to !spirv.ptr<i32, Function>
     ```
   }];
 
@@ -110,15 +110,15 @@ def SPV_ConvertFToSOp : SPV_CastOp<"ConvertFToS", SPV_Integer, SPV_Float, []> {
     <!-- End of AutoGen section -->
 
     ```
-    convert-f-to-s-op ::= ssa-id `=` `spv.ConvertFToSOp` ssa-use
+    convert-f-to-s-op ::= ssa-id `=` `spirv.ConvertFToSOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.ConvertFToS %0 : f32 to i32
-    %3 = spv.ConvertFToS %2 : vector<3xf32> to vector<3xi32>
+    %1 = spirv.ConvertFToS %0 : f32 to i32
+    %3 = spirv.ConvertFToS %2 : vector<3xf32> to vector<3xi32>
     ```
   }];
 }
@@ -143,15 +143,15 @@ def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
     <!-- End of AutoGen section -->
 
     ```
-    convert-f-to-u-op ::= ssa-id `=` `spv.ConvertFToUOp` ssa-use
+    convert-f-to-u-op ::= ssa-id `=` `spirv.ConvertFToUOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.ConvertFToU %0 : f32 to i32
-    %3 = spv.ConvertFToU %2 : vector<3xf32> to vector<3xi32>
+    %1 = spirv.ConvertFToU %0 : f32 to i32
+    %3 = spirv.ConvertFToU %2 : vector<3xf32> to vector<3xi32>
     ```
   }];
 }
@@ -177,15 +177,15 @@ def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF",
     <!-- End of AutoGen section -->
 
     ```
-    convert-s-to-f-op ::= ssa-id `=` `spv.ConvertSToFOp` ssa-use
+    convert-s-to-f-op ::= ssa-id `=` `spirv.ConvertSToFOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.ConvertSToF %0 : i32 to f32
-    %3 = spv.ConvertSToF %2 : vector<3xi32> to vector<3xf32>
+    %1 = spirv.ConvertSToF %0 : i32 to f32
+    %3 = spirv.ConvertSToF %2 : vector<3xi32> to vector<3xf32>
     ```
   }];
 }
@@ -211,15 +211,15 @@ def SPV_ConvertUToFOp : SPV_CastOp<"ConvertUToF",
     <!-- End of AutoGen section -->
 
     ```
-    convert-u-to-f-op ::= ssa-id `=` `spv.ConvertUToFOp` ssa-use
+    convert-u-to-f-op ::= ssa-id `=` `spirv.ConvertUToFOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.ConvertUToF %0 : i32 to f32
-    %3 = spv.ConvertUToF %2 : vector<3xi32> to vector<3xf32>
+    %1 = spirv.ConvertUToF %0 : i32 to f32
+    %3 = spirv.ConvertUToF %2 : vector<3xi32> to vector<3xf32>
     ```
   }];
 }
@@ -247,15 +247,15 @@ def SPV_FConvertOp : SPV_CastOp<"FConvert",
     <!-- End of AutoGen section -->
 
     ```
-    f-convert-op ::= ssa-id `=` `spv.FConvertOp` ssa-use
+    f-convert-op ::= ssa-id `=` `spirv.FConvertOp` ssa-use
                      `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.FConvertOp %0 : f32 to f64
-    %3 = spv.FConvertOp %2 : vector<3xf32> to vector<3xf64>
+    %1 = spirv.FConvertOp %0 : f32 to f64
+    %3 = spirv.FConvertOp %2 : vector<3xf32> to vector<3xf64>
     ```
   }];
 }
@@ -282,15 +282,15 @@ def SPV_SConvertOp : SPV_CastOp<"SConvert",
     <!-- End of AutoGen section -->
 
     ```
-    s-convert-op ::= ssa-id `=` `spv.SConvertOp` ssa-use
+    s-convert-op ::= ssa-id `=` `spirv.SConvertOp` ssa-use
                      `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.SConvertOp %0 : i32 to i64
-    %3 = spv.SConvertOp %2 : vector<3xi32> to vector<3xi64>
+    %1 = spirv.SConvertOp %0 : i32 to i64
+    %3 = spirv.SConvertOp %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
 }
@@ -318,15 +318,15 @@ def SPV_UConvertOp : SPV_CastOp<"UConvert",
     <!-- End of AutoGen section -->
 
     ```
-    u-convert-op ::= ssa-id `=` `spv.UConvertOp` ssa-use
+    u-convert-op ::= ssa-id `=` `spirv.UConvertOp` ssa-use
                  `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.UConvertOp %0 : i32 to i64
-    %3 = spv.UConvertOp %2 : vector<3xi32> to vector<3xi64>
+    %1 = spirv.UConvertOp %0 : i32 to i64
+    %3 = spirv.UConvertOp %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
 }
@@ -348,8 +348,8 @@ def SPV_PtrCastToGenericOp : SPV_Op<"PtrCastToGeneric", [NoSideEffect]> {
     #### Example:
 
     ```mlir
-    %1 = spv.PtrCastToGenericOp %0 : !spv.ptr<f32, CrossWorkGroup> to 
-         !spv.ptr<f32, Generic>
+    %1 = spirv.PtrCastToGenericOp %0 : !spirv.ptr<f32, CrossWorkGroup> to 
+         !spirv.ptr<f32, Generic>
     ```
   }];
 
@@ -391,8 +391,8 @@ def SPV_GenericCastToPtrOp : SPV_Op<"GenericCastToPtr", [NoSideEffect]> {
     #### Example:
 
     ```mlir
-       %1 = spv.GenericCastToPtrOp %0 : !spv.ptr<f32, Generic> to
-       !spv.ptr<f32, CrossWorkGroup>
+       %1 = spirv.GenericCastToPtrOp %0 : !spirv.ptr<f32, Generic> to
+       !spirv.ptr<f32, CrossWorkGroup>
     ```
   }];
 
@@ -444,8 +444,8 @@ def SPV_GenericCastToPtrExplicitOp : SPV_Op<"GenericCastToPtrExplicit", [NoSideE
     #### Example:
 
     ```mlir
-       %1 = spv.GenericCastToPtrExplicitOp %0 : !spv.ptr<f32, Generic> to
-       !spv.ptr<f32, CrossWorkGroup>
+       %1 = spirv.GenericCastToPtrExplicitOp %0 : !spirv.ptr<f32, Generic> to
+       !spirv.ptr<f32, CrossWorkGroup>
     ```
   }];
 

@@ -28,14 +28,14 @@ def SPV_INTELJointMatrixWorkItemLengthOp : SPV_IntelVendorOp<"JointMatrixWorkIte
     Type is a joint matrix type.
 
     ``` {.ebnf}
-    joint-matrix-length-op ::= ssa-id `=` `spv.INTEL.JointMatrixWorkItemLength
+    joint-matrix-length-op ::= ssa-id `=` `spirv.INTEL.JointMatrixWorkItemLength
                                     ` : ` joint-matrix-type
     ```
 
     For example:
 
     ```
-    %0 = spv.INTEL.JointMatrixWorkItemLength : !spv.jointmatrix<Subgroup, i32, 8, 16>
+    %0 = spirv.INTEL.JointMatrixWorkItemLength : !spirv.jointmatrix<Subgroup, i32, 8, 16>
     ```
   }];
 
@@ -85,10 +85,10 @@ def SPV_INTELJointMatrixLoadOp : SPV_IntelVendorOp<"JointMatrixLoad", []> {
 
     #### Example:
     ```mlir
-    %0 = spv.INTEL.JointMatrixLoad <Subgroup> <RowMajor> %ptr, %stride
-         {memory_access = #spv.memory_access<Volatile>} :
-         (!spv.ptr<i32, CrossWorkgroup>, i32) ->
-         !spv.jointmatrix<8x16xi32, ColumnMajor, Subgroup>
+    %0 = spirv.INTEL.JointMatrixLoad <Subgroup> <RowMajor> %ptr, %stride
+         {memory_access = #spirv.memory_access<Volatile>} :
+         (!spirv.ptr<i32, CrossWorkgroup>, i32) ->
+         !spirv.jointmatrix<8x16xi32, ColumnMajor, Subgroup>
     ```
   }];
 
@@ -149,10 +149,10 @@ def SPV_INTELJointMatrixMadOp : SPV_IntelVendorOp<"JointMatrixMad",
 
     #### Example:
     ```mlir
-    %r = spv.INTEL.JointMatrixMad <Subgroup> %a, %b, %c :
-         !spv.jointmatrix<8x32xi8, RowMajor, Subgroup>,
-         !spv.jointmatrix<32x8xi8, ColumnMajor, Subgroup>
-         -> !spv.jointmatrix<8x8xi32,  RowMajor, Subgroup>
+    %r = spirv.INTEL.JointMatrixMad <Subgroup> %a, %b, %c :
+         !spirv.jointmatrix<8x32xi8, RowMajor, Subgroup>,
+         !spirv.jointmatrix<32x8xi8, ColumnMajor, Subgroup>
+         -> !spirv.jointmatrix<8x8xi32,  RowMajor, Subgroup>
     ```
 
   }];
@@ -212,9 +212,9 @@ def SPV_INTELJointMatrixStoreOp : SPV_IntelVendorOp<"JointMatrixStore", []> {
 
     #### Example:
     ```mlir
-    spv.INTEL.JointMatrixStore <Subgroup> <ColumnMajor> %ptr, %m, %stride
-    {memory_access = #spv.memory_access<Volatile>} : (!spv.ptr<i32, Workgroup>,
-    !spv.jointmatrix<8x16xi32, RowMajor, Subgroup>, i32)
+    spirv.INTEL.JointMatrixStore <Subgroup> <ColumnMajor> %ptr, %m, %stride
+    {memory_access = #spirv.memory_access<Volatile>} : (!spirv.ptr<i32, Workgroup>,
+    !spirv.jointmatrix<8x16xi32, RowMajor, Subgroup>, i32)
     ```
 
   }];

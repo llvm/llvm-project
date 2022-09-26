@@ -57,14 +57,14 @@ def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
-    non-uniform-ballot-op ::= ssa-id `=` `spv.GroupNonUniformBallot` scope
+    non-uniform-ballot-op ::= ssa-id `=` `spirv.GroupNonUniformBallot` scope
                               ssa-use `:` `vector` `<` 4 `x` `integer-type` `>`
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.GroupNonUniformBallot "SubGroup" %predicate : vector<4xi32>
+    %0 = spirv.GroupNonUniformBallot "SubGroup" %predicate : vector<4xi32>
     ```
   }];
 
@@ -122,7 +122,7 @@ def SPV_GroupNonUniformBroadcastOp : SPV_Op<"GroupNonUniformBroadcast",
                                `vector<` integer-literal `x` integer-type `>` |
                                `vector<` integer-literal `x` float-type `>`
     group-non-uniform-broadcast-op ::= ssa-id `=`
-        `spv.GroupNonUniformBroadcast` scope ssa_use, ssa_use
+        `spirv.GroupNonUniformBroadcast` scope ssa_use, ssa_use
         `:` integer-float-scalar-vector-type `,` integer-type
     ```mlir
 
@@ -132,8 +132,8 @@ def SPV_GroupNonUniformBroadcastOp : SPV_Op<"GroupNonUniformBroadcast",
     %scalar_value = ... : f32
     %vector_value = ... : vector<4xf32>
     %id = ... : i32
-    %0 = spv.GroupNonUniformBroadcast "Subgroup" %scalar_value, %id : f32, i32
-    %1 = spv.GroupNonUniformBroadcast "Workgroup" %vector_value, %id :
+    %0 = spirv.GroupNonUniformBroadcast "Subgroup" %scalar_value, %id : f32, i32
+    %1 = spirv.GroupNonUniformBroadcast "Workgroup" %vector_value, %id :
       vector<4xf32>, i32
     ```
   }];
@@ -177,14 +177,14 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
 
     ```
     scope ::= `"Workgroup"` | `"Subgroup"`
-    non-uniform-elect-op ::= ssa-id `=` `spv.GroupNonUniformElect` scope
+    non-uniform-elect-op ::= ssa-id `=` `spirv.GroupNonUniformElect` scope
                              `:` `i1`
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.GroupNonUniformElect : i1
+    %0 = spirv.GroupNonUniformElect : i1
     ```
   }];
 
@@ -239,7 +239,7 @@ def SPV_GroupNonUniformFAddOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    non-uniform-fadd-op ::= ssa-id `=` `spv.GroupNonUniformFAdd` scope operation
+    non-uniform-fadd-op ::= ssa-id `=` `spirv.GroupNonUniformFAdd` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` float-scalar-vector-type
     ```
@@ -247,11 +247,11 @@ def SPV_GroupNonUniformFAddOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
-    %0 = spv.GroupNonUniformFAdd "Workgroup" "Reduce" %scalar : f32
-    %1 = spv.GroupNonUniformFAdd "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
+    %0 = spirv.GroupNonUniformFAdd "Workgroup" "Reduce" %scalar : f32
+    %1 = spirv.GroupNonUniformFAdd "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
     ```
   }];
 
@@ -299,7 +299,7 @@ def SPV_GroupNonUniformFMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    non-uniform-fmax-op ::= ssa-id `=` `spv.GroupNonUniformFMax` scope operation
+    non-uniform-fmax-op ::= ssa-id `=` `spirv.GroupNonUniformFMax` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` float-scalar-vector-type
     ```
@@ -307,11 +307,11 @@ def SPV_GroupNonUniformFMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
-    %0 = spv.GroupNonUniformFMax "Workgroup" "Reduce" %scalar : f32
-    %1 = spv.GroupNonUniformFMax "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
+    %0 = spirv.GroupNonUniformFMax "Workgroup" "Reduce" %scalar : f32
+    %1 = spirv.GroupNonUniformFMax "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
     ```
   }];
 
@@ -359,7 +359,7 @@ def SPV_GroupNonUniformFMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    non-uniform-fmin-op ::= ssa-id `=` `spv.GroupNonUniformFMin` scope operation
+    non-uniform-fmin-op ::= ssa-id `=` `spirv.GroupNonUniformFMin` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` float-scalar-vector-type
     ```
@@ -367,11 +367,11 @@ def SPV_GroupNonUniformFMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
-    %0 = spv.GroupNonUniformFMin "Workgroup" "Reduce" %scalar : f32
-    %1 = spv.GroupNonUniformFMin "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
+    %0 = spirv.GroupNonUniformFMin "Workgroup" "Reduce" %scalar : f32
+    %1 = spirv.GroupNonUniformFMin "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
     ```
   }];
 
@@ -416,7 +416,7 @@ def SPV_GroupNonUniformFMulOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    non-uniform-fmul-op ::= ssa-id `=` `spv.GroupNonUniformFMul` scope operation
+    non-uniform-fmul-op ::= ssa-id `=` `spirv.GroupNonUniformFMul` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` float-scalar-vector-type
     ```
@@ -424,11 +424,11 @@ def SPV_GroupNonUniformFMulOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : f32
     %vector = ... : vector<4xf32>
-    %0 = spv.GroupNonUniformFMul "Workgroup" "Reduce" %scalar : f32
-    %1 = spv.GroupNonUniformFMul "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
+    %0 = spirv.GroupNonUniformFMul "Workgroup" "Reduce" %scalar : f32
+    %1 = spirv.GroupNonUniformFMul "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
     ```
   }];
 
@@ -471,7 +471,7 @@ def SPV_GroupNonUniformIAddOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    non-uniform-iadd-op ::= ssa-id `=` `spv.GroupNonUniformIAdd` scope operation
+    non-uniform-iadd-op ::= ssa-id `=` `spirv.GroupNonUniformIAdd` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` integer-scalar-vector-type
     ```
@@ -479,11 +479,11 @@ def SPV_GroupNonUniformIAddOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spv.GroupNonUniformIAdd "Workgroup" "Reduce" %scalar : i32
-    %1 = spv.GroupNonUniformIAdd "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
+    %0 = spirv.GroupNonUniformIAdd "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformIAdd "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
     ```
   }];
 
@@ -526,7 +526,7 @@ def SPV_GroupNonUniformIMulOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    non-uniform-imul-op ::= ssa-id `=` `spv.GroupNonUniformIMul` scope operation
+    non-uniform-imul-op ::= ssa-id `=` `spirv.GroupNonUniformIMul` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` integer-scalar-vector-type
     ```
@@ -534,11 +534,11 @@ def SPV_GroupNonUniformIMulOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spv.GroupNonUniformIMul "Workgroup" "Reduce" %scalar : i32
-    %1 = spv.GroupNonUniformIMul "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
+    %0 = spirv.GroupNonUniformIMul "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformIMul "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
     ```
   }];
 
@@ -583,7 +583,7 @@ def SPV_GroupNonUniformSMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    non-uniform-smax-op ::= ssa-id `=` `spv.GroupNonUniformSMax` scope operation
+    non-uniform-smax-op ::= ssa-id `=` `spirv.GroupNonUniformSMax` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` integer-scalar-vector-type
     ```
@@ -591,11 +591,11 @@ def SPV_GroupNonUniformSMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spv.GroupNonUniformSMax "Workgroup" "Reduce" %scalar : i32
-    %1 = spv.GroupNonUniformSMax "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
+    %0 = spirv.GroupNonUniformSMax "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformSMax "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
     ```
   }];
 
@@ -640,7 +640,7 @@ def SPV_GroupNonUniformSMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    non-uniform-smin-op ::= ssa-id `=` `spv.GroupNonUniformSMin` scope operation
+    non-uniform-smin-op ::= ssa-id `=` `spirv.GroupNonUniformSMin` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` integer-scalar-vector-type
     ```
@@ -648,11 +648,11 @@ def SPV_GroupNonUniformSMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spv.GroupNonUniformSMin "Workgroup" "Reduce" %scalar : i32
-    %1 = spv.GroupNonUniformSMin "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
+    %0 = spirv.GroupNonUniformSMin "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformSMin "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
     ```
   }];
 
@@ -690,7 +690,7 @@ def SPV_GroupNonUniformShuffleOp : SPV_Op<"GroupNonUniformShuffle",
     #### Example:
 
     ```mlir
-    %0 = spv.GroupNonUniformShuffle <Subgroup> %val, %id : f32, i32
+    %0 = spirv.GroupNonUniformShuffle <Subgroup> %val, %id : f32, i32
     ```
   }];
 
@@ -745,7 +745,7 @@ def SPV_GroupNonUniformShuffleDownOp : SPV_Op<"GroupNonUniformShuffleDown",
     #### Example:
 
     ```mlir
-    %0 = spv.GroupNonUniformShuffleDown <Subgroup> %val, %delta : f32, i32
+    %0 = spirv.GroupNonUniformShuffleDown <Subgroup> %val, %delta : f32, i32
     ```
   }];
 
@@ -799,7 +799,7 @@ def SPV_GroupNonUniformShuffleUpOp : SPV_Op<"GroupNonUniformShuffleUp",
     #### Example:
 
     ```mlir
-    %0 = spv.GroupNonUniformShuffleUp <Subgroup> %val, %delta : f32, i32
+    %0 = spirv.GroupNonUniformShuffleUp <Subgroup> %val, %delta : f32, i32
     ```
   }];
 
@@ -853,7 +853,7 @@ def SPV_GroupNonUniformShuffleXorOp : SPV_Op<"GroupNonUniformShuffleXor",
     #### Example:
 
     ```mlir
-    %0 = spv.GroupNonUniformShuffleXor <Subgroup> %val, %mask : f32, i32
+    %0 = spirv.GroupNonUniformShuffleXor <Subgroup> %val, %mask : f32, i32
     ```
   }];
 
@@ -913,7 +913,7 @@ def SPV_GroupNonUniformUMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    non-uniform-umax-op ::= ssa-id `=` `spv.GroupNonUniformUMax` scope operation
+    non-uniform-umax-op ::= ssa-id `=` `spirv.GroupNonUniformUMax` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` integer-scalar-vector-type
     ```
@@ -921,11 +921,11 @@ def SPV_GroupNonUniformUMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spv.GroupNonUniformUMax "Workgroup" "Reduce" %scalar : i32
-    %1 = spv.GroupNonUniformUMax "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
+    %0 = spirv.GroupNonUniformUMax "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformUMax "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
     ```
   }];
 
@@ -971,7 +971,7 @@ def SPV_GroupNonUniformUMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    non-uniform-umin-op ::= ssa-id `=` `spv.GroupNonUniformUMin` scope operation
+    non-uniform-umin-op ::= ssa-id `=` `spirv.GroupNonUniformUMin` scope operation
                             ssa-use ( `cluster_size` `(` ssa_use `)` )?
                             `:` integer-scalar-vector-type
     ```
@@ -979,11 +979,11 @@ def SPV_GroupNonUniformUMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     #### Example:
 
     ```mlir
-    %four = spv.Constant 4 : i32
+    %four = spirv.Constant 4 : i32
     %scalar = ... : i32
     %vector = ... : vector<4xi32>
-    %0 = spv.GroupNonUniformUMin "Workgroup" "Reduce" %scalar : i32
-    %1 = spv.GroupNonUniformUMin "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
+    %0 = spirv.GroupNonUniformUMin "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformUMin "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
     ```
   }];
 

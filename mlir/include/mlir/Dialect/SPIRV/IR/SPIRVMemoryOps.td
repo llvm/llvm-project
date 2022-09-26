@@ -47,7 +47,7 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
 
     <!-- End of AutoGen section -->
     ```
-    access-chain-op ::= ssa-id `=` `spv.AccessChain` ssa-use
+    access-chain-op ::= ssa-id `=` `spirv.AccessChain` ssa-use
                         `[` ssa-use (',' ssa-use)* `]`
                         `:` pointer-type
     ```
@@ -55,10 +55,10 @@ def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
     #### Example:
 
     ```mlir
-    %0 = "spv.Constant"() { value = 1: i32} : () -> i32
-    %1 = spv.Variable : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>
-    %2 = spv.AccessChain %1[%0] : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>
-    %3 = spv.Load "Function" %2 ["Volatile"] : !spv.array<4xf32>
+    %0 = "spirv.Constant"() { value = 1: i32} : () -> i32
+    %1 = spirv.Variable : !spirv.ptr<!spirv.struct<f32, !spirv.array<4xf32>>, Function>
+    %2 = spirv.AccessChain %1[%0] : !spirv.ptr<!spirv.struct<f32, !spirv.array<4xf32>>, Function>
+    %3 = spirv.Load "Function" %2 ["Volatile"] : !spirv.array<4xf32>
     ```
   }];
 
@@ -101,7 +101,7 @@ def SPV_CopyMemoryOp : SPV_Op<"CopyMemory", []> {
     <!-- End of AutoGen section -->
 
     ```
-    copy-memory-op ::= `spv.CopyMemory ` storage-class ssa-use
+    copy-memory-op ::= `spirv.CopyMemory ` storage-class ssa-use
                        storage-class ssa-use
                        (`[` memory-access `]` (`, [` memory-access `]`)?)?
                        ` : ` spirv-element-type
@@ -110,9 +110,9 @@ def SPV_CopyMemoryOp : SPV_Op<"CopyMemory", []> {
     #### Example:
 
     ```mlir
-    %0 = spv.Variable : !spv.ptr<f32, Function>
-    %1 = spv.Variable : !spv.ptr<f32, Function>
-    spv.CopyMemory "Function" %0, "Function" %1 : f32
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    %1 = spirv.Variable : !spirv.ptr<f32, Function>
+    spirv.CopyMemory "Function" %0, "Function" %1 : f32
     ```
   }];
 
@@ -144,7 +144,7 @@ def SPV_InBoundsPtrAccessChainOp : SPV_Op<"InBoundsPtrAccessChain", [NoSideEffec
     <!-- End of AutoGen section -->
 
     ```
-    access-chain-op ::= ssa-id `=` `spv.InBoundsPtrAccessChain` ssa-use
+    access-chain-op ::= ssa-id `=` `spirv.InBoundsPtrAccessChain` ssa-use
                         `[` ssa-use (',' ssa-use)* `]`
                         `:` pointer-type
     ```mlir
@@ -152,8 +152,8 @@ def SPV_InBoundsPtrAccessChainOp : SPV_Op<"InBoundsPtrAccessChain", [NoSideEffec
     #### Example:
 
     ```
-    func @inbounds_ptr_access_chain(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
-      %0 = spv.InBoundsPtrAccessChain %arg0[%arg1] : !spv.ptr<f32, CrossWorkgroup>, i64
+    func @inbounds_ptr_access_chain(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
+      %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
       ...
     }
     ```
@@ -202,17 +202,17 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
     memory-access ::= `"None"` | `"Volatile"` | `"Aligned", ` integer-literal
                     | `"NonTemporal"`
 
-    load-op ::= ssa-id ` = spv.Load ` storage-class ssa-use
+    load-op ::= ssa-id ` = spirv.Load ` storage-class ssa-use
                 (`[` memory-access `]`)? ` : ` spirv-element-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.Variable : !spv.ptr<f32, Function>
-    %1 = spv.Load "Function" %0 : f32
-    %2 = spv.Load "Function" %0 ["Volatile"] : f32
-    %3 = spv.Load "Function" %0 ["Aligned", 4] : f32
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    %1 = spirv.Load "Function" %0 : f32
+    %2 = spirv.Load "Function" %0 ["Volatile"] : f32
+    %3 = spirv.Load "Function" %0 ["Aligned", 4] : f32
     ```
   }];
 
@@ -270,7 +270,7 @@ def SPV_PtrAccessChainOp : SPV_Op<"PtrAccessChain", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    [access-chain-op ::= ssa-id `=` `spv.PtrAccessChain` ssa-use
+    [access-chain-op ::= ssa-id `=` `spirv.PtrAccessChain` ssa-use
                         `[` ssa-use (',' ssa-use)* `]`
                         `:` pointer-type
     ```mlir
@@ -278,8 +278,8 @@ def SPV_PtrAccessChainOp : SPV_Op<"PtrAccessChain", [NoSideEffect]> {
     #### Example:
 
     ```
-    func @ptr_access_chain(%arg0: !spv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
-      %0 = spv.PtrAccessChain %arg0[%arg1] : !spv.ptr<f32, CrossWorkgroup>, i64
+    func @ptr_access_chain(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
+      %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
       ...
     }
     ```
@@ -323,18 +323,18 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
     <!-- End of AutoGen section -->
 
     ```
-    store-op ::= `spv.Store ` storage-class ssa-use `, ` ssa-use `, `
+    store-op ::= `spirv.Store ` storage-class ssa-use `, ` ssa-use `, `
                   (`[` memory-access `]`)? `:` spirv-element-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.Variable : !spv.ptr<f32, Function>
-    %1 = spv.FMul ... : f32
-    spv.Store "Function" %0, %1 : f32
-    spv.Store "Function" %0, %1 ["Volatile"] : f32
-    spv.Store "Function" %0, %1 ["Aligned", 4] : f32
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    %1 = spirv.FMul ... : f32
+    spirv.Store "Function" %0, %1 : f32
+    spirv.Store "Function" %0, %1 ["Volatile"] : f32
+    spirv.Store "Function" %0, %1 ["Aligned", 4] : f32
     ```
   }];
 
@@ -383,7 +383,7 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
     <!-- End of AutoGen section -->
 
     ```
-    variable-op ::= ssa-id `=` `spv.Variable` (`init(` ssa-use `)`)?
+    variable-op ::= ssa-id `=` `spirv.Variable` (`init(` ssa-use `)`)?
                     attribute-dict? `:` spirv-pointer-type
     ```
 
@@ -392,10 +392,10 @@ def SPV_VariableOp : SPV_Op<"Variable", []> {
     #### Example:
 
     ```mlir
-    %0 = spv.Constant ...
+    %0 = spirv.Constant ...
 
-    %1 = spv.Variable : !spv.ptr<f32, Function>
-    %2 = spv.Variable init(%0): !spv.ptr<f32, Function>
+    %1 = spirv.Variable : !spirv.ptr<f32, Function>
+    %2 = spirv.Variable init(%0): !spirv.ptr<f32, Function>
     ```
   }];
 

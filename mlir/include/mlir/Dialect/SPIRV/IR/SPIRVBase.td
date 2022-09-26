@@ -24,7 +24,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVAvailability.td"
 //===----------------------------------------------------------------------===//
 
 def SPIRV_Dialect : Dialect {
-  let name = "spv";
+  let name = "spirv";
 
   let summary = "The SPIR-V dialect in MLIR.";
 

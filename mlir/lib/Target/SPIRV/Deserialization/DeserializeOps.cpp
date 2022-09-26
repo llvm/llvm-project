@@ -40,7 +40,7 @@ static inline spirv::Opcode extractOpcode(uint32_t word) {
 
 Value spirv::Deserializer::getValue(uint32_t id) {
   if (auto constInfo = getConstant(id)) {
-    // Materialize a `spv.Constant` op at every use site.
+    // Materialize a `spirv.Constant` op at every use site.
     return opBuilder.create<spirv::ConstantOp>(unknownLoc, constInfo->second,
                                                constInfo->first);
   }
@@ -149,7 +149,7 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpSourceContinued:
   case spirv::Opcode::OpSourceExtension:
     // TODO: This is debug information embedded in the binary which should be
-    // translated into the spv.module.
+    // translated into the spirv.module.
     return success();
   case spirv::Opcode::OpTypeVoid:
   case spirv::Opcode::OpTypeBool:

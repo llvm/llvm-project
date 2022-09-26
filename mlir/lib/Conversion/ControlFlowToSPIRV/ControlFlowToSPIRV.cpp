@@ -31,7 +31,7 @@ using namespace mlir;
 
 namespace {
 
-/// Converts cf.br to spv.Branch.
+/// Converts cf.br to spirv.Branch.
 struct BranchOpPattern final : public OpConversionPattern<cf::BranchOp> {
   using OpConversionPattern<cf::BranchOp>::OpConversionPattern;
 
@@ -44,7 +44,7 @@ struct BranchOpPattern final : public OpConversionPattern<cf::BranchOp> {
   }
 };
 
-/// Converts cf.cond_br to spv.BranchConditional.
+/// Converts cf.cond_br to spirv.BranchConditional.
 struct CondBranchOpPattern final
     : public OpConversionPattern<cf::CondBranchOp> {
   using OpConversionPattern<cf::CondBranchOp>::OpConversionPattern;
