@@ -750,12 +750,13 @@ void elf::riscvFinalizeRelax(int passes) {
         p += size;
 
         // For R_RISCV_ALIGN, we will place `offset` in a location (among NOPs)
-        // to satisfy the alignment requirement. If `remove` is a multiple of 4,
-        // it is as if we have skipped some NOPs. Otherwise we are in the middle
-        // of a 4-byte NOP, and we need to rewrite the NOP sequence.
+        // to satisfy the alignment requirement. If both `remove` and r.addend
+        // are multiples of 4, it is as if we have skipped some NOPs. Otherwise
+        // we are in the middle of a 4-byte NOP, and we need to rewrite the NOP
+        // sequence.
         int64_t skip = 0;
         if (r.type == R_RISCV_ALIGN) {
-          if (remove % 4 != 0) {
+          if (remove % 4 || r.addend % 4) {
             skip = r.addend - remove;
             int64_t j = 0;
             for (; j + 4 <= skip; j += 4)
