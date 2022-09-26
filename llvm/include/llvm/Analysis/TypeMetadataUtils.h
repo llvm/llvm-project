@@ -64,7 +64,7 @@ void findDevirtualizableCallsForTypeCheckedLoad(
 /// Used for example from GlobalDCE to find an entry in a C++ vtable that
 /// matches a vcall offset.
 ///
-/// To support Swift vtables, getPointerAtOffset can see through "relative
+/// To support relative vtables, getPointerAtOffset can see through "relative
 /// pointers", i.e. (sub-)expressions of the form of:
 ///
 /// @symbol = ... {
