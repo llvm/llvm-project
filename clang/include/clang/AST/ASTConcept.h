@@ -44,7 +44,6 @@ public:
   using Detail = llvm::PointerUnion<Expr *, SubstitutionDiagnostic *>;
 
   bool IsSatisfied = false;
-  bool ContainsErrors = false;
 
   /// \brief Pairs of unsatisfied atomic constraint expressions along with the
   /// substituted constraint expr, if the template arguments could be
@@ -79,7 +78,6 @@ struct ASTConstraintSatisfaction final :
                           UnsatisfiedConstraintRecord> {
   std::size_t NumRecords;
   bool IsSatisfied : 1;
-  bool ContainsErrors : 1;
 
   const UnsatisfiedConstraintRecord *begin() const {
     return getTrailingObjects<UnsatisfiedConstraintRecord>();

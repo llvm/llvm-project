@@ -402,7 +402,6 @@ static void
 addConstraintSatisfaction(ASTRecordWriter &Record,
                           const ASTConstraintSatisfaction &Satisfaction) {
   Record.push_back(Satisfaction.IsSatisfied);
-  Record.push_back(Satisfaction.ContainsErrors);
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
