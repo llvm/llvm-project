@@ -18,35 +18,35 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class SPIRV_ArithmeticBinaryOp<string mnemonic, Type type,
-                               list<Trait> traits = []> :
+class SPV_ArithmeticBinaryOp<string mnemonic, Type type,
+                       list<Trait> traits = []> :
       // Operands type same as result type.
-      SPIRV_BinaryOp<mnemonic, type, type,
+      SPV_BinaryOp<mnemonic, type, type,
                    !listconcat(traits,
                                [NoSideEffect, SameOperandsAndResultType])> {
   // In addition to normal types arithmetic instructions can support cooperative
   // matrix.
   let arguments = (ins
-    SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$operand1,
-    SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$operand2
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$operand1,
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$operand2
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$result
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$result
   );
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-class SPIRV_ArithmeticUnaryOp<string mnemonic, Type type,
-                              list<Trait> traits = []> :
+class SPV_ArithmeticUnaryOp<string mnemonic, Type type,
+                            list<Trait> traits = []> :
       // Operand type same as result type.
-      SPIRV_UnaryOp<mnemonic, type, type,
+      SPV_UnaryOp<mnemonic, type, type,
                    !listconcat(traits,
                                [NoSideEffect, SameOperandsAndResultType])>;
 
 // -----
 
-def SPIRV_FAddOp : SPIRV_ArithmeticBinaryOp<"FAdd", SPIRV_Float, [Commutative]> {
+def SPV_FAddOp : SPV_ArithmeticBinaryOp<"FAdd", SPV_Float, [Commutative]> {
   let summary = "Floating-point addition of Operand 1 and Operand 2.";
 
   let description = [{
@@ -75,7 +75,7 @@ def SPIRV_FAddOp : SPIRV_ArithmeticBinaryOp<"FAdd", SPIRV_Float, [Commutative]> 
 
 // -----
 
-def SPIRV_FDivOp : SPIRV_ArithmeticBinaryOp<"FDiv", SPIRV_Float, []> {
+def SPV_FDivOp : SPV_ArithmeticBinaryOp<"FDiv", SPV_Float, []> {
   let summary = "Floating-point division of Operand 1 divided by Operand 2.";
 
   let description = [{
@@ -106,7 +106,7 @@ def SPIRV_FDivOp : SPIRV_ArithmeticBinaryOp<"FDiv", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_FModOp : SPIRV_ArithmeticBinaryOp<"FMod", SPIRV_Float, []> {
+def SPV_FModOp : SPV_ArithmeticBinaryOp<"FMod", SPV_Float, []> {
   let summary = [{
     The floating-point remainder whose sign matches the sign of Operand 2.
   }];
@@ -140,7 +140,7 @@ def SPIRV_FModOp : SPIRV_ArithmeticBinaryOp<"FMod", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_FMulOp : SPIRV_ArithmeticBinaryOp<"FMul", SPIRV_Float, [Commutative]> {
+def SPV_FMulOp : SPV_ArithmeticBinaryOp<"FMul", SPV_Float, [Commutative]> {
   let summary = "Floating-point multiplication of Operand 1 and Operand 2.";
 
   let description = [{
@@ -171,7 +171,7 @@ def SPIRV_FMulOp : SPIRV_ArithmeticBinaryOp<"FMul", SPIRV_Float, [Commutative]> 
 
 // -----
 
-def SPIRV_FNegateOp : SPIRV_ArithmeticUnaryOp<"FNegate", SPIRV_Float, []> {
+def SPV_FNegateOp : SPV_ArithmeticUnaryOp<"FNegate", SPV_Float, []> {
   let summary = [{
     Inverts the sign bit of Operand. (Note, however, that OpFNegate is still
     considered a floating-point instruction, and so is subject to the
@@ -205,7 +205,7 @@ def SPIRV_FNegateOp : SPIRV_ArithmeticUnaryOp<"FNegate", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_FRemOp : SPIRV_ArithmeticBinaryOp<"FRem", SPIRV_Float, []> {
+def SPV_FRemOp : SPV_ArithmeticBinaryOp<"FRem", SPV_Float, []> {
   let summary = [{
     The floating-point remainder whose sign matches the sign of Operand 1.
   }];
@@ -240,7 +240,7 @@ def SPIRV_FRemOp : SPIRV_ArithmeticBinaryOp<"FRem", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_FSubOp : SPIRV_ArithmeticBinaryOp<"FSub", SPIRV_Float, []> {
+def SPV_FSubOp : SPV_ArithmeticBinaryOp<"FSub", SPV_Float, []> {
   let summary = "Floating-point subtraction of Operand 2 from Operand 1.";
 
   let description = [{
@@ -270,8 +270,8 @@ def SPIRV_FSubOp : SPIRV_ArithmeticBinaryOp<"FSub", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_IAddOp : SPIRV_ArithmeticBinaryOp<"IAdd",
-                                        SPIRV_Integer,
+def SPV_IAddOp : SPV_ArithmeticBinaryOp<"IAdd",
+                                        SPV_Integer,
                                         [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer addition of Operand 1 and Operand 2.";
 
@@ -310,8 +310,8 @@ def SPIRV_IAddOp : SPIRV_ArithmeticBinaryOp<"IAdd",
 
 // -----
 
-def SPIRV_IAddCarryOp : SPIRV_BinaryOp<"IAddCarry",
-                                   SPIRV_AnyStruct, SPIRV_Integer,
+def SPV_IAddCarryOp : SPV_BinaryOp<"IAddCarry",
+                                   SPV_AnyStruct, SPV_Integer,
                                    [Commutative, NoSideEffect]> {
   let summary = [{
     Integer addition of Operand 1 and Operand 2, including the carry.
@@ -346,12 +346,12 @@ def SPIRV_IAddCarryOp : SPIRV_BinaryOp<"IAddCarry",
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$operand1,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$operand2
+    SPV_ScalarOrVectorOf<SPV_Integer>:$operand1,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$operand2
   );
 
   let results = (outs
-    SPIRV_AnyStruct:$result
+    SPV_AnyStruct:$result
   );
 
   let builders = [
@@ -367,8 +367,8 @@ def SPIRV_IAddCarryOp : SPIRV_BinaryOp<"IAddCarry",
 
 // -----
 
-def SPIRV_IMulOp : SPIRV_ArithmeticBinaryOp<"IMul",
-                                        SPIRV_Integer,
+def SPV_IMulOp : SPV_ArithmeticBinaryOp<"IMul",
+                                        SPV_Integer,
                                         [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer multiplication of Operand 1 and Operand 2.";
 
@@ -407,8 +407,8 @@ def SPIRV_IMulOp : SPIRV_ArithmeticBinaryOp<"IMul",
 
 // -----
 
-def SPIRV_ISubOp : SPIRV_ArithmeticBinaryOp<"ISub",
-                                        SPIRV_Integer,
+def SPV_ISubOp : SPV_ArithmeticBinaryOp<"ISub",
+                                        SPV_Integer,
                                         [UsableInSpecConstantOp]> {
   let summary = "Integer subtraction of Operand 2 from Operand 1.";
 
@@ -447,7 +447,7 @@ def SPIRV_ISubOp : SPIRV_ArithmeticBinaryOp<"ISub",
 
 // -----
 
-def SPIRV_ISubBorrowOp : SPIRV_BinaryOp<"ISubBorrow", SPIRV_AnyStruct, SPIRV_Integer,
+def SPV_ISubBorrowOp : SPV_BinaryOp<"ISubBorrow", SPV_AnyStruct, SPV_Integer,
                                     [NoSideEffect]> {
   let summary = [{
     Result is the unsigned integer subtraction of Operand 2 from Operand 1,
@@ -485,12 +485,12 @@ def SPIRV_ISubBorrowOp : SPIRV_BinaryOp<"ISubBorrow", SPIRV_AnyStruct, SPIRV_Int
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$operand1,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$operand2
+    SPV_ScalarOrVectorOf<SPV_Integer>:$operand1,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$operand2
   );
 
   let results = (outs
-    SPIRV_AnyStruct:$result
+    SPV_AnyStruct:$result
   );
 
   let builders = [
@@ -506,8 +506,8 @@ def SPIRV_ISubBorrowOp : SPIRV_BinaryOp<"ISubBorrow", SPIRV_AnyStruct, SPIRV_Int
 
 // -----
 
-def SPIRV_SDivOp : SPIRV_ArithmeticBinaryOp<"SDiv",
-                                        SPIRV_Integer,
+def SPV_SDivOp : SPV_ArithmeticBinaryOp<"SDiv",
+                                        SPV_Integer,
                                         [UsableInSpecConstantOp]> {
   let summary = "Signed-integer division of Operand 1 divided by Operand 2.";
 
@@ -541,8 +541,8 @@ def SPIRV_SDivOp : SPIRV_ArithmeticBinaryOp<"SDiv",
 
 // -----
 
-def SPIRV_SModOp : SPIRV_ArithmeticBinaryOp<"SMod",
-                                        SPIRV_Integer,
+def SPV_SModOp : SPV_ArithmeticBinaryOp<"SMod",
+                                        SPV_Integer,
                                         [UsableInSpecConstantOp]> {
   let summary = [{
     Signed remainder operation for the remainder whose sign matches the sign
@@ -580,8 +580,8 @@ def SPIRV_SModOp : SPIRV_ArithmeticBinaryOp<"SMod",
 
 // -----
 
-def SPIRV_SNegateOp : SPIRV_ArithmeticUnaryOp<"SNegate",
-                                          SPIRV_Integer,
+def SPV_SNegateOp : SPV_ArithmeticUnaryOp<"SNegate",
+                                          SPV_Integer,
                                           [UsableInSpecConstantOp]> {
   let summary = "Signed-integer subtract of Operand from zero.";
 
@@ -607,8 +607,8 @@ def SPIRV_SNegateOp : SPIRV_ArithmeticUnaryOp<"SNegate",
 
 // -----
 
-def SPIRV_SRemOp : SPIRV_ArithmeticBinaryOp<"SRem",
-                                        SPIRV_Integer,
+def SPV_SRemOp : SPV_ArithmeticBinaryOp<"SRem",
+                                        SPV_Integer,
                                         [UsableInSpecConstantOp]> {
   let summary = [{
     Signed remainder operation for the remainder whose sign matches the sign
@@ -646,8 +646,8 @@ def SPIRV_SRemOp : SPIRV_ArithmeticBinaryOp<"SRem",
 
 // -----
 
-def SPIRV_UDivOp : SPIRV_ArithmeticBinaryOp<"UDiv",
-                                        SPIRV_Integer,
+def SPV_UDivOp : SPV_ArithmeticBinaryOp<"UDiv",
+                                        SPV_Integer,
                                         [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = "Unsigned-integer division of Operand 1 divided by Operand 2.";
 
@@ -680,7 +680,7 @@ def SPIRV_UDivOp : SPIRV_ArithmeticBinaryOp<"UDiv",
 
 // -----
 
-def SPIRV_VectorTimesScalarOp : SPIRV_Op<"VectorTimesScalar", [NoSideEffect]> {
+def SPV_VectorTimesScalarOp : SPV_Op<"VectorTimesScalar", [NoSideEffect]> {
   let summary = "Scale a floating-point vector.";
 
   let description = [{
@@ -701,12 +701,12 @@ def SPIRV_VectorTimesScalarOp : SPIRV_Op<"VectorTimesScalar", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    VectorOfLengthAndType<[2, 3, 4], [SPIRV_Float]>:$vector,
-    SPIRV_Float:$scalar
+    VectorOfLengthAndType<[2, 3, 4], [SPV_Float]>:$vector,
+    SPV_Float:$scalar
   );
 
   let results = (outs
-    VectorOfLengthAndType<[2, 3, 4], [SPIRV_Float]>:$result
+    VectorOfLengthAndType<[2, 3, 4], [SPV_Float]>:$result
   );
 
   let assemblyFormat = "operands attr-dict `:` `(` type(operands) `)` `->` type($result)";
@@ -714,8 +714,8 @@ def SPIRV_VectorTimesScalarOp : SPIRV_Op<"VectorTimesScalar", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_UModOp : SPIRV_ArithmeticBinaryOp<"UMod",
-                                        SPIRV_Integer,
+def SPV_UModOp : SPV_ArithmeticBinaryOp<"UMod",
+                                        SPV_Integer,
                                         [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = "Unsigned modulo operation of Operand 1 modulo Operand 2.";
 

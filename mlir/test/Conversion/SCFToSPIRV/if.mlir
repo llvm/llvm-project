@@ -2,7 +2,7 @@
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @kernel_simple_selection

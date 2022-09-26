@@ -17,16 +17,16 @@
 // GroupNonUniform capability.
 
 // spirv.KHR.SubgroupBallot is available under in all SPIR-V versions under
-// SubgroupBallotKHR capability and SPIRV_KHR_shader_ballot extension.
+// SubgroupBallotKHR capability and SPV_KHR_shader_ballot extension.
 
 // The GeometryPointSize capability implies the Geometry capability, which
 // implies the Shader capability.
 
 // PhysicalStorageBuffer64 addressing model is available via extension
-// SPIRV_EXT_physical_storage_buffer or SPIRV_KHR_physical_storage_buffer;
+// SPV_EXT_physical_storage_buffer or SPV_KHR_physical_storage_buffer;
 // both extensions are incorporated into SPIR-V 1.5.
 
-// Vulkan memory model is available via extension SPIRV_KHR_vulkan_memory_model,
+// Vulkan memory model is available via extension SPV_KHR_vulkan_memory_model,
 // which extensions are incorporated into SPIR-V 1.5.
 
 //===----------------------------------------------------------------------===//
@@ -97,7 +97,7 @@ func.func @cmp_exchange_weak_missing_capability_atomic_storage(%ptr: !spirv.ptr<
 
 // CHECK-LABEL: @subgroup_ballot_missing_capability
 func.func @subgroup_ballot_missing_capability(%predicate: i1) -> vector<4xi32> attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [], [SPIRV_KHR_shader_ballot]>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [], [SPV_KHR_shader_ballot]>, #spirv.resource_limits<>>
 } {
   // CHECK: test.convert_to_subgroup_ballot_op
   %0 = "test.convert_to_subgroup_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
@@ -128,7 +128,7 @@ func.func @bit_reverse_recursively_implied_capability(%operand: i32) -> i32 attr
 
 // CHECK-LABEL: @subgroup_ballot_suitable_extension
 func.func @subgroup_ballot_suitable_extension(%predicate: i1) -> vector<4xi32> attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [SubgroupBallotKHR], [SPIRV_KHR_shader_ballot]>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [SubgroupBallotKHR], [SPV_KHR_shader_ballot]>, #spirv.resource_limits<>>
 } {
   // CHECK: spirv.KHR.SubgroupBallot
   %0 = "test.convert_to_subgroup_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
@@ -146,7 +146,7 @@ func.func @subgroup_ballot_missing_extension(%predicate: i1) -> vector<4xi32> at
 
 // CHECK-LABEL: @module_suitable_extension1
 func.func @module_suitable_extension1() attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPIRV_KHR_vulkan_memory_model, SPIRV_EXT_physical_storage_buffer]>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model, SPV_EXT_physical_storage_buffer]>, #spirv.resource_limits<>>
 } {
   // CHECK: spirv.module PhysicalStorageBuffer64 Vulkan
   "test.convert_to_module_op"() : () ->()
@@ -155,7 +155,7 @@ func.func @module_suitable_extension1() attributes {
 
 // CHECK-LABEL: @module_suitable_extension2
 func.func @module_suitable_extension2() attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPIRV_KHR_vulkan_memory_model, SPIRV_KHR_physical_storage_buffer]>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model, SPV_KHR_physical_storage_buffer]>, #spirv.resource_limits<>>
 } {
   // CHECK: spirv.module PhysicalStorageBuffer64 Vulkan
   "test.convert_to_module_op"() : () -> ()
@@ -164,7 +164,7 @@ func.func @module_suitable_extension2() attributes {
 
 // CHECK-LABEL: @module_missing_extension_mm
 func.func @module_missing_extension_mm() attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPIRV_KHR_physical_storage_buffer]>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_physical_storage_buffer]>, #spirv.resource_limits<>>
 } {
   // CHECK: test.convert_to_module_op
   "test.convert_to_module_op"() : () -> ()
@@ -173,7 +173,7 @@ func.func @module_missing_extension_mm() attributes {
 
 // CHECK-LABEL: @module_missing_extension_am
 func.func @module_missing_extension_am() attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPIRV_KHR_vulkan_memory_model]>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model]>, #spirv.resource_limits<>>
 } {
   // CHECK: test.convert_to_module_op
   "test.convert_to_module_op"() : () -> ()
@@ -182,7 +182,7 @@ func.func @module_missing_extension_am() attributes {
 
 // CHECK-LABEL: @module_implied_extension
 func.func @module_implied_extension() attributes {
-  // Version 1.5 implies SPIRV_KHR_vulkan_memory_model and SPIRV_KHR_physical_storage_buffer.
+  // Version 1.5 implies SPV_KHR_vulkan_memory_model and SPV_KHR_physical_storage_buffer.
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.5, [VulkanMemoryModel, PhysicalStorageBufferAddresses], []>, #spirv.resource_limits<>>
 } {
   // CHECK: spirv.module PhysicalStorageBuffer64 Vulkan

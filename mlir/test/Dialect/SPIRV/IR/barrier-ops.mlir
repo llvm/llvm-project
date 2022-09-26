@@ -14,7 +14,7 @@ func.func @control_barrier_0() -> () {
 
 func.func @control_barrier_1() -> () {
   // expected-error @+2 {{to be one of}}
-  // expected-error @+1 {{failed to parse SPIRV_ScopeAttr}}
+  // expected-error @+1 {{failed to parse SPV_ScopeAttr}}
   spirv.ControlBarrier <Something>, <Device>, <Acquire|UniformMemory>
   return
 }

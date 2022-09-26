@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPIRV_KHRAssumeTrueOp : SPIRV_KhrVendorOp<"AssumeTrue", []> {
+def SPV_KHRAssumeTrueOp : SPV_KhrVendorOp<"AssumeTrue", []> {
   let summary = "TBD";
 
   let description = [{
@@ -38,14 +38,14 @@ def SPIRV_KHRAssumeTrueOp : SPIRV_KhrVendorOp<"AssumeTrue", []> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPIRV_KHR_expect_assume]>,
-    Capability<[SPIRV_C_ExpectAssumeKHR]>
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[SPV_KHR_expect_assume]>,
+    Capability<[SPV_C_ExpectAssumeKHR]>
   ];
 
   let arguments = (ins
-    SPIRV_Bool:$condition
+    SPV_Bool:$condition
   );
 
   let results = (outs);
@@ -56,7 +56,7 @@ def SPIRV_KHRAssumeTrueOp : SPIRV_KhrVendorOp<"AssumeTrue", []> {
 
 // -----
 
-def SPIRV_UndefOp : SPIRV_Op<"Undef", [NoSideEffect]> {
+def SPV_UndefOp : SPV_Op<"Undef", [NoSideEffect]> {
   let summary = "Make an intermediate object whose value is undefined.";
 
   let description = [{
@@ -83,7 +83,7 @@ def SPIRV_UndefOp : SPIRV_Op<"Undef", [NoSideEffect]> {
   let arguments = (ins);
 
   let results = (outs
-    SPIRV_Type:$result
+    SPV_Type:$result
   );
 
   let hasVerifier = 0;

@@ -16,7 +16,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [NoSideEffect]> {
+def SPV_MatrixTimesMatrixOp : SPV_Op<"MatrixTimesMatrix", [NoSideEffect]> {
   let summary = "Linear-algebraic multiply of LeftMatrix X RightMatrix.";
 
   let description = [{
@@ -48,19 +48,19 @@ def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [NoSideEffect]> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Matrix]>
+    Capability<[SPV_C_Matrix]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyMatrix:$leftmatrix,
-    SPIRV_AnyMatrix:$rightmatrix
+    SPV_AnyMatrix:$leftmatrix,
+    SPV_AnyMatrix:$rightmatrix
   );
 
   let results = (outs
-    SPIRV_AnyMatrix:$result
+    SPV_AnyMatrix:$result
   );
 
   let assemblyFormat = [{
@@ -70,7 +70,7 @@ def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [NoSideEffect]> {
+def SPV_MatrixTimesScalarOp : SPV_Op<"MatrixTimesScalar", [NoSideEffect]> {
   let summary = "Scale a floating-point matrix.";
 
   let description = [{
@@ -101,19 +101,19 @@ def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [NoSideEffect]> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Matrix]>
+    Capability<[SPV_C_Matrix]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyMatrix:$matrix,
-    SPIRV_Float:$scalar
+    SPV_AnyMatrix:$matrix,
+    SPV_Float:$scalar
   );
 
   let results = (outs
-    SPIRV_AnyMatrix:$result
+    SPV_AnyMatrix:$result
   );
 
   // TODO: we need just one matrix type given that the input and result are the
@@ -123,16 +123,16 @@ def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [NoSideEffect]> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Matrix]>
+    Capability<[SPV_C_Matrix]>
   ];
 }
 
 // -----
 
-def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [NoSideEffect]> {
+def SPV_TransposeOp : SPV_Op<"Transpose", [NoSideEffect]> {
   let summary = "Transpose a matrix.";
 
   let description = [{
@@ -163,18 +163,18 @@ def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [NoSideEffect]> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Matrix]>
+    Capability<[SPV_C_Matrix]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyMatrix:$matrix
+    SPV_AnyMatrix:$matrix
   );
 
   let results = (outs
-    SPIRV_AnyMatrix:$result
+    SPV_AnyMatrix:$result
   );
 
   let assemblyFormat = [{

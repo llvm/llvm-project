@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [NoSideEffect]> {
+def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
   let summary = "Create a pointer into a composite object.";
 
   let description = [{
@@ -63,12 +63,12 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$base_ptr,
-    Variadic<SPIRV_Integer>:$indices
+    SPV_AnyPtr:$base_ptr,
+    Variadic<SPV_Integer>:$indices
   );
 
   let results = (outs
-    SPIRV_AnyPtr:$component_ptr
+    SPV_AnyPtr:$component_ptr
   );
 
   let builders = [OpBuilder<(ins "Value":$basePtr, "ValueRange":$indices)>];
@@ -78,7 +78,7 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
+def SPV_CopyMemoryOp : SPV_Op<"CopyMemory", []> {
   let summary = [{
     Copy from the memory pointed to by Source to the memory pointed to by
     Target. Both operands must be non-void pointers and having the same <id>
@@ -117,11 +117,11 @@ def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$target,
-    SPIRV_AnyPtr:$source,
-    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
+    SPV_AnyPtr:$target,
+    SPV_AnyPtr:$source,
+    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment,
-    OptionalAttr<SPIRV_MemoryAccessAttr>:$source_memory_access,
+    OptionalAttr<SPV_MemoryAccessAttr>:$source_memory_access,
     OptionalAttr<I32Attr>:$source_alignment
   );
 
@@ -132,7 +132,7 @@ def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
 
 // -----
 
-def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [NoSideEffect]> {
+def SPV_InBoundsPtrAccessChainOp : SPV_Op<"InBoundsPtrAccessChain", [NoSideEffect]> {
   let summary = [{
     Has the same semantics as OpPtrAccessChain, with the addition that the
     resulting pointer is known to point within the base object.
@@ -160,20 +160,20 @@ def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [NoSideE
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Addresses]>
+    Capability<[SPV_C_Addresses]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$base_ptr,
-    SPIRV_Integer:$element,
-    Variadic<SPIRV_Integer>:$indices
+    SPV_AnyPtr:$base_ptr,
+    SPV_Integer:$element,
+    Variadic<SPV_Integer>:$indices
   );
 
   let results = (outs
-    SPIRV_AnyPtr:$result
+    SPV_AnyPtr:$result
   );
 
   let builders = [OpBuilder<(ins "Value":$basePtr, "Value":$element, "ValueRange":$indices)>];
@@ -181,7 +181,7 @@ def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [NoSideE
 
 // -----
 
-def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
+def SPV_LoadOp : SPV_Op<"Load", []> {
   let summary = "Load through a pointer.";
 
   let description = [{
@@ -217,13 +217,13 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
-    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
+    SPV_AnyPtr:$ptr,
+    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment
   );
 
   let results = (outs
-    SPIRV_Type:$value
+    SPV_Type:$value
   );
 
   let builders = [
@@ -235,7 +235,7 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
 
 // -----
 
-def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [NoSideEffect]> {
+def SPV_PtrAccessChainOp : SPV_Op<"PtrAccessChain", [NoSideEffect]> {
   let summary = [{
     Has the same semantics as OpAccessChain, with the addition of the
     Element operand.
@@ -286,20 +286,20 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [NoSideEffect]> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Addresses, SPIRV_C_PhysicalStorageBufferAddresses, SPIRV_C_VariablePointers, SPIRV_C_VariablePointersStorageBuffer]>
+    Capability<[SPV_C_Addresses, SPV_C_PhysicalStorageBufferAddresses, SPV_C_VariablePointers, SPV_C_VariablePointersStorageBuffer]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$base_ptr,
-    SPIRV_Integer:$element,
-    Variadic<SPIRV_Integer>:$indices
+    SPV_AnyPtr:$base_ptr,
+    SPV_Integer:$element,
+    Variadic<SPV_Integer>:$indices
   );
 
   let results = (outs
-    SPIRV_AnyPtr:$result
+    SPV_AnyPtr:$result
   );
 
   let builders = [OpBuilder<(ins "Value":$basePtr, "Value":$element, "ValueRange":$indices)>];
@@ -307,7 +307,7 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_StoreOp : SPIRV_Op<"Store", []> {
+def SPV_StoreOp : SPV_Op<"Store", []> {
   let summary = "Store through a pointer.";
 
   let description = [{
@@ -339,9 +339,9 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", []> {
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
-    SPIRV_Type:$value,
-    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
+    SPV_AnyPtr:$ptr,
+    SPV_Type:$value,
+    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment
   );
 
@@ -360,7 +360,7 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", []> {
 
 // -----
 
-def SPIRV_VariableOp : SPIRV_Op<"Variable", []> {
+def SPV_VariableOp : SPV_Op<"Variable", []> {
   let summary = [{
     Allocate an object in memory, resulting in a pointer to it, which can be
     used with OpLoad and OpStore.
@@ -400,12 +400,12 @@ def SPIRV_VariableOp : SPIRV_Op<"Variable", []> {
   }];
 
   let arguments = (ins
-    SPIRV_StorageClassAttr:$storage_class,
+    SPV_StorageClassAttr:$storage_class,
     Optional<AnyType>:$initializer
   );
 
   let results = (outs
-    SPIRV_AnyPtr:$pointer
+    SPV_AnyPtr:$pointer
   );
 }
 
