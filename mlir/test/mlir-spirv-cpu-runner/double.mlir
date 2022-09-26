@@ -4,7 +4,7 @@
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_variable_pointers]>,
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_variable_pointers]>,
     #spirv.resource_limits<
      max_compute_workgroup_invocations = 128,
      max_compute_workgroup_size = [128, 128, 64]>>

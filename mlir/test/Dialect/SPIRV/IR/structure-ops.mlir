@@ -413,17 +413,17 @@ spirv.module Logical GLSL450 { }
 spirv.module @name Logical GLSL450 { }
 
 // Module with (version, capabilities, extensions) triple
-// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_16bit_storage]>
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_16bit_storage]> { }
+// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]>
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]> { }
 
 // Module with additional attributes
 // CHECK: spirv.module Logical GLSL450 attributes {foo = "bar"}
 spirv.module Logical GLSL450 attributes {foo = "bar"} { }
 
 // Module with VCE triple and additional attributes
-// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_16bit_storage]> attributes {foo = "bar"}
+// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]> attributes {foo = "bar"}
 spirv.module Logical GLSL450
-  requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_16bit_storage]>
+  requires #spirv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]>
   attributes {foo = "bar"} { }
 
 // Module with function

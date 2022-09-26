@@ -19,7 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather", [NoSideEffect]> {
+def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
   let summary = "Gathers the requested depth-comparison from four texels.";
 
   let description = [{
@@ -58,22 +58,22 @@ def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather", [NoSideEffect]> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_Shader]>
+    Capability<[SPV_C_Shader]>
   ];
 
   let arguments = (ins
-    SPIRV_AnySampledImage:$sampledimage,
-    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$coordinate,
-    SPIRV_Float:$dref,
-    OptionalAttr<SPIRV_ImageOperandsAttr>:$imageoperands,
-    Variadic<SPIRV_Type>:$operand_arguments
+    SPV_AnySampledImage:$sampledimage,
+    SPV_ScalarOrVectorOf<SPV_Float>:$coordinate,
+    SPV_Float:$dref,
+    OptionalAttr<SPV_ImageOperandsAttr>:$imageoperands,
+    Variadic<SPV_Type>:$operand_arguments
   );
 
   let results = (outs
-    SPIRV_Vector:$result
+    SPV_Vector:$result
   );
 
   let assemblyFormat = [{$sampledimage `:` type($sampledimage) `,`
@@ -86,7 +86,7 @@ def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [NoSideEffect]> {
+def SPV_ImageQuerySizeOp : SPV_Op<"ImageQuerySize", [NoSideEffect]> {
   let summary = "Query the dimensions of Image, with no level of detail.";
 
   let description = [{
@@ -124,18 +124,18 @@ def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [NoSideEffect]> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>,
-    MaxVersion<SPIRV_V_1_6>,
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPIRV_C_ImageQuery, SPIRV_C_Kernel]>
+    Capability<[SPV_C_ImageQuery, SPV_C_Kernel]>
   ];
 
   let arguments = (ins
-    SPIRV_AnyImage:$image
+    SPV_AnyImage:$image
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+    SPV_ScalarOrVectorOf<SPV_Integer>:$result
   );
 
   let assemblyFormat = "attr-dict $image `:` type($image) `->` type($result)";
@@ -143,7 +143,7 @@ def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_ImageOp : SPIRV_Op<"Image",
+def SPV_ImageOp : SPV_Op<"Image",
     [NoSideEffect,
      TypesMatchWith<"type of 'result' matches image type of 'sampledimage'",
                     "sampledimage", "result",
@@ -166,11 +166,11 @@ def SPIRV_ImageOp : SPIRV_Op<"Image",
   }];
 
   let arguments = (ins
-    SPIRV_AnySampledImage:$sampledimage
+    SPV_AnySampledImage:$sampledimage
   );
 
   let results = (outs
-    SPIRV_AnyImage:$result
+    SPV_AnyImage:$result
   );
 
   let assemblyFormat = "attr-dict $sampledimage `:` type($sampledimage)";

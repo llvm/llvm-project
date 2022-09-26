@@ -25,7 +25,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
+def SPV_AddressOfOp : SPV_Op<"mlir.addressof",
     [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
      InFunctionScope, NoSideEffect]> {
   let summary = "Get the address of a global variable.";
@@ -58,7 +58,7 @@ def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
   );
 
   let results = (outs
-    SPIRV_AnyPtr:$pointer
+    SPV_AnyPtr:$pointer
   );
 
   let hasOpcode = 0;
@@ -72,7 +72,7 @@ def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
 
 // -----
 
-def SPIRV_ConstantOp : SPIRV_Op<"Constant",
+def SPV_ConstantOp : SPV_Op<"Constant",
     [ConstantLike,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
      NoSideEffect]> {
@@ -119,7 +119,7 @@ def SPIRV_ConstantOp : SPIRV_Op<"Constant",
   );
 
   let results = (outs
-    SPIRV_Type:$constant
+    SPV_Type:$constant
   );
 
   let hasFolder = 1;
@@ -143,7 +143,7 @@ def SPIRV_ConstantOp : SPIRV_Op<"Constant",
 
 // -----
 
-def SPIRV_EntryPointOp : SPIRV_Op<"EntryPoint", [InModuleScope]> {
+def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
   let summary = [{
     Declare an entry point, its execution model, and its interface.
   }];
@@ -189,7 +189,7 @@ def SPIRV_EntryPointOp : SPIRV_Op<"EntryPoint", [InModuleScope]> {
   }];
 
   let arguments = (ins
-    SPIRV_ExecutionModelAttr:$execution_model,
+    SPV_ExecutionModelAttr:$execution_model,
     FlatSymbolRefAttr:$fn,
     SymbolRefArrayAttr:$interface
   );
@@ -205,7 +205,7 @@ def SPIRV_EntryPointOp : SPIRV_Op<"EntryPoint", [InModuleScope]> {
 
 // -----
 
-def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
+def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
   let summary = "Declare an execution mode for an entry point.";
 
   let description = [{
@@ -238,7 +238,7 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 
   let arguments = (ins
     FlatSymbolRefAttr:$fn,
-    SPIRV_ExecutionModeAttr:$execution_mode,
+    SPV_ExecutionModeAttr:$execution_mode,
     I32ArrayAttr:$values
   );
 
@@ -255,7 +255,7 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 
 // -----
 
-def SPIRV_FuncOp : SPIRV_Op<"func", [
+def SPV_FuncOp : SPV_Op<"func", [
     AutomaticAllocationScope, DeclareOpInterfaceMethods<CallableOpInterface>,
     FunctionOpInterface, InModuleScope, IsolatedFromAbove, Symbol
   ]> {
@@ -292,7 +292,7 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
   let arguments = (ins
     TypeAttrOf<FunctionType>:$function_type,
     StrAttr:$sym_name,
-    SPIRV_FunctionControlAttr:$function_control
+    SPV_FunctionControlAttr:$function_control
   );
 
   let results = (outs);
@@ -331,7 +331,7 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
 
 // -----
 
-def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
+def SPV_GlobalVariableOp : SPV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
   let summary = [{
     Allocate an object in memory at module scope. The object is
     referenced using a symbol name.
@@ -431,7 +431,7 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [InModuleScope, Symbol]>
 
 // -----
 
-def SPIRV_ModuleOp : SPIRV_Op<"module",
+def SPV_ModuleOp : SPV_Op<"module",
     [IsolatedFromAbove, NoRegionArguments, NoTerminator,
      SingleBlock, SymbolTable, Symbol]> {
   let summary = "The top-level op that defines a SPIR-V module";
@@ -469,7 +469,7 @@ def SPIRV_ModuleOp : SPIRV_Op<"module",
     spirv.module Logical GLSL450  {}
 
     spirv.module Logical Vulkan
-        requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_vulkan_memory_model]>
+        requires #spirv.vce<v1.0, [Shader], [SPV_KHR_vulkan_memory_model]>
         attributes { some_additional_attr = ... } {
       spirv.func @do_nothing() -> () {
         spirv.Return
@@ -479,9 +479,9 @@ def SPIRV_ModuleOp : SPIRV_Op<"module",
   }];
 
   let arguments = (ins
-    SPIRV_AddressingModelAttr:$addressing_model,
-    SPIRV_MemoryModelAttr:$memory_model,
-    OptionalAttr<SPIRV_VerCapExtAttr>:$vce_triple,
+    SPV_AddressingModelAttr:$addressing_model,
+    SPV_MemoryModelAttr:$memory_model,
+    OptionalAttr<SPV_VerCapExtAttr>:$vce_triple,
     OptionalAttr<StrAttr>:$sym_name
   );
 
@@ -520,7 +520,7 @@ def SPIRV_ModuleOp : SPIRV_Op<"module",
 
 // -----
 
-def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [NoSideEffect]> {
+def SPV_ReferenceOfOp : SPV_Op<"mlir.referenceof", [NoSideEffect]> {
   let summary = "Reference a specialization constant.";
 
   let description = [{
@@ -552,7 +552,7 @@ def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [NoSideEffect]> {
   );
 
   let results = (outs
-    SPIRV_Type:$reference
+    SPV_Type:$reference
   );
 
   let hasOpcode = 0;
@@ -564,7 +564,7 @@ def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_SpecConstantOp : SPIRV_Op<"SpecConstant", [InModuleScope, Symbol]> {
+def SPV_SpecConstantOp : SPV_Op<"SpecConstant", [InModuleScope, Symbol]> {
   let summary = [{
     Declare a new integer-type or floating-point-type scalar specialization
     constant.
@@ -614,7 +614,7 @@ def SPIRV_SpecConstantOp : SPIRV_Op<"SpecConstant", [InModuleScope, Symbol]> {
 
 // -----
 
-def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
+def SPV_SpecConstantCompositeOp : SPV_Op<"SpecConstantComposite", [
     InModuleScope, Symbol]> {
   let summary = "Declare a new composite specialization constant.";
 
@@ -668,7 +668,7 @@ def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
 
 // -----
 
-def SPIRV_SpecConstantOperationOp : SPIRV_Op<"SpecConstantOperation", [
+def SPV_SpecConstantOperationOp : SPV_Op<"SpecConstantOperation", [
        NoSideEffect, InFunctionScope,
        SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = [{
@@ -759,7 +759,7 @@ def SPIRV_SpecConstantOperationOp : SPIRV_Op<"SpecConstantOperation", [
 
 // -----
 
-def SPIRV_YieldOp : SPIRV_Op<"mlir.yield", [
+def SPV_YieldOp : SPV_Op<"mlir.yield", [
     HasParent<"SpecConstantOperationOp">, NoSideEffect, Terminator]> {
   let summary = [{
     Yields the result computed in `spirv.SpecConstantOperation`'s
@@ -770,7 +770,7 @@ def SPIRV_YieldOp : SPIRV_Op<"mlir.yield", [
     This op is a special terminator whose only purpose is to terminate
     an `spirv.SpecConstantOperation`'s enclosed region. It accepts a
     single operand produced by the preceeding (and only other) instruction
-    in its parent block (see SPIRV_SpecConstantOperation for further
+    in its parent block (see SPV_SpecConstantOperation for further
     details). This op has no corresponding SPIR-V instruction.
 
     ```
