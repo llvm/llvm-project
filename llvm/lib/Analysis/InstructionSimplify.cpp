@@ -4236,50 +4236,48 @@ static Value *simplifySelectBitTest(Value *TrueVal, Value *FalseVal, Value *X,
 static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
                                      ICmpInst::Predicate Pred, Value *TVal,
                                      Value *FVal) {
-  // Canonicalize max/min as false value of select.
-  if (match(TVal, m_c_MaxOrMin(m_Specific(FVal), m_Value()))) {
-    std::swap(TVal, FVal);
-    Pred = ICmpInst::getInversePredicate(Pred);
-  }
-
-  // Cond ? X : max(X, Y)
-  Value *X = TVal, *Y;
-  if (!match(FVal, m_c_MaxOrMin(m_Specific(X), m_Value(Y))))
-    return nullptr;
-
-  // Canonicalize common select operand X as CmpLHS.
-  if (CmpRHS == X) {
+  // Canonicalize common cmp+sel operand as CmpLHS.
+  if (CmpRHS == TVal || CmpRHS == FVal) {
     std::swap(CmpLHS, CmpRHS);
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
-  // (X Pred Y) ? X : max(X, Y)
-  if (CmpLHS != X || CmpRHS != Y)
+  // Canonicalize common cmp+sel operand as TVal.
+  if (CmpLHS == FVal) {
+    std::swap(TVal, FVal);
+    Pred = ICmpInst::getInversePredicate(Pred);
+  }
+
+  // (X pred Y) ? X : max/min(X, Y)
+  Value *X = CmpLHS, *Y = CmpRHS;
+  auto *MMI = dyn_cast<MinMaxIntrinsic>(FVal);
+  if (!MMI || TVal != X ||
+      !match(FVal, m_c_MaxOrMin(m_Specific(X), m_Specific(Y))))
     return nullptr;
 
-  if (auto *MMI = dyn_cast<MinMaxIntrinsic>(FVal)) {
-    ICmpInst::Predicate MMPred = MMI->getPredicate();
-    // (X >  Y) ? X : max(X, Y) --> max(X, Y)
-    // (X >= Y) ? X : max(X, Y) --> max(X, Y)
-    // (X == Y) ? X : max(X, Y) --> max(X, Y)
-    // (X <  Y) ? X : min(X, Y) --> min(X, Y)
-    // (X <= Y) ? X : min(X, Y) --> min(X, Y)
-    // (X == Y) ? X : min(X, Y) --> min(X, Y)
-    if (MMPred == CmpInst::getStrictPredicate(Pred) ||
-        Pred == ICmpInst::ICMP_EQ)
-      return MMI;
+  // (X == Y) ? X : max/min(X, Y) --> max/min(X, Y)
+  if (Pred == CmpInst::ICMP_EQ)
+    return MMI;
 
-    // (X <  Y) ? X : max(X, Y) --> X
-    // (X <= Y) ? X : max(X, Y) --> X
-    // (X != Y) ? X : max(X, Y) --> X
-    // (X >  Y) ? X : min(X, Y) --> X
-    // (X >= Y) ? X : min(X, Y) --> X
-    // (X != Y) ? X : min(X, Y) --> X
-    ICmpInst::Predicate InvPred = CmpInst::getInversePredicate(Pred);
-    if (MMPred == CmpInst::getStrictPredicate(InvPred) ||
-        Pred == ICmpInst::ICMP_NE)
-      return X;
-  }
+  // (X != Y) ? X : max/min(X, Y) --> X
+  if (Pred == CmpInst::ICMP_NE)
+    return X;
+
+  // (X >  Y) ? X : max(X, Y) --> max(X, Y)
+  // (X >= Y) ? X : max(X, Y) --> max(X, Y)
+  // (X <  Y) ? X : min(X, Y) --> min(X, Y)
+  // (X <= Y) ? X : min(X, Y) --> min(X, Y)
+  ICmpInst::Predicate MMPred = MMI->getPredicate();
+  if (MMPred == CmpInst::getStrictPredicate(Pred))
+    return MMI;
+
+  // (X <  Y) ? X : max(X, Y) --> X
+  // (X <= Y) ? X : max(X, Y) --> X
+  // (X >  Y) ? X : min(X, Y) --> X
+  // (X >= Y) ? X : min(X, Y) --> X
+  ICmpInst::Predicate InvPred = CmpInst::getInversePredicate(Pred);
+  if (MMPred == CmpInst::getStrictPredicate(InvPred))
+    return X;
 
   return nullptr;
 }
