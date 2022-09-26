@@ -5843,8 +5843,8 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (Op0 == Op1)
       return Op0;
 
-    // Canonicalize constant operand as Op1.
-    if (isa<Constant>(Op0))
+    // Canonicalize immediate constant operand as Op1.
+    if (match(Op0, m_ImmConstant()))
       std::swap(Op0, Op1);
 
     // Assume undef is the limit value.
