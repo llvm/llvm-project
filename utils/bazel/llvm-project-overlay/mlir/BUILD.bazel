@@ -2317,7 +2317,6 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":ArithmeticUtils",
         ":IR",
         ":Support",
         "//llvm:Support",
@@ -8556,6 +8555,7 @@ cc_library(
         ":ArithmeticCanonicalizationIncGen",
         ":ArithmeticOpsIncGen",
         ":CommonFolders",
+        ":DialectUtils",
         ":IR",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
