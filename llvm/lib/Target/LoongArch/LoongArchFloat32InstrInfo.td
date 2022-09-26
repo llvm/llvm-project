@@ -157,11 +157,8 @@ def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
 
 // Match non-signaling comparison
 
-// TODO: change setcc to any_fsetcc after call is supported because
-// we need to call llvm.experimental.constrained.fcmp.f32 in testcase.
-// See RISCV float-fcmp-strict.ll for reference.
 class PatFPSetcc<CondCode cc, LAInst CmpInst, RegisterClass RegTy>
-    : Pat<(setcc RegTy:$fj, RegTy:$fk, cc),
+    : Pat<(any_fsetcc RegTy:$fj, RegTy:$fk, cc),
           (MOVCF2GR (CmpInst RegTy:$fj, RegTy:$fk))>;
 // SETOGT/SETOGE/SETUGT/SETUGE will expand into SETOLT/SETOLE/SETULT/SETULE.
 def : PatFPSetcc<SETOEQ, FCMP_CEQ_S,  FPR32>;
@@ -196,7 +193,22 @@ defm : PatFPBrcond<SETUNE, FCMP_CUNE_S, FPR32>;
 defm : PatFPBrcond<SETUO,  FCMP_CUN_S, FPR32>;
 defm : PatFPBrcond<SETLT,  FCMP_CLT_S, FPR32>;
 
-// TODO: Match signaling comparison strict_fsetccs with FCMP_S*_S instructions.
+// Match signaling comparison
+
+class PatStrictFsetccs<CondCode cc, LAInst CmpInst, RegisterClass RegTy>
+    : Pat<(strict_fsetccs RegTy:$fj, RegTy:$fk, cc),
+          (MOVCF2GR (CmpInst RegTy:$fj, RegTy:$fk))>;
+def : PatStrictFsetccs<SETOEQ, FCMP_SEQ_S,  FPR32>;
+def : PatStrictFsetccs<SETOLT, FCMP_SLT_S,  FPR32>;
+def : PatStrictFsetccs<SETOLE, FCMP_SLE_S,  FPR32>;
+def : PatStrictFsetccs<SETONE, FCMP_SNE_S,  FPR32>;
+def : PatStrictFsetccs<SETO,   FCMP_SOR_S,  FPR32>;
+def : PatStrictFsetccs<SETUEQ, FCMP_SUEQ_S, FPR32>;
+def : PatStrictFsetccs<SETULT, FCMP_SULT_S, FPR32>;
+def : PatStrictFsetccs<SETULE, FCMP_SULE_S, FPR32>;
+def : PatStrictFsetccs<SETUNE, FCMP_SUNE_S, FPR32>;
+def : PatStrictFsetccs<SETUO,  FCMP_SUN_S,  FPR32>;
+def : PatStrictFsetccs<SETLT,  FCMP_SLT_S,  FPR32>;
 
 /// Select
 
