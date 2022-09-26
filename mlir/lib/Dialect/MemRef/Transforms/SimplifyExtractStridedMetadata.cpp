@@ -487,14 +487,103 @@ struct ForwardStaticMetadata
     return success(atLeastOneReplacement);
   }
 };
+
+/// Replace `base, offset, sizes, strides =
+///              extract_strided_metadata(allocLikeOp)`
+///
+/// With
+///
+/// ```
+/// base = reinterpret_cast allocLikeOp(allocSizes) to a flat memref<eltTy>
+/// offset = 0
+/// sizes = allocSizes
+/// strides#i = prod(allocSizes#j, for j in {i+1..rank-1})
+/// ```
+///
+/// The transformation only applies if the allocLikeOp has been normalized.
+/// In other words, the affine_map must be an identity.
+template <typename AllocLikeOp>
+struct ExtractStridedMetadataOpAllocFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+public:
+  using OpRewritePattern<memref::ExtractStridedMetadataOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
+                                PatternRewriter &rewriter) const override {
+    auto allocLikeOp = op.getSource().getDefiningOp<AllocLikeOp>();
+    if (!allocLikeOp)
+      return failure();
+
+    auto memRefType =
+        allocLikeOp.getResult().getType().template cast<MemRefType>();
+    if (!memRefType.getLayout().isIdentity())
+      return rewriter.notifyMatchFailure(
+          allocLikeOp, "alloc-like operations should have been normalized");
+
+    Location loc = op.getLoc();
+    int rank = memRefType.getRank();
+
+    // Collect the sizes.
+    ValueRange dynamic = allocLikeOp.getDynamicSizes();
+    SmallVector<OpFoldResult> sizes;
+    sizes.reserve(rank);
+    unsigned dynamicPos = 0;
+    for (int64_t size : memRefType.getShape()) {
+      if (ShapedType::isDynamic(size))
+        sizes.push_back(dynamic[dynamicPos++]);
+      else
+        sizes.push_back(rewriter.getIndexAttr(size));
+    }
+
+    // Strides (just creates identity strides).
+    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
+    AffineExpr expr = rewriter.getAffineConstantExpr(1);
+    unsigned symbolNumber = 0;
+    for (int i = rank - 2; i >= 0; --i) {
+      expr = expr * rewriter.getAffineSymbolExpr(symbolNumber++);
+      assert(i + 1 + symbolNumber == sizes.size() &&
+             "The ArrayRef should encompass the last #symbolNumber sizes");
+      ArrayRef<OpFoldResult> sizesInvolvedInStride(&sizes[i + 1], symbolNumber);
+      strides[i] = makeComposedFoldedAffineApply(rewriter, loc, expr,
+                                                 sizesInvolvedInStride);
+    }
+
+    // Put all the values together to replace the results.
+    SmallVector<Value> results;
+    results.reserve(rank * 2 + 2);
+
+    auto baseBufferType = op.getBaseBuffer().getType().cast<MemRefType>();
+    int64_t offset = 0;
+    if (allocLikeOp.getType() == baseBufferType)
+      results.push_back(allocLikeOp);
+    else
+      results.push_back(rewriter.create<memref::ReinterpretCastOp>(
+          loc, baseBufferType, allocLikeOp, offset,
+          /*sizes=*/ArrayRef<int64_t>(),
+          /*strides=*/ArrayRef<int64_t>()));
+
+    // Offset.
+    results.push_back(rewriter.create<arith::ConstantIndexOp>(loc, offset));
+
+    for (OpFoldResult size : sizes)
+      results.push_back(getValueOrCreateConstantIndexOp(rewriter, loc, size));
+
+    for (OpFoldResult stride : strides)
+      results.push_back(getValueOrCreateConstantIndexOp(rewriter, loc, stride));
+
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+};
 } // namespace
 
 void memref::populateSimplifyExtractStridedMetadataOpPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<ExtractStridedMetadataOpSubviewFolder,
-           ExtractStridedMetadataOpExpandShapeFolder, ForwardStaticMetadata>(
-          patterns.getContext());
+  patterns.add<ExtractStridedMetadataOpSubviewFolder,
+               ExtractStridedMetadataOpExpandShapeFolder, ForwardStaticMetadata,
+               ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
+               ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>>(
+      patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
