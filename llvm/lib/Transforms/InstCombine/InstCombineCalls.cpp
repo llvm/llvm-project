@@ -1297,6 +1297,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
     // umin(x, 1) == zext(x != 0)
     if (match(I1, m_One())) {
+      assert(II->getType()->getScalarSizeInBits() != 1 &&
+             "Expected simplify of umin with max constant");
       Value *Zero = Constant::getNullValue(I0->getType());
       Value *Cmp = Builder.CreateICmpNE(I0, Zero);
       return CastInst::Create(Instruction::ZExt, Cmp, II->getType());
