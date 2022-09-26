@@ -44,7 +44,7 @@ func.func @module_logical_glsl450() {
 func.func @module_physical_storage_buffer64_vulkan() {
   // CHECK: spirv.module min version: v1.0
   // CHECK: spirv.module max version: v1.6
-  // CHECK: spirv.module extensions: [ [SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer] [SPV_KHR_vulkan_memory_model] ]
+  // CHECK: spirv.module extensions: [ [SPIRV_EXT_physical_storage_buffer, SPIRV_KHR_physical_storage_buffer] [SPIRV_KHR_vulkan_memory_model] ]
   // CHECK: spirv.module capabilities: [ [PhysicalStorageBufferAddresses] [VulkanMemoryModel] ]
   spirv.module PhysicalStorageBuffer64 Vulkan { }
   return

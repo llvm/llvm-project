@@ -2,7 +2,7 @@
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader, Int64], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader, Int64], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @while_loop1
