@@ -72,7 +72,7 @@ framework module B_Private { umbrella header "B_Private.h" }
 // CHECK:        "translation-units": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "commands": [
-// CHECK-NEXT:         {
+// CHECK:              {
 // CHECK:                "command-line": [
 // CHECK:                  "-fmodule-map-file=[[PREFIX]]/frameworks/A.framework/Modules/module.modulemap",
 // CHECK:                  "-fmodule-name=A",
@@ -84,10 +84,8 @@ framework module B_Private { umbrella header "B_Private.h" }
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       ]
-// CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }
+// CHECK:            ]
+// CHECK:          }
 
 // RUN: %deps-to-rsp %t/result.json --module-name=B > %t/B.cc1.rsp
 // RUN: %clang @%t/B.cc1.rsp
