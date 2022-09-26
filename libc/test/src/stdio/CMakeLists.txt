@@ -121,21 +121,23 @@ add_libc_unittest(
     libc.src.stdio.puts
 )
 
-add_libc_unittest(
-  remove_test
-  SUITE
-    libc_stdio_unittests
-  SRCS
-    remove_test.cpp
-  DEPENDS
-    libc.include.errno
-    libc.include.unistd
-    libc.src.fcntl.open
-    libc.src.stdio.remove
-    libc.src.sys.stat.mkdirat
-    libc.src.unistd.access
-    libc.src.unistd.close
-)
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_libc_unittest(
+    remove_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      remove_test.cpp
+    DEPENDS
+      libc.include.errno
+      libc.include.unistd
+      libc.src.fcntl.open
+      libc.src.stdio.remove
+      libc.src.sys.stat.mkdirat
+      libc.src.unistd.access
+      libc.src.unistd.close
+  )
+endif()
 
 add_subdirectory(printf_core)
 add_subdirectory(testdata)
