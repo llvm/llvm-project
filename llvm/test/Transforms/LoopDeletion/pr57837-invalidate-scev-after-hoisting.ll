@@ -73,3 +73,56 @@ exit:
 }
 
 declare void @use(i32)
+
+
+define i32 @scev_invalidation_after_deleting(ptr %src) {
+; CHECK-LABEL: @scev_invalidation_after_deleting(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    br label [[INNER_1:%.*]]
+; CHECK:       inner.1:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 0, [[OUTER_IV]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[INNER_2_PREHEADER:%.*]], label [[INNER_1]]
+; CHECK:       inner.2.preheader:
+; CHECK-NEXT:    br label [[INNER_3_PH:%.*]]
+; CHECK:       inner.3.ph:
+; CHECK-NEXT:    br label [[INNER_3:%.*]]
+; CHECK:       inner.3:
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[SRC:%.*]], align 4
+; CHECK-NEXT:    br i1 false, label [[OUTER_LATCH]], label [[INNER_3]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[L_LCSSA:%.*]] = phi i32 [ [[L]], [[INNER_3]] ]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 0 to i32
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i32 [[L_LCSSA]], [[TRUNC]]
+; CHECK-NEXT:    br label [[OUTER_HEADER]]
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i32 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.1
+
+inner.1:
+  %c.1 = icmp eq i32 0, %outer.iv
+  br i1 %c.1, label %inner.2, label %inner.1
+
+inner.2:
+  %iv.2 = phi i64 [ 0, %inner.1 ], [ %iv.2.next, %inner.2 ]
+  %iv.2.next = add nuw i64 %iv.2, 1
+  br i1 true, label %inner.3.ph, label %inner.2
+
+inner.3.ph:
+  %trunc = trunc i64 %iv.2 to i32
+  br label %inner.3
+
+inner.3:
+  %l = load i32, ptr %src, align 4
+  br i1 false, label %outer.latch, label %inner.3
+
+outer.latch:
+  %outer.iv.next = add nsw i32 %l, %trunc
+  br label %outer.header
+}
