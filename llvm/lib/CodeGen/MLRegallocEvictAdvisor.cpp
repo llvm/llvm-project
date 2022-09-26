@@ -461,9 +461,10 @@ public:
     return I->second.get();
   }
 
-  void logRewardIfNeeded(const MachineFunction &MF, float Reward) override {
+  void logRewardIfNeeded(const MachineFunction &MF,
+                         llvm::function_ref<float()> GetReward) override {
     if (auto *Log = this->getLogger(MF))
-      Log->logFloatFinalReward(Reward);
+      Log->logFloatFinalReward(GetReward());
   }
 
 private:
@@ -1067,13 +1068,19 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
 }
 
 bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
-  float Reward = static_cast<float>(
-      calculateRegAllocScore(MF, getAnalysis<MachineBlockFrequencyInfo>())
-          .getScore());
+  Optional<float> CachedReward;
+  auto GetReward = [&]() {
+    if (!CachedReward)
+      CachedReward = static_cast<float>(
+          calculateRegAllocScore(MF, getAnalysis<MachineBlockFrequencyInfo>())
+              .getScore());
+    return *CachedReward;
+  };
 
-  getAnalysis<RegAllocEvictionAdvisorAnalysis>().logRewardIfNeeded(MF, Reward);
-  getAnalysis<RegAllocPriorityAdvisorAnalysis>().logRewardIfNeeded(MF, Reward);
-
+  getAnalysis<RegAllocEvictionAdvisorAnalysis>().logRewardIfNeeded(MF,
+                                                                   GetReward);
+  getAnalysis<RegAllocPriorityAdvisorAnalysis>().logRewardIfNeeded(MF,
+                                                                   GetReward);
   return false;
 }
 #endif // #ifdef LLVM_HAVE_TF_API
