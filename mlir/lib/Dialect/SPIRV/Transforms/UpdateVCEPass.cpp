@@ -102,7 +102,7 @@ void UpdateVCEPass::runOnOperation() {
 
   spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnv(module);
   if (!targetAttr) {
-    module.emitError("missing 'spv.target_env' attribute");
+    module.emitError("missing 'spirv.target_env' attribute");
     return signalPassFailure();
   }
 

@@ -58,13 +58,13 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
 
     memory-semantics ::= `"None"` | `"Acquire"` | "Release"` | ...
 
-    control-barrier-op ::= `spv.ControlBarrier` scope, scope, memory-semantics
+    control-barrier-op ::= `spirv.ControlBarrier` scope, scope, memory-semantics
     ```
 
     #### Example:
 
     ```mlir
-    spv.ControlBarrier "Workgroup", "Device", "Acquire|UniformMemory"
+    spirv.ControlBarrier "Workgroup", "Device", "Acquire|UniformMemory"
 
     ```
   }];
@@ -109,13 +109,13 @@ def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
 
     memory-semantics ::= `"None"` | `"Acquire"` | `"Release"` | ...
 
-    memory-barrier-op ::= `spv.MemoryBarrier` scope, memory-semantics
+    memory-barrier-op ::= `spirv.MemoryBarrier` scope, memory-semantics
     ```
 
     #### Example:
 
     ```mlir
-    spv.MemoryBarrier "Device", "Acquire|UniformMemory"
+    spirv.MemoryBarrier "Device", "Acquire|UniformMemory"
 
     ```
   }];

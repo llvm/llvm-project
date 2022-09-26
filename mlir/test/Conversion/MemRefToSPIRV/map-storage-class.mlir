@@ -18,29 +18,29 @@
 // VULKAN-LABEL: func @operand_result
 // OPENCL-LABEL: func @operand_result
 func.func @operand_result() {
-  // VULKAN: memref<f32, #spv.storage_class<StorageBuffer>>
-  // OPENCL: memref<f32, #spv.storage_class<CrossWorkgroup>>
+  // VULKAN: memref<f32, #spirv.storage_class<StorageBuffer>>
+  // OPENCL: memref<f32, #spirv.storage_class<CrossWorkgroup>>
   %0 = "dialect.memref_producer"() : () -> (memref<f32>)
-  // VULKAN: memref<4xi32, #spv.storage_class<Generic>>
-  // OPENCL: memref<4xi32, #spv.storage_class<Generic>>
+  // VULKAN: memref<4xi32, #spirv.storage_class<Generic>>
+  // OPENCL: memref<4xi32, #spirv.storage_class<Generic>>
   %1 = "dialect.memref_producer"() : () -> (memref<4xi32, 1>)
-  // VULKAN: memref<?x4xf16, #spv.storage_class<Workgroup>>
-  // OPENCL: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  // VULKAN: memref<?x4xf16, #spirv.storage_class<Workgroup>>
+  // OPENCL: memref<?x4xf16, #spirv.storage_class<Workgroup>>
   %2 = "dialect.memref_producer"() : () -> (memref<?x4xf16, 3>)
-  // VULKAN: memref<*xf16, #spv.storage_class<Uniform>>
-  // OPENCL: memref<*xf16, #spv.storage_class<UniformConstant>>
+  // VULKAN: memref<*xf16, #spirv.storage_class<Uniform>>
+  // OPENCL: memref<*xf16, #spirv.storage_class<UniformConstant>>
   %3 = "dialect.memref_producer"() : () -> (memref<*xf16, 4>)
 
 
   "dialect.memref_consumer"(%0) : (memref<f32>) -> ()
-  // VULKAN: memref<4xi32, #spv.storage_class<Generic>>
-  // OPENCL: memref<4xi32, #spv.storage_class<Generic>>
+  // VULKAN: memref<4xi32, #spirv.storage_class<Generic>>
+  // OPENCL: memref<4xi32, #spirv.storage_class<Generic>>
   "dialect.memref_consumer"(%1) : (memref<4xi32, 1>) -> ()
-  // VULKAN: memref<?x4xf16, #spv.storage_class<Workgroup>>
-  // OPENCL: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  // VULKAN: memref<?x4xf16, #spirv.storage_class<Workgroup>>
+  // OPENCL: memref<?x4xf16, #spirv.storage_class<Workgroup>>
   "dialect.memref_consumer"(%2) : (memref<?x4xf16, 3>) -> ()
-  // VULKAN: memref<*xf16, #spv.storage_class<Uniform>>
-  // OPENCL: memref<*xf16, #spv.storage_class<UniformConstant>>
+  // VULKAN: memref<*xf16, #spirv.storage_class<Uniform>>
+  // OPENCL: memref<*xf16, #spirv.storage_class<UniformConstant>>
   "dialect.memref_consumer"(%3) : (memref<*xf16, 4>) -> ()
 
   return
@@ -51,8 +51,8 @@ func.func @operand_result() {
 // VULKAN-LABEL: func @type_attribute
 // OPENCL-LABEL: func @type_attribute
 func.func @type_attribute() {
-  // VULKAN: attr = memref<i32, #spv.storage_class<Generic>>
-  // OPENCL: attr = memref<i32, #spv.storage_class<Generic>>
+  // VULKAN: attr = memref<i32, #spirv.storage_class<Generic>>
+  // OPENCL: attr = memref<i32, #spirv.storage_class<Generic>>
   "dialect.memref_producer"() { attr = memref<i32, 1> } : () -> ()
   return
 }
@@ -62,11 +62,11 @@ func.func @type_attribute() {
 // VULKAN-LABEL: func.func @function_io
 // OPENCL-LABEL: func.func @function_io
 func.func @function_io
-  // VULKAN-SAME: (%{{.+}}: memref<f64, #spv.storage_class<Generic>>, %{{.+}}: memref<4xi32, #spv.storage_class<Workgroup>>)
-  // OPENCL-SAME: (%{{.+}}: memref<f64, #spv.storage_class<Generic>>, %{{.+}}: memref<4xi32, #spv.storage_class<Workgroup>>)
+  // VULKAN-SAME: (%{{.+}}: memref<f64, #spirv.storage_class<Generic>>, %{{.+}}: memref<4xi32, #spirv.storage_class<Workgroup>>)
+  // OPENCL-SAME: (%{{.+}}: memref<f64, #spirv.storage_class<Generic>>, %{{.+}}: memref<4xi32, #spirv.storage_class<Workgroup>>)
   (%arg0: memref<f64, 1>, %arg1: memref<4xi32, 3>)
-  // VULKAN-SAME: -> (memref<f64, #spv.storage_class<Generic>>, memref<4xi32, #spv.storage_class<Workgroup>>)
-  // OPENCL-SAME: -> (memref<f64, #spv.storage_class<Generic>>, memref<4xi32, #spv.storage_class<Workgroup>>)
+  // VULKAN-SAME: -> (memref<f64, #spirv.storage_class<Generic>>, memref<4xi32, #spirv.storage_class<Workgroup>>)
+  // OPENCL-SAME: -> (memref<f64, #spirv.storage_class<Generic>>, memref<4xi32, #spirv.storage_class<Workgroup>>)
   -> (memref<f64, 1>, memref<4xi32, 3>) {
   return %arg0, %arg1: memref<f64, 1>, memref<4xi32, 3>
 }
@@ -76,8 +76,8 @@ func.func @function_io
 gpu.module @kernel {
 // VULKAN-LABEL: gpu.func @function_io
 // OPENCL-LABEL: gpu.func @function_io
-// VULKAN-SAME: memref<8xi32, #spv.storage_class<StorageBuffer>>
-// OPENCL-SAME: memref<8xi32, #spv.storage_class<CrossWorkgroup>>
+// VULKAN-SAME: memref<8xi32, #spirv.storage_class<StorageBuffer>>
+// OPENCL-SAME: memref<8xi32, #spirv.storage_class<CrossWorkgroup>>
 gpu.func @function_io(%arg0 : memref<8xi32>) kernel { gpu.return }
 }
 
@@ -87,10 +87,10 @@ gpu.func @function_io(%arg0 : memref<8xi32>) kernel { gpu.return }
 // OPENCL-LABEL: func.func @region
 func.func @region(%cond: i1, %arg0: memref<f32, 1>) {
   scf.if %cond {
-    //      VULKAN: "dialect.memref_consumer"(%{{.+}}) {attr = memref<i64, #spv.storage_class<Workgroup>>}
-    //      OPENCL: "dialect.memref_consumer"(%{{.+}}) {attr = memref<i64, #spv.storage_class<Workgroup>>}
-    // VULKAN-SAME: (memref<f32, #spv.storage_class<Generic>>) -> memref<f32, #spv.storage_class<Generic>>
-    // OPENCL-SAME: (memref<f32, #spv.storage_class<Generic>>) -> memref<f32, #spv.storage_class<Generic>>
+    //      VULKAN: "dialect.memref_consumer"(%{{.+}}) {attr = memref<i64, #spirv.storage_class<Workgroup>>}
+    //      OPENCL: "dialect.memref_consumer"(%{{.+}}) {attr = memref<i64, #spirv.storage_class<Workgroup>>}
+    // VULKAN-SAME: (memref<f32, #spirv.storage_class<Generic>>) -> memref<f32, #spirv.storage_class<Generic>>
+    // OPENCL-SAME: (memref<f32, #spirv.storage_class<Generic>>) -> memref<f32, #spirv.storage_class<Generic>>
     %0 = "dialect.memref_consumer"(%arg0) { attr = memref<i64, 3> } : (memref<f32, 1>) -> (memref<f32, 1>)
   }
   return
@@ -118,24 +118,24 @@ func.func @missing_mapping() {
 // -----
 
 /// Checks memory maps to OpenCL mapping if Kernel capability is enabled.
-module attributes { spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel], []>, #spv.resource_limits<>> } {
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>> } {
 func.func @operand_result() {
-  // CHECK: memref<f32, #spv.storage_class<CrossWorkgroup>>
+  // CHECK: memref<f32, #spirv.storage_class<CrossWorkgroup>>
   %0 = "dialect.memref_producer"() : () -> (memref<f32>)
-  // CHECK: memref<4xi32, #spv.storage_class<Generic>>
+  // CHECK: memref<4xi32, #spirv.storage_class<Generic>>
   %1 = "dialect.memref_producer"() : () -> (memref<4xi32, 1>)
-  // CHECK: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  // CHECK: memref<?x4xf16, #spirv.storage_class<Workgroup>>
   %2 = "dialect.memref_producer"() : () -> (memref<?x4xf16, 3>)
-  // CHECK: memref<*xf16, #spv.storage_class<UniformConstant>>
+  // CHECK: memref<*xf16, #spirv.storage_class<UniformConstant>>
   %3 = "dialect.memref_producer"() : () -> (memref<*xf16, 4>)
 
 
   "dialect.memref_consumer"(%0) : (memref<f32>) -> ()
-  // CHECK: memref<4xi32, #spv.storage_class<Generic>>
+  // CHECK: memref<4xi32, #spirv.storage_class<Generic>>
   "dialect.memref_consumer"(%1) : (memref<4xi32, 1>) -> ()
-  // CHECK: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  // CHECK: memref<?x4xf16, #spirv.storage_class<Workgroup>>
   "dialect.memref_consumer"(%2) : (memref<?x4xf16, 3>) -> ()
-  // CHECK: memref<*xf16, #spv.storage_class<UniformConstant>>
+  // CHECK: memref<*xf16, #spirv.storage_class<UniformConstant>>
   "dialect.memref_consumer"(%3) : (memref<*xf16, 4>) -> ()
 
   return
@@ -145,24 +145,24 @@ func.func @operand_result() {
 // -----
 
 /// Checks memory maps to Vulkan mapping if Shader capability is enabled.
-module attributes { spv.target_env = #spv.target_env<#spv.vce<v1.0, [Shader], []>, #spv.resource_limits<>> } {
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>> } {
 func.func @operand_result() {
-  // CHECK: memref<f32, #spv.storage_class<StorageBuffer>>
+  // CHECK: memref<f32, #spirv.storage_class<StorageBuffer>>
   %0 = "dialect.memref_producer"() : () -> (memref<f32>)
-  // CHECK: memref<4xi32, #spv.storage_class<Generic>>
+  // CHECK: memref<4xi32, #spirv.storage_class<Generic>>
   %1 = "dialect.memref_producer"() : () -> (memref<4xi32, 1>)
-  // CHECK: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  // CHECK: memref<?x4xf16, #spirv.storage_class<Workgroup>>
   %2 = "dialect.memref_producer"() : () -> (memref<?x4xf16, 3>)
-  // CHECK: memref<*xf16, #spv.storage_class<Uniform>>
+  // CHECK: memref<*xf16, #spirv.storage_class<Uniform>>
   %3 = "dialect.memref_producer"() : () -> (memref<*xf16, 4>)
 
 
   "dialect.memref_consumer"(%0) : (memref<f32>) -> ()
-  // CHECK: memref<4xi32, #spv.storage_class<Generic>>
+  // CHECK: memref<4xi32, #spirv.storage_class<Generic>>
   "dialect.memref_consumer"(%1) : (memref<4xi32, 1>) -> ()
-  // CHECK: memref<?x4xf16, #spv.storage_class<Workgroup>>
+  // CHECK: memref<?x4xf16, #spirv.storage_class<Workgroup>>
   "dialect.memref_consumer"(%2) : (memref<?x4xf16, 3>) -> ()
-  // CHECK: memref<*xf16, #spv.storage_class<Uniform>>
+  // CHECK: memref<*xf16, #spirv.storage_class<Uniform>>
   "dialect.memref_consumer"(%3) : (memref<*xf16, 4>) -> ()
   return
 }

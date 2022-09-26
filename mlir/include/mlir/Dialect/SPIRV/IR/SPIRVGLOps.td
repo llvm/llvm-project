@@ -120,14 +120,14 @@ def SPV_GLFAbsOp : SPV_GLUnaryArithmeticOp<"FAbs", 4, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    abs-op ::= ssa-id `=` `spv.GL.FAbs` ssa-use `:`
+    abs-op ::= ssa-id `=` `spirv.GL.FAbs` ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.FAbs %0 : f32
-    %3 = spv.GL.FAbs %1 : vector<3xf16>
+    %2 = spirv.GL.FAbs %0 : f32
+    %3 = spirv.GL.FAbs %1 : vector<3xf16>
     ```
   }];
 }
@@ -149,14 +149,14 @@ def SPV_GLSAbsOp : SPV_GLUnaryArithmeticOp<"SAbs", 5, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    abs-op ::= ssa-id `=` `spv.GL.SAbs` ssa-use `:`
+    abs-op ::= ssa-id `=` `spirv.GL.SAbs` ssa-use `:`
                integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.SAbs %0 : i32
-    %3 = spv.GL.SAbs %1 : vector<3xi16>
+    %2 = spirv.GL.SAbs %0 : i32
+    %3 = spirv.GL.SAbs %1 : vector<3xi16>
     ```
   }];
 }
@@ -180,14 +180,14 @@ def SPV_GLCeilOp : SPV_GLUnaryArithmeticOp<"Ceil", 9, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    ceil-op ::= ssa-id `=` `spv.GL.Ceil` ssa-use `:`
+    ceil-op ::= ssa-id `=` `spirv.GL.Ceil` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Ceil %0 : f32
-    %3 = spv.GL.Ceil %1 : vector<3xf16>
+    %2 = spirv.GL.Ceil %0 : f32
+    %3 = spirv.GL.Ceil %1 : vector<3xf16>
     ```
   }];
 }
@@ -212,14 +212,14 @@ def SPV_GLCosOp : SPV_GLUnaryArithmeticOp<"Cos", 14, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    cos-op ::= ssa-id `=` `spv.GL.Cos` ssa-use `:`
+    cos-op ::= ssa-id `=` `spirv.GL.Cos` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Cos %0 : f32
-    %3 = spv.GL.Cos %1 : vector<3xf16>
+    %2 = spirv.GL.Cos %0 : f32
+    %3 = spirv.GL.Cos %1 : vector<3xf16>
     ```
   }];
 }
@@ -244,14 +244,14 @@ def SPV_GLSinOp : SPV_GLUnaryArithmeticOp<"Sin", 13, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    sin-op ::= ssa-id `=` `spv.GL.Sin` ssa-use `:`
+    sin-op ::= ssa-id `=` `spirv.GL.Sin` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Sin %0 : f32
-    %3 = spv.GL.Sin %1 : vector<3xf16>
+    %2 = spirv.GL.Sin %0 : f32
+    %3 = spirv.GL.Sin %1 : vector<3xf16>
     ```
   }];
 }
@@ -276,14 +276,14 @@ def SPV_GLTanOp : SPV_GLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    tan-op ::= ssa-id `=` `spv.GL.Tan` ssa-use `:`
+    tan-op ::= ssa-id `=` `spirv.GL.Tan` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Tan %0 : f32
-    %3 = spv.GL.Tan %1 : vector<3xf16>
+    %2 = spirv.GL.Tan %0 : f32
+    %3 = spirv.GL.Tan %1 : vector<3xf16>
     ```
   }];
 }
@@ -310,14 +310,14 @@ def SPV_GLAsinOp : SPV_GLUnaryArithmeticOp<"Asin", 16, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    asin-op ::= ssa-id `=` `spv.GL.Asin` ssa-use `:`
+    asin-op ::= ssa-id `=` `spirv.GL.Asin` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Asin %0 : f32
-    %3 = spv.GL.Asin %1 : vector<3xf16>
+    %2 = spirv.GL.Asin %0 : f32
+    %3 = spirv.GL.Asin %1 : vector<3xf16>
     ```
   }];
 }
@@ -344,14 +344,14 @@ def SPV_GLAcosOp : SPV_GLUnaryArithmeticOp<"Acos", 17, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    acos-op ::= ssa-id `=` `spv.GL.Acos` ssa-use `:`
+    acos-op ::= ssa-id `=` `spirv.GL.Acos` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Acos %0 : f32
-    %3 = spv.GL.Acos %1 : vector<3xf16>
+    %2 = spirv.GL.Acos %0 : f32
+    %3 = spirv.GL.Acos %1 : vector<3xf16>
     ```
   }];
 }
@@ -378,14 +378,14 @@ def SPV_GLAtanOp : SPV_GLUnaryArithmeticOp<"Atan", 18, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    atan-op ::= ssa-id `=` `spv.GL.Atan` ssa-use `:`
+    atan-op ::= ssa-id `=` `spirv.GL.Atan` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Atan %0 : f32
-    %3 = spv.GL.Atan %1 : vector<3xf16>
+    %2 = spirv.GL.Atan %0 : f32
+    %3 = spirv.GL.Atan %1 : vector<3xf16>
     ```
   }];
 }
@@ -410,14 +410,14 @@ def SPV_GLExpOp : SPV_GLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    exp-op ::= ssa-id `=` `spv.GL.Exp` ssa-use `:`
+    exp-op ::= ssa-id `=` `spirv.GL.Exp` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Exp %0 : f32
-    %3 = spv.GL.Exp %1 : vector<3xf16>
+    %2 = spirv.GL.Exp %0 : f32
+    %3 = spirv.GL.Exp %1 : vector<3xf16>
     ```
   }];
 }
@@ -441,14 +441,14 @@ def SPV_GLFloorOp : SPV_GLUnaryArithmeticOp<"Floor", 8, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spv.GL.Floor` ssa-use `:`
+    floor-op ::= ssa-id `=` `spirv.GL.Floor` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Floor %0 : f32
-    %3 = spv.GL.Floor %1 : vector<3xf16>
+    %2 = spirv.GL.Floor %0 : f32
+    %3 = spirv.GL.Floor %1 : vector<3xf16>
     ```
   }];
 }
@@ -471,14 +471,14 @@ def SPV_GLRoundOp: SPV_GLUnaryArithmeticOp<"Round", 1, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spv.GL.Round` ssa-use `:`
+    floor-op ::= ssa-id `=` `spirv.GL.Round` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Round %0 : f32
-    %3 = spv.GL.Round %1 : vector<3xf16>
+    %2 = spirv.GL.Round %0 : f32
+    %3 = spirv.GL.Round %1 : vector<3xf16>
     ```
   }];
 }
@@ -501,14 +501,14 @@ def SPV_GLInverseSqrtOp : SPV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPV_Float> 
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    rsqrt-op ::= ssa-id `=` `spv.GL.InverseSqrt` ssa-use `:`
+    rsqrt-op ::= ssa-id `=` `spirv.GL.InverseSqrt` ssa-use `:`
                  float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.InverseSqrt %0 : f32
-    %3 = spv.GL.InverseSqrt %1 : vector<3xf16>
+    %2 = spirv.GL.InverseSqrt %0 : f32
+    %3 = spirv.GL.InverseSqrt %1 : vector<3xf16>
     ```
   }];
 }
@@ -534,14 +534,14 @@ def SPV_GLLogOp : SPV_GLUnaryArithmeticOp<"Log", 28, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    log-op ::= ssa-id `=` `spv.GL.Log` ssa-use `:`
+    log-op ::= ssa-id `=` `spirv.GL.Log` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Log %0 : f32
-    %3 = spv.GL.Log %1 : vector<3xf16>
+    %2 = spirv.GL.Log %0 : f32
+    %3 = spirv.GL.Log %1 : vector<3xf16>
     ```
   }];
 }
@@ -565,14 +565,14 @@ def SPV_GLFMaxOp : SPV_GLBinaryArithmeticOp<"FMax", 40, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmax-op ::= ssa-id `=` `spv.GL.FMax` ssa-use `:`
+    fmax-op ::= ssa-id `=` `spirv.GL.FMax` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.FMax %0, %1 : f32
-    %3 = spv.GL.FMax %0, %1 : vector<3xf16>
+    %2 = spirv.GL.FMax %0, %1 : f32
+    %3 = spirv.GL.FMax %0, %1 : vector<3xf16>
     ```
   }];
 }
@@ -595,14 +595,14 @@ def SPV_GLUMaxOp : SPV_GLBinaryArithmeticOp<"UMax", 41, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spv.GL.UMax` ssa-use `:`
+    smax-op ::= ssa-id `=` `spirv.GL.UMax` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.UMax %0, %1 : i32
-    %3 = spv.GL.UMax %0, %1 : vector<3xi16>
+    %2 = spirv.GL.UMax %0, %1 : i32
+    %3 = spirv.GL.UMax %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -625,14 +625,14 @@ def SPV_GLSMaxOp : SPV_GLBinaryArithmeticOp<"SMax", 42, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spv.GL.SMax` ssa-use `:`
+    smax-op ::= ssa-id `=` `spirv.GL.SMax` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.SMax %0, %1 : i32
-    %3 = spv.GL.SMax %0, %1 : vector<3xi16>
+    %2 = spirv.GL.SMax %0, %1 : i32
+    %3 = spirv.GL.SMax %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -656,14 +656,14 @@ def SPV_GLFMinOp : SPV_GLBinaryArithmeticOp<"FMin", 37, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmin-op ::= ssa-id `=` `spv.GL.FMin` ssa-use `:`
+    fmin-op ::= ssa-id `=` `spirv.GL.FMin` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.FMin %0, %1 : f32
-    %3 = spv.GL.FMin %0, %1 : vector<3xf16>
+    %2 = spirv.GL.FMin %0, %1 : f32
+    %3 = spirv.GL.FMin %0, %1 : vector<3xf16>
     ```
   }];
 }
@@ -686,14 +686,14 @@ def SPV_GLUMinOp : SPV_GLBinaryArithmeticOp<"UMin", 38, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spv.GL.UMin` ssa-use `:`
+    smin-op ::= ssa-id `=` `spirv.GL.UMin` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.UMin %0, %1 : i32
-    %3 = spv.GL.UMin %0, %1 : vector<3xi16>
+    %2 = spirv.GL.UMin %0, %1 : i32
+    %3 = spirv.GL.UMin %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -716,14 +716,14 @@ def SPV_GLSMinOp : SPV_GLBinaryArithmeticOp<"SMin", 39, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spv.GL.SMin` ssa-use `:`
+    smin-op ::= ssa-id `=` `spirv.GL.SMin` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.SMin %0, %1 : i32
-    %3 = spv.GL.SMin %0, %1 : vector<3xi16>
+    %2 = spirv.GL.SMin %0, %1 : i32
+    %3 = spirv.GL.SMin %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -750,14 +750,14 @@ def SPV_GLPowOp : SPV_GLBinaryArithmeticOp<"Pow", 26, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    pow-op ::= ssa-id `=` `spv.GL.Pow` ssa-use `:`
+    pow-op ::= ssa-id `=` `spirv.GL.Pow` ssa-use `:`
                restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Pow %0, %1 : f32
-    %3 = spv.GL.Pow %0, %1 : vector<3xf16>
+    %2 = spirv.GL.Pow %0, %1 : f32
+    %3 = spirv.GL.Pow %0, %1 : vector<3xf16>
     ```
   }];
 }
@@ -780,14 +780,14 @@ def SPV_GLFSignOp : SPV_GLUnaryArithmeticOp<"FSign", 6, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    sign-op ::= ssa-id `=` `spv.GL.FSign` ssa-use `:`
+    sign-op ::= ssa-id `=` `spirv.GL.FSign` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.FSign %0 : f32
-    %3 = spv.GL.FSign %1 : vector<3xf16>
+    %2 = spirv.GL.FSign %0 : f32
+    %3 = spirv.GL.FSign %1 : vector<3xf16>
     ```
   }];
 }
@@ -809,14 +809,14 @@ def SPV_GLSSignOp : SPV_GLUnaryArithmeticOp<"SSign", 7, SPV_Integer> {
     ```
     integer-scalar-vector-type ::= integer-type |
                                    `vector<` integer-literal `x` integer-type `>`
-    sign-op ::= ssa-id `=` `spv.GL.SSign` ssa-use `:`
+    sign-op ::= ssa-id `=` `spirv.GL.SSign` ssa-use `:`
                 integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.SSign %0 : i32
-    %3 = spv.GL.SSign %1 : vector<3xi16>
+    %2 = spirv.GL.SSign %0 : i32
+    %3 = spirv.GL.SSign %1 : vector<3xi16>
     ```
   }];
 }
@@ -839,14 +839,14 @@ def SPV_GLSqrtOp : SPV_GLUnaryArithmeticOp<"Sqrt", 31, SPV_Float> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    sqrt-op ::= ssa-id `=` `spv.GL.Sqrt` ssa-use `:`
+    sqrt-op ::= ssa-id `=` `spirv.GL.Sqrt` ssa-use `:`
                 float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Sqrt %0 : f32
-    %3 = spv.GL.Sqrt %1 : vector<3xf16>
+    %2 = spirv.GL.Sqrt %0 : f32
+    %3 = spirv.GL.Sqrt %1 : vector<3xf16>
     ```
   }];
 }
@@ -871,14 +871,14 @@ def SPV_GLSinhOp : SPV_GLUnaryArithmeticOp<"Sinh", 19, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    sinh-op ::= ssa-id `=` `spv.GL.Sinh` ssa-use `:`
+    sinh-op ::= ssa-id `=` `spirv.GL.Sinh` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Sinh %0 : f32
-    %3 = spv.GL.Sinh %1 : vector<3xf16>
+    %2 = spirv.GL.Sinh %0 : f32
+    %3 = spirv.GL.Sinh %1 : vector<3xf16>
     ```
   }];
 }
@@ -903,14 +903,14 @@ def SPV_GLCoshOp : SPV_GLUnaryArithmeticOp<"Cosh", 20, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    cosh-op ::= ssa-id `=` `spv.GL.Cosh` ssa-use `:`
+    cosh-op ::= ssa-id `=` `spirv.GL.Cosh` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Cosh %0 : f32
-    %3 = spv.GL.Cosh %1 : vector<3xf16>
+    %2 = spirv.GL.Cosh %0 : f32
+    %3 = spirv.GL.Cosh %1 : vector<3xf16>
     ```
   }];
 }
@@ -935,14 +935,14 @@ def SPV_GLTanhOp : SPV_GLUnaryArithmeticOp<"Tanh", 21, SPV_Float16or32> {
     restricted-float-scalar-vector-type ::=
       restricted-float-scalar-type |
       `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    tanh-op ::= ssa-id `=` `spv.GL.Tanh` ssa-use `:`
+    tanh-op ::= ssa-id `=` `spirv.GL.Tanh` ssa-use `:`
                 restricted-float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.Tanh %0 : f32
-    %3 = spv.GL.Tanh %1 : vector<3xf16>
+    %2 = spirv.GL.Tanh %0 : f32
+    %3 = spirv.GL.Tanh %1 : vector<3xf16>
     ```
   }];
 }
@@ -965,14 +965,14 @@ def SPV_GLFClampOp : SPV_GLTernaryArithmeticOp<"FClamp", 43, SPV_Float> {
 
     <!-- End of AutoGen section -->
     ```
-    fclamp-op ::= ssa-id `=` `spv.GL.FClamp` ssa-use, ssa-use, ssa-use `:`
+    fclamp-op ::= ssa-id `=` `spirv.GL.FClamp` ssa-use, ssa-use, ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.FClamp %x, %min, %max : f32
-    %3 = spv.GL.FClamp %x, %min, %max : vector<3xf16>
+    %2 = spirv.GL.FClamp %x, %min, %max : f32
+    %3 = spirv.GL.FClamp %x, %min, %max : vector<3xf16>
     ```
   }];
 }
@@ -994,14 +994,14 @@ def SPV_GLUClampOp : SPV_GLTernaryArithmeticOp<"UClamp", 44, SPV_Integer> {
 
     <!-- End of AutoGen section -->
     ```
-    uclamp-op ::= ssa-id `=` `spv.GL.UClamp` ssa-use, ssa-use, ssa-use `:`
+    uclamp-op ::= ssa-id `=` `spirv.GL.UClamp` ssa-use, ssa-use, ssa-use `:`
                unsigned-signless-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.UClamp %x, %min, %max : i32
-    %3 = spv.GL.UClamp %x, %min, %max : vector<3xui16>
+    %2 = spirv.GL.UClamp %x, %min, %max : i32
+    %3 = spirv.GL.UClamp %x, %min, %max : vector<3xui16>
     ```
   }];
 }
@@ -1023,14 +1023,14 @@ def SPV_GLSClampOp : SPV_GLTernaryArithmeticOp<"SClamp", 45, SPV_Integer> {
 
     <!-- End of AutoGen section -->
     ```
-    uclamp-op ::= ssa-id `=` `spv.GL.UClamp` ssa-use, ssa-use, ssa-use `:`
+    uclamp-op ::= ssa-id `=` `spirv.GL.UClamp` ssa-use, ssa-use, ssa-use `:`
                sgined-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.SClamp %x, %min, %max : si32
-    %3 = spv.GL.SClamp %x, %min, %max : vector<3xsi16>
+    %2 = spirv.GL.SClamp %x, %min, %max : si32
+    %3 = spirv.GL.SClamp %x, %min, %max : vector<3xsi16>
     ```
   }];
 }
@@ -1063,14 +1063,14 @@ def SPV_GLFmaOp : SPV_GLTernaryArithmeticOp<"Fma", 50, SPV_Float> {
 
     <!-- End of AutoGen section -->
     ```
-    fma-op ::= ssa-id `=` `spv.GL.Fma` ssa-use, ssa-use, ssa-use `:`
+    fma-op ::= ssa-id `=` `spirv.GL.Fma` ssa-use, ssa-use, ssa-use `:`
                float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %0 = spv.GL.Fma %a, %b, %c : f32
-    %1 = spv.GL.Fma %a, %b, %c : vector<3xf16>
+    %0 = spirv.GL.Fma %a, %b, %c : f32
+    %1 = spirv.GL.Fma %a, %b, %c : vector<3xf16>
     ```
   }];
 }
@@ -1105,15 +1105,15 @@ def SPV_GLFrexpStructOp : SPV_GLOp<"FrexpStruct", 52, [NoSideEffect]> {
                                  `vector<` integer-literal `x` float-type `>`
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    frexpstruct-op ::= ssa-id `=` `spv.GL.FrexpStruct` ssa-use `:`
-                                  `!spv.struct<` float-scalar-vector-type `,`
+    frexpstruct-op ::= ssa-id `=` `spirv.GL.FrexpStruct` ssa-use `:`
+                                  `!spirv.struct<` float-scalar-vector-type `,`
                                                   integer-scalar-vector-type `>`
     ```
     #### Example:
 
     ```mlir
-    %2 = spv.GL.FrexpStruct %0 : f32 -> !spv.struct<f32, i32>
-    %3 = spv.GL.FrexpStruct %0 : vector<3xf32> -> !spv.struct<vector<3xf32>, vector<3xi32>>
+    %2 = spirv.GL.FrexpStruct %0 : f32 -> !spirv.struct<f32, i32>
+    %3 = spirv.GL.FrexpStruct %0 : vector<3xf32> -> !spirv.struct<vector<3xf32>, vector<3xi32>>
     ```
   }];
 
@@ -1163,8 +1163,8 @@ def SPV_GLLdexpOp :
     #### Example:
 
     ```mlir
-    %y = spv.GL.Ldexp %x : f32, %exp : i32 -> f32
-    %y = spv.GL.Ldexp %x : vector<3xf32>, %exp : vector<3xi32> -> vector<3xf32>
+    %y = spirv.GL.Ldexp %x : f32, %exp : i32 -> f32
+    %y = spirv.GL.Ldexp %x : vector<3xf32>, %exp : vector<3xi32> -> vector<3xf32>
     ```
   }];
 
@@ -1199,8 +1199,8 @@ def SPV_GLFMixOp :
     #### Example:
 
     ```mlir
-    %0 = spv.GL.FMix %x : f32, %y : f32, %a : f32 -> f32
-    %0 = spv.GL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
+    %0 = spirv.GL.FMix %x : f32, %y : f32, %a : f32 -> f32
+    %0 = spirv.GL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
     ```
   }];
 

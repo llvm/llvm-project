@@ -27,13 +27,13 @@ def SPV_KHRAssumeTrueOp : SPV_KhrVendorOp<"AssumeTrue", []> {
     <!-- End of AutoGen section -->
 
     ```
-    assumetruekhr-op ::= `spv.KHR.AssumeTrue` ssa-use
+    assumetruekhr-op ::= `spirv.KHR.AssumeTrue` ssa-use
     ```mlir
 
     #### Example:
 
     ```
-    spv.KHR.AssumeTrue %arg
+    spirv.KHR.AssumeTrue %arg
     ```
   }];
 
@@ -69,14 +69,14 @@ def SPV_UndefOp : SPV_Op<"Undef", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    undef-op ::= `spv.Undef` `:` spirv-type
+    undef-op ::= `spirv.Undef` `:` spirv-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.Undef : f32
-    %1 = spv.Undef : !spv.struct<!spv.array<4 x vector<4xi32>>>
+    %0 = spirv.Undef : f32
+    %1 = spirv.Undef : !spirv.struct<!spirv.array<4 x vector<4xi32>>>
     ```
   }];
 

@@ -32,7 +32,7 @@ def SPV_BranchOp : SPV_Op<"Branch", [
     <!-- End of AutoGen section -->
 
     ```
-    branch-op ::= `spv.Branch` successor
+    branch-op ::= `spirv.Branch` successor
     successor ::= bb-id branch-use-list?
     branch-use-list ::= `(` ssa-use-list `:` type-list-no-parens `)`
     ```
@@ -40,8 +40,8 @@ def SPV_BranchOp : SPV_Op<"Branch", [
     #### Example:
 
     ```mlir
-    spv.Branch ^target
-    spv.Branch ^target(%0, %1: i32, f32)
+    spirv.Branch ^target
+    spirv.Branch ^target(%0, %1: i32, f32)
     ```
   }];
 
@@ -103,7 +103,7 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
     <!-- End of AutoGen section -->
 
     ```
-    branch-conditional-op ::= `spv.BranchConditional` ssa-use
+    branch-conditional-op ::= `spirv.BranchConditional` ssa-use
                               (`[` integer-literal, integer-literal `]`)?
                               `,` successor `,` successor
     successor ::= bb-id branch-use-list?
@@ -113,8 +113,8 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
     #### Example:
 
     ```mlir
-    spv.BranchConditional %condition, ^true_branch, ^false_branch
-    spv.BranchConditional %condition, ^true_branch(%0: i32), ^false_branch(%1: i32)
+    spirv.BranchConditional %condition, ^true_branch, ^false_branch
+    spirv.BranchConditional %condition, ^true_branch(%0: i32), ^false_branch(%1: i32)
     ```
   }];
 
@@ -215,15 +215,15 @@ def SPV_FunctionCallOp : SPV_Op<"FunctionCall", [
     <!-- End of AutoGen section -->
 
     ```
-    function-call-op ::= `spv.FunctionCall` function-id `(` ssa-use-list `)`
+    function-call-op ::= `spirv.FunctionCall` function-id `(` ssa-use-list `)`
                      `:` function-type
     ```
 
     #### Example:
 
     ```mlir
-    spv.FunctionCall @f_void(%arg0) : (i32) ->  ()
-    %0 = spv.FunctionCall @f_iadd(%arg0, %arg1) : (i32, i32) -> i32
+    spirv.FunctionCall @f_void(%arg0) : (i32) ->  ()
+    %0 = spirv.FunctionCall @f_iadd(%arg0, %arg1) : (i32, i32) -> i32
     ```
   }];
 
@@ -257,19 +257,19 @@ def SPV_LoopOp : SPV_Op<"mlir.loop", [InFunctionScope]> {
     and exited in structured ways. See "2.11. Structured Control Flow" of the
     SPIR-V spec for more details.
 
-    Instead of having a `spv.LoopMerge` op to directly model loop merge
+    Instead of having a `spirv.LoopMerge` op to directly model loop merge
     instruction for indicating the merge and continue target, we use regions
     to delimit the boundary of the loop: the merge target is the next op
-    following the `spv.mlir.loop` op and the continue target is the block that
-    has a back-edge pointing to the entry block inside the `spv.mlir.loop`'s region.
+    following the `spirv.mlir.loop` op and the continue target is the block that
+    has a back-edge pointing to the entry block inside the `spirv.mlir.loop`'s region.
     This way it's easier to discover all blocks belonging to a construct and
     it plays nicer with the MLIR system.
 
-    The `spv.mlir.loop` region should contain at least four blocks: one entry block,
+    The `spirv.mlir.loop` region should contain at least four blocks: one entry block,
     one loop header block, one loop continue block, one loop merge block.
     The entry block should be the first block and it should jump to the loop
     header block, which is the second block. The loop merge block should be the
-    last block. The merge block should only contain a `spv.mlir.merge` op.
+    last block. The merge block should only contain a `spirv.mlir.merge` op.
     The continue block should be the second to last block and it should have a
     branch to the loop header block. The loop continue block should be the only
     block, except the entry block, branching to the header block.
@@ -299,7 +299,7 @@ def SPV_LoopOp : SPV_Op<"mlir.loop", [InFunctionScope]> {
     Block *getMergeBlock();
 
     // Adds an empty entry block and loop merge block containing one
-    // spv.mlir.merge op.
+    // spirv.mlir.merge op.
     void addEntryAndMergeBlock();
   }];
 
@@ -317,10 +317,10 @@ def SPV_MergeOp : SPV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
-    We use `spv.mlir.selection`/`spv.mlir.loop` for modelling structured selection/loop.
+    We use `spirv.mlir.selection`/`spirv.mlir.loop` for modelling structured selection/loop.
     This op is a terminator used inside their regions to mean jumping to the
-    merge point, which is the next op following the `spv.mlir.selection` or
-    `spv.mlir.loop` op. This op does not have a corresponding instruction in the
+    merge point, which is the next op following the `spirv.mlir.selection` or
+    `spirv.mlir.loop` op. This op does not have a corresponding instruction in the
     SPIR-V binary format; it's solely for structural purpose.
   }];
 
@@ -347,7 +347,7 @@ def SPV_ReturnOp : SPV_Op<"Return", [InFunctionScope, NoSideEffect,
     <!-- End of AutoGen section -->
 
     ```
-    return-op ::= `spv.Return`
+    return-op ::= `spirv.Return`
     ```
   }];
 
@@ -369,7 +369,7 @@ def SPV_UnreachableOp : SPV_Op<"Unreachable", [InFunctionScope, Terminator]> {
     <!-- End of AutoGen section -->
 
     ```
-    unreachable-op ::= `spv.Unreachable`
+    unreachable-op ::= `spirv.Unreachable`
     ```
   }];
 
@@ -396,13 +396,13 @@ def SPV_ReturnValueOp : SPV_Op<"ReturnValue", [InFunctionScope, NoSideEffect,
     <!-- End of AutoGen section -->
 
     ```
-    return-value-op ::= `spv.ReturnValue` ssa-use `:` spirv-type
+    return-value-op ::= `spirv.ReturnValue` ssa-use `:` spirv-type
     ```
 
     #### Example:
 
     ```mlir
-    spv.ReturnValue %0 : f32
+    spirv.ReturnValue %0 : f32
     ```
   }];
 
@@ -426,16 +426,16 @@ def SPV_SelectionOp : SPV_Op<"mlir.selection", [InFunctionScope]> {
     and exited in structured ways. See "2.11. Structured Control Flow" of the
     SPIR-V spec for more details.
 
-    Instead of having a `spv.SelectionMerge` op to directly model selection
+    Instead of having a `spirv.SelectionMerge` op to directly model selection
     merge instruction for indicating the merge target, we use regions to delimit
     the boundary of the selection: the merge target is the next op following the
-    `spv.mlir.selection` op. This way it's easier to discover all blocks belonging to
+    `spirv.mlir.selection` op. This way it's easier to discover all blocks belonging to
     the selection and it plays nicer with the MLIR system.
 
-    The `spv.mlir.selection` region should contain at least two blocks: one selection
+    The `spirv.mlir.selection` region should contain at least two blocks: one selection
     header block, and one selection merge. The selection header block should be
     the first block. The selection merge block should be the last block.
-    The merge block should only contain a `spv.mlir.merge` op.
+    The merge block should only contain a `spirv.mlir.merge` op.
   }];
 
   let arguments = (ins
@@ -453,12 +453,12 @@ def SPV_SelectionOp : SPV_Op<"mlir.selection", [InFunctionScope]> {
     /// Returns the selection merge block.
     Block *getMergeBlock();
 
-    /// Adds a selection merge block containing one spv.mlir.merge op.
+    /// Adds a selection merge block containing one spirv.mlir.merge op.
     void addMergeBlock();
 
-    /// Creates a spv.mlir.selection op for `if (<condition>) then { <thenBody> }`
+    /// Creates a spirv.mlir.selection op for `if (<condition>) then { <thenBody> }`
     /// with `builder`. `builder`'s insertion point will remain at after the
-    /// newly inserted spv.mlir.selection op afterwards.
+    /// newly inserted spirv.mlir.selection op afterwards.
     static SelectionOp createIfThen(
         Location loc, Value condition,
         function_ref<void(OpBuilder &builder)> thenBody,
