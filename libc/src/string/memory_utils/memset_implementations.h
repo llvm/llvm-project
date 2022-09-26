@@ -133,10 +133,6 @@ inline static void inline_memset(char *dst, unsigned char value, size_t count) {
 #endif
 }
 
-inline static void inline_bzero(char *dst, size_t count) {
-  inline_memset(dst, 0, count);
-}
-
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H

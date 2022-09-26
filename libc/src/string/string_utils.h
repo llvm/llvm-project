@@ -12,7 +12,7 @@
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/common.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
-#include "src/string/memory_utils/memset_implementations.h"
+#include "src/string/memory_utils/bzero_implementations.h"
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
