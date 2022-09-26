@@ -468,3 +468,36 @@ func.func @invalid_concat_size_mismatch(%arg0: tensor<2x4xf64, #DC>,
          tensor<4x4xf64, #DC> to tensor<9x4xf64, #DC>
   return %0 : tensor<9x4xf64, #DC>
 }
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
+  // expected-error@+1 {{Unmatched number of arguments in the block}}
+  sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
+    ^bb0(%1: index, %2: index, %3: index, %v: f64) :
+  }
+  return
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
+  // expected-error@+1 {{Expecting Index type for argument at index 1}}
+  sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
+    ^bb0(%1: index, %2: f64, %v: f64) :
+  }
+  return
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
+  // expected-error@+1 {{Unmatched element type between input tensor and block argument}}
+  sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
+    ^bb0(%1: index, %2: index, %v: f32) :
+  }
+  return
+}

@@ -1202,11 +1202,9 @@ class upward_defs_iterator
   using BaseT = upward_defs_iterator::iterator_facade_base;
 
 public:
-  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT,
-                       bool *PerformedPhiTranslation = nullptr)
+  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT)
       : DefIterator(Info.first), Location(Info.second),
-        OriginalAccess(Info.first), DT(DT),
-        PerformedPhiTranslation(PerformedPhiTranslation) {
+        OriginalAccess(Info.first), DT(DT) {
     CurrentPair.first = nullptr;
 
     WalkingPhi = Info.first && isa<MemoryPhi>(Info.first);
@@ -1247,34 +1245,24 @@ private:
     CurrentPair.first = *DefIterator;
     CurrentPair.second = Location;
     if (WalkingPhi && Location.Ptr) {
-      // Mark size as unknown, if the location is not guaranteed to be
-      // loop-invariant for any possible loop in the function. Setting the size
-      // to unknown guarantees that any memory accesses that access locations
-      // after the pointer are considered as clobbers, which is important to
-      // catch loop carried dependences.
-      if (!IsGuaranteedLoopInvariant(Location.Ptr))
-        CurrentPair.second =
-            Location.getWithNewSize(LocationSize::beforeOrAfterPointer());
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getModule()->getDataLayout(), nullptr);
 
       if (!Translator.PHITranslateValue(OriginalAccess->getBlock(),
-                                        DefIterator.getPhiArgBlock(), DT,
-                                        true)) {
-        Value *TransAddr = Translator.getAddr();
-        if (TransAddr != Location.Ptr) {
-          CurrentPair.second = CurrentPair.second.getWithNewPtr(TransAddr);
+                                        DefIterator.getPhiArgBlock(), DT, true))
+        if (Translator.getAddr() != CurrentPair.second.Ptr)
+          CurrentPair.second =
+              CurrentPair.second.getWithNewPtr(Translator.getAddr());
 
-          if (TransAddr &&
-              !IsGuaranteedLoopInvariant(TransAddr))
-            CurrentPair.second = CurrentPair.second.getWithNewSize(
-                LocationSize::beforeOrAfterPointer());
-
-          if (PerformedPhiTranslation)
-            *PerformedPhiTranslation = true;
-        }
-      }
+      // Mark size as unknown, if the location is not guaranteed to be
+      // loop-invariant for any possible loop in the function. Setting the size
+      // to unknown guarantees that any memory accesses that access locations
+      // after the pointer are considered as clobbers, which is important to
+      // catch loop carried dependences.
+      if (!IsGuaranteedLoopInvariant(CurrentPair.second.Ptr))
+        CurrentPair.second = CurrentPair.second.getWithNewSize(
+            LocationSize::beforeOrAfterPointer());
     }
   }
 
@@ -1284,13 +1272,11 @@ private:
   MemoryAccess *OriginalAccess = nullptr;
   DominatorTree *DT = nullptr;
   bool WalkingPhi = false;
-  bool *PerformedPhiTranslation = nullptr;
 };
 
 inline upward_defs_iterator
-upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT,
-                  bool *PerformedPhiTranslation = nullptr) {
-  return upward_defs_iterator(Pair, &DT, PerformedPhiTranslation);
+upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT) {
+  return upward_defs_iterator(Pair, &DT);
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }

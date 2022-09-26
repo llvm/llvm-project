@@ -110,6 +110,17 @@ inline unsigned getNumIterators(ArrayAttr iteratorTypes) {
   return res;
 }
 
+/// Return positions in `iteratorTypes` that match `iteratorTypeName`.
+inline void findPositionsOfType(ArrayAttr iteratorTypes,
+                                StringRef iteratorTypeName,
+                                SmallVectorImpl<unsigned> &res) {
+  for (const auto &en :
+       llvm::enumerate(iteratorTypes.getAsValueRange<StringAttr>())) {
+    if (en.value() == iteratorTypeName)
+      res.push_back(en.index());
+  }
+}
+
 /// Helper StructuredGenerator class to manipulate and rewrite ops with
 /// `StructuredOpInterface`. This is templated for now because VectorOps do not
 /// yet implement the StructuredOpInterface itself.

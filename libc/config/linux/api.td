@@ -153,6 +153,7 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IOFBF", "0">,
     SimpleMacroDef<"_IOLBF", "1">,
     SimpleMacroDef<"_IONBF", "2">,
+    SimpleMacroDef<"EOF", "-1">,
   ];
   let Types = ["size_t", "FILE", "cookie_io_functions_t"];
 }
@@ -170,7 +171,7 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
 }
 
 def TimeAPI : PublicAPI<"time.h"> {
-  let Types = ["time_t", "struct tm"];
+  let Types = ["time_t", "struct tm", "struct timespec"];
 }
 
 def ErrnoAPI : PublicAPI<"errno.h"> {
@@ -195,22 +196,6 @@ def ErrnoAPI : PublicAPI<"errno.h"> {
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
   let Types = ["off_t", "size_t"];
   let Macros = [
-    SimpleMacroDef<"PROT_NONE", "0">,
-    SimpleMacroDef<"PROT_READ", "1">,
-    SimpleMacroDef<"PROT_WRITE", "2">,
-    SimpleMacroDef<"PROT_EXEC", "4">,
-
-    SimpleMacroDef<"MAP_FIXED", "1">,
-    SimpleMacroDef<"MAP_PRIVATE", "2">,
-    SimpleMacroDef<"MAP_SHARED", "4">,
-
-    SimpleMacroDef<"MAP_FAILED", "((void*)-1)">,
-
-    // TODO: The value of 0x20 is good for x86_64, but has to be extended
-    // in some manner to accommodate other machine architectures.
-    SimpleMacroDef<"MAP_ANONYMOUS", "0x20">
-
-    // TODO: Add other MAP_* macros used by Linux.
   ];
 
 }
@@ -268,7 +253,7 @@ def DirentAPI : PublicAPI<"dirent.h"> {
 }
 
 def UniStdAPI : PublicAPI<"unistd.h"> {
-  let Types = ["off_t", "size_t", "ssize_t"];
+  let Types = ["off_t", "pid_t", "size_t", "ssize_t", "uid_t"];
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
@@ -276,7 +261,8 @@ def SysResourceAPI : PublicAPI<"sys/resource.h"> {
 }
 
 def SysStatAPI : PublicAPI<"sys/stat.h"> {
-  let Types = ["mode_t"];
+  let Types = ["mode_t", "dev_t", "ino_t", "nlink_t", "uid_t", "gid_t", "off_t",
+               "struct timespec", "blksize_t", "blkcnt_t", "struct stat"];
 }
 
 def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {

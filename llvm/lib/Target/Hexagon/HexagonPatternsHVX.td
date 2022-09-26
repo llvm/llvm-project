@@ -60,9 +60,6 @@ def HiVec: OutPatFrag<(ops node:$Vs), (EXTRACT_SUBREG $Vs, vsub_hi)>;
 def HexagonQCAT:       SDNode<"HexagonISD::QCAT",       SDTVecBinOp>;
 def HexagonQTRUE:      SDNode<"HexagonISD::QTRUE",      SDTVecLeaf>;
 def HexagonQFALSE:     SDNode<"HexagonISD::QFALSE",     SDTVecLeaf>;
-def HexagonVPACKL:     SDNode<"HexagonISD::VPACKL",     SDTVecUnaryOp>;
-def HexagonVUNPACK:    SDNode<"HexagonISD::VUNPACK",    SDTVecUnaryOp>;
-def HexagonVUNPACKU:   SDNode<"HexagonISD::VUNPACKU",   SDTVecUnaryOp>;
 
 def vzero:  PatFrags<(ops), [(splat_vector (i32 0)), (splat_vector (f32zero))]>;
 def qtrue:  PatFrag<(ops), (HexagonQTRUE)>;
@@ -71,9 +68,6 @@ def qcat:   PatFrag<(ops node:$Qs, node:$Qt),
                     (HexagonQCAT node:$Qs, node:$Qt)>;
 
 def qnot:     PatFrag<(ops node:$Qs), (xor node:$Qs, qtrue)>;
-def vpackl:   PatFrag<(ops node:$Vs), (HexagonVPACKL node:$Vs)>;
-def vunpack:  PatFrag<(ops node:$Vs), (HexagonVUNPACK node:$Vs)>;
-def vunpacku: PatFrag<(ops node:$Vs), (HexagonVUNPACKU node:$Vs)>;
 
 def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
 def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
@@ -596,6 +590,12 @@ let Predicates = [UseHVX] in {
            (V6_vpackeb (HiVec $Vss), (LoVec $Vss))>;
   def: Pat<(VecI16 (trunc HWI32:$Vss)),
            (V6_vpackeh (HiVec $Vss), (LoVec $Vss))>;
+  // Pattern for (v32i8 (trunc v32i32:$Vs)) after widening:
+  def: Pat<(VecI8 (trunc
+              (concat_vectors
+                (VecI16 (trunc (concat_vectors HVI32:$Vs, undef))),
+                undef))),
+           (V6_vdealb4w (IMPLICIT_DEF), HvxVR:$Vs)>;
 
   def: Pat<(VecQ8 (trunc HVI8:$Vs)),
            (V6_vandvrt HvxVR:$Vs, (A2_tfrsi 0x01010101))>;
@@ -661,31 +661,6 @@ let Predicates = [UseHVX] in {
   def: Pat<(sra HVI32:$Vs, HVI32:$Vt), (V6_vasrwv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI16:$Vs, HVI16:$Vt), (V6_vlsrhv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI32:$Vs, HVI32:$Vt), (V6_vlsrwv HvxVR:$Vs, HvxVR:$Vt)>;
-
-  // Vpackl is a pseudo-op that is used when legalizing widened truncates.
-  // It should never be produced with a register pair in the output, but
-  // it can happen to have a pair as an input.
-  def: Pat<(VecI8  (vpackl HVI16:$Vs)), (V6_vdealb HvxVR:$Vs)>;
-  def: Pat<(VecI8  (vpackl HVI32:$Vs)), (V6_vdealb4w (IMPLICIT_DEF), HvxVR:$Vs)>;
-  def: Pat<(VecI16 (vpackl HVI32:$Vs)), (V6_vdealh HvxVR:$Vs)>;
-  def: Pat<(VecI8  (vpackl HWI16:$Vs)), (V6_vpackeb (HiVec $Vs), (LoVec $Vs))>;
-  def: Pat<(VecI8  (vpackl HWI32:$Vs)),
-           (V6_vpackeb (IMPLICIT_DEF), (V6_vpackeh (HiVec $Vs), (LoVec $Vs)))>;
-  def: Pat<(VecI16 (vpackl HWI32:$Vs)), (V6_vpackeh (HiVec $Vs), (LoVec $Vs))>;
-
-  def: Pat<(VecI16  (vunpack   HVI8:$Vs)), (LoVec (VSxtb $Vs))>;
-  def: Pat<(VecI32  (vunpack   HVI8:$Vs)), (LoVec (VSxth (LoVec (VSxtb $Vs))))>;
-  def: Pat<(VecI32  (vunpack  HVI16:$Vs)), (LoVec (VSxth $Vs))>;
-  def: Pat<(VecPI16 (vunpack   HVI8:$Vs)), (VSxtb $Vs)>;
-  def: Pat<(VecPI32 (vunpack   HVI8:$Vs)), (VSxth (LoVec (VSxtb $Vs)))>;
-  def: Pat<(VecPI32 (vunpack  HVI32:$Vs)), (VSxth $Vs)>;
-
-  def: Pat<(VecI16  (vunpacku  HVI8:$Vs)), (LoVec (VZxtb $Vs))>;
-  def: Pat<(VecI32  (vunpacku  HVI8:$Vs)), (LoVec (VZxth (LoVec (VZxtb $Vs))))>;
-  def: Pat<(VecI32  (vunpacku HVI16:$Vs)), (LoVec (VZxth $Vs))>;
-  def: Pat<(VecPI16 (vunpacku  HVI8:$Vs)), (VZxtb $Vs)>;
-  def: Pat<(VecPI32 (vunpacku  HVI8:$Vs)), (VZxth (LoVec (VZxtb $Vs)))>;
-  def: Pat<(VecPI32 (vunpacku HVI32:$Vs)), (VZxth $Vs)>;
 
   let Predicates = [UseHVX,UseHVXV60] in {
     def: Pat<(VecI16 (bswap HVI16:$Vs)),

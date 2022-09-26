@@ -119,7 +119,8 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.clear();
   binary.reserve(moduleSize);
 
-  spirv::appendModuleHeader(binary, module.vce_triple()->getVersion(), nextID);
+  spirv::appendModuleHeader(binary, module.getVceTriple()->getVersion(),
+                            nextID);
   binary.append(capabilities.begin(), capabilities.end());
   binary.append(extensions.begin(), extensions.end());
   binary.append(extendedSets.begin(), extendedSets.end());
@@ -166,7 +167,7 @@ uint32_t Serializer::getOrCreateFunctionID(StringRef fnName) {
 }
 
 void Serializer::processCapability() {
-  for (auto cap : module.vce_triple()->getCapabilities())
+  for (auto cap : module.getVceTriple()->getCapabilities())
     encodeInstructionInto(capabilities, spirv::Opcode::OpCapability,
                           {static_cast<uint32_t>(cap)});
 }
@@ -186,7 +187,7 @@ void Serializer::processDebugInfo() {
 
 void Serializer::processExtension() {
   llvm::SmallVector<uint32_t, 16> extName;
-  for (spirv::Extension ext : module.vce_triple()->getExtensions()) {
+  for (spirv::Extension ext : module.getVceTriple()->getExtensions()) {
     extName.clear();
     spirv::encodeStringLiteralInto(extName, spirv::stringifyExtension(ext));
     encodeInstructionInto(extensions, spirv::Opcode::OpExtension, extName);
@@ -1045,11 +1046,11 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
     } else if (auto branchCondOp =
                    dyn_cast<spirv::BranchConditionalOp>(terminator)) {
       Optional<OperandRange> blockOperands;
-      if (branchCondOp.trueTarget() == block) {
-        blockOperands = branchCondOp.trueTargetOperands();
+      if (branchCondOp.getTrueTarget() == block) {
+        blockOperands = branchCondOp.getTrueTargetOperands();
       } else {
-        assert(branchCondOp.falseTarget() == block);
-        blockOperands = branchCondOp.falseTargetOperands();
+        assert(branchCondOp.getFalseTarget() == block);
+        blockOperands = branchCondOp.getFalseTargetOperands();
       }
 
       assert(!blockOperands->empty() &&

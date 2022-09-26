@@ -5,20 +5,19 @@
 ; CHECK: MemoryUse(1)
 define <vscale x 4 x i32> @f(<vscale x 4 x i32> %z) {
   %a = alloca <vscale x 4 x i32>
-  store <vscale x 4 x i32> %z, <vscale x 4 x i32>* %a
-  %zz = load <vscale x 4 x i32>, <vscale x 4 x i32>* %a
+  store <vscale x 4 x i32> %z, ptr %a
+  %zz = load <vscale x 4 x i32>, ptr %a
   ret <vscale x 4 x i32> %zz
 }
 
 ; CHECK-LABEL: define i32 @g(
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK: MemoryUse(1)
-declare i32* @gg(<vscale x 4 x i32>* %a)
-define i32 @g(i32 %z, i32 *%bb) {
+declare ptr @gg(ptr %a)
+define i32 @g(i32 %z, ptr %bb) {
   %a = alloca <vscale x 4 x i32>
-  %aa = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %a, i32 0, i32 0
-  store i32 %z, i32* %aa
-  %bbb = call i32* @gg(<vscale x 4 x i32>* %a) readnone
-  %zz = load i32, i32* %bbb
+  store i32 %z, ptr %a
+  %bbb = call ptr @gg(ptr %a) readnone
+  %zz = load i32, ptr %bbb
   ret i32 %zz
 }

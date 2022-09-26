@@ -5961,6 +5961,13 @@ TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> VL,
       return CI->getValue().isPowerOf2();
     return false;
   });
+  const bool IsNegatedPowerOfTwo = all_of(VL, [&](Value *V) {
+    // TODO: We should allow undef elements here
+    auto *Op = cast<Instruction>(V)->getOperand(OpIdx);
+    if (auto *CI = dyn_cast<ConstantInt>(Op))
+      return CI->getValue().isNegatedPowerOf2();
+    return false;
+  });
 
   TTI::OperandValueKind VK = TTI::OK_AnyValue;
   if (IsConstant && IsUniform)
@@ -5970,8 +5977,10 @@ TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> VL,
   else if (IsUniform)
     VK = TTI::OK_UniformValue;
 
-  const TTI::OperandValueProperties VP =
-    IsPowerOfTwo ? TTI::OP_PowerOf2 : TTI::OP_None;
+  TTI::OperandValueProperties VP = TTI::OP_None;
+  VP = IsPowerOfTwo ? TTI::OP_PowerOf2 : VP;
+  VP = IsNegatedPowerOfTwo ? TTI::OP_NegatedPowerOf2 : VP;
+
   return {VK, VP};
 }
 
@@ -6340,14 +6349,17 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
 
       unsigned NumOfParts = TTI->getNumberOfParts(SrcVecTy);
 
+      SmallVector<int> InsertMask(NumElts, UndefMaskElem);
       unsigned OffsetBeg = *getInsertIndex(VL.front());
       unsigned OffsetEnd = OffsetBeg;
-      for (Value *V : VL.drop_front()) {
+      InsertMask[OffsetBeg] = 0;
+      for (auto [I, V] : enumerate(VL.drop_front())) {
         unsigned Idx = *getInsertIndex(V);
         if (OffsetBeg > Idx)
           OffsetBeg = Idx;
         else if (OffsetEnd < Idx)
           OffsetEnd = Idx;
+        InsertMask[Idx] = I + 1;
       }
       unsigned VecScalarsSz = PowerOf2Ceil(NumElts);
       if (NumOfParts > 0)
@@ -6412,8 +6424,6 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // initial vector or inserting a subvector.
       // TODO: Implement the analysis of the FirstInsert->getOperand(0)
       // subvector of ActualVecTy.
-      SmallVector<int> InsertMask(NumElts, UndefMaskElem);
-      copy(Mask, std::next(InsertMask.begin(), OffsetBeg));
       if (!isUndefVector(FirstInsert->getOperand(0), InsertMask) &&
           NumScalars != NumElts && !IsWholeSubvector) {
         if (InsertVecSz != VecSz) {
@@ -6540,32 +6550,26 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
     case Instruction::And:
     case Instruction::Or:
     case Instruction::Xor: {
-      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None};
-
-      // Certain instructions can be cheaper to vectorize if they have a
-      // constant second vector operand.
       const unsigned OpIdx = isa<BinaryOperator>(VL0) ? 1 : 0;
-      auto Op2Info = getOperandInfo(VL, OpIdx);
 
-      SmallVector<const Value *, 4> Operands(VL0->operand_values());
-      InstructionCost ScalarEltCost =
+      InstructionCost ScalarCost = 0;
+      for (auto *V : VL) {
+        auto *VI = cast<Instruction>(V);
+        TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(VI->getOperand(0));
+        TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(VI->getOperand(OpIdx));
+        SmallVector<const Value *, 4> Operands(VI->operand_values());
+        ScalarCost +=
           TTI->getArithmeticInstrCost(E->getOpcode(), ScalarTy, CostKind,
-                                      Op1Info, Op2Info,
-                                      Operands, VL0);
+                                      Op1Info, Op2Info, Operands, VI);
+      }
       if (NeedToShuffleReuses) {
-        CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
+        CommonCost -= (EntryVF - VL.size()) * ScalarCost/VL.size();
       }
-      InstructionCost ScalarCost = VecTy->getNumElements() * ScalarEltCost;
-      for (unsigned I = 0, Num = VL0->getNumOperands(); I < Num; ++I) {
-        if (all_of(VL, [I](Value *V) {
-              return isConstant(cast<Instruction>(V)->getOperand(I));
-            }))
-          Operands[I] = ConstantVector::getNullValue(VecTy);
-      }
+      TTI::OperandValueInfo Op1Info = getOperandInfo(VL, 0);
+      TTI::OperandValueInfo Op2Info = getOperandInfo(VL, OpIdx);
       InstructionCost VecCost =
           TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind,
-                                      Op1Info, Op2Info,
-                                      Operands, VL0);
+                                      Op1Info, Op2Info);
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecCost, ScalarCost));
       return CommonCost + VecCost - ScalarCost;
     }
@@ -6630,16 +6634,18 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       auto *SI =
           cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
       Align Alignment = SI->getAlign();
+      InstructionCost ScalarStCost = 0;
+      for (auto *V : VL) {
+        auto *VI = cast<Instruction>(V);
+        TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(VI->getOperand(0));
+        ScalarStCost +=
+          TTI->getMemoryOpCost(Instruction::Store, ScalarTy, Alignment, 0,
+                               CostKind, OpInfo, VI);
+      }
       TTI::OperandValueInfo OpInfo = getOperandInfo(VL, 0);
-      InstructionCost ScalarEltCost = TTI->getMemoryOpCost(
-          Instruction::Store, ScalarTy, Alignment, 0, CostKind, OpInfo, VL0);
-      InstructionCost ScalarStCost = VecTy->getNumElements() * ScalarEltCost;
-      TTI::OperandValueKind OpVK = TTI::OK_AnyValue;
-      if (OpInfo.isConstant())
-        OpVK = TTI::OK_NonUniformConstantValue;
-      InstructionCost VecStCost = TTI->getMemoryOpCost(
-          Instruction::Store, VecTy, Alignment, 0, CostKind,
-          {OpVK, TTI::OP_None}, VL0);
+      InstructionCost VecStCost =
+        TTI->getMemoryOpCost(Instruction::Store, VecTy, Alignment, 0, CostKind,
+                             OpInfo);
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecStCost, ScalarStCost));
       return CommonCost + VecStCost - ScalarStCost;
     }
@@ -10401,6 +10407,11 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
       ValueTy = Trunc->getSrcTy();
     unsigned MinVF = TTI->getStoreMinimumVF(
         R.getMinVF(DL->getTypeSizeInBits(ValueTy)), StoreTy, ValueTy);
+
+    if (MaxVF <= MinVF) {
+      LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF << ") <= "
+                        << "MinVF (" << MinVF << ")\n");
+    }
 
     // FIXME: Is division-by-2 the correct step? Should we assert that the
     // register size is a power-of-2?

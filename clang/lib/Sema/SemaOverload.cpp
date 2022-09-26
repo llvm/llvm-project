@@ -1074,6 +1074,15 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
             !shouldLinkPossiblyHiddenDecl(*I, New))
           continue;
 
+        // C++20 [temp.friend] p9: A non-template friend declaration with a
+        // requires-clause shall be a definition.  A friend function template
+        // with a constraint that depends on a template parameter from an
+        // enclosing template shall be a definition.  Such a constrained friend
+        // function or function template declaration does not declare the same
+        // function or function template as a declaration in any other scope.
+        if (Context.FriendsDifferByConstraints(OldF, New))
+          continue;
+
         Match = *I;
         return Ovl_Match;
       }
@@ -6521,7 +6530,8 @@ void Sema::AddOverloadCandidate(
 
   if (Function->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckFunctionConstraints(Function, Satisfaction) ||
+    if (CheckFunctionConstraints(Function, Satisfaction, /*Loc*/ {},
+                                 /*ForOverloadResolution*/ true) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
@@ -7027,7 +7037,8 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
 
   if (Method->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckFunctionConstraints(Method, Satisfaction) ||
+    if (CheckFunctionConstraints(Method, Satisfaction, /*Loc*/ {},
+                                 /*ForOverloadResolution*/ true) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;

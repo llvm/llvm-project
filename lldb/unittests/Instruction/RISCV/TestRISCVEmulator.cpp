@@ -250,10 +250,10 @@ void TestAtomic(RISCVEmulatorTester *tester, uint64_t inst, T rs1_val,
 
 TEST_F(RISCVEmulatorTester, TestAtomicSequence) {
   this->WritePC(0x0);
-  *(uint64_t *)this->memory = 0x100427af;        // lr.w	a5,(s0)
-  *(uint64_t *)(this->memory + 4) = 0x00079663;  // bnez	a5,12
-  *(uint64_t *)(this->memory + 8) = 0x1ce426af;  // sc.w.aq	a3,a4,(s0)
-  *(uint64_t *)(this->memory + 12) = 0xfe069ae3; // bnez	a3,-12
+  *(uint32_t *)this->memory = 0x100427af;        // lr.w	a5,(s0)
+  *(uint32_t *)(this->memory + 4) = 0x00079663;  // bnez	a5,12
+  *(uint32_t *)(this->memory + 8) = 0x1ce426af;  // sc.w.aq	a3,a4,(s0)
+  *(uint32_t *)(this->memory + 12) = 0xfe069ae3; // bnez	a3,-12
   ASSERT_TRUE(this->DecodeAndExecute(*(uint32_t *)this->memory, false));
   ASSERT_EQ(this->gpr.gpr[0], uint64_t(16));
 }

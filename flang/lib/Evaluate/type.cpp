@@ -96,7 +96,7 @@ DynamicType::DynamicType(int k, const semantics::ParamValue &pv)
     : category_{TypeCategory::Character}, kind_{k} {
   CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   if (auto n{ToInt64(pv.GetExplicit())}) {
-    knownLength_ = *n;
+    knownLength_ = *n > 0 ? *n : 0;
   } else {
     charLengthParamValue_ = &pv;
   }

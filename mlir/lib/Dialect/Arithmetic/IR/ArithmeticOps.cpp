@@ -627,9 +627,21 @@ OpFoldResult arith::XOrIOp::fold(ArrayRef<Attribute> operands) {
   if (getLhs() == getRhs())
     return Builder(getContext()).getZeroAttr(getType());
   /// xor(xor(x, a), a) -> x
-  if (arith::XOrIOp prev = getLhs().getDefiningOp<arith::XOrIOp>())
+  /// xor(xor(a, x), a) -> x
+  if (arith::XOrIOp prev = getLhs().getDefiningOp<arith::XOrIOp>()) {
     if (prev.getRhs() == getRhs())
       return prev.getLhs();
+    if (prev.getLhs() == getRhs())
+      return prev.getRhs();
+  }
+  /// xor(a, xor(x, a)) -> x
+  /// xor(a, xor(a, x)) -> x
+  if (arith::XOrIOp prev = getRhs().getDefiningOp<arith::XOrIOp>()) {
+    if (prev.getRhs() == getLhs())
+      return prev.getLhs();
+    if (prev.getLhs() == getLhs())
+      return prev.getRhs();
+  }
 
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) ^ b; });

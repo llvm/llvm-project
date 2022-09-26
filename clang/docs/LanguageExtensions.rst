@@ -648,8 +648,8 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
  ET __builtin_reduce_min(VT a)           return x or y, whichever is smaller; If exactly one argument     integer and floating point types
                                          is a NaN, return the other argument. If both arguments are
                                          NaNs, fmax() return a NaN.
- ET __builtin_reduce_add(VT a)           \+                                                               integer and floating point types
- ET __builtin_reduce_mul(VT a)           \*                                                               integer and floating point types
+ ET __builtin_reduce_add(VT a)           \+                                                               integer types
+ ET __builtin_reduce_mul(VT a)           \*                                                               integer types
  ET __builtin_reduce_and(VT a)           &                                                                integer types
  ET __builtin_reduce_or(VT a)            \|                                                               integer types
  ET __builtin_reduce_xor(VT a)           ^                                                                integer types
@@ -2136,7 +2136,7 @@ between the host and device is known to be compatible.
   struct OnlySL {
     int a;
     int b;
-    NotPod() : a(0), b(0) {}
+    OnlySL() : a(0), b(0) {}
   };
 
   // Not standard layout type because of two different access controls.
@@ -2144,16 +2144,17 @@ between the host and device is known to be compatible.
     int a;
   private:
     int b;
-  }
+  };
 
+  #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : enable
   kernel void kernel_main(
     Pod a,
-  #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : enable
+
     OnlySL b,
     global NotSL *c,
-  #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
-    global OnlySL *d,
+    global OnlySL *d
   );
+  #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
 
 Remove address space builtin function
 -------------------------------------

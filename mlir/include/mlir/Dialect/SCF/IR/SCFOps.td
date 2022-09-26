@@ -233,6 +233,12 @@ def ForOp : SCF_Op<"for",
     Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front(getNumInductionVars());
     }
+    /// Return the `index`-th region iteration argument.
+    BlockArgument getRegionIterArg(unsigned index) {
+      assert(index < getNumRegionIterArgs() && 
+        "expected an index less than the number of region iter args");
+      return getBody()->getArguments().drop_front(getNumInductionVars())[index];
+    }
     Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
     }

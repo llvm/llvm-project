@@ -527,18 +527,16 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
 }
 
 CompressedSection::CompressedSection(const SectionBase &Sec,
-                                     DebugCompressionType CompressionType)
+                                     DebugCompressionType CompressionType,
+                                     bool Is64Bits)
     : SectionBase(Sec), CompressionType(CompressionType),
       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
   compression::compress(compression::Params(CompressionType), OriginalData,
                         CompressedData);
 
   Flags |= ELF::SHF_COMPRESSED;
-  size_t ChdrSize =
-      std::max(std::max(sizeof(object::Elf_Chdr_Impl<object::ELF64LE>),
-                        sizeof(object::Elf_Chdr_Impl<object::ELF64BE>)),
-               std::max(sizeof(object::Elf_Chdr_Impl<object::ELF32LE>),
-                        sizeof(object::Elf_Chdr_Impl<object::ELF32BE>)));
+  size_t ChdrSize = Is64Bits ? sizeof(object::Elf_Chdr_Impl<object::ELF64LE>)
+                             : sizeof(object::Elf_Chdr_Impl<object::ELF32LE>);
   Size = ChdrSize + CompressedData.size();
   Align = 8;
 }
@@ -1873,6 +1871,7 @@ template <class ELFT> Error ELFBuilder<ELFT>::build(bool EnsureSymtab) {
     return HeadersFile.takeError();
 
   const typename ELFFile<ELFT>::Elf_Ehdr &Ehdr = HeadersFile->getHeader();
+  Obj.Is64Bits = Ehdr.e_ident[EI_CLASS] == ELFCLASS64;
   Obj.OSABI = Ehdr.e_ident[EI_OSABI];
   Obj.ABIVersion = Ehdr.e_ident[EI_ABIVERSION];
   Obj.Type = Ehdr.e_type;

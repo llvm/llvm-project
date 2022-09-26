@@ -56,25 +56,11 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, i8* %p) #0 {
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT10]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP20:%.*]] = or <4 x i32> [[TMP16]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = or <4 x i32> [[TMP17]], [[TMP19]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[TMP20]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i32> [[TMP21]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP22]], i32* undef, align 4, !tbaa [[TBAA4:![0-9]+]]
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP20]], i32 1
-; CHECK-NEXT:    store i32 [[TMP23]], i32* undef, align 4, !tbaa [[TBAA4]]
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP20]], i32 2
-; CHECK-NEXT:    store i32 [[TMP24]], i32* undef, align 4, !tbaa [[TBAA4]]
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP20]], i32 3
-; CHECK-NEXT:    store i32 [[TMP25]], i32* undef, align 4, !tbaa [[TBAA4]]
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP21]], i32 0
-; CHECK-NEXT:    store i32 [[TMP26]], i32* undef, align 4, !tbaa [[TBAA4]]
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP21]], i32 1
-; CHECK-NEXT:    store i32 [[TMP27]], i32* undef, align 4, !tbaa [[TBAA4]]
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i32> [[TMP21]], i32 2
-; CHECK-NEXT:    store i32 [[TMP28]], i32* undef, align 4, !tbaa [[TBAA4]]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP21]], i32 3
-; CHECK-NEXT:    store i32 [[TMP29]], i32* undef, align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[SW_EPILOG:%.*]], label [[SCALAR_PH]]
@@ -85,14 +71,14 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, i8* %p) #0 {
 ; CHECK-NEXT:    [[P_359:%.*]] = phi i8* [ [[ADD_PTR86:%.*]], [[FOR_BODY68]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[CONV70:%.*]] = zext i8 [[X]] to i32
 ; CHECK-NEXT:    [[SHL71:%.*]] = shl nuw i32 [[CONV70]], 24
-; CHECK-NEXT:    [[TMP31:%.*]] = load i8, i8* [[P]], align 1, !tbaa [[TBAA1]]
-; CHECK-NEXT:    [[CONV73:%.*]] = zext i8 [[TMP31]] to i32
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, i8* [[P]], align 1, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[CONV73:%.*]] = zext i8 [[TMP24]] to i32
 ; CHECK-NEXT:    [[SHL74:%.*]] = shl nuw nsw i32 [[CONV73]], 16
 ; CHECK-NEXT:    [[OR75:%.*]] = or i32 [[SHL74]], [[SHL71]]
-; CHECK-NEXT:    [[TMP32:%.*]] = load i8, i8* undef, align 1, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[TMP25:%.*]] = load i8, i8* undef, align 1, !tbaa [[TBAA1]]
 ; CHECK-NEXT:    [[SHL78:%.*]] = shl nuw nsw i32 undef, 8
 ; CHECK-NEXT:    [[OR79:%.*]] = or i32 [[OR75]], [[SHL78]]
-; CHECK-NEXT:    [[CONV81:%.*]] = zext i8 [[TMP32]] to i32
+; CHECK-NEXT:    [[CONV81:%.*]] = zext i8 [[TMP25]] to i32
 ; CHECK-NEXT:    [[OR83:%.*]] = or i32 [[OR79]], [[CONV81]]
 ; CHECK-NEXT:    store i32 [[OR83]], i32* undef, align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[ADD_PTR86]] = getelementptr inbounds i8, i8* [[P_359]], i64 4

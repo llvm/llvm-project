@@ -121,7 +121,7 @@ pdl.pattern : benefit(1) {
 pdl.pattern : benefit(1) {
   // expected-error@below {{expected the same number of attribute values and attribute names, got 1 names and 0 values}}
   %op = "pdl.operation"() {
-    attributeNames = ["attr"],
+    attributeValueNames = ["attr"],
     operand_segment_sizes = array<i32: 0, 0, 0>
   } : () -> (!pdl.operation)
   rewrite %op with "rewriter"

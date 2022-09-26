@@ -108,6 +108,7 @@ static_library("CodeGen") {
     "MachineBlockFrequencyInfo.cpp",
     "MachineBlockPlacement.cpp",
     "MachineBranchProbabilityInfo.cpp",
+    "MachineCFGPrinter.cpp",
     "MachineCSE.cpp",
     "MachineCheckDebugify.cpp",
     "MachineCombiner.cpp",

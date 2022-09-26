@@ -947,6 +947,16 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
                               EmptyDeclSpecAttrs);
     }
 
+  case tok::kw_cbuffer:
+  case tok::kw_tbuffer:
+    if (getLangOpts().HLSL) {
+      SourceLocation DeclEnd;
+      ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+      return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs,
+                              EmptyDeclSpecAttrs);
+    }
+    goto dont_know;
+
   case tok::kw_static:
     // Parse (then ignore) 'static' prior to a template instantiation. This is
     // a GCC extension that we intentionally do not support.

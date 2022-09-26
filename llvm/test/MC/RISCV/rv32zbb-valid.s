@@ -37,3 +37,28 @@ max t0, t1, t2
 # CHECK-ASM-AND-OBJ: maxu t0, t1, t2
 # CHECK-ASM: encoding: [0xb3,0x72,0x73,0x0a]
 maxu t0, t1, t2
+
+# CHECK-ASM-AND-OBJ: andn t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x72,0x73,0x40]
+andn t0, t1, t2
+# CHECK-ASM-AND-OBJ: orn t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x62,0x73,0x40]
+orn t0, t1, t2
+# CHECK-ASM-AND-OBJ: xnor t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x42,0x73,0x40]
+xnor t0, t1, t2
+# CHECK-ASM-AND-OBJ: rol t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x12,0x73,0x60]
+rol t0, t1, t2
+# CHECK-ASM-AND-OBJ: ror t0, t1, t2
+# CHECK-ASM: encoding: [0xb3,0x52,0x73,0x60]
+ror t0, t1, t2
+# CHECK-ASM-AND-OBJ: rori t0, t1, 31
+# CHECK-ASM: encoding: [0x93,0x52,0xf3,0x61]
+rori t0, t1, 31
+# CHECK-ASM-AND-OBJ: rori t0, t1, 0
+# CHECK-ASM: encoding: [0x93,0x52,0x03,0x60]
+rori t0, t1, 0
+# CHECK-ASM-AND-OBJ: orc.b t0, t1
+# CHECK-ASM: encoding: [0x93,0x52,0x73,0x28]
+orc.b t0, t1

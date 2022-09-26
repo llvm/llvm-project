@@ -73,6 +73,10 @@
 // CHECK-PRECEDENCE: -Wall
 
 
-//--- Duplicate --config options are allowed if the value is the same
-// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir=%S/Inputs/config2 --config config-4.cfg --config config-4.cfg -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-SAME-CONFIG
-// CHECK-SAME-CONFIG: Configuration file: {{.*}}Inputs{{.}}config2{{.}}config-4.cfg
+//--- Multiple configuration files can be specified.
+// RUN: %clang --config-system-dir=%S/Inputs/config --config-user-dir= --config config-4.cfg --config %S/Inputs/config2/config-4.cfg -S %s -o /dev/null -v 2>&1 | FileCheck %s -check-prefix CHECK-TWO-CONFIGS
+// CHECK-TWO-CONFIGS: Configuration file: {{.*}}Inputs{{.}}config{{.}}config-4.cfg
+// CHECK-TWO-CONFIGS-NEXT: Configuration file: {{.*}}Inputs{{.}}config2{{.}}config-4.cfg
+// CHECK-TWO-CONFIGS: -isysroot
+// CHECK-TWO-CONFIGS-SAME: /opt/data
+// CHECK-TWO-CONFIGS-SAME: -Wall

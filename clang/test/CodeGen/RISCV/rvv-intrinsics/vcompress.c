@@ -566,7 +566,7 @@ vfloat32mf2_t test_vcompress_vm_f32mf2_tu(vbool64_t mask, vfloat32mf2_t merge, v
 
 // CHECK-RV64-LABEL: @test_vcompress_vm_i32mf2_ta(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vcompress.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vcompress.nxv1i32.i64(<vscale x 1 x i32> poison, <vscale x 1 x i32> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vint32mf2_t test_vcompress_vm_i32mf2_ta(vbool64_t mask, vint32mf2_t src, size_t vl) {
@@ -575,7 +575,7 @@ vint32mf2_t test_vcompress_vm_i32mf2_ta(vbool64_t mask, vint32mf2_t src, size_t 
 
 // CHECK-RV64-LABEL: @test_vcompress_vm_u32mf2_ta(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vcompress.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vcompress.nxv1i32.i64(<vscale x 1 x i32> poison, <vscale x 1 x i32> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
 //
 vuint32mf2_t test_vcompress_vm_u32mf2_ta(vbool64_t mask, vuint32mf2_t src, size_t vl) {
@@ -584,7 +584,7 @@ vuint32mf2_t test_vcompress_vm_u32mf2_ta(vbool64_t mask, vuint32mf2_t src, size_
 
 // CHECK-RV64-LABEL: @test_vcompress_vm_f32mf2_ta(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vcompress.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vcompress.nxv1f32.i64(<vscale x 1 x float> poison, <vscale x 1 x float> [[SRC:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vcompress_vm_f32mf2_ta(vbool64_t mask, vfloat32mf2_t src, size_t vl) {

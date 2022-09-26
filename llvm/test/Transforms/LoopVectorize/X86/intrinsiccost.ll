@@ -148,16 +148,16 @@ while.end:                                        ; preds = %while.body, %entry
   ret void
 }
 
-; CHECK-COST-LABEL: cttz
-; CHECK-COST: Found an estimated cost of 1 for VF 1 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
+; CHECK-COST-LABEL: fshl
+; CHECK-COST: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
 ; CHECK-COST: Found an estimated cost of 1 for VF 2 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
 ; CHECK-COST: Found an estimated cost of 1 for VF 4 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
 ; CHECK-COST: Found an estimated cost of 1 for VF 8 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
 ; CHECK-COST: Found an estimated cost of 1 for VF 16 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
 ; CHECK-COST: Found an estimated cost of 4 for VF 32 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
 
-define void @cttz(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocapture noalias %pDst, i32 %blockSize) #0 {
-; CHECK-LABEL: @cttz(
+define void @fshl(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocapture noalias %pDst, i32 %blockSize) #0 {
+; CHECK-LABEL: @fshl(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_NOT6:%.*]] = icmp eq i32 [[BLOCKSIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT6]], label [[WHILE_END:%.*]], label [[ITER_CHECK:%.*]]

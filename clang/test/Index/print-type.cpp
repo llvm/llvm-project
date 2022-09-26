@@ -191,7 +191,7 @@ inline namespace InlineNS {}
 // CHECK: TemplateRef=TypeAlias:61:1 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: ClassTemplate=Specialization:66:8 (Definition) [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: TemplateTypeParameter=T:65:19 (Definition) [type=T] [typekind=Unexposed] [canonicaltype=type-parameter-0-0] [canonicaltypekind=Unexposed] [isPOD=0]
-// CHECK: StructDecl=Specialization:69:8 [Specialization of Specialization:66:8] [type=Specialization<int>] [typekind=Record] [templateargs/1= [type=int] [typekind=Int]] [isPOD=0]
+// CHECK: StructDecl=Specialization:69:8 [Specialization of Specialization:66:8] [Template arg 0: kind: 1, type: int] [type=Specialization<int>] [typekind=Record] [templateargs/1= [type=int] [typekind=Int]] [isPOD=0]
 // CHECK: VarDecl=templRefParam:71:40 (Definition) [type=Specialization<Specialization<bool> &>] [typekind=Elaborated] [templateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [canonicaltype=Specialization<Specialization<bool> &>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [isPOD=1]
 // CHECK: TemplateRef=Specialization:66:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: CallExpr=Specialization:66:8 [type=Specialization<Specialization<bool> &>] [typekind=Elaborated] [templateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [canonicaltype=Specialization<Specialization<bool> &>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [isPOD=1]

@@ -71,9 +71,12 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 define void @buildvec_dominant0_v2f32(<2 x float>* %x) {
 ; CHECK-LABEL: buildvec_dominant0_v2f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI2_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI2_0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    vlse32.v v8, (a1), zero
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <2 x float> <float 0.0, float 1.0>, <2 x float>* %x
@@ -86,10 +89,10 @@ define void @buildvec_dominant0_v2f32(<2 x float>* %x) {
 define void @buildvec_dominant1_v2f32(<2 x float>* %x) {
 ; CHECK-LABEL: buildvec_dominant1_v2f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vadd.vi v8, v8, 1
-; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <2 x float> <float 1.0, float 2.0>, <2 x float>* %x

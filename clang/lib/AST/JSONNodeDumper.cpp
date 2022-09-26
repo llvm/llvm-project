@@ -901,6 +901,11 @@ void JSONNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *RD) {
   }
 }
 
+void JSONNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
+  VisitNamedDecl(D);
+  JOS.attribute("bufferKind", D->isCBuffer() ? "cbuffer" : "tbuffer");
+}
+
 void JSONNodeDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
   VisitNamedDecl(D);
   JOS.attribute("tagUsed", D->wasDeclaredWithTypename() ? "typename" : "class");

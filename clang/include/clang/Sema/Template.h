@@ -503,6 +503,7 @@ enum class TemplateSubstitutionKind : char {
     const MultiLevelTemplateArgumentList &TemplateArgs;
     Sema::LateInstantiatedAttrVec* LateAttrs = nullptr;
     LocalInstantiationScope *StartingScope = nullptr;
+    bool EvaluateConstraints = true;
 
     /// A list of out-of-line class template partial
     /// specializations that will need to be instantiated after the
@@ -525,6 +526,13 @@ enum class TemplateSubstitutionKind : char {
         : SemaRef(SemaRef),
           SubstIndex(SemaRef, SemaRef.ArgumentPackSubstitutionIndex),
           Owner(Owner), TemplateArgs(TemplateArgs) {}
+
+    void setEvaluateConstraints(bool B) {
+      EvaluateConstraints = B;
+    }
+    bool getEvaluateConstraints() {
+      return EvaluateConstraints;
+    }
 
 // Define all the decl visitors using DeclNodes.inc
 #define DECL(DERIVED, BASE) \

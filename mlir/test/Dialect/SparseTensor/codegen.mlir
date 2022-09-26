@@ -384,3 +384,29 @@ func.func @sparse_compression(%arg0: tensor<8x8xf64, #CSR>,
     : tensor<8x8xf64, #CSR>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index
   return
 }
+
+// CHECK-LABEL: func @sparse_push_back(
+//  CHECK-SAME: %[[A:.*]]: memref<?xindex>,
+//  CHECK-SAME: %[[B:.*]]: memref<?xf64>,
+//  CHECK-SAME: %[[C:.*]]: f64) -> memref<?xf64> {
+//   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+//   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//       CHECK: %[[S:.*]] = memref.dim %[[B]], %[[C0]]
+//       CHECK: %[[P:.*]] = memref.load %[[A]]{{\[}}%[[C2]]]
+//       CHECK: %[[T:.*]] = arith.cmpi uge, %[[P]], %[[S]]
+//       CHECK: %[[M:.*]] = scf.if %[[T]] -> (memref<?xf64>) {
+//       CHECK:  %[[P1:.*]] = arith.muli %[[S]], %[[C2]]
+//       CHECK:  %[[M2:.*]] = memref.realloc %[[B]](%[[P1]])
+//       CHECK:  scf.yield %[[M2]] : memref<?xf64>
+//       CHECK: } else {
+//       CHECK:  scf.yield %[[B]] : memref<?xf64>
+//       CHECK: }
+//       CHECK: memref.store %[[C]], %[[M]]{{\[}}%[[P]]]
+//       CHECK: %[[P2:.*]] = arith.addi %[[P]], %[[C1]]
+//       CHECK: memref.store %[[P2]], %[[A]]{{\[}}%[[C2]]]
+//       CHECK: return %[[M]] : memref<?xf64>
+func.func @sparse_push_back(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2: f64) -> memref<?xf64> {
+  %0 = sparse_tensor.push_back %arg0, %arg1, %arg2 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64 to memref<?xf64>
+  return %0 : memref<?xf64>
+}

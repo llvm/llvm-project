@@ -194,31 +194,18 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
         MR |= MRI;
       }
       continue;
-    } else if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-      MemoryLocation Loc = MemoryLocation::get(LI);
-      // Ignore non-volatile loads from local memory. (Atomic is okay here.)
-      if (!LI->isVolatile() &&
-          AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
-        continue;
-      AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
-    } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-      MemoryLocation Loc = MemoryLocation::get(SI);
-      // Ignore non-volatile stores to local memory. (Atomic is okay here.)
-      if (!SI->isVolatile() &&
-          AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
-        continue;
-      AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
-    } else if (VAArgInst *VI = dyn_cast<VAArgInst>(&I)) {
-      // Ignore vaargs on local memory.
-      MemoryLocation Loc = MemoryLocation::get(VI);
-      if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
-        continue;
-      AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
-    } else {
-      // If AccessesNonArgsOrAlloca has not been updated above, set it
-      // conservatively.
-      AccessesNonArgsOrAlloca |= I.mayReadOrWriteMemory();
     }
+
+    if (!I.mayReadOrWriteMemory())
+      continue;
+
+    Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(&I);
+    // Ignore non-volatile accesses from local memory. (Atomic is okay here.)
+    if (Loc && !I.isVolatile() &&
+        AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
+      continue;
+
+    AccessesNonArgsOrAlloca |= !Loc || !IsArgumentOrAlloca(Loc->Ptr);
 
     // Any remaining instructions need to be taken seriously!  Check if they
     // read or write memory.

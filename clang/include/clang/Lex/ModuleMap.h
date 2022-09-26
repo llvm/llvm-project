@@ -136,9 +136,11 @@ public:
     /// should be textually included.
     TextualHeader = 0x2,
 
+    /// This header is explicitly excluded from the module.
+    ExcludedHeader = 0x4,
+
     // Caution: Adding an enumerator needs other changes.
     // Adjust the number of bits for KnownHeader::Storage.
-    // Adjust the bitfield HeaderFileInfo::HeaderRole size.
     // Adjust the HeaderFileInfoTrait::ReadData streaming.
     // Adjust the HeaderFileInfoTrait::EmitData streaming.
     // Adjust ModuleMap::addHeader.
@@ -153,7 +155,7 @@ public:
   /// A header that is known to reside within a given module,
   /// whether it was included or excluded.
   class KnownHeader {
-    llvm::PointerIntPair<Module *, 2, ModuleHeaderRole> Storage;
+    llvm::PointerIntPair<Module *, 3, ModuleHeaderRole> Storage;
 
   public:
     KnownHeader() : Storage(nullptr, NormalHeader) {}
@@ -434,7 +436,8 @@ public:
   /// given header file.  The KnownHeader is default constructed to indicate
   /// that no module owns this header file.
   KnownHeader findModuleForHeader(const FileEntry *File,
-                                  bool AllowTextual = false);
+                                  bool AllowTextual = false,
+                                  bool AllowExcluded = false);
 
   /// Retrieve all the modules that contain the given header file. Note that
   /// this does not implicitly load module maps, except for builtin headers,

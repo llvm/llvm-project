@@ -1396,13 +1396,13 @@
 // SPARC64-OBSD:#define __UINTMAX_C_SUFFIX__ ULL
 // SPARC64-OBSD:#define __UINTMAX_TYPE__ long long unsigned int
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-pc-kfreebsd-gnu < /dev/null | FileCheck -match-full-lines -check-prefix KFREEBSD-DEFINE %s
-// KFREEBSD-DEFINE:#define __FreeBSD_kernel__ 1
-// KFREEBSD-DEFINE:#define __GLIBC__ 1
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-pc-kfreebsd-gnu < /dev/null | FileCheck -match-full-lines -check-prefix KFREEBSD-DEF %s
+// KFREEBSD-DEF:#define __FreeBSD_kernel__ 1
+// KFREEBSD-DEF:#define __GLIBC__ 1
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i686-pc-kfreebsd-gnu < /dev/null | FileCheck -match-full-lines -check-prefix KFREEBSDI686-DEFINE %s
-// KFREEBSDI686-DEFINE:#define __FreeBSD_kernel__ 1
-// KFREEBSDI686-DEFINE:#define __GLIBC__ 1
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i686-pc-kfreebsd-gnu < /dev/null | FileCheck -match-full-lines -check-prefix KFREEBSDI686-DEF %s
+// KFREEBSDI686-DEF:#define __FreeBSD_kernel__ 1
+// KFREEBSDI686-DEF:#define __GLIBC__ 1
 //
 // RUN: %clang_cc1 -x c++ -triple i686-pc-linux-gnu -fobjc-runtime=gcc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GNUSOURCE %s
 // RUN: %clang_cc1 -x c++ -triple sparc-rtems-elf -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GNUSOURCE %s

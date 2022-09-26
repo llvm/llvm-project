@@ -130,7 +130,11 @@ private:
                          bool IsRet, CallLoweringInfo *CLI,
                          LoongArchCCAssignFn Fn) const;
 
+  template <class NodeTy>
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
 
@@ -143,11 +147,22 @@ private:
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
+
+  ConstraintType getConstraintType(StringRef Constraint) const override;
+
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
+
+  void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+                                    std::vector<SDValue> &Ops,
+                                    SelectionDAG &DAG) const override;
 };
 
 } // end namespace llvm

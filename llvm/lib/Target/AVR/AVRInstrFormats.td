@@ -134,11 +134,11 @@ class FRdK<bits<4> opcode, dag outs, dag ins, string asmstr, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 class FRd<bits<4> opcode, bits<7> f, dag outs, dag ins, string asmstr,
           list<dag> pattern> : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> d;
+  bits<5> rd;
 
   let Inst{15 - 12} = opcode;
   let Inst{11 - 9} = f{6 - 4};
-  let Inst{8 - 4} = d;
+  let Inst{8 - 4} = rd;
   let Inst{3 - 0} = f{3 - 0};
 
   let DecoderMethod = "decodeFRd";
@@ -215,14 +215,14 @@ class FSTLD<bit type, bits<2> mode, dag outs, dag ins, string asmstr,
 //===---------------------------------------------------------------------===//
 class FLPMX<bit e, bit p, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> reg;
+  bits<5> rd;
 
   let Inst{15 - 12} = 0b1001;
 
   let Inst{11 - 9} = 0b000;
-  let Inst{8} = reg{4};
+  let Inst{8} = rd{4};
 
-  let Inst{7 - 4} = reg{3 - 0};
+  let Inst{7 - 4} = rd{3 - 0};
 
   let Inst{3 - 2} = 0b01;
   let Inst{1} = e;
@@ -239,12 +239,12 @@ class FLPMX<bit e, bit p, dag outs, dag ins, string asmstr, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 class FMOVWRdRr<dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> d;
-  bits<5> r;
+  bits<5> rd;
+  bits<5> rr;
 
   let Inst{15 - 8} = 0b00000001;
-  let Inst{7 - 4} = d{4 - 1};
-  let Inst{3 - 0} = r{4 - 1};
+  let Inst{7 - 4} = rd{4 - 1};
+  let Inst{3 - 0} = rr{4 - 1};
 
   let DecoderMethod = "decodeFMOVWRdRr";
 }
@@ -296,18 +296,18 @@ class FFMULRdRr<bits<2> f, dag outs, dag ins, string asmstr, list<dag> pattern>
 // Arithmetic word instructions (ADIW / SBIW): <|1001|011f|kkdd|kkkk|>
 // f = secondary opcode = 1 bit
 // k = constant data = 6 bits
-// d = destination = 4 bits
+// d = destination = 2 bits
 // (Only accepts r25:24 r27:26 r29:28 r31:30)
 //===----------------------------------------------------------------------===//
 class FWRdK<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> dst; // accept 5 bits but only encode bits 1 and 2
+  bits<5> rd; // accept 5 bits but only encode bits 1 and 2
   bits<6> k;
 
   let Inst{15 - 9} = 0b1001011;
   let Inst{8} = f;
   let Inst{7 - 6} = k{5 - 4};
-  let Inst{5 - 4} = dst{2 - 1};
+  let Inst{5 - 4} = rd{2 - 1};
   let Inst{3 - 0} = k{3 - 0};
 
   let DecoderMethod = "decodeFWRdK";
@@ -321,12 +321,12 @@ class FWRdK<bit f, dag outs, dag ins, string asmstr, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 class FIORdA<dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> d;
+  bits<5> rd;
   bits<6> A;
 
   let Inst{15 - 11} = 0b10110;
   let Inst{10 - 9} = A{5 - 4};
-  let Inst{8 - 4} = d;
+  let Inst{8 - 4} = rd;
   let Inst{3 - 0} = A{3 - 0};
 
   let DecoderMethod = "decodeFIORdA";
@@ -341,11 +341,11 @@ class FIORdA<dag outs, dag ins, string asmstr, list<dag> pattern>
 class FIOARr<dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
   bits<6> A;
-  bits<5> r;
+  bits<5> rr;
 
   let Inst{15 - 11} = 0b10111;
   let Inst{10 - 9} = A{5 - 4};
-  let Inst{8 - 4} = r;
+  let Inst{8 - 4} = rr;
   let Inst{3 - 0} = A{3 - 0};
 
   let DecoderMethod = "decodeFIOARr";
@@ -360,7 +360,7 @@ class FIOARr<dag outs, dag ins, string asmstr, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 class FIOBIT<bits<2> t, dag outs, dag ins, string asmstr, list<dag> pattern>
     : AVRInst16<outs, ins, asmstr, pattern> {
-  bits<5> A;
+  bits<5> addr;
   bits<3> b;
 
   let Inst{15 - 12} = 0b1001;
@@ -368,9 +368,9 @@ class FIOBIT<bits<2> t, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11 - 10} = 0b10;
   let Inst{9 - 8} = t;
 
-  let Inst{7 - 4} = A{4 - 1};
+  let Inst{7 - 4} = addr{4 - 1};
 
-  let Inst{3} = A{0};
+  let Inst{3} = addr{0};
   let Inst{2 - 0} = b{2 - 0};
 
   let DecoderMethod = "decodeFIOBIT";

@@ -642,7 +642,7 @@ static spirv::PointerType getPushConstantStorageType(unsigned elementCount,
 static spirv::GlobalVariableOp getPushConstantVariable(Block &body,
                                                        unsigned elementCount) {
   for (auto varOp : body.getOps<spirv::GlobalVariableOp>()) {
-    auto ptrType = varOp.type().dyn_cast<spirv::PointerType>();
+    auto ptrType = varOp.getType().dyn_cast<spirv::PointerType>();
     if (!ptrType)
       continue;
 
@@ -874,7 +874,7 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
   // Special treatment for global variables, whose type requirements are
   // conveyed by type attributes.
   if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
-    valueTypes.push_back(globalVar.type());
+    valueTypes.push_back(globalVar.getType());
 
   // Make sure the op's operands/results use types that are allowed by the
   // target environment.

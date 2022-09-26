@@ -392,6 +392,7 @@ void DefFormat::genLiteralParser(StringRef value, FmtContext &ctx,
               .Case("?", "Question")
               .Case("+", "Plus")
               .Case("*", "Star")
+              .Case("...", "Ellipsis")
        << "()";
   }
   if (isOptional) {

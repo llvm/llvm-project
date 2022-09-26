@@ -2160,6 +2160,14 @@ gentbl_cc_library(
             ["-gen-op-doc"],
             "g3doc/Dialects/NVGPU/NVGPU.md",
         ),
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/NVGPU/IR/NVGPUTypes.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/NVGPU/IR/NVGPU.td",
@@ -2440,6 +2448,7 @@ cc_library(
         "include/mlir/Dialect/Affine/LoopFusionUtils.h",
         "include/mlir/Dialect/Affine/LoopUtils.h",
         "include/mlir/Dialect/Affine/Utils.h",
+        "include/mlir/Dialect/Affine/ViewLikeInterfaceUtils.h",
     ],
     includes = ["include"],
     deps = [
@@ -2453,6 +2462,7 @@ cc_library(
         ":SCFDialect",
         ":Support",
         ":TransformUtils",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -5067,6 +5077,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AffineUtils",
         ":ArithmeticDialect",
         ":ArithmeticUtils",
         ":BufferizationDialect",

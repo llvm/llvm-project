@@ -209,5 +209,6 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   }
   // FIXME: add validation for enable_16bit_types should be after HLSL 2018 and
   // shader model 6.2.
+  // See: https://github.com/llvm/llvm-project/issues/57876
   return DAL;
 }

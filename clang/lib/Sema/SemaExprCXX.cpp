@@ -2449,6 +2449,8 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   else if (RequireNonAbstractType(Loc, AllocType,
                                   diag::err_allocation_of_abstract_type))
     return true;
+  else if (!checkArrayElementAlignment(AllocType, Loc))
+    return true;
   else if (AllocType->isVariablyModifiedType())
     return Diag(Loc, diag::err_variably_modified_new_type)
              << AllocType;
@@ -3187,7 +3189,7 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
 bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
                                     DeclarationName Name,
                                     FunctionDecl *&Operator, bool Diagnose,
-                                    bool WantSize) {
+                                    bool WantSize, bool WantAligned) {
   LookupResult Found(*this, Name, StartLoc, LookupOrdinaryName);
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
@@ -3197,7 +3199,8 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
 
   Found.suppressDiagnostics();
 
-  bool Overaligned = hasNewExtendedAlignment(*this, Context.getRecordType(RD));
+  bool Overaligned =
+      WantAligned || hasNewExtendedAlignment(*this, Context.getRecordType(RD));
 
   // C++17 [expr.delete]p10:
   //   If the deallocation functions have class scope, the one without a
