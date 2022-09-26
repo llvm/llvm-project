@@ -48,27 +48,28 @@ std::unique_ptr<OperationPass<mlir::ModuleOp>>
 createDecorateSPIRVCompositeTypeLayoutPass();
 
 /// Creates an operation pass that deduces and attaches the minimal version/
-/// capabilities/extensions requirements for spv.module ops.
-/// For each spv.module op, this pass requires a `spv.target_env` attribute on
-/// it or an enclosing module-like op to drive the deduction. The reason is
+/// capabilities/extensions requirements for spirv.module ops.
+/// For each spirv.module op, this pass requires a `spirv.target_env` attribute
+/// on it or an enclosing module-like op to drive the deduction. The reason is
 /// that an op can be enabled by multiple extensions/capabilities. So we need
-/// to know which one to pick. `spv.target_env` gives the hard limit as for
+/// to know which one to pick. `spirv.target_env` gives the hard limit as for
 /// what the target environment can support; this pass deduces what are
-/// actually needed for a specific spv.module op.
+/// actually needed for a specific spirv.module op.
 std::unique_ptr<OperationPass<spirv::ModuleOp>>
 createUpdateVersionCapabilityExtensionPass();
 
 /// Creates an operation pass that lowers the ABI attributes specified during
 /// SPIR-V Lowering. Specifically,
 /// 1. Creates the global variables for arguments of entry point function using
-///    the specification in the `spv.interface_var_abi` attribute for each
+///    the specification in the `spirv.interface_var_abi` attribute for each
 ///    argument.
 /// 2. Inserts the EntryPointOp and the ExecutionModeOp for entry point
-///    functions using the specification in the `spv.entry_point_abi` attribute.
+///    functions using the specification in the `spirv.entry_point_abi`
+///    attribute.
 std::unique_ptr<OperationPass<spirv::ModuleOp>> createLowerABIAttributesPass();
 
 /// Creates an operation pass that rewrites sequential chains of
-/// spv.CompositeInsert into spv.CompositeConstruct.
+/// spirv.CompositeInsert into spirv.CompositeConstruct.
 std::unique_ptr<OperationPass<spirv::ModuleOp>> createRewriteInsertsPass();
 
 /// Creates an operation pass that unifies access of multiple aliased resources

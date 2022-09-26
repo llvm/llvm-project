@@ -279,8 +279,8 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
     }
-    // Block decoration does not affect spv.struct type, but is still stored for
-    // verification.
+    // Block decoration does not affect spirv.struct type, but is still stored
+    // for verification.
     // TODO: Update StructType to contain this information since
     // it is needed for many validation rules.
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
@@ -483,7 +483,8 @@ spirv::Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
   }
 
   // Wire up block arguments from OpPhi instructions.
-  // Put all structured control flow in spv.mlir.selection/spv.mlir.loop ops.
+  // Put all structured control flow in spirv.mlir.selection/spirv.mlir.loop
+  // ops.
   if (failed(wireUpBlockArgument()) || failed(structurizeControlFlow())) {
     return failure();
   }
@@ -563,7 +564,7 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
   auto ptrType = type.dyn_cast<spirv::PointerType>();
   if (!ptrType) {
     return emitError(unknownLoc,
-                     "expected a result type <id> to be a spv.ptr, found : ")
+                     "expected a result type <id> to be a spirv.ptr, found : ")
            << type;
   }
   wordIndex++;
@@ -1467,7 +1468,7 @@ Block *spirv::Deserializer::getOrCreateBlock(uint32_t id) {
   }
 
   // We don't know where this block will be placed finally (in a
-  // spv.mlir.selection or spv.mlir.loop or function). Create it into the
+  // spirv.mlir.selection or spirv.mlir.loop or function). Create it into the
   // function for now and sort out the proper place later.
   auto *block = curFunction->addBlock();
   LLVM_DEBUG(logger.startLine() << "[block] created block for id = " << id
@@ -1639,7 +1640,7 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
 
 namespace {
 /// A class for putting all blocks in a structured selection/loop in a
-/// spv.mlir.selection/spv.mlir.loop op.
+/// spirv.mlir.selection/spirv.mlir.loop op.
 class ControlFlowStructurizer {
 public:
 #ifndef NDEBUG
@@ -1660,18 +1661,19 @@ public:
 
   /// Structurizes the loop at the given `headerBlock`.
   ///
-  /// This method will create an spv.mlir.loop op in the `mergeBlock` and move
-  /// all blocks in the structured loop into the spv.mlir.loop's region. All
+  /// This method will create an spirv.mlir.loop op in the `mergeBlock` and move
+  /// all blocks in the structured loop into the spirv.mlir.loop's region. All
   /// branches to the `headerBlock` will be redirected to the `mergeBlock`. This
   /// method will also update `mergeInfo` by remapping all blocks inside to the
   /// newly cloned ones inside structured control flow op's regions.
   LogicalResult structurize();
 
 private:
-  /// Creates a new spv.mlir.selection op at the beginning of the `mergeBlock`.
+  /// Creates a new spirv.mlir.selection op at the beginning of the
+  /// `mergeBlock`.
   spirv::SelectionOp createSelectionOp(uint32_t selectionControl);
 
-  /// Creates a new spv.mlir.loop op at the beginning of the `mergeBlock`.
+  /// Creates a new spirv.mlir.loop op at the beginning of the `mergeBlock`.
   spirv::LoopOp createLoopOp(uint32_t loopControl);
 
   /// Collects all blocks reachable from `headerBlock` except `mergeBlock`.
@@ -1684,7 +1686,7 @@ private:
 
   Block *headerBlock;
   Block *mergeBlock;
-  Block *continueBlock; // nullptr for spv.mlir.selection
+  Block *continueBlock; // nullptr for spirv.mlir.selection
 
   SetVector<Block *> constructBlocks;
 
@@ -1838,8 +1840,8 @@ LogicalResult ControlFlowStructurizer::structurize() {
     for (BlockArgument blockArg : headerBlock->getArguments())
       mergeBlock->addArgument(blockArg.getType(), blockArg.getLoc());
 
-    // If the loop header block has block arguments, make sure the spv.Branch op
-    // matches.
+    // If the loop header block has block arguments, make sure the spirv.Branch
+    // op matches.
     SmallVector<Value, 4> blockArgs;
     if (!headerBlock->args_empty())
       blockArgs = {mergeBlock->args_begin(), mergeBlock->args_end()};
@@ -1917,7 +1919,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // matching the function signature and used by the cloned blocks.
     if (isFnEntryBlock(block)) {
       LLVM_DEBUG(logger.startLine() << "[cf] changing entry block " << block
-                                    << " to only contain a spv.Branch op\n");
+                                    << " to only contain a spirv.Branch op\n");
       // Still keep the function entry block for the potential block arguments,
       // but replace all ops inside with a branch to the merge block.
       block->clear();

@@ -26,9 +26,9 @@ using namespace mlir;
 
 namespace mlir {
 struct ScfToSPIRVContextImpl {
-  // Map between the spirv region control flow operation (spv.mlir.loop or
-  // spv.mlir.selection) to the VariableOp created to store the region results.
-  // The order of the VariableOp matches the order of the results.
+  // Map between the spirv region control flow operation (spirv.mlir.loop or
+  // spirv.mlir.selection) to the VariableOp created to store the region
+  // results. The order of the VariableOp matches the order of the results.
   DenseMap<Operation *, SmallVector<spirv::VariableOp, 8>> outputVars;
 };
 } // namespace mlir
@@ -120,9 +120,9 @@ public:
 
 /// Helper function to replaces SCF op outputs with SPIR-V variable loads.
 /// We create VariableOp to handle the results value of the control flow region.
-/// spv.mlir.loop/spv.mlir.selection currently don't yield value. Right after
-/// the loop we load the value from the allocation and use it as the SCF op
-/// result.
+/// spirv.mlir.loop/spirv.mlir.selection currently don't yield value. Right
+/// after the loop we load the value from the allocation and use it as the SCF
+/// op result.
 template <typename ScfOp, typename OpTy>
 static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
                                   ConversionPatternRewriter &rewriter,
@@ -248,7 +248,7 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, OpAdaptor adaptor,
   // subsequently converges.
   auto loc = ifOp.getLoc();
 
-  // Create `spv.selection` operation, selection header block and merge block.
+  // Create `spirv.selection` operation, selection header block and merge block.
   auto selectionOp =
       rewriter.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
   auto *mergeBlock =
@@ -277,7 +277,7 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, OpAdaptor adaptor,
     rewriter.inlineRegionBefore(elseRegion, mergeBlock);
   }
 
-  // Create a `spv.BranchConditional` operation for selection header block.
+  // Create a `spirv.BranchConditional` operation for selection header block.
   rewriter.setInsertionPointToEnd(selectionHeaderBlock);
   rewriter.create<spirv::BranchConditionalOp>(loc, adaptor.getCondition(),
                                               thenBlock, ArrayRef<Value>(),

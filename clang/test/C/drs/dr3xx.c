@@ -1,8 +1,8 @@
 /* RUN: %clang_cc1 -std=c89 -fsyntax-only -Wvla -verify=expected,c89only -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c99 -fsyntax-only -Wvla -verify -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -fsyntax-only -Wvla -verify -pedantic %s
-   RUN: %clang_cc1 -std=c17 -fsyntax-only -Wvla -verify -pedantic %s
-   RUN: %clang_cc1 -std=c2x -fsyntax-only -Wvla -verify -pedantic %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -Wvla -verify=expected,c99andup -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -Wvla -verify=expected,c99andup -pedantic %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -Wvla -verify=expected,c99andup -pedantic %s
+   RUN: %clang_cc1 -std=c2x -fsyntax-only -Wvla -verify=expected,c99andup -pedantic %s
  */
 
 /* The following are DRs which do not require tests to demonstrate
@@ -108,10 +108,91 @@ _Static_assert(sizeof(dr315.a + dr315.b) == sizeof(unsigned long long), ""); /* 
  */
 _Static_assert(sizeof(dr315.c + dr315.d) == sizeof(int), "");
 
+#if __STDC_VERSION__ < 202000L
 /* WG14 DR316: yes
  * Unprototyped function types
  */
-#if __STDC_VERSION__ < 202000L
 void dr316_1(a) int a; {}  /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} */
 void (*dr316_1_ptr)(int, int, int) = dr316_1;
+
+/* WG14 DR317: yes
+ * Function definitions with empty parentheses
+ *
+ * Despite the function with empty parens being a definition, this does not
+ * provide a prototype for the function. However, calling the function with
+ * arguments is undefined behavior, so it is defensible for us to warn the user
+ * about it. They key point to this DR is that we give the "without a
+ * prototype" warnings to demonstrate we don't give this function a prototype.
+ */
+void dr317_1() {}  /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C}} */
+void dr317_2(void) {
+  if (0)
+    dr317_1(1); /* expected-warning {{too many arguments in call to 'dr317_1'}}
+                   expected-warning {{passing arguments to 'dr317_1' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                 */
+}
 #endif /* __STDC_VERSION__ < 202000L */
+
+/* WG14 DR320: yes
+ * Scope of variably modified type
+ */
+int dr320_v;
+typedef int dr320_t[dr320_v]; /* c89only-warning {{variable length arrays are a C99 feature}}
+                                 expected-error {{variable length array declaration not allowed at file scope}}
+                                 c99andup-warning {{variable length array used}}
+                               */
+void dr320(int okay[dr320_v]) { /* c89only-warning {{variable length arrays are a C99 feature}}
+                                   c99andup-warning {{variable length array used}}
+                                 */
+  typedef int type[dr320_v]; /* c89only-warning {{variable length arrays are a C99 feature}}
+                                c99andup-warning {{variable length array used}}
+                              */
+  extern type bad;  /* expected-error {{variable length array declaration cannot have 'extern' linkage}} */
+
+  /* C99 6.7.5.2p2, second sentence. */
+  static type fine; /* expected-error {{variable length array declaration cannot have 'static' storage duration}} */
+}
+
+/* WG14 DR321: yes
+ * Wide character code values for members of the basic character set
+ */
+#define DR321 (\
+    ' ' == L' ' && '\t' == L'\t' && '\v' == L'\v' && '\r' == L'\r' &&           \
+    '\n' == L'\n' &&                                                            \
+    'a' == L'a' && 'b' == L'b' && 'c' == L'c' && 'd' == L'd' && 'e' == L'e' &&  \
+    'f' == L'f' && 'g' == L'g' && 'h' == L'h' && 'i' == L'i' && 'j' == L'j' &&  \
+    'k' == L'k' && 'l' == L'l' && 'm' == L'm' && 'n' == L'n' && 'o' == L'o' &&  \
+    'p' == L'p' && 'q' == L'q' && 'r' == L'r' && 's' == L's' && 't' == L't' &&  \
+    'u' == L'u' && 'v' == L'v' && 'w' == L'w' && 'x' == L'x' && 'y' == L'y' &&  \
+    'z' == L'z' &&                                                              \
+    'A' == L'A' && 'B' == L'B' && 'C' == L'C' && 'D' == L'D' && 'E' == L'E' &&  \
+    'F' == L'F' && 'G' == L'G' && 'H' == L'H' && 'I' == L'I' && 'J' == L'J' &&  \
+    'K' == L'K' && 'L' == L'L' && 'M' == L'M' && 'N' == L'N' && 'O' == L'O' &&  \
+    'P' == L'P' && 'Q' == L'Q' && 'R' == L'R' && 'S' == L'S' && 'T' == L'T' &&  \
+    'U' == L'U' && 'V' == L'V' && 'W' == L'W' && 'X' == L'X' && 'Y' == L'Y' &&  \
+    'Z' == L'Z' &&                                                              \
+    '0' == L'0' && '1' == L'1' && '2' == L'2' && '3' == L'3' && '4' == L'4' &&  \
+    '5' == L'5' && '6' == L'6' && '7' == L'7' && '8' == L'8' &&                 \
+    '9' == L'9' &&                                                              \
+    '_' == L'_' && '{' == L'{' && '}' == L'}' && '[' == L'[' && ']' == L']' &&  \
+    '#' == L'#' && '(' == L'(' && ')' == L')' && '<' == L'<' && '>' == L'>' &&  \
+    '%' == L'%' && ':' == L':' && ';' == L';' && '.' == L'.' && '?' == L'?' &&  \
+    '*' == L'*' && '+' == L'+' && '-' == L'-' && '/' == L'/' && '^' == L'^' &&  \
+    '&' == L'&' && '|' == L'|' && '~' == L'~' && '!' == L'!' && '=' == L'=' &&  \
+    ',' == L',' && '\\' == L'\\' && '"' == L'"' && '\'' == L'\''                \
+  )
+#if __STDC_MB_MIGHT_NEQ_WC__
+#ifndef __FreeBSD__ // PR22208, FreeBSD expects us to give a bad (but conforming) answer here.
+_Static_assert(!DR321, "__STDC_MB_MIGHT_NEQ_WC__ but all basic source characters have same representation");
+#endif
+#else
+_Static_assert(DR321, "!__STDC_MB_MIGHT_NEQ_WC__ but some character differs");
+#endif
+
+/* WG14 DR328: yes
+ * String literals in compound literal initialization
+ */
+const char *dr328_v = (const char *){"this is a string literal"}; /* c89only-warning {{compound literals are a C99-specific feature}} */
+void dr328(void) {
+  const char *val = (const char *){"also a string literal"}; /* c89only-warning {{compound literals are a C99-specific feature}} */
+}

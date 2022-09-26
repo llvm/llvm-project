@@ -53,7 +53,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   target.addIllegalDialect<spirv::SPIRVDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
 
-  // Set `ModuleOp` as legal for `spv.module` conversion.
+  // Set `ModuleOp` as legal for `spirv.module` conversion.
   target.addLegalOp<ModuleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

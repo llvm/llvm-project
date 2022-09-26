@@ -249,7 +249,7 @@ void CooperativeMatrixNVType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     Optional<StorageClass> storage) {
   getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
-  static const Extension exts[] = {Extension::SPV_NV_cooperative_matrix};
+  static const Extension exts[] = {Extension::SPIRV_NV_cooperative_matrix};
   ArrayRef<Extension> ref(exts, std::size(exts));
   extensions.push_back(ref);
 }
@@ -317,7 +317,7 @@ void JointMatrixINTELType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     Optional<StorageClass> storage) {
   getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
-  static const Extension exts[] = {Extension::SPV_INTEL_joint_matrix};
+  static const Extension exts[] = {Extension::SPIRV_INTEL_joint_matrix};
   ArrayRef<Extension> ref(exts, std::size(exts));
   extensions.push_back(ref);
 }
@@ -591,8 +591,8 @@ bool ScalarType::isValid(IntegerType type) {
 void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                Optional<StorageClass> storage) {
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
-  // to appear in interface storage classes. See SPV_KHR_16bit_storage and
-  // SPV_KHR_8bit_storage for more details.
+  // to appear in interface storage classes. See SPIRV_KHR_16bit_storage and
+  // SPIRV_KHR_8bit_storage for more details.
   if (!storage)
     return;
 
@@ -601,7 +601,7 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
   case StorageClass::StorageBuffer:
   case StorageClass::Uniform:
     if (getIntOrFloatBitWidth() == 8) {
-      static const Extension exts[] = {Extension::SPV_KHR_8bit_storage};
+      static const Extension exts[] = {Extension::SPIRV_KHR_8bit_storage};
       ArrayRef<Extension> ref(exts, std::size(exts));
       extensions.push_back(ref);
     }
@@ -609,7 +609,7 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
   case StorageClass::Input:
   case StorageClass::Output:
     if (getIntOrFloatBitWidth() == 16) {
-      static const Extension exts[] = {Extension::SPV_KHR_16bit_storage};
+      static const Extension exts[] = {Extension::SPIRV_KHR_16bit_storage};
       ArrayRef<Extension> ref(exts, std::size(exts));
       extensions.push_back(ref);
     }
@@ -625,8 +625,8 @@ void ScalarType::getCapabilities(
   unsigned bitwidth = getIntOrFloatBitWidth();
 
   // 8- or 16-bit integer/floating-point numbers will require extra capabilities
-  // to appear in interface storage classes. See SPV_KHR_16bit_storage and
-  // SPV_KHR_8bit_storage for more details.
+  // to appear in interface storage classes. See SPIRV_KHR_16bit_storage and
+  // SPIRV_KHR_8bit_storage for more details.
 
 #define STORAGE_CASE(storage, cap8, cap16)                                     \
   case StorageClass::storage: {                                                \

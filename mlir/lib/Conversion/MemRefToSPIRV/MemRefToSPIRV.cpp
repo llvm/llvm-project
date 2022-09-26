@@ -55,8 +55,8 @@ static Value getOffsetForBitwidth(Location loc, Value srcIdx, int sourceBits,
 /// supported. During conversion if a memref of an unsupported type is used,
 /// load/stores to this memref need to be modified to use a supported higher
 /// bitwidth `targetBits` and extracting the required bits. For an accessing a
-/// 1D array (spv.array or spv.rt_array), the last index is modified to load the
-/// bits needed. The extraction of the actual bits needed are handled
+/// 1D array (spirv.array or spirv.rt_array), the last index is modified to load
+/// the bits needed. The extraction of the actual bits needed are handled
 /// separately. Note that this only works for a 1-D tensor.
 static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
                                           spirv::AccessChainOp op,
@@ -170,8 +170,8 @@ public:
 
 /// Converts an allocation operation to SPIR-V. Currently only supports lowering
 /// to Workgroup memory when the size is constant.  Note that this pattern needs
-/// to be applied in a pass that runs at least at spv.module scope since it wil
-/// ladd global variables into the spv.module.
+/// to be applied in a pass that runs at least at spirv.module scope since it
+/// wil ladd global variables into the spirv.module.
 class AllocOpPattern final : public OpConversionPattern<memref::AllocOp> {
 public:
   using OpConversionPattern<memref::AllocOp>::OpConversionPattern;
@@ -192,7 +192,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.load to spv.Load + spv.AccessChain on integers.
+/// Converts memref.load to spirv.Load + spirv.AccessChain on integers.
 class IntLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
   using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
@@ -202,7 +202,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.load to spv.Load + spv.AccessChain.
+/// Converts memref.load to spirv.Load + spirv.AccessChain.
 class LoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
   using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
@@ -212,7 +212,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.store to spv.Store on integers.
+/// Converts memref.store to spirv.Store on integers.
 class IntStoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
   using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
@@ -222,7 +222,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.store to spv.Store.
+/// Converts memref.store to spirv.Store.
 class StoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
   using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
@@ -267,7 +267,7 @@ AllocOpPattern::matchAndRewrite(memref::AllocOp operation, OpAdaptor adaptor,
   // Get the SPIR-V type for the allocation.
   Type spirvType = getTypeConverter()->convertType(allocType);
 
-  // Insert spv.GlobalVariable for this allocation.
+  // Insert spirv.GlobalVariable for this allocation.
   Operation *parent =
       SymbolTable::getNearestSymbolTable(operation->getParentOp());
   if (!parent)
@@ -360,7 +360,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   }
 
   // Bitcasting is currently unsupported for Kernel capability /
-  // spv.PtrAccessChain.
+  // spirv.PtrAccessChain.
   if (typeConverter.allows(spirv::Capability::Kernel))
     return failure();
 
@@ -488,7 +488,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   }
 
   // Bitcasting is currently unsupported for Kernel capability /
-  // spv.PtrAccessChain.
+  // spirv.PtrAccessChain.
   if (typeConverter.allows(spirv::Capability::Kernel))
     return failure();
 

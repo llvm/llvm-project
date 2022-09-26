@@ -15,9 +15,9 @@
 
 // -----
 
-def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
+def SPIRV_NVCooperativeMatrixLengthOp : SPIRV_NvVendorOp<"CooperativeMatrixLength",
   [NoSideEffect]> {
-  let summary = "See extension SPV_NV_cooperative_matrix";
+  let summary = "See extension SPIRV_NV_cooperative_matrix";
 
   let description = [{
     Number of components of a cooperative matrix type accessible to each
@@ -28,24 +28,24 @@ def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
     Type is a cooperative matrix type.
 
     ``` {.ebnf}
-    cooperative-matrix-length-op ::= ssa-id `=` `spv.NV.CooperativeMatrixLength
+    cooperative-matrix-length-op ::= ssa-id `=` `spirv.NV.CooperativeMatrixLength
                                     ` : ` cooperative-matrix-type
     ```
 
     For example:
 
     ```
-    %0 = spv.NV.CooperativeMatrixLength : !spv.coopmatrix<Subgroup, i32, 8, 16>
+    %0 = spirv.NV.CooperativeMatrixLength : !spirv.coopmatrix<Subgroup, i32, 8, 16>
     ```
   }];
 
   let assemblyFormat = "attr-dict `:` $cooperative_matrix_type";
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
-    Extension<[SPV_NV_cooperative_matrix]>,
-    Capability<[SPV_C_CooperativeMatrixNV]>
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPIRV_NV_cooperative_matrix]>,
+    Capability<[SPIRV_C_CooperativeMatrixNV]>
   ];
 
   let arguments = (ins
@@ -53,15 +53,15 @@ def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
   );
 
   let results = (outs
-    SPV_Int32:$result
+    SPIRV_Int32:$result
   );
   let hasVerifier = 0;
 }
 
 // -----
 
-def SPV_NVCooperativeMatrixLoadOp : SPV_NvVendorOp<"CooperativeMatrixLoad", []> {
-  let summary = "See extension SPV_NV_cooperative_matrix";
+def SPIRV_NVCooperativeMatrixLoadOp : SPIRV_NvVendorOp<"CooperativeMatrixLoad", []> {
+  let summary = "See extension SPIRV_NV_cooperative_matrix";
 
   let description = [{
     Load a cooperative matrix through a pointer.
@@ -71,7 +71,7 @@ def SPV_NVCooperativeMatrixLoadOp : SPV_NvVendorOp<"CooperativeMatrixLoad", []> 
 
     Pointer is a pointer into an array. Its type must be an OpTypePointer whose
     Type operand is a scalar or vector type. The storage class of Pointer must
-    be Workgroup, StorageBuffer, or (if SPV_EXT_physical_storage_buffer is
+    be Workgroup, StorageBuffer, or (if SPIRV_EXT_physical_storage_buffer is
     supported) PhysicalStorageBufferEXT.
 
     Stride is the number of elements in the array in memory between the first
@@ -100,7 +100,7 @@ def SPV_NVCooperativeMatrixLoadOp : SPV_NvVendorOp<"CooperativeMatrixLoad", []> 
     ### Custom assembly form
 
     ``` {.ebnf}
-    cooperative-matrixload-op ::= ssa-id `=` `spv.NV.CooperativeMatrixLoad`
+    cooperative-matrixload-op ::= ssa-id `=` `spirv.NV.CooperativeMatrixLoad`
                               ssa-use `,` ssa-use `,` ssa-use
                               (`[` memory-access `]`)? ` : `
                               pointer-type `as`
@@ -110,35 +110,35 @@ def SPV_NVCooperativeMatrixLoadOp : SPV_NvVendorOp<"CooperativeMatrixLoad", []> 
     For example:
 
     ```
-    %0 = spv.NV.CooperativeMatrixLoad %ptr, %stride, %colMajor
-         : !spv.ptr<i32, StorageBuffer> as !spv.coopmatrix<i32, Workgroup, 16, 8>
+    %0 = spirv.NV.CooperativeMatrixLoad %ptr, %stride, %colMajor
+         : !spirv.ptr<i32, StorageBuffer> as !spirv.coopmatrix<i32, Workgroup, 16, 8>
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
-    Extension<[SPV_NV_cooperative_matrix]>,
-    Capability<[SPV_C_CooperativeMatrixNV]>
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPIRV_NV_cooperative_matrix]>,
+    Capability<[SPIRV_C_CooperativeMatrixNV]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer,
-    SPV_Integer:$stride,
-    SPV_Bool:$columnmajor,
-    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_Integer:$stride,
+    SPIRV_Bool:$columnmajor,
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access
   );
 
   let results = (outs
-    SPV_AnyCooperativeMatrix:$result
+    SPIRV_AnyCooperativeMatrix:$result
   );
 }
 
 // -----
 
-def SPV_NVCooperativeMatrixMulAddOp : SPV_NvVendorOp<"CooperativeMatrixMulAdd",
+def SPIRV_NVCooperativeMatrixMulAddOp : SPIRV_NvVendorOp<"CooperativeMatrixMulAdd",
   [NoSideEffect, AllTypesMatch<["c", "result"]>]> {
-  let summary = "See extension SPV_NV_cooperative_matrix";
+  let summary = "See extension SPIRV_NV_cooperative_matrix";
 
   let description = [{
     Linear-algebraic matrix multiply of A by B and then component-wise add C.
@@ -172,7 +172,7 @@ def SPV_NVCooperativeMatrixMulAddOp : SPV_NvVendorOp<"CooperativeMatrixMulAdd",
     the scope of the operation).
 
     ``` {.ebnf}
-    cooperative-matrixmuladd-op ::= ssa-id `=` `spv.NV.CooperativeMatrixMulAdd`
+    cooperative-matrixmuladd-op ::= ssa-id `=` `spirv.NV.CooperativeMatrixMulAdd`
                               ssa-use `,` ssa-use `,` ssa-use ` : `
                               a-cooperative-matrix-type,
                               b-cooperative-matrix-type ->
@@ -181,8 +181,8 @@ def SPV_NVCooperativeMatrixMulAddOp : SPV_NvVendorOp<"CooperativeMatrixMulAdd",
     For example:
 
     ```
-    %0 = spv.NV.CooperativeMatrixMulAdd %arg0, %arg1, %arg2,  :
-      !spv.coopmatrix<Subgroup, i32, 8, 16>
+    %0 = spirv.NV.CooperativeMatrixMulAdd %arg0, %arg1, %arg2,  :
+      !spirv.coopmatrix<Subgroup, i32, 8, 16>
     ```
   }];
 
@@ -191,34 +191,34 @@ def SPV_NVCooperativeMatrixMulAddOp : SPV_NvVendorOp<"CooperativeMatrixMulAdd",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
-    Extension<[SPV_NV_cooperative_matrix]>,
-    Capability<[SPV_C_CooperativeMatrixNV]>
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPIRV_NV_cooperative_matrix]>,
+    Capability<[SPIRV_C_CooperativeMatrixNV]>
   ];
 
   let arguments = (ins
-    SPV_AnyCooperativeMatrix:$a,
-    SPV_AnyCooperativeMatrix:$b,
-    SPV_AnyCooperativeMatrix:$c
+    SPIRV_AnyCooperativeMatrix:$a,
+    SPIRV_AnyCooperativeMatrix:$b,
+    SPIRV_AnyCooperativeMatrix:$c
   );
 
   let results = (outs
-    SPV_AnyCooperativeMatrix:$result
+    SPIRV_AnyCooperativeMatrix:$result
   );
 }
 
 // -----
 
-def SPV_NVCooperativeMatrixStoreOp : SPV_NvVendorOp<"CooperativeMatrixStore", []> {
-  let summary = "See extension SPV_NV_cooperative_matrix";
+def SPIRV_NVCooperativeMatrixStoreOp : SPIRV_NvVendorOp<"CooperativeMatrixStore", []> {
+  let summary = "See extension SPIRV_NV_cooperative_matrix";
 
   let description = [{
     Store a cooperative matrix through a pointer.
 
     Pointer is a pointer into an array. Its type must be an OpTypePointer whose
     Type operand is a scalar or vector type. The storage class of Pointer must
-    be Workgroup, StorageBuffer, or (if SPV_EXT_physical_storage_buffer is
+    be Workgroup, StorageBuffer, or (if SPIRV_EXT_physical_storage_buffer is
     supported) PhysicalStorageBufferEXT.
 
     Object is the object to store. Its type must be an
@@ -236,7 +236,7 @@ def SPV_NVCooperativeMatrixStoreOp : SPV_NvVendorOp<"CooperativeMatrixStore", []
     same as specifying None.
 
     ``` {.ebnf}
-    coop-matrix-store-op ::= `spv.NV.CooperativeMatrixStore `
+    coop-matrix-store-op ::= `spirv.NV.CooperativeMatrixStore `
                               ssa-use `, ` ssa-use `, `
                               ssa-use `, ` ssa-use `, `
                               (`[` memory-access `]`)? `:`
@@ -246,24 +246,24 @@ def SPV_NVCooperativeMatrixStoreOp : SPV_NvVendorOp<"CooperativeMatrixStore", []
     For example:
 
     ```
-      spv.NV.CooperativeMatrixStore %arg0, %arg2, %arg1, %arg3 :
-        !spv.ptr<i32, StorageBuffer>, !spv.coopmatrix<Workgroup, i32, 16, 8>
+      spirv.NV.CooperativeMatrixStore %arg0, %arg2, %arg1, %arg3 :
+        !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<Workgroup, i32, 16, 8>
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
-    Extension<[SPV_NV_cooperative_matrix]>,
-    Capability<[SPV_C_CooperativeMatrixNV]>
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPIRV_NV_cooperative_matrix]>,
+    Capability<[SPIRV_C_CooperativeMatrixNV]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer,
-    SPV_AnyCooperativeMatrix:$object,
-    SPV_Integer:$stride,
-    SPV_Bool:$columnmajor,
-    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_AnyCooperativeMatrix:$object,
+    SPIRV_Integer:$stride,
+    SPIRV_Bool:$columnmajor,
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access
   );
 
   let results = (outs);

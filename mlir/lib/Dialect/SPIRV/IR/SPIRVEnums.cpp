@@ -36,23 +36,24 @@ ArrayRef<spirv::Extension> spirv::getImpliedExtensions(spirv::Version version) {
   // Note: the following lists are from "Appendix A: Changes" of the spec.
 
 #define V_1_3_IMPLIED_EXTS                                                     \
-  Extension::SPV_KHR_shader_draw_parameters, Extension::SPV_KHR_16bit_storage, \
-      Extension::SPV_KHR_device_group, Extension::SPV_KHR_multiview,           \
-      Extension::SPV_KHR_storage_buffer_storage_class,                         \
-      Extension::SPV_KHR_variable_pointers
+  Extension::SPIRV_KHR_shader_draw_parameters,                                 \
+      Extension::SPIRV_KHR_16bit_storage, Extension::SPIRV_KHR_device_group,   \
+      Extension::SPIRV_KHR_multiview,                                          \
+      Extension::SPIRV_KHR_storage_buffer_storage_class,                       \
+      Extension::SPIRV_KHR_variable_pointers
 
 #define V_1_4_IMPLIED_EXTS                                                     \
-  Extension::SPV_KHR_no_integer_wrap_decoration,                               \
-      Extension::SPV_GOOGLE_decorate_string,                                   \
-      Extension::SPV_GOOGLE_hlsl_functionality1,                               \
-      Extension::SPV_KHR_float_controls
+  Extension::SPIRV_KHR_no_integer_wrap_decoration,                             \
+      Extension::SPIRV_GOOGLE_decorate_string,                                 \
+      Extension::SPIRV_GOOGLE_hlsl_functionality1,                             \
+      Extension::SPIRV_KHR_float_controls
 
 #define V_1_5_IMPLIED_EXTS                                                     \
-  Extension::SPV_KHR_8bit_storage, Extension::SPV_EXT_descriptor_indexing,     \
-      Extension::SPV_EXT_shader_viewport_index_layer,                          \
-      Extension::SPV_EXT_physical_storage_buffer,                              \
-      Extension::SPV_KHR_physical_storage_buffer,                              \
-      Extension::SPV_KHR_vulkan_memory_model
+  Extension::SPIRV_KHR_8bit_storage, Extension::SPIRV_EXT_descriptor_indexing, \
+      Extension::SPIRV_EXT_shader_viewport_index_layer,                        \
+      Extension::SPIRV_EXT_physical_storage_buffer,                            \
+      Extension::SPIRV_KHR_physical_storage_buffer,                            \
+      Extension::SPIRV_KHR_vulkan_memory_model
 
   switch (version) {
   default:
