@@ -4265,7 +4265,7 @@ static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
     // (X <  Y) ? X : min(X, Y) --> min(X, Y)
     // (X <= Y) ? X : min(X, Y) --> min(X, Y)
     // (X == Y) ? X : min(X, Y) --> min(X, Y)
-    if (MMPred == Pred || MMPred == CmpInst::getStrictPredicate(Pred) ||
+    if (MMPred == CmpInst::getStrictPredicate(Pred) ||
         Pred == ICmpInst::ICMP_EQ)
       return MMI;
 
@@ -4276,7 +4276,7 @@ static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
     // (X >= Y) ? X : min(X, Y) --> X
     // (X != Y) ? X : min(X, Y) --> X
     ICmpInst::Predicate InvPred = CmpInst::getInversePredicate(Pred);
-    if (MMPred == InvPred || MMPred == CmpInst::getStrictPredicate(InvPred) ||
+    if (MMPred == CmpInst::getStrictPredicate(InvPred) ||
         Pred == ICmpInst::ICMP_NE)
       return X;
   }
