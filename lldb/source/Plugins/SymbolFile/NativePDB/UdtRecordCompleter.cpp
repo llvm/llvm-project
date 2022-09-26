@@ -45,10 +45,12 @@ UdtRecordCompleter::UdtRecordCompleter(
     break;
   case LF_UNION:
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, m_cvr.ur));
+    m_layout.bit_size = m_cvr.ur.getSize() * 8;
     break;
   case LF_CLASS:
   case LF_STRUCTURE:
     llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, m_cvr.cr));
+    m_layout.bit_size = m_cvr.cr.getSize() * 8;
     break;
   default:
     llvm_unreachable("unreachable!");
