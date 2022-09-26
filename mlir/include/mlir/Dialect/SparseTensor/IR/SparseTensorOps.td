@@ -379,6 +379,10 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
     alternative implementations in the future, such as sending the contents to
     a buffer defined by a pointer.
 
+    Note that this operation is "impure" in the sense that its behavior
+    is solely defined by side-effects and not SSA values. The semantics
+    may be refined over time as our sparse abstractions evolve.
+
     Example:
 
     ```mlir
@@ -697,12 +701,12 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
     Arguments<(ins Optional<AnyType>:$result)> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{
-      Yields a value from within a `binary`, `unary`, `reduce`, 
+      Yields a value from within a `binary`, `unary`, `reduce`,
       `select` or `foreach` block.
 
       Example:
 
-      ```
+      ```mlir
       %0 = sparse_tensor.unary %a : i64 to i64 {
         ^bb0(%arg0: i64):
           %cst = arith.constant 1 : i64
@@ -740,7 +744,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      tensor at the given coordinates.
 
      Example:
-     
+
      ```mlir
      sparse_tensor.foreach in %0 : tensor<?x?xf64, #DCSR> do {
       ^bb0(%arg1: index, %arg2: index, %arg3: f64):
@@ -748,7 +752,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      }
      ```
   }];
-  
+
   let regions = (region AnyRegion:$region);
   let assemblyFormat = "`in` $tensor attr-dict `:` type($tensor)  `do` $region";
   let hasVerifier = 1;
