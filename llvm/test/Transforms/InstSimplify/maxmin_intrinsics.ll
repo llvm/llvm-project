@@ -27,8 +27,7 @@ define i8 @constexpr_maxvalue() {
 
 define i8 @constexpr_maxvalue_commute() {
 ; CHECK-LABEL: @constexpr_maxvalue_commute(
-; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 ptrtoint (ptr @g to i8), i8 -1)
-; CHECK-NEXT:    ret i8 [[UMIN]]
+; CHECK-NEXT:    ret i8 ptrtoint (ptr @g to i8)
 ;
   %umin = call i8 @llvm.umin.i8(i8 ptrtoint (ptr @g to i8), i8 255)
   ret i8 %umin
