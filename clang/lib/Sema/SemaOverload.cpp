@@ -10119,12 +10119,6 @@ void Sema::diagnoseEquivalentInternalLinkageDeclarations(
   }
 }
 
-bool OverloadCandidate::NotValidBecauseConstraintExprHasError() const {
-  return DeductionFailure.Result == Sema::TDK_ConstraintsNotSatisfied &&
-         static_cast<CNSInfo *>(DeductionFailure.Data)
-             ->Satisfaction.ContainsErrors;
-}
-
 /// Computes the best viable function (C++ 13.3.3)
 /// within an overload candidate set.
 ///
@@ -10177,18 +10171,10 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
   Best = end();
   for (auto *Cand : Candidates) {
     Cand->Best = false;
-    if (Cand->Viable) {
+    if (Cand->Viable)
       if (Best == end() ||
           isBetterOverloadCandidate(S, *Cand, *Best, Loc, Kind))
         Best = Cand;
-    } else if (Cand->NotValidBecauseConstraintExprHasError()) {
-      // This candidate has constraint that we were unable to evaluate because
-      // it referenced an expression that contained an error. Rather than fall
-      // back onto a potentially unintended candidate (made worse by by
-      // subsuming constraints), treat this as 'no viable candidate'.
-      Best = end();
-      return OR_No_Viable_Function;
-    }
   }
 
   // If we didn't find any viable functions, abort.
