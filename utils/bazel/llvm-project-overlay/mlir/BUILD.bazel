@@ -2306,6 +2306,33 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "DialectUtilsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Utils/StructuredOpsUtils.td",
+    ],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "DialectUtilsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Utils/DialectUtilsEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Utils/DialectUtilsEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Utils/StructuredOpsUtils.td",
+    deps = [":DialectUtilsTdFiles"],
+)
+
 cc_library(
     name = "DialectUtils",
     srcs = glob([
@@ -2317,6 +2344,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":DialectUtilsIncGen",
         ":IR",
         ":Support",
         "//llvm:Support",
@@ -7198,11 +7226,13 @@ td_library(
     name = "LinalgOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/Linalg/IR/LinalgBase.td",
+        "include/mlir/Dialect/Linalg/IR/LinalgEnums.td",
         "include/mlir/Dialect/Linalg/IR/LinalgOps.td",
     ],
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
+        ":DialectUtilsTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
@@ -7251,14 +7281,6 @@ gentbl_cc_library(
             "include/mlir/Dialect/Linalg/IR/LinalgOpsDialect.cpp.inc",
         ),
         (
-            ["-gen-enum-decls"],
-            "include/mlir/Dialect/Linalg/IR/LinalgOpsEnums.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "include/mlir/Dialect/Linalg/IR/LinalgOpsEnums.cpp.inc",
-        ),
-        (
             ["-gen-attrdef-decls"],
             "include/mlir/Dialect/Linalg/IR/LinalgOpsAttrDefs.h.inc",
         ),
@@ -7269,6 +7291,24 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Linalg/IR/LinalgOps.td",
+    deps = [":LinalgOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "LinalgEnumsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Linalg/IR/LinalgOpsEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Linalg/IR/LinalgOpsEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Linalg/IR/LinalgEnums.td",
     deps = [":LinalgOpsTdFiles"],
 )
 
@@ -7527,6 +7567,7 @@ cc_library(
         ":FuncDialect",
         ":IR",
         ":InferTypeOpInterface",
+        ":LinalgEnumsIncGen",
         ":LinalgInterfacesIncGen",
         ":LinalgNamedStructuredOpsYamlIncGen",
         ":LinalgOpsIncGen",
@@ -7717,6 +7758,7 @@ cc_library(
     hdrs = ["include/mlir/Interfaces/TilingInterface.h"],
     includes = ["include"],
     deps = [
+        ":DialectUtils",
         ":IR",
         ":Support",
         ":TilingInterfaceIncGen",

@@ -21191,6 +21191,21 @@ bool ARMTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   return Subtarget->hasV6T2Ops();
 }
 
+bool ARMTargetLowering::isMaskAndCmp0FoldingBeneficial(
+    const Instruction &AndI) const {
+  if (!Subtarget->hasV7Ops())
+    return false;
+
+  // Sink the `and` instruction only if the mask would fit into a modified
+  // immediate operand.
+  ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
+  if (!Mask || Mask->getValue().getBitWidth() > 32u)
+    return false;
+  auto MaskVal = unsigned(Mask->getValue().getZExtValue());
+  return (Subtarget->isThumb2() ? ARM_AM::getT2SOImmVal(MaskVal)
+                                : ARM_AM::getSOImmVal(MaskVal)) != -1;
+}
+
 bool ARMTargetLowering::shouldExpandShift(SelectionDAG &DAG, SDNode *N) const {
   return !Subtarget->hasMinSize() || Subtarget->isTargetWindows();
 }

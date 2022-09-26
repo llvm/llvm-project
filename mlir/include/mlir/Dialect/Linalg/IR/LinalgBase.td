@@ -13,6 +13,7 @@
 #ifndef LINALG_BASE
 #define LINALG_BASE
 
+include "mlir/Dialect/Linalg/IR/LinalgEnums.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
@@ -62,37 +63,6 @@ def Linalg_Dialect : Dialect {
 }
 
 // Define the function attribute enums matching the OpDSL functions.
-def UnaryFn : I32EnumAttr<"UnaryFn", "", [
-  I32EnumAttrCase<"exp", 0>,
-  I32EnumAttrCase<"log", 1>,
-  I32EnumAttrCase<"abs", 2>,
-  I32EnumAttrCase<"ceil", 3>,
-  I32EnumAttrCase<"floor", 4>,
-  I32EnumAttrCase<"negf", 5>
-]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::linalg";
-}
-def BinaryFn : I32EnumAttr<"BinaryFn", "", [
-  I32EnumAttrCase<"add", 0>,
-  I32EnumAttrCase<"sub", 1>,
-  I32EnumAttrCase<"mul", 2>,
-  I32EnumAttrCase<"max_signed", 3>,
-  I32EnumAttrCase<"min_signed", 4>,
-  I32EnumAttrCase<"max_unsigned", 5>,
-  I32EnumAttrCase<"min_unsigned", 6>
-]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::linalg";
-}
-def TypeFn : I32EnumAttr<"TypeFn", "", [
-  I32EnumAttrCase<"cast_signed", 0>,
-  I32EnumAttrCase<"cast_unsigned", 1>
-]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::linalg";
-}
-
 def UnaryFnAttr : EnumAttr<Linalg_Dialect, UnaryFn, "unary_fn"> {
   let assemblyFormat = "`<` $value `>`";
 }

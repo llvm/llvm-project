@@ -485,9 +485,9 @@ CallEvent::getReturnValueUnderConstruction() const {
 
   EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
-  SVal RetVal =
-    Engine.computeObjectUnderConstruction(getOriginExpr(), getState(),
-                                          getLocationContext(), CC, CallOpts);
+  SVal RetVal = Engine.computeObjectUnderConstruction(
+      getOriginExpr(), getState(), &Engine.getBuilderContext(),
+      getLocationContext(), CC, CallOpts);
   return RetVal;
 }
 

@@ -638,7 +638,8 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   auto iteratorTypesRange =
       linalgOp.iterator_types().getAsValueRange<StringAttr>();
   for (StringRef iteratorType : iteratorTypesRange) {
-    if (!llvm::is_contained(getAllIteratorTypeNames(), iteratorType))
+    if (!llvm::is_contained(getAllIteratorTypeNames(), iteratorType) ||
+        !utils::symbolizeIteratorType(iteratorType).has_value())
       return op->emitOpError("unexpected iterator_type (")
              << iteratorType << ")";
   }
