@@ -23,6 +23,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -398,10 +399,11 @@ public:
       llvm::StringRef name, const CompilerType &function_Type,
       clang::StorageClass storage, bool is_inline);
 
-  CompilerType CreateFunctionType(const CompilerType &result_type,
-                                  const CompilerType *args, unsigned num_args,
-                                  bool is_variadic, unsigned type_quals,
-                                  clang::CallingConv cc = clang::CC_C);
+  CompilerType
+  CreateFunctionType(const CompilerType &result_type, const CompilerType *args,
+                     unsigned num_args, bool is_variadic, unsigned type_quals,
+                     clang::CallingConv cc = clang::CC_C,
+                     clang::RefQualifierKind ref_qual = clang::RQ_None);
 
   clang::ParmVarDecl *
   CreateParameterDeclaration(clang::DeclContext *decl_ctx,
