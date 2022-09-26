@@ -18,6 +18,10 @@ build --force_pic
 # super large, the benefits of shared objects are minimal.
 build --dynamic_mode=off
 
+# Rely on compiler flags to compile with debug info/strip rather than stripping
+# based on compilation_mode.
+build --strip=never
+
 ###############################################################################
 # Options to select different strategies for linking potential dependent
 # libraries. The default leaves it disabled.
