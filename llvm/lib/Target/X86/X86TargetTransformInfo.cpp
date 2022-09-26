@@ -779,7 +779,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   static const CostKindTblEntry AVX512DQCostTable[] = {
     { ISD::MUL,  MVT::v2i64, { 2, 15, 1, 3 } }, // pmullq
     { ISD::MUL,  MVT::v4i64, { 2, 15, 1, 3 } }, // pmullq
-    { ISD::MUL,  MVT::v8i64, { 2, 15, 1, 3 } }  // pmullq
+    { ISD::MUL,  MVT::v8i64, { 3, 15, 1, 3 } }  // pmullq
   };
 
   // Look for AVX512DQ lowering tricks for custom cases.
@@ -3093,7 +3093,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
   static const CostKindTblEntry SLMCostTbl[] = {
     // slm pcmpeq/pcmpgt throughput is 2
-    { ISD::SETCC,   MVT::v2i64,   { 2 } },
+    { ISD::SETCC,   MVT::v2i64,   { 2, 5, 1, 2 } },
     // slm pblendvb/blendvpd/blendvps throughput is 4
     { ISD::SELECT,  MVT::v2f64,   { 4, 4, 1, 3 } }, // vblendvpd
     { ISD::SELECT,  MVT::v4f32,   { 4, 4, 1, 3 } }, // vblendvps

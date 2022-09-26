@@ -1024,7 +1024,7 @@ define i32 @mul(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = mul i64 undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = mul <2 x i64> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4I64 = mul <4 x i64> undef, undef
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8I64 = mul <8 x i64> undef, undef
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I64 = mul <8 x i64> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = mul i32 undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = mul <4 x i32> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = mul <8 x i32> undef, undef

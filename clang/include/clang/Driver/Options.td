@@ -3260,6 +3260,12 @@ def gsimple_template_names_EQ
       HelpText<"Use simple template names in DWARF, or include the full "
                "template name with a modified prefix for validation">,
       Values<"simple,mangled">, Flags<[CC1Option, NoDriverOption]>;
+def gsrc_hash_EQ : Joined<["-"], "gsrc-hash=">,
+  Group<g_flags_Group>, Flags<[CC1Option, NoDriverOption]>,
+  Values<"md5,sha1,sha256">,
+  NormalizedValues<["DSH_MD5", "DSH_SHA1", "DSH_SHA256"]>,
+  NormalizedValuesScope<"CodeGenOptions">,
+  MarshallingInfoEnum<CodeGenOpts<"DebugSrcHash">, "DSH_MD5">;
 def gno_simple_template_names : Flag<["-"], "gno-simple-template-names">,
                                 Group<g_flags_Group>;
 def ggnu_pubnames : Flag<["-"], "ggnu-pubnames">, Group<g_flags_Group>, Flags<[CC1Option]>;
@@ -6844,6 +6850,15 @@ def _SLASH_Zc_wchar_t_ : CLFlag<"Zc:wchar_t-">,
   HelpText<"Disable C++ builtin type wchar_t">;
 def _SLASH_Z7 : CLFlag<"Z7">,
   HelpText<"Enable CodeView debug information in object files">;
+def _SLASH_ZH_MD5 : CLFlag<"ZH:MD5">,
+  HelpText<"Use MD5 for file checksums in debug info (default)">,
+  Alias<gsrc_hash_EQ>, AliasArgs<["md5"]>;
+def _SLASH_ZH_SHA1 : CLFlag<"ZH:SHA1">,
+  HelpText<"Use SHA1 for file checksums in debug info">,
+  Alias<gsrc_hash_EQ>, AliasArgs<["sha1"]>;
+def _SLASH_ZH_SHA_256 : CLFlag<"ZH:SHA_256">,
+  HelpText<"Use SHA256 for file checksums in debug info">,
+  Alias<gsrc_hash_EQ>, AliasArgs<["sha256"]>;
 def _SLASH_Zi : CLFlag<"Zi">, Alias<_SLASH_Z7>,
   HelpText<"Like /Z7">;
 def _SLASH_Zp : CLJoined<"Zp">,
@@ -7029,9 +7044,6 @@ def _SLASH_Zc_forScope : CLIgnoredFlag<"Zc:forScope">;
 def _SLASH_Zc_inline : CLIgnoredFlag<"Zc:inline">;
 def _SLASH_Zc_rvalueCast : CLIgnoredFlag<"Zc:rvalueCast">;
 def _SLASH_Zc_ternary : CLIgnoredFlag<"Zc:ternary">;
-def _SLASH_ZH_MD5 : CLIgnoredFlag<"ZH:MD5">;
-def _SLASH_ZH_SHA1 : CLIgnoredFlag<"ZH:SHA1">;
-def _SLASH_ZH_SHA_256 : CLIgnoredFlag<"ZH:SHA_256">;
 def _SLASH_Zm : CLIgnoredJoined<"Zm">;
 def _SLASH_Zo : CLIgnoredFlag<"Zo">;
 def _SLASH_Zo_ : CLIgnoredFlag<"Zo-">;

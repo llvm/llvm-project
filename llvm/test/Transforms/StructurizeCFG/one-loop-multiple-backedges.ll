@@ -8,7 +8,7 @@ define void @blam(i32 addrspace(1)* nocapture %arg, float %arg1, float %arg2) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i64 [ 0, [[BB:%.*]] ], [ [[TMP1:%.*]], [[FLOW1:%.*]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i64 [ 0, [[BB:%.*]] ], [ [[TMP2:%.*]], [[FLOW1:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ult float [[ARG1:%.*]], 3.500000e+00
 ; CHECK-NEXT:    [[TMP4_INV:%.*]] = xor i1 [[TMP4]], true
 ; CHECK-NEXT:    br i1 [[TMP4_INV]], label [[BB5:%.*]], label [[FLOW:%.*]]
@@ -16,19 +16,20 @@ define void @blam(i32 addrspace(1)* nocapture %arg, float %arg1, float %arg2) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp uge float 0.000000e+00, [[ARG2:%.*]]
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[TMP6]], [[BB5]] ], [ [[TMP4]], [[BB3]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[BB7:%.*]], label [[FLOW1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 15, [[BB5]] ], [ undef, [[BB3]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP6]], [[BB5]] ], [ [[TMP4]], [[BB3]] ]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB7:%.*]], label [[FLOW1]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[TMP]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp sge i64 [[TMP8]], 5
 ; CHECK-NEXT:    br label [[FLOW1]]
 ; CHECK:       Flow1:
-; CHECK-NEXT:    [[TMP1]] = phi i64 [ [[TMP8]], [[BB7]] ], [ undef, [[FLOW]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 255, [[BB7]] ], [ 15, [[FLOW]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP9]], [[BB7]] ], [ true, [[FLOW]] ]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[BB10:%.*]], label [[BB3]]
+; CHECK-NEXT:    [[TMP2]] = phi i64 [ [[TMP8]], [[BB7]] ], [ undef, [[FLOW]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 255, [[BB7]] ], [ [[TMP0]], [[FLOW]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP9]], [[BB7]] ], [ true, [[FLOW]] ]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[BB10:%.*]], label [[BB3]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    store i32 [[TMP2]], i32 addrspace(1)* [[ARG:%.*]], align 4
+; CHECK-NEXT:    store i32 [[TMP3]], i32 addrspace(1)* [[ARG:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
