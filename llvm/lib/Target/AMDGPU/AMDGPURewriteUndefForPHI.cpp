@@ -75,7 +75,7 @@ public:
   AMDGPURewriteUndefForPHI() : FunctionPass(ID) {
     initializeAMDGPURewriteUndefForPHIPass(*PassRegistry::getPassRegistry());
   }
-  bool runOnFunction(Function &F);
+  bool runOnFunction(Function &F) override;
   StringRef getPassName() const override {
     return "AMDGPU Rewrite Undef for PHI";
   }
