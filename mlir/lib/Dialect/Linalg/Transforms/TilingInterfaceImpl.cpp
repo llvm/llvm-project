@@ -96,7 +96,7 @@ struct LinalgOpTilingInterface
         llvm::map_range(concreteOp.iterator_types(), [](Attribute strAttr) {
           return utils::symbolizeIteratorType(
                      strAttr.cast<StringAttr>().getValue())
-              .getValue();
+              .value();
         }));
   }
 
