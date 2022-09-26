@@ -1,6 +1,7 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,PREGFX12 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89,PREGFX12 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89,PREGFX12 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
 
@@ -127,9 +128,11 @@ define amdgpu_kernel void @test_sub_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16
   ret void
 }
 
-; GCN-LABEL: {{^}}s_sub_i64:
-; GCN: s_sub_u32
-; GCN: s_subb_u32
+; PREGFX12-LABEL: {{^}}s_sub_i64:
+; PREGFX12: s_sub_u32
+; PREGFX12: s_subb_u32
+;
+; GFX12: s_sub_u64
 define amdgpu_kernel void @s_sub_i64(i64 addrspace(1)* noalias %out, i64 %a, i64 %b) nounwind {
   %result = sub i64 %a, %b
   store i64 %result, i64 addrspace(1)* %out, align 8

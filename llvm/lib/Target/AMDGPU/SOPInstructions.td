@@ -593,6 +593,10 @@ let SubtargetPredicate = isGFX12Plus in {
     [(set SReg_64:$sdst, (UniformBinFrag<add> i64:$src0, i64:$src1))]>{
     let isCommutable = 1;
   }
+
+  def S_SUB_U64 : SOP2_64 <"s_sub_u64",
+    [(set SReg_64:$sdst, (UniformBinFrag<sub> i64:$src0, i64:$src1))]
+  >;
 } // End SubtargetPredicate = isGFX12Plus
 
 // This pattern is restricted to certain subtargets (practically GFX8Plus)
@@ -2052,6 +2056,7 @@ defm S_CSELECT_B32     : SOP2_Real_gfx11_gfx12<0x030>;
 defm S_CSELECT_B64     : SOP2_Real_gfx11_gfx12<0x031>;
 defm S_PACK_HL_B32_B16 : SOP2_Real_gfx11_gfx12<0x035>;
 defm S_ADD_U64         : SOP2_Real_gfx12<0x053>;
+defm S_SUB_U64         : SOP2_Real_gfx12<0x054>;
 
 //===----------------------------------------------------------------------===//
 // SOP2 - GFX1150, GFX12
