@@ -396,11 +396,6 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // Emit the actual call op.
   auto callLoc = CGM.getLoc(Loc);
-
-  // FIXME: Used to be:
-  // auto theCall = CGM.getBuilder().create<mlir::cir::CallOp>(
-  //     callLoc, mlir::SymbolRefAttr::get(CalleePtr),
-  //     CalleePtr.getType().getResults(), CIRCallArgs);
   auto theCall = CGM.getBuilder().create<mlir::cir::CallOp>(callLoc, CalleePtr,
                                                             CIRCallArgs);
 
