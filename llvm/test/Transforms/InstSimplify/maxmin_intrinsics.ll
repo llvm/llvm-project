@@ -15,6 +15,25 @@ declare i8 @llvm.umin.i8(i8, i8)
 declare <2 x i8> @llvm.umin.v2i8(<2 x i8>, <2 x i8>)
 declare void @llvm.assume(i1)
 
+@g = external dso_local global [9 x i32], align 4
+
+define i8 @constexpr_maxvalue() {
+; CHECK-LABEL: @constexpr_maxvalue(
+; CHECK-NEXT:    ret i8 ptrtoint (ptr @g to i8)
+;
+  %umin = call i8 @llvm.umin.i8(i8 255, i8 ptrtoint (ptr @g to i8))
+  ret i8 %umin
+}
+
+define i8 @constexpr_maxvalue_commute() {
+; CHECK-LABEL: @constexpr_maxvalue_commute(
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 ptrtoint (ptr @g to i8), i8 -1)
+; CHECK-NEXT:    ret i8 [[UMIN]]
+;
+  %umin = call i8 @llvm.umin.i8(i8 ptrtoint (ptr @g to i8), i8 255)
+  ret i8 %umin
+}
+
 define i81 @smax_sameval(i81 %x) {
 ; CHECK-LABEL: @smax_sameval(
 ; CHECK-NEXT:    ret i81 [[X:%.*]]
