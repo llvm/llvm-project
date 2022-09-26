@@ -358,11 +358,11 @@ genrule(
     name = "basic_version_gen",
     outs = ["include/clang/Basic/Version.inc"],
     cmd = (
-        "echo '#define CLANG_VERSION 15.0.1' >> $@\n" +
+        "echo '#define CLANG_VERSION 15.0.2' >> $@\n" +
         "echo '#define CLANG_VERSION_MAJOR 15' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR 0' >> $@\n" +
-        "echo '#define CLANG_VERSION_PATCHLEVEL 1' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"15.0.1\"' >> $@\n"
+        "echo '#define CLANG_VERSION_PATCHLEVEL 2' >> $@\n" +
+        "echo '#define CLANG_VERSION_STRING \"15.0.2\"' >> $@\n"
     ),
 )
 
