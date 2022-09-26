@@ -459,7 +459,7 @@ template <class ELFT> void elf::createSyntheticSections() {
     add(*in.riscvTableJumpSection);
 
     symtab->addSymbol(Defined{
-        /*file=*/nullptr, ".tbljalentries", STB_WEAK, STT_NOTYPE, STT_NOTYPE,
+        /*file=*/nullptr, "__tbljalvec_base$", STB_GLOBAL, STT_NOTYPE, STT_NOTYPE,
         /*value=*/0, /*size=*/0, in.riscvTableJumpSection.get()});
   }
 
