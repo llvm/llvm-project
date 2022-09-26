@@ -9,34 +9,32 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; OPT-NEXT:  main_body:
 ; OPT-NEXT:    br label [[LOOP_OUTER:%.*]]
 ; OPT:       LOOP.outer:
-; OPT-NEXT:    [[PHI_BROKEN2:%.*]] = phi i64 [ [[TMP10:%.*]], [[FLOW1:%.*]] ], [ 0, [[MAIN_BODY:%.*]] ]
-; OPT-NEXT:    [[TMP43:%.*]] = phi i32 [ 0, [[MAIN_BODY]] ], [ [[TMP4:%.*]], [[FLOW1]] ]
+; OPT-NEXT:    [[PHI_BROKEN2:%.*]] = phi i64 [ [[TMP8:%.*]], [[FLOW1:%.*]] ], [ 0, [[MAIN_BODY:%.*]] ]
+; OPT-NEXT:    [[TMP43:%.*]] = phi i32 [ 0, [[MAIN_BODY]] ], [ [[TMP3:%.*]], [[FLOW1]] ]
 ; OPT-NEXT:    br label [[LOOP:%.*]]
 ; OPT:       LOOP:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP8:%.*]], [[FLOW:%.*]] ], [ 0, [[LOOP_OUTER]] ]
-; OPT-NEXT:    [[TMP0:%.*]] = phi i32 [ undef, [[LOOP_OUTER]] ], [ [[TMP4]], [[FLOW]] ]
-; OPT-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP43]], [[LOOP_OUTER]] ], [ [[TMP5:%.*]], [[FLOW]] ]
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP6:%.*]], [[FLOW:%.*]] ], [ 0, [[LOOP_OUTER]] ]
+; OPT-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP43]], [[LOOP_OUTER]] ], [ [[TMP3]], [[FLOW]] ]
 ; OPT-NEXT:    [[TMP48:%.*]] = icmp slt i32 [[TMP45]], [[UB:%.*]]
-; OPT-NEXT:    [[TMP1:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP48]])
-; OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP1]], 0
-; OPT-NEXT:    [[TMP3:%.*]] = extractvalue { i1, i64 } [[TMP1]], 1
-; OPT-NEXT:    br i1 [[TMP2]], label [[ENDIF:%.*]], label [[FLOW]]
+; OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP48]])
+; OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
+; OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
+; OPT-NEXT:    br i1 [[TMP1]], label [[ENDIF:%.*]], label [[FLOW]]
 ; OPT:       Flow:
-; OPT-NEXT:    [[TMP4]] = phi i32 [ [[TMP47:%.*]], [[ENDIF]] ], [ [[TMP0]], [[LOOP]] ]
-; OPT-NEXT:    [[TMP5]] = phi i32 [ [[TMP47]], [[ENDIF]] ], [ undef, [[LOOP]] ]
-; OPT-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP51:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
-; OPT-NEXT:    [[TMP7:%.*]] = phi i1 [ [[TMP51_INV:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP3]])
-; OPT-NEXT:    [[TMP8]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP7]], i64 [[PHI_BROKEN]])
-; OPT-NEXT:    [[TMP9:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP8]])
-; OPT-NEXT:    [[TMP10]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP6]], i64 [[PHI_BROKEN2]])
-; OPT-NEXT:    br i1 [[TMP9]], label [[FLOW1]], label [[LOOP]]
+; OPT-NEXT:    [[TMP3]] = phi i32 [ [[TMP47:%.*]], [[ENDIF]] ], [ undef, [[LOOP]] ]
+; OPT-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP51:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
+; OPT-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP51_INV:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; OPT-NEXT:    [[TMP6]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP5]], i64 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP7:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP6]])
+; OPT-NEXT:    [[TMP8]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN2]])
+; OPT-NEXT:    br i1 [[TMP7]], label [[FLOW1]], label [[LOOP]]
 ; OPT:       Flow1:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
-; OPT-NEXT:    [[TMP11:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP10]])
-; OPT-NEXT:    br i1 [[TMP11]], label [[IF:%.*]], label [[LOOP_OUTER]]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP6]])
+; OPT-NEXT:    [[TMP9:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP8]])
+; OPT-NEXT:    br i1 [[TMP9]], label [[IF:%.*]], label [[LOOP_OUTER]]
 ; OPT:       IF:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP10]])
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
 ; OPT-NEXT:    ret void
 ; OPT:       ENDIF:
 ; OPT-NEXT:    [[TMP47]] = add i32 [[TMP45]], 1
@@ -156,7 +154,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    [[CMP2]] = icmp sge i32 [[TMP]], [[LOAD2]]
 ; OPT-NEXT:    br label [[FLOW3]]
 ; OPT:       Flow5:
-; OPT-NEXT:    [[TMP9]] = phi i32 [ [[LSR_IV_NEXT]], [[CASE0]] ], [ [[TMP6]], [[LEAFBLOCK]] ]
+; OPT-NEXT:    [[TMP9]] = phi i32 [ [[LSR_IV_NEXT]], [[CASE0]] ], [ undef, [[LEAFBLOCK]] ]
 ; OPT-NEXT:    [[TMP10]] = phi i1 [ [[CMP1]], [[CASE0]] ], [ [[TMP7]], [[LEAFBLOCK]] ]
 ; OPT-NEXT:    br label [[FLOW4]]
 ; OPT:       bb9:
