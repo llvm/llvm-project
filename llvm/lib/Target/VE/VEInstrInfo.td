@@ -2052,29 +2052,6 @@ def : Pat<(i32 (setcc f64:$l, f64:$r, cond:$cond)),
 def : Pat<(i32 (setcc f128:$l, f128:$r, cond:$cond)),
           (setccrr<CMOVDrm> (fcond2cc $cond), (FCMPQrr $l, $r))>;
 
-// Special SELECTCC pattern matches
-// Use min/max for better performance.
-//
-//   MAX/MIN  %res, %lhs, %rhs
-
-def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOGT)),
-          (FMAXDrr $LHS, $RHS)>;
-def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOGT)),
-          (FMAXSrr $LHS, $RHS)>;
-def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOGE)),
-          (FMAXDrr $LHS, $RHS)>;
-def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOGE)),
-          (FMAXSrr $LHS, $RHS)>;
-
-def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOLT)),
-          (FMINDrr $LHS, $RHS)>;
-def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOLT)),
-          (FMINSrr $LHS, $RHS)>;
-def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOLE)),
-          (FMINDrr $LHS, $RHS)>;
-def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOLE)),
-          (FMINSrr $LHS, $RHS)>;
-
 // Helper classes to construct cmov patterns for the ease.
 //
 //   Hiding INSERT_SUBREG/EXTRACT_SUBREG patterns.
