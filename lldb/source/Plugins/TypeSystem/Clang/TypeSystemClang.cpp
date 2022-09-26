@@ -2168,11 +2168,10 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   return func_decl;
 }
 
-CompilerType
-TypeSystemClang::CreateFunctionType(const CompilerType &result_type,
-                                    const CompilerType *args, unsigned num_args,
-                                    bool is_variadic, unsigned type_quals,
-                                    clang::CallingConv cc) {
+CompilerType TypeSystemClang::CreateFunctionType(
+    const CompilerType &result_type, const CompilerType *args,
+    unsigned num_args, bool is_variadic, unsigned type_quals,
+    clang::CallingConv cc, clang::RefQualifierKind ref_qual) {
   if (!result_type || !ClangUtil::IsClangType(result_type))
     return CompilerType(); // invalid return type
 
@@ -2201,7 +2200,7 @@ TypeSystemClang::CreateFunctionType(const CompilerType &result_type,
   proto_info.Variadic = is_variadic;
   proto_info.ExceptionSpec = EST_None;
   proto_info.TypeQuals = clang::Qualifiers::fromFastMask(type_quals);
-  proto_info.RefQualifier = RQ_None;
+  proto_info.RefQualifier = ref_qual;
 
   return GetType(getASTContext().getFunctionType(
       ClangUtil::GetQualType(result_type), qual_type_args, proto_info));
