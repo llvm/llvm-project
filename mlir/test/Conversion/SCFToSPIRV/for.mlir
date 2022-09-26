@@ -2,7 +2,7 @@
 
 module attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
 func.func @loop_kernel(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {

@@ -1077,7 +1077,7 @@ func.func @vector_srem(%arg0: vector<3xi16>, %arg1: vector<3xi16>) {
 module attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, Int8, Int16, Int64, Float16, Float64],
-             [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+             [SPIRV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @select

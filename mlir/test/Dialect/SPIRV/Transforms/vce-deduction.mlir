@@ -51,10 +51,10 @@ spirv.module Logical GLSL450 attributes {
 
 // Test Physical Storage Buffers are deduced correctly.
 
-// CHECK: spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0, [PhysicalStorageBufferAddresses, Shader], [SPV_EXT_physical_storage_buffer]>
+// CHECK: spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0, [PhysicalStorageBufferAddresses, Shader], [SPIRV_EXT_physical_storage_buffer]>
 spirv.module PhysicalStorageBuffer64 GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Shader, PhysicalStorageBufferAddresses], [SPV_EXT_physical_storage_buffer]>, #spirv.resource_limits<>>
+    #spirv.vce<v1.0, [Shader, PhysicalStorageBufferAddresses], [SPIRV_EXT_physical_storage_buffer]>, #spirv.resource_limits<>>
 } {
   spirv.func @physical_ptr(%val : !spirv.ptr<f32, PhysicalStorageBuffer>) "None" {
     spirv.Return
@@ -150,13 +150,13 @@ spirv.module Logical GLSL450 attributes {
 //===----------------------------------------------------------------------===//
 
 // Test deducing minimal extensions.
-// spirv.KHR.SubgroupBallot requires the SPV_KHR_shader_ballot extension.
+// spirv.KHR.SubgroupBallot requires the SPIRV_KHR_shader_ballot extension.
 
-// CHECK: requires #spirv.vce<v1.0, [SubgroupBallotKHR, Shader], [SPV_KHR_shader_ballot]>
+// CHECK: requires #spirv.vce<v1.0, [SubgroupBallotKHR, Shader], [SPIRV_KHR_shader_ballot]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, SubgroupBallotKHR],
-             [SPV_KHR_shader_ballot, SPV_KHR_shader_clock, SPV_KHR_variable_pointers]>, #spirv.resource_limits<>>
+             [SPIRV_KHR_shader_ballot, SPIRV_KHR_shader_clock, SPIRV_KHR_variable_pointers]>, #spirv.resource_limits<>>
 } {
   spirv.func @subgroup_ballot(%predicate : i1) -> vector<4xi32> "None" {
     %0 = spirv.KHR.SubgroupBallot %predicate: vector<4xi32>
@@ -165,10 +165,10 @@ spirv.module Logical GLSL450 attributes {
 }
 
 // Test deducing implied extension.
-// Vulkan memory model requires SPV_KHR_vulkan_memory_model, which is enabled
+// Vulkan memory model requires SPIRV_KHR_vulkan_memory_model, which is enabled
 // implicitly by v1.5.
 
-// CHECK: requires #spirv.vce<v1.0, [VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>
+// CHECK: requires #spirv.vce<v1.0, [VulkanMemoryModel], [SPIRV_KHR_vulkan_memory_model]>
 spirv.module Logical Vulkan attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, VulkanMemoryModel], []>, #spirv.resource_limits<>>
@@ -183,7 +183,7 @@ spirv.module Logical Vulkan attributes {
 
 // Using 8-bit integers in interface storage class requires additional
 // extensions and capabilities.
-// CHECK: requires #spirv.vce<v1.0, [StorageBuffer16BitAccess, Shader, Int16], [SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>
+// CHECK: requires #spirv.vce<v1.0, [StorageBuffer16BitAccess, Shader, Int16], [SPIRV_KHR_16bit_storage, SPIRV_KHR_storage_buffer_storage_class]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.3, [Shader, StorageBuffer16BitAccess, Int16], []>, #spirv.resource_limits<>>
@@ -198,7 +198,7 @@ spirv.module Logical GLSL450 attributes {
 // Complicated nested types
 // * Buffer requires ImageBuffer or SampledBuffer.
 // * Rg32f requires StorageImageExtendedFormats.
-// CHECK: requires #spirv.vce<v1.0, [UniformAndStorageBuffer8BitAccess, StorageUniform16, Int64, Shader, ImageBuffer, StorageImageExtendedFormats], [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>
+// CHECK: requires #spirv.vce<v1.0, [UniformAndStorageBuffer8BitAccess, StorageUniform16, Int64, Shader, ImageBuffer, StorageImageExtendedFormats], [SPIRV_KHR_8bit_storage, SPIRV_KHR_16bit_storage]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.5, [Shader, UniformAndStorageBuffer8BitAccess, StorageBuffer16BitAccess, StorageUniform16, Int16, Int64, ImageBuffer, StorageImageExtendedFormats], []>,

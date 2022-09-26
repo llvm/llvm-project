@@ -73,7 +73,7 @@ spirv.module Logical GLSL450 {
 }
 
 // expected-error @+1 {{input modules differ in addressing model, memory model, and/or VCE triple}}
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPIRV_KHR_storage_buffer_storage_class]> {
 }
 }
 

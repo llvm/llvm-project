@@ -806,7 +806,7 @@ should be of `#spirv.target_env` attribute kind, which is defined as:
 
 ```
 spirv-version    ::= `v1.0` | `v1.1` | ...
-spirv-extension  ::= `SPV_KHR_16bit_storage` | `SPV_EXT_physical_storage_buffer` | ...
+spirv-extension  ::= `SPIRV_KHR_16bit_storage` | `SPIRV_EXT_physical_storage_buffer` | ...
 spirv-capability ::= `Shader` | `Kernel` | `GroupNonUniform` | ...
 
 spirv-extension-list     ::= `[` (spirv-extension-elements)? `]`
@@ -849,7 +849,7 @@ For example,
 ```
 module attributes {
 spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.3, [Shader, GroupNonUniform], [SPV_KHR_8bit_storage]>,
+    #spirv.vce<v1.3, [Shader, GroupNonUniform], [SPIRV_KHR_8bit_storage]>,
     ARM:IntegratedGPU,
     {
       max_compute_workgroup_invocations = 128 : i32,
