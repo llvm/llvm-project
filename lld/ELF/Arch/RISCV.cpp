@@ -626,32 +626,21 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->writes.push_back(0x2001); // c.jal
     remove = 6;
   } else {
-    if (isInt<21>(displace)) {
+    int tblEntryIndex = -1;
+    if (config->riscvTbljal && rd == 0)
+      tblEntryIndex = in.riscvTableJumpSection->getEntryZero(*r.sym);
+    else if (config->riscvTbljal && rd == X_RA)
+      tblEntryIndex = in.riscvTableJumpSection->getEntryRa(*r.sym);
+
+    if (tblEntryIndex >= 0) {
+      sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
+      sec.relaxAux->writes.push_back(
+            0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
+      remove = 6;
+    } else if (isInt<21>(displace)) {
       sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
       sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
       remove = 4;
-    }
-
-    int tblEntryIndex = -1;
-    if (config->riscvTbljal) {
-      if (rd == 0)
-        tblEntryIndex = in.riscvTableJumpSection->getEntryZero(*r.sym);
-      else if (rd == X_RA)
-        tblEntryIndex = in.riscvTableJumpSection->getEntryRa(*r.sym);
-
-      if (tblEntryIndex >= 0) {
-        sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
-
-        // remove > 0 means the inst has been write to jal
-        // rewrite the last item.
-        if (remove)
-          sec.relaxAux->writes.back() =
-              (0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
-        else
-          sec.relaxAux->writes.push_back(
-              0xa002 | (tblEntryIndex << 2)); // cm.jt or cm.jalt
-        remove = 6;
-      }
     }
   }
 }
