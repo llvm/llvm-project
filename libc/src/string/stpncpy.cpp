@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(char *, stpncpy,
     dest[i] = src[i];
   // When n>strlen(src), n-strlen(src) \0 are appended.
   if (n > i)
-    inline_memset(dest + i, 0, n - i);
+    inline_bzero(dest + i, n - i);
   return dest + i;
 }
 
