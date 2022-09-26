@@ -8,14 +8,14 @@
 # RUN: ld.lld %t.rv64.o -riscv-tbljal --defsym foo=_start+30 -o %t.rv64
 # RUN: llvm-objdump -d -M no-aliases --mattr=+experimental-zcmt --no-show-raw-insn %t.rv32 | FileCheck --check-prefix=TBLJAL %s
 # RUN: llvm-objdump -d -M no-aliases --mattr=+experimental-zcmt --no-show-raw-insn %t.rv64 | FileCheck --check-prefix=TBLJAL %s
-# TBLJAL:      cm.jalt 66
+# TBLJAL:      cm.jalt 34
 # TBLJAL-NEXT: cm.jt   2
-# TBLJAL-NEXT: cm.jalt 67
-# TBLJAL-NEXT: cm.jalt 65
-# TBLJAL-NEXT: cm.jalt 65
-# TBLJAL-NEXT: cm.jalt 64
-# TBLJAL-NEXT: cm.jalt 64
-# TBLJAL-NEXT: cm.jalt 64
+# TBLJAL-NEXT: cm.jalt 35
+# TBLJAL-NEXT: cm.jalt 33
+# TBLJAL-NEXT: cm.jalt 33
+# TBLJAL-NEXT: cm.jalt 32
+# TBLJAL-NEXT: cm.jalt 32
+# TBLJAL-NEXT: cm.jalt 32
 # TBLJAL-NEXT: cm.jt   3
 # TBLJAL-NEXT: cm.jt   1
 # TBLJAL-NEXT: cm.jt   1
@@ -47,14 +47,14 @@
 # OLDBOUNDARY-NEXT: jal    zero, {{.*}} <foo_3>
 # OLDBOUNDARY-NEXT: jal    zero, {{.*}} <foo_3>
 # OLDBOUNDARY-NEXT: jal    zero, {{.*}} <foo_3>
-# BOUNDARY:      cm.jalt 66
+# BOUNDARY:      cm.jalt 34
 # BOUNDARY-NEXT: cm.jt   2
-# BOUNDARY-NEXT: cm.jalt 67
-# BOUNDARY-NEXT: cm.jalt 65
-# BOUNDARY-NEXT: cm.jalt 65
-# BOUNDARY-NEXT: cm.jalt 64
-# BOUNDARY-NEXT: cm.jalt 64
-# BOUNDARY-NEXT: cm.jalt 64
+# BOUNDARY-NEXT: cm.jalt 35
+# BOUNDARY-NEXT: cm.jalt 33
+# BOUNDARY-NEXT: cm.jalt 33
+# BOUNDARY-NEXT: cm.jalt 32
+# BOUNDARY-NEXT: cm.jalt 32
+# BOUNDARY-NEXT: cm.jalt 32
 # BOUNDARY-NEXT: cm.jt   3
 # BOUNDARY-NEXT: cm.jt   1
 # BOUNDARY-NEXT: cm.jt   1

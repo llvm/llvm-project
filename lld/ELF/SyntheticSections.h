@@ -406,11 +406,11 @@ private:
   std::vector<std::pair<std::string, int>> finalizedCMJALTEntries;
 
   // used in finalizeContents function.
-  const size_t maxCMJTEntrySize = 64;
-  const size_t maxCMJALTEntrySize = 192;
+  const size_t maxCMJTEntrySize = 32;
+  const size_t maxCMJALTEntrySize = 224;
 
   const size_t startCMJTEntryIdx = 0;
-  const size_t startCMJALTEntryIdx = 64;
+  const size_t startCMJALTEntryIdx = 32;
 };
 
 // The IgotPltSection is a Got associated with the PltSection for GNU Ifunc
