@@ -86,6 +86,12 @@ API Changes
   Any standards-required ``[[nodiscard]]`` applications in C++20 are now always enabled. Any extended applications
   are now enabled by default and can be disabled by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
 
+- ``_LIBCPP_VERSION`` was previously defined to e.g. ``15001`` to represent LLVM 15.0.01, but this value had been
+  left undocumented. Starting with LLVM 16, ``_LIBCPP_VERSION`` will contain the version of LLVM represented as
+  ``XXYYZZ``. In other words, ``_LIBCPP_VERSION`` is gaining a digit. This should not be an issue for existing
+  code, since using e.g. ``_LIBCPP_VERSION > 15000`` will still give the right answer now that ``_LIBCPP_VERSION``
+  is defined as e.g. ``160000`` (with one more digit).
+
 ABI Affecting Changes
 ---------------------
 - In freestanding mode, ``atomic<small enum class>`` does not contain a lock byte anymore if the platform
