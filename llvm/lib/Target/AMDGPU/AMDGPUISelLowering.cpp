@@ -1630,12 +1630,12 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   SDValue fqneg = DAG.getNode(ISD::FNEG, DL, FltVT, fq);
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // float fr = mad(fqneg, fb, fa);
   unsigned OpCode = !Subtarget->hasMadMacF32Insts() ?
                     (unsigned)ISD::FMA :
-                    !MFI->getMode().allFP32Denormals() ?
+                    (!MFI || !MFI->getMode().allFP32Denormals()) ?
                     (unsigned)ISD::FMAD :
                     (unsigned)AMDGPUISD::FMAD_FTZ;
   SDValue fr = DAG.getNode(OpCode, DL, FltVT, fqneg, fb, fa);
