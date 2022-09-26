@@ -11,86 +11,99 @@ define void @f(i32 %v, ptr noalias  %outp) {
 ; V7M-LABEL: f:
 ; V7M:       @ %bb.0: @ %entry
 ; V7M-NEXT:    movs r2, #0
-; V7M-NEXT:    and r12, r0, #14
 ; V7M-NEXT:    str r2, [r1]
-; V7M-NEXT:    and r3, r0, #4
-; V7M-NEXT:    and r2, r0, #2
-; V7M-NEXT:    lsls r0, r0, #31
-; V7M-NEXT:    bne .LBB0_2
+; V7M-NEXT:    lsls r2, r0, #31
+; V7M-NEXT:    bne .LBB0_3
 ; V7M-NEXT:  @ %bb.1: @ %if.then
-; V7M-NEXT:    cmp r2, #0
-; V7M-NEXT:    it ne
-; V7M-NEXT:    movne.w r2, #33024
-; V7M-NEXT:    cmp r3, #0
-; V7M-NEXT:    it ne
-; V7M-NEXT:    addne.w r2, r2, #16512
-; V7M-NEXT:    b .LBB0_3
-; V7M-NEXT:  .LBB0_2: @ %if.else
-; V7M-NEXT:    cmp r2, #0
-; V7M-NEXT:    it ne
-; V7M-NEXT:    movne.w r2, #8256
-; V7M-NEXT:    cmp r3, #0
-; V7M-NEXT:    it ne
-; V7M-NEXT:    addne.w r2, r2, #4128
+; V7M-NEXT:    tst.w r0, #14
+; V7M-NEXT:    beq .LBB0_6
+; V7M-NEXT:  @ %bb.2:
+; V7M-NEXT:    lsls r2, r0, #30
+; V7M-NEXT:    mov.w r3, #33024
+; V7M-NEXT:    and.w r2, r3, r2, asr #31
+; V7M-NEXT:    lsrs r0, r0, #2
+; V7M-NEXT:    bfi r2, r0, #7, #1
+; V7M-NEXT:    bfi r2, r0, #14, #1
+; V7M-NEXT:    b .LBB0_5
 ; V7M-NEXT:  .LBB0_3: @ %if.else
-; V7M-NEXT:    cmp.w r12, #0
-; V7M-NEXT:    it ne
-; V7M-NEXT:    strne r2, [r1]
+; V7M-NEXT:    tst.w r0, #14
+; V7M-NEXT:    it eq
+; V7M-NEXT:    bxeq lr
+; V7M-NEXT:  .LBB0_4:
+; V7M-NEXT:    lsls r2, r0, #30
+; V7M-NEXT:    mov.w r3, #8256
+; V7M-NEXT:    and.w r2, r3, r2, asr #31
+; V7M-NEXT:    lsrs r0, r0, #2
+; V7M-NEXT:    bfi r2, r0, #5, #1
+; V7M-NEXT:    bfi r2, r0, #12, #1
+; V7M-NEXT:  .LBB0_5: @ %if.end
+; V7M-NEXT:    str r2, [r1]
+; V7M-NEXT:  .LBB0_6: @ %exit
 ; V7M-NEXT:    bx lr
 ;
 ; V7A-LABEL: f:
 ; V7A:       @ %bb.0: @ %entry
 ; V7A-NEXT:    mov r2, #0
-; V7A-NEXT:    and r12, r0, #14
-; V7A-NEXT:    str r2, [r1]
-; V7A-NEXT:    and r3, r0, #4
-; V7A-NEXT:    and r2, r0, #2
 ; V7A-NEXT:    tst r0, #1
-; V7A-NEXT:    bne .LBB0_2
+; V7A-NEXT:    str r2, [r1]
+; V7A-NEXT:    bne .LBB0_3
 ; V7A-NEXT:  @ %bb.1: @ %if.then
-; V7A-NEXT:    cmp r2, #0
-; V7A-NEXT:    movw r0, #16512
-; V7A-NEXT:    movwne r2, #33024
-; V7A-NEXT:    b .LBB0_3
-; V7A-NEXT:  .LBB0_2: @ %if.else
-; V7A-NEXT:    cmp r2, #0
-; V7A-NEXT:    movw r0, #4128
-; V7A-NEXT:    movwne r2, #8256
+; V7A-NEXT:    tst r0, #14
+; V7A-NEXT:    beq .LBB0_6
+; V7A-NEXT:  @ %bb.2:
+; V7A-NEXT:    lsl r2, r0, #30
+; V7A-NEXT:    mov r3, #33024
+; V7A-NEXT:    and r2, r3, r2, asr #31
+; V7A-NEXT:    lsr r0, r0, #2
+; V7A-NEXT:    bfi r2, r0, #7, #1
+; V7A-NEXT:    bfi r2, r0, #14, #1
+; V7A-NEXT:    b .LBB0_5
 ; V7A-NEXT:  .LBB0_3: @ %if.else
-; V7A-NEXT:    cmp r3, #0
-; V7A-NEXT:    orrne r2, r2, r0
-; V7A-NEXT:    cmp r12, #0
-; V7A-NEXT:    strne r2, [r1]
+; V7A-NEXT:    tst r0, #14
+; V7A-NEXT:    bxeq lr
+; V7A-NEXT:  .LBB0_4:
+; V7A-NEXT:    lsl r2, r0, #30
+; V7A-NEXT:    mov r3, #8256
+; V7A-NEXT:    and r2, r3, r2, asr #31
+; V7A-NEXT:    lsr r0, r0, #2
+; V7A-NEXT:    bfi r2, r0, #5, #1
+; V7A-NEXT:    bfi r2, r0, #12, #1
+; V7A-NEXT:  .LBB0_5: @ %if.end
+; V7A-NEXT:    str r2, [r1]
+; V7A-NEXT:  .LBB0_6: @ %exit
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: f:
 ; V7A-T:       @ %bb.0: @ %entry
 ; V7A-T-NEXT:    movs r2, #0
-; V7A-T-NEXT:    and r12, r0, #14
 ; V7A-T-NEXT:    str r2, [r1]
-; V7A-T-NEXT:    and r3, r0, #4
-; V7A-T-NEXT:    and r2, r0, #2
-; V7A-T-NEXT:    lsls r0, r0, #31
-; V7A-T-NEXT:    bne .LBB0_2
+; V7A-T-NEXT:    lsls r2, r0, #31
+; V7A-T-NEXT:    bne .LBB0_3
 ; V7A-T-NEXT:  @ %bb.1: @ %if.then
-; V7A-T-NEXT:    cmp r2, #0
-; V7A-T-NEXT:    it ne
-; V7A-T-NEXT:    movne.w r2, #33024
-; V7A-T-NEXT:    cmp r3, #0
-; V7A-T-NEXT:    it ne
-; V7A-T-NEXT:    addne.w r2, r2, #16512
-; V7A-T-NEXT:    b .LBB0_3
-; V7A-T-NEXT:  .LBB0_2: @ %if.else
-; V7A-T-NEXT:    cmp r2, #0
-; V7A-T-NEXT:    it ne
-; V7A-T-NEXT:    movne.w r2, #8256
-; V7A-T-NEXT:    cmp r3, #0
-; V7A-T-NEXT:    it ne
-; V7A-T-NEXT:    addne.w r2, r2, #4128
+; V7A-T-NEXT:    tst.w r0, #14
+; V7A-T-NEXT:    beq .LBB0_6
+; V7A-T-NEXT:  @ %bb.2:
+; V7A-T-NEXT:    lsls r2, r0, #30
+; V7A-T-NEXT:    mov.w r3, #33024
+; V7A-T-NEXT:    and.w r2, r3, r2, asr #31
+; V7A-T-NEXT:    lsrs r0, r0, #2
+; V7A-T-NEXT:    bfi r2, r0, #7, #1
+; V7A-T-NEXT:    bfi r2, r0, #14, #1
+; V7A-T-NEXT:    b .LBB0_5
 ; V7A-T-NEXT:  .LBB0_3: @ %if.else
-; V7A-T-NEXT:    cmp.w r12, #0
-; V7A-T-NEXT:    it ne
-; V7A-T-NEXT:    strne r2, [r1]
+; V7A-T-NEXT:    tst.w r0, #14
+; V7A-T-NEXT:    it eq
+; V7A-T-NEXT:    bxeq lr
+; V7A-T-NEXT:  .LBB0_4:
+; V7A-T-NEXT:    lsls r2, r0, #30
+; V7A-T-NEXT:    mov.w r3, #8256
+; V7A-T-NEXT:    and.w r2, r3, r2, asr #31
+; V7A-T-NEXT:    lsrs r0, r0, #2
+; V7A-T-NEXT:    bfi r2, r0, #5, #1
+; V7A-T-NEXT:    bfi r2, r0, #12, #1
+; V7A-T-NEXT:  .LBB0_5: @ %if.end
+; V7A-T-NEXT:    str r2, [r1]
+; V7A-T-NEXT:  .LBB0_6: @ %exit
 ; V7A-T-NEXT:    bx lr
 ;
 ; V6M-LABEL: f:
@@ -176,17 +189,16 @@ exit:
 define i32 @f0(i1 %c0, i32 %v) {
 ; V7M-LABEL: f0:
 ; V7M:       @ %bb.0: @ %E
-; V7M-NEXT:    bic r1, r1, #-16843010
 ; V7M-NEXT:    lsls r0, r0, #31
 ; V7M-NEXT:    beq .LBB1_2
 ; V7M-NEXT:  @ %bb.1: @ %A
-; V7M-NEXT:    cmp r1, #0
+; V7M-NEXT:    tst.w r1, #16843009
 ; V7M-NEXT:    itt eq
 ; V7M-NEXT:    moveq r0, #0
 ; V7M-NEXT:    bxeq lr
 ; V7M-NEXT:    b .LBB1_3
 ; V7M-NEXT:  .LBB1_2: @ %B
-; V7M-NEXT:    cmp r1, #0
+; V7M-NEXT:    tst.w r1, #16843009
 ; V7M-NEXT:    itt ne
 ; V7M-NEXT:    movne r0, #0
 ; V7M-NEXT:    bxne lr
@@ -216,17 +228,16 @@ define i32 @f0(i1 %c0, i32 %v) {
 ;
 ; V7A-T-LABEL: f0:
 ; V7A-T:       @ %bb.0: @ %E
-; V7A-T-NEXT:    bic r1, r1, #-16843010
 ; V7A-T-NEXT:    lsls r0, r0, #31
 ; V7A-T-NEXT:    beq .LBB1_2
 ; V7A-T-NEXT:  @ %bb.1: @ %A
-; V7A-T-NEXT:    cmp r1, #0
+; V7A-T-NEXT:    tst.w r1, #16843009
 ; V7A-T-NEXT:    itt eq
 ; V7A-T-NEXT:    moveq r0, #0
 ; V7A-T-NEXT:    bxeq lr
 ; V7A-T-NEXT:    b .LBB1_3
 ; V7A-T-NEXT:  .LBB1_2: @ %B
-; V7A-T-NEXT:    cmp r1, #0
+; V7A-T-NEXT:    tst.w r1, #16843009
 ; V7A-T-NEXT:    itt ne
 ; V7A-T-NEXT:    movne r0, #0
 ; V7A-T-NEXT:    bxne lr
@@ -286,17 +297,16 @@ X:
 define i32 @f1(i1 %c0, i32 %v) {
 ; V7M-LABEL: f1:
 ; V7M:       @ %bb.0: @ %E
-; V7M-NEXT:    and r1, r1, #100663296
 ; V7M-NEXT:    lsls r0, r0, #31
 ; V7M-NEXT:    beq .LBB2_2
 ; V7M-NEXT:  @ %bb.1: @ %A
-; V7M-NEXT:    cmp r1, #0
+; V7M-NEXT:    tst.w r1, #100663296
 ; V7M-NEXT:    itt eq
 ; V7M-NEXT:    moveq r0, #0
 ; V7M-NEXT:    bxeq lr
 ; V7M-NEXT:    b .LBB2_3
 ; V7M-NEXT:  .LBB2_2: @ %B
-; V7M-NEXT:    cmp r1, #0
+; V7M-NEXT:    tst.w r1, #100663296
 ; V7M-NEXT:    itt ne
 ; V7M-NEXT:    movne r0, #0
 ; V7M-NEXT:    bxne lr
@@ -306,11 +316,10 @@ define i32 @f1(i1 %c0, i32 %v) {
 ;
 ; V7A-LABEL: f1:
 ; V7A:       @ %bb.0: @ %E
-; V7A-NEXT:    and r1, r1, #100663296
 ; V7A-NEXT:    tst r0, #1
 ; V7A-NEXT:    beq .LBB2_3
 ; V7A-NEXT:  @ %bb.1: @ %A
-; V7A-NEXT:    cmp r1, #0
+; V7A-NEXT:    tst r1, #100663296
 ; V7A-NEXT:    moveq r0, #0
 ; V7A-NEXT:    bxeq lr
 ; V7A-NEXT:  .LBB2_2: @ %D
@@ -318,23 +327,22 @@ define i32 @f1(i1 %c0, i32 %v) {
 ; V7A-NEXT:    bx lr
 ; V7A-NEXT:  .LBB2_3: @ %B
 ; V7A-NEXT:    mov r0, #0
-; V7A-NEXT:    cmp r1, #0
+; V7A-NEXT:    tst r1, #100663296
 ; V7A-NEXT:    moveq r0, #1
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: f1:
 ; V7A-T:       @ %bb.0: @ %E
-; V7A-T-NEXT:    and r1, r1, #100663296
 ; V7A-T-NEXT:    lsls r0, r0, #31
 ; V7A-T-NEXT:    beq .LBB2_2
 ; V7A-T-NEXT:  @ %bb.1: @ %A
-; V7A-T-NEXT:    cmp r1, #0
+; V7A-T-NEXT:    tst.w r1, #100663296
 ; V7A-T-NEXT:    itt eq
 ; V7A-T-NEXT:    moveq r0, #0
 ; V7A-T-NEXT:    bxeq lr
 ; V7A-T-NEXT:    b .LBB2_3
 ; V7A-T-NEXT:  .LBB2_2: @ %B
-; V7A-T-NEXT:    cmp r1, #0
+; V7A-T-NEXT:    tst.w r1, #100663296
 ; V7A-T-NEXT:    itt ne
 ; V7A-T-NEXT:    movne r0, #0
 ; V7A-T-NEXT:    bxne lr
