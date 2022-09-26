@@ -75,7 +75,8 @@ public:
     return impl->getAbstractAttribute().getDialect();
   }
 
-  /// Print the attribute.
+  /// Print the attribute. If `elideType` is set, the attribute is printed
+  /// without a trailing colon type if it has one.
   void print(raw_ostream &os, bool elideType = false) const;
   void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
   void dump() const;
