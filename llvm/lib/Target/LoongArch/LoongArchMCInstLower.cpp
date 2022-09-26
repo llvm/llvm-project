@@ -47,6 +47,12 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   case LoongArchII::MO_PCREL_LO:
     Kind = LoongArchMCExpr::VK_LoongArch_PCALA_LO12;
     break;
+  case LoongArchII::MO_GOT_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_GOT_HI20;
+    break;
+  case LoongArchII::MO_GOT_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_GOT_LO12;
+    break;
     // TODO: Handle more target-flags.
   }
 
@@ -94,9 +100,12 @@ bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
     MCOp = lowerSymbolOperand(
         MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()), AP);
     break;
-  // TODO: lower special operands
   case MachineOperand::MO_BlockAddress:
+    MCOp = lowerSymbolOperand(
+        MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP);
+    break;
   case MachineOperand::MO_JumpTableIndex:
+    MCOp = lowerSymbolOperand(MO, AP.GetJTISymbol(MO.getIndex()), AP);
     break;
   }
   return true;
