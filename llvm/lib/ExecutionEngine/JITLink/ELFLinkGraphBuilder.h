@@ -409,19 +409,19 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
       continue;
     }
 
-    // Map Visibility and Binding to Scope and Linkage:
-    Linkage L;
-    Scope S;
-
-    if (auto LSOrErr = getSymbolLinkageAndScope(Sym, *Name))
-      std::tie(L, S) = *LSOrErr;
-    else
-      return LSOrErr.takeError();
-
     if (Sym.isDefined() &&
         (Sym.getType() == ELF::STT_NOTYPE || Sym.getType() == ELF::STT_FUNC ||
          Sym.getType() == ELF::STT_OBJECT ||
          Sym.getType() == ELF::STT_SECTION || Sym.getType() == ELF::STT_TLS)) {
+
+      // Map Visibility and Binding to Scope and Linkage:
+      Linkage L;
+      Scope S;
+      if (auto LSOrErr = getSymbolLinkageAndScope(Sym, *Name))
+        std::tie(L, S) = *LSOrErr;
+      else
+        return LSOrErr.takeError();
+
       // Handle extended tables.
       unsigned Shndx = Sym.st_shndx;
       if (Shndx == ELF::SHN_XINDEX) {
@@ -460,7 +460,25 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
                << ": Creating external graph symbol for ELF symbol \"" << *Name
                << "\"\n";
       });
-      auto &GSym = G->addExternalSymbol(*Name, Sym.st_size, L);
+
+      if (Sym.getBinding() != ELF::STB_GLOBAL &&
+          Sym.getBinding() != ELF::STB_WEAK)
+        return make_error<StringError>(
+            "Invalid symbol binding " +
+                Twine(static_cast<int>(Sym.getBinding())) +
+                " for external symbol " + *Name,
+            inconvertibleErrorCode());
+
+      if (Sym.getVisibility() != ELF::STV_DEFAULT)
+        return make_error<StringError>(
+            "Invalid symbol visibility " +
+                Twine(static_cast<int>(Sym.getVisibility())) +
+                " for external symbol " + *Name,
+            inconvertibleErrorCode());
+
+      // If L is Linkage::Weak that means this is a weakly referenced symbol.
+      auto &GSym = G->addExternalSymbol(*Name, Sym.st_size,
+                                        Sym.getBinding() == ELF::STB_WEAK);
       setGraphSymbol(SymIndex, GSym);
     } else {
       LLVM_DEBUG({

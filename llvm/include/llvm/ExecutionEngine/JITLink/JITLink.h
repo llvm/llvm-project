@@ -405,7 +405,7 @@ private:
   Symbol(Addressable &Base, orc::ExecutorAddrDiff Offset, StringRef Name,
          orc::ExecutorAddrDiff Size, Linkage L, Scope S, bool IsLive,
          bool IsCallable)
-      : Name(Name), Base(&Base), Offset(Offset), Size(Size) {
+      : Name(Name), Base(&Base), Offset(Offset), WeakRef(0), Size(Size) {
     assert(Offset <= MaxOffset && "Offset out of range");
     setLinkage(L);
     setScope(S);
@@ -428,12 +428,14 @@ private:
 
   static Symbol &constructExternal(BumpPtrAllocator &Allocator,
                                    Addressable &Base, StringRef Name,
-                                   orc::ExecutorAddrDiff Size, Linkage L) {
+                                   orc::ExecutorAddrDiff Size, Linkage L,
+                                   bool WeaklyReferenced) {
     assert(!Base.isDefined() &&
            "Cannot create external symbol from defined block");
     assert(!Name.empty() && "External symbol name cannot be empty");
     auto *Sym = Allocator.Allocate<Symbol>();
     new (Sym) Symbol(Base, 0, Name, Size, L, Scope::Default, false, false);
+    Sym->setWeaklyReferenced(WeaklyReferenced);
     return *Sym;
   }
 
@@ -615,6 +617,20 @@ public:
     this->S = static_cast<uint8_t>(S);
   }
 
+  /// Returns true if this is a weakly referenced external symbol.
+  /// This method may only be called on external symbols.
+  bool isWeaklyReferenced() const {
+    assert(isExternal() && "isWeaklyReferenced called on non-external");
+    return WeakRef;
+  }
+
+  /// Set the WeaklyReferenced value for this symbol.
+  /// This method may only be called on external symbols.
+  void setWeaklyReferenced(bool WeakRef) {
+    assert(isExternal() && "setWeaklyReferenced called on non-external");
+    this->WeakRef = WeakRef;
+  }
+
 private:
   void makeExternal(Addressable &A) {
     assert(!A.isDefined() && !A.isAbsolute() &&
@@ -645,11 +661,12 @@ private:
   // FIXME: A char* or SymbolStringPtr may pack better.
   StringRef Name;
   Addressable *Base = nullptr;
-  uint64_t Offset : 59;
+  uint64_t Offset : 58;
   uint64_t L : 1;
   uint64_t S : 2;
   uint64_t IsLive : 1;
   uint64_t IsCallable : 1;
+  uint64_t WeakRef : 1;
   size_t Size = 0;
 };
 
@@ -1076,12 +1093,13 @@ public:
   /// Add an external symbol.
   /// Some formats (e.g. ELF) allow Symbols to have sizes. For Symbols whose
   /// size is not known, you should substitute '0'.
-  /// For external symbols Linkage determines whether the symbol must be
-  /// present during lookup: Externals with strong linkage must be found or
-  /// an error will be emitted. Externals with weak linkage are permitted to
-  /// be undefined, in which case they are assigned a value of 0.
+  /// The IsWeaklyReferenced argument determines whether the symbol must be
+  /// present during lookup: Externals that are strongly referenced must be
+  /// found or an error will be emitted. Externals that are weakly referenced
+  /// are permitted to be undefined, in which case they are assigned an address
+  /// of 0.
   Symbol &addExternalSymbol(StringRef Name, orc::ExecutorAddrDiff Size,
-                            Linkage L) {
+                            bool IsWeaklyReferenced) {
     assert(llvm::count_if(ExternalSymbols,
                           [&](const Symbol *Sym) {
                             return Sym->getName() == Name;
@@ -1089,7 +1107,7 @@ public:
            "Duplicate external symbol");
     auto &Sym = Symbol::constructExternal(
         Allocator, createAddressable(orc::ExecutorAddr(), false), Name, Size,
-        L);
+        Linkage::Strong, IsWeaklyReferenced);
     ExternalSymbols.insert(&Sym);
     return Sym;
   }
