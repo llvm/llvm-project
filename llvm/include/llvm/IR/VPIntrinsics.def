@@ -239,6 +239,10 @@ END_REGISTER_VP(vp_fneg, VP_FNEG)
 BEGIN_REGISTER_VP(vp_fabs, 1, 2, VP_FABS, -1)
 END_REGISTER_VP(vp_fabs, VP_FABS)
 
+// llvm.vp.sqrt(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_sqrt, 1, 2, VP_SQRT, -1)
+END_REGISTER_VP(vp_sqrt, VP_SQRT)
+
 // llvm.vp.fma(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fma, 3, 4, VP_FMA, -1)
 VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fma)
