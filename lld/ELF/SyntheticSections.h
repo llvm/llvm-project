@@ -377,10 +377,10 @@ public:
   bool isNeeded() const override;
   void finalizeContents() override;
 
-  void addEntryZero(const Symbol &symbol);
-  int getEntryZero(const Symbol &symbol);
-  void addEntryRa(const Symbol &symbol);
-  int getEntryRa(const Symbol &symbol);
+  void addCMJTEntryCandidate(const Symbol &symbol);
+  int getCMJTEntryIndex(const Symbol &symbol);
+  void addCMJALTEntryCandidate(const Symbol &symbol);
+  int getCMJALTEntryIndex(const Symbol &symbol);
   void scanTableJumpEntrys(const InputSection &sec) const;
 
   // Flag to force TableJump to be in output if we have relocations
@@ -400,17 +400,17 @@ private:
 
   const size_t xlen = config->is64 ? 64 : 32;
 
-  std::map<std::string, int> entriesZero;
-  std::vector<std::pair<std::string, int>> finalizedEntriesZero;
-  std::map<std::string, int> entriesRa;
-  std::vector<std::pair<std::string, int>> finalizedEntriesRa;
+  std::map<std::string, int> CMJTEntryCandidates;
+  std::vector<std::pair<std::string, int>> finalizedCMJTEntries;
+  std::map<std::string, int> CMJALTEntryCandidates;
+  std::vector<std::pair<std::string, int>> finalizedCMJALTEntries;
 
   // used in finalizeContents function.
-  const size_t maxSizeZero = 64;
-  const size_t maxSizeRa = 192;
+  const size_t maxCMJTEntrySize = 64;
+  const size_t maxCMJALTEntrySize = 192;
 
-  const size_t startZero = 0;
-  const size_t startRa = 64;
+  const size_t startCMJTEntryIdx = 0;
+  const size_t startCMJALTEntryIdx = 64;
 };
 
 // The IgotPltSection is a Got associated with the PltSection for GNU Ifunc

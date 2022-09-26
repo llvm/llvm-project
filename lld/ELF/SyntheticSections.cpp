@@ -1175,22 +1175,22 @@ TableJumpSection::TableJumpSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
                        config->wordsize, "__tbljalvec_base$") {}
 
-void TableJumpSection::addEntryZero(const Symbol &symbol) {
-  addEntry(symbol, entriesZero);
+void TableJumpSection::addCMJTEntryCandidate(const Symbol &symbol) {
+  addEntry(symbol, CMJTEntryCandidates);
 }
 
-int TableJumpSection::getEntryZero(const Symbol &symbol) {
-  uint32_t index = getEntry(symbol, finalizedEntriesZero);
-  return index < maxSizeZero ? (int)(startZero + index) : -1;
+int TableJumpSection::getCMJTEntryIndex(const Symbol &symbol) {
+  uint32_t index = getEntry(symbol, finalizedCMJTEntries);
+  return index < maxCMJTEntrySize ? (int)(startCMJTEntryIdx + index) : -1;
 }
 
-void TableJumpSection::addEntryRa(const Symbol &symbol) {
-  addEntry(symbol, entriesRa);
+void TableJumpSection::addCMJALTEntryCandidate(const Symbol &symbol) {
+  addEntry(symbol, CMJALTEntryCandidates);
 }
 
-int TableJumpSection::getEntryRa(const Symbol &symbol) {
-  uint32_t index = getEntry(symbol, finalizedEntriesRa);
-  return index < maxSizeRa ? (int)(startRa + index) : -1;
+int TableJumpSection::getCMJALTEntryIndex(const Symbol &symbol) {
+  uint32_t index = getEntry(symbol, finalizedCMJALTEntries);
+  return index < maxCMJALTEntrySize ? (int)(startCMJALTEntryIdx + index) : -1;
 }
 
 void TableJumpSection::addEntry(const Symbol &symbol,
@@ -1222,9 +1222,9 @@ void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
       const auto jalr = sec.data()[r.offset + 4];
       const uint8_t rd = (jalr & ((1ULL << (11 + 1)) - 1)) >> 7;
       if (rd == 0)
-        in.riscvTableJumpSection->addEntryZero(*r.sym);
+        in.riscvTableJumpSection->addCMJTEntryCandidate(*r.sym);
       else if (rd == 1)
-        in.riscvTableJumpSection->addEntryRa(*r.sym);
+        in.riscvTableJumpSection->addCMJALTEntryCandidate(*r.sym);
       else
         return; // Unknown link register, do not modify.
     }
@@ -1238,32 +1238,32 @@ void TableJumpSection::finalizeContents() {
     return p1.second > p2.second;
   };
 
-  std::copy(entriesZero.begin(), entriesZero.end(),
-            std::back_inserter(finalizedEntriesZero));
-  std::sort(finalizedEntriesZero.begin(), finalizedEntriesZero.end(), cmp);
-  if (finalizedEntriesZero.size() > maxSizeZero)
-    finalizedEntriesZero.resize(maxSizeZero);
+  std::copy(CMJTEntryCandidates.begin(), CMJTEntryCandidates.end(),
+            std::back_inserter(finalizedCMJTEntries));
+  std::sort(finalizedCMJTEntries.begin(), finalizedCMJTEntries.end(), cmp);
+  if (finalizedCMJTEntries.size() > maxCMJTEntrySize)
+    finalizedCMJTEntries.resize(maxCMJTEntrySize);
 
-  std::copy(entriesRa.begin(), entriesRa.end(),
-            std::back_inserter(finalizedEntriesRa));
-  std::sort(finalizedEntriesRa.begin(), finalizedEntriesRa.end(), cmp);
-  if (finalizedEntriesRa.size() > maxSizeRa)
-    finalizedEntriesRa.resize(maxSizeRa);
+  std::copy(CMJALTEntryCandidates.begin(), CMJALTEntryCandidates.end(),
+            std::back_inserter(finalizedCMJALTEntries));
+  std::sort(finalizedCMJALTEntries.begin(), finalizedCMJALTEntries.end(), cmp);
+  if (finalizedCMJALTEntries.size() > maxCMJALTEntrySize)
+    finalizedCMJALTEntries.resize(maxCMJALTEntrySize);
 }
 
 size_t TableJumpSection::getSize() const {
-  if (!entriesRa.empty()) {
-    return (startRa + entriesRa.size()) * xlen;
+  if (!CMJALTEntryCandidates.empty()) {
+    return (startCMJALTEntryIdx + CMJALTEntryCandidates.size()) * xlen;
   }
-  return (startZero + entriesZero.size()) * xlen;
+  return (startCMJTEntryIdx + CMJTEntryCandidates.size()) * xlen;
 }
 
 void TableJumpSection::writeTo(uint8_t *buf) {
   target->writeTableJumpHeader(buf);
-  writeEntries(buf + startZero, finalizedEntriesZero);
-  padUntil(buf + ((startZero + finalizedEntriesZero.size()) * xlen),
-           startRa * xlen);
-  writeEntries(buf + startRa, finalizedEntriesRa);
+  writeEntries(buf + startCMJTEntryIdx, finalizedCMJTEntries);
+  padUntil(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) * xlen),
+           startCMJALTEntryIdx * xlen);
+  writeEntries(buf + startCMJALTEntryIdx, finalizedCMJALTEntries);
 }
 
 void TableJumpSection::padUntil(uint8_t *buf, const uint8_t address) {

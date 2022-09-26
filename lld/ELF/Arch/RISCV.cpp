@@ -628,9 +628,9 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
   } else {
     int tblEntryIndex = -1;
     if (config->riscvTbljal && rd == 0)
-      tblEntryIndex = in.riscvTableJumpSection->getEntryZero(*r.sym);
+      tblEntryIndex = in.riscvTableJumpSection->getCMJTEntryIndex(*r.sym);
     else if (config->riscvTbljal && rd == X_RA)
-      tblEntryIndex = in.riscvTableJumpSection->getEntryRa(*r.sym);
+      tblEntryIndex = in.riscvTableJumpSection->getCMJALTEntryIndex(*r.sym);
 
     if (tblEntryIndex >= 0) {
       sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
