@@ -58,7 +58,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ROTL, GRLenVT, Expand);
   setOperationAction(ISD::CTPOP, GRLenVT, Expand);
 
-  setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, GRLenVT, Custom);
+  setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
+                      ISD::JumpTable},
+                     GRLenVT, Custom);
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
@@ -128,8 +130,6 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
   }
 
-  // Effectively disable jump table generation.
-  setMinimumJumpTableEntries(INT_MAX);
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
 
   setOperationAction(ISD::BR_CC, GRLenVT, Expand);
@@ -180,6 +180,10 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerGlobalAddress(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return lowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::BlockAddress:
+    return lowerBlockAddress(Op, DAG);
+  case ISD::JumpTable:
+    return lowerJumpTable(Op, DAG);
   case ISD::SHL_PARTS:
     return lowerShiftLeftParts(Op, DAG);
   case ISD::SRA_PARTS:
@@ -272,46 +276,66 @@ SDValue LoongArchTargetLowering::lowerFP_TO_SINT(SDValue Op,
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
 }
 
+static SDValue getTargetNode(GlobalAddressSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, Flags);
+}
+
+static SDValue getTargetNode(BlockAddressSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetBlockAddress(N->getBlockAddress(), Ty, N->getOffset(),
+                                   Flags);
+}
+
+static SDValue getTargetNode(ConstantPoolSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlign(),
+                                   N->getOffset(), Flags);
+}
+
+static SDValue getTargetNode(JumpTableSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetJumpTable(N->getIndex(), Ty, Flags);
+}
+
+template <class NodeTy>
+SDValue LoongArchTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
+                                         bool IsLocal) const {
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  SDValue Addr = getTargetNode(N, DL, Ty, DAG, 0);
+  // TODO: Check CodeModel.
+  if (IsLocal)
+    // This generates the pattern (PseudoLA_PCREL sym), which expands to
+    // (addi.w/d (pcalau12i %pc_hi20(sym)) %pc_lo12(sym)).
+    return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_PCREL, DL, Ty, Addr),
+                   0);
+
+  // This generates the pattern (PseudoLA_GOT sym), which expands to (ld.w/d
+  // (pcalau12i %got_pc_hi20(sym)) %got_pc_lo12(sym)).
+  return SDValue(DAG.getMachineNode(LoongArch::PseudoLA_GOT, DL, Ty, Addr), 0);
+}
+
+SDValue LoongArchTargetLowering::lowerBlockAddress(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  return getAddr(cast<BlockAddressSDNode>(Op), DAG);
+}
+
+SDValue LoongArchTargetLowering::lowerJumpTable(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  return getAddr(cast<JumpTableSDNode>(Op), DAG);
+}
+
 SDValue LoongArchTargetLowering::lowerConstantPool(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT Ty = Op.getValueType();
-  ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
-
-  // FIXME: Only support PC-relative addressing to access the symbol.
-  // Target flags will be added later.
-  if (!isPositionIndependent()) {
-    SDValue ConstantN = DAG.getTargetConstantPool(
-        N->getConstVal(), Ty, N->getAlign(), N->getOffset());
-    SDValue AddrHi(DAG.getMachineNode(LoongArch::PCALAU12I, DL, Ty, ConstantN),
-                   0);
-    SDValue Addr(DAG.getMachineNode(Subtarget.is64Bit() ? LoongArch::ADDI_D
-                                                        : LoongArch::ADDI_W,
-                                    DL, Ty, AddrHi, ConstantN),
-                 0);
-    return Addr;
-  }
-  report_fatal_error("Unable to lower ConstantPool");
+  return getAddr(cast<ConstantPoolSDNode>(Op), DAG);
 }
 
 SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
                                                     SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  EVT Ty = getPointerTy(DAG.getDataLayout());
-  const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
-  unsigned ADDIOp = Subtarget.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
-
-  // TODO: Support dso_preemptable and target flags.
-  if (GV->isDSOLocal()) {
-    SDValue GAHi =
-        DAG.getTargetGlobalAddress(GV, DL, Ty, 0, LoongArchII::MO_PCREL_HI);
-    SDValue GALo =
-        DAG.getTargetGlobalAddress(GV, DL, Ty, 0, LoongArchII::MO_PCREL_LO);
-    SDValue AddrHi(DAG.getMachineNode(LoongArch::PCALAU12I, DL, Ty, GAHi), 0);
-
-    return SDValue(DAG.getMachineNode(ADDIOp, DL, Ty, AddrHi, GALo), 0);
-  }
-  report_fatal_error("Unable to lowerGlobalAddress");
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
+  assert(N->getOffset() == 0 && "unexpected offset in global node");
+  return getAddr(N, DAG, N->getGlobal()->isDSOLocal());
 }
 
 SDValue LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,

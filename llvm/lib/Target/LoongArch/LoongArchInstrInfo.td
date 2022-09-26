@@ -919,6 +919,12 @@ let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins grlenimm:$src), []>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins grlenimm:$src), []>;
+
 /// BSTRINS and BSTRPICK
 
 let Predicates = [IsLA32] in {
