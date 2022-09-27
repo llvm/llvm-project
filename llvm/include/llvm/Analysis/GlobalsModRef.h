@@ -27,9 +27,7 @@ class Function;
 ///
 /// This focuses on handling aliasing properties of globals and interprocedural
 /// function call mod/ref information.
-class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
-  friend AAResultBase<GlobalsAAResult>;
-
+class GlobalsAAResult : public AAResultBase {
   class FunctionInfo;
 
   const DataLayout &DL;
