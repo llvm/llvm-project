@@ -110,6 +110,9 @@ public:
                               BasicBlock::const_iterator To,
                               const T &Ignore = {}) const;
 
+  // This function is only used for assertions at the moment.
+  [[maybe_unused]] bool isByteVecTy(Type *Ty) const;
+
   Function &F;
   const DataLayout &DL;
   AliasAnalysis &AA;
@@ -119,11 +122,6 @@ public:
   const HexagonSubtarget &HST;
 
 private:
-#ifndef NDEBUG
-  // These two functions are only used for assertions at the moment.
-  bool isByteVecTy(Type *Ty) const;
-  bool isSectorTy(Type *Ty) const;
-#endif
   Value *getElementRange(IRBuilder<> &Builder, Value *Lo, Value *Hi, int Start,
                          int Length) const;
 };
@@ -224,6 +222,8 @@ private:
   Optional<MemoryLocation> getLocation(const Instruction &In) const;
   Optional<AddrInfo> getAddrInfo(Instruction &In) const;
   bool isHvx(const AddrInfo &AI) const;
+  // This function is only used for assertions at the moment.
+  [[maybe_unused]] bool isSectorTy(Type *Ty) const;
 
   Value *getPayload(Value *Val) const;
   Value *getMask(Value *Val) const;
@@ -804,6 +804,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
 
     if (DoAlign) {
       for (int j = 0; j != NumSectors; ++j) {
+        assert(isSectorTy(ASpan[j].Seg.Val->getType()));
         ASpan[j].Seg.Val = HVC.vralignb(Builder, ASpan[j].Seg.Val,
                                         ASpan[j + 1].Seg.Val, AlignVal);
       }
@@ -867,10 +868,11 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     // vlalign
     if (DoAlign) {
       for (int j = 1; j != NumSectors + 2; ++j) {
-        ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanV[j - 1].Seg.Val,
-                                             ASpanV[j].Seg.Val, AlignVal);
-        ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanM[j - 1].Seg.Val,
-                                             ASpanM[j].Seg.Val, AlignVal);
+        Value *PrevV = ASpanV[j - 1].Seg.Val, *ThisV = ASpanV[j].Seg.Val;
+        Value *PrevM = ASpanM[j - 1].Seg.Val, *ThisM = ASpanM[j].Seg.Val;
+        assert(isSectorTy(PrevV->getType()) && isSectorTy(PrevM->getType()));
+        ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevV, ThisV, AlignVal);
+        ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevM, ThisM, AlignVal);
       }
     }
 
@@ -895,6 +897,15 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     Inst->eraseFromParent();
 
   return true;
+}
+
+auto AlignVectors::isSectorTy(Type *Ty) const -> bool {
+  if (!HVC.isByteVecTy(Ty))
+    return false;
+  int Size = HVC.getSizeOf(Ty);
+  if (HVC.HST.isTypeForHVX(Ty))
+    return Size == static_cast<int>(HVC.HST.getVectorLength());
+  return Size == 4 || Size == 8;
 }
 
 auto AlignVectors::run() -> bool {
@@ -1039,7 +1050,6 @@ auto HexagonVectorCombine::insertb(IRBuilder<> &Builder, Value *Dst, Value *Src,
 auto HexagonVectorCombine::vlalignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
                                     Value *Amt) const -> Value * {
   assert(Lo->getType() == Hi->getType() && "Argument type mismatch");
-  assert(isSectorTy(Hi->getType()));
   if (isZero(Amt))
     return Hi;
   int VecLen = getSizeOf(Hi);
@@ -1073,7 +1083,6 @@ auto HexagonVectorCombine::vlalignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
 auto HexagonVectorCombine::vralignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
                                     Value *Amt) const -> Value * {
   assert(Lo->getType() == Hi->getType() && "Argument type mismatch");
-  assert(isSectorTy(Lo->getType()));
   if (isZero(Amt))
     return Lo;
   int VecLen = getSizeOf(Lo);
@@ -1448,22 +1457,11 @@ auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
   return true;
 }
 
-#ifndef NDEBUG
 auto HexagonVectorCombine::isByteVecTy(Type *Ty) const -> bool {
   if (auto *VecTy = dyn_cast<VectorType>(Ty))
     return VecTy->getElementType() == getByteTy();
   return false;
 }
-
-auto HexagonVectorCombine::isSectorTy(Type *Ty) const -> bool {
-  if (!isByteVecTy(Ty))
-    return false;
-  int Size = getSizeOf(Ty);
-  if (HST.isTypeForHVX(Ty))
-    return Size == static_cast<int>(HST.getVectorLength());
-  return Size == 4 || Size == 8;
-}
-#endif
 
 auto HexagonVectorCombine::getElementRange(IRBuilder<> &Builder, Value *Lo,
                                            Value *Hi, int Start,
