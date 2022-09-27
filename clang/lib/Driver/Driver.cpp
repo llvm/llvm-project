@@ -2911,12 +2911,16 @@ class OffloadingActionBuilder final {
         std::string FileName = IA->getInputArg().getAsString(Args);
         // Check if the type of the file is the same as the action. Do not
         // unbundle it if it is not. Do not unbundle .so files, for example,
-        // which are not object files.
+        // which are not object files. Files with extension ".lib" is classified
+        // as TY_Object but they are actually archives, therefore should not be
+        // unbundled here as objects. They will be handled at other places.
+        const StringRef LibFileExt = ".lib";
         if (IA->getType() == types::TY_Object &&
             (!llvm::sys::path::has_extension(FileName) ||
              types::lookupTypeForExtension(
                  llvm::sys::path::extension(FileName).drop_front()) !=
-                 types::TY_Object))
+                 types::TY_Object ||
+             llvm::sys::path::extension(FileName) == LibFileExt))
           return ABRT_Inactive;
 
         for (auto Arch : GpuArchList) {
