@@ -413,19 +413,6 @@ private:
     setCallable(IsCallable);
   }
 
-  static Symbol &constructCommon(BumpPtrAllocator &Allocator, Block &Base,
-                                 StringRef Name, orc::ExecutorAddrDiff Size,
-                                 Scope S, bool IsLive) {
-    assert(!Name.empty() && "Common symbol name cannot be empty");
-    assert(Base.isDefined() &&
-           "Cannot create common symbol from undefined block");
-    assert(static_cast<Block &>(Base).getSize() == Size &&
-           "Common symbol size should match underlying block size");
-    auto *Sym = Allocator.Allocate<Symbol>();
-    new (Sym) Symbol(Base, 0, Name, Size, Linkage::Weak, S, IsLive, false);
-    return *Sym;
-  }
-
   static Symbol &constructExternal(BumpPtrAllocator &Allocator,
                                    Addressable &Base, StringRef Name,
                                    orc::ExecutorAddrDiff Size, Linkage L,
@@ -1124,22 +1111,6 @@ public:
     auto &Sym = Symbol::constructAbsolute(Allocator, createAddressable(Address),
                                           Name, Size, L, S, IsLive);
     AbsoluteSymbols.insert(&Sym);
-    return Sym;
-  }
-
-  /// Convenience method for adding a weak zero-fill symbol.
-  Symbol &addCommonSymbol(StringRef Name, Scope S, Section &Section,
-                          orc::ExecutorAddr Address, orc::ExecutorAddrDiff Size,
-                          uint64_t Alignment, bool IsLive) {
-    assert(llvm::count_if(defined_symbols(),
-                          [&](const Symbol *Sym) {
-                            return Sym->getName() == Name;
-                          }) == 0 &&
-           "Duplicate defined symbol");
-    auto &Sym = Symbol::constructCommon(
-        Allocator, createBlock(Section, Size, Address, Alignment, 0), Name,
-        Size, S, IsLive);
-    Section.addSymbol(Sym);
     return Sym;
   }
 
