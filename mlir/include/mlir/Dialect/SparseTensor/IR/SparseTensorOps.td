@@ -392,6 +392,51 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
   let assemblyFormat = "$tensor `,` $dest attr-dict `:` type($tensor) `,` type($dest)";
 }
 
+def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
+    // TODO: May want to extend tablegen with
+    // class NonemptyVariadic<Type type> : Variadic<type> { let minSize = 1; }
+    // and then use NonemptyVariadic<...>:$xs here.
+    Arguments<(ins Index:$n,
+               Variadic<StridedMemRefRankOf<[AnyInteger, Index], [1]>>:$xs,
+               Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys)>  {
+  string summary = "Sorts the arrays in xs and ys lexicographically on the "
+                   "integral values found in the xs list";
+  string description = [{
+    Lexicographically sort the first `n` values in `xs` along with the values in
+    `ys`. Conceptually, the values being sorted are tuples produced by
+    `zip(zip(xs), zip(ys))`. In particular, values in `ys` needed to be sorted
+    along with values in `xs`, but values in `ys` don't affect the
+    lexicographical order. The order in which arrays appear in `xs` affects the
+    sorting result. The operator updates `xs` and `ys` in place with the result
+    of the sorting.
+
+    For example, assume x1=[4, 3], x2=[1, 2], y1=[10, 5], then the output of
+    "sort 2, x1, x2 jointly y1" are x1=[3, 4], x2=[2, 1], y1=[5, 10] while the
+    output of "sort 2, x2, x1, jointly y1" are x2=[1, 2], x1=[4, 3], y1=[10, 5].
+
+    Buffers in `xs` needs to have the same integral element type while buffers
+    in `ys` can have different numeric element types. All buffers in `xs` and
+    `ys` should have a dimension not less than `n`. The behavior of the operator
+    is undefined if this condition is not met. The operator requires at least
+    one buffer in `xs` while `ys` can be empty.
+
+    Note that this operation is "impure" in the sense that its behavior is
+    solely defined by side-effects and not SSA values. The semantics may be
+    refined over time as our sparse abstractions evolve.
+
+    Example:
+
+    ```mlir
+    sparse_tensor.sort %n, %x1, %x2 jointly y1, %y2
+      : memref<?xindex>, memref<?xindex> jointly memref<?xindex>, memref<?xf32>
+    ```
+  }];
+  let assemblyFormat = "$n `,` $xs (`jointly` $ys^)? attr-dict"
+                       "`:` type($xs) (`jointly` type($ys)^)?";
+
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Syntax Operations.
 //===----------------------------------------------------------------------===//

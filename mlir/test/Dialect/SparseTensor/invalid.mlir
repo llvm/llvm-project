@@ -501,3 +501,29 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   }
   return
 }
+
+// -----
+
+// TODO: a test case with empty xs doesn't work due to some parser issues.
+
+func.func @sparse_sort_x_type( %arg0: index, %arg1: memref<?xf32>) {
+  // expected-error@+1 {{operand #1 must be 1D memref of integer or index values}}
+  sparse_tensor.sort %arg0, %arg1: memref<?xf32>
+}
+
+// -----
+
+func.func @sparse_sort_dim_too_small(%arg0: memref<10xindex>) {
+  %i20 = arith.constant 20 : index
+  // expected-error@+1 {{xs and ys need to have a dimension >= n: 10 < 20}}
+  sparse_tensor.sort %i20, %arg0 : memref<10xindex>
+  return
+}
+
+// -----
+
+func.func @sparse_sort_mismatch_x_type(%arg0: index, %arg1: memref<10xindex>, %arg2: memref<10xi8>) {
+  // expected-error@+1 {{mismatch xs element types}}
+  sparse_tensor.sort %arg0, %arg1, %arg2 : memref<10xindex>, memref<10xi8>
+  return
+}
