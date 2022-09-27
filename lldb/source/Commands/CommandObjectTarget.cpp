@@ -1549,12 +1549,16 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
           strm.EOL();
         } else {
           strm.IndentMore();
+          strm.Indent("    Name: ");
+          strm.PutCString(symbol->GetDisplayName().GetStringRef());
+          strm.EOL();
           strm.Indent("    Value: ");
           strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());
           if (symbol->GetByteSizeIsValid()) {
             strm.Indent("    Size: ");
             strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetByteSize());
           }
+          strm.IndentLess();
         }
       }
     }
