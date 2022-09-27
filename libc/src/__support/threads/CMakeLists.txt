@@ -43,3 +43,17 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
       libc.src.__support.CPP.optional
   )
 endif()
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS}/callonce.cpp)
+  add_object_library(
+    callonce
+    SRCS
+      ${LIBC_TARGET_OS}/callonce.cpp
+    HDRS
+      callonce.h
+    DEPENDS
+      libc.include.sys_syscall
+      libc.src.__support.CPP.atomic
+      libc.src.__support.OSUtil.osutil
+  )
+endif()
