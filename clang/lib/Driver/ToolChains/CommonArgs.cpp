@@ -626,6 +626,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                          Path));
   }
 
+  // This controls whether or not we perform JustMyCode instrumentation.
+  if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
+    if (ToolChain.getEffectiveTriple().isOSBinFormatELF())
+      CmdArgs.push_back("-plugin-opt=-enable-jmc-instrument");
+    else
+      D.Diag(clang::diag::warn_drv_fjmc_for_elf_only);
+  }
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty())
