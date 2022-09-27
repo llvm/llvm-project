@@ -343,7 +343,6 @@ ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 endif
 OBJECTS =
 EXE ?= a.out
-
 ifneq "$(FRAMEWORK)" ""
 	DYLIB_NAME ?= $(FRAMEWORK).framework/Versions/A/$(FRAMEWORK)
 	DYLIB_FILENAME ?= $(FRAMEWORK).framework/Versions/A/$(FRAMEWORK)
@@ -732,9 +731,9 @@ ifeq "$(USESWIFTDRIVER)" "1"
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Darwin"
 DYLIB_SWIFT_FLAGS=  \
-	 -Xlinker -dylib \
-	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
-	 $(LD_EXTRAS)
+        -Xlinker -dylib \
+        -Xlinker -install_name -Xlinker "$(DYLIB_INSTALL_NAME)" \
+        $(LD_EXTRAS)
 ifeq "$(DYLIB_HIDE_SWIFTMODULE)" ""
 DYLIB_SWIFT_FLAGS+= -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule
 endif

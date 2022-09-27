@@ -2608,12 +2608,39 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
   LLDB_SCOPED_TIMER();
 
   Module *lldb_module = nullptr;
-  if (m_use_scratch_typesystem_per_module)
-    if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
-      auto sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
-      lldb_module = sc.module_sp.get();
-    }
+  if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
+    auto sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
+    lldb_module = sc.module_sp.get();
+  }
 
+  // Opt into the per-module scratch context if we find incompatible triples.
+  if (!m_use_scratch_typesystem_per_module) {
+    TargetSP target_sp = exe_scope.CalculateTarget();
+    if (lldb_module) {
+      auto module_arch = lldb_module->GetArchitecture();
+      auto target_arch = target_sp->GetArchitecture();
+      auto module_triple = module_arch.GetTriple();
+      auto target_triple = target_arch.GetTriple();
+      if (!module_arch.IsCompatibleMatch(target_arch) ||
+          (module_triple.isArm64e() != target_triple.isArm64e())) {
+        m_use_scratch_typesystem_per_module = true;
+        std::string module_name = lldb_module->GetSpecificationDescription();
+        const char *msg = "%sModule \"%s\" uses triple \"%s\", which is "
+                          "not compatible with the target triple \"%s\". "
+                          "Enabling per-module Swift scratch context.\n";
+
+        StreamSP errs = GetDebugger().GetAsyncErrorStream();
+        if (errs)
+          errs->Printf(msg, "warning: ", module_name.c_str(),
+                       module_triple.str().c_str(),
+                       target_triple.str().c_str());
+        if (log)
+          log->Printf(msg, "", module_name.c_str(), module_triple.str().c_str(),
+                      target_triple.str().c_str());
+      }
+    }
+  }
+ 
   auto get_or_create_fallback_context =
       [&]() -> TypeSystemSwiftTypeRefForExpressions * {
     if (!lldb_module || !m_use_scratch_typesystem_per_module)

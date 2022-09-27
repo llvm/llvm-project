@@ -1475,13 +1475,14 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
           : static_cast<SwiftASTContext *>(new SwiftASTContextForModule(
                 m_description, typeref_typesystem)));
   bool suppress_config_log = false;
-  auto defer_log = llvm::make_scope_exit([swift_ast_sp, &suppress_config_log] {
-    // To avoid spamming the log with useless info, we don't log the
-    // configuration if everything went fine and the current module
-    // doesn't have any Swift contents (i.e., the shared cache dylibs).
-    if (!suppress_config_log)
-      swift_ast_sp->LogConfiguration();
-  });
+  auto defer_log =
+      llvm::make_scope_exit([swift_ast_sp, &suppress_config_log, fallback] {
+        // To avoid spamming the log with useless info, we don't log the
+        // configuration if everything went fine and the current module
+        // doesn't have any Swift contents (i.e., the shared cache dylibs).
+        if (!suppress_config_log || fallback)
+          swift_ast_sp->LogConfiguration();
+      });
 
   // This is a module AST context, mark it as such.
   swift_ast_sp->m_is_scratch_context = false;
