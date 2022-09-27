@@ -505,9 +505,10 @@ Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
   // Collect the list of template arguments relative to the 'primary' template.
   // We need the entire list, since the constraint is completely uninstantiated
   // at this point.
-  MLTAL = getTemplateInstantiationArgs(FD, nullptr, /*RelativeToPrimary*/ true,
-                                       /*Pattern*/ nullptr,
-                                       /*LookBeyondLambda*/ true);
+  MLTAL = getTemplateInstantiationArgs(FD, /*Innermost=*/nullptr,
+                                       /*RelativeToPrimary=*/true,
+                                       /*Pattern=*/nullptr,
+                                       /*ForConstraintInstantiation=*/true);
   if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
     return {};
 
@@ -581,9 +582,9 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
 static unsigned CalculateTemplateDepthForConstraints(Sema &S,
                                                      const NamedDecl *ND) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      ND, nullptr, /*RelativeToPrimary*/ true,
-      /*Pattern*/ nullptr,
-      /*LookBeyondLambda*/ true, /*IncludeContainingStruct*/ true);
+      ND, /*Innermost=*/nullptr, /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/true);
   return MLTAL.getNumSubstitutedLevels();
 }
 
@@ -724,6 +725,12 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
     Record = Method->getParent();
   }
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
+  FunctionScopeRAII FuncScope(*this);
+  if (isLambdaCallOperator(Decl))
+    PushLambdaScope();
+  else
+    FuncScope.disable();
+
   llvm::SmallVector<Expr *, 1> Converted;
   return CheckConstraintSatisfaction(Template, TemplateAC, Converted, *MLTAL,
                                      PointOfInstantiation, Satisfaction);
@@ -1062,9 +1069,9 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                            CSE->getTemplateArguments()};
   MultiLevelTemplateArgumentList MLTAL =
       S.getTemplateInstantiationArgs(CSE->getNamedConcept(), &TAL,
-                                     /*RelativeToPrimary*/ true,
-                                     /*Pattern*/ nullptr,
-                                     /*LookBeyondLambda*/ true);
+                                     /*RelativeToPrimary=*/true,
+                                     /*Pattern=*/nullptr,
+                                     /*ForConstraintInstantiation=*/true);
 
   return substituteParameterMappings(S, N, CSE->getNamedConcept(), MLTAL,
                                      CSE->getTemplateArgsAsWritten());

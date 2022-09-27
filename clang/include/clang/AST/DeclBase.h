@@ -474,6 +474,9 @@ public:
 
   bool isInStdNamespace() const;
 
+  // Return true if this is a FileContext Decl.
+  bool isFileContextDecl() const;
+
   ASTContext &getASTContext() const LLVM_READONLY;
 
   /// Helper to get the language options from the ASTContext.
