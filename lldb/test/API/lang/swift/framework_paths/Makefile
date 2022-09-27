@@ -26,4 +26,3 @@ Direct.framework: $(SRCDIR)/Direct.swift.in Discovered.framework
 		FRAMEWORK=Direct \
 		SWIFTFLAGS_EXTRAS=-F$(BUILDDIR)/secret_path
 	rm -f $(BUILDDIR)/Direct.swiftmodule $(BUILDDIR)/Direct.swiftinterface $(BUILDDIR)/Direct.swift
-	ln -s $(BUILDDIR)/Direct.framework/Direct $(BUILDDIR)/Direct # FIXME
