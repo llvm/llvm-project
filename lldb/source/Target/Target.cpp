@@ -4524,6 +4524,19 @@ bool TargetProperties::GetSwiftEnableBareSlashRegex() const {
 
   return true;
 }
+
+bool TargetProperties::GetSwiftEnableCxxInterop() const {
+  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
+      nullptr, false, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values->GetPropertyAtIndexAsBoolean(
+        nullptr, ePropertySwiftEnableCxxInterop, false);
+
+  return false;
+}
+
 bool TargetProperties::GetSwiftAutoImportFrameworks() const {
   const uint32_t idx = ePropertySwiftAutoImportFrameworks;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
