@@ -100,17 +100,17 @@ TEST(IntervalTreeTest, UserClass) {
   // Valid interval values: [10...20]
   Point = 10;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   CheckData(Point, Intervals[0], 10, 20, 10.20);
 
   Point = 15;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   CheckData(Point, Intervals[0], 10, 20, 10.20);
 
   Point = 20;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   CheckData(Point, Intervals[0], 10, 20, 10.20);
 
   // Invalid interval values: 20] < x < [30
@@ -121,17 +121,17 @@ TEST(IntervalTreeTest, UserClass) {
   // Valid interval values: [30...40]
   Point = 30;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   CheckData(Point, Intervals[0], 30, 40, 30.40);
 
   Point = 35;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   CheckData(Point, Intervals[0], 30, 40, 30.40);
 
   Point = 40;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   CheckData(Point, Intervals[0], 30, 40, 30.40);
 
   // Invalid interval values: 40] < x
@@ -200,17 +200,17 @@ TEST(IntervalTreeTest, OneInterval) {
   // Valid interval values: [10...20].
   Point = 10;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   Point = 15;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   Point = 20;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   // Invalid interval values: 20] < x
@@ -242,17 +242,17 @@ TEST(IntervalTreeTest, TwoIntervals) {
   // Valid interval values: [10...20]
   Point = 10;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   Point = 15;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   Point = 20;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   // Invalid interval values: 20] < x < [30
@@ -263,17 +263,17 @@ TEST(IntervalTreeTest, TwoIntervals) {
   // Valid interval values: [30...40]
   Point = 30;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 30, 40, 3040);
 
   Point = 35;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 30, 40, 3040);
 
   Point = 40;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 30, 40, 3040);
 
   // Invalid interval values: 40] < x
@@ -307,17 +307,17 @@ TEST(IntervalTreeTest, ThreeIntervals) {
   // Valid interval values: [10...20]
   Point = 10;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   Point = 15;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   Point = 20;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 20, 1020);
 
   // Invalid interval values: 20] < x < [30
@@ -328,17 +328,17 @@ TEST(IntervalTreeTest, ThreeIntervals) {
   // Valid interval values: [30...40]
   Point = 30;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 30, 40, 3040);
 
   Point = 35;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 30, 40, 3040);
 
   Point = 40;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 30, 40, 3040);
 
   // Invalid interval values: 40] < x < [50
@@ -349,17 +349,17 @@ TEST(IntervalTreeTest, ThreeIntervals) {
   // Valid interval values: [50...60]
   Point = 50;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 50, 60, 5060);
 
   Point = 55;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 50, 60, 5060);
 
   Point = 60;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 50, 60, 5060);
 
   // Invalid interval values: 60] < x
@@ -401,7 +401,7 @@ TEST(IntervalTreeTest, EmptyIntervals) {
   // Valid interval values: [10...10].
   Point = 10;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 10, 1010);
 
   // Invalid interval values: 10] < x
@@ -412,20 +412,20 @@ TEST(IntervalTreeTest, EmptyIntervals) {
   // Invalid interval values: x < [50.
   Point = 45;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 40, 60, 4060);
 
   // Valid interval values: [50...50].
   Point = 50;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 40, 60, 4060);
   checkData(Point, Intervals[1], 50, 50, 5050);
 
   // Invalid interval values: 50] < x
   Point = 55;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 40, 60, 4060);
 
   // Invalid interval values: x < [70.
@@ -436,7 +436,7 @@ TEST(IntervalTreeTest, EmptyIntervals) {
   // Valid interval values: [70...70].
   Point = 70;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 70, 70, 7070);
 
   // Invalid interval values: 70] < x
@@ -475,101 +475,101 @@ TEST(IntervalTreeTest, SimpleIntervalsOverlapping) {
   // Valid interval values:
   Point = 10;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 90, 1090);
 
   Point = 15;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 90, 1090);
 
   Point = 20;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 20, 80, 2080);
   checkData(Point, Intervals[1], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
 
   Point = 25;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 20, 80, 2080);
   checkData(Point, Intervals[1], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
 
   Point = 30;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 30, 70, 3070);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
 
   Point = 35;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 30, 70, 3070);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
 
   Point = 40;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
   checkData(Point, Intervals[3], 40, 60, 4060);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 40, 60, 4060);
   checkData(Point, Intervals[1], 30, 70, 3070);
   checkData(Point, Intervals[2], 20, 80, 2080);
   checkData(Point, Intervals[3], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
@@ -577,21 +577,21 @@ TEST(IntervalTreeTest, SimpleIntervalsOverlapping) {
 
   Point = 50;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
   checkData(Point, Intervals[3], 40, 60, 4060);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 40, 60, 4060);
   checkData(Point, Intervals[1], 30, 70, 3070);
   checkData(Point, Intervals[2], 20, 80, 2080);
   checkData(Point, Intervals[3], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
@@ -599,21 +599,21 @@ TEST(IntervalTreeTest, SimpleIntervalsOverlapping) {
 
   Point = 60;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
   checkData(Point, Intervals[3], 40, 60, 4060);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 40, 60, 4060);
   checkData(Point, Intervals[1], 30, 70, 3070);
   checkData(Point, Intervals[2], 20, 80, 2080);
   checkData(Point, Intervals[3], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
@@ -621,82 +621,82 @@ TEST(IntervalTreeTest, SimpleIntervalsOverlapping) {
 
   Point = 65;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 30, 70, 3070);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
 
   Point = 70;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 30, 70, 3070);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   checkData(Point, Intervals[2], 30, 70, 3070);
 
   Point = 75;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 20, 80, 2080);
   checkData(Point, Intervals[1], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
 
   Point = 80;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 20, 80, 2080);
   checkData(Point, Intervals[1], 10, 90, 1090);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 90, 1090);
   checkData(Point, Intervals[1], 20, 80, 2080);
 
   Point = 85;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 90, 1090);
 
   Point = 90;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 90, 1090);
 
   // Invalid interval values: 90] < x
@@ -759,7 +759,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   // Find valid interval values.
   Point = 30;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 25, 41, 2541);
   checkData(Point, Intervals[2], 15, 40, 1540);
@@ -767,7 +767,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 30, 35, 3035);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 30, 35, 3035);
   checkData(Point, Intervals[1], 20, 30, 2030);
   checkData(Point, Intervals[2], 25, 41, 2541);
@@ -775,7 +775,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 25, 41, 2541);
@@ -784,7 +784,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 35;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 25, 41, 2541);
@@ -792,7 +792,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 30, 35, 3035);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 30, 35, 3035);
   checkData(Point, Intervals[1], 25, 41, 2541);
   checkData(Point, Intervals[2], 31, 56, 3156);
@@ -800,7 +800,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 15, 40, 1540);
@@ -809,7 +809,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 39;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -818,7 +818,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[5], 15, 40, 1540);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 39, 50, 3950);
   checkData(Point, Intervals[1], 25, 41, 2541);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -827,7 +827,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[5], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 15, 40, 1540);
@@ -837,7 +837,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 50;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -846,7 +846,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[5], 50, 75, 5075);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 39, 50, 3950);
   checkData(Point, Intervals[1], 49, 65, 4965);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -855,7 +855,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[5], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 50, 75, 5075);
@@ -865,7 +865,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 55;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 49, 65, 4965);
@@ -873,7 +873,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 55, 61, 5561);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 55, 61, 5561);
   checkData(Point, Intervals[1], 49, 65, 4965);
   checkData(Point, Intervals[2], 31, 56, 3156);
@@ -881,7 +881,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 50, 75, 5075);
@@ -890,7 +890,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 61;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 49, 65, 4965);
   checkData(Point, Intervals[2], 50, 75, 5075);
@@ -898,7 +898,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 60, 70, 6070);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 55, 61, 5561);
   checkData(Point, Intervals[1], 60, 70, 6070);
   checkData(Point, Intervals[2], 49, 65, 4965);
@@ -906,7 +906,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 49, 65, 4965);
@@ -915,7 +915,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 31;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 25, 41, 2541);
@@ -923,7 +923,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 30, 35, 3035);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 30, 35, 3035);
   checkData(Point, Intervals[1], 25, 41, 2541);
   checkData(Point, Intervals[2], 31, 56, 3156);
@@ -931,7 +931,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 15, 40, 1540);
@@ -940,7 +940,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 56;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 49, 65, 4965);
@@ -948,7 +948,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 55, 61, 5561);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 55, 61, 5561);
   checkData(Point, Intervals[1], 49, 65, 4965);
   checkData(Point, Intervals[2], 31, 56, 3156);
@@ -956,7 +956,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 50, 75, 5075);
@@ -965,40 +965,40 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 12;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 11, 16, 1116);
   checkData(Point, Intervals[2], 12, 21, 1221);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 11, 16, 1116);
   checkData(Point, Intervals[1], 12, 21, 1221);
   checkData(Point, Intervals[2], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 12, 21, 1221);
   checkData(Point, Intervals[2], 11, 16, 1116);
 
   Point = 21;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 20, 30, 2030);
   checkData(Point, Intervals[3], 12, 21, 1221);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 12, 21, 1221);
   checkData(Point, Intervals[1], 20, 30, 2030);
   checkData(Point, Intervals[2], 15, 40, 1540);
   checkData(Point, Intervals[3], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 20, 30, 2030);
@@ -1006,21 +1006,21 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 25;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 20, 30, 2030);
   checkData(Point, Intervals[3], 25, 41, 2541);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 20, 30, 2030);
   checkData(Point, Intervals[1], 25, 41, 2541);
   checkData(Point, Intervals[2], 15, 40, 1540);
   checkData(Point, Intervals[3], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 25, 41, 2541);
@@ -1028,7 +1028,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 41;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1036,7 +1036,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 25, 41, 2541);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 39, 50, 3950);
   checkData(Point, Intervals[1], 25, 41, 2541);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1044,7 +1044,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1053,7 +1053,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 49;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1061,7 +1061,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 49, 65, 4965);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 39, 50, 3950);
   checkData(Point, Intervals[1], 49, 65, 4965);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1069,7 +1069,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1078,21 +1078,21 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 65;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 60, 70, 6070);
   checkData(Point, Intervals[3], 49, 65, 4965);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 60, 70, 6070);
   checkData(Point, Intervals[1], 49, 65, 4965);
   checkData(Point, Intervals[2], 50, 75, 5075);
   checkData(Point, Intervals[3], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 49, 65, 4965);
@@ -1100,75 +1100,75 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 71;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 71, 79, 7179);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 71, 79, 7179);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 71, 79, 7179);
 
   Point = 79;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 74, 80, 7480);
   checkData(Point, Intervals[2], 71, 79, 7179);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 74, 80, 7480);
   checkData(Point, Intervals[1], 71, 79, 7179);
   checkData(Point, Intervals[2], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 71, 79, 7179);
   checkData(Point, Intervals[2], 74, 80, 7480);
 
   Point = 11;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 11, 16, 1116);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 11, 16, 1116);
   checkData(Point, Intervals[1], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 11, 16, 1116);
 
   Point = 16;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 12, 21, 1221);
   checkData(Point, Intervals[3], 11, 16, 1116);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 11, 16, 1116);
   checkData(Point, Intervals[1], 12, 21, 1221);
   checkData(Point, Intervals[2], 15, 40, 1540);
   checkData(Point, Intervals[3], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 12, 21, 1221);
@@ -1176,21 +1176,21 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 20;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 20, 30, 2030);
   checkData(Point, Intervals[3], 12, 21, 1221);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 12, 21, 1221);
   checkData(Point, Intervals[1], 20, 30, 2030);
   checkData(Point, Intervals[2], 15, 40, 1540);
   checkData(Point, Intervals[3], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 20, 30, 2030);
@@ -1198,7 +1198,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 30;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 25, 41, 2541);
   checkData(Point, Intervals[2], 15, 40, 1540);
@@ -1206,7 +1206,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 30, 35, 3035);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 30, 35, 3035);
   checkData(Point, Intervals[1], 20, 30, 2030);
   checkData(Point, Intervals[2], 25, 41, 2541);
@@ -1214,7 +1214,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 25, 41, 2541);
@@ -1223,7 +1223,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 36;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1231,7 +1231,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 15, 40, 1540);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 25, 41, 2541);
   checkData(Point, Intervals[1], 36, 54, 3654);
   checkData(Point, Intervals[2], 31, 56, 3156);
@@ -1239,7 +1239,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 15, 40, 1540);
@@ -1248,7 +1248,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 54;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1256,7 +1256,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 50, 75, 5075);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 49, 65, 4965);
   checkData(Point, Intervals[1], 36, 54, 3654);
   checkData(Point, Intervals[2], 31, 56, 3156);
@@ -1264,7 +1264,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 50, 75, 5075);
@@ -1273,7 +1273,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 60;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 49, 65, 4965);
   checkData(Point, Intervals[2], 50, 75, 5075);
@@ -1281,7 +1281,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 60, 70, 6070);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 55, 61, 5561);
   checkData(Point, Intervals[1], 60, 70, 6070);
   checkData(Point, Intervals[2], 49, 65, 4965);
@@ -1289,7 +1289,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 49, 65, 4965);
@@ -1298,40 +1298,40 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 70;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 60, 70, 6070);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 60, 70, 6070);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 3);
+  ASSERT_EQ(Intervals.size(), 3u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 60, 70, 6070);
 
   Point = 74;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 71, 79, 7179);
   checkData(Point, Intervals[3], 74, 80, 7480);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 74, 80, 7480);
   checkData(Point, Intervals[1], 71, 79, 7179);
   checkData(Point, Intervals[2], 50, 75, 5075);
   checkData(Point, Intervals[3], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 71, 79, 7179);
@@ -1339,37 +1339,37 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 80;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 74, 80, 7480);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 74, 80, 7480);
   checkData(Point, Intervals[1], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 2);
+  ASSERT_EQ(Intervals.size(), 2u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 74, 80, 7480);
 
   Point = 15;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 11, 16, 1116);
   checkData(Point, Intervals[3], 12, 21, 1221);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 11, 16, 1116);
   checkData(Point, Intervals[1], 12, 21, 1221);
   checkData(Point, Intervals[2], 15, 40, 1540);
   checkData(Point, Intervals[3], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 15, 40, 1540);
   checkData(Point, Intervals[2], 12, 21, 1221);
@@ -1377,7 +1377,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 40;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1386,7 +1386,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[5], 15, 40, 1540);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 39, 50, 3950);
   checkData(Point, Intervals[1], 25, 41, 2541);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1395,7 +1395,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[5], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 15, 40, 1540);
@@ -1405,7 +1405,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 43;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1413,7 +1413,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 43, 45, 4345);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 43, 45, 4345);
   checkData(Point, Intervals[1], 39, 50, 3950);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1421,7 +1421,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1430,7 +1430,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 45;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1438,7 +1438,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 43, 45, 4345);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 43, 45, 4345);
   checkData(Point, Intervals[1], 39, 50, 3950);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1446,7 +1446,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[4], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 5);
+  ASSERT_EQ(Intervals.size(), 5u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1455,7 +1455,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 50;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1464,7 +1464,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[5], 50, 75, 5075);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 39, 50, 3950);
   checkData(Point, Intervals[1], 49, 65, 4965);
   checkData(Point, Intervals[2], 36, 54, 3654);
@@ -1473,7 +1473,7 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
   checkData(Point, Intervals[5], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 6);
+  ASSERT_EQ(Intervals.size(), 6u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 31, 56, 3156);
   checkData(Point, Intervals[2], 50, 75, 5075);
@@ -1483,21 +1483,21 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 75;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 74, 80, 7480);
   checkData(Point, Intervals[3], 71, 79, 7179);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Ascending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 74, 80, 7480);
   checkData(Point, Intervals[1], 71, 79, 7179);
   checkData(Point, Intervals[2], 50, 75, 5075);
   checkData(Point, Intervals[3], 10, 85, 1085);
   Intervals = Tree.getContaining(Point);
   Tree.sortIntervals(Intervals, UUSorting::Descending);
-  ASSERT_EQ(Intervals.size(), 4);
+  ASSERT_EQ(Intervals.size(), 4u);
   checkData(Point, Intervals[0], 10, 85, 1085);
   checkData(Point, Intervals[1], 50, 75, 5075);
   checkData(Point, Intervals[2], 71, 79, 7179);
@@ -1505,12 +1505,12 @@ TEST(IntervalTreeTest, ComplexIntervalsOverlapping) {
 
   Point = 10;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 85, 1085);
 
   Point = 85;
   Intervals = Tree.getContaining(Point);
-  ASSERT_EQ(Intervals.size(), 1);
+  ASSERT_EQ(Intervals.size(), 1u);
   checkData(Point, Intervals[0], 10, 85, 1085);
 
   // Invalid interval values.
