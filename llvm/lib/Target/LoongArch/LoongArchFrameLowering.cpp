@@ -53,21 +53,55 @@ void LoongArchFrameLowering::adjustReg(MachineBasicBlock &MBB,
                                        MachineInstr::MIFlag Flag) const {
   const LoongArchInstrInfo *TII = STI.getInstrInfo();
   bool IsLA64 = STI.is64Bit();
+  unsigned Addi = IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W;
 
   if (DestReg == SrcReg && Val == 0)
     return;
 
   if (isInt<12>(Val)) {
     // addi.w/d $DstReg, $SrcReg, Val
-    BuildMI(MBB, MBBI, DL,
-            TII->get(IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W), DestReg)
+    BuildMI(MBB, MBBI, DL, TII->get(Addi), DestReg)
         .addReg(SrcReg)
         .addImm(Val)
         .setMIFlag(Flag);
     return;
   }
 
-  report_fatal_error("adjustReg cannot yet handle adjustments >12 bits");
+  // Try to split the offset across two ADDIs. We need to keep the stack pointer
+  // aligned after each ADDI. We need to determine the maximum value we can put
+  // in each ADDI. In the negative direction, we can use -2048 which is always
+  // sufficiently aligned. In the positive direction, we need to find the
+  // largest 12-bit immediate that is aligned. Exclude -4096 since it can be
+  // created with LU12I.W.
+  assert(getStackAlign().value() < 2048 && "Stack alignment too large");
+  int64_t MaxPosAdjStep = 2048 - getStackAlign().value();
+  if (Val > -4096 && Val <= (2 * MaxPosAdjStep)) {
+    int64_t FirstAdj = Val < 0 ? -2048 : MaxPosAdjStep;
+    Val -= FirstAdj;
+    BuildMI(MBB, MBBI, DL, TII->get(Addi), DestReg)
+        .addReg(SrcReg)
+        .addImm(FirstAdj)
+        .setMIFlag(Flag);
+    BuildMI(MBB, MBBI, DL, TII->get(Addi), DestReg)
+        .addReg(DestReg, RegState::Kill)
+        .addImm(Val)
+        .setMIFlag(Flag);
+    return;
+  }
+
+  unsigned Opc = IsLA64 ? LoongArch::ADD_D : LoongArch::ADD_W;
+  if (Val < 0) {
+    Val = -Val;
+    Opc = IsLA64 ? LoongArch::SUB_D : LoongArch::SUB_W;
+  }
+
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+  TII->movImm(MBB, MBBI, DL, ScratchReg, Val, Flag);
+  BuildMI(MBB, MBBI, DL, TII->get(Opc), DestReg)
+      .addReg(SrcReg)
+      .addReg(ScratchReg, RegState::Kill)
+      .setMIFlag(Flag);
 }
 
 // Determine the size of the frame and maximum call frame size.
