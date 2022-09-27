@@ -17,7 +17,7 @@
 using namespace llvm;
 
 AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
-    : IsEntryFunction(AMDGPU::isEntryFunctionCC(
+    : Mode(MF.getFunction()), IsEntryFunction(AMDGPU::isEntryFunctionCC(
                                   MF.getFunction().getCallingConv())),
       IsModuleEntryFunction(
           AMDGPU::isModuleEntryFunctionCC(MF.getFunction().getCallingConv())),
