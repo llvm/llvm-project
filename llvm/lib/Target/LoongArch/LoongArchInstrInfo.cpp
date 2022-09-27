@@ -13,6 +13,7 @@
 #include "LoongArchInstrInfo.h"
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
+#include "MCTargetDesc/LoongArchMatInt.h"
 
 using namespace llvm;
 
@@ -21,7 +22,8 @@ using namespace llvm;
 
 LoongArchInstrInfo::LoongArchInstrInfo(LoongArchSubtarget &STI)
     : LoongArchGenInstrInfo(LoongArch::ADJCALLSTACKDOWN,
-                            LoongArch::ADJCALLSTACKUP) {}
+                            LoongArch::ADJCALLSTACKUP),
+      STI(STI) {}
 
 void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
@@ -112,6 +114,43 @@ void LoongArchInstrInfo::loadRegFromStackSlot(
       .addFrameIndex(FI)
       .addImm(0)
       .addMemOperand(MMO);
+}
+
+void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                const DebugLoc &DL, Register DstReg,
+                                uint64_t Val, MachineInstr::MIFlag Flag) const {
+  Register SrcReg = LoongArch::R0;
+
+  if (!STI.is64Bit() && !isInt<32>(Val))
+    report_fatal_error("Should only materialize 32-bit constants for LA32");
+
+  auto Seq = LoongArchMatInt::generateInstSeq(Val);
+  assert(!Seq.empty());
+
+  for (auto &Inst : Seq) {
+    switch (Inst.Opc) {
+    case LoongArch::LU12I_W:
+      BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
+          .addImm(Inst.Imm)
+          .setMIFlag(Flag);
+      break;
+    case LoongArch::ADDI_W:
+    case LoongArch::ORI:
+    case LoongArch::LU32I_D: // "rj" is needed due to InstrInfo pattern
+    case LoongArch::LU52I_D:
+      BuildMI(MBB, MBBI, DL, get(Inst.Opc), DstReg)
+          .addReg(SrcReg, RegState::Kill)
+          .addImm(Inst.Imm)
+          .setMIFlag(Flag);
+      break;
+    default:
+      assert(false && "Unknown insn emitted by LoongArchMatInt");
+    }
+
+    // Only the first instruction has $zero as its source.
+    SrcReg = DstReg;
+  }
 }
 
 unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {

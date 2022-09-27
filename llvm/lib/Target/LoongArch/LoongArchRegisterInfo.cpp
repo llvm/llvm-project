@@ -13,7 +13,9 @@
 
 #include "LoongArchRegisterInfo.h"
 #include "LoongArch.h"
+#include "LoongArchInstrInfo.h"
 #include "LoongArchSubtarget.h"
+#include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -112,7 +114,11 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
 
   MachineInstr &MI = *II;
+  MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MI.getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const LoongArchSubtarget &STI = MF.getSubtarget<LoongArchSubtarget>();
+  const LoongArchInstrInfo *TII = STI.getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   DebugLoc DL = MI.getDebugLoc();
 
@@ -122,12 +128,32 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       TFI->getFrameIndexReference(MF, FrameIndex, FrameReg) +
       StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
-  // Offsets must be encodable with a 12-bit immediate field.
+  bool FrameRegIsKill = false;
+
   if (!isInt<12>(Offset.getFixed())) {
-    report_fatal_error("Frame offsets outside of the signed 12-bit range is "
-                       "not supported currently");
+    unsigned Addi = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+    unsigned Add = STI.is64Bit() ? LoongArch::ADD_D : LoongArch::ADD_W;
+
+    // The offset won't fit in an immediate, so use a scratch register instead.
+    // Modify Offset and FrameReg appropriately.
+    Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+    TII->movImm(MBB, II, DL, ScratchReg, Offset.getFixed());
+    if (MI.getOpcode() == Addi) {
+      BuildMI(MBB, II, DL, TII->get(Add), MI.getOperand(0).getReg())
+          .addReg(FrameReg)
+          .addReg(ScratchReg, RegState::Kill);
+      MI.eraseFromParent();
+      return;
+    }
+    BuildMI(MBB, II, DL, TII->get(Add), ScratchReg)
+        .addReg(FrameReg)
+        .addReg(ScratchReg, RegState::Kill);
+    Offset = StackOffset::getFixed(0);
+    FrameReg = ScratchReg;
+    FrameRegIsKill = true;
   }
 
-  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
+  MI.getOperand(FIOperandNum)
+      .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
 }
