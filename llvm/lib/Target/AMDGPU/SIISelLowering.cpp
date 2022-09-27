@@ -249,6 +249,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       case ISD::STORE:
       case ISD::BUILD_VECTOR:
       case ISD::BITCAST:
+      case ISD::UNDEF:
       case ISD::EXTRACT_VECTOR_ELT:
       case ISD::INSERT_VECTOR_ELT:
       case ISD::EXTRACT_SUBVECTOR:
@@ -516,6 +517,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         case ISD::STORE:
         case ISD::BUILD_VECTOR:
         case ISD::BITCAST:
+        case ISD::UNDEF:
         case ISD::EXTRACT_VECTOR_ELT:
         case ISD::INSERT_VECTOR_ELT:
         case ISD::INSERT_SUBVECTOR:
