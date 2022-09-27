@@ -1,3 +1,5 @@
+// UNSUPPORTED: ps4
+
 // RUN: %clang -### -fcrash-diagnostics-dir=mydumps -c %s 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=OPTION
 // OPTION: "-crash-diagnostics-dir=mydumps"
