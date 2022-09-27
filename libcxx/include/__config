@@ -22,6 +22,16 @@
 #  pragma GCC system_header
 #endif
 
+#if defined(__apple_build_version__)
+#  define _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_APPLE_CLANG_VER (__apple_build_version__ / 10000)
+#elif defined(__clang__)
+#  define _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
+#elif defined(__GNUC__)
+#  define _LIBCPP_COMPILER_GCC
+#endif
+
 #ifdef __cplusplus
 
 // _LIBCPP_VERSION represents the version of libc++, which matches the version of LLVM.
@@ -200,16 +210,6 @@
 
 #  ifndef __has_include
 #    define __has_include(...) 0
-#  endif
-
-#  if defined(__apple_build_version__)
-#    define _LIBCPP_COMPILER_CLANG_BASED
-#    define _LIBCPP_APPLE_CLANG_VER (__apple_build_version__ / 10000)
-#  elif defined(__clang__)
-#    define _LIBCPP_COMPILER_CLANG_BASED
-#    define _LIBCPP_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
-#  elif defined(__GNUC__)
-#    define _LIBCPP_COMPILER_GCC
 #  endif
 
 #  if !defined(_LIBCPP_COMPILER_CLANG_BASED) && __cplusplus < 201103L
