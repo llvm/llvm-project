@@ -45,6 +45,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Job.h"
+#include "clang/Driver/OffloadBundler.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -70,11 +71,14 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/WithColor.h"
 
 #include "time-stat/ts-interface.h"
 
@@ -1122,38 +1126,241 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
     return Status;
   }
 
+  SMDiagnostic SMDiag;
   LLVMContext Context;
   Context.setDiagnosticHandler(
-      std::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
+    std::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
 
-  auto Composite = std::make_unique<llvm::Module>("linked", Context);
+  auto Composite = std::make_unique<llvm::Module>("llvm-link", Context);
   Linker L(*Composite);
   unsigned ApplicableFlags = Linker::Flags::None;
 
+  // Collect bitcode memory buffers from bitcodes, bundles, and archives
   for (auto *Input : InSet->DataObjects) {
-    if (Input->DataKind != AMD_COMGR_DATA_KIND_BC) {
-      continue;
-    }
 
-    SMDiagnostic SMDiag;
-    // The data in Input outlives Mod, and the linker destructs Mod after
-    // linking it into composite (i.e. ownership is not transferred to the
-    // composite) so MemoryBuffer::getMemBuffer is sufficient.
-    auto Mod =
+    if (env::shouldSaveTemps())
+      outputToFile(Input, StringRef(std::string("comgr_tmp_") + Input->Name));
+
+    if (Input->DataKind == AMD_COMGR_DATA_KIND_BC) {
+      // The data in Input outlives Mod, and the linker destructs Mod after
+      // linking it into composite (i.e. ownership is not transferred to the
+      // composite) so MemoryBuffer::getMemBuffer is sufficient.
+      auto Mod =
         getLazyIRModule(MemoryBuffer::getMemBuffer(
-                            StringRef(Input->Data, Input->Size), "", false),
-                        SMDiag, Context, true);
-    if (!Mod) {
-      SMDiag.print(Input->Name, LogS, /* ShowColors */ false);
-      return AMD_COMGR_STATUS_ERROR;
+            StringRef(Input->Data, Input->Size), "", false),
+          SMDiag, Context, true);
+
+      if (!Mod) {
+        SMDiag.print(Input->Name, LogS, /* ShowColors */ false);
+        return AMD_COMGR_STATUS_ERROR;
+      }
+      if (verifyModule(*Mod, &LogS))
+        return AMD_COMGR_STATUS_ERROR;
+      if (L.linkInModule(std::move(Mod), ApplicableFlags))
+        return AMD_COMGR_STATUS_ERROR;
     }
-    if (verifyModule(*Mod, &LogS)) {
-      return AMD_COMGR_STATUS_ERROR;
+    else if (Input->DataKind == AMD_COMGR_DATA_KIND_BC_BUNDLE) {
+      // Determine desired bundle entry ID
+      if (!ActionInfo->IsaName)
+        return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+      std::string isa_name = ActionInfo->IsaName;
+      size_t index = isa_name.find("gfx");
+      std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa-gfx" +
+        isa_name.substr(index + 3);
+
+      // Configure Offload Bundler
+      OffloadBundlerConfig BundlerConfig;
+      BundlerConfig.AllowMissingBundles = true;
+      BundlerConfig.FilesType = "bc";
+
+      BundlerConfig.TargetNames.push_back(bundle_entry_id);
+      BundlerConfig.InputFileNames.push_back(std::string(Input->Name));
+
+      // Generate prefix for output files
+      std::string output_prefix = std::string(Input->Name);
+      index = output_prefix.find_last_of(".");
+      output_prefix = output_prefix.substr(0, index);
+      std::string output_file_name = output_prefix + '-' + bundle_entry_id +
+        ".bc";
+
+      // ISA name may contain ':', which is an invalid character in file names
+      // on Windows. Replace with '_'
+      std::replace(output_file_name.begin(), output_file_name.end(), ':', '_');
+
+      BundlerConfig.OutputFileNames.push_back(output_file_name);
+
+      OffloadBundler Bundler(BundlerConfig);
+
+      // Execute unbundling
+      if (env::shouldEmitVerboseLogs()) {
+        LogS << "    Extracting Bitcode Bundle:\n"
+          << "\t  Bundle Entry ID: " << BundlerConfig.TargetNames[0] << '\n'
+          << "\t   Input Filename: " << BundlerConfig.InputFileNames[0] << '\n'
+          << "\t  Output Filename: " << BundlerConfig.OutputFileNames[0]
+          << '\n';
+      }
+
+      llvm::Error Err = Bundler.UnbundleFiles();
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "UnbundleFiles error: ");
+
+      // Read unbundled bitcode from file system in order to pass to linker
+      amd_comgr_data_t ResultT;
+      if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &ResultT))
+        return Status;
+
+      DataObject *Result = DataObject::convert(ResultT);
+      if (auto Status = inputFromFile(Result, StringRef(output_file_name)))
+        return Status;
+
+      Result->Name = strdup(output_file_name.c_str());
+
+      auto Mod =
+        getLazyIRModule(MemoryBuffer::getMemBuffer(
+            StringRef(Result->Data, Result->Size), "", false),
+          SMDiag, Context, true);
+
+      if (!Mod) {
+        SMDiag.print(Result->Name, LogS, /* ShowColors */ false);
+        return AMD_COMGR_STATUS_ERROR;
+      }
+      if (verifyModule(*Mod, &LogS))
+        return AMD_COMGR_STATUS_ERROR;
+      if (L.linkInModule(std::move(Mod), ApplicableFlags))
+        return AMD_COMGR_STATUS_ERROR;
+
+      Result->release();
+
+      // Remove output file
+      if (!env::shouldSaveTemps())
+        sys::fs::remove(output_file_name);
     }
-    if (L.linkInModule(std::move(Mod), ApplicableFlags)) {
-      return AMD_COMGR_STATUS_ERROR;
+    // Unbundle bitcode archive
+    else if (Input->DataKind == AMD_COMGR_DATA_KIND_AR_BUNDLE) {
+      // Determine desired bundle entry ID
+      if (!ActionInfo->IsaName)
+        return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+      std::string isa_name = ActionInfo->IsaName;
+      size_t index = isa_name.find("gfx");
+      std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa-gfx" +
+        isa_name.substr(index + 3);
+
+      // Configure Offload Bundler
+      OffloadBundlerConfig BundlerConfig;
+      BundlerConfig.AllowMissingBundles = true;
+      BundlerConfig.FilesType = "a";
+      BundlerConfig.HipOpenmpCompatible = 1;
+      BundlerConfig.AllowNoHost = 1;
+
+      BundlerConfig.TargetNames.push_back(bundle_entry_id);
+      BundlerConfig.InputFileNames.push_back(std::string(Input->Name));
+
+      // Generate prefix for output files
+      std::string output_prefix = std::string(Input->Name);
+      index = output_prefix.find_last_of(".");
+      output_prefix = output_prefix.substr(0, index);
+
+      std::string output_file_name = output_prefix + '-' + bundle_entry_id +
+        ".a";
+
+      // ISA name may contain ':', which is an invalid character in file names
+      // on Windows. Replace with '_'
+      std::replace(output_file_name.begin(), output_file_name.end(), ':', '_');
+
+      BundlerConfig.OutputFileNames.push_back(output_file_name);
+
+      OffloadBundler Bundler(BundlerConfig);
+
+      // Execute unbundling
+      if (env::shouldEmitVerboseLogs()) {
+        LogS << "    Extracting Bitcode Archive:\n"
+          << "\t  Bundle Entry ID: " << BundlerConfig.TargetNames[0] << '\n'
+          << "\t   Input Filename: " << BundlerConfig.InputFileNames[0] << '\n'
+          << "\t  Output Filename: " << BundlerConfig.OutputFileNames[0]
+          << '\n';
+      }
+      llvm::Error Err = Bundler.UnbundleArchive();
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "UnbundleArchive error: ");
+
+      // Read archive back into Comgr
+      amd_comgr_data_t ResultT;
+      if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_AR, &ResultT))
+        return Status;
+
+      DataObject *Result = DataObject::convert(ResultT);
+      if (auto Status = inputFromFile(Result, StringRef(output_file_name)))
+        return Status;
+
+      // Get memory buffer for each bitcode in archive file
+      //   Modeled after static loadArFile in llvm-link.cpp
+      std::string ArchiveName = "comgr.ar";
+      llvm::StringRef ArchiveBuf = StringRef(Result->Data, Result->Size);
+      auto ArchiveOrError = object::Archive::create(
+        MemoryBufferRef(ArchiveBuf, ArchiveName));
+
+      if (!ArchiveOrError) {
+        llvm::logAllUnhandledErrors(ArchiveOrError.takeError(),
+                                    llvm::errs(), "Unpack Archives error: ");
+        return AMD_COMGR_STATUS_ERROR;
+      }
+
+      auto Archive = std::move(ArchiveOrError.get());
+
+      Err = Error::success();
+      for (const object::Archive::Child &C : Archive->children(Err)) {
+
+        // Get child name
+        Expected<StringRef> Ename = C.getName();
+        if (Error E = Ename.takeError()) {
+          errs() << ": ";
+          WithColor::error() << " failed to read name of archive member"
+            << ArchiveName << "'\n";
+          return AMD_COMGR_STATUS_ERROR;
+        }
+        std::string ChildName = Ename.get().str();
+
+        // Get memory buffer
+        SMDiagnostic ParseErr;
+        Expected<MemoryBufferRef> MemBuf = C.getMemoryBufferRef();
+        if (Error E = MemBuf.takeError()) {
+          errs() << ": ";
+          WithColor::error() << " loading memory for member '"
+            << "' of archive library failed'" << ArchiveName
+            << "'\n";
+          return AMD_COMGR_STATUS_ERROR;
+        };
+
+        // Link memory buffer into composite
+        auto Mod =
+          getLazyIRModule(MemoryBuffer::getMemBuffer(MemBuf.get()),
+                          SMDiag, Context, true);
+
+        if (!Mod) {
+          SMDiag.print(ChildName.c_str(), LogS, /* ShowColors */ false);
+          return AMD_COMGR_STATUS_ERROR;
+        }
+        if (verifyModule(*Mod, &LogS))
+          return AMD_COMGR_STATUS_ERROR;
+        if (L.linkInModule(std::move(Mod), ApplicableFlags))
+          return AMD_COMGR_STATUS_ERROR;
+      }
+
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
+                                  "Unpack Archives error: ");
+
+      Result->release();
+
+      // Remove output file
+      if (!env::shouldSaveTemps())
+        sys::fs::remove(output_file_name);
     }
+    else
+      continue;
   }
+
   if (verifyModule(*Composite, &LogS)) {
     return AMD_COMGR_STATUS_ERROR;
   }

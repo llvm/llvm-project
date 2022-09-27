@@ -1,4 +1,5 @@
 set(TEST_INPUT_BINARIES)
+set(TEST_INPUT_BITCODES)
 # Create target ${name} which depends on a clang command to compile ${input} to
 # ${output}, with any additional arguments from ${ARGN}, and add it to the
 # TEST_INPUT_BINARIES target list.
@@ -32,6 +33,39 @@ macro(add_test_shared_binary name target1 input1 target2 input2 output)
   list(APPEND TEST_INPUT_BINARIES "${name}")
 endmacro()
 
+# Creates target ${name} which depends on a clang command to compile ${input} to
+# ${output}, with any additional arguments from ${ARGN}, and add it to the
+# TEST_INPUT_BITCODES target list.
+macro(add_test_input_bitcode name input output)
+  add_custom_command(
+    OUTPUT "${output}"
+    COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx906 -emit-llvm -fgpu-rdc
+    --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+    -o "${output}"
+    VERBATIM
+    DEPENDS clang lld "${input}")
+  add_custom_target("${name}"
+    DEPENDS "${output}"
+    SOURCES "${input}")
+  list(APPEND TEST_INPUT_BITCODES "${name}")
+endmacro()
+
+# Creates target ${name} and output ${output} by archiving a file.
+# ${target} should refer to the a target created in the above
+# add_test_input_bitcode() macro, and ${input} should refer
+# to the associated bitcode file built by the same macro.
+macro(add_test_archive name target input output)
+  add_custom_command(
+    OUTPUT "${output}"
+    COMMAND "$<TARGET_FILE:llvm-ar>" rc "${output}" "${input}"
+    VERBATIM
+    DEPENDS clang lld ${target})
+  add_custom_target("${name}"
+    DEPENDS "${output}"
+    SOURCES "${input}")
+  list(APPEND TEST_INPUT_BITCODES "${name}")
+endmacro()
+
 add_test_input_binary(reloc1 reloc1.cl reloc1.o -c -mcode-object-version=2)
 add_test_input_binary(reloc2 reloc2.cl reloc2.o -c -mcode-object-version=2)
 add_test_input_binary(reloc-asm reloc-asm.s reloc-asm.o -c -mcode-object-version=2)
@@ -56,6 +90,7 @@ add_test_shared_binary(shared12-v3 source1-v3 source1-v3.o source2-v3 source2-v3
 add_test_shared_binary(shared14-v3 source1-v3 source1-v3.o source4-v3 source4-v3.o shared14-v3.so)
 add_test_shared_binary(shared23-v3 source2-v3 source2-v3.o source3-v3 source3-v3.o shared23-v3.so)
 
+
 configure_file("source1.cl" "source1.cl" COPYONLY)
 configure_file("source1-device-libs.cl" "source1-device-libs.cl" COPYONLY)
 configure_file("source2.cl" "source2.cl" COPYONLY)
@@ -74,8 +109,12 @@ configure_file("source2-v3.s" "source2-v3.s" COPYONLY)
 configure_file("source3-v3.s" "source3-v3.s" COPYONLY)
 configure_file("source4-v3.s" "source4-v3.s" COPYONLY)
 
-# Create executable ${name} and accompanying test ${name} built from
-# test/${name}.c
+configure_file("source/square.hip" "source/square.hip" COPYONLY)
+configure_file("source/double.hip" "source/double.hip" COPYONLY)
+configure_file("source/cube.hip" "source/cube.hip" COPYONLY)
+
+# Creates executable ${name} and accompanying test ${name} built from
+# test/${name}.cl
 macro(add_comgr_test name lang)
   set(test_name "comgr_${name}")
   add_executable("${name}" "${name}.${lang}")
@@ -97,7 +136,7 @@ endif()
   target_link_libraries("${name}"
     amd_comgr)
   add_dependencies("${name}"
-    ${TEST_INPUT_BINARIES})
+    ${TEST_INPUT_BINARIES};${TEST_INPUT_BITCODES})
   add_test(NAME ${test_name}
     COMMAND "${name}")
   add_dependencies(check-comgr ${name})
@@ -143,6 +182,13 @@ add_comgr_test(multithread_test cpp)
 
 # Test : Compile HIP tests only if HIP-Clang is installed.
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
-  add_comgr_test(compile_hip_test)
-  add_comgr_test(compile_hip_test_in_process)
+  add_test_input_bitcode(cube source/cube.hip source/cube.bc)
+  add_test_input_bitcode(square source/square.hip source/square.bc)
+  add_test_input_bitcode(double source/double.hip source/double.bc)
+
+  add_test_archive(cube_archive cube source/cube.bc source/cube.a)
+
+  add_comgr_test(compile_hip_test c)
+  add_comgr_test(compile_hip_test_in_process c)
+  add_comgr_test(unbundle_hip_test c)
 endif()

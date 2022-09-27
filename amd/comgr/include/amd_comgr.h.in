@@ -333,9 +333,21 @@ typedef enum amd_comgr_data_kind_s {
    */
   AMD_COMGR_DATA_KIND_FATBIN = 0x10,
   /**
+   * The data is an archive.
+   */
+  AMD_COMGR_DATA_KIND_AR = 0x11,
+  /**
+   * The data is a bundled bitcode.
+   */
+  AMD_COMGR_DATA_KIND_BC_BUNDLE = 0x12,
+  /**
+   * The data is a bundled archive.
+   */
+  AMD_COMGR_DATA_KIND_AR_BUNDLE = 0x13,
+  /**
    * Marker for last valid data kind.
    */
-  AMD_COMGR_DATA_KIND_LAST = AMD_COMGR_DATA_KIND_FATBIN
+  AMD_COMGR_DATA_KIND_LAST = AMD_COMGR_DATA_KIND_AR_BUNDLE
 } amd_comgr_data_kind_t;
 
 /**
@@ -1528,11 +1540,12 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES = 0x3,
   /**
-   * Link each bc data object in @p input together and add the linked
-   * bc data object to @p result. Any device library bc data object
-   * must be explicitly added to @p input if needed.
+   * Link a collection of bitcodes, bundled bitcodes, and bundled bitcode
+   * archives in @p into a single composite (unbundled) bitcode @p.
+   * Any device library bc data object must be explicitly added to @p input if
+   * needed.
    *
-   * Return @p AMD_COMGR_STATUS_ERROR if the link fails.
+   * Return @p AMD_COMGR_STATUS_ERROR if the link or unbundling fails.
    *
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name is not set in @p info and does not match the isa name
