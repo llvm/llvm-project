@@ -312,6 +312,6 @@ void UdtRecordCompleter::complete() {
   TypeSystemClang::CompleteTagDeclarationDefinition(m_derived_ct);
 
   if (auto *record_decl = llvm::dyn_cast<clang::CXXRecordDecl>(&m_tag_decl)) {
-    m_ast_builder.importer().SetRecordLayout(record_decl, m_layout);
+    m_ast_builder.GetClangASTImporter().SetRecordLayout(record_decl, m_layout);
   }
 }

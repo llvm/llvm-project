@@ -445,6 +445,7 @@ public:
   // TypeSystem methods
   DWARFASTParser *GetDWARFParser() override;
   PDBASTParser *GetPDBParser() override;
+  npdb::PdbAstBuilder *GetNativePDBParser() override;
 
   // TypeSystemClang callbacks for external source lookups.
   void CompleteTagDecl(clang::TagDecl *);
@@ -1085,6 +1086,7 @@ private:
   std::unique_ptr<clang::ModuleMap> m_module_map_up;
   std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;
   std::unique_ptr<PDBASTParser> m_pdb_ast_parser_up;
+  std::unique_ptr<npdb::PdbAstBuilder> m_native_pdb_ast_parser_up;
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
