@@ -248,22 +248,23 @@ Error OnDiskOutputFile::tryToCreateTemporary(Optional<int> &FD) {
   // (noticeable, clang's own GlobalModuleIndex.cpp) glob for build
   // artifacts, also append .tmp.
   StringRef OutputExtension = sys::path::extension(OutputPath);
-  SmallString<128> TempPath =
+  SmallString<128> ModelPath =
       StringRef(OutputPath).drop_back(OutputExtension.size());
-  TempPath += "-%%%%%%%%";
-  TempPath += OutputExtension;
-  TempPath += ".tmp";
+  ModelPath += "-%%%%%%%%";
+  ModelPath += OutputExtension;
+  ModelPath += ".tmp";
 
   return createDirectoriesOnDemand(OutputPath, Config, [&]() -> Error {
     int NewFD;
+    SmallString<128> UniquePath;
     if (std::error_code EC =
-            sys::fs::createUniqueFile(TempPath, NewFD, TempPath))
-      return make_error<TempFileOutputError>(TempPath, OutputPath, EC);
+            sys::fs::createUniqueFile(ModelPath, NewFD, UniquePath))
+      return make_error<TempFileOutputError>(ModelPath, OutputPath, EC);
 
     if (Config.getDiscardOnSignal())
-      sys::RemoveFileOnSignal(TempPath);
+      sys::RemoveFileOnSignal(UniquePath);
 
-    this->TempPath = TempPath.str().str();
+    TempPath = UniquePath.str().str();
     FD.emplace(NewFD);
     return Error::success();
   });
