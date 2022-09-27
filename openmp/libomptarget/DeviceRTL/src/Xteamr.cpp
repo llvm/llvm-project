@@ -18,52 +18,31 @@
 #include "Types.h"
 #include "Utils.h"
 
-#define __XTEAM_MAX_FLOAT (__builtin_inff())
-#define __XTEAM_LOW_FLOAT -__XTEAM_MAX_FLOAT
-#define __XTEAM_MAX_DOUBLE (__builtin_huge_val())
-#define __XTEAM_LOW_DOUBLE -__XTEAM_MAX_DOUBLE
-#define __XTEAM_MAX_INT32 2147483647
-#define __XTEAM_LOW_INT32 (-__XTEAM_MAX_INT32 - 1)
-#define __XTEAM_MAX_UINT32 4294967295
-#define __XTEAM_LOW_UINT32 0
-#define __XTEAM_MAX_INT64 9223372036854775807
-// #define __XTEAM_LOW_INT64 -9223372036854775808
-#define __XTEAM_LOW_INT64 (-__XTEAM_MAX_INT64 - 1)
-#define __XTEAM_MAX_UINT64 0xffffffffffffffff
-// #define __XTEAM_MAX_UINT64 18446744073709551615
-#define __XTEAM_LOW_UINT64 0
-#define __XTEAM_NTHREADS 1024
-#define __XTEAM_MAXW_PERTEAM 32
-#define __XTEAM_SHARED_LDS static volatile __attribute__((address_space(3)))
+#define __XTEAM_SHARED_LDS volatile __attribute__((address_space(3)))
 
 using namespace _OMP;
 
 #pragma omp declare target
 // Headers for specialized shfl_xor
-double xteamr_shfl_xor_d(double var, int lane_mask,
-                         int width = mapping::getWarpSize());
-float xteamr_shfl_xor_f(float var, int lane_mask,
-                        int width = mapping::getWarpSize());
-int xteamr_shfl_xor_int(int var, int lane_mask,
-                        int width = mapping::getWarpSize());
-double _Complex xteamr_shfl_xor_cd(double _Complex var, int lane_mask,
-                                   int width = mapping::getWarpSize());
-float _Complex xteamr_shfl_xor_cf(float _Complex var, int lane_mask,
-                                  int width = mapping::getWarpSize());
+double xteamr_shfl_xor_d(double var, const int lane_mask, const uint32_t width);
+float xteamr_shfl_xor_f(float var, const int lane_mask, const uint32_t width);
+int xteamr_shfl_xor_int(int var, const int lane_mask, const uint32_t width);
+double _Complex xteamr_shfl_xor_cd(double _Complex var, const int lane_mask,
+                                   const uint32_t width);
+float _Complex xteamr_shfl_xor_cf(float _Complex var, const int lane_mask,
+                                  const uint32_t width);
 
 // Define the arch (amdgcn vs nvptx) variants of shfl
 
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-int xteamr_shfl_xor_int(int var, int lane_mask,
-                        int width = mapping::getWarpSize()) {
+int xteamr_shfl_xor_int(int var, const int lane_mask, const uint32_t width) {
   int self = mapping::getThreadIdInWarp(); // __lane_id();
   int index = self ^ lane_mask;
   index = index >= ((self + width) & ~(width - 1)) ? self : index;
   return __builtin_amdgcn_ds_bpermute(index << 2, var);
 }
-float xteamr_shfl_xor_f(float var, int lane_mask,
-                        int width = mapping::getWarpSize()) {
+float xteamr_shfl_xor_f(float var, const int lane_mask, const uint32_t width) {
   union {
     int i;
     unsigned u;
@@ -73,8 +52,8 @@ float xteamr_shfl_xor_f(float var, int lane_mask,
   tmp.i = xteamr_shfl_xor_int(tmp.i, lane_mask, width);
   return tmp.f;
 }
-double xteamr_shfl_xor_d(double var, int lane_mask,
-                         int width = mapping::getWarpSize()) {
+double xteamr_shfl_xor_d(double var, const int lane_mask,
+                         const uint32_t width) {
   static_assert(sizeof(double) == 2 * sizeof(int), "");
   static_assert(sizeof(double) == sizeof(uint64_t), "");
 
@@ -90,14 +69,14 @@ double xteamr_shfl_xor_d(double var, int lane_mask,
   return tmp1;
 }
 
-double _Complex xteamr_shfl_xor_cd(double _Complex var, int lane_mask,
-                                   int width = mapping::getWarpSize()) {
+double _Complex xteamr_shfl_xor_cd(double _Complex var, const int lane_mask,
+                                   const uint32_t width) {
   __real__(var) = xteamr_shfl_xor_d(__real__(var), lane_mask, width);
   __imag__(var) = xteamr_shfl_xor_d(__imag__(var), lane_mask, width);
   return var;
 }
-float _Complex xteamr_shfl_xor_cf(float _Complex var, int lane_mask,
-                                  int width = mapping::getWarpSize()) {
+float _Complex xteamr_shfl_xor_cf(float _Complex var, const int lane_mask,
+                                  const uint32_t width) {
   __real__(var) = xteamr_shfl_xor_f(__real__(var), lane_mask, width);
   __imag__(var) = xteamr_shfl_xor_f(__imag__(var), lane_mask, width);
   return var;
@@ -107,12 +86,11 @@ float _Complex xteamr_shfl_xor_cf(float _Complex var, int lane_mask,
 #pragma omp begin declare variant match(                                       \
     device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
 
-int xteamr_shfl_xor_int(int var, int lane_mask, int width) {
+int xteamr_shfl_xor_int(int var, const int lane_mask, const uint32_t width) {
   int c = ((32 - width) << 8) | 0x1f;
   return __nvvm_shfl_sync_bfly_i32(0xFFFFFFFF, var, lane_mask, c);
 }
-float xteamr_shfl_xor_f(float var, int lane_mask,
-                        int width = mapping::getWarpSize()) {
+float xteamr_shfl_xor_f(float var, const int lane_mask, const uint32_t width) {
   union {
     int i;
     unsigned u;
@@ -122,8 +100,7 @@ float xteamr_shfl_xor_f(float var, int lane_mask,
   tmp.i = xteamr_shfl_xor_int(tmp.i, lane_mask, width);
   return tmp.f;
 }
-double xteamr_shfl_xor_d(double var, int laneMask,
-                         int width = mapping::getWarpSize()) {
+double xteamr_shfl_xor_d(double var, int laneMask, const uint32_t width) {
   unsigned lo, hi;
   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "d"(var));
   hi = xteamr_shfl_xor_int(hi, laneMask, width);
@@ -131,14 +108,14 @@ double xteamr_shfl_xor_d(double var, int laneMask,
   asm volatile("mov.b64 %0, {%1,%2};" : "=d"(var) : "r"(lo), "r"(hi));
   return var;
 }
-double _Complex xteamr_shfl_xor_cd(double _Complex var, int lane_mask,
-                                   int width = mapping::getWarpSize()) {
+double _Complex xteamr_shfl_xor_cd(double _Complex var, const int lane_mask,
+                                   const uint32_t width) {
   __real__(var) = xteamr_shfl_xor_d(__real__(var), lane_mask, width);
   __imag__(var) = xteamr_shfl_xor_d(__imag__(var), lane_mask, width);
   return var;
 }
-float _Complex xteamr_shfl_xor_cf(float _Complex var, int lane_mask,
-                                  int width = mapping::getWarpSize()) {
+float _Complex xteamr_shfl_xor_cf(float _Complex var, const int lane_mask,
+                                  const uint32_t width) {
   __real__(var) = xteamr_shfl_xor_f(__real__(var), lane_mask, width);
   __imag__(var) = xteamr_shfl_xor_f(__imag__(var), lane_mask, width);
   return var;
@@ -180,371 +157,458 @@ template <> struct __dispatch_tag<long> {
 template <> struct __dispatch_tag<unsigned long> {
   typedef _ul_tag type;
 };
-double xteamr_shfl_xor(_d_tag tag, double var, int lane_mask, int width) {
-  return xteamr_shfl_xor_d(var, lane_mask, width);
+template <const uint32_t _WSZ>
+double xteamr_shfl_xor(_d_tag tag, double var, const int lane_mask) {
+  return xteamr_shfl_xor_d(var, lane_mask, _WSZ);
 }
-float xteamr_shfl_xor(_f_tag tag, float var, int lane_mask, int width) {
-  return xteamr_shfl_xor_f(var, lane_mask, width);
+template <const uint32_t _WSZ>
+float xteamr_shfl_xor(_f_tag tag, float var, const int lane_mask) {
+  return xteamr_shfl_xor_f(var, lane_mask, _WSZ);
 }
-double _Complex xteamr_shfl_xor(_cd_tag tag, double _Complex var, int lane_mask,
-                                int width) {
-  return xteamr_shfl_xor_cd(var, lane_mask, width);
+template <const uint32_t _WSZ>
+double _Complex xteamr_shfl_xor(_cd_tag tag, double _Complex var,
+                                const int lane_mask) {
+  return xteamr_shfl_xor_cd(var, lane_mask, _WSZ);
 }
-float _Complex xteamr_shfl_xor(_cf_tag tag, float _Complex var, int lane_mask,
-                               int width) {
-  return xteamr_shfl_xor_cf(var, lane_mask, width);
+template <const uint32_t _WSZ>
+float _Complex xteamr_shfl_xor(_cf_tag tag, float _Complex var,
+                               const int lane_mask) {
+  return xteamr_shfl_xor_cf(var, lane_mask, _WSZ);
 }
-int xteamr_shfl_xor(_i_tag tag, int var, int lane_mask, int width) {
-  return xteamr_shfl_xor_int(var, lane_mask, width);
+template <const uint32_t _WSZ>
+int xteamr_shfl_xor(_i_tag tag, int var, const int lane_mask) {
+  return xteamr_shfl_xor_int(var, lane_mask, _WSZ);
 }
-unsigned int xteamr_shfl_xor(_ui_tag tag, unsigned int var, int lane_mask,
-                             int width) {
-  return xteamr_shfl_xor_int(var, lane_mask, width);
+template <const uint32_t _WSZ>
+unsigned int xteamr_shfl_xor(_ui_tag tag, unsigned int var,
+                             const int lane_mask) {
+  return xteamr_shfl_xor_int(var, lane_mask, _WSZ);
 }
-long xteamr_shfl_xor(_l_tag tag, long var, int lane_mask, int width) {
-  return xteamr_shfl_xor_d(var, lane_mask, width);
+template <const uint32_t _WSZ>
+long xteamr_shfl_xor(_l_tag tag, long var, const int lane_mask) {
+  return xteamr_shfl_xor_d(var, lane_mask, _WSZ);
 }
-unsigned long xteamr_shfl_xor(_ul_tag tag, unsigned long var, int lane_mask,
-                              int width) {
-  return xteamr_shfl_xor_d(var, lane_mask, width);
+template <const uint32_t _WSZ>
+unsigned long xteamr_shfl_xor(_ul_tag tag, unsigned long var,
+                              const int lane_mask) {
+  return xteamr_shfl_xor_d(var, lane_mask, _WSZ);
 }
-template <typename T> T xteamr_shfl_xor(T var, int lane_mask, int width) {
+
+template <typename T, const uint32_t _WSZ>
+T xteamr_shfl_xor(T var, const int lane_mask) {
   typedef typename __dispatch_tag<T>::type tag;
-  return xteamr_shfl_xor(tag(), var, lane_mask, width);
+  return xteamr_shfl_xor<_WSZ>(tag(), var, lane_mask);
 }
 
-double xtreamr_get_low(_d_tag) { return __XTEAM_LOW_DOUBLE; }
-float xtreamr_get_low(_f_tag) { return __XTEAM_LOW_FLOAT; }
-int xtreamr_get_low(_i_tag) { return __XTEAM_LOW_INT32; }
-long xtreamr_get_low(_l_tag) { return __XTEAM_LOW_INT64; }
-unsigned int xtreamr_get_low(_ui_tag) { return __XTEAM_LOW_UINT32; }
-unsigned long xtreamr_get_low(_ul_tag) { return __XTEAM_LOW_UINT64; }
-template <typename T> T xtreamr_get_low() {
-  typedef typename __dispatch_tag<T>::type tag;
-  return xtreamr_get_low(tag());
-}
+template <typename T, const int32_t _NW, const int32_t _WSZ>
+__attribute__((flatten, always_inline)) void _xteam_reduction(
+    T val, T *r_ptr, T *team_vals, uint32_t *teams_done_ptr,
+    void (*_rf)(T *, T),
+    void (*_rf_lds)(__XTEAM_SHARED_LDS T *, __XTEAM_SHARED_LDS T *),
+    const T inival) {
 
-double xteamr_get_max(_d_tag) { return __XTEAM_MAX_DOUBLE; }
-float xteamr_get_max(_f_tag) { return __XTEAM_MAX_FLOAT; }
-int xteamr_get_max(_i_tag) { return __XTEAM_MAX_INT32; }
-long xteamr_get_max(_l_tag) { return __XTEAM_MAX_INT64; }
-unsigned int xteamr_get_max(_ui_tag) { return __XTEAM_MAX_UINT32; }
-unsigned long xteamr_get_max(_ul_tag) { return __XTEAM_MAX_UINT64; }
-template <typename T> T xteamr_get_max() {
-  typedef typename __dispatch_tag<T>::type tag;
-  return xteamr_get_max(tag());
-}
+  constexpr int32_t _NT = _NW * _WSZ;
+  const uint32_t omp_thread_num = mapping::getThreadIdInBlock();
+  const uint32_t omp_team_num = mapping::getBlockId();
+  const uint32_t wave_num = mapping::getWarpId();         // 0 15
+  const uint32_t lane_num = mapping::getThreadIdInWarp(); //  0 63
+  const uint32_t NumTeams = mapping::getNumberOfBlocks();
+  static __XTEAM_SHARED_LDS T xwave_lds[_NW];
+  static __XTEAM_SHARED_LDS bool __is_last_team;
 
-template <typename T>
-void __local_xteamr_sum(T val, T *result_value, T *xteam_mem,
-                        uint32_t *teams_done_ptr) {
-
-  const int32_t omp_thread_num = mapping::getThreadIdInBlock();
-  const int32_t omp_team_num = mapping::getBlockId();
-  const int32_t wave_num = mapping::getWarpId();         // 0 15
-  const int32_t lane_num = mapping::getThreadIdInWarp(); //  0 63
-  const int32_t wsz = mapping::getWarpSize();
-  constexpr int32_t NumThreads = __XTEAM_NTHREADS;
-  const int32_t NumTeams = mapping::getNumberOfBlocks();
-  const int32_t num_waves = NumThreads / wsz;
-  __XTEAM_SHARED_LDS T psums[__XTEAM_MAXW_PERTEAM];
-  __XTEAM_SHARED_LDS bool __is_last_team;
-
-  if (omp_thread_num == 0)
-    xteam_mem[omp_team_num] = T(0); // check this works for complex sum?
-
-  // Reduce each wavefront to psums[wave_num]
-  __kmpc_impl_syncthreads();
-  for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1)
-    val += xteamr_shfl_xor<T>(val, offset, wsz);
-
+  // Binary reduce each wave, then copy to xwave_lds[wave_num]
+  for (unsigned int offset = _WSZ / 2; offset > 0; offset >>= 1)
+    (*_rf)(&val, xteamr_shfl_xor<T, _WSZ>(val, offset));
   if (lane_num == 0)
-    psums[wave_num] = val;
+    xwave_lds[wave_num] = val;
 
-  for (unsigned int offset = num_waves / 2; offset > 0; offset >>= 1) {
-    __kmpc_impl_syncthreads();
-    if (wave_num < offset) {
-      psums[wave_num] += psums[wave_num + offset];
-    }
+  // Binary reduce each wave's value into wave_lds[0] with lds memory.
+  __kmpc_impl_syncthreads();
+  for (unsigned int offset = _NW / 2; offset > 0; offset >>= 1) {
+    if (omp_thread_num < offset)
+      (*_rf_lds)(&(xwave_lds[omp_thread_num]),
+                 &(xwave_lds[omp_thread_num + offset]));
   }
+  __kmpc_impl_syncthreads();
+
+  // Discover the last team to complete cross wave reduction
+  // The team number of last team is nondeterministic.
   __is_last_team = false;
   if (omp_thread_num == 0) {
-    xteam_mem[omp_team_num] = psums[0];
+    team_vals[omp_team_num] = xwave_lds[0];
     uint32_t td = atomic::inc(teams_done_ptr, NumTeams - 1u, __ATOMIC_SEQ_CST);
     if (td == (NumTeams - 1u))
       __is_last_team = true;
   }
 
-  // Sync so all threads from last team know they are in the last team
+  // This sync needed, so all threads from last team know they are in the last
+  // team.
   __kmpc_impl_syncthreads();
 
   if (__is_last_team) {
     // All threads from last completed team enter here.
-    val = T(0);
+    // All other teams exit.
     if (omp_thread_num < NumTeams)
-      val = xteam_mem[omp_thread_num];
+      val = team_vals[omp_thread_num];
+    else
+      val = inival;
 
-    for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
-      val += xteamr_shfl_xor<T>(val, offset, wsz);
-    }
-    if (lane_num == 0) {
-      psums[wave_num] = val;
-    }
+    // Reduce each wave into xwave_lds[wave_num]
+    for (unsigned int offset = _WSZ / 2; offset > 0; offset >>= 1)
+      (*_rf)(&val, xteamr_shfl_xor<T, _WSZ>(val, offset));
+    if (lane_num == 0)
+      xwave_lds[wave_num] = val;
+
+    // Typically only 2 useable waves when <128 CUs. No gain to parallelizing
+    // these last 2 reductions. So do these on thread 0 into lane 0's val.
     if (omp_thread_num == 0) {
-      unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
+      // FIXME: We know wave_lds[0] is done since wave_num==0 here. But do
+      //        we need a sync here to ensure wave_lds[i!=0] is correct?
+      unsigned int usableWaves = ((NumTeams - 1) / _WSZ) + 1;
       for (unsigned int kk = 1; kk < usableWaves; kk++)
-        psums[0] += psums[kk];
-      *result_value += psums[0];
-    }
-  }
-}
+        (*_rf_lds)(&xwave_lds[0], &xwave_lds[kk]);
 
-template <typename T>
-void __local_xteamr_max(T val, T *result_value, T *xteam_mem,
-                        uint32_t *teams_done_ptr) {
-
-  const int32_t omp_thread_num = mapping::getThreadIdInBlock();
-  const int32_t omp_team_num = mapping::getBlockId();
-  const int32_t wave_num = mapping::getWarpId();         // 0 15
-  const int32_t lane_num = mapping::getThreadIdInWarp(); //  0 63
-  const int32_t wsz = mapping::getWarpSize();
-  constexpr int32_t NumThreads = __XTEAM_NTHREADS;
-  const int32_t NumTeams = mapping::getNumberOfBlocks();
-  const int32_t num_waves = NumThreads / wsz;
-  __XTEAM_SHARED_LDS T psums[__XTEAM_MAXW_PERTEAM];
-  __XTEAM_SHARED_LDS bool __is_last_team;
-
-  if (omp_thread_num == 0)
-    xteam_mem[omp_team_num] = xtreamr_get_low<T>();
-
-  // Reduce each wavefront to psums[wave_num]
-  __kmpc_impl_syncthreads();
-  for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
-    T otherval = xteamr_shfl_xor<T>(val, offset, wsz);
-    if (otherval > val)
-      val = otherval;
-  }
-
-  if (lane_num == 0)
-    psums[wave_num] = val;
-
-  for (unsigned int offset = num_waves / 2; offset > 0; offset >>= 1) {
-    __kmpc_impl_syncthreads();
-    if (wave_num < offset) {
-      T otherval = psums[wave_num + offset];
-      if (otherval > psums[wave_num])
-        psums[wave_num] = otherval;
-    }
-  }
-  __is_last_team = false;
-  if (omp_thread_num == 0) {
-    xteam_mem[omp_team_num] = psums[0];
-    uint32_t td = atomic::inc(teams_done_ptr, NumTeams - 1u, __ATOMIC_SEQ_CST);
-    if (td == (NumTeams - 1u))
-      __is_last_team = true;
-  }
-
-  // Sync so all threads from last team know they are in the last team
-  __kmpc_impl_syncthreads();
-
-  if (__is_last_team) {
-    // All threads from last completed team enter here.
-    val = xtreamr_get_low<T>();
-    if (omp_thread_num < NumTeams)
-      val = xteam_mem[omp_thread_num];
-    for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
-      T otherval = xteamr_shfl_xor<T>(val, offset, wsz);
-      if (otherval > val)
-        val = otherval;
-    }
-    if (lane_num == 0) {
-      psums[wave_num] = val;
-    }
-    if (omp_thread_num == 0) {
-      unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
-      for (unsigned int kk = 1; kk < usableWaves; kk++) {
-        T otherval = psums[kk];
-        if (otherval > psums[0])
-          psums[0] = otherval;
-      }
-      if (psums[0] > *result_value)
-        *result_value = psums[0];
-    }
-  }
-}
-
-template <typename T>
-void __local_xteamr_min(T val, T *result_value, T *xteam_mem,
-                        uint32_t *teams_done_ptr) {
-
-  const int32_t omp_thread_num = mapping::getThreadIdInBlock();
-  const int32_t omp_team_num = mapping::getBlockId();
-  const int32_t wave_num = mapping::getWarpId();         // 0 15
-  const int32_t lane_num = mapping::getThreadIdInWarp(); //  0 63
-  const int32_t wsz = mapping::getWarpSize();
-  constexpr int32_t NumThreads = __XTEAM_NTHREADS;
-  const int32_t NumTeams = mapping::getNumberOfBlocks();
-  const int32_t num_waves = NumThreads / wsz;
-  __XTEAM_SHARED_LDS T psums[__XTEAM_MAXW_PERTEAM];
-  __XTEAM_SHARED_LDS bool __is_last_team;
-
-  if (omp_thread_num == 0)
-    xteam_mem[omp_team_num] = xteamr_get_max<T>();
-
-  // Reduce each wavefront to psums[wave_num]
-  __kmpc_impl_syncthreads();
-  for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
-    T otherval = xteamr_shfl_xor<T>(val, offset, wsz);
-    if (otherval < val)
-      val = otherval;
-  }
-
-  if (lane_num == 0)
-    psums[wave_num] = val;
-
-  for (unsigned int offset = num_waves / 2; offset > 0; offset >>= 1) {
-    __kmpc_impl_syncthreads();
-    if (wave_num < offset) {
-      T otherval = psums[wave_num + offset];
-      if (otherval < psums[wave_num])
-        psums[wave_num] = otherval;
-    }
-  }
-  __is_last_team = false;
-  if (omp_thread_num == 0) {
-    xteam_mem[omp_team_num] = psums[0];
-    uint32_t td = atomic::inc(teams_done_ptr, NumTeams - 1u, __ATOMIC_SEQ_CST);
-    if (td == (NumTeams - 1u))
-      __is_last_team = true;
-  }
-
-  // Sync so all threads from last team know they are in the last team
-  __kmpc_impl_syncthreads();
-
-  if (__is_last_team) {
-    // All threads from last completed team enter here.
-    val = xteamr_get_max<T>();
-    if (omp_thread_num < NumTeams)
-      val = xteam_mem[omp_thread_num];
-
-    for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
-      T otherval = xteamr_shfl_xor<T>(val, offset, wsz);
-      if (otherval < val)
-        val = otherval;
-    }
-    if (lane_num == 0) {
-      psums[wave_num] = val;
-    }
-    if (omp_thread_num == 0) {
-      unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
-      for (unsigned int kk = 1; kk < usableWaves; kk++) {
-        T otherval = psums[kk];
-        psums[0] = (otherval < psums[0]) ? otherval : psums[0];
-      }
-      if (psums[0] < *result_value)
-        *result_value = psums[0];
+      // Reduce with the original result value.
+      xwave_lds[1] = *r_ptr;
+      (*_rf_lds)(&xwave_lds[0], &xwave_lds[1]);
+      *r_ptr = xwave_lds[0];
     }
   }
 }
 
 //  Calls to these __kmpc extern C functions are created in clang codegen
-//  for FORTRAH, c, and C++. They may also be used for sumulation and teeting.
-//  The headers for these extern C fns are in ../include/Interface.h
-extern "C" {
-void __kmpc_xteamr_sum_d(double inval, double *result_value, double *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_sum<double>(inval, result_value, xteam_mem, teams_done_ptr);
+//  for FORTRAN, c, and C++. They may also be used for sumulation and testing.
+//  The headers for these extern C functions are in ../include/Interface.h
+//  The compiler builds the name based on data type,
+//  number of waves in the team,and warpsize.
+//
+#define _EXT_ATTR extern "C" __attribute__((flatten, always_inline)) void
+_EXT_ATTR
+__kmpc_xteamr_d_16x64(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
+                      void (*_rf)(double *, double),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
+                                      __XTEAM_SHARED_LDS double *),
+                      double iv) {
+  _xteam_reduction<double, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
 }
-void __kmpc_xteamr_sum_f(float inval, float *result_value, float *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_sum<float>(inval, result_value, xteam_mem, teams_done_ptr);
-}
-void __kmpc_xteamr_sum_cd(double _Complex inval, double _Complex *result_value,
-                          double _Complex *xteam_mem,
-                          uint32_t *teams_done_ptr) {
-  __local_xteamr_sum<double _Complex>(inval, result_value, xteam_mem,
-                                      teams_done_ptr);
-}
-void __kmpc_xteamr_sum_cf(float _Complex inval, float _Complex *result_value,
-                          float _Complex *xteam_mem, uint32_t *teams_done_ptr) {
-  __local_xteamr_sum<float _Complex>(inval, result_value, xteam_mem,
-                                     teams_done_ptr);
-}
-void __kmpc_xteamr_sum_i(int inval, int *result_value, int *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_sum<int>(inval, result_value, xteam_mem, teams_done_ptr);
-}
-void __kmpc_xteamr_sum_ui(unsigned int inval, unsigned int *result_value,
-                          unsigned int *xteam_mem, uint32_t *teams_done_ptr) {
-  __local_xteamr_sum<unsigned int>(inval, result_value, xteam_mem,
-                                   teams_done_ptr);
-}
-void __kmpc_xteamr_sum_l(long inval, long *result_value, long *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_sum<long>(inval, result_value, xteam_mem, teams_done_ptr);
-}
-void __kmpc_xteamr_sum_ul(unsigned long inval, unsigned long *result_value,
-                          unsigned long *xteam_mem, uint32_t *teams_done_ptr) {
-  __local_xteamr_sum<unsigned long>(inval, result_value, xteam_mem,
-                                    teams_done_ptr);
+_EXT_ATTR
+__kmpc_xteamr_f_16x64(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
+                      void (*_rf)(float *, float),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
+                                      __XTEAM_SHARED_LDS float *),
+                      float iv) {
+  _xteam_reduction<float, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
 }
 
-// Note: One may not compare/order complex numbers so no complex max or min
-
-void __kmpc_xteamr_max_d(double inval, double *result_value, double *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_max<double>(inval, result_value, xteam_mem, teams_done_ptr);
+_EXT_ATTR
+__kmpc_xteamr_cd_16x64(double _Complex v, double _Complex *r_ptr, double _Complex *tvals, uint32_t *td_ptr,
+                      void (*_rf)(double _Complex *, double _Complex),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS double _Complex *,
+                                      __XTEAM_SHARED_LDS double _Complex *),
+                      double _Complex iv) {
+  _xteam_reduction<double _Complex, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
 }
-void __kmpc_xteamr_max_f(float inval, float *result_value, float *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_max<float>(inval, result_value, xteam_mem, teams_done_ptr);
+_EXT_ATTR
+__kmpc_xteamr_cf_16x64(float _Complex v, float _Complex *r_ptr, float _Complex *tvals, uint32_t *td_ptr,
+                      void (*_rf)(float _Complex  *, float _Complex),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS float _Complex *,
+                                      __XTEAM_SHARED_LDS float _Complex *),
+                      float _Complex iv) {
+  _xteam_reduction<float _Complex, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
 }
-void __kmpc_xteamr_max_i(int inval, int *result_value, int *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_max<int>(inval, result_value, xteam_mem, teams_done_ptr);
+_EXT_ATTR
+__kmpc_xteamr_i_16x64(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
+                      void (*_rf)(int *, int),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
+                                      __XTEAM_SHARED_LDS int *),
+                      int iv) {
+  _xteam_reduction<int, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
 }
-void __kmpc_xteamr_max_ui(unsigned int inval, unsigned int *result_value,
-                          unsigned int *xteam_mem, uint32_t *teams_done_ptr) {
-  __local_xteamr_max<unsigned int>(inval, result_value, xteam_mem,
-                                   teams_done_ptr);
+_EXT_ATTR
+__kmpc_xteamr_ui_16x64(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
+                       uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
+                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
+                                       __XTEAM_SHARED_LDS uint32_t *),
+                       uint32_t iv) {
+  _xteam_reduction<uint32_t, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
 }
-void __kmpc_xteamr_max_l(long inval, long *result_value, long *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_max<long>(inval, result_value, xteam_mem, teams_done_ptr);
+_EXT_ATTR
+__kmpc_xteamr_l_16x64(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
+                      void (*_rf)(long *, long),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
+                                      __XTEAM_SHARED_LDS long *),
+                      long iv) {
+  _xteam_reduction<long, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
 }
-void __kmpc_xteamr_max_ul(unsigned long inval, unsigned long *result_value,
-                          unsigned long *xteam_mem, uint32_t *teams_done_ptr) {
-  __local_xteamr_max<unsigned long>(inval, result_value, xteam_mem,
-                                    teams_done_ptr);
-}
-
-void __kmpc_xteamr_min_d(double inval, double *result_value, double *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_min<double>(inval, result_value, xteam_mem, teams_done_ptr);
-}
-void __kmpc_xteamr_min_f(float inval, float *result_value, float *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_min<float>(inval, result_value, xteam_mem, teams_done_ptr);
-}
-void __kmpc_xteamr_min_i(int inval, int *result_value, int *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_min<int>(inval, result_value, xteam_mem, teams_done_ptr);
-}
-void __kmpc_xteamr_min_ui(unsigned int inval, unsigned int *result_value,
-                          unsigned int *xteam_mem, uint32_t *teams_done_ptr) {
-  __local_xteamr_min<unsigned int>(inval, result_value, xteam_mem,
-                                   teams_done_ptr);
-}
-void __kmpc_xteamr_min_l(long inval, long *result_value, long *xteam_mem,
-                         uint32_t *teams_done_ptr) {
-  __local_xteamr_min<long>(inval, result_value, xteam_mem, teams_done_ptr);
-}
-void __kmpc_xteamr_min_ul(unsigned long inval, unsigned long *result_value,
-                          unsigned long *xteam_mem, uint32_t *teams_done_ptr) {
-  __local_xteamr_min<unsigned long>(inval, result_value, xteam_mem,
-                                    teams_done_ptr);
+_EXT_ATTR
+__kmpc_xteamr_ul_16x64(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
+                       uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
+                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
+                                       __XTEAM_SHARED_LDS uint64_t *),
+                       uint64_t iv) {
+  _xteam_reduction<uint64_t, 16, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
 }
 
-} // end extern "C"
+_EXT_ATTR
+__kmpc_xteamr_d_8x64(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
+                     void (*_rf)(double *, double),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
+                                     __XTEAM_SHARED_LDS double *),
+                     double iv) {
+  _xteam_reduction<double, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_8x64(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
+                     void (*_rf)(float *, float),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
+                                     __XTEAM_SHARED_LDS float *),
+                     float iv) {
+  _xteam_reduction<float, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_cd_8x64(double _Complex v, double _Complex *r_ptr, double _Complex *tvals, uint32_t *td_ptr,
+                      void (*_rf)(double _Complex *, double _Complex),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS double _Complex *,
+                                      __XTEAM_SHARED_LDS double _Complex *),
+                      double _Complex iv) {
+  _xteam_reduction<double _Complex, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_cf_8x64(float _Complex v, float _Complex *r_ptr, float _Complex *tvals, uint32_t *td_ptr,
+                      void (*_rf)(float _Complex  *, float _Complex),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS float _Complex *,
+                                      __XTEAM_SHARED_LDS float _Complex *),
+                      float _Complex iv) {
+  _xteam_reduction<float _Complex, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_8x64(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
+                     void (*_rf)(int *, int),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
+                                     __XTEAM_SHARED_LDS int *),
+                     int iv) {
+  _xteam_reduction<int, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_8x64(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
+                      uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
+                                      __XTEAM_SHARED_LDS uint32_t *),
+                      uint32_t iv) {
+  _xteam_reduction<uint32_t, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_8x64(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
+                     void (*_rf)(long *, long),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
+                                     __XTEAM_SHARED_LDS long *),
+                     long iv) {
+  _xteam_reduction<long, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_8x64(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
+                      uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
+                                      __XTEAM_SHARED_LDS uint64_t *),
+                      uint64_t iv) {
+  _xteam_reduction<uint64_t, 8, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+
+_EXT_ATTR
+__kmpc_xteamr_d_4x64(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
+                     void (*_rf)(double *, double),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
+                                     __XTEAM_SHARED_LDS double *),
+                     double iv) {
+  _xteam_reduction<double, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_4x64(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
+                     void (*_rf)(float *, float),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
+                                     __XTEAM_SHARED_LDS float *),
+                     float iv) {
+  _xteam_reduction<float, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_4x64(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
+                     void (*_rf)(int *, int),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
+                                     __XTEAM_SHARED_LDS int *),
+                     int iv) {
+  _xteam_reduction<int, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_4x64(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
+                      uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
+                                      __XTEAM_SHARED_LDS uint32_t *),
+                      uint32_t iv) {
+  _xteam_reduction<uint32_t, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_4x64(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
+                     void (*_rf)(long *, long),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
+                                     __XTEAM_SHARED_LDS long *),
+                     long iv) {
+  _xteam_reduction<long, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_4x64(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
+                      uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
+                                      __XTEAM_SHARED_LDS uint64_t *),
+                      uint64_t iv) {
+  _xteam_reduction<uint64_t, 4, 64>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+
+_EXT_ATTR
+__kmpc_xteamr_d_32x32(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
+                      void (*_rf)(double *, double),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
+                                      __XTEAM_SHARED_LDS double *),
+                      double iv) {
+  _xteam_reduction<double, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_32x32(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
+                      void (*_rf)(float *, float),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
+                                      __XTEAM_SHARED_LDS float *),
+                      float iv) {
+  _xteam_reduction<float, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_32x32(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
+                      void (*_rf)(int *, int),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
+                                      __XTEAM_SHARED_LDS int *),
+                      int iv) {
+  _xteam_reduction<int, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_32x32(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
+                       uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
+                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
+                                       __XTEAM_SHARED_LDS uint32_t *),
+                       uint32_t iv) {
+  _xteam_reduction<uint32_t, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_32x32(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
+                      void (*_rf)(long *, long),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
+                                      __XTEAM_SHARED_LDS long *),
+                      long iv) {
+  _xteam_reduction<long, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_32x32(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
+                       uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
+                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
+                                       __XTEAM_SHARED_LDS uint64_t *),
+                       uint64_t iv) {
+  _xteam_reduction<uint64_t, 32, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+
+_EXT_ATTR
+__kmpc_xteamr_d_16x32(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
+                      void (*_rf)(double *, double),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
+                                      __XTEAM_SHARED_LDS double *),
+                      double iv) {
+  _xteam_reduction<double, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_16x32(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
+                      void (*_rf)(float *, float),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
+                                      __XTEAM_SHARED_LDS float *),
+                      float iv) {
+  _xteam_reduction<float, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_16x32(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
+                      void (*_rf)(int *, int),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
+                                      __XTEAM_SHARED_LDS int *),
+                      int iv) {
+  _xteam_reduction<int, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_16x32(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
+                       uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
+                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
+                                       __XTEAM_SHARED_LDS uint32_t *),
+                       uint32_t iv) {
+  _xteam_reduction<uint32_t, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_16x32(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
+                      void (*_rf)(long *, long),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
+                                      __XTEAM_SHARED_LDS long *),
+                      long iv) {
+  _xteam_reduction<long, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_16x32(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
+                       uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
+                       void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
+                                       __XTEAM_SHARED_LDS uint64_t *),
+                       uint64_t iv) {
+  _xteam_reduction<uint64_t, 16, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+
+_EXT_ATTR
+__kmpc_xteamr_d_8x32(double v, double *r_ptr, double *tvals, uint32_t *td_ptr,
+                     void (*_rf)(double *, double),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS double *,
+                                     __XTEAM_SHARED_LDS double *),
+                     double iv) {
+  _xteam_reduction<double, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_f_8x32(float v, float *r_ptr, float *tvals, uint32_t *td_ptr,
+                     void (*_rf)(float *, float),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS float *,
+                                     __XTEAM_SHARED_LDS float *),
+                     float iv) {
+  _xteam_reduction<float, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_i_8x32(int v, int *r_ptr, int *tvals, uint32_t *td_ptr,
+                     void (*_rf)(int *, int),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS int *,
+                                     __XTEAM_SHARED_LDS int *),
+                     int iv) {
+  _xteam_reduction<int, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ui_8x32(uint32_t v, uint32_t *r_ptr, uint32_t *tvals,
+                      uint32_t *td_ptr, void (*_rf)(uint32_t *, uint32_t),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint32_t *,
+                                      __XTEAM_SHARED_LDS uint32_t *),
+                      uint32_t iv) {
+  _xteam_reduction<uint32_t, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_l_8x32(long v, long *r_ptr, long *tvals, uint32_t *td_ptr,
+                     void (*_rf)(long *, long),
+                     void (*_rf_lds)(__XTEAM_SHARED_LDS long *,
+                                     __XTEAM_SHARED_LDS long *),
+                     long iv) {
+  _xteam_reduction<long, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+_EXT_ATTR
+__kmpc_xteamr_ul_8x32(uint64_t v, uint64_t *r_ptr, uint64_t *tvals,
+                      uint32_t *td_ptr, void (*_rf)(uint64_t *, uint64_t),
+                      void (*_rf_lds)(__XTEAM_SHARED_LDS uint64_t *,
+                                      __XTEAM_SHARED_LDS uint64_t *),
+                      uint64_t iv) {
+  _xteam_reduction<uint64_t, 8, 32>(v, r_ptr, tvals, td_ptr, _rf, _rf_lds, iv);
+}
+#undef _EXT_ATTR
 
 #pragma omp end declare target

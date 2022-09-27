@@ -133,6 +133,7 @@ set(src_files
   ${source_directory}/ExtraMapping.cpp
   ${source_directory}/Xteam.cpp
   ${source_directory}/Xteamr.cpp
+  ${source_directory}/Rfuns.cpp
   ${source_directory}/Memory.cpp
 )
 
