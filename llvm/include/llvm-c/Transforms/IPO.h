@@ -54,9 +54,6 @@ void LLVMAddGlobalDCEPass(LLVMPassManagerRef PM);
 /** See llvm::createGlobalOptimizerPass function. */
 void LLVMAddGlobalOptimizerPass(LLVMPassManagerRef PM);
 
-/** See llvm::createPruneEHPass function. */
-void LLVMAddPruneEHPass(LLVMPassManagerRef PM);
-
 /** See llvm::createIPSCCPPass function. */
 void LLVMAddIPSCCPPass(LLVMPassManagerRef PM);
 
