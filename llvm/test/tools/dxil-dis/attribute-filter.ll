@@ -1,7 +1,7 @@
 ; RUN: llc %s --filetype=obj -o - | dxil-dis -o - | FileCheck %s
 
-; CHECK: target triple = "dxil-unknown-unknown"
-target triple = "dxil-unknown-unknown"
+; CHECK: target triple = "dxil-unknown-shadermodel6.7-library"
+target triple = "dxil-unknown-shadermodel6.7-library"
 
 ; CHECK: Function Attrs: nounwind readnone
 ; Function Attrs: norecurse nounwind readnone willreturn
