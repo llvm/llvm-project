@@ -54,7 +54,6 @@ let test_transforms () =
            ++ add_always_inliner
            ++ add_global_dce
            ++ add_global_optimizer
-           ++ add_prune_eh
            ++ add_ipsccp
            ++ add_internalize ~all_but_main:true
            ++ add_strip_dead_prototypes
