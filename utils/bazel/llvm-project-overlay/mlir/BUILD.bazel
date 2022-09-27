@@ -2030,6 +2030,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SparseTensor/IR/SparseTensor.h"],
     includes = ["include"],
     deps = [
+        ":ArithmeticDialect",
         ":IR",
         ":InferTypeOpInterface",
         ":SparseTensorAttrDefsIncGen",
