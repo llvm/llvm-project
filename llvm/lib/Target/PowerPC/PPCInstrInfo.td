@@ -1770,13 +1770,13 @@ def STWAT : X_RD5_RS5_IM5<31, 710, (outs), (ins gprc:$rS, gprc:$rA, u5imm:$FC),
 let isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
 def TRAP  : XForm_24<31, 4, (outs), (ins), "trap", IIC_LdStLoad, [(trap)]>;
 
-def TWI : DForm_base<3, (outs), (ins u5imm:$to, gprc:$rA, s16imm:$imm),
+def TWI : DForm_base<3, (outs), (ins u5imm:$to, gprc:$rA, s16imm:$imm, variable_ops),
                      "twi $to, $rA, $imm", IIC_IntTrapW, []>;
-def TW : XForm_1<31, 4, (outs), (ins u5imm:$to, gprc:$rA, gprc:$rB),
+def TW : XForm_1<31, 4, (outs), (ins u5imm:$to, gprc:$rA, gprc:$rB, variable_ops),
                  "tw $to, $rA, $rB", IIC_IntTrapW, []>;
-def TDI : DForm_base<2, (outs), (ins u5imm:$to, g8rc:$rA, s16imm:$imm),
+def TDI : DForm_base<2, (outs), (ins u5imm:$to, g8rc:$rA, s16imm:$imm, variable_ops),
                      "tdi $to, $rA, $imm", IIC_IntTrapD, []>;
-def TD : XForm_1<31, 68, (outs), (ins u5imm:$to, g8rc:$rA, g8rc:$rB),
+def TD : XForm_1<31, 68, (outs), (ins u5imm:$to, g8rc:$rA, g8rc:$rB, variable_ops),
                  "td $to, $rA, $rB", IIC_IntTrapD, []>;
 
 def POPCNTB : XForm_11<31, 122, (outs gprc:$rA), (ins gprc:$rS),
@@ -5085,8 +5085,6 @@ def : Pat<(int_ppc_stwcx ForceXForm:$dst, gprc:$A),
           (STWCX gprc:$A, ForceXForm:$dst)>;
 def : Pat<(int_ppc_stbcx ForceXForm:$dst, gprc:$A),
           (STBCX gprc:$A, ForceXForm:$dst)>;
-def : Pat<(int_ppc_trap gprc:$A),
-          (TWI 24, $A, 0)>;
 
 def : Pat<(int_ppc_fcfid f64:$A),
         (XSCVSXDDP $A)>;

@@ -16227,6 +16227,24 @@ void PPCTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
+void PPCTargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
+                                              SmallVectorImpl<SDValue> &Ops,
+                                              SelectionDAG &DAG) const {
+  if (I.getNumOperands() <= 1)
+    return;
+  if (!isa<ConstantSDNode>(Ops[1].getNode()))
+    return;
+  auto IntrinsicID = cast<ConstantSDNode>(Ops[1].getNode())->getZExtValue();
+  if (IntrinsicID != Intrinsic::ppc_tdw && IntrinsicID != Intrinsic::ppc_tw &&
+      IntrinsicID != Intrinsic::ppc_trapd && IntrinsicID != Intrinsic::ppc_trap)
+    return;
+
+  if (I.hasMetadata("annotation")) {
+    MDNode *MDN = I.getMetadata("annotation");
+    Ops.push_back(DAG.getMDNode(MDN));
+  }
+}
+
 // isLegalAddressingMode - Return true if the addressing mode represented
 // by AM is legal for this target, for a load/store of the specified type.
 bool PPCTargetLowering::isLegalAddressingMode(const DataLayout &DL,
