@@ -60,6 +60,18 @@ enum class DisableValidationForModuleKind {
   LLVM_MARK_AS_BITMASK_ENUM(Module)
 };
 
+/// Diagnostic options for caching related behaviors.
+enum class CachingDiagKind {
+  /// Do not emit diagnosis for caching.
+  None = 0,
+
+  /// Warning about nondeterministic caching.
+  Warning = 1,
+
+  /// Error about nondeterministic caching.
+  Error = 2
+};
+
 /// PreprocessorOptions - This class is used for passing the various options
 /// used in preprocessor initialization to InitializePreprocessor().
 class PreprocessorOptions {
@@ -219,6 +231,9 @@ public:
 
   /// Prevents intended crashes when using #pragma clang __debug. For testing.
   bool DisablePragmaDebugCrash = false;
+
+  /// Should diagnose caching related issues.
+  CachingDiagKind CachingDiagOption = CachingDiagKind::None;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}

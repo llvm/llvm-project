@@ -97,6 +97,11 @@ void CompilerInstance::setDiagnostics(DiagnosticsEngine *Value) {
   Diagnostics = Value;
 }
 
+bool CompilerInstance::isSourceNonReproducible() const {
+  assert(PP && "Need to have preprocessor");
+  return PP->isSourceNonReproducible();
+}
+
 void CompilerInstance::setVerboseOutputStream(raw_ostream &Value) {
   OwnedVerboseOutputStream.reset();
   VerboseOutputStream = &Value;

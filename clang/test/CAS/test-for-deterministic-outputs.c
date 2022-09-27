@@ -9,6 +9,21 @@
 // CACHE-SKIPPED: remark: compile job cache skipped
 // CACHE-SKIPPED: remark: compile job cache skipped
 
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Rcompile-job-cache 2> %t/out.txt
+// RUN: FileCheck %s --check-prefix=CACHE-WARN --input-file=%t/out.txt
+
+/// Check still a cache miss.
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Rcompile-job-cache 2> %t/out.txt
+// RUN: FileCheck %s --check-prefix=CACHE-WARN --input-file=%t/out.txt
+
+// CACHE-WARN: remark: compile job cache miss
+// CACHE-WARN: warning: encountered non-reproducible token, caching will be skipped
+// CACHE-WARN: warning: encountered non-reproducible token, caching will be skipped
+// CACHE-WARN: warning: encountered non-reproducible token, caching will be skipped
+// CACHE-WARN: remark: compile job cache skipped
+
 void getit(const char **p1, const char **p2, const char **p3) {
   *p1 = __DATE__;
   *p2 = __TIMESTAMP__;

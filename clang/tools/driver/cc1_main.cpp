@@ -32,6 +32,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CAS/ActionCache.h"
@@ -220,8 +221,10 @@ public:
   virtual bool prepareOutputCollection() = 0;
 
   /// Finish writing outputs from a computed result, after a cache miss.
-  virtual Error
-  finishComputedResult(const llvm::cas::CASID &ResultCacheKey) = 0;
+  /// If SkipCache is true, it should not insert the ResultCacheKey into
+  /// Cache for future uses.
+  virtual Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
+                                     bool SkipCache) = 0;
 
   void finishSerializedDiagnostics();
 
@@ -259,7 +262,8 @@ private:
 
   bool prepareOutputCollection() override;
 
-  Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey) override;
+  Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
+                             bool SkipCache) override;
 
   /// Replay a cache hit.
   ///
@@ -317,7 +321,7 @@ public:
 
   /// Canonicalize \p Clang.
   ///
-  /// Return status if should exit immediately, otherwise None.
+  /// \returns status if should exit immediately, otherwise None.
   ///
   /// TODO: Refactor \a cc1_main() so that instead this canonicalizes the
   /// CompilerInvocation before Clang gets access to command-line arguments, to
@@ -326,11 +330,13 @@ public:
 
   /// Try looking up a cached result and replaying it.
   ///
-  /// Return status if should exit immediately, otherwise None.
+  /// \returns status if should exit immediately, otherwise None.
   Optional<int> tryReplayCachedResult(CompilerInstance &Clang);
 
   /// Finish writing outputs from a computed result, after a cache miss.
-  void finishComputedResult(CompilerInstance &Clang, bool Success);
+  ///
+  /// \returns true if finished successfully.
+  bool finishComputedResult(CompilerInstance &Clang, bool Success);
 
 private:
   int reportCachingBackendError(DiagnosticsEngine &Diag, Error &&E) {
@@ -395,6 +401,18 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
       canonicalizeAndCreateCacheKey(*CAS, Diags, Invocation, CacheOpts);
   if (!ResultCacheKey)
     return 1; // Exit with error!
+
+  switch (FrontendOpts.ProgramAction) {
+  case frontend::GenerateModule:
+  case frontend::GenerateModuleInterface:
+  case frontend::GenerateHeaderModule:
+  case frontend::GeneratePCH:
+    Clang.getPreprocessorOpts().CachingDiagOption = CachingDiagKind::Error;
+    break;
+  default:
+    Clang.getPreprocessorOpts().CachingDiagOption = CachingDiagKind::Warning;
+    break;
+  }
 
   DisableCachedCompileJobReplay = CacheOpts.DisableCachedCompileJobReplay;
 
@@ -625,11 +643,11 @@ bool ObjectStoreCachingOutputs::prepareOutputCollection() {
   return false;
 }
 
-void CompileJobCache::finishComputedResult(CompilerInstance &Clang,
+bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
                                            bool Success) {
   // Nothing to do if not caching.
   if (!CacheCompileJob)
-    return;
+    return Success;
 
   CacheBackend->finishSerializedDiagnostics();
 
@@ -639,7 +657,7 @@ void CompileJobCache::finishComputedResult(CompilerInstance &Clang,
   // without a temporary (non-atomically), failure may cause the removal of a
   // preexisting file. That behaviour is not currently modeled by the cache.
   if (!Success)
-    return;
+    return false;
 
   // Existing diagnostic client is finished, create a new one in case we need
   // to print more diagnostics.
@@ -648,10 +666,29 @@ void CompileJobCache::finishComputedResult(CompilerInstance &Clang,
                                 &Clang.getInvocation().getDiagnosticOpts()),
       /*ShouldOwnClient=*/true);
 
-  if (Error E = CacheBackend->finishComputedResult(*ResultCacheKey)) {
-    reportCachingBackendError(Clang.getDiagnostics(), std::move(E));
-    Success = false;
+  // Check if we encounter any source that would generate non-reproducible
+  // outputs.
+  bool SkipCache = Clang.hasPreprocessor() && Clang.isSourceNonReproducible();
+  if (SkipCache) {
+    DiagnosticsEngine &Diags = Clang.getDiagnostics();
+    switch (Clang.getPreprocessorOpts().CachingDiagOption) {
+      case CachingDiagKind::None:
+        break;
+      case CachingDiagKind::Warning:
+        Diags.Report(diag::remark_compile_job_cache_skipped)
+            << ResultCacheKey->toString();
+        break;
+      case CachingDiagKind::Error:
+        llvm_unreachable("Should not reach here if there is an error");
+    }
   }
+
+  if (Error E =
+          CacheBackend->finishComputedResult(*ResultCacheKey, SkipCache)) {
+    reportCachingBackendError(Clang.getDiagnostics(), std::move(E));
+    return false;
+  }
+  return true;
 }
 
 void CachingOutputs::finishSerializedDiagnostics() {
@@ -671,7 +708,7 @@ void CachingOutputs::finishSerializedDiagnostics() {
 }
 
 Error ObjectStoreCachingOutputs::finishComputedResult(
-    const llvm::cas::CASID &ResultCacheKey) {
+    const llvm::cas::CASID &ResultCacheKey, bool SkipCache) {
   // FIXME: Stop calling report_fatal_error().
   if (!SerialDiagsOutput) {
     // Not requested to get a serialized diagnostics file but we generated it
@@ -709,8 +746,12 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
   Expected<cas::ObjectRef> Result = CachedResultBuilder.build(*CAS);
   if (!Result)
     llvm::report_fatal_error(Result.takeError());
-  if (llvm::Error E = Cache->put(ResultCacheKey, CAS->getID(*Result)))
-    llvm::report_fatal_error(std::move(E));
+
+  // Skip caching if requested.
+  if (!SkipCache) {
+    if (llvm::Error E = Cache->put(ResultCacheKey, CAS->getID(*Result)))
+      llvm::report_fatal_error(std::move(E));
+  }
 
   // Replay / decanonicalize as necessary.
   Optional<int> Status = replayCachedResult(*Result,
@@ -894,7 +935,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   }
 
   // Cache the result, and decanonicalize and finish outputs.
-  JobCache.finishComputedResult(*Clang, Success);
+  Success = JobCache.finishComputedResult(*Clang, Success);
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.

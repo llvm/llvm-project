@@ -250,6 +250,9 @@ class Preprocessor {
   /// True if we are pre-expanding macro arguments.
   bool InMacroArgPreExpansion;
 
+  /// True if we encountered any of the non-deterministic macros.
+  bool IsSourceNonReproducible;
+
   /// Mapping/lookup information for all identifiers in
   /// the program, including program keywords.
   mutable IdentifierTable Identifiers;
@@ -1124,6 +1127,8 @@ public:
 
   void setPragmasEnabled(bool Enabled) { PragmasEnabled = Enabled; }
   bool getPragmasEnabled() const { return PragmasEnabled; }
+
+  bool isSourceNonReproducible() const { return IsSourceNonReproducible; }
 
   void SetSuppressIncludeNotFoundError(bool Suppress) {
     SuppressIncludeNotFoundError = Suppress;

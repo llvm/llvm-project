@@ -762,6 +762,12 @@ def warn_pp_date_time : Warning<
   "expansion of date or time macro is not reproducible">,
   ShowInSystemHeader, DefaultIgnore, InGroup<DiagGroup<"date-time">>;
 
+def warn_pp_encounter_nonreproducible: Warning<
+  "encountered non-reproducible token, caching will be skipped">,
+  InGroup<DiagGroup<"reproducible-caching">>;
+def err_pp_encounter_nonreproducible: Error<
+  "encountered non-reproducible token, caching failed">;
+
 // Module map parsing
 def err_mmap_unknown_token : Error<"skipping stray token">;
 def err_mmap_expected_module : Error<"expected module declaration">;
