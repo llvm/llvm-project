@@ -131,6 +131,9 @@ bool LoongArchPreRAExpandPseudo::expandPcalau12iInstPair(
 bool LoongArchPreRAExpandPseudo::expandLoadAddressPcrel(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
+  // Code Sequence:
+  // pcalau12i $rd, %pc_hi20(sym)
+  // addi.w/d $rd, $rd, %pc_lo12(sym)
   MachineFunction *MF = MBB.getParent();
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
   unsigned SecondOpcode = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
@@ -141,6 +144,9 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressPcrel(
 bool LoongArchPreRAExpandPseudo::expandLoadAddressGot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI) {
+  // Code Sequence:
+  // pcalau12i $rd, %got_pc_hi20(sym)
+  // ld.w/d $rd, $rd, %got_pc_lo12(sym)
   MachineFunction *MF = MBB.getParent();
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
   unsigned SecondOpcode = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
