@@ -972,20 +972,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
     handleLoops(false, LoopEnd);
   }
 
-  // If the start of the loop is the entry block, we can't branch to it so
-  // insert a new dummy entry block.
-  Function *LoopFunc = LoopStart->getParent();
-  if (LoopStart == &LoopFunc->getEntryBlock()) {
-    LoopStart->setName("entry.orig");
-
-    BasicBlock *NewEntry =
-      BasicBlock::Create(LoopStart->getContext(),
-                         "entry",
-                         LoopFunc,
-                         LoopStart);
-    BranchInst::Create(LoopStart, NewEntry);
-    DT->setNewRoot(NewEntry);
-  }
+  assert(LoopStart != &LoopStart->getParent()->getEntryBlock());
 
   // Create an extra loop end node
   LoopEnd = needPrefix(false);
