@@ -529,6 +529,22 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
     .Default(false);
 }
 
+void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
+                                          StringRef Name, bool Enabled) const {
+  Features[Name] = Enabled;
+  llvm::AArch64::ArchKind AK = llvm::AArch64::getSubArchArchKind(Name);
+  // Add all previous architecture versions.
+  // In case of v9.x the v8.x counterparts are added too.
+  if ("9" == getArchVersionString(AK))
+    for (llvm::AArch64::ArchKind I = llvm::AArch64::convertV9toV8(AK);
+         I != llvm::AArch64::ArchKind::INVALID; --I)
+      Features[llvm::AArch64::getSubArch(I)] = Enabled;
+
+  for (llvm::AArch64::ArchKind I = --AK; I != llvm::AArch64::ArchKind::INVALID;
+       --I)
+    Features[llvm::AArch64::getSubArch(I)] = Enabled;
+}
+
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
   FPU = FPUMode;
@@ -620,31 +636,32 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     if (Feature == "+strict-align")
       HasUnaligned = false;
-    if (Feature == "+v8a")
+    // All predecessor archs are added but select the latest one for ArchKind.
+    if (Feature == "+v8a" && ArchKind < llvm::AArch64::ArchKind::ARMV8A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8A;
-    if (Feature == "+v8.1a")
+    if (Feature == "+v8.1a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_1A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_1A;
-    if (Feature == "+v8.2a")
+    if (Feature == "+v8.2a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_2A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_2A;
-    if (Feature == "+v8.3a")
+    if (Feature == "+v8.3a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_3A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_3A;
-    if (Feature == "+v8.4a")
+    if (Feature == "+v8.4a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_4A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_4A;
-    if (Feature == "+v8.5a")
+    if (Feature == "+v8.5a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_5A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_5A;
-    if (Feature == "+v8.6a")
+    if (Feature == "+v8.6a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_6A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_6A;
-    if (Feature == "+v8.7a")
+    if (Feature == "+v8.7a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_7A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_7A;
-    if (Feature == "+v8.8a")
+    if (Feature == "+v8.8a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_8A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_8A;
-    if (Feature == "+v9a")
+    if (Feature == "+v9a" && ArchKind < llvm::AArch64::ArchKind::ARMV9A)
       ArchKind = llvm::AArch64::ArchKind::ARMV9A;
-    if (Feature == "+v9.1a")
+    if (Feature == "+v9.1a" && ArchKind < llvm::AArch64::ArchKind::ARMV9_1A)
       ArchKind = llvm::AArch64::ArchKind::ARMV9_1A;
-    if (Feature == "+v9.2a")
+    if (Feature == "+v9.2a" && ArchKind < llvm::AArch64::ArchKind::ARMV9_2A)
       ArchKind = llvm::AArch64::ArchKind::ARMV9_2A;
-    if (Feature == "+v9.3a")
+    if (Feature == "+v9.3a" && ArchKind < llvm::AArch64::ArchKind::ARMV9_3A)
       ArchKind = llvm::AArch64::ArchKind::ARMV9_3A;
     if (Feature == "+v8r")
       ArchKind = llvm::AArch64::ArchKind::ARMV8R;
