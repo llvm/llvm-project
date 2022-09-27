@@ -846,7 +846,7 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
 
   return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
       SlabSize, SREPC, SAs);
-}  size_t SlabSize = 1024 * 1024 * 1024;
+}
 
 
 static Expected<MaterializationUnit::Interface>
