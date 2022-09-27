@@ -1,4 +1,4 @@
-//===-- Implementation header for call_once function ------------*- C++ -*-===//
+//===-- Implementation header for pthread_once function ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_CALL_ONCE_H
-#define LLVM_LIBC_SRC_THREADS_CALL_ONCE_H
+#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_ONCE_H
+#define LLVM_LIBC_SRC_THREADS_PTHREAD_ONCE_H
 
-#include <threads.h>
+#include <pthread.h>
 
 namespace __llvm_libc {
 
-void call_once(once_flag *flag, __call_once_func_t func);
+int pthread_once(pthread_once_t *flag, __pthread_once_func_t func);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_THREADS_CALL_ONCE_H
+#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_ONCE_H

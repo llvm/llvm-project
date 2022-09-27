@@ -386,3 +386,14 @@ add_entrypoint_object(
     libc.include.pthread
     libc.src.__support.threads.thread
 )
+
+add_entrypoint_object(
+  pthread_once
+  SRCS
+    pthread_once.cpp
+  HDRS
+    pthread_once.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.callonce
+)
