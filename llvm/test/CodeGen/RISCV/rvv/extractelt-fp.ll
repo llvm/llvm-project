@@ -579,3 +579,84 @@ define float @extractelt_fdiv_nxv4f32_splat(<vscale x 4 x float> %x) {
   %ext = extractelement <vscale x 4 x float> %bo, i32 0
   ret float %ext
 }
+
+define double @extractelt_nxv16f64_0(<vscale x 16 x double> %v) {
+; CHECK-LABEL: extractelt_nxv16f64_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 0, e64, m8, ta, mu
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %r = extractelement <vscale x 16 x double> %v, i32 0
+  ret double %r
+}
+
+define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
+; CHECK-LABEL: extractelt_nxv16f64_neg1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    .cfi_def_cfa s0, 0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    addi a0, sp, 64
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a2, a1, 3
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    vs8r.v v16, (a2)
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    fld fa0, -8(a0)
+; CHECK-NEXT:    addi sp, s0, -64
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  %r = extractelement <vscale x 16 x double> %v, i32 -1
+  ret double %r
+}
+
+define double @extractelt_nxv16f64_imm(<vscale x 16 x double> %v) {
+; CHECK-LABEL: extractelt_nxv16f64_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-NEXT:    vslidedown.vi v8, v8, 2
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+  %r = extractelement <vscale x 16 x double> %v, i32 2
+  ret double %r
+}
+
+define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 signext %idx) {
+; CHECK-LABEL: extractelt_nxv16f64_idx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a2, a1, 1
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    bltu a0, a2, .LBB54_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB54_2:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    .cfi_def_cfa s0, 0
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    addi a2, sp, 64
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    vs8r.v v8, (a2)
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    vs8r.v v16, (a1)
+; CHECK-NEXT:    fld fa0, 0(a0)
+; CHECK-NEXT:    addi sp, s0, -64
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  %r = extractelement <vscale x 16 x double> %v, i32 %idx
+  ret double %r
+}
