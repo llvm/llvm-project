@@ -132,7 +132,7 @@ FailureOr<Operation *> fuseElementwiseOps(RewriterBase &rewriter,
 /// dim sizes are currently not supported.
 LogicalResult rewriteTopLevelForeachThreadToGpuBlocks(
     RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
-    function_ref<void(Operation *, const SmallVector<int64_t> &, IndexType,
+    function_ref<void(RewriterBase &, scf::ForeachThreadOp,
                       SmallVector<Value> &)>
         blockIdGenerator,
     SmallVector<int64_t> &gridDims);
