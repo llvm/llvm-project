@@ -224,6 +224,8 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #include <version>
 
 // standard-mandated includes
+
+// [ios.syn]
 #include <iosfwd>
 
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)

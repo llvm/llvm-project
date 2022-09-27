@@ -100,6 +100,8 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <version>
 
 // standard-mandated includes
+
+// [thread.syn]
 #include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

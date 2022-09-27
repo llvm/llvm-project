@@ -47,6 +47,8 @@ struct suspend_always;
 #include <version>
 
 // standard-mandated includes
+
+// [coroutine.syn]
 #include <compare>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
