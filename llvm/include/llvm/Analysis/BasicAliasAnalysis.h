@@ -41,9 +41,7 @@ class Value;
 /// While it does retain some storage, that is used as an optimization and not
 /// to preserve information from query to query. However it does retain handles
 /// to various other analyses and must be recomputed when those analyses are.
-class BasicAAResult : public AAResultBase<BasicAAResult> {
-  friend AAResultBase<BasicAAResult>;
-
+class BasicAAResult : public AAResultBase {
   const DataLayout &DL;
   const Function &F;
   const TargetLibraryInfo &TLI;
