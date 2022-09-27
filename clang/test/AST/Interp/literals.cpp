@@ -161,3 +161,30 @@ namespace SizeOf {
 
 #endif
 };
+
+namespace rem {
+  static_assert(2 % 2 == 0, "");
+  static_assert(2 % 1 == 0, "");
+  static_assert(-3 % 4 == -3, "");
+  static_assert(4 % -2 == 0, "");
+  static_assert(-3 % -4 == -3, "");
+
+  constexpr int zero() { return 0; }
+  static_assert(10 % zero() == 20, ""); // ref-error {{not an integral constant expression}} \
+                                        // ref-note {{division by zero}} \
+                                        // expected-error {{not an integral constant expression}} \
+                                        // expected-note {{division by zero}}
+
+
+  static_assert(true % true == 0, "");
+  static_assert(false % true == 0, "");
+  static_assert(true % false == 10, ""); // ref-error {{not an integral constant expression}} \
+                                         // ref-note {{division by zero}} \
+                                         // expected-error {{not an integral constant expression}} \
+                                         // expected-note {{division by zero}}
+  constexpr int x = INT_MIN % - 1; // ref-error {{must be initialized by a constant expression}} \
+                                   // ref-note {{value 2147483648 is outside the range}} \
+                                   // expected-error {{must be initialized by a constant expression}} \
+                                   // expected-note {{value 2147483648 is outside the range}} \
+
+};

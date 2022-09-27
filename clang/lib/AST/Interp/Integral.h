@@ -207,6 +207,11 @@ public:
     return CheckMulUB(A.V, B.V, R->V);
   }
 
+  static bool rem(Integral A, Integral B, unsigned OpBits, Integral *R) {
+    *R = Integral(A.V % B.V);
+    return false;
+  }
+
   static bool neg(Integral A, Integral *R) {
     *R = -A;
     return false;
