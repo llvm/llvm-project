@@ -149,6 +149,12 @@ if(Python3_RPATH)
     )
 endif()
 
+# BEGIN Swift Mods
+# Note that add_properties_for_swift_modules appends RPATHs so it's critical
+# that this is called after lldb_setup_rpaths.
+add_properties_for_swift_modules(liblldb)
+# END Swift Mods
+
 if(LLDB_ENABLE_PYTHON)
   add_dependencies(liblldb swig_wrapper_python)
 
