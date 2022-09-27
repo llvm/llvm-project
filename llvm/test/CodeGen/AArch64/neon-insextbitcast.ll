@@ -16,7 +16,8 @@ entry:
 define <4 x i32> @test_vins_v4i32_0(<4 x i32> %a, float %b) {
 ; CHECK-LABEL: test_vins_v4i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    mov v0.s[0], v1.s[0]
 ; CHECK-NEXT:    ret
 entry:
   %c = bitcast float %b to i32
@@ -42,7 +43,8 @@ define <2 x i32> @test_vins_v2i32_0(<2 x i32> %a, float %b) {
 ; CHECK-LABEL: test_vins_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    mov v0.s[0], v1.s[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
@@ -66,7 +68,8 @@ entry:
 define <2 x i64> @test_vins_v2i64_0(<2 x i64> %a, double %b) {
 ; CHECK-LABEL: test_vins_v2i64_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.d[0], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %c = bitcast double %b to i64
