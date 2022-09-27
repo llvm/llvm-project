@@ -447,10 +447,15 @@ Static Analyzer
   ``scanbuild`` was also updated accordingly.
   Passing these flags will result in a hard error.
 
-.. _release-notes-ubsan:
+.. _release-notes-sanitizers:
 
-Undefined Behavior Sanitizer (UBSan)
-------------------------------------
+Sanitizers
+----------
+- ``-fsanitize-memory-param-retval`` is turned on by default. With
+  ``-fsanitize=memory``, passing uninitialized variables to functions and
+  returning uninitialized variables from functions is more aggressively
+  reported. ``-fno-sanitize-memory-param-retval`` restores the previous
+  behavior.
 
 Core Analysis Improvements
 ==========================
