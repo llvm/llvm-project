@@ -454,9 +454,11 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
     object::COFFSymbolRef Symbol, const object::coff_section *Section) {
   if (Symbol.isCommon()) {
     // FIXME: correct alignment
-    return &G->addCommonSymbol(SymbolName, Scope::Default, getCommonSection(),
-                               orc::ExecutorAddr(), Symbol.getValue(),
-                               Symbol.getValue(), false);
+    return &G->addDefinedSymbol(
+        G->createZeroFillBlock(getCommonSection(), Symbol.getValue(),
+                               orc::ExecutorAddr(), Symbol.getValue(), 0),
+        0, SymbolName, Symbol.getValue(), Linkage::Strong, Scope::Default,
+        false, false);
   }
   if (Symbol.isAbsolute())
     return &G->addAbsoluteSymbol(SymbolName,
