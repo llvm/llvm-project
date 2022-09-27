@@ -55,8 +55,8 @@ static Value getOffsetForBitwidth(Location loc, Value srcIdx, int sourceBits,
 /// supported. During conversion if a memref of an unsupported type is used,
 /// load/stores to this memref need to be modified to use a supported higher
 /// bitwidth `targetBits` and extracting the required bits. For an accessing a
-/// 1D array (spv.array or spv.rt_array), the last index is modified to load the
-/// bits needed. The extraction of the actual bits needed are handled
+/// 1D array (spirv.array or spirv.rt_array), the last index is modified to load
+/// the bits needed. The extraction of the actual bits needed are handled
 /// separately. Note that this only works for a 1-D tensor.
 static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
                                           spirv::AccessChainOp op,
@@ -69,12 +69,12 @@ static Value adjustAccessChainForBitwidth(SPIRVTypeConverter &typeConverter,
       builder.getIntegerAttr(targetType, targetBits / sourceBits);
   auto idx = builder.create<spirv::ConstantOp>(loc, targetType, attr);
   auto lastDim = op->getOperand(op.getNumOperands() - 1);
-  auto indices = llvm::to_vector<4>(op.indices());
+  auto indices = llvm::to_vector<4>(op.getIndices());
   // There are two elements if this is a 1-D tensor.
   assert(indices.size() == 2);
   indices.back() = builder.create<spirv::SDivOp>(loc, lastDim, idx);
-  Type t = typeConverter.convertType(op.component_ptr().getType());
-  return builder.create<spirv::AccessChainOp>(loc, t, op.base_ptr(), indices);
+  Type t = typeConverter.convertType(op.getComponentPtr().getType());
+  return builder.create<spirv::AccessChainOp>(loc, t, op.getBasePtr(), indices);
 }
 
 /// Returns the shifted `targetBits`-bit value with the given offset.
@@ -170,8 +170,8 @@ public:
 
 /// Converts an allocation operation to SPIR-V. Currently only supports lowering
 /// to Workgroup memory when the size is constant.  Note that this pattern needs
-/// to be applied in a pass that runs at least at spv.module scope since it wil
-/// ladd global variables into the spv.module.
+/// to be applied in a pass that runs at least at spirv.module scope since it
+/// wil ladd global variables into the spirv.module.
 class AllocOpPattern final : public OpConversionPattern<memref::AllocOp> {
 public:
   using OpConversionPattern<memref::AllocOp>::OpConversionPattern;
@@ -192,7 +192,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.load to spv.Load + spv.AccessChain on integers.
+/// Converts memref.load to spirv.Load + spirv.AccessChain on integers.
 class IntLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
   using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
@@ -202,7 +202,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.load to spv.Load + spv.AccessChain.
+/// Converts memref.load to spirv.Load + spirv.AccessChain.
 class LoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
   using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
@@ -212,7 +212,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.store to spv.Store on integers.
+/// Converts memref.store to spirv.Store on integers.
 class IntStoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
   using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
@@ -222,7 +222,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts memref.store to spv.Store.
+/// Converts memref.store to spirv.Store.
 class StoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
   using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
@@ -267,7 +267,7 @@ AllocOpPattern::matchAndRewrite(memref::AllocOp operation, OpAdaptor adaptor,
   // Get the SPIR-V type for the allocation.
   Type spirvType = getTypeConverter()->convertType(allocType);
 
-  // Insert spv.GlobalVariable for this allocation.
+  // Insert spirv.GlobalVariable for this allocation.
   Operation *parent =
       SymbolTable::getNearestSymbolTable(operation->getParentOp());
   if (!parent)
@@ -360,7 +360,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   }
 
   // Bitcasting is currently unsupported for Kernel capability /
-  // spv.PtrAccessChain.
+  // spirv.PtrAccessChain.
   if (typeConverter.allows(spirv::Capability::Kernel))
     return failure();
 
@@ -371,7 +371,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   // Assume that getElementPtr() works linearizely. If it's a scalar, the method
   // still returns a linearized accessing. If the accessing is not linearized,
   // there will be offset issues.
-  assert(accessChainOp.indices().size() == 2);
+  assert(accessChainOp.getIndices().size() == 2);
   Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
                                                    srcBits, dstBits, rewriter);
   Value spvLoadOp = rewriter.create<spirv::LoadOp>(
@@ -488,7 +488,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   }
 
   // Bitcasting is currently unsupported for Kernel capability /
-  // spv.PtrAccessChain.
+  // spirv.PtrAccessChain.
   if (typeConverter.allows(spirv::Capability::Kernel))
     return failure();
 
@@ -507,7 +507,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   // 6) store 32-bit value back
   // The step 1 to step 3 are done by AtomicAnd as one atomic step, and the step
   // 4 to step 6 are done by AtomicOr as another atomic step.
-  assert(accessChainOp.indices().size() == 2);
+  assert(accessChainOp.getIndices().size() == 2);
   Value lastDim = accessChainOp->getOperand(accessChainOp.getNumOperands() - 1);
   Value offset = getOffsetForBitwidth(loc, lastDim, srcBits, dstBits, rewriter);
 

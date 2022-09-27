@@ -1508,10 +1508,6 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
     return;
 
   Node &N = *NI->second;
-  NodeMap.erase(NI);
-
-  // Remove this from the entry edges if present.
-  EntryEdges.removeEdgeInternal(N);
 
   // Cannot remove a function which has yet to be visited in the DFS walk, so
   // if we have a node at all then we must have an SCC and RefSCC.
@@ -1519,14 +1515,38 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
   assert(CI != SCCMap.end() &&
          "Tried to remove a node without an SCC after DFS walk started!");
   SCC &C = *CI->second;
+  RefSCC *RC = &C.getOuterRefSCC();
+
+  // In extremely rare cases, we can delete a dead function which is still in a
+  // non-trivial RefSCC. This can happen due to spurious ref edges sticking
+  // around after an IR function reference is removed.
+  if (RC->size() != 1) {
+    SmallVector<Node *, 0> NodesInRC;
+    for (SCC &OtherC : *RC) {
+      for (Node &OtherN : OtherC)
+        NodesInRC.push_back(&OtherN);
+    }
+    for (Node *OtherN : NodesInRC) {
+      if ((*OtherN)->lookup(N)) {
+        auto NewRefSCCs =
+            RC->removeInternalRefEdge(*OtherN, ArrayRef<Node *>(&N));
+        // If we've split into multiple RefSCCs, RC is now invalid and the
+        // RefSCC containing C will be different.
+        if (!NewRefSCCs.empty())
+          RC = &C.getOuterRefSCC();
+      }
+    }
+  }
+
+  NodeMap.erase(NI);
+  EntryEdges.removeEdgeInternal(N);
   SCCMap.erase(CI);
-  RefSCC &RC = C.getOuterRefSCC();
 
   // This node must be the only member of its SCC as it has no callers, and
   // that SCC must be the only member of a RefSCC as it has no references.
   // Validate these properties first.
   assert(C.size() == 1 && "Dead functions must be in a singular SCC");
-  assert(RC.size() == 1 && "Dead functions must be in a singular RefSCC");
+  assert(RC->size() == 1 && "Dead functions must be in a singular RefSCC");
 
   // Finally clear out all the data structures from the node down through the
   // components. postorder_ref_scc_iterator will skip empty RefSCCs, so no need
@@ -1535,8 +1555,8 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
   N.G = nullptr;
   N.F = nullptr;
   C.clear();
-  RC.clear();
-  RC.G = nullptr;
+  RC->clear();
+  RC->G = nullptr;
 
   // Nothing to delete as all the objects are allocated in stable bump pointer
   // allocators.

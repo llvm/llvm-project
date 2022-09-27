@@ -347,3 +347,18 @@ func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #SparseMatrix>,
          tensor<4x4xf64, #SparseMatrix> to tensor<9x4xf64, #SparseMatrix>
   return %0 : tensor<9x4xf64, #SparseMatrix>
 }
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @sparse_tensor_foreach(
+//  CHECK-SAME: %[[A0:.*]]: tensor<2x4xf64
+//       CHECK: sparse_tensor.foreach in %[[A0]] : 
+//       CHECK:  ^bb0(%arg1: index, %arg2: index, %arg3: f64):
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
+  sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
+    ^bb0(%1: index, %2: index, %v: f64) :
+  }
+  return
+}

@@ -1834,6 +1834,12 @@ static QualType typeForNode(const SelectionTree::Node *N) {
       QualType VisitExpr(const Expr *S) {
         return S->IgnoreImplicitAsWritten()->getType();
       }
+      QualType VisitMemberExpr(const MemberExpr *S) {
+        // The `foo` in `s.foo()` pretends not to have a real type!
+        if (S->getType()->isSpecificBuiltinType(BuiltinType::BoundMember))
+          return Expr::findBoundMemberType(S);
+        return VisitExpr(S);
+      }
       // Exceptions for void expressions that operate on a type in some way.
       QualType VisitCXXDeleteExpr(const CXXDeleteExpr *S) {
         return S->getDestroyedType();

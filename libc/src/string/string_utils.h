@@ -12,7 +12,7 @@
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/common.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
-#include "src/string/memory_utils/memset_implementations.h"
+#include "src/string/memory_utils/bzero_implementations.h"
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
@@ -94,7 +94,7 @@ static inline size_t strlcpy(char *__restrict dst, const char *__restrict src,
     return len;
   size_t n = len < size - 1 ? len : size - 1;
   inline_memcpy(dst, src, n);
-  inline_memset(dst + n, 0, size - n);
+  inline_bzero(dst + n, size - n);
   return len;
 }
 

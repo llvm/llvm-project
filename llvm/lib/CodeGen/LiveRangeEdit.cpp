@@ -183,14 +183,18 @@ SlotIndex LiveRangeEdit::rematerializeAt(MachineBasicBlock &MBB,
                                          unsigned DestReg,
                                          const Remat &RM,
                                          const TargetRegisterInfo &tri,
-                                         bool Late) {
+                                         bool Late,
+                                         unsigned SubIdx,
+                                         MachineInstr *ReplaceIndexMI) {
   assert(RM.OrigMI && "Invalid remat");
-  TII.reMaterialize(MBB, MI, DestReg, 0, *RM.OrigMI, tri);
+  TII.reMaterialize(MBB, MI, DestReg, SubIdx, *RM.OrigMI, tri);
   // DestReg of the cloned instruction cannot be Dead. Set isDead of DestReg
   // to false anyway in case the isDead flag of RM.OrigMI's dest register
   // is true.
   (*--MI).getOperand(0).setIsDead(false);
   Rematted.insert(RM.ParentVNI);
+  if (ReplaceIndexMI)
+    return LIS.ReplaceMachineInstrInMaps(*ReplaceIndexMI, *MI).getRegSlot();
   return LIS.getSlotIndexes()->insertMachineInstrInMaps(*MI, Late).getRegSlot();
 }
 

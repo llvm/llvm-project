@@ -102,17 +102,21 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
       continue;
 
     int64_t Offset = 0;
-    BitCastInst *BCI = dyn_cast<BitCastInst>(U);
-    if (!BCI) {
+    auto *Load = dyn_cast<LoadInst>(U); // Load from ImplicitArgPtr/DispatchPtr?
+    auto *BCI = dyn_cast<BitCastInst>(U);
+    if (!Load && !BCI) {
       if (GetPointerBaseWithConstantOffset(U, Offset, DL) != CI)
         continue;
+      Load = dyn_cast<LoadInst>(*U->user_begin()); // Load from GEP?
       BCI = dyn_cast<BitCastInst>(*U->user_begin());
     }
 
-    if (!BCI || !BCI->hasOneUse())
-      continue;
+    if (BCI) {
+      if (!BCI->hasOneUse())
+        continue;
+      Load = dyn_cast<LoadInst>(*BCI->user_begin()); // Load from BCI?
+    }
 
-    auto *Load = dyn_cast<LoadInst>(*BCI->user_begin());
     if (!Load || !Load->isSimple())
       continue;
 

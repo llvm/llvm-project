@@ -15,6 +15,7 @@ kIsWindows = sys.platform in ['win32', 'cygwin']
 
 class GoogleTest(TestFormat):
     def __init__(self, test_sub_dirs, test_suffix, run_under = []):
+        self.seen_executables = set()
         self.test_sub_dirs = str(test_sub_dirs).split(';')
 
         # On Windows, assume tests will also end in '.exe'.
@@ -54,6 +55,12 @@ class GoogleTest(TestFormat):
                                              suffixes=self.test_suffixes):
                 # Discover the tests in this executable.
                 execpath = os.path.join(source_path, subdir, fn)
+                if execpath in self.seen_executables:
+                    litConfig.warning(
+                        "Skip adding %r since it has been added to the test pool" % execpath)
+                    continue
+                else:
+                    self.seen_executables.add(execpath)
                 num_tests = self.get_num_tests(execpath, litConfig,
                                                localConfig)
                 if num_tests is not None:

@@ -213,7 +213,7 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
     // Ignore launch ops with missing attributes here. The errors will be
     // reported by the verifiers of those ops.
     if (!launchOp->getAttrOfType<SymbolRefAttr>(
-            LaunchFuncOp::getKernelAttrName()))
+            LaunchFuncOp::getKernelAttrName(launchOp->getName())))
       return success();
 
     // Check that `launch_func` refers to a well-formed GPU kernel module.
@@ -703,7 +703,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   auto kernelSymbol =
       SymbolRefAttr::get(kernelModule.getNameAttr(),
                          {SymbolRefAttr::get(kernelFunc.getNameAttr())});
-  result.addAttribute(getKernelAttrName(), kernelSymbol);
+  result.addAttribute(getKernelAttrName(result.name), kernelSymbol);
   SmallVector<int32_t, 9> segmentSizes(9, 1);
   segmentSizes.front() = asyncDependencies.size();
   segmentSizes[segmentSizes.size() - 2] = dynamicSharedMemorySize ? 1 : 0;
@@ -718,9 +718,11 @@ StringAttr LaunchFuncOp::getKernelModuleName() {
 
 StringAttr LaunchFuncOp::getKernelName() { return kernel().getLeafReference(); }
 
-unsigned LaunchFuncOp::getNumKernelOperands() { return operands().size(); }
+unsigned LaunchFuncOp::getNumKernelOperands() {
+  return kernelOperands().size();
+}
 
-Value LaunchFuncOp::getKernelOperand(unsigned i) { return operands()[i]; }
+Value LaunchFuncOp::getKernelOperand(unsigned i) { return kernelOperands()[i]; }
 
 KernelDim3 LaunchFuncOp::getGridSizeOperandValues() {
   auto operands = getOperands().drop_front(asyncDependencies().size());
@@ -742,11 +744,6 @@ LogicalResult LaunchFuncOp::verify() {
     return emitOpError("expected the closest surrounding module to have the '" +
                        GPUDialect::getContainerModuleAttrName() +
                        "' attribute");
-
-  auto kernelAttr = (*this)->getAttrOfType<SymbolRefAttr>(getKernelAttrName());
-  if (!kernelAttr)
-    return emitOpError("symbol reference attribute '" + getKernelAttrName() +
-                       "' must be specified");
 
   return success();
 }

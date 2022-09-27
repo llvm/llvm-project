@@ -954,9 +954,18 @@ findForkedPointer(PredicatedScalarEvolution &PSE,
   SmallVector<std::pair<const SCEV *, bool>> Scevs;
   findForkedSCEVs(SE, L, Ptr, Scevs, MaxForkedSCEVDepth);
 
-  // For now, we will only accept a forked pointer with two possible SCEVs.
-  if (Scevs.size() == 2)
+  // For now, we will only accept a forked pointer with two possible SCEVs
+  // that are either SCEVAddRecExprs or loop invariant.
+  if (Scevs.size() == 2 &&
+      (isa<SCEVAddRecExpr>(Scevs[0].first) ||
+       SE->isLoopInvariant(Scevs[0].first, L)) &&
+      (isa<SCEVAddRecExpr>(Scevs[1].first) ||
+       SE->isLoopInvariant(Scevs[1].first, L))) {
+    LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n");
+    LLVM_DEBUG(dbgs() << "\t(1) " << *(Scevs[0].first) << "\n");
+    LLVM_DEBUG(dbgs() << "\t(2) " << *(Scevs[1].first) << "\n");
     return Scevs;
+  }
 
   return {
       std::make_pair(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false)};

@@ -2,13 +2,13 @@
 module m
   real :: var
   interface i
-    !ERROR: 'var' is not a subprogram
+    !ERROR: 'var' is not a procedure
     procedure :: sub, var
     !ERROR: Procedure 'bad' not found
     procedure :: bad
   end interface
   interface operator(.foo.)
-    !ERROR: 'var' is not a subprogram
+    !ERROR: 'var' is not a procedure
     procedure :: var
     !ERROR: OPERATOR(.foo.) procedure 'sub' must be a function
     procedure :: sub
@@ -35,3 +35,13 @@ contains
     logical, intent(in) :: y
   end
 end
+
+module m2
+  interface
+    module subroutine specific
+    end subroutine
+  end interface
+  interface generic
+     module procedure specific
+  end interface
+end module

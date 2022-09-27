@@ -90,10 +90,10 @@ static LogicalResult serializeModule(ModuleOp module, raw_ostream &output) {
   module.walk([&](spirv::ModuleOp op) { spirvModules.push_back(op); });
 
   if (spirvModules.empty())
-    return module.emitError("found no 'spv.module' op");
+    return module.emitError("found no 'spirv.module' op");
 
   if (spirvModules.size() != 1)
-    return module.emitError("found more than one 'spv.module' op");
+    return module.emitError("found more than one 'spirv.module' op");
 
   if (failed(spirv::serialize(spirvModules[0], binary)))
     return failure();
@@ -128,10 +128,10 @@ static LogicalResult roundTripModule(ModuleOp srcModule, bool emitDebugInfo,
   auto spirvModules = srcModule.getOps<spirv::ModuleOp>();
 
   if (spirvModules.begin() == spirvModules.end())
-    return srcModule.emitError("found no 'spv.module' op");
+    return srcModule.emitError("found no 'spirv.module' op");
 
   if (std::next(spirvModules.begin()) != spirvModules.end())
-    return srcModule.emitError("found more than one 'spv.module' op");
+    return srcModule.emitError("found more than one 'spirv.module' op");
 
   spirv::SerializationOptions options;
   options.emitDebugInfo = emitDebugInfo;

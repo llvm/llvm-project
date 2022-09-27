@@ -87,6 +87,33 @@ bool LoongArchExpandAtomicPseudo::expandMI(
   case LoongArch::PseudoAtomicSwap32:
     return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xchg, false, 32,
                              NextMBBI);
+  case LoongArch::PseudoMaskedAtomicLoadAdd32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Add, true, 32, NextMBBI);
+  case LoongArch::PseudoMaskedAtomicLoadSub32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Sub, true, 32, NextMBBI);
+  case LoongArch::PseudoAtomicLoadNand32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, false, 32,
+                             NextMBBI);
+  case LoongArch::PseudoAtomicLoadNand64:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, false, 64,
+                             NextMBBI);
+  case LoongArch::PseudoMaskedAtomicLoadNand32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, true, 32,
+                             NextMBBI);
+  case LoongArch::PseudoAtomicLoadAdd32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Add, false, 32,
+                             NextMBBI);
+  case LoongArch::PseudoAtomicLoadSub32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Sub, false, 32,
+                             NextMBBI);
+  case LoongArch::PseudoAtomicLoadAnd32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::And, false, 32,
+                             NextMBBI);
+  case LoongArch::PseudoAtomicLoadOr32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Or, false, 32, NextMBBI);
+  case LoongArch::PseudoAtomicLoadXor32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xor, false, 32,
+                             NextMBBI);
   }
   return false;
 }
@@ -104,12 +131,13 @@ static void doAtomicBinOpExpansion(const LoongArchInstrInfo *TII,
 
   // .loop:
   //   dbar 0
-  //   ll.w dest, (addr)
+  //   ll.[w|d] dest, (addr)
   //   binop scratch, dest, val
-  //   sc.w scratch, scratch, (addr)
+  //   sc.[w|d] scratch, scratch, (addr)
   //   beq scratch, zero, loop
   BuildMI(LoopMBB, DL, TII->get(LoongArch::DBAR)).addImm(0);
-  BuildMI(LoopMBB, DL, TII->get(LoongArch::LL_W), DestReg)
+  BuildMI(LoopMBB, DL,
+          TII->get(Width == 32 ? LoongArch::LL_W : LoongArch::LL_D), DestReg)
       .addReg(AddrReg)
       .addImm(0);
   switch (BinOp) {
@@ -120,8 +148,42 @@ static void doAtomicBinOpExpansion(const LoongArchInstrInfo *TII,
         .addReg(IncrReg)
         .addReg(LoongArch::R0);
     break;
+  case AtomicRMWInst::Nand:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::AND), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::XORI), ScratchReg)
+        .addReg(ScratchReg)
+        .addImm(-1);
+    break;
+  case AtomicRMWInst::Add:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::ADD_W), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::Sub:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::SUB_W), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::And:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::AND), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::Or:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::OR), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::Xor:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::XOR), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
   }
-  BuildMI(LoopMBB, DL, TII->get(LoongArch::SC_W), ScratchReg)
+  BuildMI(LoopMBB, DL,
+          TII->get(Width == 32 ? LoongArch::SC_W : LoongArch::SC_D), ScratchReg)
       .addReg(ScratchReg)
       .addReg(AddrReg)
       .addImm(0);
@@ -183,6 +245,23 @@ static void doMaskedAtomicBinOpExpansion(
         .addReg(IncrReg)
         .addImm(0);
     break;
+  case AtomicRMWInst::Add:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::ADD_W), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::Sub:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::SUB_W), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    break;
+  case AtomicRMWInst::Nand:
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::AND), ScratchReg)
+        .addReg(DestReg)
+        .addReg(IncrReg);
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::XORI), ScratchReg)
+        .addReg(ScratchReg)
+        .addImm(-1);
     // TODO: support other AtomicRMWInst.
   }
 

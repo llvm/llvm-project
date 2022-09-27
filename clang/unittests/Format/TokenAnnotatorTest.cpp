@@ -450,6 +450,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
   EXPECT_TOKEN(Tokens[20], tok::arrow, TT_TrailingReturnArrow);
 
   Tokens = annotate("template <typename T>\n"
+                    "requires Bar<T>\n"
+                    "bool foo(T) { return false; }");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TRUE(Tokens[9]->ClosesRequiresClause);
+  EXPECT_TOKEN(Tokens[11], tok::identifier, TT_FunctionDeclarationName);
+
+  Tokens = annotate("template <typename T>\n"
                     "struct S {\n"
                     "  void foo() const requires Bar<T>;\n"
                     "  void bar() const & requires Baz<T>;\n"
@@ -833,6 +841,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   auto Tokens = annotate("[]() constexpr {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[]() consteval {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[]() mutable {}");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[]() static {}");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);

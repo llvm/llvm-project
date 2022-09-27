@@ -235,34 +235,36 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
   // Try to refine the mod-ref info further using other API entry points to the
   // aggregate set of AA results.
-  auto MRB = getModRefBehavior(Call);
-  if (MRB.onlyAccessesInaccessibleMem())
+
+  // We can completely ignore inaccessible memory here, because MemoryLocations
+  // can only reference accessible memory.
+  auto MRB = getModRefBehavior(Call).getWithoutLoc(
+      FunctionModRefBehavior::InaccessibleMem);
+  if (MRB.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
-  // TODO: Exclude inaccessible memory location here.
-  Result &= MRB.getModRef();
-
-  if (MRB.onlyAccessesArgPointees() || MRB.onlyAccessesInaccessibleOrArgMem()) {
+  ModRefInfo ArgMR = MRB.getModRef(FunctionModRefBehavior::ArgMem);
+  ModRefInfo OtherMR =
+      MRB.getWithoutLoc(FunctionModRefBehavior::ArgMem).getModRef();
+  if ((ArgMR | OtherMR) != OtherMR) {
+    // Refine the modref info for argument memory. We only bother to do this
+    // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
+    // on the final result.
     ModRefInfo AllArgsMask = ModRefInfo::NoModRef;
-    if (MRB.doesAccessArgPointees()) {
-      for (const auto &I : llvm::enumerate(Call->args())) {
-        const Value *Arg = I.value();
-        if (!Arg->getType()->isPointerTy())
-          continue;
-        unsigned ArgIdx = I.index();
-        MemoryLocation ArgLoc =
-            MemoryLocation::getForArgument(Call, ArgIdx, TLI);
-        AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI);
-        if (ArgAlias != AliasResult::NoAlias)
-          AllArgsMask |= getArgModRefInfo(Call, ArgIdx);
-      }
+    for (const auto &I : llvm::enumerate(Call->args())) {
+      const Value *Arg = I.value();
+      if (!Arg->getType()->isPointerTy())
+        continue;
+      unsigned ArgIdx = I.index();
+      MemoryLocation ArgLoc = MemoryLocation::getForArgument(Call, ArgIdx, TLI);
+      AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI);
+      if (ArgAlias != AliasResult::NoAlias)
+        AllArgsMask |= getArgModRefInfo(Call, ArgIdx);
     }
-    // Return NoModRef if no alias found with any argument.
-    if (isNoModRef(AllArgsMask))
-      return ModRefInfo::NoModRef;
-    // Logical & between other AA analyses and argument analysis.
-    Result &= AllArgsMask;
+    ArgMR &= AllArgsMask;
   }
+
+  Result &= ArgMR | OtherMR;
 
   // If Loc is a constant memory location, the call definitely could not
   // modify the memory location.

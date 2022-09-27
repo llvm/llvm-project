@@ -1995,7 +1995,7 @@ def ICXWriteResGroup174 : SchedWriteRes<[ICXPort01]> {
 }
 def: InstRW<[ICXWriteResGroup174], (instregex "VPMULLQ(Z128|Z256)rr")>;
 
-def ICXWriteResGroup174z : SchedWriteRes<[ICXPort05]> {
+def ICXWriteResGroup174z : SchedWriteRes<[ICXPort0]> {
   let Latency = 15;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
@@ -2163,7 +2163,7 @@ def ICXWriteResGroup211 : SchedWriteRes<[ICXPort23,ICXPort01]> {
 }
 def: InstRW<[ICXWriteResGroup211], (instregex "VPMULLQZ256rm(b?)")>;
 
-def ICXWriteResGroup211_1 : SchedWriteRes<[ICXPort23,ICXPort05]> {
+def ICXWriteResGroup211_1 : SchedWriteRes<[ICXPort23,ICXPort0]> {
   let Latency = 22;
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];

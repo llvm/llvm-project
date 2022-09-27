@@ -421,6 +421,46 @@ define i1 @shl2_trunc_eq0(i9 %a) {
   ret i1 %r
 }
 
+define i1 @shl2_trunc_ne0(i9 %a) {
+; CHECK-LABEL: @shl2_trunc_ne0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i9 2, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[T]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i9 2, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp ne i6 %t, 0
+  ret i1 %r
+}
+
+define i1 @shl3_trunc_eq0(i9 %a) {
+; CHECK-LABEL: @shl3_trunc_eq0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i9 3, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i9 [[SHL]] to i6
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i6 [[T]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i9 3, %a
+  %t = trunc i9 %shl to i6
+  %r = icmp eq i6 %t, 0
+  ret i1 %r
+}
+
+define <2 x i1> @shl4_trunc_ne0(<2 x i8> %a) {
+; CHECK-LABEL: @shl4_trunc_ne0(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 4, i8 poison>, [[A:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i8> [[SHL]] to <2 x i5>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i5> [[T]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %shl = shl <2 x i8> <i8 4, i8 poison>, %a
+  %t = trunc <2 x i8> %shl to <2 x i5>
+  %r = icmp ne <2 x i5> %t, zeroinitializer
+  ret <2 x i1> %r
+}
+
+
 ; TODO: A < 5
 
 define i1 @shl1_trunc_sgt0(i9 %a) {

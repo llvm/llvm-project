@@ -70,9 +70,8 @@ def PDL_Dialect : Dialect {
     void registerTypes();
   }];
 
-  // FIXME: Prefixed accessors overlap with builtin Operation members. Flip
-  // once resolved.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
+  // FIXME: Flip to prefixed.
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLDIALECT

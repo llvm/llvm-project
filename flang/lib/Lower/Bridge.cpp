@@ -847,6 +847,8 @@ private:
     }
     mlir::Value resultVal = resultSymBox.match(
         [&](const fir::CharBoxValue &x) -> mlir::Value {
+          if (Fortran::semantics::IsBindCProcedure(functionSymbol))
+            return builder->create<fir::LoadOp>(loc, x.getBuffer());
           return fir::factory::CharacterExprHelper{*builder, loc}
               .createEmboxChar(x.getBuffer(), x.getLen());
         },
@@ -2715,6 +2717,8 @@ private:
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
     auto mapPassedEntity = [&](const auto arg) {
       if (arg.passBy == PassBy::AddressAndLength) {
+        if (callee.characterize().IsBindC())
+          return;
         // TODO: now that fir call has some attributes regarding character
         // return, PassBy::AddressAndLength should be retired.
         mlir::Location loc = toLocation();

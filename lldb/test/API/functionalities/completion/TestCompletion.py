@@ -405,6 +405,11 @@ class CommandLineCompletionTestCase(TestBase):
                               ['target.process.thread.step-avoid-regexp',
                                'target.process.thread.trace-thread'])
 
+    def test_settings_set_can_complete_setting_enum_values(self):
+        """Checks that we can complete the values of an enum setting."""
+        self.complete_from_to('settings set stop-disassembly-display ',
+                              ['never', 'always', 'no-debuginfo', 'no-source'])
+
     def test_thread_plan_discard(self):
         self.build()
         (_, _, thread, _) = lldbutil.run_to_source_breakpoint(self,

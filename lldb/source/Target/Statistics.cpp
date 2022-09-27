@@ -136,6 +136,7 @@ json::Value TargetStats::ToJSON(Target &target) {
   target_metrics_json.try_emplace("breakpoints", std::move(breakpoints_array));
   target_metrics_json.try_emplace("totalBreakpointResolveTime",
                                   totalBreakpointResolveTime);
+  target_metrics_json.try_emplace("sourceMapDeduceCount", m_source_map_deduce_count);
 
   return target_metrics_json;
 }
@@ -159,6 +160,10 @@ void TargetStats::SetFirstPublicStopTime() {
   // first stop time if it hasn't already been set.
   if (!m_first_public_stop_time)
     m_first_public_stop_time = StatsClock::now();
+}
+
+void TargetStats::IncreaseSourceMapDeduceCount() {
+  ++m_source_map_deduce_count;
 }
 
 bool DebuggerStats::g_collecting_stats = false;

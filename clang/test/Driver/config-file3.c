@@ -34,18 +34,26 @@
 // RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir=%t/testdmode -c -### %s 2>&1 | FileCheck %s -check-prefix SYMLINK
 //
 // SYMLINK: Configuration file: {{.*}}/testdmode/qqq-clang-g++.cfg
-//
-//--- File specified by --config overrides config inferred from clang executable.
+
+//--- File specified by --config is loaded after the one inferred from the executable.
 //
 // RUN: %t/testdmode/qqq-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --config i386-qqq.cfg -c -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-EXPLICIT
 //
-// CHECK-EXPLICIT: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
+// CHECK-EXPLICIT: Configuration file: {{.*}}/testdmode/qqq-clang-g++.cfg
+// CHECK-EXPLICIT-NEXT: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
 
 //--- --no-default-config disables config search.
 //
 // RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir=%t/testdmode --no-default-config -c -### %s 2>&1 | FileCheck %s -check-prefix NO-DEFAULT-CONFIG
 //
 // NO-DEFAULT-CONFIG-NOT: Configuration file:
+
+//--- Explicit --config works with --no-default-config.
+//
+// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --no-default-config --config i386-qqq.cfg -c -no-canonical-prefixes -### %s 2>&1 | FileCheck %s -check-prefix CHECK-EXPLICIT-NO-DEFAULT
+//
+// CHECK-EXPLICIT-NO-DEFAULT-NOT: Configuration file: {{.*}}/testdmode/qqq-clang-g++.cfg
+// CHECK-EXPLICIT-NO-DEFAULT: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
 
 //--- Invocation qqq-clang-g++ tries to find config file qqq.cfg if qqq-clang-g++.cfg is not found.
 //

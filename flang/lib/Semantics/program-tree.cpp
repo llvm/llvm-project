@@ -217,6 +217,10 @@ Symbol::Flag ProgramTree::GetSubpFlag() const {
 }
 
 bool ProgramTree::HasModulePrefix() const {
+  if (std::holds_alternative<
+          const parser::Statement<parser::MpSubprogramStmt> *>(stmt_)) {
+    return true; // MODULE PROCEDURE foo
+  }
   using ListType = std::list<parser::PrefixSpec>;
   const auto *prefixes{common::visit(
       common::visitors{

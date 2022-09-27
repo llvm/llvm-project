@@ -54,13 +54,7 @@ private:
   bool HasStdExtZba = false;
   bool HasStdExtZbb = false;
   bool HasStdExtZbc = false;
-  bool HasStdExtZbe = false;
-  bool HasStdExtZbf = false;
-  bool HasStdExtZbm = false;
-  bool HasStdExtZbp = false;
-  bool HasStdExtZbr = false;
   bool HasStdExtZbs = false;
-  bool HasStdExtZbt = false;
   bool HasStdExtZca = false;
   bool HasStdExtV = false;
   bool HasStdExtZve32x = false;
@@ -165,13 +159,7 @@ public:
   bool hasStdExtZba() const { return HasStdExtZba; }
   bool hasStdExtZbb() const { return HasStdExtZbb; }
   bool hasStdExtZbc() const { return HasStdExtZbc; }
-  bool hasStdExtZbe() const { return HasStdExtZbe; }
-  bool hasStdExtZbf() const { return HasStdExtZbf; }
-  bool hasStdExtZbm() const { return HasStdExtZbm; }
-  bool hasStdExtZbp() const { return HasStdExtZbp; }
-  bool hasStdExtZbr() const { return HasStdExtZbr; }
   bool hasStdExtZbs() const { return HasStdExtZbs; }
-  bool hasStdExtZbt() const { return HasStdExtZbt; }
   bool hasStdExtZca() const { return HasStdExtZca; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtZvfh() const { return HasStdExtZvfh; }

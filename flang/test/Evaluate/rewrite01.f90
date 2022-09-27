@@ -157,4 +157,33 @@ subroutine len_test(a,b, c, d, e, n, m)
   print *, len(mofun(m+1))
 end subroutine len_test
 
+!CHECK-LABEL: associate_tests
+subroutine associate_tests(p)
+  real, pointer :: p(:)
+  real :: a(10:20)
+  interface
+    subroutine may_change_p_bounds(p)
+      real, pointer :: p(:)
+    end subroutine
+  end interface
+  associate(x => p)
+    call may_change_p_bounds(p)
+    !CHECK: PRINT *, lbound(x,dim=1,kind=8), size(x,dim=1,kind=8)+lbound(x,dim=1,kind=8)-1_8, size(x,dim=1,kind=8)
+    print *, lbound(x, 1, kind=8), ubound(x, 1, kind=8), size(x, 1, kind=8)
+  end associate
+  associate(x => p+1)
+    call may_change_p_bounds(p)
+    !CHECK: PRINT *, 1_8, size(x,dim=1,kind=8), size(x,dim=1,kind=8)
+    print *, lbound(x, 1, kind=8), ubound(x, 1, kind=8), size(x, 1, kind=8)
+  end associate
+  associate(x => a)
+    !CHECK: PRINT *, 10_8, 20_8, 11_8
+    print *, lbound(x, 1, kind=8), ubound(x, 1, kind=8), size(x, 1, kind=8)
+  end associate
+  associate(x => a+42.)
+    !CHECK: PRINT *, 1_8, 11_8, 11_8
+    print *, lbound(x, 1, kind=8), ubound(x, 1, kind=8), size(x, 1, kind=8)
+  end associate
+end subroutine
+
 end module

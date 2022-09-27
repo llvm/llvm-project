@@ -1635,6 +1635,7 @@ LANGBUILTIN(__builtin_coro_done, "bv*", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_promise, "v*v*IiIb", "n", COR_LANG)
 
 LANGBUILTIN(__builtin_coro_size, "z", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_align, "z", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_frame, "v*", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_noop, "v*", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_free, "v*v*", "n", COR_LANG)

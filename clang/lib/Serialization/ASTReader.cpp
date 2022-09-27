@@ -1901,8 +1901,8 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
          "Wrong data length in HeaderFileInfo deserialization");
   while (d != End) {
     uint32_t LocalSMID = endian::readNext<uint32_t, little, unaligned>(d);
-    auto HeaderRole = static_cast<ModuleMap::ModuleHeaderRole>(LocalSMID & 3);
-    LocalSMID >>= 2;
+    auto HeaderRole = static_cast<ModuleMap::ModuleHeaderRole>(LocalSMID & 7);
+    LocalSMID >>= 3;
 
     // This header is part of a module. Associate it with the module to enable
     // implicit module import.

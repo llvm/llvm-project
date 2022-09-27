@@ -30,9 +30,6 @@ define void @foo(i64* %ptr, i32* %ptr.2) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[PTR_2]], align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[PTR_2]], align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    store i32 [[TMP3]], i32* [[PTR_2]], align 4, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    store i32 [[TMP4]], i32* [[PTR_2]], align 4, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, i64* [[PTR]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, i64* [[TMP6]], i32 0

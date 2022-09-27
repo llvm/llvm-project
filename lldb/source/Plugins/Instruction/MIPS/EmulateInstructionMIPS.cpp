@@ -585,9 +585,9 @@ const char *EmulateInstructionMIPS::GetRegisterName(unsigned reg_num,
   return nullptr;
 }
 
-bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
-                                             uint32_t reg_num,
-                                             RegisterInfo &reg_info) {
+llvm::Optional<RegisterInfo>
+EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
+                                        uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_num) {
     case LLDB_REGNUM_GENERIC_PC:
@@ -611,11 +611,12 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
       reg_num = dwarf_sr_mips;
       break;
     default:
-      return false;
+      return {};
     }
   }
 
   if (reg_kind == eRegisterKindDWARF) {
+    RegisterInfo reg_info;
     ::memset(&reg_info, 0, sizeof(RegisterInfo));
     ::memset(reg_info.kinds, LLDB_INVALID_REGNUM, sizeof(reg_info.kinds));
 
@@ -636,7 +637,7 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
       reg_info.format = eFormatVectorOfUInt8;
       reg_info.encoding = eEncodingVector;
     } else {
-      return false;
+      return {};
     }
 
     reg_info.name = GetRegisterName(reg_num, false);
@@ -662,9 +663,9 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
     default:
       break;
     }
-    return true;
+    return reg_info;
   }
-  return false;
+  return {};
 }
 
 EmulateInstructionMIPS::MipsOpcode *

@@ -169,7 +169,7 @@ async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
   OpBuilder builder(executeOp);
   auto newOp = builder.create<async::ExecuteOp>(
       executeOp.getLoc(), TypeRange{resultTypes}.drop_front() /*drop token*/,
-      executeOp.dependencies(), executeOp.operands());
+      executeOp.dependencies(), executeOp.bodyOperands());
   BlockAndValueMapping mapper;
   newOp.getRegion().getBlocks().clear();
   executeOp.getRegion().cloneInto(&newOp.getRegion(), mapper);
@@ -258,7 +258,7 @@ private:
           // Set `it` to the beginning of the region and add asyncTokens to the
           // async.execute operands.
           it = executeOp.getBody()->begin();
-          executeOp.operandsMutable().append(asyncTokens);
+          executeOp.bodyOperandsMutable().append(asyncTokens);
           SmallVector<Type, 1> tokenTypes(
               asyncTokens.size(), builder.getType<gpu::AsyncTokenType>());
           SmallVector<Location, 1> tokenLocs(asyncTokens.size(),
@@ -301,7 +301,7 @@ struct GpuAsyncRegionPass::SingleTokenUseCallback {
   void operator()(async::ExecuteOp executeOp) {
     // Extract !gpu.async.token results which have multiple uses.
     auto multiUseResults =
-        llvm::make_filter_range(executeOp.results(), [](OpResult result) {
+        llvm::make_filter_range(executeOp.bodyResults(), [](OpResult result) {
           if (result.use_empty() || result.hasOneUse())
             return false;
           auto valueType = result.getType().dyn_cast<async::ValueType>();
@@ -319,16 +319,16 @@ struct GpuAsyncRegionPass::SingleTokenUseCallback {
               });
 
     for (auto index : indices) {
-      assert(!executeOp.results()[index].getUses().empty());
+      assert(!executeOp.bodyResults()[index].getUses().empty());
       // Repeat async.yield token result, one for each use after the first one.
-      auto uses = llvm::drop_begin(executeOp.results()[index].getUses());
+      auto uses = llvm::drop_begin(executeOp.bodyResults()[index].getUses());
       auto count = std::distance(uses.begin(), uses.end());
       auto yieldOp = cast<async::YieldOp>(executeOp.getBody()->getTerminator());
       SmallVector<Value, 4> operands(count, yieldOp.getOperand(index));
       executeOp = addExecuteResults(executeOp, operands);
       // Update 'uses' to refer to the new executeOp.
-      uses = llvm::drop_begin(executeOp.results()[index].getUses());
-      auto results = executeOp.results().take_back(count);
+      uses = llvm::drop_begin(executeOp.bodyResults()[index].getUses());
+      auto results = executeOp.bodyResults().take_back(count);
       for (auto pair : llvm::zip(uses, results))
         std::get<0>(pair).set(std::get<1>(pair));
     }

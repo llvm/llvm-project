@@ -52,9 +52,8 @@ public:
     Tokens.append(Expanded.begin(), Expanded.end());
 
     TokenList UnexpandedTokens;
-    for (const UnwrappedLineNode &Node : Unexpanded[ID]->Tokens) {
+    for (const UnwrappedLineNode &Node : Unexpanded[ID]->Tokens)
       UnexpandedTokens.push_back(Node.Tok);
-    }
     return UnexpandedTokens;
   }
 
@@ -71,9 +70,8 @@ private:
   llvm::SmallVector<TokenList, 1>
   lexArgs(const std::vector<std::string> &Args) {
     llvm::SmallVector<TokenList, 1> Result;
-    for (const auto &Arg : Args) {
+    for (const auto &Arg : Args)
       Result.push_back(uneof(Lex.lex(Arg)));
-    }
     return Result;
   }
   llvm::DenseMap<FormatToken *, std::unique_ptr<UnwrappedLine>> Unexpanded;
@@ -102,7 +100,7 @@ struct Matcher {
   Chunk consume(StringRef Tokens) {
     TokenList Result;
     for (const FormatToken *Token : uneof(Lex.lex(Tokens))) {
-      (void)Token;  // Fix unused variable warning when asserts are disabled.
+      (void)Token; // Fix unused variable warning when asserts are disabled.
       assert((*It)->getType() == Token->getType() &&
              (*It)->TokenText == Token->TokenText);
       Result.push_back(*It);
@@ -119,12 +117,10 @@ struct Matcher {
 UnexpandedMap mergeUnexpanded(const UnexpandedMap &M1,
                               const UnexpandedMap &M2) {
   UnexpandedMap Result;
-  for (const auto &KV : M1) {
+  for (const auto &KV : M1)
     Result[KV.first] = std::make_unique<UnwrappedLine>(*KV.second);
-  }
-  for (const auto &KV : M2) {
+  for (const auto &KV : M2)
     Result[KV.first] = std::make_unique<UnwrappedLine>(*KV.second);
-  }
   return Result;
 }
 
@@ -141,9 +137,8 @@ public:
 
   UnwrappedLine line(llvm::ArrayRef<FormatToken *> Tokens) {
     UnwrappedLine Result;
-    for (FormatToken *Tok : Tokens) {
+    for (FormatToken *Tok : Tokens)
       Result.Tokens.push_back(UnwrappedLineNode(Tok));
-    }
     return Result;
   }
 
