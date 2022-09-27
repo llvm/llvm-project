@@ -456,7 +456,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                                                 PGSOQueryType::IRPass);
   bool CanAddPredicate = !OptForSize;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, Strides,
-                            CanAddPredicate, false);
+                            CanAddPredicate, false).value_or(0);
   if (Stride == 1 || Stride == -1)
     return Stride;
   return 0;
