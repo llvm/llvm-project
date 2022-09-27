@@ -438,8 +438,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
       resultTypes.push_back(newInputOutputTypes[i + genericOp.getNumInputs()]);
     GenericOp replacementOp = rewriter.create<GenericOp>(
         loc, resultTypes, newInputs, newOutputs, newIndexingMaps,
-        llvm::to_vector<4>(genericOp.getIteratorTypes()
-                               .template getAsValueRange<StringAttr>()));
+        genericOp.getIteratorTypesArray());
     rewriter.inlineRegionBefore(genericOp.getRegion(),
                                 replacementOp.getRegion(),
                                 replacementOp.getRegion().begin());

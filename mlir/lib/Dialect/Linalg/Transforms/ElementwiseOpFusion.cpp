@@ -467,9 +467,8 @@ static bool isFusableWithReshapeByDimExpansion(GenericOp genericOp,
                             .isProjectedPermutation();
                       }) &&
          genericOp.getTiedIndexingMap(fusableOpOperand).getNumResults() > 0 &&
-         llvm::all_of(genericOp.getIteratorTypes(), [](Attribute attr) {
-           return attr.cast<StringAttr>().getValue() ==
-                  getParallelIteratorTypeName();
+         llvm::all_of(genericOp.getIteratorTypesArray(), [](StringRef it) {
+           return it == getParallelIteratorTypeName();
          });
 }
 

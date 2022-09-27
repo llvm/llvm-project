@@ -493,6 +493,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return iterator types in the current operation.
+      }],
+      /*retTy=*/"SmallVector<StringRef>",
+      /*methodName=*/"getIteratorTypesArray",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto range = $_op.iterator_types().template getAsValueRange<StringAttr>();
+        return {range.begin(), range.end()};
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return true if the indexing map is depending on the current op instance.
         This means that the indexing map is dynamically synthesized by using the
         op instance's concrete attributes, instead of being static for all

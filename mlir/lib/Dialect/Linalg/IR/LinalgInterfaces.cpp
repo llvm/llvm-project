@@ -297,8 +297,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
       !indexingMaps.back().isProjectedPermutation())
     return MatchConvolutionResult::NotProjectedPermutations;
 
-  auto iteratorTypesRange =
-      linalgOp.iterator_types().getAsValueRange<StringAttr>();
+  auto iteratorTypesRange = linalgOp.getIteratorTypesArray();
 
   llvm::SmallDenseSet<unsigned> outputDims =
       getPreservedDims(indexingMaps.back());

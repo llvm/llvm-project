@@ -61,9 +61,7 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
     SmallVector<Value> outputOperands = genericOp.getOutputOperands();
     auto newOp = rewriter.create<GenericOp>(
         loc, genericOp->getResultTypes(), newOperands, outputOperands,
-        newIndexingMaps,
-        llvm::to_vector<4>(genericOp.getIteratorTypes()
-                               .template getAsValueRange<StringAttr>()));
+        newIndexingMaps, genericOp.getIteratorTypesArray());
     rewriter.cloneRegionBefore(genericOp.getRegion(), newOp.getRegion(),
                                newOp.getRegion().begin());
 
