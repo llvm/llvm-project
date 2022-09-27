@@ -1226,7 +1226,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
   /// Helper struct, will support ranges eventually.
   struct OffsetInfo {
-    int64_t Offset = OffsetAndSize::Unknown;
+    int64_t Offset = OffsetAndSize::Unassigned;
 
     bool operator==(const OffsetInfo &OI) const { return Offset == OI.Offset; }
   };
@@ -1243,6 +1243,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
     auto HandlePassthroughUser = [&](Value *Usr, OffsetInfo PtrOI,
                                      bool &Follow) {
+      assert(PtrOI.Offset != OffsetAndSize::Unassigned &&
+             "Cannot pass through if the input Ptr was not visited!");
       OffsetInfo &UsrOI = OffsetInfoMap[Usr];
       UsrOI = PtrOI;
       Follow = true;
@@ -1283,11 +1285,15 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
         if (PtrOI.Offset == OffsetAndSize::Unknown ||
             !GEP->accumulateConstantOffset(DL, GEPOffset)) {
+          LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset not constant "
+                            << *GEP << "\n");
           UsrOI.Offset = OffsetAndSize::Unknown;
           Follow = true;
           return true;
         }
 
+        LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset is constant " << *GEP
+                          << "\n");
         UsrOI.Offset = PtrOI.Offset + GEPOffset.getZExtValue();
         Follow = true;
         return true;
@@ -1306,15 +1312,22 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         bool IsFirstPHIUser = !OffsetInfoMap.count(Usr);
         OffsetInfo &UsrOI = OffsetInfoMap[Usr];
         OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
-        // Check if the PHI is invariant (so far).
-        if (UsrOI == PtrOI)
-          return true;
 
         // Check if the PHI operand has already an unknown offset as we can't
         // improve on that anymore.
         if (PtrOI.Offset == OffsetAndSize::Unknown) {
+          LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand offset unknown "
+                            << *CurPtr << " in " << *Usr << "\n");
+          Follow = UsrOI.Offset != OffsetAndSize::Unknown;
           UsrOI = PtrOI;
-          Follow = true;
+          return true;
+        }
+
+        // Check if the PHI is invariant (so far).
+        if (UsrOI == PtrOI) {
+          assert(PtrOI.Offset != OffsetAndSize::Unassigned &&
+                 "Cannot assign if the current Ptr was not visited!");
+          LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI is invariant (so far)");
           return true;
         }
 
