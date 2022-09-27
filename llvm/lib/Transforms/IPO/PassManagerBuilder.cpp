@@ -647,7 +647,6 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createGlobalsAAWrapperPass());
 
   // Start of CallGraph SCC passes.
-  MPM.add(createPruneEHPass()); // Remove dead EH info
   bool RunInliner = false;
   if (Inliner) {
     MPM.add(Inliner);
