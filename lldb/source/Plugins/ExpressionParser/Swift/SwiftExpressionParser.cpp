@@ -1069,14 +1069,8 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       auto *swift_ast_ctx =
           llvm::cast<SwiftASTContext>(actual_type.GetTypeSystem());
 
-      // Currently the Swift runtime cannot resolve types that were
-      // defined in the expression evaluator. That's because we don't
-      // tell it about type metadata sections that were JIT-compiled
-      // by the expression evaluator. Until that is implemented, fall
-      // back to SwiftASTContext.
-      if (!FromLLDBModule(transformed_type.getPointer()))
-        actual_type =
-            swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
+      actual_type =
+          swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
 
       offset = materializer.AddResultVariable(
           actual_type, false, true,
@@ -1139,7 +1133,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           variable.GetType(), variable.GetDecl(),
           &user_expression.GetPersistentVariableDelegate(), error);
     } else {
-      // Transform the variable metadata to a typeref type if necessary.
+      // Transform the variable metadata to a typeref type if possible.
       auto compiler_type =
           variable_metadata->m_persistent_variable_sp->GetCompilerType();
       if (auto *swift_ast_ctx =
