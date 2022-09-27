@@ -76,7 +76,6 @@ template <> struct IRTraits<BasicBlock> {
 } // end namespace afdo_detail
 
 extern cl::opt<bool> SampleProfileUseProfi;
-extern cl::opt<bool> SampleProfileInferEntryCount;
 
 template <typename BT> class SampleProfileLoaderBaseImpl {
 public:
@@ -922,8 +921,7 @@ void SampleProfileLoaderBaseImpl<BT>::finalizeWeightPropagation(
   if (SampleProfileUseProfi) {
     const BasicBlockT *EntryBB = getEntryBB(&F);
     ErrorOr<uint64_t> EntryWeight = getBlockWeight(EntryBB);
-    if (BlockWeights[EntryBB] > 0 &&
-        (SampleProfileInferEntryCount || !EntryWeight)) {
+    if (BlockWeights[EntryBB] > 0) {
       getFunction(F).setEntryCount(
           ProfileCount(BlockWeights[EntryBB], Function::PCT_Real),
           &InlinedGUIDs);
