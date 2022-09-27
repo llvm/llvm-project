@@ -270,17 +270,21 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
 
     auto InternedName = getExecutionSession().intern(KV.first);
     auto Flags = KV.second.getFlags();
-
-    // Override object flags and claim responsibility for symbols if
-    // requested.
-    if (OverrideObjectFlags || AutoClaimObjectSymbols) {
-      auto I = R.getSymbols().find(InternedName);
-
-      if (OverrideObjectFlags && I != R.getSymbols().end())
+    auto I = R.getSymbols().find(InternedName);
+    if (I != R.getSymbols().end()) {
+      // Override object flags and claim responsibility for symbols if
+      // requested.
+      if (OverrideObjectFlags)
         Flags = I->second;
-      else if (AutoClaimObjectSymbols && I == R.getSymbols().end())
-        ExtraSymbolsToClaim[InternedName] = Flags;
-    }
+      else {
+        // RuntimeDyld/MCJIT's weak tracking isn't compatible with ORC's. Even
+        // if we're not overriding flags in general we should set the weak flag
+        // according to the MaterializationResponsibility object symbol table.
+        if (I->second.isWeak())
+          Flags |= JITSymbolFlags::Weak;
+      }
+    } else if (AutoClaimObjectSymbols)
+      ExtraSymbolsToClaim[InternedName] = Flags;
 
     Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
   }
