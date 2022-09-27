@@ -517,7 +517,7 @@ LogicalResult SortOp::verify() {
                         bool checkEleType = true) -> LogicalResult {
     for (Value opnd : operands) {
       MemRefType mtp = opnd.getType().cast<MemRefType>();
-      uint64_t dim = mtp.getShape()[0];
+      int64_t dim = mtp.getShape()[0];
       // We can't check the size of dynamic dimension at compile-time, but all
       // xs and ys should have a dimension not less than n at runtime.
       if (n && dim != ShapedType::kDynamicSize && dim < n.value())
