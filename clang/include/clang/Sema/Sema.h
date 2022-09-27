@@ -9053,7 +9053,7 @@ public:
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const TemplateArgumentList *Innermost = nullptr,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
-      bool LookBeyondLambda = false, bool IncludeContainingStruct = false);
+      bool ForConstraintInstantiation = false);
 
   /// A context in which code is being synthesized (where a source location
   /// alone is not sufficient to identify the context). This covers template
