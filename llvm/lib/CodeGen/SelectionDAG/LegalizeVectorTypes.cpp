@@ -1020,7 +1020,6 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CTPOP:
   case ISD::FABS: case ISD::VP_FABS:
   case ISD::FCEIL:
-  case ISD::VP_FCEIL:
   case ISD::FCOS:
   case ISD::FEXP:
   case ISD::FEXP2:
@@ -4085,7 +4084,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FNEG: case ISD::VP_FNEG:
   case ISD::VP_FABS:
   case ISD::VP_SQRT:
-  case ISD::VP_FCEIL:
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:
