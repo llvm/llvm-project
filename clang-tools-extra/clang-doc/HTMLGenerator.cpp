@@ -308,7 +308,7 @@ static std::unique_ptr<TagNode> genLink(const Twine &Text, const Twine &Link) {
 static std::unique_ptr<HTMLNode>
 genReference(const Reference &Type, StringRef CurrentDirectory,
              llvm::Optional<StringRef> JumpToSection = None) {
-  if (Type.Path.empty() && !Type.IsInGlobalNamespace) {
+  if (Type.Path.empty()) {
     if (!JumpToSection)
       return std::make_unique<TextNode>(Type.Name);
     else

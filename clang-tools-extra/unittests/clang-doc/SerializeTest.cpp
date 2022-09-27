@@ -119,7 +119,7 @@ TEST(SerializeTest, emitNamespaceInfo) {
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "f";
-  F.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  F.ReturnType = TypeInfo("void");
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   F.Namespace.emplace_back(EmptySID, "B", InfoType::IT_namespace);
   F.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -165,7 +165,8 @@ typedef struct {} G;)raw",
                                    InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  ExpectedE.Members.emplace_back("int", "value", AccessSpecifier::AS_public);
+  ExpectedE.Members.emplace_back(TypeInfo("int"), "value",
+                                 AccessSpecifier::AS_public);
   // TODO the data member should have the docstring on it:
   //ExpectedE.Members.back().Description.push_back(MakeOneLineCommentInfo(" Some docs"));
   CheckRecordInfo(&ExpectedE, E);
@@ -175,7 +176,7 @@ typedef struct {} G;)raw",
   FunctionInfo EConstructor;
   EConstructor.Name = "E";
   EConstructor.Parent = Reference(EmptySID, "E", InfoType::IT_record);
-  EConstructor.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  EConstructor.ReturnType = TypeInfo("void");
   EConstructor.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   EConstructor.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
   EConstructor.Namespace.emplace_back(EmptySID, "GlobalNamespace",
@@ -191,7 +192,7 @@ typedef struct {} G;)raw",
   FunctionInfo Method;
   Method.Name = "ProtectedMethod";
   Method.Parent = Reference(EmptySID, "E", InfoType::IT_record);
-  Method.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  Method.ReturnType = TypeInfo("void");
   Method.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   Method.Namespace.emplace_back(EmptySID, "E", InfoType::IT_record);
   Method.Namespace.emplace_back(EmptySID, "GlobalNamespace",
@@ -214,7 +215,7 @@ typedef struct {} G;)raw",
   FunctionInfo TemplateMethod;
   TemplateMethod.Name = "TemplateMethod";
   TemplateMethod.Parent = Reference(EmptySID, "F", InfoType::IT_record);
-  TemplateMethod.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  TemplateMethod.ReturnType = TypeInfo("void");
   TemplateMethod.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   TemplateMethod.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
   TemplateMethod.Namespace.emplace_back(EmptySID, "GlobalNamespace",
@@ -231,8 +232,7 @@ typedef struct {} G;)raw",
   SpecializedTemplateMethod.Name = "TemplateMethod";
   SpecializedTemplateMethod.Parent =
       Reference(EmptySID, "F", InfoType::IT_record);
-  SpecializedTemplateMethod.ReturnType =
-      TypeInfo(EmptySID, "void", InfoType::IT_default);
+  SpecializedTemplateMethod.ReturnType = TypeInfo("void");
   SpecializedTemplateMethod.Loc.emplace_back(0,
                                              llvm::SmallString<16>{"test.cpp"});
   SpecializedTemplateMethod.Namespace.emplace_back(EmptySID, "F",
@@ -306,7 +306,8 @@ TEST(SerializeTest, emitRecordMemberInfo) {
                                    InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::TTK_Struct;
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  ExpectedE.Members.emplace_back("int", "I", AccessSpecifier::AS_public);
+  ExpectedE.Members.emplace_back(TypeInfo("int"), "I",
+                                 AccessSpecifier::AS_public);
   CheckRecordInfo(&ExpectedE, E);
 }
 
@@ -348,7 +349,7 @@ TEST(SerializeTest, emitPublicFunctionInternalInfo) {
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "F";
-  F.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
+  F.ReturnType = TypeInfo("int");
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   F.Access = AccessSpecifier::AS_none;
   ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
@@ -363,9 +364,9 @@ TEST(SerializeTest, emitInlinedFunctionInfo) {
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "F";
-  F.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  F.ReturnType = TypeInfo("void");
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  F.Params.emplace_back("int", "I");
+  F.Params.emplace_back(TypeInfo("int"), "I");
   F.Access = AccessSpecifier::AS_none;
   ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
@@ -396,7 +397,8 @@ class J : public I<int> {} ;)raw",
                                    InfoType::IT_namespace);
   ExpectedG.TagType = TagTypeKind::TTK_Class;
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  ExpectedG.Members.emplace_back("int", "I", AccessSpecifier::AS_protected);
+  ExpectedG.Members.emplace_back(TypeInfo("int"), "I",
+                                 AccessSpecifier::AS_protected);
   CheckRecordInfo(&ExpectedG, G);
 
   RecordInfo *E = InfoAsRecord(Infos[6].get());
@@ -412,9 +414,9 @@ class J : public I<int> {} ;)raw",
                                AccessSpecifier::AS_public, true);
   FunctionInfo FunctionSet;
   FunctionSet.Name = "set";
-  FunctionSet.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  FunctionSet.ReturnType = TypeInfo("void");
   FunctionSet.Loc.emplace_back();
-  FunctionSet.Params.emplace_back("int", "N");
+  FunctionSet.Params.emplace_back(TypeInfo("int"), "N");
   FunctionSet.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
   FunctionSet.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                      InfoType::IT_namespace);
@@ -426,7 +428,7 @@ class J : public I<int> {} ;)raw",
                                AccessSpecifier::AS_private, true);
   FunctionInfo FunctionGet;
   FunctionGet.Name = "get";
-  FunctionGet.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
+  FunctionGet.ReturnType = TypeInfo("int");
   FunctionGet.DefLoc = Location();
   FunctionGet.Namespace.emplace_back(EmptySID, "G", InfoType::IT_record);
   FunctionGet.Namespace.emplace_back(EmptySID, "GlobalNamespace",
@@ -434,7 +436,7 @@ class J : public I<int> {} ;)raw",
   FunctionGet.Access = AccessSpecifier::AS_private;
   FunctionGet.IsMethod = true;
   ExpectedE.Bases.back().ChildFunctions.emplace_back(std::move(FunctionGet));
-  ExpectedE.Bases.back().Members.emplace_back("int", "I",
+  ExpectedE.Bases.back().Members.emplace_back(TypeInfo("int"), "I",
                                               AccessSpecifier::AS_private);
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedE.TagType = TagTypeKind::TTK_Class;
@@ -458,9 +460,9 @@ class J : public I<int> {} ;)raw",
                                AccessSpecifier::AS_private, false);
   FunctionInfo FunctionSetNew;
   FunctionSetNew.Name = "set";
-  FunctionSetNew.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  FunctionSetNew.ReturnType = TypeInfo("void");
   FunctionSetNew.Loc.emplace_back();
-  FunctionSetNew.Params.emplace_back("int", "N");
+  FunctionSetNew.Params.emplace_back(TypeInfo("int"), "N");
   FunctionSetNew.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
   FunctionSetNew.Namespace.emplace_back(EmptySID, "GlobalNamespace",
                                         InfoType::IT_namespace);
@@ -472,7 +474,7 @@ class J : public I<int> {} ;)raw",
                                AccessSpecifier::AS_private, false);
   FunctionInfo FunctionGetNew;
   FunctionGetNew.Name = "get";
-  FunctionGetNew.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
+  FunctionGetNew.ReturnType = TypeInfo("int");
   FunctionGetNew.DefLoc = Location();
   FunctionGetNew.Namespace.emplace_back(EmptySID, "G", InfoType::IT_record);
   FunctionGetNew.Namespace.emplace_back(EmptySID, "GlobalNamespace",
@@ -480,7 +482,7 @@ class J : public I<int> {} ;)raw",
   FunctionGetNew.Access = AccessSpecifier::AS_private;
   FunctionGetNew.IsMethod = true;
   ExpectedH.Bases.back().ChildFunctions.emplace_back(std::move(FunctionGetNew));
-  ExpectedH.Bases.back().Members.emplace_back("int", "I",
+  ExpectedH.Bases.back().Members.emplace_back(TypeInfo("int"), "I",
                                               AccessSpecifier::AS_private);
   CheckRecordInfo(&ExpectedH, H);
 
@@ -520,10 +522,10 @@ export double exportedModuleFunction(double y);)raw",
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "moduleFunction";
-  F.ReturnType = TypeInfo(EmptySID, "int", InfoType::IT_default);
+  F.ReturnType = TypeInfo("int");
   F.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
-  F.Params.emplace_back("int", "x");
-  F.Params.emplace_back("double", "d");
+  F.Params.emplace_back(TypeInfo("int"), "x");
+  F.Params.emplace_back(TypeInfo("double"), "d");
   F.Params.back().DefaultValue = "3.2 - 1.0";
   F.Access = AccessSpecifier::AS_none;
   ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
@@ -533,9 +535,10 @@ export double exportedModuleFunction(double y);)raw",
   NamespaceInfo ExpectedBWithExportedFunction(EmptySID);
   FunctionInfo ExportedF;
   ExportedF.Name = "exportedModuleFunction";
-  ExportedF.ReturnType = TypeInfo(EmptySID, "double", InfoType::IT_default);
+  ExportedF.ReturnType =
+      TypeInfo(Reference(EmptySID, "double", InfoType::IT_default));
   ExportedF.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
-  ExportedF.Params.emplace_back("double", "y");
+  ExportedF.Params.emplace_back(TypeInfo("double"), "y");
   ExportedF.Access = AccessSpecifier::AS_none;
   ExpectedBWithExportedFunction.ChildFunctions.emplace_back(
       std::move(ExportedF));
