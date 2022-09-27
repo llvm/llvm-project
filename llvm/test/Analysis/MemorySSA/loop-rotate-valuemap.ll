@@ -14,11 +14,11 @@ for.cond.cleanup15:                               ; preds = %for.body16
 
 for.body16:                                       ; preds = %for.body16.for.body16_crit_edge, %entry
   %call.i = tail call float @expf(float 0.000000e+00) #1
-  %0 = load float*, float** undef, align 8
+  %0 = load ptr, ptr undef, align 8
   br i1 undef, label %for.cond.cleanup15, label %for.body16.for.body16_crit_edge
 
 for.body16.for.body16_crit_edge:                  ; preds = %for.body16
-  %.pre = load float, float* undef, align 8
+  %.pre = load float, ptr undef, align 8
   br label %for.body16
 }
 

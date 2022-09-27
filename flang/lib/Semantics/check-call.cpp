@@ -931,9 +931,10 @@ parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
 bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, const evaluate::FoldingContext &context,
     bool allowActualArgumentConversions) {
-  return !CheckExplicitInterface(
-      proc, actuals, context, nullptr, nullptr, allowActualArgumentConversions)
-              .AnyFatalError();
+  return proc.HasExplicitInterface() &&
+      !CheckExplicitInterface(proc, actuals, context, nullptr, nullptr,
+          allowActualArgumentConversions)
+           .AnyFatalError();
 }
 
 void CheckArguments(const characteristics::Procedure &proc,

@@ -392,6 +392,12 @@ func.func @foo() {
 // CHECK: test.format_literal_following_optional_group(5 : i32) : i32 {a}
 test.format_literal_following_optional_group(5 : i32) : i32 {a}
 
+func.func @variadic(%a: i32) {
+  // CHECK: test.ellipsis(%{{.*}} ...) : i32 ...
+  test.ellipsis(%a ...) : i32 ...
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Format trait type inference
 //===----------------------------------------------------------------------===//

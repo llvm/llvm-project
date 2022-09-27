@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Endian.h"
 #include <memory>
 #include <vector>
 
@@ -40,7 +41,7 @@ class ObjFileAddressMap : public AddressesMap {
 public:
   ObjFileAddressMap(DWARFContext &Context, const Options &Options,
                     object::ObjectFile &ObjFile)
-      : Opts(Options) {
+      : Opts(Options), Context(Context) {
     // Remember addresses of existing text sections.
     for (const object::SectionRef &Sect : ObjFile.sections()) {
       if (!Sect.isText())
@@ -137,9 +138,28 @@ public:
 
   void clear() override { DWARFAddressRanges.clear(); }
 
-  llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t, uint64_t) override {
-    // should not be called.
-    return object::createError("no relocations in linked binary");
+  llvm::Expected<uint64_t> relocateIndexedAddr(uint64_t StartOffset,
+                                               uint64_t EndOffset) override {
+    // No relocations in linked binary. Return just address value.
+
+    const char *AddrPtr =
+        Context.getDWARFObj().getAddrSection().Data.data() + StartOffset;
+    support::endianness Endianess =
+        Context.getDWARFObj().isLittleEndian() ? support::little : support::big;
+
+    assert(EndOffset > StartOffset);
+    switch (EndOffset - StartOffset) {
+    case 1:
+      return *AddrPtr;
+    case 2:
+      return support::endian::read16(AddrPtr, Endianess);
+    case 4:
+      return support::endian::read32(AddrPtr, Endianess);
+    case 8:
+      return support::endian::read64(AddrPtr, Endianess);
+    }
+
+    llvm_unreachable("relocateIndexedAddr unhandled case!");
   }
 
 protected:
@@ -209,6 +229,7 @@ private:
   RangesTy DWARFAddressRanges;
   AddressRanges TextAddressRanges;
   const Options &Opts;
+  DWARFContext &Context;
 };
 
 static bool knownByDWARFUtil(StringRef SecName) {

@@ -2848,6 +2848,20 @@ template<>
 struct IsPartialSpecialization<VarTemplatePartialSpecializationDecl> {
   static constexpr bool value = true;
 };
+template <typename TemplateDeclT>
+static bool DeducedArgsNeedReplacement(TemplateDeclT *Template) {
+  return false;
+}
+template <>
+bool DeducedArgsNeedReplacement<VarTemplatePartialSpecializationDecl>(
+    VarTemplatePartialSpecializationDecl *Spec) {
+  return !Spec->isClassScopeExplicitSpecialization();
+}
+template <>
+bool DeducedArgsNeedReplacement<ClassTemplatePartialSpecializationDecl>(
+    ClassTemplatePartialSpecializationDecl *Spec) {
+  return !Spec->isClassScopeExplicitSpecialization();
+}
 
 template<typename TemplateDeclT>
 static Sema::TemplateDeductionResult
@@ -2856,13 +2870,25 @@ CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
                                 TemplateDeductionInfo& Info) {
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
-  // FIXME: This will change quite a bit once deferred concept instantiation is
-  // implemented.
   MultiLevelTemplateArgumentList MLTAL;
-  MLTAL.addOuterTemplateArguments(DeducedArgs);
 
-  if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints,
-                                    MLTAL, Info.getLocation(),
+  bool NeedsReplacement = DeducedArgsNeedReplacement(Template);
+  TemplateArgumentList DeducedTAL{TemplateArgumentList::OnStack, DeducedArgs};
+
+  MLTAL = S.getTemplateInstantiationArgs(
+      Template, /*InnerMost*/ NeedsReplacement ? nullptr : &DeducedTAL,
+      /*RelativeToPrimary*/ true, /*Pattern*/
+      nullptr, /*LookBeyondLambda*/ true);
+
+  // getTemplateInstantiationArgs picks up the non-deduced version of the
+  // template args when this is a variable template partial specialization and
+  // not class-scope explicit specialization, so replace with Deduced Args
+  // instead of adding to inner-most.
+  if (NeedsReplacement)
+    MLTAL.replaceInnermostTemplateArguments(DeducedArgs);
+
+  if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
+                                    Info.getLocation(),
                                     Info.AssociatedConstraintsSatisfaction) ||
       !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
     Info.reset(TemplateArgumentList::CreateCopy(S.Context, DeducedArgs));

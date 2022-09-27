@@ -1,10 +1,10 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
-spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.func @foo() -> () "None" {
-    spv.Return
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  spirv.func @foo() -> () "None" {
+    spirv.Return
   }
-  spv.EntryPoint "GLCompute" @foo
-  // CHECK: spv.ExecutionMode @foo "LocalSizeHint", 3, 4, 5
-  spv.ExecutionMode @foo "LocalSizeHint", 3, 4, 5
+  spirv.EntryPoint "GLCompute" @foo
+  // CHECK: spirv.ExecutionMode @foo "LocalSizeHint", 3, 4, 5
+  spirv.ExecutionMode @foo "LocalSizeHint", 3, 4, 5
 }

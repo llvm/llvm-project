@@ -980,6 +980,7 @@ cc_library(
     ],
     textual_hdrs = [
         "src/string/memory_utils/bcmp_implementations.h",
+        "src/string/memory_utils/bzero_implementations.h",
         "src/string/memory_utils/memcmp_implementations.h",
         "src/string/memory_utils/memcpy_implementations.h",
         "src/string/memory_utils/memset_implementations.h",

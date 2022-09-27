@@ -196,17 +196,13 @@ static_assert(!__is_trivial(ComplexConstraints<int>), "");
 
 // This is evaluated at the completion of CRTPBase, while `T` is not yet completed.
 // This is probably correct behavior.
-// FIXME: We should not throw an error, instead SFINAE should make the constraint
-// silently unsatisfied. See [temp.constr.constr]p5
 template <class T>
 struct CRTPBase {
-  CRTPBase() requires (sizeof(T) > 0); // expected-error {{to an incomplete type}}
+  CRTPBase() requires (sizeof(T) > 0);
   CRTPBase() = default;
 };
 
 struct Child : CRTPBase<Child> { int x; };
-// expected-note@-1 {{definition of 'Child' is not complete until}}
-// expected-note@-2 {{in instantiation of template class 'CRTPBase<Child>' requested here}}
 static Child c;
 
 

@@ -760,7 +760,8 @@ static void genLiteralParser(StringRef value, MethodBody &body) {
               .Case("]", "RSquare()")
               .Case("?", "Question()")
               .Case("+", "Plus()")
-              .Case("*", "Star()");
+              .Case("*", "Star()")
+              .Case("...", "Ellipsis()");
 }
 
 /// Generate the storage code required for parsing the given element.
@@ -1186,7 +1187,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     if (!elseElements.empty()) {
       body << " else {\n";
       ArrayRef<FormatElement *> elseElements =
-          optional->getElseElements(/*parsable=*/true);
+          optional->getElseElements(/*parseable=*/true);
       genElementParsers(elseElements.front(), elseElements,
                         /*thenGroup=*/false);
       body << "  }";

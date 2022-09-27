@@ -203,9 +203,8 @@ JITLinkContext::LookupMap JITLinkerBase::getExternalSymbolNames() const {
     assert(Sym->getName() != StringRef() && Sym->getName() != "" &&
            "Externals must be named");
     SymbolLookupFlags LookupFlags =
-        Sym->getLinkage() == Linkage::Weak
-            ? SymbolLookupFlags::WeaklyReferencedSymbol
-            : SymbolLookupFlags::RequiredSymbol;
+        Sym->isWeaklyReferenced() ? SymbolLookupFlags::WeaklyReferencedSymbol
+                                  : SymbolLookupFlags::RequiredSymbol;
     UnresolvedExternals[Sym->getName()] = LookupFlags;
   }
   return UnresolvedExternals;
@@ -222,7 +221,7 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
       Sym->getAddressable().setAddress(
           orc::ExecutorAddr(ResultI->second.getAddress()));
     else
-      assert(Sym->getLinkage() == Linkage::Weak &&
+      assert(Sym->isWeaklyReferenced() &&
              "Failed to resolve non-weak reference");
   }
 

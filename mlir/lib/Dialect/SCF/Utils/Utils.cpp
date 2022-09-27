@@ -40,7 +40,8 @@ struct LoopParams {
 scf::ForOp
 mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
                                ValueRange newIterOperands,
-                               const NewYieldValueFn &newYieldValuesFn) {
+                               const NewYieldValueFn &newYieldValuesFn,
+                               bool replaceIterOperandsUsesInLoop) {
   // Create a new loop before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(builder);
   builder.setInsertionPoint(loop);
@@ -79,13 +80,15 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
        llvm::zip(bbArgs, newLoopBody->getArguments().take_front(bbArgs.size())))
     std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
 
-  // Replace all uses of `newIterOperands` with the corresponding basic block
-  // arguments.
-  for (auto it : llvm::zip(newIterOperands, newBBArgs)) {
-    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), [&](OpOperand &use) {
-      Operation *user = use.getOwner();
-      return newLoop->isProperAncestor(user);
-    });
+  if (replaceIterOperandsUsesInLoop) {
+    // Replace all uses of `newIterOperands` with the corresponding basic block
+    // arguments.
+    for (auto it : llvm::zip(newIterOperands, newBBArgs)) {
+      std::get<0>(it).replaceUsesWithIf(std::get<1>(it), [&](OpOperand &use) {
+        Operation *user = use.getOwner();
+        return newLoop->isProperAncestor(user);
+      });
+    }
   }
 
   // Replace all uses of the original loop with corresponding values from the
@@ -104,7 +107,8 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 
 SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
-    ValueRange newIterOperands, const NewYieldValueFn &newYieldValueFn) {
+    ValueRange newIterOperands, const NewYieldValueFn &newYieldValueFn,
+    bool replaceIterOperandsUsesInLoop) {
   if (loopNest.empty())
     return {};
   SmallVector<scf::ForOp> newLoopNest(loopNest.size());
@@ -121,8 +125,41 @@ SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
               newIterOperands.size()));
       return newYields;
     };
-    newLoopNest[loopDepth] = replaceLoopWithNewYields(
-        builder, loopNest[loopDepth], newIterOperands, fn);
+    newLoopNest[loopDepth] =
+        replaceLoopWithNewYields(builder, loopNest[loopDepth], newIterOperands,
+                                 fn, replaceIterOperandsUsesInLoop);
+    if (!replaceIterOperandsUsesInLoop) {
+      /// The yield is expected to producer the following structure
+      /// ```
+      /// %0 = scf.for ... iter_args(%arg0 = %init) {
+      ///   %1 = scf.for ... iter_args(%arg1 = %arg0) {
+      ///     scf.yield %yield
+      ///   }
+      /// }
+      /// ```
+      ///
+      /// since the yield is propagated from inside out, after the inner
+      /// loop is processed the IR is in this form
+      ///
+      /// ```
+      /// scf.for ... iter_args {
+      ///   %1 = scf.for ... iter_args(%arg1 = %init) {
+      ///     scf.yield %yield
+      ///   }
+      /// ```
+      ///
+      /// If `replaceIterOperandUsesInLoops` is true, there is nothing to do.
+      /// `%init` will be replaced with `%arg0` when it is created for the
+      /// outer loop. But without that this has to be done explicitly.
+      unsigned subLen = newIterOperands.size();
+      unsigned subStart =
+          newLoopNest[loopDepth + 1].getNumIterOperands() - subLen;
+      auto resetOperands =
+          newLoopNest[loopDepth + 1].getInitArgsMutable().slice(subStart,
+                                                                subLen);
+      resetOperands.assign(
+          newLoopNest[loopDepth].getRegionIterArgs().take_back(subLen));
+    }
   }
   return newLoopNest;
 }

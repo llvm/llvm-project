@@ -3,18 +3,10 @@
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+f -target-abi=ilp32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32IF %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbt -target-abi=ilp32 -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV32,RV32IBT %s
-; RUN: llc -mtriple=riscv32 -mattr=+f,+experimental-zbt -target-abi=ilp32 -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV32,RV32IFBT %s
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64,RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+d -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64,RV64IFD %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbt -target-abi=lp64 -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64,RV64IBT %s
-; RUN: llc -mtriple=riscv64 -mattr=+f,+d,+experimental-zbt -target-abi=lp64 -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64,RV64IFDBT %s
 
 ;; This tests how good we are at materialising constants using `select`. The aim
 ;; is that we do so without a branch if possible (at the moment our lowering of
@@ -67,73 +59,25 @@ define signext i32 @select_const_int_pow2_zero(i1 zeroext %a) nounwind {
 }
 
 define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
-; RV32I-LABEL: select_const_int_harder:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    li a0, 6
-; RV32I-NEXT:    bnez a1, .LBB3_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    li a0, 38
-; RV32I-NEXT:  .LBB3_2:
-; RV32I-NEXT:    ret
+; RV32-LABEL: select_const_int_harder:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 6
+; RV32-NEXT:    bnez a1, .LBB3_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a0, 38
+; RV32-NEXT:  .LBB3_2:
+; RV32-NEXT:    ret
 ;
-; RV32IF-LABEL: select_const_int_harder:
-; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    mv a1, a0
-; RV32IF-NEXT:    li a0, 6
-; RV32IF-NEXT:    bnez a1, .LBB3_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    li a0, 38
-; RV32IF-NEXT:  .LBB3_2:
-; RV32IF-NEXT:    ret
-;
-; RV32IBT-LABEL: select_const_int_harder:
-; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    li a1, 38
-; RV32IBT-NEXT:    li a2, 6
-; RV32IBT-NEXT:    cmov a0, a0, a2, a1
-; RV32IBT-NEXT:    ret
-;
-; RV32IFBT-LABEL: select_const_int_harder:
-; RV32IFBT:       # %bb.0:
-; RV32IFBT-NEXT:    li a1, 38
-; RV32IFBT-NEXT:    li a2, 6
-; RV32IFBT-NEXT:    cmov a0, a0, a2, a1
-; RV32IFBT-NEXT:    ret
-;
-; RV64I-LABEL: select_const_int_harder:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    li a0, 6
-; RV64I-NEXT:    bnez a1, .LBB3_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    li a0, 38
-; RV64I-NEXT:  .LBB3_2:
-; RV64I-NEXT:    ret
-;
-; RV64IFD-LABEL: select_const_int_harder:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    mv a1, a0
-; RV64IFD-NEXT:    li a0, 6
-; RV64IFD-NEXT:    bnez a1, .LBB3_2
-; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    li a0, 38
-; RV64IFD-NEXT:  .LBB3_2:
-; RV64IFD-NEXT:    ret
-;
-; RV64IBT-LABEL: select_const_int_harder:
-; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    li a1, 38
-; RV64IBT-NEXT:    li a2, 6
-; RV64IBT-NEXT:    cmov a0, a0, a2, a1
-; RV64IBT-NEXT:    ret
-;
-; RV64IFDBT-LABEL: select_const_int_harder:
-; RV64IFDBT:       # %bb.0:
-; RV64IFDBT-NEXT:    li a1, 38
-; RV64IFDBT-NEXT:    li a2, 6
-; RV64IFDBT-NEXT:    cmov a0, a0, a2, a1
-; RV64IFDBT-NEXT:    ret
+; RV64-LABEL: select_const_int_harder:
+; RV64:       # %bb.0:
+; RV64-NEXT:    mv a1, a0
+; RV64-NEXT:    li a0, 6
+; RV64-NEXT:    bnez a1, .LBB3_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a0, 38
+; RV64-NEXT:  .LBB3_2:
+; RV64-NEXT:    ret
   %1 = select i1 %a, i32 6, i32 38
   ret i32 %1
 }
@@ -163,27 +107,6 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
 ;
-; RV32IBT-LABEL: select_const_fp:
-; RV32IBT:       # %bb.0:
-; RV32IBT-NEXT:    lui a1, 264192
-; RV32IBT-NEXT:    lui a2, 263168
-; RV32IBT-NEXT:    cmov a0, a0, a2, a1
-; RV32IBT-NEXT:    ret
-;
-; RV32IFBT-LABEL: select_const_fp:
-; RV32IFBT:       # %bb.0:
-; RV32IFBT-NEXT:    bnez a0, .LBB4_2
-; RV32IFBT-NEXT:  # %bb.1:
-; RV32IFBT-NEXT:    lui a0, %hi(.LCPI4_0)
-; RV32IFBT-NEXT:    flw ft0, %lo(.LCPI4_0)(a0)
-; RV32IFBT-NEXT:    fmv.x.w a0, ft0
-; RV32IFBT-NEXT:    ret
-; RV32IFBT-NEXT:  .LBB4_2:
-; RV32IFBT-NEXT:    lui a0, %hi(.LCPI4_1)
-; RV32IFBT-NEXT:    flw ft0, %lo(.LCPI4_1)(a0)
-; RV32IFBT-NEXT:    fmv.x.w a0, ft0
-; RV32IFBT-NEXT:    ret
-;
 ; RV64I-LABEL: select_const_fp:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a1, a0
@@ -207,27 +130,6 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ; RV64IFD-NEXT:    flw ft0, %lo(.LCPI4_1)(a0)
 ; RV64IFD-NEXT:    fmv.x.w a0, ft0
 ; RV64IFD-NEXT:    ret
-;
-; RV64IBT-LABEL: select_const_fp:
-; RV64IBT:       # %bb.0:
-; RV64IBT-NEXT:    lui a1, 264192
-; RV64IBT-NEXT:    lui a2, 263168
-; RV64IBT-NEXT:    cmov a0, a0, a2, a1
-; RV64IBT-NEXT:    ret
-;
-; RV64IFDBT-LABEL: select_const_fp:
-; RV64IFDBT:       # %bb.0:
-; RV64IFDBT-NEXT:    bnez a0, .LBB4_2
-; RV64IFDBT-NEXT:  # %bb.1:
-; RV64IFDBT-NEXT:    lui a0, %hi(.LCPI4_0)
-; RV64IFDBT-NEXT:    flw ft0, %lo(.LCPI4_0)(a0)
-; RV64IFDBT-NEXT:    fmv.x.w a0, ft0
-; RV64IFDBT-NEXT:    ret
-; RV64IFDBT-NEXT:  .LBB4_2:
-; RV64IFDBT-NEXT:    lui a0, %hi(.LCPI4_1)
-; RV64IFDBT-NEXT:    flw ft0, %lo(.LCPI4_1)(a0)
-; RV64IFDBT-NEXT:    fmv.x.w a0, ft0
-; RV64IFDBT-NEXT:    ret
   %1 = select i1 %a, float 3.0, float 4.0
   ret float %1
 }

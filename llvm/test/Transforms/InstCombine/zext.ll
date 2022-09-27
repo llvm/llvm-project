@@ -510,3 +510,28 @@ define i8 @disguised_signbit_clear_test(i64 %x) {
   %t6 = zext i1 %t4 to i8
   ret i8 %t6
 }
+
+define i16 @pr57899(i1 %c, i32 %x) {
+; CHECK-LABEL: @pr57899(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i16 1
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  %g.1 = select i1 false, i32 %x, i32 1
+  br label %join
+
+join:
+  %g.2 = phi i32 [ %g.1, %if ], [ 1, %entry ]
+  %tobool1 = icmp ne i32 %g.2, 4
+  %tobool3 = icmp ne i32 %g.2, 64
+  %x1 = and i1 %tobool1, %tobool3
+  %conv4 = zext i1 %x1 to i16
+  ret i16 %conv4
+}

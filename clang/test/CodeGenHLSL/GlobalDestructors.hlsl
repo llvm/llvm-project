@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -S -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -std=hlsl202x -S -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s --check-prefixes=CHECK
 
 struct Tail {
   Tail() {

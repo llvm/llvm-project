@@ -125,6 +125,21 @@ bool areElementwiseOpsFusable(OpOperand *fusedOperand);
 FailureOr<Operation *> fuseElementwiseOps(RewriterBase &rewriter,
                                           OpOperand *fusedOperand);
 
+/// Maps the top level `scf.foreach_thread` op to GPU Thread Blocks. Mapping is
+/// one-to-one and the induction variables of `scf.foreach_thread` are rewritten
+/// to gpu.block_id according to the thread_dim_apping attribute. Dynamic,
+/// `scf.foreach_thread` trip counts are currently not supported. Dynamic block
+/// dim sizes are currently not supported.
+LogicalResult rewriteTopLevelForeachThreadToGpuBlocks(
+    RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
+    function_ref<void(Operation *, const SmallVector<int64_t> &, IndexType,
+                      SmallVector<Value> &)>
+        blockIdGenerator,
+    SmallVector<int64_t> &gridDims);
+
+/// Finds the top level scf::ForeachThreadOp of given target.
+FailureOr<scf::ForeachThreadOp> findTopLevelForeachThreadOp(Operation *target);
+
 /// Searches `scf.foreach_thread` ops nested under `target` and maps each such
 /// op to GPU threads. Mapping is one-to-one and the induction variables of
 /// `scf.foreach_thread` are rewritten to gpu.thread_id according to the

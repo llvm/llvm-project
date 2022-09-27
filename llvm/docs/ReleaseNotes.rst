@@ -62,7 +62,7 @@ and there is no way to suppress this error.
 Changes to the LLVM IR
 ----------------------
 
-* The constant expression variants of the following instructions have been
+* The constant expression variants of the following instructions has been
   removed:
 
   * ``fneg``
@@ -111,6 +111,9 @@ Changes to the PowerPC Backend
 
 Changes to the RISC-V Backend
 -----------------------------
+
+* Support for the unratified Zbe, Zbf, Zbm, Zbp, Zbr, and Zbt extensions have
+  been removed.
 
 Changes to the WebAssembly Backend
 ----------------------------------

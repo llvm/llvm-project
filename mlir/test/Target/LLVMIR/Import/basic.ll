@@ -1,4 +1,8 @@
 ; RUN: mlir-translate -import-llvm %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-DBG
+
+; CHECK-DBG: #[[UNKNOWNLOC:.+]] = loc(unknown)
+; CHECK-DBG: #[[ZEROLOC:.+]] = loc("imported-bitcode":0:0)
 
 %struct.t = type {}
 %struct.s = type { %struct.t, i64 }
@@ -129,6 +133,7 @@ define internal spir_func void @spir_func_internal() {
 
 ; FIXME: function attributes.
 ; CHECK-LABEL: llvm.func internal @f1(%arg0: i64) -> i32 attributes {dso_local} {
+; CHECK-DBG: llvm.func internal @f1(%arg0: i64 loc(unknown)) -> i32 attributes {dso_local} {
 ; CHECK-DAG: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK-DAG: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : i32
 ; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : i1
@@ -137,6 +142,7 @@ define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
 ; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
   %aa = inttoptr i64 %a to i64*
+; CHECK-DBG: llvm.mlir.addressof @g2 : !llvm.ptr<f64> loc(#[[UNKNOWNLOC]])
 ; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
 ; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
 ; %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
@@ -145,6 +151,7 @@ entry:
   %bb = ptrtoint double* @g2 to i64
   %cc = getelementptr double, double* @g2, i32 2
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : i64 to i32
+; CHECK-DBG: llvm.trunc %arg0 : i64 to i32 loc(#[[ZEROLOC]])
   %b = trunc i64 %a to i32
 ; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (i32) -> f32
   %c = call float @fe(i32 %b)
@@ -168,6 +175,7 @@ if.end:
 ; CHECK: llvm.return %[[c43]]
   ret i32 43
 }
+; CHECK-DBG: } loc(#[[UNKNOWNLOC]])
 
 ; Test that instructions that dominate can be out of sequential order.
 ; CHECK-LABEL: llvm.func @f2(%arg0: i64) -> i64 {
@@ -658,5 +666,48 @@ define void @variadic_function(i32 %X, ...) {
   ; CHECK: llvm.intr.vaend %[[CAST0]]
   call void @llvm.va_end(i8* %ap2)
   ; CHECK: llvm.return
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @atomic_rmw
+define void @atomic_rmw(i32* %ptr0, i32 %v, float* %ptr1, float %f) {
+  ; CHECK: llvm.atomicrmw add %arg0, %arg1 acquire  : i32
+  %1 = atomicrmw add i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw add %arg0, %arg1 release  : i32
+  %2 = atomicrmw add i32* %ptr0, i32 %v release
+
+  ; CHECK: llvm.atomicrmw sub %arg0, %arg1 acquire  : i32
+  %3 = atomicrmw sub i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw xchg %arg0, %arg1 acquire  : i32
+  %4 = atomicrmw xchg i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw _and %arg0, %arg1 acquire  : i32
+  %5 = atomicrmw and i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw nand %arg0, %arg1 acquire  : i32
+  %6 = atomicrmw nand i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw _or %arg0, %arg1 acquire  : i32
+  %7 = atomicrmw or i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw _xor %arg0, %arg1 acquire  : i32
+  %8 = atomicrmw xor i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw max %arg0, %arg1 acquire  : i32
+  %9 = atomicrmw max i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw min %arg0, %arg1 acquire  : i32
+  %10 = atomicrmw min i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw umax %arg0, %arg1 acquire  : i32
+  %11 = atomicrmw umax i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw umin %arg0, %arg1 acquire  : i32
+  %12 = atomicrmw umin i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw fadd %arg2, %arg3 acquire  : f32
+  %13 = atomicrmw fadd float* %ptr1, float %f acquire
+  ; CHECK: llvm.atomicrmw fsub %arg2, %arg3 acquire  : f32
+  %14 = atomicrmw fsub float* %ptr1, float %f acquire
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @atomic_cmpxchg
+define void @atomic_cmpxchg(i32* %ptr0, i32 %v, i32 %c) {
+  ; CHECK: llvm.cmpxchg %arg0, %arg2, %arg1 seq_cst seq_cst : i32
+  %1 = cmpxchg i32* %ptr0, i32 %c, i32 %v seq_cst seq_cst
+  ; CHECK: llvm.cmpxchg %arg0, %arg2, %arg1 monotonic seq_cst : i32
+  %2 = cmpxchg i32* %ptr0, i32 %c, i32 %v monotonic seq_cst
   ret void
 }

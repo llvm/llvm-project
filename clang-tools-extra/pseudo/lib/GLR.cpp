@@ -699,7 +699,6 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
 }
 
 const GSS::Node *GSS::addNode(LRTable::StateID State, const ForestNode *Symbol,
-
                               llvm::ArrayRef<const Node *> Parents) {
   Node *Result = new (allocate(Parents.size())) Node();
   Result->State = State;

@@ -74,7 +74,7 @@ func.func private @memref_unfinished_strided() -> memref<?x?xf32, strided<>>
 
 // -----
 
-// expected-error @below {{expected a non-negative 64-bit signed integer or '?'}}
+// expected-error @below {{expected a 64-bit signed integer or '?'}}
 func.func private @memref_unfinished_stride_list() -> memref<?x?xf32, strided<[>>
 
 // -----
@@ -89,7 +89,7 @@ func.func private @memref_missing_offset_colon() -> memref<?x?xf32, strided<[], 
 
 // -----
 
-// expected-error @below {{expected a non-negative 64-bit signed integer or '?'}}
+// expected-error @below {{expected a 64-bit signed integer or '?'}}
 func.func private @memref_missing_offset_value() -> memref<?x?xf32, strided<[], offset: >>
 
 // -----
@@ -99,18 +99,8 @@ func.func private @memref_incorrect_strided_ending() -> memref<?x?xf32, strided<
 
 // -----
 
-// expected-error @below {{strides must be positive or dynamic}}
+// expected-error @below {{strides must not be zero}}
 func.func private @memref_zero_stride() -> memref<?x?xf32, strided<[0, 0]>>
-
-// -----
-
-// expected-error @below {{expected a non-negative 64-bit signed integer or '?'}}
-func.func private @memref_negative_stride() -> memref<?x?xf32, strided<[-2, -2]>>
-
-// -----
-
-// expected-error @below {{expected a non-negative 64-bit signed integer or '?'}}
-func.func private @memref_negative_offset() -> memref<?x?xf32, strided<[2, 1], offset: -2>>
 
 // -----
 

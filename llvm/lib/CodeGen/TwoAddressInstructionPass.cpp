@@ -1887,11 +1887,6 @@ void TwoAddressInstructionPass::
 eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
-  if (MI.getOperand(0).getSubReg() || DstReg.isPhysical() ||
-      !(MI.getNumOperands() & 1)) {
-    LLVM_DEBUG(dbgs() << "Illegal REG_SEQUENCE instruction:" << MI);
-    llvm_unreachable(nullptr);
-  }
 
   SmallVector<Register, 4> OrigRegs;
   if (LIS) {

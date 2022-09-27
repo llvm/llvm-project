@@ -1585,3 +1585,51 @@ func.func @test_andi_not_fold_lhs(%arg0 : index) -> index {
     %2 = arith.andi %1, %arg0 : index
     return %2 : index
 }
+
+// -----
+/// xor(xor(x, a), a) -> x
+
+// CHECK-LABEL: @xorxor0(
+//       CHECK-NOT: xori
+//       CHECK:   return %arg0
+func.func @xorxor0(%a : i32, %b : i32) -> i32 {
+  %c = arith.xori %a, %b : i32
+  %res = arith.xori %c, %b : i32
+  return %res : i32
+}
+
+// -----
+/// xor(xor(a, x), a) -> x
+
+// CHECK-LABEL: @xorxor1(
+//       CHECK-NOT: xori
+//       CHECK:   return %arg0
+func.func @xorxor1(%a : i32, %b : i32) -> i32 {
+  %c = arith.xori %b, %a : i32
+  %res = arith.xori %c, %b : i32
+  return %res : i32
+}
+
+// -----
+/// xor(a, xor(x, a)) -> x
+
+// CHECK-LABEL: @xorxor2(
+//       CHECK-NOT: xori
+//       CHECK:   return %arg0
+func.func @xorxor2(%a : i32, %b : i32) -> i32 {
+  %c = arith.xori %a, %b : i32
+  %res = arith.xori %b, %c : i32
+  return %res : i32
+}
+
+// -----
+/// xor(a, xor(a, x)) -> x
+
+// CHECK-LABEL: @xorxor3(
+//       CHECK-NOT: xori
+//       CHECK:   return %arg0
+func.func @xorxor3(%a : i32, %b : i32) -> i32 {
+  %c = arith.xori %b, %a : i32
+  %res = arith.xori %b, %c : i32
+  return %res : i32
+}

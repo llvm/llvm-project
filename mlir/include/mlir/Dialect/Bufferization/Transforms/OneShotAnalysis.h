@@ -130,7 +130,7 @@ public:
 
   OneShotAnalysisState(const OneShotAnalysisState &) = delete;
 
-  virtual ~OneShotAnalysisState() = default;
+  ~OneShotAnalysisState() override = default;
 
   /// Return a reference to the BufferizationAliasInfo.
   BufferizationAliasInfo &getAliasInfo() { return aliasInfo; }

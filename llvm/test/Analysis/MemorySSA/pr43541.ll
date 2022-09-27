@@ -29,11 +29,11 @@ if.then23:                                        ; preds = %for.body12
   br i1 undef, label %if.then24, label %if.else
 
 if.then24:                                        ; preds = %if.then23
-  %0 = load %struct.job_pool.6.7*, %struct.job_pool.6.7** undef, align 8
+  %0 = load ptr, ptr undef, align 8
   br label %if.end40
 
 if.else:                                          ; preds = %if.then23
-  %1 = load %struct.job_pool.6.7*, %struct.job_pool.6.7** undef, align 8
+  %1 = load ptr, ptr undef, align 8
   br label %if.end40
 
 if.end40:                                         ; preds = %if.else, %if.then24

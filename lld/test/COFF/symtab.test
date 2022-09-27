@@ -75,7 +75,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: abs_symbol
-# CHECK-NEXT:     Value: 2662186735
+# CHECK-NEXT:     Value: 3735928559
 # CHECK-NEXT:     Section: IMAGE_SYM_ABSOLUTE (-1)
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)

@@ -15,6 +15,8 @@
 #include "flang/Common/unwrap.h"
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/symbol.h"
@@ -938,11 +940,13 @@ bool IsAllocatableDesignator(const Expr<SomeType> &);
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
-bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD=
+bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
 bool IsNullObjectPointer(const Expr<SomeType> &);
 bool IsNullProcedurePointer(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
 bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
+
+const ProcedureRef *GetProcedureRef(const Expr<SomeType> &);
 
 // Can Expr be passed as absent to an optional dummy argument.
 // See 15.5.2.12 point 1 for more details.
@@ -1026,8 +1030,14 @@ private:
 };
 
 template <typename T>
-bool IsExpandableScalar(const Expr<T> &expr, bool admitPureCall = false) {
-  return !UnexpandabilityFindingVisitor{admitPureCall}(expr);
+bool IsExpandableScalar(const Expr<T> &expr, FoldingContext &context,
+    const Shape &shape, bool admitPureCall = false) {
+  if (UnexpandabilityFindingVisitor{admitPureCall}(expr)) {
+    auto extents{AsConstantExtents(context, shape)};
+    return extents && GetSize(*extents) == 1;
+  } else {
+    return true;
+  }
 }
 
 // Common handling for procedure pointer compatibility of left- and right-hand
@@ -1100,6 +1110,33 @@ std::optional<Expr<SomeType>> DataConstantConversionExtension(
 // Hollerith data had been BOZ.
 std::optional<Expr<SomeType>> HollerithToBOZ(
     FoldingContext &, const Expr<SomeType> &, const DynamicType &);
+
+// Set explicit lower bounds on a constant array.
+class ArrayConstantBoundChanger {
+public:
+  explicit ArrayConstantBoundChanger(ConstantSubscripts &&lbounds)
+      : lbounds_{std::move(lbounds)} {}
+
+  template <typename A> A ChangeLbounds(A &&x) const {
+    return std::move(x); // default case
+  }
+  template <typename T> Constant<T> ChangeLbounds(Constant<T> &&x) {
+    x.set_lbounds(std::move(lbounds_));
+    return std::move(x);
+  }
+  template <typename T> Expr<T> ChangeLbounds(Parentheses<T> &&x) {
+    return ChangeLbounds(
+        std::move(x.left())); // Constant<> can be parenthesized
+  }
+  template <typename T> Expr<T> ChangeLbounds(Expr<T> &&x) {
+    return common::visit(
+        [&](auto &&x) { return Expr<T>{ChangeLbounds(std::move(x))}; },
+        std::move(x.u)); // recurse until we hit a constant
+  }
+
+private:
+  ConstantSubscripts &&lbounds_;
+};
 
 } // namespace Fortran::evaluate
 

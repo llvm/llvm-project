@@ -337,9 +337,8 @@ struct WmmaElementwiseOpToNVVMLowering
         extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
             loc, adaptor.getOperands()[opIdx], i));
       }
-      Value element =
-          createScalarOp(rewriter, loc, subgroupMmaElementwiseOp.operation(),
-                         extractedOperands);
+      Value element = createScalarOp(
+          rewriter, loc, subgroupMmaElementwiseOp.opType(), extractedOperands);
       matrixStruct =
           rewriter.create<LLVM::InsertValueOp>(loc, matrixStruct, element, i);
     }

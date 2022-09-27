@@ -31,6 +31,8 @@ enum {
   MO_CALL_PLT,
   MO_PCREL_HI,
   MO_PCREL_LO,
+  MO_GOT_PC_HI,
+  MO_GOT_PC_LO,
   // TODO: Add more flags.
 };
 } // end namespace LoongArchII

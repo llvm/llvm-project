@@ -116,8 +116,8 @@ define i32 @convert_double_to_i32(double %a) nounwind {
 define i32 @convert_double_to_u32(double %a) nounwind {
 ; LA32-LABEL: convert_double_to_u32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, .LCPI7_0
-; LA32-NEXT:    addi.w $a0, $a0, .LCPI7_0
+; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
+; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI7_0)
 ; LA32-NEXT:    fld.d $fa1, $a0, 0
 ; LA32-NEXT:    fsub.d $fa2, $fa0, $fa1
 ; LA32-NEXT:    ftintrz.w.d $fa2, $fa2
@@ -173,8 +173,8 @@ define i64 @convert_double_to_u64(double %a) nounwind {
 ;
 ; LA64-LABEL: convert_double_to_u64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    pcalau12i $a0, .LCPI9_0
-; LA64-NEXT:    addi.d $a0, $a0, .LCPI9_0
+; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI9_0)
+; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI9_0)
 ; LA64-NEXT:    fld.d $fa1, $a0, 0
 ; LA64-NEXT:    fsub.d $fa2, $fa0, $fa1
 ; LA64-NEXT:    ftintrz.l.d $fa2, $fa2
@@ -232,8 +232,8 @@ define double @convert_u32_to_double(i32 %a) nounwind {
 ; LA32-NEXT:    lu12i.w $a1, 275200
 ; LA32-NEXT:    st.w $a1, $sp, 12
 ; LA32-NEXT:    st.w $a0, $sp, 8
-; LA32-NEXT:    pcalau12i $a0, .LCPI12_0
-; LA32-NEXT:    addi.w $a0, $a0, .LCPI12_0
+; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI12_0)
+; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI12_0)
 ; LA32-NEXT:    fld.d $fa0, $a0, 0
 ; LA32-NEXT:    fld.d $fa1, $sp, 8
 ; LA32-NEXT:    fsub.d $fa0, $fa1, $fa0
@@ -242,12 +242,12 @@ define double @convert_u32_to_double(i32 %a) nounwind {
 ;
 ; LA64-LABEL: convert_u32_to_double:
 ; LA64:       # %bb.0:
+; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI12_0)
+; LA64-NEXT:    addi.d $a1, $a1, %pc_lo12(.LCPI12_0)
+; LA64-NEXT:    fld.d $fa0, $a1, 0
 ; LA64-NEXT:    lu52i.d $a1, $zero, 1107
-; LA64-NEXT:    movgr2fr.d $fa0, $a1
-; LA64-NEXT:    pcalau12i $a1, .LCPI12_0
-; LA64-NEXT:    addi.d $a1, $a1, .LCPI12_0
-; LA64-NEXT:    fld.d $fa1, $a1, 0
-; LA64-NEXT:    fsub.d $fa0, $fa0, $fa1
+; LA64-NEXT:    movgr2fr.d $fa1, $a1
+; LA64-NEXT:    fsub.d $fa0, $fa1, $fa0
 ; LA64-NEXT:    lu12i.w $a1, 275200
 ; LA64-NEXT:    bstrins.d $a0, $a1, 63, 32
 ; LA64-NEXT:    movgr2fr.d $fa1, $a0
@@ -273,8 +273,8 @@ define double @convert_u64_to_double(i64 %a) nounwind {
 ; LA64-NEXT:    lu52i.d $a2, $zero, 1107
 ; LA64-NEXT:    or $a1, $a1, $a2
 ; LA64-NEXT:    movgr2fr.d $fa0, $a1
-; LA64-NEXT:    pcalau12i $a1, .LCPI13_0
-; LA64-NEXT:    addi.d $a1, $a1, .LCPI13_0
+; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI13_0)
+; LA64-NEXT:    addi.d $a1, $a1, %pc_lo12(.LCPI13_0)
 ; LA64-NEXT:    fld.d $fa1, $a1, 0
 ; LA64-NEXT:    fsub.d $fa0, $fa0, $fa1
 ; LA64-NEXT:    lu12i.w $a1, 275200

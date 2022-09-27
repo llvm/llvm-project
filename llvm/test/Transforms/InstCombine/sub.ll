@@ -1182,8 +1182,8 @@ define i64 @test61([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
 
 define i32 @test62(i32 %A) {
 ; CHECK-LABEL: @test62(
-; CHECK-NEXT:    [[DOTNEG:%.*]] = mul i32 [[A:%.*]], -2
-; CHECK-NEXT:    [[C:%.*]] = add i32 [[DOTNEG]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C:%.*]] = sub i32 2, [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = sub i32 1, %A
@@ -1193,8 +1193,8 @@ define i32 @test62(i32 %A) {
 
 define <2 x i32> @test62vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test62vec(
-; CHECK-NEXT:    [[DOTNEG:%.*]] = mul <2 x i32> [[A:%.*]], <i32 -2, i32 -2>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[DOTNEG]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[C:%.*]] = sub <2 x i32> <i32 2, i32 2>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %B = sub <2 x i32> <i32 1, i32 1>, %A
@@ -1204,8 +1204,8 @@ define <2 x i32> @test62vec(<2 x i32> %A) {
 
 define i32 @test63(i32 %A) {
 ; CHECK-LABEL: @test63(
-; CHECK-NEXT:    [[DOTNEG_NEG:%.*]] = shl i32 [[A:%.*]], 1
-; CHECK-NEXT:    ret i32 [[DOTNEG_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A:%.*]], 1
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %B = sub i32 1, %A
   %C = shl i32 %B, 1
@@ -1215,8 +1215,8 @@ define i32 @test63(i32 %A) {
 
 define <2 x i32> @test63vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test63vec(
-; CHECK-NEXT:    [[DOTNEG_NEG:%.*]] = shl <2 x i32> [[A:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[DOTNEG_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %B = sub <2 x i32> <i32 1, i32 1>, %A
   %C = shl <2 x i32> %B, <i32 1, i32 1>
@@ -2067,4 +2067,55 @@ define i8 @mul_sub_common_factor_use(i8 %x, i8 %y) {
   call void @use8(i8 %m)
   %a = sub i8 %m, %x
   ret i8 %a
+}
+
+define i5 @demand_low_bits_uses(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_low_bits_uses(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 96
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[Y:%.*]], [[M]]
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[Y]] to i5
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %m = and i8 %x, 96 ; 0x60
+  %a = sub i8 %y, %m
+  call void @use8(i8 %a)
+  %r = trunc i8 %a to i5
+  ret i5 %r
+}
+
+; negative test - demands one more bit
+
+define i6 @demand_low_bits_uses_extra_bit(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_low_bits_uses_extra_bit(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 96
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[Y:%.*]], [[M]]
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[A]] to i6
+; CHECK-NEXT:    ret i6 [[R]]
+;
+  %m = and i8 %x, 96 ; 0x60
+  %a = sub i8 %y, %m
+  call void @use8(i8 %a)
+  %r = trunc i8 %a to i6
+  ret i6 %r
+}
+
+; negative test - must be operand 1
+
+define i8 @demand_low_bits_uses_commute(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @demand_low_bits_uses_commute(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[M]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[S]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = and i8 %x, -64 ; 0xC0
+  %a = sub i8 %m, %y
+  call void @use8(i8 %a)
+  %s = sub i8 %a, %z
+  %r = shl i8 %s, 2
+  ret i8 %r
 }

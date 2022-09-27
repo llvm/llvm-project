@@ -9,6 +9,7 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/intrinsics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Semantics/symbol.h"
@@ -190,6 +191,7 @@ template <typename A> bool IsActuallyConstant(const A &x) {
 template bool IsActuallyConstant(const Expr<SomeType> &);
 template bool IsActuallyConstant(const Expr<SomeInteger> &);
 template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
+template bool IsActuallyConstant(const std::optional<Expr<SubscriptInteger>> &);
 
 // Object pointer initialization checking predicate IsInitialDataTarget().
 // This code determines whether an expression is allowable as the static
@@ -361,32 +363,6 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
     return IsNullProcedurePointer(expr);
   }
 }
-
-class ArrayConstantBoundChanger {
-public:
-  ArrayConstantBoundChanger(ConstantSubscripts &&lbounds)
-      : lbounds_{std::move(lbounds)} {}
-
-  template <typename A> A ChangeLbounds(A &&x) const {
-    return std::move(x); // default case
-  }
-  template <typename T> Constant<T> ChangeLbounds(Constant<T> &&x) {
-    x.set_lbounds(std::move(lbounds_));
-    return std::move(x);
-  }
-  template <typename T> Expr<T> ChangeLbounds(Parentheses<T> &&x) {
-    return ChangeLbounds(
-        std::move(x.left())); // Constant<> can be parenthesized
-  }
-  template <typename T> Expr<T> ChangeLbounds(Expr<T> &&x) {
-    return common::visit(
-        [&](auto &&x) { return Expr<T>{ChangeLbounds(std::move(x))}; },
-        std::move(x.u)); // recurse until we hit a constant
-  }
-
-private:
-  ConstantSubscripts &&lbounds_;
-};
 
 // Converts, folds, and then checks type, rank, and shape of an
 // initialization expression for a named constant, a non-pointer
@@ -689,14 +665,13 @@ template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &, const semantics::Scope &,
     FoldingContext &);
 
-// IsSimplyContiguous() -- 9.5.4
-class IsSimplyContiguousHelper
-    : public AnyTraverse<IsSimplyContiguousHelper, std::optional<bool>> {
+// IsContiguous() -- 9.5.4
+class IsContiguousHelper
+    : public AnyTraverse<IsContiguousHelper, std::optional<bool>> {
 public:
   using Result = std::optional<bool>; // tri-state
-  using Base = AnyTraverse<IsSimplyContiguousHelper, Result>;
-  explicit IsSimplyContiguousHelper(FoldingContext &c)
-      : Base{*this}, context_{c} {}
+  using Base = AnyTraverse<IsContiguousHelper, Result>;
+  explicit IsContiguousHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
 
   Result operator()(const semantics::Symbol &symbol) const {
@@ -710,43 +685,48 @@ public:
       return true;
     } else if (semantics::IsPointer(ultimate) ||
         semantics::IsAssumedShape(ultimate)) {
-      return false;
+      return std::nullopt;
     } else if (const auto *details{
                    ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       return !details->IsAssumedRank();
-    } else if (auto assoc{Base::operator()(ultimate)}) {
-      return assoc;
     } else {
-      return false;
+      return Base::operator()(ultimate);
     }
   }
 
   Result operator()(const ArrayRef &x) const {
-    const auto &symbol{x.GetLastSymbol()};
-    if (!(*this)(symbol).has_value()) {
-      return false;
-    } else if (auto rank{CheckSubscripts(x.subscript())}) {
-      if (x.Rank() == 0) {
-        return true;
-      } else if (*rank > 0) {
-        // a(1)%b(:,:) is contiguous if an only if a(1)%b is contiguous.
-        return (*this)(x.base());
-      } else {
-        // a(:)%b(1,1) is not contiguous.
-        return false;
-      }
+    if (x.Rank() == 0) {
+      return true; // scalars considered contiguous
+    }
+    int subscriptRank{0};
+    auto subscripts{CheckSubscripts(x.subscript(), subscriptRank)};
+    if (!subscripts.value_or(false)) {
+      return subscripts; // subscripts not known to be contiguous
+    } else if (subscriptRank > 0) {
+      // a(1)%b(:,:) is contiguous if and only if a(1)%b is contiguous.
+      return (*this)(x.base());
     } else {
-      return false;
+      // a(:)%b(1,1) is (probably) not contiguous.
+      return std::nullopt;
     }
   }
   Result operator()(const CoarrayRef &x) const {
-    return CheckSubscripts(x.subscript()).has_value();
+    int rank{0};
+    return CheckSubscripts(x.subscript(), rank).has_value();
   }
   Result operator()(const Component &x) const {
-    return x.base().Rank() == 0 && (*this)(x.GetLastSymbol()).value_or(false);
+    if (x.base().Rank() == 0) {
+      return (*this)(x.GetLastSymbol());
+    } else {
+      // TODO could be true if base contiguous and this is only component, or
+      // if base has only one element?
+      return std::nullopt;
+    }
   }
-  Result operator()(const ComplexPart &) const { return false; }
-  Result operator()(const Substring &) const { return false; }
+  Result operator()(const ComplexPart &x) const {
+    return x.complex().Rank() == 0;
+  }
+  Result operator()(const Substring &) const { return std::nullopt; }
 
   Result operator()(const ProcedureRef &x) const {
     if (auto chars{
@@ -759,23 +739,25 @@ public:
                 characteristics::FunctionResult::Attr::Contiguous);
       }
     }
-    return false;
+    return std::nullopt;
   }
 
+  Result operator()(const NullPointer &) const { return true; }
+
 private:
-  // If the subscripts can possibly be on a simply-contiguous array reference,
-  // return the rank.
-  static std::optional<int> CheckSubscripts(
-      const std::vector<Subscript> &subscript) {
+  static std::optional<bool> CheckSubscripts(
+      const std::vector<Subscript> &subscript, int &rank) {
     bool anyTriplet{false};
-    int rank{0};
+    rank = 0;
     for (auto j{subscript.size()}; j-- > 0;) {
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
-        if (!triplet->IsStrideOne()) {
-          return std::nullopt;
+        auto isStride1{triplet->IsStrideOne()};
+        if (!isStride1.value_or(false)) {
+          return isStride1;
         } else if (anyTriplet) {
           if (triplet->lower() || triplet->upper()) {
-            // all triplets before the last one must be just ":"
+            // all triplets before the last one must be just ":" for
+            // simple contiguity
             return std::nullopt;
           }
         } else {
@@ -783,26 +765,26 @@ private:
         }
         ++rank;
       } else if (anyTriplet || subscript[j].Rank() > 0) {
-        return std::nullopt;
+        return false;
       }
     }
-    return rank;
+    return true;
   }
 
   FoldingContext &context_;
 };
 
 template <typename A>
-bool IsSimplyContiguous(const A &x, FoldingContext &context) {
+std::optional<bool> IsContiguous(const A &x, FoldingContext &context) {
   if (IsVariable(x)) {
-    auto known{IsSimplyContiguousHelper{context}(x)};
-    return known && *known;
+    return IsContiguousHelper{context}(x);
   } else {
     return true; // not a variable
   }
 }
 
-template bool IsSimplyContiguous(const Expr<SomeType> &, FoldingContext &);
+template std::optional<bool> IsContiguous(
+    const Expr<SomeType> &, FoldingContext &);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {

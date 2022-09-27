@@ -14,6 +14,7 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MachineValueType.h"
 #include <cassert>
@@ -149,6 +150,9 @@ template <typename T> class ArrayRef;
     /// type (which is a record).
     std::vector<OperandInfo> OperandList;
 
+    /// SubOpAliases - List of alias names for suboperands.
+    StringMap<std::pair<unsigned, unsigned>> SubOpAliases;
+
     // Information gleaned from the operand list.
     bool isPredicable;
     bool hasOptionalDef;
@@ -178,6 +182,9 @@ template <typename T> class ArrayRef;
     /// given name. If so, return true and set OpIdx to the index of the
     /// operand. Otherwise, return false.
     bool hasOperandNamed(StringRef Name, unsigned &OpIdx) const;
+
+    bool hasSubOperandAlias(StringRef Name,
+                            std::pair<unsigned, unsigned> &SubOp) const;
 
     /// ParseOperandName - Parse an operand name like "$foo" or "$foo.bar",
     /// where $foo is a whole operand and $foo.bar refers to a suboperand.
