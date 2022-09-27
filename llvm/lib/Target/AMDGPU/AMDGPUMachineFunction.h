@@ -45,6 +45,9 @@ protected:
   /// stages.
   Align DynLDSAlign;
 
+  // State of MODE register, assumed FP mode.
+  AMDGPU::SIModeRegisterDefaults Mode;
+
   // Kernels + shaders. i.e. functions called by the hardware and not called
   // by other functions.
   bool IsEntryFunction = false;
@@ -75,6 +78,10 @@ public:
 
   uint32_t getGDSSize() const {
     return GDSSize;
+  }
+
+  AMDGPU::SIModeRegisterDefaults getMode() const {
+    return Mode;
   }
 
   bool isEntryFunction() const {
