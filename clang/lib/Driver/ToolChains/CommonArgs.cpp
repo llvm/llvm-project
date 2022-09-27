@@ -67,16 +67,16 @@ using namespace llvm::opt;
 
 static void renderRpassOptions(const ArgList &Args, ArgStringList &CmdArgs) {
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
-    CmdArgs.push_back(Args.MakeArgString(Twine("--plugin-opt=-pass-remarks=") +
+    CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=-pass-remarks=") +
                                          A->getValue()));
 
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--plugin-opt=-pass-remarks-missed=") + A->getValue()));
+        Twine("-plugin-opt=-pass-remarks-missed=") + A->getValue()));
 
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--plugin-opt=-pass-remarks-analysis=") + A->getValue()));
+        Twine("-plugin-opt=-pass-remarks-analysis=") + A->getValue()));
 }
 
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
@@ -97,28 +97,28 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   assert(!F.empty() && "Cannot determine remarks output name.");
   // Append "opt.ld.<format>" to the end of the file name.
   CmdArgs.push_back(
-      Args.MakeArgString(Twine("--plugin-opt=opt-remarks-filename=") + F +
+      Args.MakeArgString(Twine("-plugin-opt=opt-remarks-filename=") + F +
                          Twine(".opt.ld.") + Format));
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_foptimization_record_passes_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--plugin-opt=opt-remarks-passes=") + A->getValue()));
+        Twine("-plugin-opt=opt-remarks-passes=") + A->getValue()));
 
   CmdArgs.push_back(Args.MakeArgString(
-      Twine("--plugin-opt=opt-remarks-format=") + Format.data()));
+      Twine("-plugin-opt=opt-remarks-format=") + Format.data()));
 }
 
 static void renderRemarksHotnessOptions(const ArgList &Args,
                                         ArgStringList &CmdArgs) {
   if (Args.hasFlag(options::OPT_fdiagnostics_show_hotness,
                    options::OPT_fno_diagnostics_show_hotness, false))
-    CmdArgs.push_back("--plugin-opt=opt-remarks-with-hotness");
+    CmdArgs.push_back("-plugin-opt=opt-remarks-with-hotness");
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--plugin-opt=opt-remarks-hotness-threshold=") + A->getValue()));
+        Twine("-plugin-opt=opt-remarks-hotness-threshold=") + A->getValue()));
 }
 
 void tools::addPathIfExists(const Driver &D, const Twine &Path,
