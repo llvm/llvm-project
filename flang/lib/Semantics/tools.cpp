@@ -1149,6 +1149,14 @@ ProcedureDefinitionClass ClassifyProcedure(const Symbol &symbol) { // 15.2.2
     } else if (IsPointer(ultimate)) {
       return ProcedureDefinitionClass::Pointer;
     }
+  } else if (const auto *nameDetails{
+                 ultimate.detailsIf<SubprogramNameDetails>()}) {
+    switch (nameDetails->kind()) {
+    case SubprogramKind::Module:
+      return ProcedureDefinitionClass::Module;
+    case SubprogramKind::Internal:
+      return ProcedureDefinitionClass::Internal;
+    }
   } else if (const Symbol * subp{FindSubprogram(symbol)}) {
     if (const auto *subpDetails{subp->detailsIf<SubprogramDetails>()}) {
       if (subpDetails->stmtFunction()) {

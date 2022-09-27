@@ -10,9 +10,9 @@ entry:
   br label %g
 
 g:                                                ; preds = %cleanup, %entry
-  %0 = load i32, i32* null, align 4
+  %0 = load i32, ptr null, align 4
   %and = and i32 %0, undef
-  store i32 %and, i32* null, align 4
+  store i32 %and, ptr null, align 4
   br i1 undef, label %if.end8, label %if.then
 
 if.then:                                          ; preds = %g

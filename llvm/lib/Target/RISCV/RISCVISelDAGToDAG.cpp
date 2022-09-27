@@ -1068,8 +1068,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // might allow it to be compressed.
     bool IsANDIOrZExt =
         isInt<12>(C2) ||
-        (C2 == UINT64_C(0xFFFF) &&
-         (Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp())) ||
+        (C2 == UINT64_C(0xFFFF) && Subtarget->hasStdExtZbb()) ||
         (C2 == UINT64_C(0xFFFFFFFF) && Subtarget->hasStdExtZba());
     if (IsANDIOrZExt && (isInt<12>(N1C->getSExtValue()) || !N0.hasOneUse()))
       break;
@@ -2247,8 +2246,6 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
           Node->getOpcode() == ISD::MUL || Node->getOpcode() == ISD::SHL ||
           Node->getOpcode() == ISD::SRL || Node->getOpcode() == ISD::AND ||
           Node->getOpcode() == ISD::SIGN_EXTEND_INREG ||
-          Node->getOpcode() == RISCVISD::GREV ||
-          Node->getOpcode() == RISCVISD::GORC ||
           isa<ConstantSDNode>(Node)) &&
          "Unexpected opcode");
 
@@ -2510,8 +2507,6 @@ bool RISCVDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   case RISCV::SUBW:
   case RISCV::MULW:
   case RISCV::SLLIW:
-  case RISCV::GREVIW:
-  case RISCV::GORCIW:
     // Result is already sign extended just remove the sext.w.
     // NOTE: We only handle the nodes that are selected with hasAllWUsers.
     ReplaceUses(N, N0.getNode());

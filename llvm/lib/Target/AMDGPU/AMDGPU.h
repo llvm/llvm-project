@@ -301,6 +301,10 @@ extern char &AMDGPUCodeGenPrepareID;
 void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
 extern char &AMDGPULateCodeGenPrepareID;
 
+FunctionPass *createAMDGPURewriteUndefForPHIPass();
+void initializeAMDGPURewriteUndefForPHIPass(PassRegistry &);
+extern char &AMDGPURewriteUndefForPHIPassID;
+
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;
 

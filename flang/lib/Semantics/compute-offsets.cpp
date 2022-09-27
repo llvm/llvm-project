@@ -173,9 +173,13 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
       Symbol &base{*dep.symbol};
       if (const auto *baseBlock{FindCommonBlockContaining(base)}) {
         if (baseBlock == &commonBlock) {
-          context_.Say(errorSite,
-              "'%s' is storage associated with '%s' by EQUIVALENCE elsewhere in COMMON block /%s/"_err_en_US,
-              symbol.name(), base.name(), commonBlock.name());
+          if (base.offset() != symbol.offset() - dep.offset ||
+              std::find(details.objects().begin(), details.objects().end(),
+                  base) != details.objects().end()) {
+            context_.Say(errorSite,
+                "'%s' is storage associated with '%s' by EQUIVALENCE elsewhere in COMMON block /%s/"_err_en_US,
+                symbol.name(), base.name(), commonBlock.name());
+          }
         } else { // 8.10.3(1)
           context_.Say(errorSite,
               "'%s' in COMMON block /%s/ must not be storage associated with '%s' in COMMON block /%s/ by EQUIVALENCE"_err_en_US,

@@ -960,6 +960,12 @@ template <class LP> void Writer::createOutputSections() {
           segname == segment_names::text)
         osec->align = target->wordSize;
 
+      // MC keeps the default 1-byte alignment for __thread_vars, even though it
+      // contains pointers that are fixed up by dyld, which requires proper
+      // alignment.
+      if (isThreadLocalVariables(osec->flags))
+        osec->align = std::max<uint32_t>(osec->align, target->wordSize);
+
       getOrCreateOutputSegment(segname)->addOutputSection(osec);
     }
   }

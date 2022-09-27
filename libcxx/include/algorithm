@@ -1910,7 +1910,7 @@ template <class BidirectionalIterator, class Compare>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-#  include <chrono> // IGNORE-CYCLE due to <format>
+#  include <chrono>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20

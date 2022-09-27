@@ -514,6 +514,8 @@ namespace {
     SDValue visitMSTORE(SDNode *N);
     SDValue visitMGATHER(SDNode *N);
     SDValue visitMSCATTER(SDNode *N);
+    SDValue visitVPGATHER(SDNode *N);
+    SDValue visitVPSCATTER(SDNode *N);
     SDValue visitFP_TO_FP16(SDNode *N);
     SDValue visitFP16_TO_FP(SDNode *N);
     SDValue visitFP_TO_BF16(SDNode *N);
@@ -10666,23 +10668,37 @@ static SDValue ConvertSelectToConcatVector(SDNode *N, SelectionDAG &DAG) {
 }
 
 bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
-                       SelectionDAG &DAG) {
-  if (!isNullConstant(BasePtr) || Index.getOpcode() != ISD::ADD)
+                       SelectionDAG &DAG, const SDLoc &DL) {
+  if (Index.getOpcode() != ISD::ADD)
     return false;
 
   // Only perform the transformation when existing operands can be reused.
   if (IndexIsScaled)
     return false;
 
-  // For now we check only the LHS of the add.
-  SDValue LHS = Index.getOperand(0);
-  SDValue SplatVal = DAG.getSplatValue(LHS);
-  if (!SplatVal || SplatVal.getValueType() != BasePtr.getValueType())
+  if (!isNullConstant(BasePtr) && !Index.hasOneUse())
     return false;
 
-  BasePtr = SplatVal;
-  Index = Index.getOperand(1);
-  return true;
+  EVT VT = BasePtr.getValueType();
+  if (SDValue SplatVal = DAG.getSplatValue(Index.getOperand(0));
+      SplatVal && SplatVal.getValueType() == VT) {
+    if (isNullConstant(BasePtr))
+      BasePtr = SplatVal;
+    else
+      BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
+    Index = Index.getOperand(1);
+    return true;
+  }
+  if (SDValue SplatVal = DAG.getSplatValue(Index.getOperand(1));
+      SplatVal && SplatVal.getValueType() == VT) {
+    if (isNullConstant(BasePtr))
+      BasePtr = SplatVal;
+    else
+      BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
+    Index = Index.getOperand(0);
+    return true;
+  }
+  return false;
 }
 
 // Fold sext/zext of index into index type.
@@ -10717,6 +10733,37 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
   return false;
 }
 
+SDValue DAGCombiner::visitVPSCATTER(SDNode *N) {
+  VPScatterSDNode *MSC = cast<VPScatterSDNode>(N);
+  SDValue Mask = MSC->getMask();
+  SDValue Chain = MSC->getChain();
+  SDValue Index = MSC->getIndex();
+  SDValue Scale = MSC->getScale();
+  SDValue StoreVal = MSC->getValue();
+  SDValue BasePtr = MSC->getBasePtr();
+  SDValue VL = MSC->getVectorLength();
+  ISD::MemIndexType IndexType = MSC->getIndexType();
+  SDLoc DL(N);
+
+  // Zap scatters with a zero mask.
+  if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
+    return Chain;
+
+  if (refineUniformBase(BasePtr, Index, MSC->isIndexScaled(), DAG, DL)) {
+    SDValue Ops[] = {Chain, StoreVal, BasePtr, Index, Scale, Mask, VL};
+    return DAG.getScatterVP(DAG.getVTList(MVT::Other), MSC->getMemoryVT(),
+                            DL, Ops, MSC->getMemOperand(), IndexType);
+  }
+
+  if (refineIndexType(Index, IndexType, StoreVal.getValueType(), DAG)) {
+    SDValue Ops[] = {Chain, StoreVal, BasePtr, Index, Scale, Mask, VL};
+    return DAG.getScatterVP(DAG.getVTList(MVT::Other), MSC->getMemoryVT(),
+                            DL, Ops, MSC->getMemOperand(), IndexType);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   MaskedScatterSDNode *MSC = cast<MaskedScatterSDNode>(N);
   SDValue Mask = MSC->getMask();
@@ -10732,7 +10779,7 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return Chain;
 
-  if (refineUniformBase(BasePtr, Index, MSC->isIndexScaled(), DAG)) {
+  if (refineUniformBase(BasePtr, Index, MSC->isIndexScaled(), DAG, DL)) {
     SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(),
                                 DL, Ops, MSC->getMemOperand(), IndexType,
@@ -10813,6 +10860,34 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::visitVPGATHER(SDNode *N) {
+  VPGatherSDNode *MGT = cast<VPGatherSDNode>(N);
+  SDValue Mask = MGT->getMask();
+  SDValue Chain = MGT->getChain();
+  SDValue Index = MGT->getIndex();
+  SDValue Scale = MGT->getScale();
+  SDValue BasePtr = MGT->getBasePtr();
+  SDValue VL = MGT->getVectorLength();
+  ISD::MemIndexType IndexType = MGT->getIndexType();
+  SDLoc DL(N);
+
+  if (refineUniformBase(BasePtr, Index, MGT->isIndexScaled(), DAG, DL)) {
+    SDValue Ops[] = {Chain, BasePtr, Index, Scale, Mask, VL};
+    return DAG.getGatherVP(
+        DAG.getVTList(N->getValueType(0), MVT::Other), MGT->getMemoryVT(), DL,
+        Ops, MGT->getMemOperand(), IndexType);
+  }
+
+  if (refineIndexType(Index, IndexType, N->getValueType(0), DAG)) {
+    SDValue Ops[] = {Chain, BasePtr, Index, Scale, Mask, VL};
+    return DAG.getGatherVP(
+        DAG.getVTList(N->getValueType(0), MVT::Other), MGT->getMemoryVT(), DL,
+        Ops, MGT->getMemOperand(), IndexType);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   MaskedGatherSDNode *MGT = cast<MaskedGatherSDNode>(N);
   SDValue Mask = MGT->getMask();
@@ -10828,7 +10903,7 @@ SDValue DAGCombiner::visitMGATHER(SDNode *N) {
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return CombineTo(N, PassThru, MGT->getChain());
 
-  if (refineUniformBase(BasePtr, Index, MGT->isIndexScaled(), DAG)) {
+  if (refineUniformBase(BasePtr, Index, MGT->isIndexScaled(), DAG, DL)) {
     SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
     return DAG.getMaskedGather(
         DAG.getVTList(N->getValueType(0), MVT::Other), MGT->getMemoryVT(), DL,
@@ -14177,26 +14252,37 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
 
   // fadd (fma A, B, (fmul C, D)), E --> fma A, B, (fma C, D, E)
   // fadd E, (fma A, B, (fmul C, D)) --> fma A, B, (fma C, D, E)
+  // This also works with nested fma instructions:
+  // fadd (fma A, B, (fma (C, D, (fmul (E, F))))), G -->
+  // fma A, B, (fma C, D, fma (E, F, G))
+  // fadd (G, (fma A, B, (fma (C, D, (fmul (E, F)))))) -->
+  // fma A, B, (fma C, D, fma (E, F, G)).
   // This requires reassociation because it changes the order of operations.
-  SDValue FMA, E;
-  if (CanReassociate && isFusedOp(N0) &&
-      N0.getOperand(2).getOpcode() == ISD::FMUL && N0.hasOneUse() &&
-      N0.getOperand(2).hasOneUse()) {
-    FMA = N0;
-    E = N1;
-  } else if (CanReassociate && isFusedOp(N1) &&
-             N1.getOperand(2).getOpcode() == ISD::FMUL && N1.hasOneUse() &&
-             N1.getOperand(2).hasOneUse()) {
-    FMA = N1;
-    E = N0;
-  }
-  if (FMA && E) {
-    SDValue A = FMA.getOperand(0);
-    SDValue B = FMA.getOperand(1);
-    SDValue C = FMA.getOperand(2).getOperand(0);
-    SDValue D = FMA.getOperand(2).getOperand(1);
-    SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
-    return DAG.getNode(PreferredFusedOpcode, SL, VT, A, B, CDE);
+  if (CanReassociate) {
+    SDValue FMA, E;
+    if (isFusedOp(N0) && N0.hasOneUse()) {
+      FMA = N0;
+      E = N1;
+    } else if (isFusedOp(N1) && N1.hasOneUse()) {
+      FMA = N1;
+      E = N0;
+    }
+
+    SDValue TmpFMA = FMA;
+    while (E && isFusedOp(TmpFMA)) {
+      SDValue FMul = TmpFMA->getOperand(2);
+      if (FMul.getOpcode() == ISD::FMUL && FMul.hasOneUse()) {
+        SDValue C = FMul.getOperand(0);
+        SDValue D = FMul.getOperand(1);
+
+        DAG.MorphNodeTo(FMul.getNode(), PreferredFusedOpcode, FMul->getVTList(),
+                        {C, D, E});
+
+        return FMA;
+      }
+
+      TmpFMA = TmpFMA->getOperand(2);
+    }
   }
 
   // Look through FP_EXTEND nodes to do more combining.
@@ -23556,6 +23642,15 @@ SDValue DAGCombiner::visitVECREDUCE(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitVPOp(SDNode *N) {
+
+  if (N->getOpcode() == ISD::VP_GATHER)
+    if (SDValue SD = visitVPGATHER(N))
+      return SD;
+
+  if (N->getOpcode() == ISD::VP_SCATTER)
+    if (SDValue SD = visitVPSCATTER(N))
+      return SD;
+
   // VP operations in which all vector elements are disabled - either by
   // determining that the mask is all false or that the EVL is 0 - can be
   // eliminated.
@@ -23849,7 +23944,8 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N, const SDLoc &DL) {
 
 SDValue DAGCombiner::SimplifySelect(const SDLoc &DL, SDValue N0, SDValue N1,
                                     SDValue N2) {
-  assert(N0.getOpcode() ==ISD::SETCC && "First argument must be a SetCC node!");
+  assert(N0.getOpcode() == ISD::SETCC &&
+         "First argument must be a SetCC node!");
 
   SDValue SCC = SimplifySelectCC(DL, N0.getOperand(0), N0.getOperand(1), N1, N2,
                                  cast<CondCodeSDNode>(N0.getOperand(2))->get());

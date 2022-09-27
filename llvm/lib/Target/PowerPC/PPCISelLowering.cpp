@@ -11998,7 +11998,7 @@ PPCTargetLowering::emitEHSjLjLongJmp(MachineInstr &MI,
   return MBB;
 }
 
-bool PPCTargetLowering::hasInlineStackProbe(MachineFunction &MF) const {
+bool PPCTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
   // If the function specifically requests inline stack probes, emit them.
   if (MF.getFunction().hasFnAttribute("probe-stack"))
     return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
@@ -12006,7 +12006,7 @@ bool PPCTargetLowering::hasInlineStackProbe(MachineFunction &MF) const {
   return false;
 }
 
-unsigned PPCTargetLowering::getStackProbeSize(MachineFunction &MF) const {
+unsigned PPCTargetLowering::getStackProbeSize(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   unsigned StackAlign = TFI->getStackAlignment();
   assert(StackAlign >= 1 && isPowerOf2_32(StackAlign) &&

@@ -17,6 +17,10 @@
 
 using namespace Fortran::runtime;
 
+#define STRINGIFY(S) #S
+#define JOIN2(A, B) A##B
+#define JOIN3(A, B, C) A##B##C
+
 /// Placeholder for real*10 version of Maxval Intrinsic
 struct ForcedMaxvalReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MaxvalReal10));
@@ -364,6 +368,54 @@ struct ForcedSumComplex16 {
       auto resTy = fir::ReferenceType::get(ty);
       return mlir::FunctionType::get(
           ctx, {resTy, boxTy, strTy, intTy, intTy, boxTy}, {});
+    };
+  }
+};
+
+/// Placeholder for integer(16) version of IAll Intrinsic
+struct ForcedIAll16 {
+  static constexpr const char *name = EXPAND_AND_QUOTE_KEY(IAll16);
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for integer(16) version of IAny Intrinsic
+struct ForcedIAny16 {
+  static constexpr const char *name = EXPAND_AND_QUOTE_KEY(IAny16);
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
+    };
+  }
+};
+
+/// Placeholder for integer(16) version of IParity Intrinsic
+struct ForcedIParity16 {
+  static constexpr const char *name = EXPAND_AND_QUOTE_KEY(IParity16);
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
+                                     {ty});
     };
   }
 };
@@ -942,3 +994,78 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
+
+// The IAll, IAny and IParity intrinsics have essentially the same
+// implementation. This macro will generate the function body given the
+// instrinsic name.
+#define GEN_IALL_IANY_IPARITY(F)                                               \
+  mlir::Value fir::runtime::JOIN2(gen, F)(                                     \
+      fir::FirOpBuilder & builder, mlir::Location loc, mlir::Value arrayBox,   \
+      mlir::Value maskBox, mlir::Value resultBox) {                            \
+    mlir::func::FuncOp func;                                                   \
+    auto ty = arrayBox.getType();                                              \
+    auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);                              \
+    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();                   \
+    auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);  \
+                                                                               \
+    if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))            \
+      func = fir::runtime::getRuntimeFunc<mkRTKey(JOIN2(F, 1))>(loc, builder); \
+    else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))       \
+      func = fir::runtime::getRuntimeFunc<mkRTKey(JOIN2(F, 2))>(loc, builder); \
+    else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))       \
+      func = fir::runtime::getRuntimeFunc<mkRTKey(JOIN2(F, 4))>(loc, builder); \
+    else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))       \
+      func = fir::runtime::getRuntimeFunc<mkRTKey(JOIN2(F, 8))>(loc, builder); \
+    else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))      \
+      func = fir::runtime::getRuntimeFunc<JOIN3(Forced, F, 16)>(loc, builder); \
+    else                                                                       \
+      fir::emitFatalError(loc, "invalid type in " STRINGIFY(F));               \
+                                                                               \
+    auto fTy = func.getFunctionType();                                         \
+    auto sourceFile = fir::factory::locationToFilename(builder, loc);          \
+    auto sourceLine =                                                          \
+        fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));         \
+    auto args = fir::runtime::createArguments(                                 \
+        builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);    \
+                                                                               \
+    return builder.create<fir::CallOp>(loc, func, args).getResult(0);          \
+  }
+
+/// Generate call to `IAllDim` intrinsic runtime routine. This is the version
+/// that handles any rank array with the dim argument specified.
+void fir::runtime::genIAllDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Value resultBox, mlir::Value arrayBox,
+                              mlir::Value dim, mlir::Value maskBox) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(IAllDim)>(loc, builder);
+  genReduction3Args(func, builder, loc, resultBox, arrayBox, dim, maskBox);
+}
+
+/// Generate call to `IAll` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+GEN_IALL_IANY_IPARITY(IAll)
+
+/// Generate call to `IAnyDim` intrinsic runtime routine. This is the version
+/// that handles any rank array with the dim argument specified.
+void fir::runtime::genIAnyDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Value resultBox, mlir::Value arrayBox,
+                              mlir::Value dim, mlir::Value maskBox) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(IAnyDim)>(loc, builder);
+  genReduction3Args(func, builder, loc, resultBox, arrayBox, dim, maskBox);
+}
+
+/// Generate call to `IAny` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+GEN_IALL_IANY_IPARITY(IAny)
+
+/// Generate call to `IParityDim` intrinsic runtime routine. This is the version
+/// that handles any rank array with the dim argument specified.
+void fir::runtime::genIParityDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value resultBox, mlir::Value arrayBox,
+                                 mlir::Value dim, mlir::Value maskBox) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(IParityDim)>(loc, builder);
+  genReduction3Args(func, builder, loc, resultBox, arrayBox, dim, maskBox);
+}
+
+/// Generate call to `IParity` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+GEN_IALL_IANY_IPARITY(IParity)

@@ -4082,8 +4082,6 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                      const SimplifyQuery &Q,
                                      bool AllowRefinement,
                                      unsigned MaxRecurse) {
-  assert(!Op->getType()->isVectorTy() && "This is not safe for vectors");
-
   // Trivial replacement.
   if (V == Op)
     return RepOp;
@@ -4095,6 +4093,14 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   auto *I = dyn_cast<Instruction>(V);
   if (!I || !is_contained(I->operands(), Op))
     return nullptr;
+
+  if (Op->getType()->isVectorTy()) {
+    // For vector types, the simplification must hold per-lane, so forbid
+    // potentially cross-lane operations like shufflevector.
+    assert(I->getType()->isVectorTy() && "Vector type mismatch");
+    if (isa<ShuffleVectorInst>(I) || isa<CallBase>(I))
+      return nullptr;
+  }
 
   // Replace Op with RepOp in instruction operands.
   SmallVector<Value *, 8> NewOps(I->getNumOperands());
@@ -4227,6 +4233,55 @@ static Value *simplifySelectBitTest(Value *TrueVal, Value *FalseVal, Value *X,
   return nullptr;
 }
 
+static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
+                                     ICmpInst::Predicate Pred, Value *TVal,
+                                     Value *FVal) {
+  // Canonicalize common cmp+sel operand as CmpLHS.
+  if (CmpRHS == TVal || CmpRHS == FVal) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  // Canonicalize common cmp+sel operand as TVal.
+  if (CmpLHS == FVal) {
+    std::swap(TVal, FVal);
+    Pred = ICmpInst::getInversePredicate(Pred);
+  }
+
+  // (X pred Y) ? X : max/min(X, Y)
+  Value *X = CmpLHS, *Y = CmpRHS;
+  auto *MMI = dyn_cast<MinMaxIntrinsic>(FVal);
+  if (!MMI || TVal != X ||
+      !match(FVal, m_c_MaxOrMin(m_Specific(X), m_Specific(Y))))
+    return nullptr;
+
+  // (X == Y) ? X : max/min(X, Y) --> max/min(X, Y)
+  if (Pred == CmpInst::ICMP_EQ)
+    return MMI;
+
+  // (X != Y) ? X : max/min(X, Y) --> X
+  if (Pred == CmpInst::ICMP_NE)
+    return X;
+
+  // (X >  Y) ? X : max(X, Y) --> max(X, Y)
+  // (X >= Y) ? X : max(X, Y) --> max(X, Y)
+  // (X <  Y) ? X : min(X, Y) --> min(X, Y)
+  // (X <= Y) ? X : min(X, Y) --> min(X, Y)
+  ICmpInst::Predicate MMPred = MMI->getPredicate();
+  if (MMPred == CmpInst::getStrictPredicate(Pred))
+    return MMI;
+
+  // (X <  Y) ? X : max(X, Y) --> X
+  // (X <= Y) ? X : max(X, Y) --> X
+  // (X >  Y) ? X : min(X, Y) --> X
+  // (X >= Y) ? X : min(X, Y) --> X
+  ICmpInst::Predicate InvPred = CmpInst::getInversePredicate(Pred);
+  if (MMPred == CmpInst::getStrictPredicate(InvPred))
+    return X;
+
+  return nullptr;
+}
+
 /// An alternative way to test if a bit is set or not uses sgt/slt instead of
 /// eq/ne.
 static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
@@ -4251,6 +4306,9 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   Value *CmpLHS, *CmpRHS;
   if (!match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
     return nullptr;
+
+  if (Value *V = simplifyCmpSelOfMaxMin(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
+    return V;
 
   // Canonicalize ne to eq predicate.
   if (Pred == ICmpInst::ICMP_NE) {
@@ -4325,9 +4383,7 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   // If we have a scalar equality comparison, then we know the value in one of
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
-  // Note that the equivalence/replacement opportunity does not hold for vectors
-  // because each element of a vector select is chosen independently.
-  if (Pred == ICmpInst::ICMP_EQ && !CondVal->getType()->isVectorTy()) {
+  if (Pred == ICmpInst::ICMP_EQ) {
     if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
                                /* AllowRefinement */ false,
                                MaxRecurse) == TrueVal ||
@@ -5787,8 +5843,8 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (Op0 == Op1)
       return Op0;
 
-    // Canonicalize constant operand as Op1.
-    if (isa<Constant>(Op0))
+    // Canonicalize immediate constant operand as Op1.
+    if (match(Op0, m_ImmConstant()))
       std::swap(Op0, Op1);
 
     // Assume undef is the limit value.

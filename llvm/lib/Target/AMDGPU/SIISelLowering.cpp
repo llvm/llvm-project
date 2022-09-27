@@ -7532,14 +7532,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       Opcode = AMDGPUISD::BUFFER_ATOMIC_XOR;
       break;
     case Intrinsic::amdgcn_buffer_atomic_fadd:
-      if (!Op.getValue(0).use_empty() && !hasAtomicFaddRtnForTy(Op)) {
-        DiagnosticInfoUnsupported
-          NoFpRet(DAG.getMachineFunction().getFunction(),
-                  "return versions of fp atomics not supported",
-                  DL.getDebugLoc(), DS_Error);
-        DAG.getContext()->diagnose(NoFpRet);
-        return SDValue();
-      }
       Opcode = AMDGPUISD::BUFFER_ATOMIC_FADD;
       break;
     default:
@@ -7831,19 +7823,13 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
     return Op;
   }
-  case Intrinsic::amdgcn_global_atomic_fadd:
-    if (!Op.getValue(0).use_empty() && !Subtarget->hasGFX90AInsts()) {
-      DiagnosticInfoUnsupported
-        NoFpRet(DAG.getMachineFunction().getFunction(),
-                "return versions of fp atomics not supported",
-                DL.getDebugLoc(), DS_Error);
-      DAG.getContext()->diagnose(NoFpRet);
-      return SDValue();
-    }
-    [[fallthrough]];
+  case Intrinsic::amdgcn_global_atomic_fadd: {
+    if (!Subtarget->hasAtomicFaddNoRtnInsts())
+      return makeV_ILLEGAL(Op, DAG);
+    return SDValue();
+  }
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
-  case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -7854,16 +7840,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     };
     unsigned Opcode = 0;
     switch (IntrID) {
-    case Intrinsic::amdgcn_global_atomic_fadd:
-      if (!Subtarget->hasAtomicFaddNoRtnInsts())
-        return makeV_ILLEGAL(Op, DAG);
-      [[fallthrough]];
-    case Intrinsic::amdgcn_flat_atomic_fadd: {
-      EVT VT = Op.getOperand(3).getValueType();
-      return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
-                           DAG.getVTList(VT, MVT::Other), Ops,
-                           M->getMemOperand());
-    }
     case Intrinsic::amdgcn_global_atomic_fmin:
     case Intrinsic::amdgcn_flat_atomic_fmin: {
       Opcode = AMDGPUISD::ATOMIC_LOAD_FMIN;
@@ -12807,9 +12783,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
     if ((AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) &&
         Subtarget->hasAtomicFaddNoRtnInsts()) {
-      if (Subtarget->hasGFX940Insts())
-        return AtomicExpansionKind::None;
-
       // The amdgpu-unsafe-fp-atomics attribute enables generation of unsafe
       // floating point atomic instructions. May generate more efficient code,
       // but may not respect rounding and denormal modes, and may give incorrect
@@ -12819,23 +12792,31 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
               .getValueAsString() != "true")
         return AtomicExpansionKind::CmpXChg;
 
-      if (Subtarget->hasGFX90AInsts()) {
-        if (Ty->isFloatTy() && AS == AMDGPUAS::FLAT_ADDRESS)
-          return AtomicExpansionKind::CmpXChg;
-
-        auto SSID = RMW->getSyncScopeID();
-        if (SSID == SyncScope::System ||
-            SSID == RMW->getContext().getOrInsertSyncScopeID("one-as"))
-          return AtomicExpansionKind::CmpXChg;
-
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
-      }
-
-      if (AS == AMDGPUAS::FLAT_ADDRESS)
+      // Always expand system scope fp atomics.
+      auto SSID = RMW->getSyncScopeID();
+      if (SSID == SyncScope::System ||
+          SSID == RMW->getContext().getOrInsertSyncScopeID("one-as"))
         return AtomicExpansionKind::CmpXChg;
 
-      return RMW->use_empty() ? ReportUnsafeHWInst(AtomicExpansionKind::None)
-                              : AtomicExpansionKind::CmpXChg;
+      if (AS == AMDGPUAS::GLOBAL_ADDRESS && Ty->isFloatTy()) {
+        // global atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
+        if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+        // global atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
+        if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
+          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      }
+
+      // flat atomic fadd f32: gfx940, gfx11+.
+      if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy() &&
+          Subtarget->hasFlatAtomicFaddF32Inst())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+
+      // global and flat atomic fadd f64: gfx90a, gfx940.
+      if (Ty->isDoubleTy() && Subtarget->hasGFX90AInsts())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+
+      return AtomicExpansionKind::CmpXChg;
     }
 
     // DS FP atomics do respect the denormal mode, but the rounding mode is

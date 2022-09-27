@@ -1413,6 +1413,18 @@ public:
     return false;
   }
 
+  // Return true if the target supports a scatter/gather instruction with
+  // indices which are scaled by the particular value.  Note that all targets
+  // must by definition support scale of 1.
+  virtual bool isLegalScaleForGatherScatter(uint64_t Scale,
+                                            uint64_t ElemSize) const {
+    // MGATHER/MSCATTER are only required to support scaling by one or by the
+    // element size.
+    if (Scale != ElemSize && Scale != 1)
+      return false;
+    return true;
+  }
+
   /// Return how the condition code should be treated: either it is legal, needs
   /// to be expanded to some other code sequence, or the target has a custom
   /// expander for it.
@@ -1892,11 +1904,11 @@ public:
 
   /// Returns the name of the symbol used to emit stack probes or the empty
   /// string if not applicable.
-  virtual bool hasStackProbeSymbol(MachineFunction &MF) const { return false; }
+  virtual bool hasStackProbeSymbol(const MachineFunction &MF) const { return false; }
 
-  virtual bool hasInlineStackProbe(MachineFunction &MF) const { return false; }
+  virtual bool hasInlineStackProbe(const MachineFunction &MF) const { return false; }
 
-  virtual StringRef getStackProbeSymbolName(MachineFunction &MF) const {
+  virtual StringRef getStackProbeSymbolName(const MachineFunction &MF) const {
     return "";
   }
 

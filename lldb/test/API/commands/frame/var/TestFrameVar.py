@@ -9,6 +9,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import os
+import shutil
 import time
 
 class TestFrameVar(TestBase):
@@ -180,5 +181,61 @@ class TestFrameVar(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_name_breakpoint(self, 'main')
         error_strings = [
             'no variable information is available in debug info for this compile unit'
+        ]
+        self.check_frame_variable_errors(thread, error_strings)
+
+    @skipUnlessPlatform(["linux", "freebsd"])
+    @add_test_categories(["dwo"])
+    def test_fission_missing_dwo(self):
+        '''
+            Test that if we build a binary with "-gsplit-dwarf" that we can
+            set a file and line breakpoint successfully, and get an error
+            letting us know we were unable to load the .dwo file.
+        '''
+        self.build(dictionary={'CFLAGS_EXTRAS': '-gsplit-dwarf'})
+        exe = self.getBuildArtifact("a.out")
+        main_dwo = self.getBuildArtifact("main.dwo")
+
+        self.assertTrue(os.path.exists(main_dwo), 'Make sure "%s" file exists' % (main_dwo))
+        # Delete the main.dwo file that contains the debug info so we force an
+        # error when we run to main and try to get variables.
+        os.unlink(main_dwo)
+
+        # We have to set a named breakpoint because we don't have any debug info
+        # because we deleted the main.o file since the mod times don't match
+        # and debug info won't be loaded
+        (target, process, thread, bkpt) = lldbutil.run_to_name_breakpoint(self, 'main')
+        error_strings = [
+            'unable to locate .dwo debug file "',
+            'main.dwo" for skeleton DIE 0x'
+        ]
+        self.check_frame_variable_errors(thread, error_strings)
+
+    @skipUnlessPlatform(["linux", "freebsd"])
+    @add_test_categories(["dwo"])
+    def test_fission_invalid_dwo_objectfile(self):
+        '''
+            Test that if we build a binary with "-gsplit-dwarf" that we can
+            set a file and line breakpoint successfully, and get an error
+            letting us know we were unable to load the .dwo file because it
+            existed, but it wasn't a valid object file.
+        '''
+        self.build(dictionary={'CFLAGS_EXTRAS': '-gsplit-dwarf'})
+        exe = self.getBuildArtifact("a.out")
+        main_dwo = self.getBuildArtifact("main.dwo")
+
+        self.assertTrue(os.path.exists(main_dwo), 'Make sure "%s" file exists' % (main_dwo))
+        # Overwrite the main.dwo with the main.c source file so that the .dwo
+        # file exists, but it isn't a valid object file as there is an error
+        # for this case.
+        shutil.copyfile(self.getSourcePath('main.c'), main_dwo)
+
+        # We have to set a named breakpoint because we don't have any debug info
+        # because we deleted the main.o file since the mod times don't match
+        # and debug info won't be loaded
+        (target, process, thread, bkpt) = lldbutil.run_to_name_breakpoint(self, 'main')
+        error_strings = [
+            'unable to load object file for .dwo debug file "'
+            'main.dwo" for unit DIE 0x',
         ]
         self.check_frame_variable_errors(thread, error_strings)

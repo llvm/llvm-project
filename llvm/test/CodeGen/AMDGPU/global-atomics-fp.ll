@@ -3,7 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX908 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
 
 define amdgpu_kernel void @global_atomic_fadd_ret_f32(float addrspace(1)* %ptr) #0 {
 ; GFX900-LABEL: global_atomic_fadd_ret_f32:
@@ -243,29 +243,14 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(float addrspace(1)* %
 ; GFX11-LABEL: global_atomic_fadd_ret_f32_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-NEXT:    s_mov_b32 s2, 0
-; GFX11-NEXT:  .LBB1_1: ; %atomicrmw.start
-; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX11-NEXT:    v_mov_b32_e32 v2, v1
-; GFX11-NEXT:    v_add_f32_e32 v1, 4.0, v2
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_atomic_cmpswap_b32 v1, v0, v[1:2], s[0:1] glc
+; GFX11-NEXT:    global_atomic_add_f32 v0, v0, v1, s[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX11-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
-; GFX11-NEXT:    s_cbranch_execnz .LBB1_1
-; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
@@ -545,29 +530,14 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(float addrspace(1)* 
 ; GFX11-LABEL: global_atomic_fadd_ret_f32_agent:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-NEXT:    s_mov_b32 s2, 0
-; GFX11-NEXT:  .LBB4_1: ; %atomicrmw.start
-; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX11-NEXT:    v_mov_b32_e32 v2, v1
-; GFX11-NEXT:    v_add_f32_e32 v1, 4.0, v2
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 4.0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_atomic_cmpswap_b32 v1, v0, v[1:2], s[0:1] glc
+; GFX11-NEXT:    global_atomic_add_f32 v0, v0, v1, s[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX11-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX11-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
-; GFX11-NEXT:    s_cbranch_execnz .LBB4_1
-; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
@@ -743,6 +713,32 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_wrong_subtarget(float addr
 ; GCN-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GCN-NEXT:    global_store_dword v[0:1], v1, off
 ; GCN-NEXT:    s_endpgm
+;
+; GFX11-LABEL: global_atomic_fadd_ret_f32_wrong_subtarget:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_mov_b64 s[2:3], 0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_load_dword s4, s[0:1], 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v1, s4
+; GFX11-NEXT:  .LBB6_1: ; %atomicrmw.start
+; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    v_mov_b32_e32 v2, v1
+; GFX11-NEXT:    v_add_f32_e32 v1, 4.0, v2
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_atomic_cmpswap v1, v0, v[1:2], s[0:1] glc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_wbinvl1_vol
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX11-NEXT:    s_or_b64 s[2:3], vcc, s[2:3]
+; GFX11-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; GFX11-NEXT:    s_cbranch_execnz .LBB6_1
+; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX11-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX11-NEXT:    global_store_dword v[0:1], v1, off
+; GFX11-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
   store float %result, float addrspace(1)* undef
   ret void
@@ -759,6 +755,17 @@ define amdgpu_kernel void @global_atomic_fadd_noret_f32_wrong_subtarget(float ad
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    s_endpgm
+;
+; GFX11-LABEL: global_atomic_fadd_noret_f32_wrong_subtarget:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    buffer_wbinvl1_vol
+; GFX11-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
   ret void
 }

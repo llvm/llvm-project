@@ -110,6 +110,11 @@ public:
     return Opc <= TargetOpcode::GENERIC_OP_END;
   }
 
+  static bool isGenericAtomicRMWOpcode(unsigned Opc) {
+    return Opc >= TargetOpcode::GENERIC_ATOMICRMW_OP_START &&
+           Opc <= TargetOpcode::GENERIC_ATOMICRMW_OP_END;
+  }
+
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
   virtual

@@ -43,7 +43,7 @@
 # FLAGS-NEXT:      addr
 # FLAGS-NEXT:      size 0x0000000000000030
 # FLAGS-NEXT:    offset
-# FLAGS-NEXT:     align
+# FLAGS-NEXT:     align 2^3 (8)
 # FLAGS-NEXT:    reloff 0
 # FLAGS-NEXT:    nreloc 0
 # FLAGS-NEXT:      type S_THREAD_LOCAL_VARIABLES

@@ -26,13 +26,13 @@ func.func @empty_async_execute() -> !async.token {
 // CHECK-LABEL: @return_async_value
 func.func @return_async_value() -> !async.value<f32> {
   // CHECK: async.execute -> !async.value<f32>
-  %token, %results = async.execute -> !async.value<f32> {
+  %token, %bodyResults = async.execute -> !async.value<f32> {
     %cst = arith.constant 1.000000e+00 : f32
     async.yield %cst : f32
   }
 
-  // CHECK: return %results : !async.value<f32>
-  return %results : !async.value<f32>
+  // CHECK: return %bodyResults : !async.value<f32>
+  return %bodyResults : !async.value<f32>
 }
 
 // CHECK-LABEL: @return_captured_value
@@ -49,14 +49,14 @@ func.func @return_captured_value() -> !async.token {
 
 // CHECK-LABEL: @return_async_values
 func.func @return_async_values() -> (!async.value<f32>, !async.value<f32>) {
-  %token, %results:2 = async.execute -> (!async.value<f32>, !async.value<f32>) {
+  %token, %bodyResults:2 = async.execute -> (!async.value<f32>, !async.value<f32>) {
     %cst1 = arith.constant 1.000000e+00 : f32
     %cst2 = arith.constant 2.000000e+00 : f32
     async.yield %cst1, %cst2 : f32, f32
   }
 
-  // CHECK: return %results#0, %results#1 : !async.value<f32>, !async.value<f32>
-  return %results#0, %results#1 : !async.value<f32>, !async.value<f32>
+  // CHECK: return %bodyResults#0, %bodyResults#1 : !async.value<f32>, !async.value<f32>
+  return %bodyResults#0, %bodyResults#1 : !async.value<f32>, !async.value<f32>
 }
 
 // CHECK-LABEL: @async_token_dependencies

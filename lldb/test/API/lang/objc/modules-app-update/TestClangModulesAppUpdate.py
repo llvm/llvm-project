@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 class TestClangModuleAppUpdate(TestBase):
 
-    @skipIf(debug_info=no_match(["gmodules"]))
+    @add_test_categories(["gmodules"])
     def test_rebuild_app_modules_untouched(self):
         with open(self.getBuildArtifact("module.modulemap"), "w") as f:
             f.write("""

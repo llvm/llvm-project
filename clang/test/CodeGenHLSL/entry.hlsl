@@ -4,9 +4,10 @@
 
 // Make sure not mangle entry.
 // CHECK:define void @foo()
-// Make sure add function attribute.
+// Make sure add function attribute and numthreads attribute.
+// CHECK:"hlsl.numthreads"="16,8,1"
 // CHECK:"hlsl.shader"="compute"
-[numthreads(1,1,1)]
+[numthreads(16,8,1)]
 void foo() {
 
 }

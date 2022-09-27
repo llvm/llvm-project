@@ -30,7 +30,7 @@ func.func @gemm_fill_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) ->
 // CHECK-SAME:           ins(%[[LHS_TILE]], %[[RHS_TILE]] :
 // CHECK-SAME:           outs(%[[FILL_TILE]] :
 //      CHECK:       %[[INSERT:.+]] = tensor.insert_slice %[[GEMM_TILE]] into %[[ITERARG1]][%[[IV0]], %[[IV1]]]
-//      CHECK        scf.yield %[[INSERT]]
+//      CHECK:       scf.yield %[[INSERT]]
 
 // -----
 
@@ -68,7 +68,7 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 // CHECK-SAME:         iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
 //  CHECK-DAG:       %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]][%[[IV0]], 0]
 //  CHECK-DAG:       %[[RHS_TILE:.+]] = tensor.extract_slice %[[ARG1]][0, %[[IV1]]]
-//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[ITERARG1]][%[[IV0]], %[[IV1]]]
+//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[INIT]][%[[IV0]], %[[IV1]]]
 //      CHECK:       %[[FILL_TILE:.+]] = linalg.fill
 // CHECK-SAME:           outs(%[[INIT_TILE]] :
 //      CHECK:       %[[GEMM_TILE:.+]] = linalg.matmul
@@ -80,7 +80,7 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 // CHECK-SAME:           ins(%[[GEMM_TILE]], %[[BIAS_TILE]] :
 // CHECK-SAME:           outs(%[[OUTS_TILE]] :
 //      CHECK:       %[[INSERT:.+]] = tensor.insert_slice %[[GENERIC_TILE]] into %[[ITERARG1]][%[[IV0]], %[[IV1]]]
-//      CHECK        scf.yield %[[INSERT]]
+//      CHECK:       scf.yield %[[INSERT]]
 
 // -----
 
@@ -130,7 +130,7 @@ func.func @gemm_gemm_fusion(%lhs0 : tensor<?x?xf32>, %rhs0 : tensor<?x?xf32>, %r
 // CHECK-SAME:         ins(%[[GEMM0_TILE]], %[[RHS1_TILE]] :
 // CHECK-SAME:         outs(%[[FILL1_TILE]] :
 //      CHECK:     %[[INSERT:.+]] = tensor.insert_slice %[[GEMM1_TILE]] into %[[ITERARG]][%[[IV]], 0]
-//      CHECK      scf.yield %[[INSERT]]
+//      CHECK:     scf.yield %[[INSERT]]
 
 // -----
 
@@ -182,7 +182,7 @@ func.func @gemm_transpose_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32
 // CHECK-SAME:           ins(%[[GEMM_TILE]] :
 // CHECK-SAME:           outs(%[[OUTS_TILE]] :
 //      CHECK:       %[[INSERT:.+]] = tensor.insert_slice %[[GENERIC_TILE]] into %[[ITERARG1]][%[[IV1]], %[[IV0]]]
-//      CHECK        scf.yield %[[INSERT]]
+//      CHECK:       scf.yield %[[INSERT]]
 
 // -----
 
@@ -218,7 +218,7 @@ func.func @interchange_matmul_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?
 // CHECK-SAME:         iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
 //  CHECK-DAG:       %[[LHS_TILE:.+]] = tensor.extract_slice %[[ARG0]][%[[IV1]], 0]
 //  CHECK-DAG:       %[[RHS_TILE:.+]] = tensor.extract_slice %[[ARG1]][0, %[[IV0]]]
-//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[ITERARG1]][%[[IV1]], %[[IV0]]]
+//  CHECK-DAG:       %[[INIT_TILE:.+]] = tensor.extract_slice %[[INIT]][%[[IV1]], %[[IV0]]]
 //      CHECK:       %[[FILL_TILE:.+]] = linalg.fill
 // CHECK-SAME:           outs(%[[INIT_TILE]] :
 //      CHECK:       %[[GEMM_TILE:.+]] = linalg.matmul
@@ -229,7 +229,7 @@ func.func @interchange_matmul_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?
 // CHECK-SAME:           ins(%[[GEMM_TILE]] :
 // CHECK-SAME:           outs(%[[INIT_TILE_2]] :
 //      CHECK:       %[[INSERT:.+]] = tensor.insert_slice %[[GENERIC_TILE]] into %[[ITERARG1]][%[[IV1]], %[[IV0]]]
-//      CHECK        scf.yield %[[INSERT]]
+//      CHECK:       scf.yield %[[INSERT]]
 
 // -----
 

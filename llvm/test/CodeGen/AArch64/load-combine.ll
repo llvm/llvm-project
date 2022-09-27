@@ -561,3 +561,199 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(i32* %arg) {
   %tmp8 = or i32 %tmp7, %tmp30
   ret i32 %tmp8
 }
+
+define void @short_vector_to_i32(<4 x i8>* %in, i32* %out, i32* %p) {
+; CHECK-LABEL: short_vector_to_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    umov w8, v0.h[0]
+; CHECK-NEXT:    umov w9, v0.h[1]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
+; CHECK-NEXT:    bfi w8, w9, #8, #8
+; CHECK-NEXT:    bfi w8, w10, #16, #8
+; CHECK-NEXT:    bfi w8, w11, #24, #8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i8>, <4 x i8>* %in, align 4
+
+  %e1 = extractelement <4 x i8> %ld, i32 0
+  %e2 = extractelement <4 x i8> %ld, i32 1
+  %e3 = extractelement <4 x i8> %ld, i32 2
+  %e4 = extractelement <4 x i8> %ld, i32 3
+
+  %z0 = zext i8 %e1 to i32
+  %z1 = zext i8 %e2 to i32
+  %z2 = zext i8 %e3 to i32
+  %z3 = zext i8 %e4 to i32
+
+  %s1 = shl nuw nsw i32 %z1, 8
+  %s2 = shl nuw nsw i32 %z2, 16
+  %s3 = shl nuw i32 %z3, 24
+
+  %i1 = or i32 %s1, %z0
+  %i2 = or i32 %i1, %s2
+  %i3 = or i32 %i2, %s3
+
+  store i32 %i3, i32* %out
+  ret void
+}
+
+define void @short_vector_to_i32_unused_low_i8(<4 x i8>* %in, i32* %out, i32* %p) {
+; CHECK-LABEL: short_vector_to_i32_unused_low_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    umov w8, v0.h[2]
+; CHECK-NEXT:    umov w9, v0.h[1]
+; CHECK-NEXT:    umov w10, v0.h[3]
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    bfi w8, w9, #8, #8
+; CHECK-NEXT:    bfi w8, w10, #24, #8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i8>, <4 x i8>* %in, align 4
+
+  %e2 = extractelement <4 x i8> %ld, i32 1
+  %e3 = extractelement <4 x i8> %ld, i32 2
+  %e4 = extractelement <4 x i8> %ld, i32 3
+
+  %z1 = zext i8 %e2 to i32
+  %z2 = zext i8 %e3 to i32
+  %z3 = zext i8 %e4 to i32
+
+  %s1 = shl nuw nsw i32 %z1, 8
+  %s2 = shl nuw nsw i32 %z2, 16
+  %s3 = shl nuw i32 %z3, 24
+
+  %i2 = or i32 %s1, %s2
+  %i3 = or i32 %i2, %s3
+
+  store i32 %i3, i32* %out
+  ret void
+}
+
+define void @short_vector_to_i32_unused_high_i8(<4 x i8>* %in, i32* %out, i32* %p) {
+; CHECK-LABEL: short_vector_to_i32_unused_high_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    umov w8, v0.h[0]
+; CHECK-NEXT:    umov w9, v0.h[1]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    bfi w8, w9, #8, #8
+; CHECK-NEXT:    bfi w8, w10, #16, #8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i8>, <4 x i8>* %in, align 4
+
+  %e1 = extractelement <4 x i8> %ld, i32 0
+  %e2 = extractelement <4 x i8> %ld, i32 1
+  %e3 = extractelement <4 x i8> %ld, i32 2
+
+  %z0 = zext i8 %e1 to i32
+  %z1 = zext i8 %e2 to i32
+  %z2 = zext i8 %e3 to i32
+
+  %s1 = shl nuw nsw i32 %z1, 8
+  %s2 = shl nuw nsw i32 %z2, 16
+
+  %i1 = or i32 %s1, %z0
+  %i2 = or i32 %i1, %s2
+
+  store i32 %i2, i32* %out
+  ret void
+}
+
+define void @short_vector_to_i32_unused_low_i16(<4 x i8>* %in, i32* %out, i32* %p) {
+; CHECK-LABEL: short_vector_to_i32_unused_low_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    umov w8, v0.h[3]
+; CHECK-NEXT:    umov w9, v0.h[2]
+; CHECK-NEXT:    lsl w8, w8, #24
+; CHECK-NEXT:    bfi w8, w9, #16, #8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i8>, <4 x i8>* %in, align 4
+
+  %e3 = extractelement <4 x i8> %ld, i32 2
+  %e4 = extractelement <4 x i8> %ld, i32 3
+
+  %z2 = zext i8 %e3 to i32
+  %z3 = zext i8 %e4 to i32
+
+  %s2 = shl nuw nsw i32 %z2, 16
+  %s3 = shl nuw i32 %z3, 24
+
+  %i3 = or i32 %s2, %s3
+
+  store i32 %i3, i32* %out
+  ret void
+}
+
+define void @short_vector_to_i32_unused_high_i16(<4 x i8>* %in, i32* %out, i32* %p) {
+; CHECK-LABEL: short_vector_to_i32_unused_high_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    umov w8, v0.h[0]
+; CHECK-NEXT:    umov w9, v0.h[1]
+; CHECK-NEXT:    bfi w8, w9, #8, #8
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i8>, <4 x i8>* %in, align 4
+
+  %e1 = extractelement <4 x i8> %ld, i32 0
+  %e2 = extractelement <4 x i8> %ld, i32 1
+
+  %z0 = zext i8 %e1 to i32
+  %z1 = zext i8 %e2 to i32
+
+  %s1 = shl nuw nsw i32 %z1, 8
+
+  %i1 = or i32 %s1, %z0
+
+  store i32 %i1, i32* %out
+  ret void
+}
+
+define void @short_vector_to_i64(<4 x i8>* %in, i64* %out, i64* %p) {
+; CHECK-LABEL: short_vector_to_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    umov w8, v0.h[0]
+; CHECK-NEXT:    umov w9, v0.h[1]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
+; CHECK-NEXT:    bfi x8, x9, #8, #8
+; CHECK-NEXT:    bfi x8, x10, #16, #8
+; CHECK-NEXT:    bfi x8, x11, #24, #8
+; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i8>, <4 x i8>* %in, align 4
+
+  %e1 = extractelement <4 x i8> %ld, i32 0
+  %e2 = extractelement <4 x i8> %ld, i32 1
+  %e3 = extractelement <4 x i8> %ld, i32 2
+  %e4 = extractelement <4 x i8> %ld, i32 3
+
+  %z0 = zext i8 %e1 to i64
+  %z1 = zext i8 %e2 to i64
+  %z2 = zext i8 %e3 to i64
+  %z3 = zext i8 %e4 to i64
+
+  %s1 = shl nuw nsw i64 %z1, 8
+  %s2 = shl nuw nsw i64 %z2, 16
+  %s3 = shl nuw i64 %z3, 24
+
+  %i1 = or i64 %s1, %z0
+  %i2 = or i64 %i1, %s2
+  %i3 = or i64 %i2, %s3
+
+  store i64 %i3, i64* %out
+  ret void
+}

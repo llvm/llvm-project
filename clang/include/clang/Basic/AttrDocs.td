@@ -6590,6 +6590,31 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def HLSLResourceBindingDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The resource binding attribute sets the virtual register and logical register space for a resource.
+Attribute spelling in HLSL is: ``register(slot [, space])``.
+``slot`` takes the format ``[type][number]``,
+where ``type`` is a single character specifying the resource type and ``number`` is the virtual register number.
+
+Register types are:
+t for shader resource views (SRV),
+s for samplers,
+u for unordered access views (UAV),
+b for constant buffer views (CBV).
+
+Register space is specified in the format ``space[number]`` and defaults to ``space0`` if omitted.
+Here're resource binding examples with and without space:
+.. code-block:: c++
+
+  RWBuffer<float> Uav : register(u3, space1);
+  Buffer<float> Buf : register(t1);
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3d12/resource-binding-in-hlsl
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";

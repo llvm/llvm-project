@@ -800,12 +800,6 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
         Expr *NewIDC = canonicalizeImmediatelyDeclaredConstraint(
                 *this, TC->getImmediatelyDeclaredConstraint(),
                 ParamAsArgument);
-        TemplateArgumentListInfo CanonArgsAsWritten;
-        if (auto *Args = TC->getTemplateArgsAsWritten())
-          for (const auto &ArgLoc : Args->arguments())
-            CanonArgsAsWritten.addArgument(
-                TemplateArgumentLoc(ArgLoc.getArgument(),
-                                    TemplateArgumentLocInfo()));
         NewTTP->setTypeConstraint(
             NestedNameSpecifierLoc(),
             DeclarationNameInfo(TC->getNamedConcept()->getDeclName(),
@@ -4764,9 +4758,6 @@ QualType
 ASTContext::getSubstTemplateTypeParmType(const TemplateTypeParmType *Parm,
                                          QualType Replacement,
                                          Optional<unsigned> PackIndex) const {
-  assert(Replacement.isCanonical()
-         && "replacement types must always be canonical");
-
   llvm::FoldingSetNodeID ID;
   SubstTemplateTypeParmType::Profile(ID, Parm, Replacement, PackIndex);
   void *InsertPos = nullptr;
@@ -4774,8 +4765,11 @@ ASTContext::getSubstTemplateTypeParmType(const TemplateTypeParmType *Parm,
     = SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!SubstParm) {
-    SubstParm = new (*this, TypeAlignment)
-        SubstTemplateTypeParmType(Parm, Replacement, PackIndex);
+    void *Mem = Allocate(SubstTemplateTypeParmType::totalSizeToAlloc<QualType>(
+                             !Replacement.isCanonical()),
+                         TypeAlignment);
+    SubstParm =
+        new (Mem) SubstTemplateTypeParmType(Parm, Replacement, PackIndex);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
@@ -5166,7 +5160,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     if (T->isRecordType())
       T.addConst();
     Expr *E = new (*this) DeclRefExpr(
-        *this, NTTP, /*enclosing*/ false, T,
+        *this, NTTP, /*RefersToEnclosingVariableOrCapture*/ false, T,
         Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
 
     if (NTTP->isParameterPack())
@@ -6452,6 +6446,31 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
   return true;
 }
 
+bool ASTContext::FriendsDifferByConstraints(const FunctionDecl *X,
+                                            const FunctionDecl *Y) const {
+  // If these aren't friends, then they aren't friends that differ by
+  // constraints.
+  if (!X->getFriendObjectKind() || !Y->getFriendObjectKind())
+    return false;
+
+  // If the the two functions share lexical declaration context, they are not in
+  // separate instantations, and thus in the same scope.
+  if (X->getLexicalDeclContext() == Y->getLexicalDeclContext())
+    return false;
+
+  if (!X->getDescribedFunctionTemplate()) {
+    assert(!Y->getDescribedFunctionTemplate() &&
+           "How would these be the same if they aren't both templates?");
+
+    // If these friends don't have constraints, they aren't constrained, and
+    // thus don't fall under temp.friend p9. Else the simple presence of a
+    // constraint makes them unique.
+    return X->getTrailingRequiresClause();
+  }
+
+  return X->FriendConstraintRefersToEnclosingTemplate();
+}
+
 bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   if (X == Y)
     return true;
@@ -6530,6 +6549,10 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
 
     if (!isSameConstraintExpr(FuncX->getTrailingRequiresClause(),
                               FuncY->getTrailingRequiresClause()))
+      return false;
+
+    // Constrained friends are different in certain cases, see: [temp.friend]p9.
+    if (FriendsDifferByConstraints(FuncX, FuncY))
       return false;
 
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {

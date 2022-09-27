@@ -3446,12 +3446,26 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
                                                    SDValue &Hi) {
-  SDValue Op = N->getOperand(N->isStrictFPOpcode() ? 1 : 0);
+  SDLoc dl(N);
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
 
   assert(getTypeAction(Op.getValueType()) != TargetLowering::TypePromoteFloat &&
          "Input type needs to be promoted!");
 
   EVT VT = Op.getValueType();
+
+  if (VT == MVT::f16) {
+    VT = MVT::f32;
+    // Extend to f32.
+    if (IsStrict) {
+      Op = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, { VT, MVT::Other }, {Chain, Op});
+      Chain = Op.getValue(1);
+    } else {
+      Op = DAG.getNode(ISD::FP_EXTEND, dl, VT, Op);
+    }
+  }
 
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
   if (N->getOpcode() == ISD::LLROUND ||
@@ -3483,9 +3497,7 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
   } else
     llvm_unreachable("Unexpected opcode!");
 
-  SDLoc dl(N);
   EVT RetVT = N->getValueType(0);
-  SDValue Chain = N->isStrictFPOpcode() ? N->getOperand(0) : SDValue();
 
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);

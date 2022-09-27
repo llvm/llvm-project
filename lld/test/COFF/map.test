@@ -11,6 +11,11 @@
 # RUN: lld-link /out:%t.dll /dll %t-dll.obj /export:exportfn1 \
 # RUN:   /export:foo=exportfn2 /map /mapinfo:exports
 # RUN: FileCheck -check-prefix=MAPINFO -strict-whitespace %s < %t.map
+# RUN: rm -rf %t && mkdir -p %t && cd %t
+# RUN: cp %t.obj map.test.tmp.obj
+# RUN: cp %t-dll.lib map.test.tmp-dll.lib
+# RUN: lld-link /entry:main map.test.tmp.obj map.test.tmp-dll.lib /map
+# RUN: FileCheck -check-prefix=MAP -strict-whitespace %s < map.test.tmp.map
 
 # MAP: {{.*}}
 # MAP-EMPTY:

@@ -161,7 +161,7 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", []>,
+def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [NoSideEffect]>,
     Arguments<(ins Variadic<AnyRankedTensor>:$inputs, IndexAttr:$dimension)>,
     Results<(outs AnyRankedTensor:$result)> {
 
@@ -379,6 +379,10 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
     alternative implementations in the future, such as sending the contents to
     a buffer defined by a pointer.
 
+    Note that this operation is "impure" in the sense that its behavior
+    is solely defined by side-effects and not SSA values. The semantics
+    may be refined over time as our sparse abstractions evolve.
+
     Example:
 
     ```mlir
@@ -389,7 +393,7 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
 }
 
 //===----------------------------------------------------------------------===//
-// Sparse Tensor Custom Linalg.Generic Operations.
+// Sparse Tensor Syntax Operations.
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
@@ -694,15 +698,15 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [NoSideEffect, SameOperand
 }
 
 def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
-    Arguments<(ins AnyType:$result)> {
+    Arguments<(ins Optional<AnyType>:$result)> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{
       Yields a value from within a `binary`, `unary`, `reduce`,
-      or `select` block.
+      `select` or `foreach` block.
 
       Example:
 
-      ```
+      ```mlir
       %0 = sparse_tensor.unary %a : i64 to i64 {
         ^bb0(%arg0: i64):
           %cst = arith.constant 1 : i64
@@ -712,9 +716,45 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
       ```
   }];
 
+  let builders = [
+    OpBuilder<(ins),
+    [{
+      build($_builder, $_state, Value());
+    }]>
+  ];
+
   let assemblyFormat = [{
         $result attr-dict `:` type($result)
   }];
+  let hasVerifier = 1;
+}
+
+def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
+    [SingleBlockImplicitTerminator<"YieldOp">]>,
+    Arguments<(ins AnySparseTensor:$tensor)>{
+  let summary = "Iterates over non-zero elements in a sparse tensor";
+  let description = [{
+     Iterates over every non-zero element in the given sparse tensor and executes
+     the block.
+
+     For a input sparse tensor with rank n, the block must take n + 1 arguments. The
+     first n arguments must be Index type, together indicating the current coordinates
+     of the element being visited. The last argument must have the same type as the
+     sparse tensor's element type, representing the actual value loaded from the input
+     tensor at the given coordinates.
+
+     Example:
+
+     ```mlir
+     sparse_tensor.foreach in %0 : tensor<?x?xf64, #DCSR> do {
+      ^bb0(%arg1: index, %arg2: index, %arg3: f64):
+        do something...
+     }
+     ```
+  }];
+
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "`in` $tensor attr-dict `:` type($tensor)  `do` $region";
   let hasVerifier = 1;
 }
 

@@ -26,9 +26,9 @@ using namespace mlir;
 
 namespace mlir {
 struct ScfToSPIRVContextImpl {
-  // Map between the spirv region control flow operation (spv.mlir.loop or
-  // spv.mlir.selection) to the VariableOp created to store the region results.
-  // The order of the VariableOp matches the order of the results.
+  // Map between the spirv region control flow operation (spirv.mlir.loop or
+  // spirv.mlir.selection) to the VariableOp created to store the region
+  // results. The order of the VariableOp matches the order of the results.
   DenseMap<Operation *, SmallVector<spirv::VariableOp, 8>> outputVars;
 };
 } // namespace mlir
@@ -120,9 +120,9 @@ public:
 
 /// Helper function to replaces SCF op outputs with SPIR-V variable loads.
 /// We create VariableOp to handle the results value of the control flow region.
-/// spv.mlir.loop/spv.mlir.selection currently don't yield value. Right after
-/// the loop we load the value from the allocation and use it as the SCF op
-/// result.
+/// spirv.mlir.loop/spirv.mlir.selection currently don't yield value. Right
+/// after the loop we load the value from the allocation and use it as the SCF
+/// op result.
 template <typename ScfOp, typename OpTy>
 static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
                                   ConversionPatternRewriter &rewriter,
@@ -174,7 +174,7 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, OpAdaptor adaptor,
   // Create the block for the header.
   auto *header = new Block();
   // Insert the header.
-  loopOp.body().getBlocks().insert(getBlockIt(loopOp.body(), 1), header);
+  loopOp.getBody().getBlocks().insert(getBlockIt(loopOp.getBody(), 1), header);
 
   // Create the new induction variable to use.
   Value adapLowerBound = adaptor.getLowerBound();
@@ -197,13 +197,13 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, OpAdaptor adaptor,
 
   // Move the blocks from the forOp into the loopOp. This is the body of the
   // loopOp.
-  rewriter.inlineRegionBefore(forOp->getRegion(0), loopOp.body(),
-                              getBlockIt(loopOp.body(), 2));
+  rewriter.inlineRegionBefore(forOp->getRegion(0), loopOp.getBody(),
+                              getBlockIt(loopOp.getBody(), 2));
 
   SmallVector<Value, 8> args(1, adaptor.getLowerBound());
   args.append(adaptor.getInitArgs().begin(), adaptor.getInitArgs().end());
   // Branch into it from the entry.
-  rewriter.setInsertionPointToEnd(&(loopOp.body().front()));
+  rewriter.setInsertionPointToEnd(&(loopOp.getBody().front()));
   rewriter.create<spirv::BranchOp>(loc, header, args);
 
   // Generate the rest of the loop header.
@@ -248,16 +248,16 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, OpAdaptor adaptor,
   // subsequently converges.
   auto loc = ifOp.getLoc();
 
-  // Create `spv.selection` operation, selection header block and merge block.
+  // Create `spirv.selection` operation, selection header block and merge block.
   auto selectionOp =
       rewriter.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
   auto *mergeBlock =
-      rewriter.createBlock(&selectionOp.body(), selectionOp.body().end());
+      rewriter.createBlock(&selectionOp.getBody(), selectionOp.getBody().end());
   rewriter.create<spirv::MergeOp>(loc);
 
   OpBuilder::InsertionGuard guard(rewriter);
   auto *selectionHeaderBlock =
-      rewriter.createBlock(&selectionOp.body().front());
+      rewriter.createBlock(&selectionOp.getBody().front());
 
   // Inline `then` region before the merge block and branch to it.
   auto &thenRegion = ifOp.getThenRegion();
@@ -277,7 +277,7 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, OpAdaptor adaptor,
     rewriter.inlineRegionBefore(elseRegion, mergeBlock);
   }
 
-  // Create a `spv.BranchConditional` operation for selection header block.
+  // Create a `spirv.BranchConditional` operation for selection header block.
   rewriter.setInsertionPointToEnd(selectionHeaderBlock);
   rewriter.create<spirv::BranchConditionalOp>(loc, adaptor.getCondition(),
                                               thenBlock, ArrayRef<Value>(),
@@ -367,12 +367,12 @@ WhileOpConversion::matchAndRewrite(scf::WhileOp whileOp, OpAdaptor adaptor,
     return failure();
 
   // Move the while before block as the initial loop header block.
-  rewriter.inlineRegionBefore(beforeRegion, loopOp.body(),
-                              getBlockIt(loopOp.body(), 1));
+  rewriter.inlineRegionBefore(beforeRegion, loopOp.getBody(),
+                              getBlockIt(loopOp.getBody(), 1));
 
   // Move the while after block as the initial loop body block.
-  rewriter.inlineRegionBefore(afterRegion, loopOp.body(),
-                              getBlockIt(loopOp.body(), 2));
+  rewriter.inlineRegionBefore(afterRegion, loopOp.getBody(),
+                              getBlockIt(loopOp.getBody(), 2));
 
   // Jump from the loop entry block to the loop header block.
   rewriter.setInsertionPointToEnd(&entryBlock);

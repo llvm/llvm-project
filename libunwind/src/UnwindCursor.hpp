@@ -442,7 +442,7 @@ public:
   virtual void setFloatReg(int, unw_fpreg_t) {
     _LIBUNWIND_ABORT("setFloatReg not implemented");
   }
-  virtual int step() { _LIBUNWIND_ABORT("step not implemented"); }
+  virtual int step(bool = false) { _LIBUNWIND_ABORT("step not implemented"); }
   virtual void getInfo(unw_proc_info_t *) {
     _LIBUNWIND_ABORT("getInfo not implemented");
   }
@@ -494,7 +494,7 @@ public:
   virtual bool        validFloatReg(int);
   virtual unw_fpreg_t getFloatReg(int);
   virtual void        setFloatReg(int, unw_fpreg_t);
-  virtual int         step();
+  virtual int         step(bool = false);
   virtual void        getInfo(unw_proc_info_t *);
   virtual void        jumpto();
   virtual bool        isSignalFrame();
@@ -925,7 +925,7 @@ public:
   virtual bool        validFloatReg(int);
   virtual unw_fpreg_t getFloatReg(int);
   virtual void        setFloatReg(int, unw_fpreg_t);
-  virtual int         step();
+  virtual int         step(bool stage2 = false);
   virtual void        getInfo(unw_proc_info_t *);
   virtual void        jumpto();
   virtual bool        isSignalFrame();
@@ -999,22 +999,21 @@ private:
                          pint_t pc, uintptr_t dso_base);
   bool getInfoFromDwarfSection(pint_t pc, const UnwindInfoSections &sects,
                                             uint32_t fdeSectionOffsetHint=0);
-  int stepWithDwarfFDE() {
-    return DwarfInstructions<A, R>::stepWithDwarf(_addressSpace,
-                                              (pint_t)this->getReg(UNW_REG_IP),
-                                              (pint_t)_info.unwind_info,
-                                              _registers, _isSignalFrame);
+  int stepWithDwarfFDE(bool stage2) {
+    return DwarfInstructions<A, R>::stepWithDwarf(
+        _addressSpace, (pint_t)this->getReg(UNW_REG_IP),
+        (pint_t)_info.unwind_info, _registers, _isSignalFrame, stage2);
   }
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
   bool getInfoFromCompactEncodingSection(pint_t pc,
                                             const UnwindInfoSections &sects);
-  int stepWithCompactEncoding() {
-  #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+  int stepWithCompactEncoding(bool stage2 = false) {
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
     if ( compactSaysUseDwarf() )
-      return stepWithDwarfFDE();
-  #endif
+      return stepWithDwarfFDE(stage2);
+#endif
     R dummy;
     return stepWithCompactEncoding(dummy);
   }
@@ -2796,8 +2795,8 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_S390X)
 
-template <typename A, typename R>
-int UnwindCursor<A, R>::step() {
+template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
+  (void)stage2;
   // Bottom of stack is defined is when unwind info cannot be found.
   if (_unwindInfoMissing)
     return UNW_STEP_END;
@@ -2811,13 +2810,13 @@ int UnwindCursor<A, R>::step() {
 #endif
   {
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-    result = this->stepWithCompactEncoding();
+    result = this->stepWithCompactEncoding(stage2);
 #elif defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
     result = this->stepWithSEHData();
 #elif defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
     result = this->stepWithTBTableData();
 #elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
-    result = this->stepWithDwarfFDE();
+    result = this->stepWithDwarfFDE(stage2);
 #elif defined(_LIBUNWIND_ARM_EHABI)
     result = this->stepWithEHABI();
 #else

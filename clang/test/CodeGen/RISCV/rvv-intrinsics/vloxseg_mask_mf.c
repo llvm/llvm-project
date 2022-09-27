@@ -6925,7 +6925,7 @@ void test_vloxseg8ei64_v_f32mf2_m (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat3
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei8_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg2.nxv1f16.nxv1i8.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg2.nxv1f16.nxv1i8.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6938,7 +6938,7 @@ void test_vloxseg2ei8_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, const _Flo
 
 // CHECK-RV64-LABEL: @test_vloxseg3ei8_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg3.nxv1f16.nxv1i8.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg3.nxv1f16.nxv1i8.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6953,7 +6953,7 @@ void test_vloxseg3ei8_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg4ei8_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg4.nxv1f16.nxv1i8.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg4.nxv1f16.nxv1i8.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6970,7 +6970,7 @@ void test_vloxseg4ei8_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg5ei8_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg5.nxv1f16.nxv1i8.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg5.nxv1f16.nxv1i8.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -6989,7 +6989,7 @@ void test_vloxseg5ei8_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg6ei8_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg6.nxv1f16.nxv1i8.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg6.nxv1f16.nxv1i8.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7010,7 +7010,7 @@ void test_vloxseg6ei8_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg7ei8_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg7.nxv1f16.nxv1i8.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg7.nxv1f16.nxv1i8.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7033,7 +7033,7 @@ void test_vloxseg7ei8_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg8ei8_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg8.nxv1f16.nxv1i8.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg8.nxv1f16.nxv1i8.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7058,7 +7058,7 @@ void test_vloxseg8ei8_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei8_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg2.nxv2f16.nxv2i8.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg2.nxv2f16.nxv2i8.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7071,7 +7071,7 @@ void test_vloxseg2ei8_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, const _Flo
 
 // CHECK-RV64-LABEL: @test_vloxseg3ei8_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg3.nxv2f16.nxv2i8.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg3.nxv2f16.nxv2i8.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7086,7 +7086,7 @@ void test_vloxseg3ei8_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg4ei8_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg4.nxv2f16.nxv2i8.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg4.nxv2f16.nxv2i8.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7103,7 +7103,7 @@ void test_vloxseg4ei8_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg5ei8_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg5.nxv2f16.nxv2i8.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg5.nxv2f16.nxv2i8.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7122,7 +7122,7 @@ void test_vloxseg5ei8_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg6ei8_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg6.nxv2f16.nxv2i8.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg6.nxv2f16.nxv2i8.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7143,7 +7143,7 @@ void test_vloxseg6ei8_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg7ei8_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg7.nxv2f16.nxv2i8.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg7.nxv2f16.nxv2i8.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7166,7 +7166,7 @@ void test_vloxseg7ei8_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg8ei8_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg8.nxv2f16.nxv2i8.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg8.nxv2f16.nxv2i8.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i8> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7191,7 +7191,7 @@ void test_vloxseg8ei8_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16mf
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg2.nxv1f16.nxv1i16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg2.nxv1f16.nxv1i16.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7204,7 +7204,7 @@ void test_vloxseg2ei16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, const _Fl
 
 // CHECK-RV64-LABEL: @test_vloxseg3ei16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg3.nxv1f16.nxv1i16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg3.nxv1f16.nxv1i16.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7219,7 +7219,7 @@ void test_vloxseg3ei16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg4ei16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg4.nxv1f16.nxv1i16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg4.nxv1f16.nxv1i16.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7236,7 +7236,7 @@ void test_vloxseg4ei16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg5ei16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg5.nxv1f16.nxv1i16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg5.nxv1f16.nxv1i16.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7255,7 +7255,7 @@ void test_vloxseg5ei16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg6ei16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg6.nxv1f16.nxv1i16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg6.nxv1f16.nxv1i16.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7276,7 +7276,7 @@ void test_vloxseg6ei16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg7ei16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg7.nxv1f16.nxv1i16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg7.nxv1f16.nxv1i16.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7299,7 +7299,7 @@ void test_vloxseg7ei16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg8ei16_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg8.nxv1f16.nxv1i16.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg8.nxv1f16.nxv1i16.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7324,7 +7324,7 @@ void test_vloxseg8ei16_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg2.nxv2f16.nxv2i16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg2.nxv2f16.nxv2i16.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7337,7 +7337,7 @@ void test_vloxseg2ei16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, const _Fl
 
 // CHECK-RV64-LABEL: @test_vloxseg3ei16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg3.nxv2f16.nxv2i16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg3.nxv2f16.nxv2i16.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7352,7 +7352,7 @@ void test_vloxseg3ei16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg4ei16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg4.nxv2f16.nxv2i16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg4.nxv2f16.nxv2i16.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7369,7 +7369,7 @@ void test_vloxseg4ei16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg5ei16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg5.nxv2f16.nxv2i16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg5.nxv2f16.nxv2i16.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7388,7 +7388,7 @@ void test_vloxseg5ei16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg6ei16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg6.nxv2f16.nxv2i16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg6.nxv2f16.nxv2i16.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7409,7 +7409,7 @@ void test_vloxseg6ei16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg7ei16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg7.nxv2f16.nxv2i16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg7.nxv2f16.nxv2i16.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7432,7 +7432,7 @@ void test_vloxseg7ei16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg8ei16_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg8.nxv2f16.nxv2i16.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg8.nxv2f16.nxv2i16.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i16> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7457,7 +7457,7 @@ void test_vloxseg8ei16_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei32_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg2.nxv1f16.nxv1i32.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg2.nxv1f16.nxv1i32.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7470,7 +7470,7 @@ void test_vloxseg2ei32_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, const _Fl
 
 // CHECK-RV64-LABEL: @test_vloxseg3ei32_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg3.nxv1f16.nxv1i32.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg3.nxv1f16.nxv1i32.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7485,7 +7485,7 @@ void test_vloxseg3ei32_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg4ei32_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg4.nxv1f16.nxv1i32.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg4.nxv1f16.nxv1i32.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7502,7 +7502,7 @@ void test_vloxseg4ei32_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg5ei32_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg5.nxv1f16.nxv1i32.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg5.nxv1f16.nxv1i32.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7521,7 +7521,7 @@ void test_vloxseg5ei32_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg6ei32_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg6.nxv1f16.nxv1i32.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg6.nxv1f16.nxv1i32.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7542,7 +7542,7 @@ void test_vloxseg6ei32_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg7ei32_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg7.nxv1f16.nxv1i32.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg7.nxv1f16.nxv1i32.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7565,7 +7565,7 @@ void test_vloxseg7ei32_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg8ei32_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg8.nxv1f16.nxv1i32.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg8.nxv1f16.nxv1i32.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7590,7 +7590,7 @@ void test_vloxseg8ei32_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei32_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg2.nxv2f16.nxv2i32.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg2.nxv2f16.nxv2i32.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7603,7 +7603,7 @@ void test_vloxseg2ei32_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, const _Fl
 
 // CHECK-RV64-LABEL: @test_vloxseg3ei32_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg3.nxv2f16.nxv2i32.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg3.nxv2f16.nxv2i32.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7618,7 +7618,7 @@ void test_vloxseg3ei32_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg4ei32_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg4.nxv2f16.nxv2i32.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg4.nxv2f16.nxv2i32.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7635,7 +7635,7 @@ void test_vloxseg4ei32_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg5ei32_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg5.nxv2f16.nxv2i32.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg5.nxv2f16.nxv2i32.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7654,7 +7654,7 @@ void test_vloxseg5ei32_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg6ei32_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg6.nxv2f16.nxv2i32.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg6.nxv2f16.nxv2i32.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7675,7 +7675,7 @@ void test_vloxseg6ei32_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg7ei32_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg7.nxv2f16.nxv2i32.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg7.nxv2f16.nxv2i32.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7698,7 +7698,7 @@ void test_vloxseg7ei32_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg8ei32_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg8.nxv2f16.nxv2i32.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg8.nxv2f16.nxv2i32.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7723,7 +7723,7 @@ void test_vloxseg8ei32_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei64_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg2.nxv1f16.nxv1i64.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg2.nxv1f16.nxv1i64.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7736,7 +7736,7 @@ void test_vloxseg2ei64_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, const _Fl
 
 // CHECK-RV64-LABEL: @test_vloxseg3ei64_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg3.nxv1f16.nxv1i64.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg3.nxv1f16.nxv1i64.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7751,7 +7751,7 @@ void test_vloxseg3ei64_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg4ei64_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg4.nxv1f16.nxv1i64.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg4.nxv1f16.nxv1i64.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7768,7 +7768,7 @@ void test_vloxseg4ei64_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg5ei64_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg5.nxv1f16.nxv1i64.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg5.nxv1f16.nxv1i64.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7787,7 +7787,7 @@ void test_vloxseg5ei64_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg6ei64_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg6.nxv1f16.nxv1i64.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg6.nxv1f16.nxv1i64.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7808,7 +7808,7 @@ void test_vloxseg6ei64_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg7ei64_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg7.nxv1f16.nxv1i64.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg7.nxv1f16.nxv1i64.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7831,7 +7831,7 @@ void test_vloxseg7ei64_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg8ei64_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg8.nxv1f16.nxv1i64.i64(<vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, <vscale x 1 x half> undef, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } @llvm.riscv.vloxseg8.nxv1f16.nxv1i64.i64(<vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, <vscale x 1 x half> poison, half* [[BASE:%.*]], <vscale x 1 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x half> [[TMP1]], <vscale x 1 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half> } [[TMP0]], 1
@@ -7856,7 +7856,7 @@ void test_vloxseg8ei64_v_f16mf4 (vfloat16mf4_t *v0, vfloat16mf4_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei64_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg2.nxv2f16.nxv2i64.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg2.nxv2f16.nxv2i64.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7869,7 +7869,7 @@ void test_vloxseg2ei64_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, const _Fl
 
 // CHECK-RV64-LABEL: @test_vloxseg3ei64_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg3.nxv2f16.nxv2i64.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg3.nxv2f16.nxv2i64.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7884,7 +7884,7 @@ void test_vloxseg3ei64_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg4ei64_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg4.nxv2f16.nxv2i64.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg4.nxv2f16.nxv2i64.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7901,7 +7901,7 @@ void test_vloxseg4ei64_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg5ei64_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg5.nxv2f16.nxv2i64.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg5.nxv2f16.nxv2i64.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7920,7 +7920,7 @@ void test_vloxseg5ei64_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg6ei64_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg6.nxv2f16.nxv2i64.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg6.nxv2f16.nxv2i64.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7941,7 +7941,7 @@ void test_vloxseg6ei64_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg7ei64_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg7.nxv2f16.nxv2i64.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg7.nxv2f16.nxv2i64.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -7964,7 +7964,7 @@ void test_vloxseg7ei64_v_f16mf2 (vfloat16mf2_t *v0, vfloat16mf2_t *v1, vfloat16m
 
 // CHECK-RV64-LABEL: @test_vloxseg8ei64_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg8.nxv2f16.nxv2i64.i64(<vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, <vscale x 2 x half> undef, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } @llvm.riscv.vloxseg8.nxv2f16.nxv2i64.i64(<vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, <vscale x 2 x half> poison, half* [[BASE:%.*]], <vscale x 2 x i64> [[BINDEX:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 2 x half> [[TMP1]], <vscale x 2 x half>* [[V0:%.*]], align 2
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half> } [[TMP0]], 1
@@ -9079,7 +9079,7 @@ void test_vloxseg2ei32_v_i32mf2_tumu(vint32mf2_t *v0, vint32mf2_t *v1, vbool64_t
 
 // CHECK-RV64-LABEL: @test_vloxseg2ei32_v_i32mf2_tama(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vloxseg2.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vloxseg2.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> poison, <vscale x 1 x i32> poison, i32* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
 // CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
 // CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1

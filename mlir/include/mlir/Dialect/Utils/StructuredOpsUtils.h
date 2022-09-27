@@ -23,6 +23,9 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
+// Pull in all enum type definitions and utility function declarations.
+#include "mlir/Dialect/Utils/DialectUtilsEnums.h.inc"
+
 namespace mlir {
 
 class OpBuilder;
@@ -108,6 +111,17 @@ inline unsigned getNumIterators(ArrayAttr iteratorTypes) {
   for (auto n : getAllIteratorTypeNames())
     res += getNumIterators(n, iteratorTypes);
   return res;
+}
+
+/// Return positions in `iteratorTypes` that match `iteratorTypeName`.
+inline void findPositionsOfType(ArrayAttr iteratorTypes,
+                                StringRef iteratorTypeName,
+                                SmallVectorImpl<unsigned> &res) {
+  for (const auto &en :
+       llvm::enumerate(iteratorTypes.getAsValueRange<StringAttr>())) {
+    if (en.value() == iteratorTypeName)
+      res.push_back(en.index());
+  }
 }
 
 /// Helper StructuredGenerator class to manipulate and rewrite ops with

@@ -6895,7 +6895,10 @@ HLSLNumThreadsAttr *Sema::mergeHLSLNumThreadsAttr(Decl *D,
 static void handleHLSLSVGroupIndexAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   using llvm::Triple;
   Triple Target = S.Context.getTargetInfo().getTriple();
-  if (Target.getEnvironment() != Triple::Compute) {
+  if (Target.getEnvironment() != Triple::Compute &&
+      Target.getEnvironment() != Triple::Library) {
+    // FIXME: it is OK for a compute shader entry and pixel shader entry live in
+    // same HLSL file. Issue https://github.com/llvm/llvm-project/issues/57880.
     uint32_t Pipeline =
         (uint32_t)S.Context.getTargetInfo().getTriple().getEnvironment() -
         (uint32_t)llvm::Triple::Pixel;
@@ -6942,6 +6945,78 @@ Sema::mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
     return nullptr;
   }
   return HLSLShaderAttr::Create(Context, ShaderType, AL);
+}
+
+static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
+                                          const ParsedAttr &AL) {
+  StringRef Space = "space0";
+  StringRef Slot = "";
+
+  if (!AL.isArgIdent(0)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+        << AL << AANT_ArgumentIdentifier;
+    return;
+  }
+
+  IdentifierLoc *Loc = AL.getArgAsIdent(0);
+  StringRef Str = Loc->Ident->getName();
+  SourceLocation ArgLoc = Loc->Loc;
+
+  SourceLocation SpaceArgLoc;
+  if (AL.getNumArgs() == 2) {
+    Slot = Str;
+    if (!AL.isArgIdent(1)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
+          << AL << AANT_ArgumentIdentifier;
+      return;
+    }
+
+    IdentifierLoc *Loc = AL.getArgAsIdent(1);
+    Space = Loc->Ident->getName();
+    SpaceArgLoc = Loc->Loc;
+  } else {
+    Slot = Str;
+  }
+
+  // Validate.
+  if (!Slot.empty()) {
+    switch (Slot[0]) {
+    case 'u':
+    case 'b':
+    case 's':
+    case 't':
+      break;
+    default:
+      S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type)
+          << Slot.substr(0, 1);
+      return;
+    }
+
+    StringRef SlotNum = Slot.substr(1);
+    unsigned Num = 0;
+    if (SlotNum.getAsInteger(10, Num)) {
+      S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_number);
+      return;
+    }
+  }
+
+  if (!Space.startswith("space")) {
+    S.Diag(SpaceArgLoc, diag::err_hlsl_expected_space) << Space;
+    return;
+  }
+  StringRef SpaceNum = Space.substr(5);
+  unsigned Num = 0;
+  if (SpaceNum.getAsInteger(10, Num)) {
+    S.Diag(SpaceArgLoc, diag::err_hlsl_expected_space) << Space;
+    return;
+  }
+
+  // FIXME: check reg type match decl. Issue
+  // https://github.com/llvm/llvm-project/issues/57886.
+  HLSLResourceBindingAttr *NewAttr =
+      HLSLResourceBindingAttr::Create(S.getASTContext(), Slot, Space, AL);
+  if (NewAttr)
+    D->addAttr(NewAttr);
 }
 
 static void handleMSInheritanceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8922,6 +8997,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLShader:
     handleHLSLShaderAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_HLSLResourceBinding:
+    handleHLSLResourceBindingAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AbiTag:

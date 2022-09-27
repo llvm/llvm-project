@@ -236,22 +236,7 @@ define void @uniform_store_varying_value(i32* align(4) %addr) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP0]], 13
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP0]], 14
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[TMP0]], 15
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[ADDR:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP3]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP4]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP5]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP6]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP7]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP8]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP9]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP11]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP12]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP13]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP14]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP15]], i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 [[TMP16]], i32* [[ADDR]], align 4
+; CHECK-NEXT:    store i32 [[TMP16]], i32* [[ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -337,21 +322,6 @@ define void @uniform_copy(i32* %A, i32* %B) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 4, !alias.scope !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
 ; CHECK-NEXT:    store i32 [[TMP0]], i32* [[B]], align 4, !alias.scope !15, !noalias !12
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096

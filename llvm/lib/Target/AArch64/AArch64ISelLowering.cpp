@@ -4673,7 +4673,18 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_umin:
     return DAG.getNode(ISD::UMIN, dl, Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
-
+  case Intrinsic::aarch64_neon_scalar_sqxtn:
+  case Intrinsic::aarch64_neon_scalar_sqxtun:
+  case Intrinsic::aarch64_neon_scalar_uqxtn: {
+    assert(Op.getValueType() == MVT::i32 || Op.getValueType() == MVT::f32);
+    if (Op.getValueType() == MVT::i32)
+      return DAG.getNode(ISD::BITCAST, dl, MVT::i32,
+                         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::f32,
+                                     Op.getOperand(0),
+                                     DAG.getNode(ISD::BITCAST, dl, MVT::f64,
+                                                 Op.getOperand(1))));
+    return SDValue();
+  }
   case Intrinsic::aarch64_sve_sunpkhi:
     return DAG.getNode(AArch64ISD::SUNPKHI, dl, Op.getValueType(),
                        Op.getOperand(1));
@@ -10784,6 +10795,51 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Try to fold shuffle (tbl2, tbl2) into a single tbl4.
+static SDValue tryToConvertShuffleOfTbl2ToTbl4(SDValue Op,
+                                               ArrayRef<int> ShuffleMask,
+                                               SelectionDAG &DAG) {
+  SDValue Tbl1 = Op->getOperand(0);
+  SDValue Tbl2 = Op->getOperand(1);
+  SDLoc dl(Op);
+  SDValue Tbl2ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl2, dl, MVT::i64);
+
+  EVT VT = Op.getValueType();
+  if (Tbl1->getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      Tbl1->getOperand(0) != Tbl2ID ||
+      Tbl2->getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      Tbl2->getOperand(0) != Tbl2ID)
+    return SDValue();
+
+  if (Tbl1->getValueType(0) != MVT::v16i8 ||
+      Tbl2->getValueType(0) != MVT::v16i8)
+    return SDValue();
+
+  SDValue Mask1 = Tbl1->getOperand(3);
+  SDValue Mask2 = Tbl2->getOperand(3);
+  SmallVector<SDValue, 16> TBLMaskParts(16, SDValue());
+  for (unsigned I = 0; I < 16; I++) {
+    if (ShuffleMask[I] < 16)
+      TBLMaskParts[I] = Mask1->getOperand(ShuffleMask[I]);
+    else {
+      auto *C =
+          dyn_cast<ConstantSDNode>(Mask2->getOperand(ShuffleMask[I] - 16));
+      if (!C)
+        return SDValue();
+      TBLMaskParts[I] = DAG.getConstant(C->getSExtValue() + 32, dl, MVT::i32);
+    }
+  }
+
+  SDValue TBLMask = DAG.getBuildVector(VT, dl, TBLMaskParts);
+  SDValue ID =
+      DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl4, dl, MVT::i64);
+
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::v16i8,
+                     {ID, Tbl1->getOperand(1), Tbl1->getOperand(2),
+                      Tbl2->getOperand(1), Tbl2->getOperand(2), TBLMask});
+}
+
 SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                                                    SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -10806,6 +10862,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   assert(V1.getValueType() == VT && "Unexpected VECTOR_SHUFFLE type!");
   assert(ShuffleMask.size() == VT.getVectorNumElements() &&
          "Unexpected VECTOR_SHUFFLE mask size!");
+
+  if (SDValue Res = tryToConvertShuffleOfTbl2ToTbl4(Op, ShuffleMask, DAG))
+    return Res;
 
   if (SVN->isSplat()) {
     int Lane = SVN->getSplatIndex();
@@ -20280,71 +20339,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                         /*OnlyPackedOffsets=*/false);
     case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
       return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_IMM_PRED);
-    case Intrinsic::aarch64_sve_tuple_get: {
-      SDLoc DL(N);
-      SDValue Chain = N->getOperand(0);
-      SDValue Src1 = N->getOperand(2);
-      SDValue Idx = N->getOperand(3);
-
-      uint64_t IdxConst = cast<ConstantSDNode>(Idx)->getZExtValue();
-      EVT ResVT = N->getValueType(0);
-      uint64_t NumLanes = ResVT.getVectorElementCount().getKnownMinValue();
-      SDValue ExtIdx = DAG.getVectorIdxConstant(IdxConst * NumLanes, DL);
-      SDValue Val =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, Src1, ExtIdx);
-      return DAG.getMergeValues({Val, Chain}, DL);
-    }
-    case Intrinsic::aarch64_sve_tuple_set: {
-      SDLoc DL(N);
-      SDValue Chain = N->getOperand(0);
-      SDValue Tuple = N->getOperand(2);
-      SDValue Idx = N->getOperand(3);
-      SDValue Vec = N->getOperand(4);
-
-      EVT TupleVT = Tuple.getValueType();
-      uint64_t TupleLanes = TupleVT.getVectorElementCount().getKnownMinValue();
-
-      uint64_t IdxConst = cast<ConstantSDNode>(Idx)->getZExtValue();
-      uint64_t NumLanes =
-          Vec.getValueType().getVectorElementCount().getKnownMinValue();
-
-      if ((TupleLanes % NumLanes) != 0)
-        report_fatal_error("invalid tuple vector!");
-
-      uint64_t NumVecs = TupleLanes / NumLanes;
-
-      SmallVector<SDValue, 4> Opnds;
-      for (unsigned I = 0; I < NumVecs; ++I) {
-        if (I == IdxConst)
-          Opnds.push_back(Vec);
-        else {
-          SDValue ExtIdx = DAG.getVectorIdxConstant(I * NumLanes, DL);
-          Opnds.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
-                                      Vec.getValueType(), Tuple, ExtIdx));
-        }
-      }
-      SDValue Concat =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, Tuple.getValueType(), Opnds);
-      return DAG.getMergeValues({Concat, Chain}, DL);
-    }
-    case Intrinsic::aarch64_sve_tuple_create2:
-    case Intrinsic::aarch64_sve_tuple_create3:
-    case Intrinsic::aarch64_sve_tuple_create4: {
-      SDLoc DL(N);
-      SDValue Chain = N->getOperand(0);
-
-      SmallVector<SDValue, 4> Opnds;
-      for (unsigned I = 2; I < N->getNumOperands(); ++I)
-        Opnds.push_back(N->getOperand(I));
-
-      EVT VT = Opnds[0].getValueType();
-      EVT EltVT = VT.getVectorElementType();
-      EVT DestVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                                    VT.getVectorElementCount() *
-                                        (N->getNumOperands() - 2));
-      SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, DestVT, Opnds);
-      return DAG.getMergeValues({Concat, Chain}, DL);
-    }
     case Intrinsic::aarch64_rndr:
     case Intrinsic::aarch64_rndrrs: {
       unsigned IntrinsicID =

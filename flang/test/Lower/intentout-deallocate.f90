@@ -141,5 +141,53 @@ contains
 ! CHECK:   fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: }
 
+  subroutine sub10(a)
+    integer, intent(out), allocatable :: a(:)
+
+  entry sub11
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmod1Psub10(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
+! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK: fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK: fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+
+! CHECK-LABEL: func.func @_QMmod1Psub11() {
+! CHECK-NOT: fir.freemem
+
+  subroutine sub12(a)
+    integer, intent(out), allocatable :: a(:)
+  entry sub13(a)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMmod1Psub12(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
+! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK: fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK: fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+
+! CHECK-LABEL: func.func @_QMmod1Psub13(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "a"}) {
+! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK: fir.freemem %[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
+! CHECK: %[[C0:.*]] = arith.constant 0 : index
+! CHECK: %[[SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]](%[[SHAPE]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK: fir.store %[[EMBOX]] to %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+
+
 end module
 
