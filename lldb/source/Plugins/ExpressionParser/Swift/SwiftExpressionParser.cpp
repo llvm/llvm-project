@@ -1037,14 +1037,11 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     if (repl) {
       if (!variable.GetType().IsVoidType()) {
         auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
-        if (is_result)
-          offset = repl_mat.AddREPLResultVariable(
-              variable.GetType(), variable.GetDecl(),
-              &user_expression.GetResultDelegate(), error);
-        else
-          offset = repl_mat.AddREPLResultVariable(
-              variable.GetType(), variable.GetDecl(),
-              &user_expression.GetErrorDelegate(), error);
+        offset = repl_mat.AddREPLResultVariable(
+            variable.GetType(), variable.GetDecl(),
+            is_result ? &user_expression.GetResultDelegate()
+                      : &user_expression.GetErrorDelegate(),
+            error);
       }
     } else {
       CompilerType actual_type = variable.GetType();
@@ -1081,14 +1078,11 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
         actual_type =
             swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
 
-      if (is_result)
-        offset = materializer.AddResultVariable(
-            actual_type, false, true, &user_expression.GetResultDelegate(),
-            error);
-      else
-        offset = materializer.AddResultVariable(
-            actual_type, false, true, &user_expression.GetErrorDelegate(),
-            error);
+      offset = materializer.AddResultVariable(
+          actual_type, false, true,
+          is_result ? &user_expression.GetResultDelegate()
+                    : &user_expression.GetErrorDelegate(),
+          error);
     }
 
     if (!error.Success()) {
