@@ -143,12 +143,19 @@ public:
     switch (action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (outputStream && mlirMod) {
+
+        // Run CIR cleanup, in the future also the relevent raising and
+        // some code analysis.
         if (!feOptions.DisableCIRPasses) {
           runCIRToCIRPasses(mlirMod, mlirCtx.get(),
                             !feOptions.DisableCIRVerifier);
         }
-        mlir::OpPrintingFlags flags;
+
+        // Emit remaining defaulted C++ methods
+        gen->buildDefaultMethods();
+
         // FIXME: we cannot roundtrip prettyForm=true right now.
+        mlir::OpPrintingFlags flags;
         flags.enableDebugInfo(/*prettyForm=*/false);
         mlirMod->print(*outputStream, flags);
       }

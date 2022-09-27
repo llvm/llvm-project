@@ -1476,6 +1476,14 @@ mlir::cir::FuncOp CIRGenModule::createCIRFunction(mlir::Location loc,
   return f;
 }
 
+bool isDefaultedMethod(const clang::FunctionDecl *FD) {
+  if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
+      (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||
+       cast<CXXMethodDecl>(FD)->isMoveAssignmentOperator()))
+    return true;
+  return false;
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return a CIR Function with the specified type. If there is
 /// something in the module with the specified name, return it potentially
@@ -1613,7 +1621,10 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
            FD = FD->getPreviousDecl()) {
         if (isa<CXXRecordDecl>(FD->getLexicalDeclContext())) {
           if (FD->doesThisDeclarationHaveABody()) {
-            addDeferredDeclToEmit(GD.getWithDecl(FD));
+            if (isDefaultedMethod(FD))
+              addDefaultMethodsToEmit(GD.getWithDecl(FD));
+            else
+              addDeferredDeclToEmit(GD.getWithDecl(FD));
             break;
           }
         }
@@ -1651,6 +1662,44 @@ mlir::Location CIRGenModule::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, builder.getContext());
 }
 
+void CIRGenModule::buildGlobalDecl(clang::GlobalDecl &D) {
+  // We should call GetAddrOfGlobal with IsForDefinition set to true in order
+  // to get a Value with exactly the type we need, not something that might
+  // have been created for another decl with the same mangled name but
+  // different type.
+  auto *Op = GetAddrOfGlobal(D, ForDefinition);
+
+  // In case of different address spaces, we may still get a cast, even with
+  // IsForDefinition equal to true. Query mangled names table to get
+  // GlobalValue.
+  if (!Op) {
+    Op = getGlobalValue(getMangledName(D));
+  }
+
+  // Make sure getGlobalValue returned non-null.
+  assert(Op);
+  assert(isa<mlir::cir::FuncOp>(Op) &&
+         "not implemented, only supports FuncOp for now");
+
+  // Check to see if we've already emitted this. This is necessary for a
+  // couple of reasons: first, decls can end up in deferred-decls queue
+  // multiple times, and second, decls can end up with definitions in unusual
+  // ways (e.g. by an extern inline function acquiring a strong function
+  // redefinition). Just ignore those cases.
+  // TODO: Not sure what to map this to for MLIR
+  if (auto Fn = cast<mlir::cir::FuncOp>(Op))
+    if (!Fn.isDeclaration())
+      return;
+
+  // If this is OpenMP, check if it is legal to emit this global normally.
+  if (getLangOpts().OpenMP) {
+    llvm_unreachable("NYI");
+  }
+
+  // Otherwise, emit the definition and move on to the next one.
+  buildGlobalDefinition(D, Op);
+}
+
 void CIRGenModule::buildDeferred() {
   // Emit deferred declare target declarations
   if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)
@@ -1681,41 +1730,7 @@ void CIRGenModule::buildDeferred() {
   CurDeclsToEmit.swap(DeferredDeclsToEmit);
 
   for (auto &D : CurDeclsToEmit) {
-    // We should call GetAddrOfGlobal with IsForDefinition set to true in order
-    // to get a Value with exactly the type we need, not something that might
-    // have been created for another decl with the same mangled name but
-    // different type.
-    auto *Op = GetAddrOfGlobal(D, ForDefinition);
-
-    // In case of different address spaces, we may still get a cast, even with
-    // IsForDefinition equal to true. Query mangled names table to get
-    // GlobalValue.
-    if (!Op) {
-      Op = getGlobalValue(getMangledName(D));
-    }
-
-    // Make sure getGlobalValue returned non-null.
-    assert(Op);
-    assert(isa<mlir::cir::FuncOp>(Op) &&
-           "not implemented, only supports FuncOp for now");
-
-    // Check to see if we've already emitted this. This is necessary for a
-    // couple of reasons: first, decls can end up in deferred-decls queue
-    // multiple times, and second, decls can end up with definitions in unusual
-    // ways (e.g. by an extern inline function acquiring a strong function
-    // redefinition). Just ignore those cases.
-    // TODO: Not sure what to map this to for MLIR
-    if (auto Fn = cast<mlir::cir::FuncOp>(Op))
-      if (!Fn.isDeclaration())
-        continue;
-
-    // If this is OpenMP, check if it is legal to emit this global normally.
-    if (getLangOpts().OpenMP) {
-      llvm_unreachable("NYI");
-    }
-
-    // Otherwise, emit the definition and move on to the next one.
-    buildGlobalDefinition(D, Op);
+    buildGlobalDecl(D);
 
     // If we found out that we need to emit more decls, do that recursively.
     // This has the advantage that the decls are emitted in a DFS and related
@@ -1725,6 +1740,13 @@ void CIRGenModule::buildDeferred() {
       assert(DeferredVTables.empty() && DeferredDeclsToEmit.empty());
     }
   }
+}
+
+void CIRGenModule::buildDefaultMethods() {
+  // Differently from DeferredDeclsToEmit, there's no recurrent use of
+  // DefaultMethodsToEmit, so use it directly for emission.
+  for (auto &D : DefaultMethodsToEmit)
+    buildGlobalDecl(D);
 }
 
 mlir::IntegerAttr CIRGenModule::getSize(CharUnits size) {
