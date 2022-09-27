@@ -265,6 +265,18 @@ END_REGISTER_VP(vp_maxnum, VP_FMAXNUM)
 BEGIN_REGISTER_VP(vp_ceil, 1, 2, VP_FCEIL, -1)
 END_REGISTER_VP(vp_ceil, VP_FCEIL)
 
+// llvm.vp.floor(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_floor, 1, 2, VP_FFLOOR, -1)
+END_REGISTER_VP(vp_floor, VP_FFLOOR)
+
+// llvm.vp.round(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_round, 1, 2, VP_FROUND, -1)
+END_REGISTER_VP(vp_round, VP_FROUND)
+
+// llvm.vp.roundeven(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_roundeven, 1, 2, VP_FROUNDEVEN, -1)
+END_REGISTER_VP(vp_roundeven, VP_FROUNDEVEN)
+
 ///// } Floating-Point Arithmetic
 
 ///// Type Casts {
