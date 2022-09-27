@@ -801,12 +801,6 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
         Expr *NewIDC = canonicalizeImmediatelyDeclaredConstraint(
                 *this, TC->getImmediatelyDeclaredConstraint(),
                 ParamAsArgument);
-        TemplateArgumentListInfo CanonArgsAsWritten;
-        if (auto *Args = TC->getTemplateArgsAsWritten())
-          for (const auto &ArgLoc : Args->arguments())
-            CanonArgsAsWritten.addArgument(
-                TemplateArgumentLoc(ArgLoc.getArgument(),
-                                    TemplateArgumentLocInfo()));
         NewTTP->setTypeConstraint(
             NestedNameSpecifierLoc(),
             DeclarationNameInfo(TC->getNamedConcept()->getDeclName(),
@@ -5177,7 +5171,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     if (T->isRecordType())
       T.addConst();
     Expr *E = new (*this) DeclRefExpr(
-        *this, NTTP, /*enclosing*/ false, T,
+        *this, NTTP, /*RefersToEnclosingVariableOrCapture*/ false, T,
         Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
 
     if (NTTP->isParameterPack())
