@@ -43,7 +43,7 @@ def immZExt12Plus1 : PatLeaf<(imm), [{
   return isUInt<13>(N->getZExtValue()) && isUInt<12>(N->getZExtValue() + 1);
 }]>;
 def immZExt7Plus1 : PatLeaf<(imm), [{
-  return isUInt<7>(N->getZExtValue()) && isUInt<12>(N->getZExtValue() + 1);
+  return isUInt<8>(N->getZExtValue()) && isUInt<7>(N->getZExtValue() + 1);
 }]>;
 // Immediate range covering both signed 12-bit and unsigned 16-bit immediates.
 def imm32SExt12OrZExt16 : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue())
