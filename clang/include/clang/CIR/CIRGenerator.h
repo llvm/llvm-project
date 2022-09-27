@@ -92,6 +92,7 @@ public:
   bool verifyModule();
 
   void buildDeferredDecls();
+  void buildDefaultMethods();
 };
 
 } // namespace cir
