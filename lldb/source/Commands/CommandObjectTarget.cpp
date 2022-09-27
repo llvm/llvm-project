@@ -1546,6 +1546,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
           DumpAddress(
               interpreter.GetExecutionContext().GetBestExecutionContextScope(),
               symbol->GetAddressRef(), verbose, all_ranges, strm);
+          strm.EOL();
         } else {
           strm.IndentMore();
           strm.Indent("    Value: ");
