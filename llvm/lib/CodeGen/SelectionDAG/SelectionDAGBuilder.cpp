@@ -4865,6 +4865,8 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 
   // Create the node.
   SDValue Result;
+  // In some cases, custom collection of operands from CallInst I may be needed.
+  TLI.CollectTargetIntrinsicOperands(I, Ops, DAG);
   if (IsTgtIntrinsic) {
     // This is target intrinsic that touches memory
     Result =
