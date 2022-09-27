@@ -80,9 +80,12 @@ public:
   // Is V an undef value?
   bool isUndef(const Value *Val) const;
 
-  int getSizeOf(const Value *Val) const;
-  int getSizeOf(const Type *Ty) const;
-  int getAllocSizeOf(const Type *Ty) const;
+  enum SizeKind {
+    Store,  // Store size
+    Alloc,  // Alloc size
+  };
+  int getSizeOf(const Value *Val, SizeKind Kind = Store) const;
+  int getSizeOf(const Type *Ty, SizeKind Kind = Store) const;
   int getTypeAlignment(Type *Ty) const;
 
   Constant *getNullValue(Type *Ty) const;
@@ -446,7 +449,7 @@ auto AlignVectors::createAdjustedPointer(IRBuilder<> &Builder, Value *Ptr,
   auto *PtrTy = cast<PointerType>(Ptr->getType());
   if (!PtrTy->isOpaque()) {
     Type *ElemTy = PtrTy->getNonOpaquePointerElementType();
-    int ElemSize = HVC.getAllocSizeOf(ElemTy);
+    int ElemSize = HVC.getSizeOf(ElemTy, HVC.Alloc);
     if (Adjust % ElemSize == 0 && Adjust != 0) {
       Value *Tmp0 =
           Builder.CreateGEP(ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize));
@@ -984,16 +987,20 @@ auto HexagonVectorCombine::isUndef(const Value *Val) const -> bool {
   return isa<UndefValue>(Val);
 }
 
-auto HexagonVectorCombine::getSizeOf(const Value *Val) const -> int {
-  return getSizeOf(Val->getType());
+auto HexagonVectorCombine::getSizeOf(const Value *Val, SizeKind Kind) const
+    -> int {
+  return getSizeOf(Val->getType(), Kind);
 }
 
-auto HexagonVectorCombine::getSizeOf(const Type *Ty) const -> int {
-  return DL.getTypeStoreSize(const_cast<Type *>(Ty)).getFixedValue();
-}
-
-auto HexagonVectorCombine::getAllocSizeOf(const Type *Ty) const -> int {
-  return DL.getTypeAllocSize(const_cast<Type *>(Ty)).getFixedValue();
+auto HexagonVectorCombine::getSizeOf(const Type *Ty, SizeKind Kind) const
+    -> int {
+  auto *NcTy = const_cast<Type *>(Ty);
+  switch (Kind) {
+  case Store:
+    return DL.getTypeStoreSize(NcTy).getFixedValue();
+  case Alloc:
+    return DL.getTypeAllocSize(NcTy).getFixedValue();
+  }
 }
 
 auto HexagonVectorCombine::getTypeAlignment(Type *Ty) const -> int {
@@ -1344,7 +1351,7 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
     return None;
 
   Builder B(Gep0->getParent());
-  int Scale = getAllocSizeOf(Gep0->getSourceElementType());
+  int Scale = getSizeOf(Gep0->getSourceElementType(), Alloc);
 
   // FIXME: for now only check GEPs with a single index.
   if (Gep0->getNumOperands() != 2 || Gep1->getNumOperands() != 2)
