@@ -59,6 +59,10 @@ public:
   bool VisitRecordDecl(const RecordDecl *D) { return mapDecl(D); }
 
   bool VisitEnumDecl(const EnumDecl *D) { return mapDecl(D); }
+
+  bool VisitTypedefDecl(const TypedefDecl *D) { return mapDecl(D); }
+
+  bool VisitTypeAliasDecl(const TypeAliasDecl *D) { return mapDecl(D); }
 };
 
 void ExtractInfosFromCode(StringRef Code, size_t NumExpectedInfos, bool Public,
@@ -124,7 +128,7 @@ TEST(SerializeTest, emitNamespaceInfo) {
   F.Namespace.emplace_back(EmptySID, "B", InfoType::IT_namespace);
   F.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
+  ExpectedBWithFunction.Children.Functions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -183,7 +187,7 @@ typedef struct {} G;)raw",
                                       InfoType::IT_namespace);
   EConstructor.Access = AccessSpecifier::AS_public;
   EConstructor.IsMethod = true;
-  ExpectedRecordWithEConstructor.ChildFunctions.emplace_back(
+  ExpectedRecordWithEConstructor.Children.Functions.emplace_back(
       std::move(EConstructor));
   CheckRecordInfo(&ExpectedRecordWithEConstructor, RecordWithEConstructor);
 
@@ -199,7 +203,7 @@ typedef struct {} G;)raw",
                                 InfoType::IT_namespace);
   Method.Access = AccessSpecifier::AS_protected;
   Method.IsMethod = true;
-  ExpectedRecordWithMethod.ChildFunctions.emplace_back(std::move(Method));
+  ExpectedRecordWithMethod.Children.Functions.emplace_back(std::move(Method));
   CheckRecordInfo(&ExpectedRecordWithMethod, RecordWithMethod);
 
   RecordInfo *F = InfoAsRecord(Infos[4].get());
@@ -222,7 +226,7 @@ typedef struct {} G;)raw",
                                         InfoType::IT_namespace);
   TemplateMethod.Access = AccessSpecifier::AS_public;
   TemplateMethod.IsMethod = true;
-  ExpectedRecordWithTemplateMethod.ChildFunctions.emplace_back(
+  ExpectedRecordWithTemplateMethod.Children.Functions.emplace_back(
       std::move(TemplateMethod));
   CheckRecordInfo(&ExpectedRecordWithTemplateMethod, RecordWithTemplateMethod);
 
@@ -241,7 +245,7 @@ typedef struct {} G;)raw",
                                                    InfoType::IT_namespace);
   SpecializedTemplateMethod.Access = AccessSpecifier::AS_public;
   SpecializedTemplateMethod.IsMethod = true;
-  ExpectedTemplatedRecord.ChildFunctions.emplace_back(
+  ExpectedTemplatedRecord.Children.Functions.emplace_back(
       std::move(SpecializedTemplateMethod));
   CheckRecordInfo(&ExpectedTemplatedRecord, TemplatedRecord);
 
@@ -268,7 +272,7 @@ TEST(SerializeTest, emitEnumInfo) {
   E.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   E.Members.emplace_back("X", "0");
   E.Members.emplace_back("Y", "1");
-  ExpectedNamespaceWithEnum.ChildEnums.emplace_back(std::move(E));
+  ExpectedNamespaceWithEnum.Children.Enums.emplace_back(std::move(E));
   CheckNamespaceInfo(&ExpectedNamespaceWithEnum, NamespaceWithEnum);
 
   NamespaceInfo *NamespaceWithScopedEnum = InfoAsNamespace(Infos[1].get());
@@ -279,7 +283,7 @@ TEST(SerializeTest, emitEnumInfo) {
   G.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   G.Members.emplace_back("A", "0");
   G.Members.emplace_back("B", "1");
-  ExpectedNamespaceWithScopedEnum.ChildEnums.emplace_back(std::move(G));
+  ExpectedNamespaceWithScopedEnum.Children.Enums.emplace_back(std::move(G));
   CheckNamespaceInfo(&ExpectedNamespaceWithScopedEnum, NamespaceWithScopedEnum);
 }
 
@@ -352,7 +356,7 @@ TEST(SerializeTest, emitPublicFunctionInternalInfo) {
   F.ReturnType = TypeInfo("int");
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
+  ExpectedBWithFunction.Children.Functions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -368,7 +372,7 @@ TEST(SerializeTest, emitInlinedFunctionInfo) {
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   F.Params.emplace_back(TypeInfo("int"), "I");
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
+  ExpectedBWithFunction.Children.Functions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
@@ -422,7 +426,8 @@ class J : public I<int> {} ;)raw",
                                      InfoType::IT_namespace);
   FunctionSet.Access = AccessSpecifier::AS_protected;
   FunctionSet.IsMethod = true;
-  ExpectedE.Bases.back().ChildFunctions.emplace_back(std::move(FunctionSet));
+  ExpectedE.Bases.back().Children.Functions.emplace_back(
+      std::move(FunctionSet));
   ExpectedE.Bases.emplace_back(EmptySID, /*Name=*/"G",
                                /*Path=*/"GlobalNamespace", true,
                                AccessSpecifier::AS_private, true);
@@ -435,7 +440,8 @@ class J : public I<int> {} ;)raw",
                                      InfoType::IT_namespace);
   FunctionGet.Access = AccessSpecifier::AS_private;
   FunctionGet.IsMethod = true;
-  ExpectedE.Bases.back().ChildFunctions.emplace_back(std::move(FunctionGet));
+  ExpectedE.Bases.back().Children.Functions.emplace_back(
+      std::move(FunctionGet));
   ExpectedE.Bases.back().Members.emplace_back(TypeInfo("int"), "I",
                                               AccessSpecifier::AS_private);
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
@@ -468,7 +474,8 @@ class J : public I<int> {} ;)raw",
                                         InfoType::IT_namespace);
   FunctionSetNew.Access = AccessSpecifier::AS_private;
   FunctionSetNew.IsMethod = true;
-  ExpectedH.Bases.back().ChildFunctions.emplace_back(std::move(FunctionSetNew));
+  ExpectedH.Bases.back().Children.Functions.emplace_back(
+      std::move(FunctionSetNew));
   ExpectedH.Bases.emplace_back(EmptySID, /*Name=*/"G",
                                /*Path=*/"GlobalNamespace", true,
                                AccessSpecifier::AS_private, false);
@@ -481,7 +488,8 @@ class J : public I<int> {} ;)raw",
                                         InfoType::IT_namespace);
   FunctionGetNew.Access = AccessSpecifier::AS_private;
   FunctionGetNew.IsMethod = true;
-  ExpectedH.Bases.back().ChildFunctions.emplace_back(std::move(FunctionGetNew));
+  ExpectedH.Bases.back().Children.Functions.emplace_back(
+      std::move(FunctionGetNew));
   ExpectedH.Bases.back().Members.emplace_back(TypeInfo("int"), "I",
                                               AccessSpecifier::AS_private);
   CheckRecordInfo(&ExpectedH, H);
@@ -528,7 +536,7 @@ export double exportedModuleFunction(double y);)raw",
   F.Params.emplace_back(TypeInfo("double"), "d");
   F.Params.back().DefaultValue = "3.2 - 1.0";
   F.Access = AccessSpecifier::AS_none;
-  ExpectedBWithFunction.ChildFunctions.emplace_back(std::move(F));
+  ExpectedBWithFunction.Children.Functions.emplace_back(std::move(F));
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 
   NamespaceInfo *BWithExportedFunction = InfoAsNamespace(Infos[1].get());
@@ -540,7 +548,7 @@ export double exportedModuleFunction(double y);)raw",
   ExportedF.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
   ExportedF.Params.emplace_back(TypeInfo("double"), "y");
   ExportedF.Access = AccessSpecifier::AS_none;
-  ExpectedBWithExportedFunction.ChildFunctions.emplace_back(
+  ExpectedBWithExportedFunction.Children.Functions.emplace_back(
       std::move(ExportedF));
   CheckNamespaceInfo(&ExpectedBWithExportedFunction, BWithExportedFunction);
 }
@@ -553,22 +561,22 @@ TEST(SerializeTest, emitChildRecords) {
 
   NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedParentA(EmptySID);
-  ExpectedParentA.ChildRecords.emplace_back(EmptySID, "A", InfoType::IT_record,
-                                            "GlobalNamespace");
+  ExpectedParentA.Children.Records.emplace_back(
+      EmptySID, "A", InfoType::IT_record, "GlobalNamespace");
   CheckNamespaceInfo(&ExpectedParentA, ParentA);
 
   RecordInfo *ParentB = InfoAsRecord(Infos[3].get());
   RecordInfo ExpectedParentB(EmptySID);
   llvm::SmallString<128> ExpectedParentBPath("GlobalNamespace/A");
   llvm::sys::path::native(ExpectedParentBPath);
-  ExpectedParentB.ChildRecords.emplace_back(EmptySID, "B", InfoType::IT_record,
-                                            ExpectedParentBPath);
+  ExpectedParentB.Children.Records.emplace_back(
+      EmptySID, "B", InfoType::IT_record, ExpectedParentBPath);
   CheckRecordInfo(&ExpectedParentB, ParentB);
 
   NamespaceInfo *ParentC = InfoAsNamespace(Infos[7].get());
   NamespaceInfo ExpectedParentC(EmptySID);
-  ExpectedParentC.ChildRecords.emplace_back(EmptySID, "C", InfoType::IT_record,
-                                            "@nonymous_namespace");
+  ExpectedParentC.Children.Records.emplace_back(
+      EmptySID, "C", InfoType::IT_record, "@nonymous_namespace");
   CheckNamespaceInfo(&ExpectedParentC, ParentC);
 }
 
@@ -580,15 +588,42 @@ TEST(SerializeTest, emitChildNamespaces) {
 
   NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
   NamespaceInfo ExpectedParentA(EmptySID);
-  ExpectedParentA.ChildNamespaces.emplace_back(EmptySID, "A",
-                                               InfoType::IT_namespace);
+  ExpectedParentA.Children.Namespaces.emplace_back(EmptySID, "A",
+                                                   InfoType::IT_namespace);
   CheckNamespaceInfo(&ExpectedParentA, ParentA);
 
   NamespaceInfo *ParentB = InfoAsNamespace(Infos[3].get());
   NamespaceInfo ExpectedParentB(EmptySID);
-  ExpectedParentB.ChildNamespaces.emplace_back(EmptySID, "B",
-                                               InfoType::IT_namespace, "A");
+  ExpectedParentB.Children.Namespaces.emplace_back(EmptySID, "B",
+                                                   InfoType::IT_namespace, "A");
   CheckNamespaceInfo(&ExpectedParentB, ParentB);
+}
+
+TEST(SerializeTests, emitTypedefs) {
+  EmittedInfoList Infos;
+  ExtractInfosFromCode("typedef int MyInt; using MyDouble = double;", 2,
+                       /*Public=*/false, Infos);
+
+  // First info will be the global namespace with the typedef in it.
+  NamespaceInfo *GlobalNS1 = InfoAsNamespace(Infos[0].get());
+  ASSERT_EQ(1u, GlobalNS1->Children.Typedefs.size());
+
+  const TypedefInfo &FirstTD = GlobalNS1->Children.Typedefs[0];
+  EXPECT_EQ("MyInt", FirstTD.Name);
+  EXPECT_FALSE(FirstTD.IsUsing);
+  EXPECT_EQ("int", FirstTD.Underlying.Type.Name);
+
+  // The second will be another global namespace with the using in it (the
+  // global namespace is duplicated because the items haven't been merged at the
+  // serialization phase of processing).
+  NamespaceInfo *GlobalNS2 = InfoAsNamespace(Infos[1].get());
+  ASSERT_EQ(1u, GlobalNS2->Children.Typedefs.size());
+
+  // Second is the "using" typedef.
+  const TypedefInfo &SecondTD = GlobalNS2->Children.Typedefs[0];
+  EXPECT_EQ("MyDouble", SecondTD.Name);
+  EXPECT_TRUE(SecondTD.IsUsing);
+  EXPECT_EQ("double", SecondTD.Underlying.Type.Name);
 }
 
 } // namespace doc

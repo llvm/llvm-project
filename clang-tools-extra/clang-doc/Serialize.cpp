@@ -273,6 +273,75 @@ static bool shouldSerializeInfo(bool PublicOnly, bool IsInAnonymousNamespace,
           isPublic(D->getAccessUnsafe(), D->getLinkageInternal()));
 }
 
+// The InsertChild functions insert the given info into the given scope using
+// the method appropriate for that type. Some types are moved into the
+// appropriate vector, while other types have Reference objects generated to
+// refer to them.
+//
+// See MakeAndInsertIntoParent().
+static void InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
+  Scope.Namespaces.emplace_back(Info.USR, Info.Name, InfoType::IT_namespace,
+                                getInfoRelativePath(Info.Namespace));
+}
+
+static void InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
+  Scope.Records.emplace_back(Info.USR, Info.Name, InfoType::IT_record,
+                             getInfoRelativePath(Info.Namespace));
+}
+
+static void InsertChild(ScopeChildren &Scope, EnumInfo Info) {
+  Scope.Enums.push_back(std::move(Info));
+}
+
+static void InsertChild(ScopeChildren &Scope, FunctionInfo Info) {
+  Scope.Functions.push_back(std::move(Info));
+}
+
+static void InsertChild(ScopeChildren &Scope, TypedefInfo Info) {
+  Scope.Typedefs.push_back(std::move(Info));
+}
+
+// Creates a parent of the correct type for the given child and inserts it into
+// that parent.
+//
+// This is complicated by the fact that namespaces and records are inserted by
+// reference (constructing a "Reference" object with that namespace/record's
+// info), while everything else is inserted by moving it directly into the child
+// vectors.
+//
+// For namespaces and records, explicitly specify a const& template parameter
+// when invoking this function:
+//   MakeAndInsertIntoParent<const Record&>(...);
+// Otherwise, specify an rvalue reference <EnumInfo&&> and move into the
+// parameter. Since each variant is used once, it's not worth having a more
+// elaborate system to automatically deduce this information.
+template <typename ChildType>
+std::unique_ptr<Info> MakeAndInsertIntoParent(ChildType Child) {
+  if (Child.Namespace.empty()) {
+    // Insert into unnamed parent namespace.
+    auto ParentNS = std::make_unique<NamespaceInfo>();
+    InsertChild(ParentNS->Children, std::forward<ChildType>(Child));
+    return ParentNS;
+  }
+
+  switch (Child.Namespace[0].RefType) {
+  case InfoType::IT_namespace: {
+    auto ParentNS = std::make_unique<NamespaceInfo>();
+    ParentNS->USR = Child.Namespace[0].USR;
+    InsertChild(ParentNS->Children, std::forward<ChildType>(Child));
+    return ParentNS;
+  }
+  case InfoType::IT_record: {
+    auto ParentRec = std::make_unique<RecordInfo>();
+    ParentRec->USR = Child.Namespace[0].USR;
+    InsertChild(ParentRec->Children, std::forward<ChildType>(Child));
+    return ParentRec;
+  }
+  default:
+    llvm_unreachable("Invalid reference type for parent namespace");
+  }
+}
+
 // There are two uses for this function.
 // 1) Getting the resulting mode of inheritance of a record.
 //    Example: class A {}; class B : private A {}; class C : public B {};
@@ -376,8 +445,8 @@ template <typename T>
 static void
 populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsInAnonymousNamespace) {
-  const auto *DC = cast<DeclContext>(D);
-  while ((DC = DC->getParent())) {
+  const DeclContext *DC = D->getDeclContext();
+  do {
     if (const auto *N = dyn_cast<NamespaceDecl>(DC)) {
       std::string Namespace;
       if (N->isAnonymousNamespace()) {
@@ -396,7 +465,7 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
     else if (const auto *N = dyn_cast<EnumDecl>(DC))
       Namespaces.emplace_back(getUSRForDecl(N), N->getNameAsString(),
                               InfoType::IT_enum);
-  }
+  } while ((DC = DC->getParent()));
   // The global namespace should be added to the list of namespaces if the decl
   // corresponds to a Record and if it doesn't have any namespace (because this
   // means it's in the global namespace). Also if its outermost namespace is a
@@ -501,7 +570,7 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
                                  IsInAnonymousNamespace);
             FI.Access =
                 getFinalAccessSpecifier(BI.Access, MD->getAccessUnsafe());
-            BI.ChildFunctions.emplace_back(std::move(FI));
+            BI.Children.Functions.emplace_back(std::move(FI));
           }
         I.Bases.emplace_back(std::move(BI));
         // Call this function recursively to get the inherited classes of
@@ -530,14 +599,9 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
   if (I->Namespace.empty() && I->USR == SymbolID())
     return {std::unique_ptr<Info>{std::move(I)}, nullptr};
 
-  auto ParentI = std::make_unique<NamespaceInfo>();
-  ParentI->USR = I->Namespace.empty() ? SymbolID() : I->Namespace[0].USR;
-  ParentI->ChildNamespaces.emplace_back(I->USR, I->Name, InfoType::IT_namespace,
-                                        getInfoRelativePath(I->Namespace));
-  if (I->Namespace.empty())
-    ParentI->Path = getInfoRelativePath(ParentI->Namespace);
-  return {std::unique_ptr<Info>{std::move(I)},
-          std::unique_ptr<Info>{std::move(ParentI)}};
+  // Namespaces are inserted into the parent by reference, so we need to return
+  // both the parent and the record itself.
+  return {std::move(I), MakeAndInsertIntoParent<const NamespaceInfo &>(*I)};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
@@ -563,26 +627,10 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
   }
   I->Path = getInfoRelativePath(I->Namespace);
 
-  switch (I->Namespace[0].RefType) {
-  case InfoType::IT_namespace: {
-    auto ParentI = std::make_unique<NamespaceInfo>();
-    ParentI->USR = I->Namespace[0].USR;
-    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
-                                       getInfoRelativePath(I->Namespace));
-    return {std::unique_ptr<Info>{std::move(I)},
-            std::unique_ptr<Info>{std::move(ParentI)}};
-  }
-  case InfoType::IT_record: {
-    auto ParentI = std::make_unique<RecordInfo>();
-    ParentI->USR = I->Namespace[0].USR;
-    ParentI->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record,
-                                       getInfoRelativePath(I->Namespace));
-    return {std::unique_ptr<Info>{std::move(I)},
-            std::unique_ptr<Info>{std::move(ParentI)}};
-  }
-  default:
-    llvm_unreachable("Invalid reference type for parent namespace");
-  }
+  // Records are inserted into the parent by reference, so we need to return
+  // both the parent and the record itself.
+  auto Parent = MakeAndInsertIntoParent<const RecordInfo &>(*I);
+  return {std::move(I), std::move(Parent)};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
@@ -596,17 +644,8 @@ emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
-  // Wrap in enclosing scope
-  auto ParentI = std::make_unique<NamespaceInfo>();
-  if (!Func.Namespace.empty())
-    ParentI->USR = Func.Namespace[0].USR;
-  else
-    ParentI->USR = SymbolID();
-  if (Func.Namespace.empty())
-    ParentI->Path = getInfoRelativePath(ParentI->Namespace);
-  ParentI->ChildFunctions.emplace_back(std::move(Func));
-  // Info is wrapped in its parent scope so it's returned in the second position
-  return {nullptr, std::unique_ptr<Info>{std::move(ParentI)}};
+  // Info is wrapped in its parent scope so is returned in the second position.
+  return {nullptr, MakeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
@@ -633,12 +672,52 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
       Reference{ParentUSR, Parent->getNameAsString(), InfoType::IT_record};
   Func.Access = D->getAccess();
 
-  // Wrap in enclosing scope
-  auto ParentI = std::make_unique<RecordInfo>();
-  ParentI->USR = ParentUSR;
-  ParentI->ChildFunctions.emplace_back(std::move(Func));
-  // Info is wrapped in its parent scope so it's returned in the second position
-  return {nullptr, std::unique_ptr<Info>{std::move(ParentI)}};
+  // Info is wrapped in its parent scope so is returned in the second position.
+  return {nullptr, MakeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
+}
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const TypedefDecl *D, const FullComment *FC, int LineNumber,
+         StringRef File, bool IsFileInRootDir, bool PublicOnly) {
+  TypedefInfo Info;
+
+  bool IsInAnonymousNamespace = false;
+  populateInfo(Info, D, FC, IsInAnonymousNamespace);
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  Info.DefLoc.emplace(LineNumber, File, IsFileInRootDir);
+  Info.Underlying = getTypeInfoForType(D->getUnderlyingType());
+  if (Info.Underlying.Type.Name.empty()) {
+    // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
+    // The record serializer explicitly checks for this syntax and constructs
+    // a record with that name, so we don't want to emit a duplicate here.
+    return {};
+  }
+  Info.IsUsing = false;
+
+  // Info is wrapped in its parent scope so is returned in the second position.
+  return {nullptr, MakeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
+}
+
+// A type alias is a C++ "using" declaration for a type. It gets mapped to a
+// TypedefInfo with the IsUsing flag set.
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const TypeAliasDecl *D, const FullComment *FC, int LineNumber,
+         StringRef File, bool IsFileInRootDir, bool PublicOnly) {
+  TypedefInfo Info;
+
+  bool IsInAnonymousNamespace = false;
+  populateInfo(Info, D, FC, IsInAnonymousNamespace);
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  Info.DefLoc.emplace(LineNumber, File, IsFileInRootDir);
+  Info.Underlying = getTypeInfoForType(D->getUnderlyingType());
+  Info.IsUsing = true;
+
+  // Info is wrapped in its parent scope so is returned in the second position.
+  return {nullptr, MakeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
@@ -656,38 +735,8 @@ emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
     Enum.BaseType = TypeInfo(D->getIntegerType().getAsString());
   parseEnumerators(Enum, D);
 
-  // Put in global namespace
-  if (Enum.Namespace.empty()) {
-    auto ParentI = std::make_unique<NamespaceInfo>();
-    ParentI->USR = SymbolID();
-    ParentI->ChildEnums.emplace_back(std::move(Enum));
-    ParentI->Path = getInfoRelativePath(ParentI->Namespace);
-    // Info is wrapped in its parent scope so it's returned in the second
-    // position
-    return {nullptr, std::unique_ptr<Info>{std::move(ParentI)}};
-  }
-
-  // Wrap in enclosing scope
-  switch (Enum.Namespace[0].RefType) {
-  case InfoType::IT_namespace: {
-    auto ParentI = std::make_unique<NamespaceInfo>();
-    ParentI->USR = Enum.Namespace[0].USR;
-    ParentI->ChildEnums.emplace_back(std::move(Enum));
-    // Info is wrapped in its parent scope so it's returned in the second
-    // position
-    return {nullptr, std::unique_ptr<Info>{std::move(ParentI)}};
-  }
-  case InfoType::IT_record: {
-    auto ParentI = std::make_unique<RecordInfo>();
-    ParentI->USR = Enum.Namespace[0].USR;
-    ParentI->ChildEnums.emplace_back(std::move(Enum));
-    // Info is wrapped in its parent scope so it's returned in the second
-    // position
-    return {nullptr, std::unique_ptr<Info>{std::move(ParentI)}};
-  }
-  default:
-    llvm_unreachable("Invalid reference type for parent namespace");
-  }
+  // Info is wrapped in its parent scope so is returned in the second position.
+  return {nullptr, MakeAndInsertIntoParent<EnumInfo &&>(std::move(Enum))};
 }
 
 } // namespace serialize

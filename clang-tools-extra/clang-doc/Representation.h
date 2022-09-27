@@ -30,17 +30,19 @@ namespace doc {
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
 
-struct Info;
-struct FunctionInfo;
-struct EnumInfo;
 struct BaseRecordInfo;
+struct EnumInfo;
+struct FunctionInfo;
+struct Info;
+struct TypedefInfo;
 
 enum class InfoType {
   IT_default,
   IT_namespace,
   IT_record,
   IT_function,
-  IT_enum
+  IT_enum,
+  IT_typedef
 };
 
 // A representation of a parsed comment.
@@ -142,6 +144,22 @@ struct Reference {
   llvm::SmallString<128> Path;
 };
 
+// Holds the children of a record or namespace.
+struct ScopeChildren {
+  // Namespaces and Records are references because they will be properly
+  // documented in their own info, while the entirety of Functions and Enums are
+  // included here because they should not have separate documentation from
+  // their scope.
+  //
+  // Namespaces are not syntactically valid as children of records, but making
+  // this general for all possible container types reduces code complexity.
+  std::vector<Reference> Namespaces;
+  std::vector<Reference> Records;
+  std::vector<FunctionInfo> Functions;
+  std::vector<EnumInfo> Enums;
+  std::vector<TypedefInfo> Typedefs;
+};
+
 // A base struct for TypeInfos
 struct TypeInfo {
   TypeInfo() = default;
@@ -199,7 +217,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
 struct Location {
   Location(int LineNumber = 0, StringRef Filename = StringRef(),
            bool IsFileInRootDir = false)
-      : LineNumber(LineNumber), Filename(Filename),
+      : LineNumber(LineNumber), Filename(std::move(Filename)),
         IsFileInRootDir(IsFileInRootDir) {}
 
   bool operator==(const Location &Other) const {
@@ -266,14 +284,7 @@ struct NamespaceInfo : public Info {
 
   void merge(NamespaceInfo &&I);
 
-  // Namespaces and Records are references because they will be properly
-  // documented in their own info, while the entirety of Functions and Enums are
-  // included here because they should not have separate documentation from
-  // their scope.
-  std::vector<Reference> ChildNamespaces;
-  std::vector<Reference> ChildRecords;
-  std::vector<FunctionInfo> ChildFunctions;
-  std::vector<EnumInfo> ChildEnums;
+  ScopeChildren Children;
 };
 
 // Info for symbols.
@@ -338,12 +349,23 @@ struct RecordInfo : public SymbolInfo {
       Bases; // List of base/parent records; this includes inherited methods and
              // attributes
 
-  // Records are references because they will be properly documented in their
-  // own info, while the entirety of Functions and Enums are included here
-  // because they should not have separate documentation from their scope.
-  std::vector<Reference> ChildRecords;
-  std::vector<FunctionInfo> ChildFunctions;
-  std::vector<EnumInfo> ChildEnums;
+  ScopeChildren Children;
+};
+
+// Info for typedef and using statements.
+struct TypedefInfo : public SymbolInfo {
+  TypedefInfo(SymbolID USR = SymbolID())
+      : SymbolInfo(InfoType::IT_typedef, USR) {}
+
+  void merge(TypedefInfo &&I);
+
+  TypeInfo Underlying;
+
+  // Inidicates if this is a new C++ "using"-style typedef:
+  //   using MyVector = std::vector<int>
+  // False means it's a C-style typedef:
+  //   typedef std::vector<int> MyVector;
+  bool IsUsing;
 };
 
 struct BaseRecordInfo : public RecordInfo {
