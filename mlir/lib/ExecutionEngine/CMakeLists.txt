@@ -190,23 +190,8 @@ if(MLIR_ENABLE_ROCM_RUNNER)
       set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "Path to which ROCm has been installed")
     endif()
   endif()
-  set(HIP_PATH "${ROCM_PATH}/hip" CACHE PATH "Path to which HIP has been installed")
-  set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
-  find_package(HIP)
-  if (NOT HIP_FOUND)
-    message(SEND_ERROR "Building mlir with ROCm support requires a working ROCm and HIP install")
-  else()
-    message(STATUS "ROCm HIP version: ${HIP_VERSION}")
-  endif()
-
-  # Locate HIP runtime library.
-  find_library(ROCM_RUNTIME_LIBRARY amdhip64
-               PATHS "${HIP_PATH}/lib")
-  if (NOT ROCM_RUNTIME_LIBRARY)
-    message(SEND_ERROR "Could not locate ROCm HIP runtime library")
-  else()
-    message(STATUS "ROCm HIP runtime lib: ${ROCM_RUNTIME_LIBRARY}")
-  endif()
+  list(APPEND CMAKE_PREFIX_PATH ${ROCM_PATH} "${ROCM_PATH}/hip")
+  find_package(hip REQUIRED)
 
   if (NOT DEFINED ROCM_TEST_CHIPSET)
     execute_process(COMMAND "${ROCM_PATH}/bin/rocm_agent_enumerator"
@@ -263,20 +248,11 @@ if(MLIR_ENABLE_ROCM_RUNNER)
      "-Wno-gnu-anonymous-struct")
   endif()
 
-  target_compile_definitions(mlir_rocm_runtime
-    PRIVATE
-    __HIP_PLATFORM_HCC__
-  )
-  target_include_directories(mlir_rocm_runtime
-    PRIVATE
-    ${HIP_PATH}/include
-    ${ROCM_PATH}/include
-  )
   set_property(TARGET mlir_rocm_runtime
     PROPERTY INSTALL_RPATH_USE_LINK_PATH ON)
 
   target_link_libraries(mlir_rocm_runtime
     PUBLIC
-    ${ROCM_RUNTIME_LIBRARY}
+    hip::host hip::amdhip64
   )
 endif()
