@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -279,7 +280,8 @@ public:
       auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
       op->setOperand(0, convert);
       return success();
-    } else if (encDst) {
+    }
+    if (encDst) {
       RankedTensorType rtp =
           op.getResult().getType().template cast<RankedTensorType>();
       auto denseTp =
@@ -294,6 +296,60 @@ public:
   }
 };
 
+/// Sparse rewriting rule for the foreach operator.
+struct ForeachRewriter : public OpRewritePattern<ForeachOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForeachOp op,
+                                PatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+    Value input = op.getTensor();
+    auto rtp = input.getType().cast<RankedTensorType>();
+    int64_t rank = rtp.getRank();
+    auto enc = getSparseTensorEncoding(rtp);
+
+    // 1. Generates loop for the sparse input.
+    SparseTensorLoopEmitter loopEmitter(ValueRange{input});
+    loopEmitter.initializeLoopEmit(rewriter, loc);
+    for (int64_t i = 0; i < rank; i++)
+      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, i);
+
+    Value vals = loopEmitter.getTensorValueBuffer(0);
+    Value idx = loopEmitter.getLastLevelTensorPointerIndex(0);
+    Value val = rewriter.create<memref::LoadOp>(op.getLoc(), vals, idx);
+
+    SmallVector<Value, 4> coords;
+    coords.reserve(rank);
+    loopEmitter.getCoordinateArray(coords);
+
+    for (int64_t i = 0; i < rank; i++)
+      loopEmitter.exitCurrentLoop();
+
+    // 2. Inline the block in the foreach operator.
+    Block::iterator inlinePos = rewriter.getInsertionPoint();
+    Block *srcBlock = op.getBody();
+    // Remove sparse_tensor.yield.
+    rewriter.eraseOp(srcBlock->getTerminator());
+
+    SmallVector<Value, 4> args;
+    // Remap coordinates.
+    for (int64_t i = 0; i < rank; i++) {
+      Value actual = coords[toOrigDim(enc, i)];
+      args.push_back(actual);
+    }
+    // Remap value.
+    args.push_back(val);
+
+    // Inline body.
+    rewriter.mergeBlockBefore(srcBlock, &*inlinePos, args);
+    // delete the foreach operator.
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 } // namespace
 
 //===---------------------------------------------------------------------===//
@@ -301,9 +357,10 @@ public:
 //===---------------------------------------------------------------------===//
 
 void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
-                                         bool /*enableRT*/) {
+                                         bool enableRT) {
   patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd,
                ReshapeRewriter<tensor::ExpandShapeOp>,
-               ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
+               ReshapeRewriter<tensor::CollapseShapeOp>, ForeachRewriter>(
+      patterns.getContext());
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
 }
