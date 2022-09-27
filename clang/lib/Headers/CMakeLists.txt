@@ -62,10 +62,14 @@ set(hip_files
   __clang_hip_runtime_wrapper.h
   )
 
-set(hlsl_files
-  hlsl.h
+set(hlsl_h hlsl.h)
+set(hlsl_subdir_files
   hlsl/hlsl_basic_types.h
   hlsl/hlsl_intrinsics.h
+  )
+set(hlsl_files
+  ${hlsl_h}
+  ${hlsl_subdir_files}
   )
 
 set(mips_msa_files
@@ -549,10 +553,20 @@ install(
   EXCLUDE_FROM_ALL
   COMPONENT x86-resource-headers)
 
+if(NOT CLANG_ENABLE_HLSL)
+  set(EXCLUDE_HLSL EXCLUDE_FROM_ALL)
+endif()
+
 install(
-  FILES ${hlsl_files}
+  FILES ${hlsl_h}
   DESTINATION ${header_install_dir}
-  EXCLUDE_FROM_ALL
+  ${EXCLUDE_HLSL}
+  COMPONENT hlsl-resource-headers)
+
+install(
+  FILES ${hlsl_subdir_files}
+  DESTINATION ${header_install_dir}/hlsl
+  ${EXCLUDE_HLSL}
   COMPONENT hlsl-resource-headers)
 
 install(
