@@ -1584,6 +1584,27 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
   }
 }
 
+TEST(TargetParserTest, AArch64ArchV9toV8Conversion) {
+  for (auto AK : AArch64::ArchKinds) {
+    if (AK == AArch64::ArchKind::INVALID)
+      EXPECT_EQ(AK, AArch64::convertV9toV8(AK));
+    else if (AK < AArch64::ArchKind::ARMV9A)
+      EXPECT_EQ(AK, AArch64::convertV9toV8(AK));
+    else if (AK >= AArch64::ArchKind::ARMV8R)
+      EXPECT_EQ(AArch64::ArchKind::INVALID, AArch64::convertV9toV8(AK));
+    else
+      EXPECT_TRUE(AArch64::convertV9toV8(AK) < AArch64::ArchKind::ARMV9A);
+  }
+  EXPECT_EQ(AArch64::ArchKind::ARMV8_5A,
+              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9A));
+  EXPECT_EQ(AArch64::ArchKind::ARMV8_6A,
+              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_1A));
+  EXPECT_EQ(AArch64::ArchKind::ARMV8_7A,
+              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_2A));
+  EXPECT_EQ(AArch64::ArchKind::ARMV8_8A,
+              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_3A));
+}
+
 TEST(TargetParserTest, AArch64ArchExtFeature) {
   const char *ArchExt[][4] = {
       {"crc", "nocrc", "+crc", "-crc"},
