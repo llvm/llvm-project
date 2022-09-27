@@ -6075,7 +6075,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
   bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
   // FIXME: it tries to fix a problem with MSVC buildbots.
   TargetTransformInfo &TTIRef = *TTI;
-  auto &&AdjustExtractsCost = [this, &TTIRef, CostKind, VL, VecTy,
+  auto &&AdjustExtractsCost = [this, &TTIRef, CostKind, VL,
                                VectorizedVals, E](InstructionCost &Cost) {
     ScalarizationOverheadBuilder ScalarizationCost;
     SmallPtrSet<Value *, 4> CheckedExtracts;
