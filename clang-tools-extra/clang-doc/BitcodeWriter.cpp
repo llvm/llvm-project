@@ -113,6 +113,7 @@ static const llvm::IndexedMap<llvm::StringRef, BlockIdToIndexFunctor>
           {BI_NAMESPACE_BLOCK_ID, "NamespaceBlock"},
           {BI_ENUM_BLOCK_ID, "EnumBlock"},
           {BI_ENUM_VALUE_BLOCK_ID, "EnumValueBlock"},
+          {BI_TYPEDEF_BLOCK_ID, "TypedefBlock"},
           {BI_TYPE_BLOCK_ID, "TypeBlock"},
           {BI_FIELD_TYPE_BLOCK_ID, "FieldTypeBlock"},
           {BI_MEMBER_TYPE_BLOCK_ID, "MemberTypeBlock"},
@@ -187,7 +188,11 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {REFERENCE_NAME, {"Name", &StringAbbrev}},
           {REFERENCE_TYPE, {"RefType", &IntAbbrev}},
           {REFERENCE_PATH, {"Path", &StringAbbrev}},
-          {REFERENCE_FIELD, {"Field", &IntAbbrev}}};
+          {REFERENCE_FIELD, {"Field", &IntAbbrev}},
+          {TYPEDEF_USR, {"USR", &SymbolIDAbbrev}},
+          {TYPEDEF_NAME, {"Name", &StringAbbrev}},
+          {TYPEDEF_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
+          {TYPEDEF_IS_USING, {"IsUsing", &BoolAbbrev}}};
       assert(Inits.size() == RecordIdCount);
       for (const auto &Init : Inits) {
         RecordIdNameMap[Init.first] = Init.second;
@@ -218,6 +223,9 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Enum Value Block
         {BI_ENUM_VALUE_BLOCK_ID,
          {ENUM_VALUE_NAME, ENUM_VALUE_VALUE, ENUM_VALUE_EXPR}},
+        // Typedef Block
+        {BI_TYPEDEF_BLOCK_ID,
+         {TYPEDEF_USR, TYPEDEF_NAME, TYPEDEF_DEFLOCATION, TYPEDEF_IS_USING}},
         // Namespace Block
         {BI_NAMESPACE_BLOCK_ID,
          {NAMESPACE_USR, NAMESPACE_NAME, NAMESPACE_PATH}},
@@ -418,6 +426,18 @@ void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
   emitBlock(T.Type, FieldId::F_type);
 }
 
+void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
+  StreamSubBlockGuard Block(Stream, BI_TYPEDEF_BLOCK_ID);
+  emitRecord(T.USR, TYPEDEF_USR);
+  emitRecord(T.Name, TYPEDEF_NAME);
+  for (const auto &N : T.Namespace)
+    emitBlock(N, FieldId::F_namespace);
+  if (T.DefLoc)
+    emitRecord(*T.DefLoc, TYPEDEF_DEFLOCATION);
+  emitRecord(T.IsUsing, TYPEDEF_IS_USING);
+  emitBlock(T.Underlying);
+}
+
 void ClangDocBitcodeWriter::emitBlock(const FieldTypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_FIELD_TYPE_BLOCK_ID);
   emitBlock(T.Type, FieldId::F_type);
@@ -465,13 +485,15 @@ void ClangDocBitcodeWriter::emitBlock(const NamespaceInfo &I) {
     emitBlock(N, FieldId::F_namespace);
   for (const auto &CI : I.Description)
     emitBlock(CI);
-  for (const auto &C : I.ChildNamespaces)
+  for (const auto &C : I.Children.Namespaces)
     emitBlock(C, FieldId::F_child_namespace);
-  for (const auto &C : I.ChildRecords)
+  for (const auto &C : I.Children.Records)
     emitBlock(C, FieldId::F_child_record);
-  for (const auto &C : I.ChildFunctions)
+  for (const auto &C : I.Children.Functions)
     emitBlock(C);
-  for (const auto &C : I.ChildEnums)
+  for (const auto &C : I.Children.Enums)
+    emitBlock(C);
+  for (const auto &C : I.Children.Typedefs)
     emitBlock(C);
 }
 
@@ -524,11 +546,13 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
     emitBlock(P, FieldId::F_vparent);
   for (const auto &PB : I.Bases)
     emitBlock(PB);
-  for (const auto &C : I.ChildRecords)
+  for (const auto &C : I.Children.Records)
     emitBlock(C, FieldId::F_child_record);
-  for (const auto &C : I.ChildFunctions)
+  for (const auto &C : I.Children.Functions)
     emitBlock(C);
-  for (const auto &C : I.ChildEnums)
+  for (const auto &C : I.Children.Enums)
+    emitBlock(C);
+  for (const auto &C : I.Children.Typedefs)
     emitBlock(C);
 }
 
@@ -543,7 +567,7 @@ void ClangDocBitcodeWriter::emitBlock(const BaseRecordInfo &I) {
   emitRecord(I.IsParent, BASE_RECORD_IS_PARENT);
   for (const auto &M : I.Members)
     emitBlock(M);
-  for (const auto &C : I.ChildFunctions)
+  for (const auto &C : I.Children.Functions)
     emitBlock(C);
 }
 
@@ -580,6 +604,9 @@ bool ClangDocBitcodeWriter::dispatchInfoForWrite(Info *I) {
     break;
   case InfoType::IT_function:
     emitBlock(*static_cast<clang::doc::FunctionInfo *>(I));
+    break;
+  case InfoType::IT_typedef:
+    emitBlock(*static_cast<clang::doc::TypedefInfo *>(I));
     break;
   default:
     llvm::errs() << "Unexpected info, unable to write.\n";
