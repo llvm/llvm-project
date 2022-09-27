@@ -5256,6 +5256,12 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   }
 }
 
+void TargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
+                                           SmallVectorImpl<SDValue> &Ops,
+                                           SelectionDAG &DAG) const {
+  return;
+}
+
 std::pair<unsigned, const TargetRegisterClass *>
 TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
                                              StringRef Constraint,

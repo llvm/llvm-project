@@ -628,6 +628,16 @@ public:
   /// changed at the end of assembly.
   virtual void emitXCOFFRenameDirective(const MCSymbol *Name, StringRef Rename);
 
+  /// Emit an XCOFF .except directive which adds information about
+  /// a trap instruction to the object file exception section
+  ///
+  /// \param Symbol - The function containing the trap.
+  /// \param Lang - The language code for the exception entry.
+  /// \param Reason - The reason code for the exception entry.
+  virtual void emitXCOFFExceptDirective(const MCSymbol *Symbol, MCSymbol *Trap,
+                                        unsigned Lang, unsigned Reason,
+                                        unsigned FunctionSize, bool hasDebug);
+
   /// Emit a XCOFF .ref directive which creates R_REF type entry in the
   /// relocation table for one or more symbols.
   ///
