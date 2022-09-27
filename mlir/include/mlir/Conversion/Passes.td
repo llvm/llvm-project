@@ -96,12 +96,11 @@ def ConvertAMDGPUToROCDL : Pass<"convert-amdgpu-to-rocdl"> {
 // ArithmeticToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertArithmeticToLLVM : Pass<"convert-arith-to-llvm"> {
+def ArithmeticToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
   let summary = "Convert Arithmetic dialect to LLVM dialect";
   let description = [{
     This pass converts supported Arithmetic ops to LLVM dialect instructions.
   }];
-  let constructor = "mlir::arith::createConvertArithmeticToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
