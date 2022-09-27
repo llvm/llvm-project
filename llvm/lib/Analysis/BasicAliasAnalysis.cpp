@@ -687,16 +687,15 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
                                            AAQueryInfo &AAQI, bool OrLocal) {
   assert(Visited.empty() && "Visited must be cleared after use!");
+  auto _ = make_scope_exit([&]{ Visited.clear(); });
 
   unsigned MaxLookup = 8;
   SmallVector<const Value *, 16> Worklist;
   Worklist.push_back(Loc.Ptr);
   do {
     const Value *V = getUnderlyingObject(Worklist.pop_back_val());
-    if (!Visited.insert(V).second) {
-      Visited.clear();
+    if (!Visited.insert(V).second)
       return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
-    }
 
     // An alloca instruction defines local memory.
     if (OrLocal && isa<AllocaInst>(V))
@@ -707,10 +706,8 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
       // Note: this doesn't require GV to be "ODR" because it isn't legal for a
       // global to be marked constant in some modules and non-constant in
       // others.  GV may even be a declaration, not a definition.
-      if (!GV->isConstant()) {
-        Visited.clear();
+      if (!GV->isConstant())
         return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
-      }
       continue;
     }
 
@@ -725,20 +722,16 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
     // the phi.
     if (const PHINode *PN = dyn_cast<PHINode>(V)) {
       // Don't bother inspecting phi nodes with many operands.
-      if (PN->getNumIncomingValues() > MaxLookup) {
-        Visited.clear();
+      if (PN->getNumIncomingValues() > MaxLookup)
         return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
-      }
       append_range(Worklist, PN->incoming_values());
       continue;
     }
 
     // Otherwise be conservative.
-    Visited.clear();
     return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
   } while (!Worklist.empty() && --MaxLookup);
 
-  Visited.clear();
   return Worklist.empty();
 }
 
