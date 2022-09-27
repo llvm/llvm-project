@@ -940,3 +940,15 @@ define i32 @extractelt_nxv32i32_idx(<vscale x 32 x i32> %v, i32 %idx) {
   %r = extractelement <vscale x 32 x i32> %v, i32 %idx
   ret i32 %r
 }
+
+define i64 @extractelt_nxv16i64_0(<vscale x 16 x i64> %v) {
+; CHECK-LABEL: extractelt_nxv16i64_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, mu
+; CHECK-NEXT:    vslidedown.vi v16, v8, 1
+; CHECK-NEXT:    vmv.x.s a1, v16
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %r = extractelement <vscale x 16 x i64> %v, i32 0
+  ret i64 %r
+}
