@@ -561,7 +561,7 @@ static void __parse_rule(tzdb& __tzdb, __tz::__rules_storage_type& __rules, istr
 
 static void __parse_zone(tzdb& __tzdb, __tz::__rules_storage_type& __rules, istream& __input) {
   chrono::__skip_mandatory_whitespace(__input);
-  auto __p                                      = std::make_unique<time_zone::__impl>(chrono::__parse_string(__input));
+  auto __p = std::make_unique<time_zone::__impl>(chrono::__parse_string(__input), __rules);
   vector<__tz::__continuation>& __continuations = __p->__continuations();
   chrono::__skip_mandatory_whitespace(__input);
 
