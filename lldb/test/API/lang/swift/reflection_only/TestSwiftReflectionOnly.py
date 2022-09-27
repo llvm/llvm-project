@@ -66,8 +66,7 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
         enum2 = frame.FindVariable("enum2")
         check_var(self, enum2, value="with")
         check_var(self, enum2, num_children=1)
-        # FIXME:  Fails in swift::reflection::NoPayloadEnumTypeInfo::projectEnumValue: .second
-        # check_var(self, enum2.GetChildAtIndex(0), value="42")
+        check_var(self, enum2.GetChildAtIndex(0).GetChildAtIndex(0), value="42")
 
         # Scan through the types log.
         import io
