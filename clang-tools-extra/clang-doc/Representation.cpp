@@ -170,8 +170,6 @@ void Reference::merge(Reference &&Other) {
     Name = Other.Name;
   if (Path.empty())
     Path = Other.Path;
-  if (!IsInGlobalNamespace)
-    IsInGlobalNamespace = Other.IsInGlobalNamespace;
 }
 
 void Info::mergeBase(Info &&Other) {

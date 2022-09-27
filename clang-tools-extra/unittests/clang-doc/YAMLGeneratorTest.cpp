@@ -82,7 +82,7 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.Members.emplace_back("int", "path/to/int", "X",
+  I.Members.emplace_back(TypeInfo("int", "path/to/int"), "X",
                          AccessSpecifier::AS_private);
 
   // Member documentation.
@@ -102,7 +102,7 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
                        AccessSpecifier::AS_public, true);
   I.Bases.back().ChildFunctions.emplace_back();
   I.Bases.back().ChildFunctions.back().Name = "InheritedFunctionOne";
-  I.Bases.back().Members.emplace_back("int", "path/to/int", "N",
+  I.Bases.back().Members.emplace_back(TypeInfo("int", "path/to/int"), "N",
                                       AccessSpecifier::AS_private);
   // F is in the global namespace
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "");
@@ -174,7 +174,6 @@ Bases:
 Parents:
   - Type:            Record
     Name:            'F'
-    IsInGlobalNamespace: true
 VirtualParents:
   - Type:            Record
     Name:            'G'
@@ -206,10 +205,10 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
 
   I.Access = AccessSpecifier::AS_none;
 
-  I.ReturnType =
-      TypeInfo(EmptySID, "void", InfoType::IT_default, "path/to/void");
-  I.Params.emplace_back("int", "path/to/int", "P");
-  I.Params.emplace_back("double", "path/to/double", "D");
+  I.ReturnType = TypeInfo(
+      Reference(EmptySID, "void", InfoType::IT_default, "path/to/void"));
+  I.Params.emplace_back(TypeInfo("int", "path/to/int"), "P");
+  I.Params.emplace_back(TypeInfo("double", "path/to/double"), "D");
   I.Params.back().DefaultValue = "2.0 * M_PI";
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
@@ -335,9 +334,9 @@ TEST(YAMLGeneratorTest, emitCommentYAML) {
   FunctionInfo I;
   I.Name = "f";
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "I");
-  I.Params.emplace_back("int", "J");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "I");
+  I.Params.emplace_back(TypeInfo("int"), "J");
   I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;
