@@ -188,3 +188,25 @@ namespace rem {
                                    // expected-note {{value 2147483648 is outside the range}} \
 
 };
+
+namespace div {
+  constexpr int zero() { return 0; }
+  static_assert(12 / 3 == 4, "");
+  static_assert(12 / zero() == 12, ""); // ref-error {{not an integral constant expression}} \
+                                        // ref-note {{division by zero}} \
+                                        // expected-error {{not an integral constant expression}} \
+                                        // expected-note {{division by zero}}
+  static_assert(12 / -3 == -4, "");
+  static_assert(-12 / 3 == -4, "");
+
+
+  constexpr int LHS = 12;
+  constexpr long unsigned RHS = 3;
+  static_assert(LHS / RHS == 4, "");
+
+  constexpr int x = INT_MIN / - 1; // ref-error {{must be initialized by a constant expression}} \
+                                   // ref-note {{value 2147483648 is outside the range}} \
+                                   // expected-error {{must be initialized by a constant expression}} \
+                                   // expected-note {{value 2147483648 is outside the range}} \
+
+};
