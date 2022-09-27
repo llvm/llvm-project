@@ -61,14 +61,14 @@ define i32 @main() {
 ; CHECK-NEXT:    store i32 4, i32* [[INPUT_RELOAD_ADDR13_I]], align 4, !noalias !3
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
 ; CHECK-NEXT:    [[FRAMEPTR_I2:%.*]] = load %f.Frame*, %f.Frame** [[TMP2]], align 8, !alias.scope !6
-; CHECK-NEXT:    [[INPUT_RELOAD_ADDR13_I3:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR_I2]], i64 0, i32 2
-; CHECK-NEXT:    [[INPUT_RELOAD14_I4:%.*]] = load i32, i32* [[INPUT_RELOAD_ADDR13_I3]], align 4, !noalias !6
 ; CHECK-NEXT:    [[N_VAL3_RELOAD_ADDR11_I5:%.*]] = getelementptr inbounds [[F_FRAME]], %f.Frame* [[FRAMEPTR_I2]], i64 0, i32 1
-; CHECK-NEXT:    [[N_VAL3_RELOAD12_I6:%.*]] = load i32, i32* [[N_VAL3_RELOAD_ADDR11_I5]], align 4, !noalias !6
-; CHECK-NEXT:    [[SUM7_I7:%.*]] = add i32 [[N_VAL3_RELOAD12_I6]], [[INPUT_RELOAD14_I4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[N_VAL3_RELOAD_ADDR11_I5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[N_VAL3_RELOAD_ADDR11_I5]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
+; CHECK-NEXT:    [[SUM7_I7:%.*]] = add i32 [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    tail call void @print(i32 [[SUM7_I7]]), !noalias !6
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast %f.Frame* [[FRAMEPTR_I2]] to i8*
-; CHECK-NEXT:    tail call void @deallocate(i8* [[TMP5]]), !noalias !6
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast %f.Frame* [[FRAMEPTR_I2]] to i8*
+; CHECK-NEXT:    tail call void @deallocate(i8* [[TMP8]]), !noalias !6
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
