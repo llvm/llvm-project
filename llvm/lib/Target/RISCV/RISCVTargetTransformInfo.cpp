@@ -656,15 +656,21 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
          getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 }
 
-InstructionCost RISCVTTIImpl::getVectorImmCost(VectorType *VecTy,
-                                               TTI::OperandValueInfo OpInfo,
-                                               TTI::TargetCostKind CostKind) {
+InstructionCost RISCVTTIImpl::getStoreImmCost(Type *Ty,
+                                              TTI::OperandValueInfo OpInfo,
+                                              TTI::TargetCostKind CostKind) {
   assert(OpInfo.isConstant() && "non constant operand?");
+  if (!isa<VectorType>(Ty))
+    // FIXME: We need to account for immediate materialization here, but doing
+    // a decent job requires more knowledge about the immediate than we
+    // currently have here.
+    return 0;
+
   APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
   // Add a cost of address load + the cost of the vector load.
   return RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
                                     getST()->getFeatureBits()) +
-    getMemoryOpCost(Instruction::Load, VecTy, DL.getABITypeAlign(VecTy),
+    getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
                     /*AddressSpace=*/0, CostKind);
 }
 
@@ -676,8 +682,8 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               TTI::OperandValueInfo OpInfo,
                                               const Instruction *I) {
   InstructionCost Cost = 0;
-  if (Opcode == Instruction::Store && isa<VectorType>(Src) && OpInfo.isConstant())
-    Cost += getVectorImmCost(cast<VectorType>(Src), OpInfo, CostKind);
+  if (Opcode == Instruction::Store && OpInfo.isConstant())
+    Cost += getStoreImmCost(Src, OpInfo, CostKind);
   return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                        CostKind, OpInfo, I);
 }
