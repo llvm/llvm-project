@@ -1030,6 +1030,13 @@ static Expr *buildStdNoThrowDeclRef(Sema &S, SourceLocation Loc) {
   return DR.get();
 }
 
+static TypeSourceInfo *getTypeSourceInfoForStdAlignValT(Sema &S,
+                                                        SourceLocation Loc) {
+  EnumDecl *StdAlignValT = S.getStdAlignValT();
+  QualType StdAlignValDecl = S.Context.getTypeDeclType(StdAlignValT);
+  return S.Context.getTrivialTypeSourceInfo(StdAlignValDecl);
+}
+
 // Find an appropriate delete for the promise.
 static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseType,
                                  FunctionDecl *&OperatorDelete) {
@@ -1039,12 +1046,15 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   auto *PointeeRD = PromiseType->getAsCXXRecordDecl();
   assert(PointeeRD && "PromiseType must be a CxxRecordDecl type");
 
+  const bool Overaligned = S.getLangOpts().CoroAlignedAllocation;
+
   // [dcl.fct.def.coroutine]p12
   // The deallocation function's name is looked up by searching for it in the
   // scope of the promise type. If nothing is found, a search is performed in
   // the global scope.
   if (S.FindDeallocationFunction(Loc, PointeeRD, DeleteName, OperatorDelete,
-                                 /*Diagnose*/ true, /*WantSize*/ true))
+                                 /*Diagnose*/ true, /*WantSize*/ true,
+                                 /*WantAligned*/ Overaligned))
     return false;
 
   // [dcl.fct.def.coroutine]p12
@@ -1057,7 +1067,6 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
     // Look for a global declaration.
     // Coroutines can always provide their required size.
     const bool CanProvideSize = true;
-    const bool Overaligned = false;
     // Sema::FindUsualDeallocationFunction will try to find the one with two
     // parameters first. It will return the deallocation function with one
     // parameter if failed.
@@ -1324,7 +1333,6 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // lvalue that denotes the parameter copy corresponding to p_i.
 
   FunctionDecl *OperatorNew = nullptr;
-  bool PassAlignment = false;
   SmallVector<Expr *, 1> PlacementArgs;
 
   const bool PromiseContainsNew = [this, &PromiseType]() -> bool {
@@ -1338,8 +1346,13 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return !R.empty() && !R.isAmbiguous();
   }();
 
+  // Helper function to indicate whether the last lookup found the aligned
+  // allocation function.
+  bool PassAlignment = S.getLangOpts().CoroAlignedAllocation;
   auto LookupAllocationFunction = [&](Sema::AllocationFunctionScope NewScope =
-                                          Sema::AFS_Both) {
+                                          Sema::AFS_Both,
+                                      bool WithoutPlacementArgs = false,
+                                      bool ForceNonAligned = false) {
     // [dcl.fct.def.coroutine]p9
     //   The allocation function's name is looked up by searching for it in the
     // scope of the promise type.
@@ -1349,10 +1362,13 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     if (NewScope == Sema::AFS_Both)
       NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
 
+    PassAlignment = !ForceNonAligned && S.getLangOpts().CoroAlignedAllocation;
     FunctionDecl *UnusedResult = nullptr;
     S.FindAllocationFunctions(Loc, SourceRange(), NewScope,
                               /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-                              /*isArray*/ false, PassAlignment, PlacementArgs,
+                              /*isArray*/ false, PassAlignment,
+                              WithoutPlacementArgs ? MultiExprArg{}
+                                                   : PlacementArgs,
                               OperatorNew, UnusedResult, /*Diagnose*/ false);
   };
 
@@ -1364,14 +1380,57 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   LookupAllocationFunction();
 
-  // [dcl.fct.def.coroutine]p9
-  //   If no viable function is found ([over.match.viable]), overload resolution
-  // is performed again on a function call created by passing just the amount of
-  // space required as an argument of type std::size_t.
-  if (!OperatorNew && !PlacementArgs.empty() && PromiseContainsNew) {
-    PlacementArgs.clear();
-    LookupAllocationFunction();
+  if (PromiseContainsNew && !PlacementArgs.empty()) {
+    // [dcl.fct.def.coroutine]p9
+    //   If no viable function is found ([over.match.viable]), overload
+    //   resolution
+    // is performed again on a function call created by passing just the amount
+    // of space required as an argument of type std::size_t.
+    //
+    // Proposed Change of [dcl.fct.def.coroutine]p9 in P2014R0:
+    //   Otherwise, overload resolution is performed again on a function call
+    //   created
+    // by passing the amount of space requested as an argument of type
+    // std::size_t as the first argument, and the requested alignment as
+    // an argument of type std:align_val_t as the second argument.
+    if (!OperatorNew ||
+        (S.getLangOpts().CoroAlignedAllocation && !PassAlignment))
+      LookupAllocationFunction(/*NewScope*/ Sema::AFS_Class,
+                               /*WithoutPlacementArgs*/ true);
   }
+
+  // Proposed Change of [dcl.fct.def.coroutine]p12 in P2014R0:
+  //   Otherwise, overload resolution is performed again on a function call
+  //   created
+  // by passing the amount of space requested as an argument of type
+  // std::size_t as the first argument, and the lvalues p1 ... pn as the
+  // succeeding arguments. Otherwise, overload resolution is performed again
+  // on a function call created by passing just the amount of space required as
+  // an argument of type std::size_t.
+  //
+  // So within the proposed change in P2014RO, the priority order of aligned
+  // allocation functions wiht promise_type is:
+  //
+  //    void* operator new( std::size_t, std::align_val_t, placement_args... );
+  //    void* operator new( std::size_t, std::align_val_t);
+  //    void* operator new( std::size_t, placement_args... );
+  //    void* operator new( std::size_t);
+
+  // Helper variable to emit warnings.
+  bool FoundNonAlignedInPromise = false;
+  if (PromiseContainsNew && S.getLangOpts().CoroAlignedAllocation)
+    if (!OperatorNew || !PassAlignment) {
+      FoundNonAlignedInPromise = OperatorNew;
+
+      LookupAllocationFunction(/*NewScope*/ Sema::AFS_Class,
+                               /*WithoutPlacementArgs*/ false,
+                               /*ForceNonAligned*/ true);
+
+      if (!OperatorNew && !PlacementArgs.empty())
+        LookupAllocationFunction(/*NewScope*/ Sema::AFS_Class,
+                                 /*WithoutPlacementArgs*/ true,
+                                 /*ForceNonAligned*/ true);
+    }
 
   bool IsGlobalOverload =
       OperatorNew && !isa<CXXRecordDecl>(OperatorNew->getDeclContext());
@@ -1387,11 +1446,21 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     LookupAllocationFunction(Sema::AFS_Global);
   }
 
+  // If we found a non-aligned allocation function in the promise_type,
+  // it indicates the user forgot to update the allocation function. Let's emit
+  // a warning here.
+  if (FoundNonAlignedInPromise) {
+    S.Diag(OperatorNew->getLocation(),
+           diag::warn_non_aligned_allocation_function)
+        << &FD;
+  }
+
   if (!OperatorNew) {
     if (PromiseContainsNew)
       S.Diag(Loc, diag::err_coroutine_unusable_new) << PromiseType << &FD;
     else if (RequiresNoThrowAlloc)
-      S.Diag(Loc, diag::err_coroutine_unfound_nothrow_new) << &FD;
+      S.Diag(Loc, diag::err_coroutine_unfound_nothrow_new)
+          << &FD << S.getLangOpts().CoroAlignedAllocation;
 
     return false;
   }
@@ -1422,15 +1491,34 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   Expr *FrameSize =
       S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_size, {});
 
-  // Make new call.
+  Expr *FrameAlignment = nullptr;
 
+  if (S.getLangOpts().CoroAlignedAllocation) {
+    FrameAlignment =
+        S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_align, {});
+
+    TypeSourceInfo *AlignValTy = getTypeSourceInfoForStdAlignValT(S, Loc);
+    if (!AlignValTy)
+      return false;
+
+    FrameAlignment = S.BuildCXXNamedCast(Loc, tok::kw_static_cast, AlignValTy,
+                                         FrameAlignment, SourceRange(Loc, Loc),
+                                         SourceRange(Loc, Loc))
+                         .get();
+  }
+
+  // Make new call.
   ExprResult NewRef =
       S.BuildDeclRefExpr(OperatorNew, OperatorNew->getType(), VK_LValue, Loc);
   if (NewRef.isInvalid())
     return false;
 
   SmallVector<Expr *, 2> NewArgs(1, FrameSize);
-  llvm::append_range(NewArgs, PlacementArgs);
+  if (S.getLangOpts().CoroAlignedAllocation && PassAlignment)
+    NewArgs.push_back(FrameAlignment);
+
+  if (OperatorNew->getNumParams() > NewArgs.size())
+    llvm::append_range(NewArgs, PlacementArgs);
 
   ExprResult NewExpr =
       S.BuildCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);
@@ -1459,8 +1547,28 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   //   used, the size of the block is passed as the corresponding argument.
   const auto *OpDeleteType =
       OpDeleteQualType.getTypePtr()->castAs<FunctionProtoType>();
-  if (OpDeleteType->getNumParams() > 1)
+  if (OpDeleteType->getNumParams() > DeleteArgs.size() &&
+      S.getASTContext().hasSameType(
+          OpDeleteType->getParamType(DeleteArgs.size()), FrameSize->getType()))
     DeleteArgs.push_back(FrameSize);
+
+  // Proposed Change of [dcl.fct.def.coroutine]p12 in P2014R0:
+  //   If deallocation function lookup finds a usual deallocation function with
+  //   a pointer parameter, size parameter and alignment parameter then this
+  //   will be the selected deallocation function, otherwise if lookup finds a
+  //   usual deallocation function with both a pointer parameter and a size
+  //   parameter, then this will be the selected deallocation function.
+  //   Otherwise, if lookup finds a usual deallocation function with only a
+  //   pointer parameter, then this will be the selected deallocation
+  //   function.
+  //
+  // So we are not forced to pass alignment to the deallocation function.
+  if (S.getLangOpts().CoroAlignedAllocation &&
+      OpDeleteType->getNumParams() > DeleteArgs.size() &&
+      S.getASTContext().hasSameType(
+          OpDeleteType->getParamType(DeleteArgs.size()),
+          FrameAlignment->getType()))
+    DeleteArgs.push_back(FrameAlignment);
 
   ExprResult DeleteExpr =
       S.BuildCallExpr(S.getCurScope(), DeleteRef.get(), Loc, DeleteArgs, Loc);

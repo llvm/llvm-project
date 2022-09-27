@@ -35,15 +35,15 @@ define double @f64_negative_zero() nounwind {
 define double @f64_constant_pi() nounwind {
 ; LA32-LABEL: f64_constant_pi:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, .LCPI2_0
-; LA32-NEXT:    addi.w $a0, $a0, .LCPI2_0
+; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
+; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI2_0)
 ; LA32-NEXT:    fld.d $fa0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: f64_constant_pi:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    pcalau12i $a0, .LCPI2_0
-; LA64-NEXT:    addi.d $a0, $a0, .LCPI2_0
+; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
+; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI2_0)
 ; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    ret
   ret double 3.1415926535897931159979634685441851615905761718750

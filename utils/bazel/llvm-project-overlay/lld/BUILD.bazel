@@ -246,10 +246,6 @@ cc_binary(
         "tools/lld/*.cpp",
         "tools/lld/*.h",
     ]),
-    tags = [
-        "manual",  # External dependency (libxml through WindowsManifest)
-        "nobuildkite",  # TODO(gcmn): Remote executors don't have libxml
-    ],
     deps = [
         ":COFF",
         ":Common",
@@ -279,8 +275,4 @@ genrule(
     cmd =
         "target=$$(basename $<); for n in ld.lld ld64.lld lld-link wasm-ld; do ln -sf $$target $(@D)/$$n; done",
     output_to_bindir = 1,
-    tags = [
-        "manual",  # External dependency (libxml through WindowsManifest)
-        "nobuildkite",  # TODO(gcmn): Remote executors don't have libxml
-    ],
 )

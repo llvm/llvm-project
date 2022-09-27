@@ -172,11 +172,11 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
                            zeroIndices, loc, rewriter);
 
   // Write out the final reduction result. This should be only conducted by one
-  // invocation. We use spv.GroupNonUniformElect to find the invocation with the
-  // lowest ID.
+  // invocation. We use spirv.GroupNonUniformElect to find the invocation with
+  // the lowest ID.
   //
   // ```
-  // if (spv.GroupNonUniformElect) { output = ... }
+  // if (spirv.GroupNonUniformElect) { output = ... }
   // ```
 
   Value condition = rewriter.create<spirv::GroupNonUniformElectOp>(

@@ -472,8 +472,8 @@ public:
               checkSingleStatement(If->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
               ThenReturnBool.Bool != TrailingReturnBool.Bool) {
-            if (Check->ChainedConditionalReturn ||
-                (!PrevIf && If->getElse() == nullptr)) {
+            if ((Check->ChainedConditionalReturn || !PrevIf) &&
+                If->getElse() == nullptr) {
               Check->replaceCompoundReturnWithCondition(
                   Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool,
                   If, ThenReturnBool.Item);

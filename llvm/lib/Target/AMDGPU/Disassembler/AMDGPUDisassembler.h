@@ -156,13 +156,6 @@ public:
   DecodeStatus decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
                                        raw_string_ostream &KdStream) const;
 
-  /// Decode as directives that handle COMPUTE_PGM_RSRC3.
-  /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC3.
-  /// \param KdStream       - Stream to write the disassembled directives to.
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  DecodeStatus decodeCOMPUTE_PGM_RSRC3(uint32_t FourByteBuffer,
-                                       raw_string_ostream &KdStream) const;
-
   DecodeStatus convertEXPInst(MCInst &MI) const;
   DecodeStatus convertVINTERPInst(MCInst &MI) const;
   DecodeStatus convertFMAanyK(MCInst &MI, int ImmLitIdx) const;

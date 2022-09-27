@@ -1121,6 +1121,16 @@ let SubtargetPredicate = isGFX90APlus in {
 def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_64>;
 let AddedComplexity = 1 in
 def : DSAtomicRetPat<DS_ADD_F64, f64, atomic_load_fadd_local_noret_64>;
+
+class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
+  bit gds=0> : GCNPat <
+  (vt (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value)),
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
+}
+
+def : DSAtomicRetPatIntrinsic<DS_ADD_RTN_F64, f64, int_amdgcn_flat_atomic_fadd_local_addrspace>;
+let AddedComplexity = 1 in
+def : DSAtomicRetPatIntrinsic<DS_ADD_F64, f64, int_amdgcn_flat_atomic_fadd_noret_local_addrspace>;
 }
 
 let SubtargetPredicate = isGFX940Plus in {

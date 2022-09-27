@@ -295,8 +295,6 @@ def note_missing_selector_name : Note<
 def note_force_empty_selector_name : Note<
   "or insert whitespace before ':' to use %0 as parameter name "
   "and have an empty entry in the selector">;
-def err_switch_label_end_of_compound_statement : Error<
-  "label at end of switch compound statement: expected statement">;
 def ext_c_label_end_of_compound_statement : ExtWarn<
   "label at end of compound statement is a C2x extension">,
    InGroup<C2x>;
@@ -1618,7 +1616,10 @@ def note_max_tokens_total_override : Note<"total token limit set here">;
 
 def err_expected_semantic_identifier : Error<
   "expected HLSL Semantic identifier">;
+def err_invalid_declaration_in_hlsl_buffer : Error<
+  "invalid declaration inside %select{tbuffer|cbuffer}0">;
 def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
+def err_hlsl_separate_attr_arg_and_number : Error<"wrong argument format for hlsl attribute, use %0 instead">;
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,
   InGroup<HLSLExtension>;

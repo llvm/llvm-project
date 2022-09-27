@@ -51,7 +51,7 @@ struct DynamicTypeStorage;
 /// extensible dialect (a dialect inheriting ExtensibleDialect). This class
 /// stores the parser, the printer, and the verifier of the attribute. Each
 /// dynamic attribute definition refers to one instance of this class.
-class DynamicAttrDefinition : SelfOwningTypeID {
+class DynamicAttrDefinition : public SelfOwningTypeID {
 public:
   using VerifierFn = llvm::unique_function<LogicalResult(
       function_ref<InFlightDiagnostic()>, ArrayRef<Attribute>) const>;
@@ -196,7 +196,7 @@ public:
 /// extensible dialect (a dialect inheriting ExtensibleDialect). This class
 /// stores the parser, the printer, and the verifier of the type. Each dynamic
 /// type definition refers to one instance of this class.
-class DynamicTypeDefinition : SelfOwningTypeID {
+class DynamicTypeDefinition : public SelfOwningTypeID {
 public:
   using VerifierFn = llvm::unique_function<LogicalResult(
       function_ref<InFlightDiagnostic()>, ArrayRef<Attribute>) const>;

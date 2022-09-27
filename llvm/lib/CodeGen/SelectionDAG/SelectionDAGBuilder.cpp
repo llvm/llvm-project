@@ -4435,16 +4435,16 @@ static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
   if (BasePtr->getType()->isVectorTy() || !IndexVal->getType()->isVectorTy())
     return false;
 
+  uint64_t ScaleVal = DL.getTypeAllocSize(GEP->getResultElementType());
+
+  // Target may not support the required addressing mode.
+  if (ScaleVal != 1 &&
+      !TLI.isLegalScaleForGatherScatter(ScaleVal, ElemSize))
+    return false;
+
   Base = SDB->getValue(BasePtr);
   Index = SDB->getValue(IndexVal);
   IndexType = ISD::SIGNED_SCALED;
-
-  // MGATHER/MSCATTER are only required to support scaling by one or by the
-  // element size. Other scales may be produced using target-specific DAG
-  // combines.
-  uint64_t ScaleVal = DL.getTypeAllocSize(GEP->getResultElementType());
-  if (ScaleVal != ElemSize && ScaleVal != 1)
-    return false;
 
   Scale =
       DAG.getTargetConstant(ScaleVal, SDB->getCurSDLoc(), TLI.getPointerTy(DL));
@@ -7296,11 +7296,6 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     const ConstrainedFPIntrinsic &FPI) {
   SDLoc sdl = getCurSDLoc();
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), FPI.getType(), ValueVTs);
-  ValueVTs.push_back(MVT::Other); // Out chain
-
   // We do not need to serialize constrained FP intrinsics against
   // each other or against (nonvolatile) loads, so they can be
   // chained like loads.
@@ -7344,7 +7339,9 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     }
   };
 
-  SDVTList VTs = DAG.getVTList(ValueVTs);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), FPI.getType());
+  SDVTList VTs = DAG.getVTList(VT, MVT::Other);
   fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
 
   SDNodeFlags Flags;
@@ -7366,8 +7363,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     Opcode = ISD::STRICT_FMA;
     // Break fmuladd into fmul and fadd.
     if (TM.Options.AllowFPOpFusion == FPOpFusion::Strict ||
-        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(),
-                                        ValueVTs[0])) {
+        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
       Opers.pop_back();
       SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers, Flags);
       pushOutChain(Mul, EB);
@@ -7431,9 +7427,34 @@ static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
   return *ResOPC;
 }
 
-void SelectionDAGBuilder::visitVPLoadGather(const VPIntrinsic &VPIntrin, EVT VT,
-                                            SmallVector<SDValue, 7> &OpValues,
-                                            bool IsGather) {
+void SelectionDAGBuilder::visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
+                                      SmallVector<SDValue, 7> &OpValues) {
+  SDLoc DL = getCurSDLoc();
+  Value *PtrOperand = VPIntrin.getArgOperand(0);
+  MaybeAlign Alignment = VPIntrin.getPointerAlignment();
+  AAMDNodes AAInfo = VPIntrin.getAAMetadata();
+  const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
+  SDValue LD;
+  bool AddToChain = true;
+  // Do not serialize variable-length loads of constant memory with
+  // anything.
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT);
+  MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
+  AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+  SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+  LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
+                     MMO, false /*IsExpanding */);
+  if (AddToChain)
+    PendingLoads.push_back(LD.getValue(1));
+  setValue(&VPIntrin, LD);
+}
+
+void SelectionDAGBuilder::visitVPGather(const VPIntrinsic &VPIntrin, EVT VT,
+                                        SmallVector<SDValue, 7> &OpValues) {
   SDLoc DL = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   Value *PtrOperand = VPIntrin.getArgOperand(0);
@@ -7441,59 +7462,62 @@ void SelectionDAGBuilder::visitVPLoadGather(const VPIntrinsic &VPIntrin, EVT VT,
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
   SDValue LD;
-  bool AddToChain = true;
-  if (!IsGather) {
-    // Do not serialize variable-length loads of constant memory with
-    // anything.
-    if (!Alignment)
-      Alignment = DAG.getEVTAlign(VT);
-    MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
-    AddToChain = !AA || !AA->pointsToConstantMemory(ML);
-    SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
-    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-        MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
-    LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
-                       MMO, false /*IsExpanding */);
-  } else {
-    if (!Alignment)
-      Alignment = DAG.getEVTAlign(VT.getScalarType());
-    unsigned AS =
-        PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
-    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-        MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
-    SDValue Base, Index, Scale;
-    ISD::MemIndexType IndexType;
-    bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
-                                      this, VPIntrin.getParent(),
-                                      VT.getScalarStoreSize());
-    if (!UniformBase) {
-      Base = DAG.getConstant(0, DL, TLI.getPointerTy(DAG.getDataLayout()));
-      Index = getValue(PtrOperand);
-      IndexType = ISD::SIGNED_SCALED;
-      Scale =
-          DAG.getTargetConstant(1, DL, TLI.getPointerTy(DAG.getDataLayout()));
-    }
-    EVT IdxVT = Index.getValueType();
-    EVT EltTy = IdxVT.getVectorElementType();
-    if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
-      EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
-      Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
-    }
-    LD = DAG.getGatherVP(
-        DAG.getVTList(VT, MVT::Other), VT, DL,
-        {DAG.getRoot(), Base, Index, Scale, OpValues[1], OpValues[2]}, MMO,
-        IndexType);
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT.getScalarType());
+  unsigned AS =
+    PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+     MachinePointerInfo(AS), MachineMemOperand::MOLoad,
+     MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+  SDValue Base, Index, Scale;
+  ISD::MemIndexType IndexType;
+  bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
+                                    this, VPIntrin.getParent(),
+                                    VT.getScalarStoreSize());
+  if (!UniformBase) {
+    Base = DAG.getConstant(0, DL, TLI.getPointerTy(DAG.getDataLayout()));
+    Index = getValue(PtrOperand);
+    IndexType = ISD::SIGNED_SCALED;
+    Scale = DAG.getTargetConstant(1, DL, TLI.getPointerTy(DAG.getDataLayout()));
   }
-  if (AddToChain)
-    PendingLoads.push_back(LD.getValue(1));
+  EVT IdxVT = Index.getValueType();
+  EVT EltTy = IdxVT.getVectorElementType();
+  if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
+    EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
+    Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
+  }
+  LD = DAG.getGatherVP(
+      DAG.getVTList(VT, MVT::Other), VT, DL,
+      {DAG.getRoot(), Base, Index, Scale, OpValues[1], OpValues[2]}, MMO,
+      IndexType);
+  PendingLoads.push_back(LD.getValue(1));
   setValue(&VPIntrin, LD);
 }
 
-void SelectionDAGBuilder::visitVPStoreScatter(const VPIntrinsic &VPIntrin,
-                                              SmallVector<SDValue, 7> &OpValues,
-                                              bool IsScatter) {
+void SelectionDAGBuilder::visitVPStore(const VPIntrinsic &VPIntrin,
+                                       SmallVector<SDValue, 7> &OpValues) {
+  SDLoc DL = getCurSDLoc();
+  Value *PtrOperand = VPIntrin.getArgOperand(1);
+  EVT VT = OpValues[0].getValueType();
+  MaybeAlign Alignment = VPIntrin.getPointerAlignment();
+  AAMDNodes AAInfo = VPIntrin.getAAMetadata();
+  SDValue ST;
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT);
+  SDValue Ptr = OpValues[1];
+  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
+      MemoryLocation::UnknownSize, *Alignment, AAInfo);
+  ST = DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], Ptr, Offset,
+                      OpValues[2], OpValues[3], VT, MMO, ISD::UNINDEXED,
+                      /* IsTruncating */ false, /*IsCompressing*/ false);
+  DAG.setRoot(ST);
+  setValue(&VPIntrin, ST);
+}
+
+void SelectionDAGBuilder::visitVPScatter(const VPIntrinsic &VPIntrin,
+                                              SmallVector<SDValue, 7> &OpValues) {
   SDLoc DL = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   Value *PtrOperand = VPIntrin.getArgOperand(1);
@@ -7501,48 +7525,35 @@ void SelectionDAGBuilder::visitVPStoreScatter(const VPIntrinsic &VPIntrin,
   MaybeAlign Alignment = VPIntrin.getPointerAlignment();
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   SDValue ST;
-  if (!IsScatter) {
-    if (!Alignment)
-      Alignment = DAG.getEVTAlign(VT);
-    SDValue Ptr = OpValues[1];
-    SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
-    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-        MemoryLocation::UnknownSize, *Alignment, AAInfo);
-    ST = DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], Ptr, Offset,
-                        OpValues[2], OpValues[3], VT, MMO, ISD::UNINDEXED,
-                        /* IsTruncating */ false, /*IsCompressing*/ false);
-  } else {
-    if (!Alignment)
-      Alignment = DAG.getEVTAlign(VT.getScalarType());
-    unsigned AS =
-        PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
-    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MachinePointerInfo(AS), MachineMemOperand::MOStore,
-        MemoryLocation::UnknownSize, *Alignment, AAInfo);
-    SDValue Base, Index, Scale;
-    ISD::MemIndexType IndexType;
-    bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
-                                      this, VPIntrin.getParent(),
-                                      VT.getScalarStoreSize());
-    if (!UniformBase) {
-      Base = DAG.getConstant(0, DL, TLI.getPointerTy(DAG.getDataLayout()));
-      Index = getValue(PtrOperand);
-      IndexType = ISD::SIGNED_SCALED;
-      Scale =
-          DAG.getTargetConstant(1, DL, TLI.getPointerTy(DAG.getDataLayout()));
-    }
-    EVT IdxVT = Index.getValueType();
-    EVT EltTy = IdxVT.getVectorElementType();
-    if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
-      EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
-      Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
-    }
-    ST = DAG.getScatterVP(DAG.getVTList(MVT::Other), VT, DL,
-                          {getMemoryRoot(), OpValues[0], Base, Index, Scale,
-                           OpValues[2], OpValues[3]},
-                          MMO, IndexType);
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT.getScalarType());
+  unsigned AS =
+      PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(AS), MachineMemOperand::MOStore,
+      MemoryLocation::UnknownSize, *Alignment, AAInfo);
+  SDValue Base, Index, Scale;
+  ISD::MemIndexType IndexType;
+  bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
+                                    this, VPIntrin.getParent(),
+                                    VT.getScalarStoreSize());
+  if (!UniformBase) {
+    Base = DAG.getConstant(0, DL, TLI.getPointerTy(DAG.getDataLayout()));
+    Index = getValue(PtrOperand);
+    IndexType = ISD::SIGNED_SCALED;
+    Scale =
+      DAG.getTargetConstant(1, DL, TLI.getPointerTy(DAG.getDataLayout()));
   }
+  EVT IdxVT = Index.getValueType();
+  EVT EltTy = IdxVT.getVectorElementType();
+  if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
+    EVT NewIdxVT = IdxVT.changeVectorElementType(EltTy);
+    Index = DAG.getNode(ISD::SIGN_EXTEND, DL, NewIdxVT, Index);
+  }
+  ST = DAG.getScatterVP(DAG.getVTList(MVT::Other), VT, DL,
+                        {getMemoryRoot(), OpValues[0], Base, Index, Scale,
+                         OpValues[2], OpValues[3]},
+                        MMO, IndexType);
   DAG.setRoot(ST);
   setValue(&VPIntrin, ST);
 }
@@ -7669,16 +7680,19 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
     break;
   }
   case ISD::VP_LOAD:
+    visitVPLoad(VPIntrin, ValueVTs[0], OpValues);
+    break;
   case ISD::VP_GATHER:
-    visitVPLoadGather(VPIntrin, ValueVTs[0], OpValues,
-                      Opcode == ISD::VP_GATHER);
+    visitVPGather(VPIntrin, ValueVTs[0], OpValues);
     break;
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     visitVPStridedLoad(VPIntrin, ValueVTs[0], OpValues);
     break;
   case ISD::VP_STORE:
+    visitVPStore(VPIntrin, OpValues);
+    break;
   case ISD::VP_SCATTER:
-    visitVPStoreScatter(VPIntrin, OpValues, Opcode == ISD::VP_SCATTER);
+    visitVPScatter(VPIntrin, OpValues);
     break;
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     visitVPStridedStore(VPIntrin, OpValues);

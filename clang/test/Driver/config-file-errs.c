@@ -1,9 +1,3 @@
-//--- No more than one '--config' may be specified.
-//
-// RUN: not %clang --config 1.cfg --config 2.cfg 2>&1 | FileCheck %s -check-prefix CHECK-DUPLICATE
-// CHECK-DUPLICATE: no more than one option '--config' is allowed
-
-
 //--- '--config' must be followed by config file name.
 //
 // RUN: not %clang --config 2>&1 | FileCheck %s -check-prefix CHECK-MISSING-FILE
@@ -20,6 +14,11 @@
 //
 // RUN: not %clang --config somewhere/nonexistent-config-file 2>&1 | FileCheck %s -check-prefix CHECK-NONEXISTENT
 // CHECK-NONEXISTENT: configuration file '{{.*}}somewhere/nonexistent-config-file' does not exist
+
+
+//--- All '--config' arguments must be existing files.
+//
+// RUN: not %clang --config %S/Inputs/config-4.cfg --config somewhere/nonexistent-config-file 2>&1 | FileCheck %s -check-prefix CHECK-NONEXISTENT
 
 
 //--- Argument of '--config' must exist somewhere in well-known directories, if it is specified by bare name.

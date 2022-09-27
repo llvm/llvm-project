@@ -1789,18 +1789,29 @@ void COFFDumper::printCOFFExports() {
     DictScope Export(W, "Export");
 
     StringRef Name;
-    uint32_t Ordinal, RVA;
+    uint32_t Ordinal;
+    bool IsForwarder;
 
     if (Error E = Exp.getSymbolName(Name))
       reportError(std::move(E), Obj->getFileName());
     if (Error E = Exp.getOrdinal(Ordinal))
       reportError(std::move(E), Obj->getFileName());
-    if (Error E = Exp.getExportRVA(RVA))
+    if (Error E = Exp.isForwarder(IsForwarder))
       reportError(std::move(E), Obj->getFileName());
 
     W.printNumber("Ordinal", Ordinal);
     W.printString("Name", Name);
-    W.printHex("RVA", RVA);
+    StringRef ForwardTo;
+    if (IsForwarder) {
+      if (Error E = Exp.getForwardTo(ForwardTo))
+        reportError(std::move(E), Obj->getFileName());
+      W.printString("ForwardedTo", ForwardTo);
+    } else {
+      uint32_t RVA;
+      if (Error E = Exp.getExportRVA(RVA))
+        reportError(std::move(E), Obj->getFileName());
+      W.printHex("RVA", RVA);
+    }
   }
 }
 

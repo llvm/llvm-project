@@ -285,14 +285,16 @@ defm "" : SIMDLoadZero<I32x4, 0x5c>;
 defm "" : SIMDLoadZero<I64x2, 0x5d>;
 
 // Use load_zero to load scalars into vectors as well where possible.
-// TODO: i32, i16, and i8 scalars
-def load_scalar :
-  PatFrag<(ops node:$addr), (scalar_to_vector (i64 (load $addr)))>;
-defm : LoadPatNoOffset<v2i64, load_scalar, "LOAD_ZERO_I64x2">;
-defm : LoadPatImmOff<v2i64, load_scalar, regPlusImm, "LOAD_ZERO_I64x2">;
-defm : LoadPatImmOff<v2i64, load_scalar, or_is_add, "LOAD_ZERO_I64x2">;
-defm : LoadPatOffsetOnly<v2i64, load_scalar, "LOAD_ZERO_I64x2">;
-defm : LoadPatGlobalAddrOffOnly<v2i64, load_scalar, "LOAD_ZERO_I64x2">;
+// TODO: i16, and i8 scalars
+foreach vec = [I32x4, I64x2] in {
+  defvar inst = "LOAD_ZERO_"#vec;
+  defvar pat = PatFrag<(ops node:$addr), (scalar_to_vector (vec.lane_vt (load $addr)))>;
+  defm : LoadPatNoOffset<vec.vt, pat, inst>;
+  defm : LoadPatImmOff<vec.vt, pat, regPlusImm, inst>;
+  defm : LoadPatImmOff<vec.vt, pat, or_is_add, inst>;
+  defm : LoadPatOffsetOnly<vec.vt, pat, inst>;
+  defm : LoadPatGlobalAddrOffOnly<vec.vt, pat, inst>;
+}
 
 // TODO: f32x4 and f64x2 as well
 foreach vec = [I32x4, I64x2] in {

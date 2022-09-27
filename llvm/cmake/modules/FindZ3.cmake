@@ -38,7 +38,7 @@ function(check_z3_version z3_include z3_lib)
   )
 
   if(Z3_COMPILED)
-    string(REGEX REPLACE "([0-9]*\\.[0-9]*\\.[0-9]*)" "\\1"
+    string(REGEX REPLACE "([0-9]+\\.[0-9]+\\.[0-9]+)" "\\1"
            z3_version "${SRC_OUTPUT}")
     set(Z3_VERSION_STRING ${z3_version} PARENT_SCOPE)
   else()
@@ -90,17 +90,17 @@ if(NOT Z3_VERSION_STRING AND (CMAKE_CROSSCOMPILING AND
   # Z3 4.8.1+ has the version is in a public header.
   file(STRINGS "${Z3_INCLUDE_DIR}/z3_version.h"
        z3_version_str REGEX "^#define[\t ]+Z3_MAJOR_VERSION[\t ]+.*")
-  string(REGEX REPLACE "^.*Z3_MAJOR_VERSION[\t ]+([0-9]).*$" "\\1"
+  string(REGEX REPLACE "^.*Z3_MAJOR_VERSION[\t ]+([0-9]+).*$" "\\1"
          Z3_MAJOR "${z3_version_str}")
 
   file(STRINGS "${Z3_INCLUDE_DIR}/z3_version.h"
        z3_version_str REGEX "^#define[\t ]+Z3_MINOR_VERSION[\t ]+.*")
-  string(REGEX REPLACE "^.*Z3_MINOR_VERSION[\t ]+([0-9]).*$" "\\1"
+  string(REGEX REPLACE "^.*Z3_MINOR_VERSION[\t ]+([0-9]+).*$" "\\1"
          Z3_MINOR "${z3_version_str}")
 
   file(STRINGS "${Z3_INCLUDE_DIR}/z3_version.h"
        z3_version_str REGEX "^#define[\t ]+Z3_BUILD_NUMBER[\t ]+.*")
-  string(REGEX REPLACE "^.*Z3_BUILD_NUMBER[\t ]+([0-9]).*$" "\\1"
+  string(REGEX REPLACE "^.*Z3_BUILD_NUMBER[\t ]+([0-9]+).*$" "\\1"
          Z3_BUILD "${z3_version_str}")
 
   set(Z3_VERSION_STRING ${Z3_MAJOR}.${Z3_MINOR}.${Z3_BUILD})

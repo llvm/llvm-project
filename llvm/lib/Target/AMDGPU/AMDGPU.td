@@ -622,6 +622,13 @@ def FeatureAtomicPkFaddNoRtnInsts
   [FeatureFlatGlobalInsts]
 >;
 
+def FeatureFlatAtomicFaddF32Inst
+  : SubtargetFeature<"flat-atomic-fadd-f32-inst",
+  "HasFlatAtomicFaddF32Inst",
+  "true",
+  "Has flat_atomic_add_f32 instruction"
+>;
+
 def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   "SupportsSRAMECC",
   "true",
@@ -688,10 +695,10 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "Does not need SW waitstates"
 >;
 
-def FeatureGFX11ExtraVGPRs : SubtargetFeature<"gfx11-extra-vgprs",
-  "HasGFX11ExtraVGPRs",
+def FeatureGFX11FullVGPRs : SubtargetFeature<"gfx11-full-vgprs",
+  "HasGFX11FullVGPRs",
   "true",
-  "GFX11 with 50% extra VGPRs and 50% larger allocation granule"
+  "GFX11 with 50% more physical VGPRs and 50% larger allocation granule than GFX10"
 >;
 
 class SubtargetFeatureNSAMaxSize <int Value> : SubtargetFeature <
@@ -1148,6 +1155,7 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicPkFaddNoRtnInsts,
+   FeatureFlatAtomicFaddF32Inst,
    FeatureSupportsSRAMECC,
    FeaturePackedTID,
    FeatureArchitectedFlatScratch,
@@ -1287,18 +1295,19 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
+   FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard]>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureGFX11ExtraVGPRs,
+    [FeatureGFX11FullVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureGFX11ExtraVGPRs])>;
+    [FeatureGFX11FullVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
@@ -1313,6 +1322,7 @@ def FeatureISAVersion11_0_3 : FeatureSet<
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
   let noNamedPositionallyEncodedOperands = 1;
+  let useDeprecatedPositionallyEncodedOperands = 1;
 }
 
 def AMDGPUAsmParser : AsmParser {
@@ -1515,11 +1525,6 @@ def isGFX908orGFX90A :
 def isGFX940Plus :
   Predicate<"Subtarget->hasGFX940Insts()">,
   AssemblerPredicate<(all_of FeatureGFX940Insts)>;
-
-def isGFX940GFX11Plus :
-  Predicate<"Subtarget->hasGFX940Insts() ||"
-            "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
-  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
 
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
@@ -1757,6 +1762,9 @@ def HasAtomicFaddNoRtnInsts : Predicate<"Subtarget->hasAtomicFaddNoRtnInsts()">,
 def HasAtomicPkFaddNoRtnInsts
   : Predicate<"Subtarget->hasAtomicPkFaddNoRtnInsts()">,
   AssemblerPredicate<(all_of FeatureAtomicPkFaddNoRtnInsts)>;
+def HasFlatAtomicFaddF32Inst
+  : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
+  AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
 
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;

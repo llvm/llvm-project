@@ -1664,7 +1664,6 @@ private:
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst, const OperandVector &Operands);
-  bool validateEarlyClobberLimitations(const MCInst &Inst, const OperandVector &Operands);
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
@@ -3575,46 +3574,6 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
   return false;
 }
 
-bool
-AMDGPUAsmParser::validateEarlyClobberLimitations(const MCInst &Inst,
-                                                 const OperandVector &Operands) {
-  const unsigned Opcode = Inst.getOpcode();
-  const MCInstrDesc &Desc = MII.get(Opcode);
-
-  const int DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdst);
-  if (DstIdx == -1 ||
-      Desc.getOperandConstraint(DstIdx, MCOI::EARLY_CLOBBER) == -1) {
-    return true;
-  }
-
-  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-
-  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
-  const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
-  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
-
-  assert(DstIdx != -1);
-  const MCOperand &Dst = Inst.getOperand(DstIdx);
-  assert(Dst.isReg());
-
-  const int SrcIndices[] = { Src0Idx, Src1Idx, Src2Idx };
-
-  for (int SrcIdx : SrcIndices) {
-    if (SrcIdx == -1) break;
-    const MCOperand &Src = Inst.getOperand(SrcIdx);
-    if (Src.isReg()) {
-      if (TRI->regsOverlap(Dst.getReg(), Src.getReg())) {
-        const unsigned SrcReg = mc2PseudoReg(Src.getReg());
-        Error(getRegLoc(SrcReg, Operands),
-          "destination must be different than all sources");
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
 
   const unsigned Opc = Inst.getOpcode();
@@ -4641,9 +4600,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateConstantBusLimitations(Inst, Operands)) {
-    return false;
-  }
-  if (!validateEarlyClobberLimitations(Inst, Operands)) {
     return false;
   }
   if (!validateIntClampSupported(Inst)) {

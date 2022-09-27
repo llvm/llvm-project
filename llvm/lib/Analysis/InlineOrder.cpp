@@ -63,92 +63,61 @@ llvm::InlineCost getInlineCostWrapper(CallBase &CB,
                        GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
 }
 
-class InlinePriority {
+class SizePriority {
 public:
-  virtual ~InlinePriority() = default;
-  virtual bool hasLowerPriority(const CallBase *L, const CallBase *R) const = 0;
-  virtual void update(const CallBase *CB) = 0;
-  virtual bool updateAndCheckDecreased(const CallBase *CB) = 0;
-};
-
-class SizePriority : public InlinePriority {
-  using PriorityT = unsigned;
-  DenseMap<const CallBase *, PriorityT> Priorities;
-
-  PriorityT evaluate(const CallBase *CB) {
+  SizePriority() = default;
+  SizePriority(const CallBase *CB, FunctionAnalysisManager &,
+               const InlineParams &) {
     Function *Callee = CB->getCalledFunction();
-    return Callee->getInstructionCount();
+    Size = Callee->getInstructionCount();
   }
 
-  bool isMoreDesirable(const PriorityT &P1, const PriorityT &P2) const {
-    return P1 < P2;
+  static bool isMoreDesirable(const SizePriority &P1, const SizePriority &P2) {
+    return P1.Size < P2.Size;
   }
 
-public:
-  bool hasLowerPriority(const CallBase *L, const CallBase *R) const override {
-    const auto I1 = Priorities.find(L);
-    const auto I2 = Priorities.find(R);
-    assert(I1 != Priorities.end() && I2 != Priorities.end());
-    return isMoreDesirable(I2->second, I1->second);
-  }
-
-  // Update the priority associated with CB.
-  void update(const CallBase *CB) override { Priorities[CB] = evaluate(CB); };
-
-  bool updateAndCheckDecreased(const CallBase *CB) override {
-    auto It = Priorities.find(CB);
-    const auto OldPriority = It->second;
-    It->second = evaluate(CB);
-    const auto NewPriority = It->second;
-    return isMoreDesirable(OldPriority, NewPriority);
-  }
+private:
+  unsigned Size;
 };
 
-class CostPriority : public InlinePriority {
-  using PriorityT = int;
-  DenseMap<const CallBase *, PriorityT> Priorities;
-  std::function<InlineCost(const CallBase *)> getInlineCost;
-
-  PriorityT evaluate(const CallBase *CB) {
-    auto IC = getInlineCost(CB);
-    int Cost = 0;
+class CostPriority {
+public:
+  CostPriority() = default;
+  CostPriority(const CallBase *CB, FunctionAnalysisManager &FAM,
+               const InlineParams &Params) {
+    auto IC = getInlineCostWrapper(const_cast<CallBase &>(*CB), FAM, Params);
     if (IC.isVariable())
       Cost = IC.getCost();
     else
       Cost = IC.isNever() ? INT_MAX : INT_MIN;
-    return Cost;
   }
 
-  bool isMoreDesirable(const PriorityT &P1, const PriorityT &P2) const {
-    return P1 < P2;
+  static bool isMoreDesirable(const CostPriority &P1, const CostPriority &P2) {
+    return P1.Cost < P2.Cost;
   }
 
-public:
-  CostPriority() = delete;
-  CostPriority(std::function<InlineCost(const CallBase *)> getInlineCost)
-      : getInlineCost(getInlineCost){};
+private:
+  int Cost;
+};
 
-  bool hasLowerPriority(const CallBase *L, const CallBase *R) const override {
+template <typename PriorityT>
+class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
+  using T = std::pair<CallBase *, int>;
+
+  bool hasLowerPriority(const CallBase *L, const CallBase *R) const {
     const auto I1 = Priorities.find(L);
     const auto I2 = Priorities.find(R);
     assert(I1 != Priorities.end() && I2 != Priorities.end());
-    return isMoreDesirable(I2->second, I1->second);
+    return PriorityT::isMoreDesirable(I2->second, I1->second);
   }
 
-  // Update the priority associated with CB.
-  void update(const CallBase *CB) override { Priorities[CB] = evaluate(CB); };
-
-  bool updateAndCheckDecreased(const CallBase *CB) override {
+  bool updateAndCheckDecreased(const CallBase *CB) {
     auto It = Priorities.find(CB);
     const auto OldPriority = It->second;
-    It->second = evaluate(CB);
+    It->second = PriorityT(CB, FAM, Params);
     const auto NewPriority = It->second;
-    return isMoreDesirable(OldPriority, NewPriority);
+    return PriorityT::isMoreDesirable(OldPriority, NewPriority);
   }
-};
-
-class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
-  using T = std::pair<CallBase *, int>;
 
   // A call site could become less desirable for inlining because of the size
   // growth from prior inlining into the callee. This method is used to lazily
@@ -158,17 +127,17 @@ class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
   // pushed right back into the heap. For simplicity, those cases where
   // the desirability of a call site increases are ignored here.
   void adjust() {
-    while (PriorityPtr->updateAndCheckDecreased(Heap.front())) {
+    while (updateAndCheckDecreased(Heap.front())) {
       std::pop_heap(Heap.begin(), Heap.end(), isLess);
       std::push_heap(Heap.begin(), Heap.end(), isLess);
     }
   }
 
 public:
-  PriorityInlineOrder(std::unique_ptr<InlinePriority> PriorityPtr)
-      : PriorityPtr(std::move(PriorityPtr)) {
-    isLess = [this](const CallBase *L, const CallBase *R) {
-      return this->PriorityPtr->hasLowerPriority(L, R);
+  PriorityInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params)
+      : FAM(FAM), Params(Params) {
+    isLess = [&](const CallBase *L, const CallBase *R) {
+      return hasLowerPriority(L, R);
     };
   }
 
@@ -179,7 +148,7 @@ public:
     const int InlineHistoryID = Elt.second;
 
     Heap.push_back(CB);
-    PriorityPtr->update(CB);
+    Priorities[CB] = PriorityT(CB, FAM, Params);
     std::push_heap(Heap.begin(), Heap.end(), isLess);
     InlineHistoryMap[CB] = InlineHistoryID;
   }
@@ -208,7 +177,9 @@ private:
   SmallVector<CallBase *, 16> Heap;
   std::function<bool(const CallBase *L, const CallBase *R)> isLess;
   DenseMap<CallBase *, int> InlineHistoryMap;
-  std::unique_ptr<InlinePriority> PriorityPtr;
+  DenseMap<const CallBase *, PriorityT> Priorities;
+  FunctionAnalysisManager &FAM;
+  const InlineParams &Params;
 };
 
 } // namespace
@@ -218,15 +189,11 @@ llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params) {
   switch (UseInlinePriority) {
   case InlinePriorityMode::Size:
     LLVM_DEBUG(dbgs() << "    Current used priority: Size priority ---- \n");
-    return std::make_unique<PriorityInlineOrder>(
-        std::make_unique<SizePriority>());
+    return std::make_unique<PriorityInlineOrder<SizePriority>>(FAM, Params);
 
   case InlinePriorityMode::Cost:
     LLVM_DEBUG(dbgs() << "    Current used priority: Cost priority ---- \n");
-    return std::make_unique<PriorityInlineOrder>(
-        std::make_unique<CostPriority>([&](const CallBase *CB) -> InlineCost {
-          return getInlineCostWrapper(const_cast<CallBase &>(*CB), FAM, Params);
-        }));
+    return std::make_unique<PriorityInlineOrder<CostPriority>>(FAM, Params);
 
   default:
     llvm_unreachable("Unsupported Inline Priority Mode");

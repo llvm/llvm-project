@@ -462,30 +462,30 @@ define i64 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    pcalau12i $a0, .LCPI21_0
-; CHECK-NEXT:    addi.d $a0, $a0, .LCPI21_0
-; CHECK-NEXT:    pcalau12i $a1, .LCPI21_1
-; CHECK-NEXT:    addi.d $a1, $a1, .LCPI21_1
-; CHECK-NEXT:    pcalau12i $a2, .LCPI21_2
-; CHECK-NEXT:    addi.d $a2, $a2, .LCPI21_2
-; CHECK-NEXT:    pcalau12i $a3, .LCPI21_3
-; CHECK-NEXT:    addi.d $a3, $a3, .LCPI21_3
-; CHECK-NEXT:    pcalau12i $a4, .LCPI21_4
-; CHECK-NEXT:    addi.d $a4, $a4, .LCPI21_4
-; CHECK-NEXT:    pcalau12i $a5, .LCPI21_5
-; CHECK-NEXT:    addi.d $a5, $a5, .LCPI21_5
-; CHECK-NEXT:    addi.d $a6, $zero, 1
-; CHECK-NEXT:    movgr2fr.d $fa0, $a6
-; CHECK-NEXT:    ffint.d.l $fa0, $fa0
-; CHECK-NEXT:    fld.d $fa1, $a5, 0
-; CHECK-NEXT:    fld.d $fa2, $a4, 0
-; CHECK-NEXT:    fld.d $fa3, $a3, 0
-; CHECK-NEXT:    fld.d $fa4, $a2, 0
-; CHECK-NEXT:    fld.d $fa5, $a1, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_0)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_0)
+; CHECK-NEXT:    fld.d $fa1, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_1)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_1)
+; CHECK-NEXT:    fld.d $fa2, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_2)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_2)
+; CHECK-NEXT:    fld.d $fa3, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_3)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_3)
+; CHECK-NEXT:    fld.d $fa4, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_4)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_4)
+; CHECK-NEXT:    fld.d $fa5, $a0, 0
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_5)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_5)
 ; CHECK-NEXT:    fld.d $fa6, $a0, 0
-; CHECK-NEXT:    pcalau12i $a0, .LCPI21_6
-; CHECK-NEXT:    addi.d $a0, $a0, .LCPI21_6
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI21_6)
+; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI21_6)
 ; CHECK-NEXT:    fld.d $fa7, $a0, 0
+; CHECK-NEXT:    addi.d $a0, $zero, 1
+; CHECK-NEXT:    movgr2fr.d $fa0, $a0
+; CHECK-NEXT:    ffint.d.l $fa0, $fa0
 ; CHECK-NEXT:    ori $a0, $zero, 0
 ; CHECK-NEXT:    lu32i.d $a0, 131072
 ; CHECK-NEXT:    lu52i.d $a0, $a0, 1026

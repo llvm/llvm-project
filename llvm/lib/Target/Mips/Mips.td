@@ -223,7 +223,9 @@ include "MipsCombine.td"
 include "MipsScheduleP5600.td"
 include "MipsScheduleGeneric.td"
 
-def MipsInstrInfo : InstrInfo;
+def MipsInstrInfo : InstrInfo {
+ let useDeprecatedPositionallyEncodedOperands = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Mips processors supported.

@@ -106,9 +106,6 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   if (LocA == LocB)
     return LocA;
 
-  SmallPtrSet<DILocation *, 5> InlinedLocationsA;
-  for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
-    InlinedLocationsA.insert(L);
   SmallSet<std::pair<DIScope *, DILocation *>, 5> Locations;
   DIScope *S = LocA->getScope();
   DILocation *L = LocA->getInlinedAt();
@@ -120,7 +117,6 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
       L = L->getInlinedAt();
     }
   }
-  const DILocation *Result = LocB;
   S = LocB->getScope();
   L = LocB->getInlinedAt();
   while (S) {
@@ -137,7 +133,7 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   // but on the other hand, it's a "line 0" location.
   if (!S || !isa<DILocalScope>(S))
     S = LocA->getScope();
-  return DILocation::get(Result->getContext(), 0, 0, S, L);
+  return DILocation::get(LocA->getContext(), 0, 0, S, L);
 }
 
 Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF,

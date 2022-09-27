@@ -144,7 +144,7 @@ struct VectorExtractStridedSliceOpConvert final
   }
 };
 
-template <class SPVFMAOp>
+template <class SPIRVFMAOp>
 struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -154,8 +154,8 @@ struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
     Type dstType = getTypeConverter()->convertType(fmaOp.getType());
     if (!dstType)
       return failure();
-    rewriter.replaceOpWithNewOp<SPVFMAOp>(fmaOp, dstType, adaptor.getLhs(),
-                                          adaptor.getRhs(), adaptor.getAcc());
+    rewriter.replaceOpWithNewOp<SPIRVFMAOp>(fmaOp, dstType, adaptor.getLhs(),
+                                            adaptor.getRhs(), adaptor.getAcc());
     return success();
   }
 };
@@ -272,8 +272,8 @@ struct VectorInsertStridedSliceOpConvert final
   }
 };
 
-template <class SPVFMaxOp, class SPVFMinOp, class SPVUMaxOp, class SPVUMinOp,
-          class SPVSMaxOp, class SPVSMinOp>
+template <class SPIRVFMaxOp, class SPIRVFMinOp, class SPIRVUMaxOp,
+          class SPIRVUMinOp, class SPIRVSMaxOp, class SPIRVSMinOp>
 struct VectorReductionPattern final
     : public OpConversionPattern<vector::ReductionOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -325,12 +325,12 @@ struct VectorReductionPattern final
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
         INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
 
-        INT_OR_FLOAT_CASE(MAXF, SPVFMaxOp);
-        INT_OR_FLOAT_CASE(MINF, SPVFMinOp);
-        INT_OR_FLOAT_CASE(MINUI, SPVUMinOp);
-        INT_OR_FLOAT_CASE(MINSI, SPVSMinOp);
-        INT_OR_FLOAT_CASE(MAXUI, SPVUMaxOp);
-        INT_OR_FLOAT_CASE(MAXSI, SPVSMaxOp);
+        INT_OR_FLOAT_CASE(MAXF, SPIRVFMaxOp);
+        INT_OR_FLOAT_CASE(MINF, SPIRVFMinOp);
+        INT_OR_FLOAT_CASE(MINUI, SPIRVUMinOp);
+        INT_OR_FLOAT_CASE(MINSI, SPIRVSMinOp);
+        INT_OR_FLOAT_CASE(MAXUI, SPIRVUMaxOp);
+        INT_OR_FLOAT_CASE(MAXSI, SPIRVSMaxOp);
 
       case vector::CombiningKind::AND:
       case vector::CombiningKind::OR:

@@ -1,5 +1,7 @@
-// XFAIL: *
-// Incorrect location for variable "parama", see PR48719.
+// Location for variable "parama" optimized out.
+// Previously it would carry incorrect location
+// information in debug-info, see PR48719.
+// Now, the location is simply not emitted.
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows

@@ -379,7 +379,7 @@ For example, the following `.mlir`:
 
 ```mlir
 module {
-  spv.module "Logical" "GLSL450" {
+  spirv.module "Logical" "GLSL450" {
     func @foo() {
       ...
     }
@@ -391,8 +391,8 @@ Has the nesting structure of:
 
 ```
 `builtin.module`
-  `spv.module`
-    `spv.func`
+  `spirv.module`
+    `spirv.func`
 ```
 
 Below is an example of constructing a pipeline that operates on the above
@@ -419,7 +419,7 @@ OpPassManager &nestedFunctionPM = nestedModulePM.nest<func::FuncOp>();
 nestedFunctionPM.addPass(std::make_unique<MyFunctionPass>());
 
 // Nest an op-agnostic pass manager. This will operate on any viable
-// operation, e.g. func.func, spv.func, spv.module, builtin.module, etc.
+// operation, e.g. func.func, spirv.func, spirv.module, builtin.module, etc.
 OpPassManager &nestedAnyPM = nestedModulePM.nestAny();
 nestedAnyPM.addPass(createCanonicalizePass());
 nestedAnyPM.addPass(createCSEPass());

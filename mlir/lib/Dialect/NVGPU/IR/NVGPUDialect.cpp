@@ -21,35 +21,17 @@
 using namespace mlir;
 using namespace mlir::nvgpu;
 
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
-
 void nvgpu::NVGPUDialect::initialize() {
-  addTypes<DeviceAsyncTokenType>();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+      >();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
       >();
 }
 
-Type NVGPUDialect::parseType(DialectAsmParser &parser) const {
-  // Parse the main keyword for the type.
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
-    return Type();
-  MLIRContext *context = getContext();
-  // Handle 'device async token' types.
-  if (keyword == "device.async.token")
-    return DeviceAsyncTokenType::get(context);
-
-  parser.emitError(parser.getNameLoc(), "unknown nvgpu type: " + keyword);
-  return Type();
-}
-
-void NVGPUDialect::printType(Type type, DialectAsmPrinter &os) const {
-  TypeSwitch<Type>(type)
-      .Case<DeviceAsyncTokenType>([&](Type) { os << "device.async.token"; })
-      .Default([](Type) { llvm_unreachable("unexpected 'nvgpu' type kind"); });
-}
 //===----------------------------------------------------------------------===//
 // NVGPU_DeviceAsyncCopyOp
 //===----------------------------------------------------------------------===//
@@ -254,5 +236,14 @@ LogicalResult LdMatrixOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// TableGen'd dialect, type, and op definitions
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"

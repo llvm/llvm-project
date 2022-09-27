@@ -5,8 +5,8 @@ declare void @use(i32 *)
 define void @foo(i64 %X) {
 ; Currently we cannot handle expressions of the form Offset - X * Scale.
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[X:%.*]], -4
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[TMP1]], 24
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 24, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = alloca i8, i64 [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to i32*
 ; CHECK-NEXT:    call void @use(i32* nonnull [[TMP4]])

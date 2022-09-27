@@ -199,12 +199,7 @@ namespace {
     DenseMap<Register, unsigned long> LargeLIVisitCounter;
 
     /// Recursively eliminate dead defs in DeadDefs.
-    void eliminateDeadDefs();
-
-    /// allUsesAvailableAt - Return true if all registers used by OrigMI at
-    /// OrigIdx are also available with the same value at UseIdx.
-    bool allUsesAvailableAt(const MachineInstr *OrigMI, SlotIndex OrigIdx,
-                            SlotIndex UseIdx);
+    void eliminateDeadDefs(LiveRangeEdit *Edit = nullptr);
 
     /// LiveRangeEdit callback for eliminateDeadDefs().
     void LRE_WillEraseInstruction(MachineInstr *MI) override;
@@ -603,18 +598,14 @@ void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-void RegisterCoalescer::eliminateDeadDefs() {
+void RegisterCoalescer::eliminateDeadDefs(LiveRangeEdit *Edit) {
+  if (Edit) {
+    Edit->eliminateDeadDefs(DeadDefs);
+    return;
+  }
   SmallVector<Register, 8> NewRegs;
   LiveRangeEdit(nullptr, NewRegs, *MF, *LIS,
                 nullptr, this).eliminateDeadDefs(DeadDefs);
-}
-
-bool RegisterCoalescer::allUsesAvailableAt(const MachineInstr *OrigMI,
-                                           SlotIndex OrigIdx,
-                                           SlotIndex UseIdx) {
-  SmallVector<Register, 8> NewRegs;
-  return LiveRangeEdit(nullptr, NewRegs, *MF, *LIS, nullptr, this)
-      .allUsesAvailableAt(OrigMI, OrigIdx, UseIdx);
 }
 
 void RegisterCoalescer::LRE_WillEraseInstruction(MachineInstr *MI) {
@@ -1306,8 +1297,12 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   }
   if (!TII->isAsCheapAsAMove(*DefMI))
     return false;
-  if (!TII->isTriviallyReMaterializable(*DefMI))
+
+  SmallVector<Register, 8> NewRegs;
+  LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
+  if (!Edit.checkRematerializable(ValNo, DefMI))
     return false;
+
   if (!definesFullReg(*DefMI, SrcReg))
     return false;
   bool SawStore = false;
@@ -1352,14 +1347,16 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     }
   }
 
-  if (!allUsesAvailableAt(DefMI, ValNo->def, CopyIdx))
+  LiveRangeEdit::Remat RM(ValNo);
+  RM.OrigMI = DefMI;
+  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx, true))
     return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();
   MachineBasicBlock *MBB = CopyMI->getParent();
   MachineBasicBlock::iterator MII =
     std::next(MachineBasicBlock::iterator(CopyMI));
-  TII->reMaterialize(*MBB, MII, DstReg, SrcIdx, *DefMI, *TRI);
+  Edit.rematerializeAt(*MBB, MII, DstReg, RM, *TRI, false, SrcIdx, CopyMI);
   MachineInstr &NewMI = *std::prev(MII);
   NewMI.setDebugLoc(DL);
 
@@ -1379,8 +1376,18 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         TRI->getCommonSubClass(DefRC, DstRC);
       if (CommonRC != nullptr) {
         NewRC = CommonRC;
+
+        // Instruction might contain "undef %0:subreg" as use operand:
+        //   %0:subreg = instr op_1, ..., op_N, undef %0:subreg, op_N+2, ...
+        //
+        // Need to check all operands.
+        for (MachineOperand &MO : NewMI.operands()) {
+          if (MO.isReg() && MO.getReg() == DstReg && MO.getSubReg() == DstIdx) {
+            MO.setSubReg(0);
+          }
+        }
+
         DstIdx = 0;
-        DefMO.setSubReg(0);
         DefMO.setIsUndef(false); // Only subregs can have def+undef.
       }
     }
@@ -1403,7 +1410,6 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     }
   }
 
-  LIS->ReplaceMachineInstrInMaps(*CopyMI, NewMI);
   CopyMI->eraseFromParent();
   ErasedInstrs.insert(CopyMI);
 
@@ -1597,7 +1603,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     // The source interval can become smaller because we removed a use.
     shrinkToUses(&SrcInt, &DeadDefs);
     if (!DeadDefs.empty())
-      eliminateDeadDefs();
+      eliminateDeadDefs(&Edit);
   } else {
     ToBeUpdated.insert(SrcReg);
   }

@@ -49,19 +49,6 @@ include transitive headers, regardless of the language version. This can be
 useful for users to aid the transition to a newer language version, or by users
 who simply want to make sure they include what they use in their code.
 
-One of the issues for libc++ with transitive includes is that these includes
-may create dependency cycles and cause the validation script
-``libcxx/utils/graph_header_deps.py`` to have false positives. To ignore an
-include from the validation script, add a comment containing ``IGNORE-CYCLE``.
-This should only be used when there is a cycle and it has been verified it is a
-false positive.
-
-.. code-block:: cpp
-
-   #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
-   #  include <chrono> // IGNORE-CYCLE due to <format>
-   #endif
-
 
 Rationale
 ---------

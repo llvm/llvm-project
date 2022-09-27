@@ -4,9 +4,6 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
-
-  // TODO: Flip to _Prefixed
-  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -42,19 +39,19 @@ def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> 
   let arguments = (ins Variadic<AnyTensor>:$input1, AnyTensor:$input2, Variadic<AnyTensor>:$input3);
 }
 
-// CHECK-LABEL: ::mlir::ValueRange OpDAdaptor::input1
+// CHECK-LABEL: ::mlir::ValueRange OpDAdaptor::getInput1
 // CHECK-NEXT:    return getODSOperands(0);
 
-// CHECK-LABEL: ::mlir::Value OpDAdaptor::input2
+// CHECK-LABEL: ::mlir::Value OpDAdaptor::getInput2
 // CHECK-NEXT:    return *getODSOperands(1).begin();
 
-// CHECK-LABEL: ::mlir::ValueRange OpDAdaptor::input3
+// CHECK-LABEL: ::mlir::ValueRange OpDAdaptor::getInput3
 // CHECK-NEXT:    return getODSOperands(2);
 
-// CHECK-LABEL: ::mlir::Operation::operand_range OpD::input1
+// CHECK-LABEL: ::mlir::Operation::operand_range OpD::getInput1
 // CHECK-NEXT: return getODSOperands(0);
 
-// CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpD::input2
+// CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpD::getInput2
 // CHECK-NEXT: return *getODSOperands(1).begin();
 
 // CHECK-LABEL: OpD::build

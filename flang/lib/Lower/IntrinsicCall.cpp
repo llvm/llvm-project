@@ -175,10 +175,10 @@ genFuncDim(FD funcDim, mlir::Type resultType, fir::FirOpBuilder &builder,
       });
 }
 
-/// Process calls to Product, Sum intrinsic functions
+/// Process calls to Product, Sum, IAll, IAny, IParity intrinsic functions
 template <typename FN, typename FD>
 static fir::ExtendedValue
-genProdOrSum(FN func, FD funcDim, mlir::Type resultType,
+genReduction(FN func, FD funcDim, mlir::Type resultType,
              fir::FirOpBuilder &builder, mlir::Location loc,
              Fortran::lower::StatementContext *stmtCtx, llvm::StringRef errMsg,
              llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -500,9 +500,11 @@ struct IntrinsicLibrary {
                           mlir::ArrayRef<mlir::Value> args);
   void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIall(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
   /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genIany(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIbclr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -514,6 +516,7 @@ struct IntrinsicLibrary {
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -802,7 +805,19 @@ static constexpr IntrinsicHandler handlers[]{
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"iachar", &I::genIchar},
+    {"iall",
+     &I::genIall,
+     {{{"array", asBox},
+       {"dim", asValue},
+       {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"iand", &I::genIand},
+    {"iany",
+     &I::genIany,
+     {{{"array", asBox},
+       {"dim", asValue},
+       {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"ibclr", &I::genIbclr},
     {"ibits", &I::genIbits},
     {"ibset", &I::genIbset},
@@ -820,6 +835,12 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}}},
     {"ior", &I::genIor},
+    {"iparity",
+     &I::genIparity,
+     {{{"array", asBox},
+       {"dim", asValue},
+       {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
     {"lbound",
@@ -3084,6 +3105,15 @@ void IntrinsicLibrary::genGetEnvironmentVariable(
   }
 }
 
+// IALL
+fir::ExtendedValue
+IntrinsicLibrary::genIall(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genReduction(fir::runtime::genIAll, fir::runtime::genIAllDim,
+                      resultType, builder, loc, stmtCtx,
+                      "unexpected result for IALL", args);
+}
+
 // IAND
 mlir::Value IntrinsicLibrary::genIand(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
@@ -3091,6 +3121,15 @@ mlir::Value IntrinsicLibrary::genIand(mlir::Type resultType,
   auto arg0 = builder.createConvert(loc, resultType, args[0]);
   auto arg1 = builder.createConvert(loc, resultType, args[1]);
   return builder.create<mlir::arith::AndIOp>(loc, arg0, arg1);
+}
+
+// IANY
+fir::ExtendedValue
+IntrinsicLibrary::genIany(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genReduction(fir::runtime::genIAny, fir::runtime::genIAnyDim,
+                      resultType, builder, loc, stmtCtx,
+                      "unexpected result for IANY", args);
 }
 
 // IBCLR
@@ -3315,6 +3354,15 @@ mlir::Value IntrinsicLibrary::genIor(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
   return builder.create<mlir::arith::OrIOp>(loc, args[0], args[1]);
+}
+
+// IPARITY
+fir::ExtendedValue
+IntrinsicLibrary::genIparity(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genReduction(fir::runtime::genIParity, fir::runtime::genIParityDim,
+                      resultType, builder, loc, stmtCtx,
+                      "unexpected result for IPARITY", args);
 }
 
 // ISHFT
@@ -3824,7 +3872,7 @@ IntrinsicLibrary::genPresent(mlir::Type,
 fir::ExtendedValue
 IntrinsicLibrary::genProduct(mlir::Type resultType,
                              llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genProdOrSum(fir::runtime::genProduct, fir::runtime::genProductDim,
+  return genReduction(fir::runtime::genProduct, fir::runtime::genProductDim,
                       resultType, builder, loc, stmtCtx,
                       "unexpected result for Product", args);
 }
@@ -4424,7 +4472,7 @@ IntrinsicLibrary::genSpread(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genSum(mlir::Type resultType,
                          llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genProdOrSum(fir::runtime::genSum, fir::runtime::genSumDim, resultType,
+  return genReduction(fir::runtime::genSum, fir::runtime::genSumDim, resultType,
                       builder, loc, stmtCtx, "unexpected result for Sum", args);
 }
 

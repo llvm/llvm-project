@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load(":template_rule.bzl", "template_rule")
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load(":tblgen.bzl", "gentbl")
 load(":config.bzl", "llvm_config_defines")
 load(":targets.bzl", "llvm_targets")
@@ -92,9 +92,24 @@ enum_targets_gen(
     targets = llvm_target_mcas,
 )
 
-template_rule(
+# Enabled targets with exegesis.
+llvm_target_exegesis = [
+    t
+    for t in llvm_targets
+    if glob(["tools/llvm-exegesis/lib/{}/CMakeLists.txt".format(t)])
+]
+
+enum_targets_gen(
+    name = "target_exegesis_def_gen",
+    src = "include/llvm/Config/TargetExegesis.def.in",
+    out = "include/llvm/Config/TargetExegesis.def",
+    macro_name = "EXEGESIS",
+    placeholder_name = "@LLVM_ENUM_EXEGESIS@",
+    targets = llvm_target_exegesis,
+)
+
+expand_template(
     name = "abi_breaking_h_gen",
-    src = "include/llvm/Config/abi-breaking.h.cmake",
     out = "include/llvm/Config/abi-breaking.h",
     substitutions = {
         # Define to enable checks that alter the LLVM C++ ABI
@@ -103,6 +118,7 @@ template_rule(
         # Define to enable reverse iteration of unordered llvm containers
         "#cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION": "#define LLVM_ENABLE_REVERSE_ITERATION 0",
     },
+    template = "include/llvm/Config/abi-breaking.h.cmake",
 )
 
 # To enable diff testing out of tree
@@ -126,6 +142,7 @@ cc_library(
         "include/llvm/Config/AsmPrinters.def",
         "include/llvm/Config/Disassemblers.def",
         "include/llvm/Config/Targets.def",
+        "include/llvm/Config/TargetExegesis.def",
         "include/llvm/Config/TargetMCAs.def",
         # Needed for include scanner to find execinfo.h
         "include/llvm/Config/config.h",
@@ -1526,6 +1543,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-subtarget", "lib/Target/AArch64/AArch64GenSubtargetInfo.inc"),
             ("-gen-disassembler", "lib/Target/AArch64/AArch64GenDisassemblerTables.inc"),
             ("-gen-searchable-tables", "lib/Target/AArch64/AArch64GenSystemOperands.inc"),
+            ("-gen-exegesis", "lib/Target/AArch64/AArch64GenExegesis.inc"),
         ],
     },
     {
@@ -1694,6 +1712,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-disassembler", "lib/Target/PowerPC/PPCGenDisassemblerTables.inc"),
             ("-gen-register-bank", "lib/Target/PowerPC/PPCGenRegisterBank.inc"),
             ("-gen-global-isel", "lib/Target/PowerPC/PPCGenGlobalISel.inc"),
+            ("-gen-exegesis", "lib/Target/PowerPC/PPCGenExegesis.inc"),
         ],
     },
     {
@@ -2521,10 +2540,6 @@ cc_library(
         # lld uses Microsoft mt.exe instead, which is not cross-platform.
         "-lxml2",
     ],
-    tags = [
-        "manual",  # External dependency (libxml)
-        "nobuildkite",  # TODO(gcmn): Fix remote execution and re-enable
-    ],
     deps = [
         ":Support",
         ":config",
@@ -2576,24 +2591,23 @@ cc_library(
     name = "Exegesis",
     srcs = glob([
         "tools/llvm-exegesis/lib/*.cpp",
-        "tools/llvm-exegesis/lib/X86/*.cpp",
-        "tools/llvm-exegesis/lib/X86/*.h",
         # We have to include these headers here as well as in the `hdrs` below
         # to allow the `.cpp` files to use file-relative-inclusion to find
         # them, even though consumers of this library use inclusion relative to
         # `tools/llvm-exegesis/lib` with the `strip_includes_prefix` of this
         # library. This mixture appears to be incompatible with header modules.
         "tools/llvm-exegesis/lib/*.h",
+    ] + [
+        "tools/llvm-exegesis/lib/{}/*.cpp".format(t)
+        for t in llvm_target_exegesis
+    ] + [
+        "tools/llvm-exegesis/lib/{}/*.h".format(t)
+        for t in llvm_target_exegesis
     ]),
     hdrs = glob(["tools/llvm-exegesis/lib/*.h"]),
-    copts = llvm_copts + ["-DHAVE_LIBPFM=1"],
-    defines = ["LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET=InitializeX86ExegesisTarget"],
+    copts = llvm_copts,
     features = ["-header_modules"],
     strip_include_prefix = "tools/llvm-exegesis/lib",
-    tags = [
-        "manual",  # External dependency (libpfm4)
-        "nobuildkite",  # TODO(chandlerc): Add support for fetching and building libpfm4 and enable this.
-    ],
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -2626,13 +2640,13 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
-template_rule(
+expand_template(
     name = "dsymutil_main",
-    src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "dsymutil-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "dsymutil",
     },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(
@@ -2730,13 +2744,13 @@ cc_binary(
     ],
 )
 
-template_rule(
+expand_template(
     name = "ar_main",
-    src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-ar-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "llvm_ar",
     },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(
@@ -2932,13 +2946,13 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
-template_rule(
+expand_template(
     name = "cxxfilt_main",
-    src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-cxxfilt-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "llvm_cxxfilt",
     },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(
@@ -3064,13 +3078,8 @@ cc_binary(
     srcs = [
         "tools/llvm-exegesis/llvm-exegesis.cpp",
     ],
-    copts = llvm_copts + ["-DHAVE_LIBPFM=0"],
-    linkopts = ["-lpfm"],
+    copts = llvm_copts,
     stamp = 0,
-    tags = [
-        "manual",  # External dependency (libpfm4 through Exegesis)
-        "nobuildkite",  # TODO(chandlerc): Enable when the library builds.
-    ],
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -3390,10 +3399,6 @@ cc_binary(
     ]),
     copts = llvm_copts,
     stamp = 0,
-    tags = [
-        "manual",  # TODO(gcmn): External dependency (through WindowsManifest)
-        "nobuildkite",  # TODO(gcmn): Re-enable when WindowsManifest builds
-    ],
     deps = [
         ":MtTableGen",
         ":Option",
@@ -3510,13 +3515,13 @@ cc_binary(
     ],
 )
 
-template_rule(
+expand_template(
     name = "objcopy_main",
-    src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-objcopy-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "llvm_objcopy",
     },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(

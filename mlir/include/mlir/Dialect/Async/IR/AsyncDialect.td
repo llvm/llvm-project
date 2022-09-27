@@ -40,7 +40,7 @@ def AsyncDialect : Dialect {
   }];
 
   // TODO: Prefixed form overlaps with generated names, update before flipping.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 #endif // ASYNC_DIALECT_TD

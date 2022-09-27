@@ -650,7 +650,7 @@ define i64 @fcvt_l_d_sat(double %a) nounwind {
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    call __fixdfdi@plt
 ; RV32I-NEXT:    mv s5, a1
-; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    bltz s6, .LBB12_2
 ; RV32I-NEXT:  # %bb.1: # %start
 ; RV32I-NEXT:    mv a1, a0
@@ -1436,7 +1436,7 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV32I-NEXT:    lui a3, 790016
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    mv a2, s0
+; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    call __gedf2@plt
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv a0, s2
@@ -1749,7 +1749,7 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV32I-NEXT:    lui a3, 787968
 ; RV32I-NEXT:    mv a0, s2
 ; RV32I-NEXT:    mv a1, s1
-; RV32I-NEXT:    mv a2, s0
+; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    call __gedf2@plt
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv a0, s2

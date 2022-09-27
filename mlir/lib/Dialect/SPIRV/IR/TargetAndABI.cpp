@@ -95,7 +95,7 @@ MLIRContext *spirv::TargetEnv::getContext() const {
 //===----------------------------------------------------------------------===//
 
 StringRef spirv::getInterfaceVarABIAttrName() {
-  return "spv.interface_var_abi";
+  return "spirv.interface_var_abi";
 }
 
 spirv::InterfaceVarABIAttr
@@ -116,7 +116,7 @@ bool spirv::needsInterfaceVarABIAttrs(spirv::TargetEnvAttr targetAttr) {
   return false;
 }
 
-StringRef spirv::getEntryPointABIAttrName() { return "spv.entry_point_abi"; }
+StringRef spirv::getEntryPointABIAttrName() { return "spirv.entry_point_abi"; }
 
 spirv::EntryPointABIAttr
 spirv::getEntryPointABIAttr(ArrayRef<int32_t> localSize, MLIRContext *context) {
@@ -164,7 +164,7 @@ spirv::getDefaultResourceLimits(MLIRContext *context) {
       /*cooperative_matrix_properties_nv=*/ArrayAttr());
 }
 
-StringRef spirv::getTargetEnvAttrName() { return "spv.target_env"; }
+StringRef spirv::getTargetEnvAttrName() { return "spirv.target_env"; }
 
 spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
   auto triple = spirv::VerCapExtAttr::get(spirv::Version::V_1_0,

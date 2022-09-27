@@ -5,23 +5,5 @@
 
 ## Version strings are required for experimental extensions
 
-.attribute arch, "rv32izbe"
-# CHECK:  error: invalid arch name 'rv32izbe', experimental extension requires explicit version number `zbe`
-
-.attribute arch, "rv32izbf"
-# CHECK: error: invalid arch name 'rv32izbf', experimental extension requires explicit version number `zbf`
-
-.attribute arch, "rv32izbm"
-# CHECK: error: invalid arch name 'rv32izbm', experimental extension requires explicit version number `zbm`
-
-.attribute arch, "rv32izbp"
-# CHECK: error: invalid arch name 'rv32izbp', experimental extension requires explicit version number `zbp`
-
-.attribute arch, "rv32izbr"
-# CHECK: error: invalid arch name 'rv32izbr', experimental extension requires explicit version number `zbr`
-
-.attribute arch, "rv32izbt"
-# CHECK: error: invalid arch name 'rv32izbt', experimental extension requires explicit version number `zbt`
-
 .attribute arch, "rv32izvfh"
 # CHECK: error: invalid arch name 'rv32izvfh', experimental extension requires explicit version number `zvfh`
