@@ -2344,6 +2344,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithmeticUtils",
         ":DialectUtilsIncGen",
         ":IR",
         ":Support",
@@ -5033,7 +5034,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
-        ":ArithmeticUtils",
+        ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
         ":TensorDialect",
@@ -8597,7 +8598,6 @@ cc_library(
         ":ArithmeticCanonicalizationIncGen",
         ":ArithmeticOpsIncGen",
         ":CommonFolders",
-        ":DialectUtils",
         ":IR",
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
