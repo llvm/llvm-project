@@ -24,7 +24,7 @@ multiclass TABLE<WebAssemblyRegClass rc, string suffix> {
   let mayLoad = 1 in
   defm TABLE_GET_#rc : I<(outs rc:$res), (ins table32_op:$table, I32:$i),
                          (outs), (ins table32_op:$table),
-                         [],
+                         [(set rc:$res, (!cast<Intrinsic>("int_wasm_table_get_" # suffix) (WebAssemblyWrapper tglobaladdr:$table), I32:$i))],
                          "table.get\t$res, $table, $i",
                          "table.get\t$table",
                          0x25>;
@@ -32,7 +32,7 @@ multiclass TABLE<WebAssemblyRegClass rc, string suffix> {
   let mayStore = 1 in
   defm TABLE_SET_#rc : I<(outs), (ins table32_op:$table, I32:$i, rc:$val),
                          (outs), (ins table32_op:$table),
-                         [],
+                         [(!cast<Intrinsic>("int_wasm_table_set_" # suffix) (WebAssemblyWrapper tglobaladdr:$table), I32:$i, rc:$val)],
                          "table.set\t$table, $i, $val",
                          "table.set\t$table",
                          0x26>;

@@ -39,6 +39,20 @@ def int_wasm_ref_is_null_func : Intrinsic<[llvm_i32_ty], [llvm_funcref_ty],
 //===----------------------------------------------------------------------===//
 // Table intrinsics
 //===----------------------------------------------------------------------===//
+def int_wasm_table_set_externref : Intrinsic<[],
+                                             [llvm_table_ty, llvm_i32_ty, llvm_externref_ty],
+                                             [IntrWriteMem]>;
+def int_wasm_table_set_funcref : Intrinsic<[],
+                                           [llvm_table_ty, llvm_i32_ty, llvm_funcref_ty],
+                                           [IntrWriteMem]>;
+
+def int_wasm_table_get_externref : Intrinsic<[llvm_externref_ty],
+                                             [llvm_table_ty, llvm_i32_ty],
+                                             [IntrReadMem]>;
+def int_wasm_table_get_funcref : Intrinsic<[llvm_funcref_ty],
+                                           [llvm_table_ty, llvm_i32_ty],
+                                           [IntrReadMem]>;
+
 // Query the current table size, and increase the current table size.
 def int_wasm_table_size : Intrinsic<[llvm_i32_ty],
                                     [llvm_table_ty],
