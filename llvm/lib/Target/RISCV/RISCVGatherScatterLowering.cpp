@@ -346,11 +346,6 @@ RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
   if (Ops[0]->getType()->isVectorTy())
     return std::make_pair(nullptr, nullptr);
 
-  // Make sure we're in a loop and that has a pre-header and a single latch.
-  Loop *L = LI->getLoopFor(GEP->getParent());
-  if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
-    return std::make_pair(nullptr, nullptr);
-
   Optional<unsigned> VecOperand;
   unsigned TypeScale = 0;
 
@@ -385,7 +380,37 @@ RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
   if (VecIndex->getType() != VecIntPtrTy)
     return std::make_pair(nullptr, nullptr);
 
-  Value *Stride;
+  // Handle the non-recursive case.  This is what we see if the vectorizer
+  // decides to use a scalar IV + vid on demand instead of a vector IV.
+  auto [Start, Stride] = matchStridedStart(VecIndex, Builder);
+  if (Start) {
+    assert(Stride);
+    Builder.SetInsertPoint(GEP);
+
+    // Replace the vector index with the scalar start and build a scalar GEP.
+    Ops[*VecOperand] = Start;
+    Type *SourceTy = GEP->getSourceElementType();
+    Value *BasePtr =
+      Builder.CreateGEP(SourceTy, Ops[0], makeArrayRef(Ops).drop_front());
+
+    // Convert stride to pointer size if needed.
+    Type *IntPtrTy = DL->getIntPtrType(BasePtr->getType());
+    assert(Stride->getType() == IntPtrTy && "Unexpected type");
+
+    // Scale the stride by the size of the indexed type.
+    if (TypeScale != 1)
+      Stride = Builder.CreateMul(Stride, ConstantInt::get(IntPtrTy, TypeScale));
+
+    auto P = std::make_pair(BasePtr, Stride);
+    StridedAddrs[GEP] = P;
+    return P;
+  }
+
+  // Make sure we're in a loop and that has a pre-header and a single latch.
+  Loop *L = LI->getLoopFor(GEP->getParent());
+  if (!L || !L->getLoopPreheader() || !L->getLoopLatch())
+    return std::make_pair(nullptr, nullptr);
+
   BinaryOperator *Inc;
   PHINode *BasePhi;
   if (!matchStridedRecurrence(VecIndex, L, Stride, BasePhi, Inc, Builder))
