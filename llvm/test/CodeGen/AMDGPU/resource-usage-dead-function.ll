@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=5 -o - %s | FileCheck -check-prefix=GCN-V5 %s
 
 ; Make sure there's no assertion when trying to report the resource
 ; usage for a function which becomes dead during codegen.
@@ -20,7 +21,8 @@ define internal fastcc void @unreachable() {
 ; GCN: s_endpgm
 
 ; GCN: .amdhsa_private_segment_fixed_size 0
-; GCN: .amdhsa_uses_dynamic_stack 0
+; GCN-NOT: .amdhsa_uses_dynamic_stack 0
+; GCN-V5: .amdhsa_uses_dynamic_stack 0
 define amdgpu_kernel void @entry() {
 bb0:
   br i1 false, label %bb1, label %bb2
