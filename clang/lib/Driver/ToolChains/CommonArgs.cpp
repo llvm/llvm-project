@@ -632,6 +632,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-plugin-opt=stats-file=") + StatsFile));
 
+  // Setup crash diagnostics dir.
+  if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("-plugin-opt=-crash-diagnostics-dir=") + A->getValue()));
+
   addX86AlignBranchArgs(D, Args, CmdArgs, /*IsLTO=*/true);
 
   // Handle remark diagnostics on screen options: '-Rpass-*'.
