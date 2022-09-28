@@ -54,6 +54,10 @@ static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
                            cl::desc("Enable the use of AA during codegen."),
                            cl::init(true));
 
+static cl::opt<unsigned> NSAThreshold("amdgpu-nsa-threshold",
+                                      cl::desc("Number of addresses from which to enable MIMG NSA."),
+                                      cl::init(3), cl::Hidden);
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 GCNSubtarget &
@@ -948,6 +952,17 @@ std::unique_ptr<ScheduleDAGMutation>
 GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
   return EnablePowerSched ? std::make_unique<FillMFMAShadowMutation>(&InstrInfo)
                           : nullptr;
+}
+
+unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
+  if (NSAThreshold.getNumOccurrences() > 0)
+    return std::max(NSAThreshold.getValue(), 2u);
+
+  int Value = AMDGPU::getIntegerAttribute(MF.getFunction(), "amdgpu-nsa-threshold", -1);
+  if (Value > 0)
+    return std::max(Value, 2);
+
+  return 3;
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {

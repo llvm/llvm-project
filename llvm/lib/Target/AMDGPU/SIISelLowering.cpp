@@ -6522,7 +6522,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // contiguous set of the remaining addresses.
   // This could help where there are more addresses than supported.
   bool UseNSA = ST->hasFeature(AMDGPU::FeatureNSAEncoding) &&
-                VAddrs.size() >= 3 &&
+                VAddrs.size() >= (unsigned)ST->getNSAThreshold(MF) &&
                 VAddrs.size() <= (unsigned)ST->getNSAMaxSize();
   SDValue VAddr;
   if (!UseNSA)
