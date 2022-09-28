@@ -6,3 +6,8 @@ RUN: %llvm-original-di-preservation %p/Inputs/corrupted.json %t2.html | FileChec
 RUN: diff -w %p/Inputs/expected-skipped.html %t2.html
 CORRUPTED: Skipped lines: 3
 CORRUPTED: Skipped bugs: 1
+
+RUN: %llvm-original-di-preservation -compress %p/Inputs/sample.json %t3.html | FileCheck %s -check-prefix=COMPRESSED
+RUN: diff -w %p/Inputs/expected-compressed.html %t3.html
+COMPRESSED-NOT: Skipped lines:
+
