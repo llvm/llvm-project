@@ -558,7 +558,8 @@ public:
     return Type::getInt8PtrTy(Context, AddrSpace);
   }
 
-  /// Fetch the type representing a pointer to an integer value.
+  /// Fetch the type of an integer with size at least as big as that of a
+  /// pointer in the given address space.
   IntegerType *getIntPtrTy(const DataLayout &DL, unsigned AddrSpace = 0) {
     return DL.getIntPtrType(Context, AddrSpace);
   }

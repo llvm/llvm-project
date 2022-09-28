@@ -237,7 +237,7 @@ namespace llvm {
                    const TargetLibraryInfo *TLI);
 
   /// Emit a call to the fwrite function. This assumes that Ptr is a pointer,
-  /// Size is an 'intptr_t', and File is a pointer to FILE.
+  /// Size is an 'size_t', and File is a pointer to FILE.
   Value *emitFWrite(Value *Ptr, Value *Size, Value *File, IRBuilderBase &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
