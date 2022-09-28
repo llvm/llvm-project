@@ -523,6 +523,14 @@ public:
   /// semantically correspond to a bool.
   bool isKnownToHaveBooleanValue(bool Semantic = true) const;
 
+  /// Check whether this array fits the idiom of a flexible array member,
+  /// depending on the value of -fstrict-flex-array.
+  /// When IgnoreTemplateOrMacroSubstitution is set, it doesn't consider sizes
+  /// resulting from the substitution of a macro or a template as special sizes.
+  bool isFlexibleArrayMemberLike(
+      ASTContext &Context, unsigned StrictFlexArraysLevel,
+      bool IgnoreTemplateOrMacroSubstitution = false) const;
+
   /// isIntegerConstantExpr - Return the value if this expression is a valid
   /// integer constant expression.  If not a valid i-c-e, return None and fill
   /// in Loc (if specified) with the location of the invalid expression.
