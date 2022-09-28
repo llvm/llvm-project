@@ -1616,6 +1616,71 @@ entry:
   ret i32 %add1
 }
 
+define i8 @local_alloca_not_simplifiable_2(i64 %index1, i64 %index2, i1 %cnd) {
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
+; TUNIT-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_2
+; TUNIT-SAME: (i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]], i1 [[CND:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; TUNIT-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
+; TUNIT-NEXT:    store i8 7, i8* [[GEP0]], align 16
+; TUNIT-NEXT:    br i1 [[CND]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; TUNIT:       left:
+; TUNIT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDEX1]]
+; TUNIT-NEXT:    br label [[JOIN:%.*]]
+; TUNIT:       right:
+; TUNIT-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDEX2]]
+; TUNIT-NEXT:    br label [[JOIN]]
+; TUNIT:       join:
+; TUNIT-NEXT:    [[GEP_JOIN:%.*]] = phi i8* [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
+; TUNIT-NEXT:    store i8 9, i8* [[GEP_JOIN]], align 4
+; TUNIT-NEXT:    [[I:%.*]] = load i8, i8* [[GEP0]], align 16
+; TUNIT-NEXT:    ret i8 [[I]]
+;
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CGSCC-LABEL: define {{[^@]+}}@local_alloca_not_simplifiable_2
+; CGSCC-SAME: (i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]], i1 [[CND:%.*]]) #[[ATTR5]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
+; CGSCC-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
+; CGSCC-NEXT:    store i8 7, i8* [[GEP0]], align 16
+; CGSCC-NEXT:    br i1 [[CND]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CGSCC:       left:
+; CGSCC-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDEX1]]
+; CGSCC-NEXT:    br label [[JOIN:%.*]]
+; CGSCC:       right:
+; CGSCC-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 [[INDEX2]]
+; CGSCC-NEXT:    br label [[JOIN]]
+; CGSCC:       join:
+; CGSCC-NEXT:    [[GEP_JOIN:%.*]] = phi i8* [ [[GEP1]], [[LEFT]] ], [ [[GEP2]], [[RIGHT]] ]
+; CGSCC-NEXT:    store i8 9, i8* [[GEP_JOIN]], align 4
+; CGSCC-NEXT:    [[I:%.*]] = load i8, i8* [[GEP0]], align 16
+; CGSCC-NEXT:    ret i8 [[I]]
+;
+entry:
+  %Bytes = alloca [1024 x i8], align 16
+  %gep0 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 0
+  store i8 7, i8* %gep0, align 4
+  br i1 %cnd, label %left, label %right
+
+left:                                             ; preds = %entry
+  %gep1 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %index1
+  br label %join
+
+right:                                            ; preds = %entry
+  %gep2 = getelementptr inbounds [1024 x i8], [1024 x i8]* %Bytes, i64 0, i64 %index2
+  br label %join
+
+join:                                             ; preds = %right, %left
+  %gep.join = phi i8* [ %gep1, %left ], [ %gep2, %right ]
+  store i8 9, i8* %gep.join, align 4
+
+  ; This load cannot be replaced by the value 7 from %entry, since the previous
+  ; store interferes due to its unknown offset.
+  %i = load i8, i8* %gep0, align 4
+  ret i8 %i
+}
+
 ; We could simplify these if we separate accessed bins wrt. alignment (here mod 4).
 define i32 @unknown_access_mixed_simplifiable(i32 %arg1, i32 %arg2) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
