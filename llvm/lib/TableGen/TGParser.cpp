@@ -586,7 +586,7 @@ Record *TGParser::ParseClassID() {
                Lex.getCurStrVal() + "'");
     else
       TokError(Msg);
-  } else {
+  } else if (TrackReferenceLocs) {
     Result->appendReferenceLoc(Lex.getLocRange());
   }
 
@@ -873,7 +873,8 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMRange NameLoc,
                              IDParseMode Mode) {
   if (CurRec) {
     if (RecordVal *RV = CurRec->getValue(Name)) {
-      RV->addReferenceLoc(NameLoc);
+      if (TrackReferenceLocs)
+        RV->addReferenceLoc(NameLoc);
       return VarInit::get(Name, RV->getType());
     }
   }
@@ -891,7 +892,8 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMRange NameLoc,
       RecordVal *RV = TemplateRec->getValue(TemplateArgName);
       assert(RV && "Template arg doesn't exist??");
       RV->setUsed(true);
-      RV->addReferenceLoc(NameLoc);
+      if (TrackReferenceLocs)
+        RV->addReferenceLoc(NameLoc);
       return VarInit::get(TemplateArgName, RV->getType());
     } else if (Name->getValue() == "NAME") {
       return VarInit::get(TemplateArgName, StringRecTy::get(Records));
@@ -916,8 +918,10 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMRange NameLoc,
 
   if (Init *I = Records.getGlobal(Name->getValue())) {
     // Add a reference to the global if it's a record.
-    if (auto *Def = dyn_cast<DefInit>(I))
-      Def->getDef()->appendReferenceLoc(NameLoc);
+    if (TrackReferenceLocs) {
+      if (auto *Def = dyn_cast<DefInit>(I))
+        Def->getDef()->appendReferenceLoc(NameLoc);
+    }
     return I;
   }
 
@@ -2229,7 +2233,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
       }
     }
 
-    Class->appendReferenceLoc(NameLoc);
+    if (TrackReferenceLocs)
+      Class->appendReferenceLoc(NameLoc);
     return VarDefInit::get(Class, Args)->Fold();
   }
   case tgtok::l_brace: {           // Value ::= '{' ValueList '}'
@@ -2530,13 +2535,15 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
       }
 
       // Add a reference to this field if we know the record class.
-      if (auto *DI = dyn_cast<DefInit>(Result)) {
-        DI->getDef()->getValue(FieldName)->addReferenceLoc(FieldNameLoc);
-      } else if (auto *TI = dyn_cast<TypedInit>(Result)) {
-        if (auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
-          for (Record *R : RecTy->getClasses())
-            if (auto *RV = R->getValue(FieldName))
-              RV->addReferenceLoc(FieldNameLoc);
+      if (TrackReferenceLocs) {
+        if (auto *DI = dyn_cast<DefInit>(Result)) {
+          DI->getDef()->getValue(FieldName)->addReferenceLoc(FieldNameLoc);
+        } else if (auto *TI = dyn_cast<TypedInit>(Result)) {
+          if (auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
+            for (Record *R : RecTy->getClasses())
+              if (auto *RV = R->getValue(FieldName))
+                RV->addReferenceLoc(FieldNameLoc);
+          }
         }
       }
 
