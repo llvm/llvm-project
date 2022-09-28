@@ -379,6 +379,13 @@ lldb::SymbolType ObjectFilePECOFF::MapSymbolType(uint16_t coff_symbol_type) {
   if (complex_type == llvm::COFF::IMAGE_SYM_DTYPE_FUNCTION) {
     return lldb::eSymbolTypeCode;
   }
+  const auto base_type = coff_symbol_type & 0xff;
+  if (base_type == llvm::COFF::IMAGE_SYM_TYPE_NULL &&
+      complex_type == llvm::COFF::IMAGE_SYM_DTYPE_NULL) {
+    // Unknown type. LLD and GNU ld uses this for variables on MinGW, so
+    // consider these symbols to be data to enable printing.
+    return lldb::eSymbolTypeData;
+  }
   return lldb::eSymbolTypeInvalid;
 }
 
