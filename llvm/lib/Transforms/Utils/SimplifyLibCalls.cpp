@@ -33,6 +33,8 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
+#include <cmath>
+
 using namespace llvm;
 using namespace PatternMatch;
 

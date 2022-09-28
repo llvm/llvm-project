@@ -27,6 +27,8 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 
+#include <cmath>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "lower-expect-intrinsic"

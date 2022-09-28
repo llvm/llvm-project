@@ -14,6 +14,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cmath>
+
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include <float.h> // For _fpclass in llvm::write_double.
 #endif

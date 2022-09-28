@@ -14,6 +14,8 @@
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
 
+#include <cmath>
+
 namespace llvm {
 
 APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
