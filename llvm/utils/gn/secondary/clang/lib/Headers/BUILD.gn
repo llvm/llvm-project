@@ -154,6 +154,7 @@ copy("Headers") {
     "hexagon_circ_brev_intrinsics.h",
     "hexagon_protos.h",
     "hexagon_types.h",
+    "hlsl.h",
     "hlsl/hlsl_basic_types.h",
     "hlsl/hlsl_intrinsics.h",
     "hresetintrin.h",
