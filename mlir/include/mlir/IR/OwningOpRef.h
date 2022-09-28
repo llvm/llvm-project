@@ -29,7 +29,7 @@ public:
   /// The underlying operation type stored in this reference.
   using OperationT = OpTy;
 
-  OwningOpRef(std::nullptr_t = nullptr) {}
+  OwningOpRef(std::nullptr_t = nullptr) : op(nullptr) {}
   OwningOpRef(OpTy op) : op(op) {}
   OwningOpRef(OwningOpRef &&other) : op(other.release()) {}
   ~OwningOpRef() {
@@ -53,7 +53,7 @@ public:
 
   /// Release the referenced op.
   OpTy release() {
-    OpTy released;
+    OpTy released(nullptr);
     std::swap(released, op);
     return released;
   }
