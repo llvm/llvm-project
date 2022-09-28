@@ -16736,10 +16736,21 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       AssertExpr = FullAssertExpr.get();
 
     llvm::APSInt Cond;
+    Expr *BaseExpr = AssertExpr;
+    AllowFoldKind FoldKind = NoFold;
+
+    if (!getLangOpts().CPlusPlus) {
+      // In C mode only allow folding and strip the implicit conversion
+      // to the type of the first _Static_assert argument that would
+      // otherwise suppress diagnostics for arguments that convert to int.
+      FoldKind = AllowFold;
+      BaseExpr = BaseExpr->IgnoreImpCasts();
+    }
+
     if (!Failed && VerifyIntegerConstantExpression(
-                       AssertExpr, &Cond,
-                       diag::err_static_assert_expression_is_not_constant)
-                       .isInvalid())
+                       BaseExpr, &Cond,
+                       diag::err_static_assert_expression_is_not_constant,
+                       FoldKind).isInvalid())
       Failed = true;
 
     if (!Failed && !Cond) {
