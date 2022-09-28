@@ -238,7 +238,7 @@ public:
   Status SetValueFromString(const RegisterInfo *reg_info,
                             const char *value_str) = delete;
 
-  Status SetValueFromData(const RegisterInfo *reg_info, DataExtractor &data,
+  Status SetValueFromData(const RegisterInfo &reg_info, DataExtractor &data,
                           lldb::offset_t offset, bool partial_data_ok);
 
   const void *GetBytes() const;

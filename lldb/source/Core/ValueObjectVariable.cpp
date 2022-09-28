@@ -398,7 +398,7 @@ bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
       error.SetErrorString("unable to retrieve register info");
       return false;
     }
-    error = reg_value.SetValueFromData(reg_info, data, 0, true);
+    error = reg_value.SetValueFromData(*reg_info, data, 0, true);
     if (error.Fail())
       return false;
     if (reg_ctx->WriteRegister(reg_info, reg_value)) {
