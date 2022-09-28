@@ -193,6 +193,9 @@ public:
   /// This queries the 'wchar_size' metadata.
   unsigned getWCharSize(const Module &M) const;
 
+  /// Returns the size of the size_t type in bits.
+  unsigned getSizeTSize(const Module &M) const;
+
   /// Get size of a C-level int or unsigned int, in bits.
   unsigned getIntSize() const {
     return SizeOfInt;
@@ -405,6 +408,9 @@ public:
   unsigned getWCharSize(const Module &M) const {
     return Impl->getWCharSize(M);
   }
+
+  /// \copydoc TargetLibraryInfoImpl::getSizeTSize()
+  unsigned getSizeTSize(const Module &M) const { return Impl->getSizeTSize(M); }
 
   /// \copydoc TargetLibraryInfoImpl::getIntSize()
   unsigned getIntSize() const {
