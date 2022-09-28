@@ -376,7 +376,7 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are
   // assuming they are the same.
-  reg_value.SetFromMemoryData(reg_info, src, src_len, process.GetByteOrder(),
+  reg_value.SetFromMemoryData(*reg_info, src, src_len, process.GetByteOrder(),
                               error);
 
   return error;
