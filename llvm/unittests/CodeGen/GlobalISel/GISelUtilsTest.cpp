@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "gtest/gtest.h"
 
@@ -245,4 +246,23 @@ TEST(GISelUtilsTest, getLCMType) {
   EXPECT_EQ(V4P1, getLCMType(P1, V2S64));
 }
 
+TEST_F(AArch64GISelMITest, ConstFalseTest) {
+  setUp();
+  if (!TM)
+    return;
+  const auto &TLI = *B.getMF().getSubtarget().getTargetLowering();
+  bool BooleanChoices[2] = {true, false};
+
+  // AArch64 uses ZeroOrOneBooleanContent for scalars, and
+  // ZeroOrNegativeOneBooleanContent for vectors.
+  for (auto IsVec : BooleanChoices) {
+    for (auto IsFP : BooleanChoices) {
+      EXPECT_TRUE(isConstFalseVal(TLI, 0, IsVec, IsFP));
+      EXPECT_FALSE(isConstFalseVal(TLI, 1, IsVec, IsFP));
+
+      // This would be true with UndefinedBooleanContent.
+      EXPECT_FALSE(isConstFalseVal(TLI, 2, IsVec, IsFP));
+    }
+  }
+}
 }
