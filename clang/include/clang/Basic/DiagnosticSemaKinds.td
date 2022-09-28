@@ -562,6 +562,8 @@ def warn_cxx17_compat_using_decl_class_member_enumerator : Warning<
   "with C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_using_enum_is_dependent : Error<
   "using-enum cannot name a dependent type">;
+def err_using_enum_not_enum : Error<
+  "%0 is not an enumerated type">;
 def err_ambiguous_inherited_constructor : Error<
   "constructor of %0 inherited from multiple base class subobjects">;
 def note_ambiguous_inherited_constructor_using : Note<

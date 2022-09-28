@@ -607,6 +607,9 @@ def warn_cxx17_compat_using_enum_declaration : Warning<
 def ext_using_enum_declaration : ExtWarn<
   "using enum declaration is a C++20 extension">,
   InGroup<CXX20>;
+def err_using_enum_expect_identifier : Error<
+  "using enum %select{requires an enum or typedef name|"
+  "does not permit an elaborated enum specifier}0">;
 def err_constructor_bad_name : Error<
   "missing return type for function %0; did you mean the constructor name %1?">;
 def err_destructor_tilde_identifier : Error<

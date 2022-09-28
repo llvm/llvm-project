@@ -4,9 +4,9 @@ namespace GH57347 {
 namespace A {}
 
 void f() {
-  using enum A::+; // expected-error {{expected identifier}}
-  using enum; // expected-error {{expected identifier or '{'}}
-  using enum class; // expected-error {{expected identifier or '{'}}
-  using enum : blah; // expected-error {{unknown type name 'blah'}} expected-error {{unnamed enumeration must be a definition}}
+  using enum A::+; // expected-error {{using enum requires an enum or typedef name}}
+  using enum; // expected-error {{using enum requires an enum or typedef name}}
+  using enum class; // expected-error {{using enum requires an enum or typedef name}}
+  using enum enum q; // expected-error {{using enum does not permit an elaborated enum specifier}}
 }
 }
