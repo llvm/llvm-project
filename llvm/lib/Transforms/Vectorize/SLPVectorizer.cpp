@@ -5805,24 +5805,32 @@ class ScalarizationOverheadBuilder {
 public:
   /// Add an extraction from a specific source and element index.
   void addExtract(Value *Src, unsigned Idx) {
-    if (m_ExtractsByClass.count(Src)) {
-      m_ExtractsByClass[Src].setBit(Idx);
-      return;
-    }
     auto *Ty = cast<FixedVectorType>(Src->getType());
     unsigned NumElts = Ty->getNumElements();
-    m_ExtractsByClass[Src] = APInt::getOneBitSet(NumElts, Idx);
+    if (m_ExtractsByClass.count(Src)) {
+      if (Idx < NumElts)
+        m_ExtractsByClass[Src].setBit(Idx);
+      else
+        m_ExtractsByClass[Src].setAllBits();
+      return;
+    }
+    m_ExtractsByClass[Src] = Idx < NumElts ? APInt::getOneBitSet(NumElts, Idx)
+                                           : APInt::getAllOnes(NumElts);
   }
 
   /// Add an extraction from a vector type and specific element index.
   /// We assume that all extractions from a given type are from the same source.
   void addExtract(FixedVectorType *VecTy, unsigned Idx) {
+    unsigned NumElts = VecTy->getNumElements();
     if (m_ExtractsByType.count(VecTy)) {
-      m_ExtractsByType[VecTy].setBit(Idx);
+      if (Idx < NumElts)
+        m_ExtractsByType[VecTy].setBit(Idx);
+      else
+        m_ExtractsByType[VecTy].setAllBits();
       return;
     }
-    unsigned NumElts = VecTy->getNumElements();
-    m_ExtractsByType[VecTy] = APInt::getOneBitSet(NumElts, Idx);
+    m_ExtractsByType[VecTy] = Idx < NumElts ? APInt::getOneBitSet(NumElts, Idx)
+                                            : APInt::getAllOnes(NumElts);
   }
 
   /// Add an extended extraction from a specific source and element index.
