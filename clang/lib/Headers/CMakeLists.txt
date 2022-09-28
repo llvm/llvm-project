@@ -62,7 +62,9 @@ set(hip_files
   __clang_hip_runtime_wrapper.h
   )
 
-set(hlsl_h hlsl.h)
+set(hlsl_h
+  hlsl.h
+  )
 set(hlsl_subdir_files
   hlsl/hlsl_basic_types.h
   hlsl/hlsl_intrinsics.h
