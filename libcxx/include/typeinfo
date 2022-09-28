@@ -61,12 +61,9 @@ public:
 #include <__config>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <exception>
 #include <type_traits>
-
-#ifdef _LIBCPP_NO_EXCEPTIONS
-#include <cstdlib>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
