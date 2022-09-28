@@ -49,7 +49,8 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
 }
 
 unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
-                                                  const GlobalVariable &GV) {
+                                                  const GlobalVariable &GV,
+                                                  Align Trailing) {
   auto Entry = LocalMemoryObjects.insert(std::make_pair(&GV, 0));
   if (!Entry.second)
     return Entry.first->second;
@@ -66,9 +67,8 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 
     StaticLDSSize += DL.getTypeAllocSize(GV.getValueType());
 
-    // Update the LDS size considering the padding to align the dynamic shared
-    // memory.
-    LDSSize = alignTo(StaticLDSSize, DynLDSAlign);
+    // Align LDS size to trailing, e.g. for aligning dynamic shared memory
+    LDSSize = alignTo(StaticLDSSize, Trailing);
   } else {
     assert(GV.getAddressSpace() == AMDGPUAS::REGION_ADDRESS &&
            "expected region address space");
@@ -84,20 +84,61 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   return Offset;
 }
 
+const GlobalVariable *
+AMDGPUMachineFunction::getKernelLDSGlobalFromFunction(const Function &F) {
+  const Module *M = F.getParent();
+  std::string KernelLDSName = "llvm.amdgcn.kernel.";
+  KernelLDSName += F.getName();
+  KernelLDSName += ".lds";
+  return M->getNamedGlobal(KernelLDSName);
+}
+
 // This kernel calls no functions that require the module lds struct
 static bool canElideModuleLDS(const Function &F) {
   return F.hasFnAttribute("amdgpu-elide-module-lds");
 }
 
-void AMDGPUMachineFunction::allocateModuleLDSGlobal(const Function &F) {
+void AMDGPUMachineFunction::allocateKnownAddressLDSGlobal(const Function &F) {
   const Module *M = F.getParent();
+
+  // This function is called before allocating any other LDS so that it can
+  // reliably put values at known addresses. Consequently, dynamic LDS, if
+  // present, will not yet have been allocated
+
+  assert(getDynLDSAlign() == Align() && "dynamic LDS not yet allocated");
+
   if (isModuleEntryFunction()) {
+
+    // Pointer values start from zero, memory allocated per-kernel-launch
+    // Variables can be grouped into a module level struct and a struct per
+    // kernel function by AMDGPULowerModuleLDSPass. If that is done, they
+    // are allocated at statically computable addresses here.
+    //
+    // Address 0
+    // {
+    //   llvm.amdgcn.module.lds
+    // }
+    // alignment padding
+    // {
+    //   llvm.amdgcn.kernel.some-name.lds
+    // }
+    // other variables, e.g. dynamic lds, allocated after this call
+
     const GlobalVariable *GV = M->getNamedGlobal("llvm.amdgcn.module.lds");
+    const GlobalVariable *KV = getKernelLDSGlobalFromFunction(F);
+
     if (GV && !canElideModuleLDS(F)) {
-      unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV);
+      unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *GV, Align());
       (void)Offset;
       assert(Offset == 0 &&
              "Module LDS expected to be allocated before other LDS");
+    }
+
+    if (KV) {
+      // The per-kernel offset is deterministic because it is allocated
+      // before any other non-module LDS variables.
+      unsigned Offset = allocateLDSGlobal(M->getDataLayout(), *KV, Align());
+      (void)Offset;
     }
   }
 }
