@@ -830,6 +830,9 @@ void ObjectFilePECOFF::AppendFromCOFFSymbolTable(
             symbol.SetType(exported->GetType());
         }
       }
+    } else if (section_number == llvm::COFF::IMAGE_SYM_ABSOLUTE) {
+      symbol.GetAddressRef() = Address(coff_sym_ref.getValue());
+      symbol.SetType(lldb::eSymbolTypeAbsolute);
     }
     symtab.AddSymbol(symbol);
   }
