@@ -78,8 +78,8 @@ static Value getOrCreateValue(OpFoldResult res, OpBuilder &builder,
 // Returns success if the transformation happened and failure otherwise.
 // This is not a pattern as it requires propagating the new memref type to its
 // uses and requires updating subview ops.
-LogicalResult mlir::memref::multiBuffer(memref::AllocOp allocOp,
-                                        unsigned multiplier) {
+FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
+                                                     unsigned multiplier) {
   DominanceInfo dom(allocOp->getParentOp());
   LoopLikeOpInterface candidateLoop;
   for (Operation *user : allocOp->getUsers()) {
@@ -142,5 +142,5 @@ LogicalResult mlir::memref::multiBuffer(memref::AllocOp allocOp,
                                                     offsets, sizes, strides);
   replaceUsesAndPropagateType(allocOp, subview, builder);
   allocOp.erase();
-  return success();
+  return newAlloc;
 }
