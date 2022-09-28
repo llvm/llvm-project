@@ -722,3 +722,30 @@ MlirAttribute mlirSparseElementsAttrGetIndices(MlirAttribute attr) {
 MlirAttribute mlirSparseElementsAttrGetValues(MlirAttribute attr) {
   return wrap(unwrap(attr).cast<SparseElementsAttr>().getValues());
 }
+
+//===----------------------------------------------------------------------===//
+// Strided layout attribute.
+//===----------------------------------------------------------------------===//
+
+bool mlirAttributeIsAStridedLayout(MlirAttribute attr) {
+  return unwrap(attr).isa<StridedLayoutAttr>();
+}
+
+MlirAttribute mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset,
+                                       intptr_t numStrides, int64_t *strides) {
+  return wrap(StridedLayoutAttr::get(unwrap(ctx), offset,
+                                     ArrayRef<int64_t>(strides, numStrides)));
+}
+
+int64_t mlirStridedLayoutAttrGetOffset(MlirAttribute attr) {
+  return unwrap(attr).cast<StridedLayoutAttr>().getOffset();
+}
+
+intptr_t mlirStridedLayoutAttrGetNumStrides(MlirAttribute attr) {
+  return static_cast<intptr_t>(
+      unwrap(attr).cast<StridedLayoutAttr>().getStrides().size());
+}
+
+int64_t mlirStridedLayoutAttrGetStride(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<StridedLayoutAttr>().getStrides()[pos];
+}
