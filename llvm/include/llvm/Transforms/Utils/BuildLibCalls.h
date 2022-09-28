@@ -85,7 +85,7 @@ namespace llvm {
 
   /// Emit a call to the strlen function to the builder, for the specified
   /// pointer. Ptr is required to be some pointer type, and the return value has
-  /// 'intptr_t' type.
+  /// 'size_t' type.
   Value *emitStrLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
                     const TargetLibraryInfo *TLI);
 
@@ -125,7 +125,7 @@ namespace llvm {
                      const TargetLibraryInfo *TLI);
 
   /// Emit a call to the __memcpy_chk function to the builder. This expects that
-  /// the Len and ObjSize have type 'intptr_t' and Dst/Src are pointers.
+  /// the Len and ObjSize have type 'size_t' and Dst/Src are pointers.
   Value *emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
                        IRBuilderBase &B, const DataLayout &DL,
                        const TargetLibraryInfo *TLI);
@@ -135,7 +135,7 @@ namespace llvm {
                      const DataLayout &DL, const TargetLibraryInfo *TLI);
 
   /// Emit a call to the memchr function. This assumes that Ptr is a pointer,
-  /// Val is an i32 value, and Len is an 'intptr_t' value.
+  /// Val is an 'int' value, and Len is an 'size_t' value.
   Value *emitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilderBase &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
@@ -219,15 +219,15 @@ namespace llvm {
                                LibFunc FloatFn, LibFunc LongDoubleFn,
                                IRBuilderBase &B, const AttributeList &Attrs);
 
-  /// Emit a call to the putchar function. This assumes that Char is an integer.
+  /// Emit a call to the putchar function. This assumes that Char is an 'int'.
   Value *emitPutChar(Value *Char, IRBuilderBase &B,
                      const TargetLibraryInfo *TLI);
 
   /// Emit a call to the puts function. This assumes that Str is some pointer.
   Value *emitPutS(Value *Str, IRBuilderBase &B, const TargetLibraryInfo *TLI);
 
-  /// Emit a call to the fputc function. This assumes that Char is an i32, and
-  /// File is a pointer to FILE.
+  /// Emit a call to the fputc function. This assumes that Char can be casted to
+  /// int (currently assuming int is i32), and File is a pointer to FILE.
   Value *emitFPutC(Value *Char, Value *File, IRBuilderBase &B,
                    const TargetLibraryInfo *TLI);
 
