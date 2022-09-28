@@ -14536,7 +14536,7 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
     //   [...] the expression to which [the unary * operator] is applied shall
     //   be a pointer to an object type, or a pointer to a function type
     LangOptions LO = S.getLangOpts();
-    if (LO.CPlusPlus || !(LO.C99 && IsAfterAmp))
+    if (LO.CPlusPlus || !(LO.C99 && (IsAfterAmp || S.isUnevaluatedContext())))
       S.Diag(OpLoc, diag::ext_typecheck_indirection_through_void_pointer)
           << LO.CPlusPlus << OpTy << Op->getSourceRange();
   }
