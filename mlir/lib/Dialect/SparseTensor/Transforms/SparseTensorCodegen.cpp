@@ -35,26 +35,6 @@ namespace {
 // Helper methods.
 //===----------------------------------------------------------------------===//
 
-/// Reorders stored dimension to original dimension.
-static unsigned toOrig(const SparseTensorEncodingAttr &enc, unsigned i) {
-  auto order = enc.getDimOrdering();
-  if (order) {
-    assert(order.isPermutation());
-    return order.getDimPosition(i);
-  }
-  return i;
-}
-
-/// Reorders original dimension to stored dimension.
-static unsigned toStored(const SparseTensorEncodingAttr &enc, unsigned i) {
-  auto order = enc.getDimOrdering();
-  if (order) {
-    assert(order.isPermutation());
-    return order.getPermutedPosition(i);
-  }
-  return i;
-}
-
 /// Flatten a list of operands that may contain sparse tensors.
 static void flattenOperands(ValueRange operands,
                             SmallVectorImpl<Value> &flattened) {
@@ -79,7 +59,7 @@ static void flattenOperands(ValueRange operands,
 /// Gets the dimension size for the given sparse tensor at the given dim.
 /// Returns None if no sparse encoding is attached to the tensor type.
 static Optional<Value> sizeFromTensorAtDim(OpBuilder &rewriter, Location loc,
-                                           ShapedType tensorTp,
+                                           RankedTensorType tensorTp,
                                            Value adaptedValue, unsigned dim) {
   auto enc = getSparseTensorEncoding(tensorTp);
   if (!enc)
@@ -95,9 +75,8 @@ static Optional<Value> sizeFromTensorAtDim(OpBuilder &rewriter, Location loc,
   // accounting for the reordering applied to the sparse storage.
   auto tuple =
       llvm::cast<UnrealizedConversionCastOp>(adaptedValue.getDefiningOp());
-  return rewriter
-      .create<memref::LoadOp>(loc, tuple.getInputs().front(),
-                              constantIndex(rewriter, loc, toStored(enc, dim)))
+  Value idx = constantIndex(rewriter, loc, toStoredDim(tensorTp, dim));
+  return rewriter.create<memref::LoadOp>(loc, tuple.getInputs().front(), idx)
       .getResult();
 }
 
@@ -243,7 +222,7 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
   // Per-dimension storage.
   for (unsigned r = 0; r < rank; r++) {
     // Get the original dimension (ro) for the current stored dimension.
-    unsigned ro = toOrig(enc, r);
+    unsigned ro = toOrigDim(rType, r);
     builder.create<memref::StoreOp>(loc, sizes[ro], dimSizes,
                                     constantIndex(builder, loc, r));
     linear = builder.create<arith::MulIOp>(loc, linear, sizes[ro]);
@@ -490,10 +469,7 @@ public:
     // Determine the size for access expansion (always the innermost stored
     // dimension size, translated back to original dimension). Note that we
     // recursively rewrite the new DimOp on the **original** tensor.
-    auto enc = getSparseTensorEncoding(srcType);
-    unsigned innerDim = srcType.getRank() - 1;
-    if (AffineMap p = enc.getDimOrdering())
-      innerDim = p.getDimPosition(innerDim);
+    unsigned innerDim = toOrigDim(srcType, srcType.getRank() - 1);
     auto sz = sizeFromTensorAtDim(rewriter, loc, srcType, adaptor.getTensor(),
                                   innerDim);
     assert(sz); // This for sure is a sparse tensor
