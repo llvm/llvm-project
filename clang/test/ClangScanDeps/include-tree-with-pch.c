@@ -14,10 +14,10 @@
 // CHECK-NEXT: Files:
 // CHECK-NEXT: [[PREFIX]]/t.c
 // CHECK-NEXT: [[PREFIX]]/t.h
-// CHECK-NEXT: [[PREFIX]]/n3.h
-// CHECK-NEXT: [[PREFIX]]/n2.h
-// CHECK-NEXT: [[PREFIX]]/n1.h
 // CHECK-NEXT: [[PREFIX]]/prefix.h
+// CHECK-NEXT: [[PREFIX]]/n1.h
+// CHECK-NEXT: [[PREFIX]]/n2.h
+// CHECK-NEXT: [[PREFIX]]/n3.h
 // CHECK-NOT: [[PREFIX]]
 
 //--- prefix.h
