@@ -81,11 +81,16 @@ Error DXContainer::parsePartOffsets() {
       return parseFailed("Part offset points beyond boundary of the file");
     PartOffsets.push_back(PartOffset);
 
-    // If this isn't a dxil part stop here...
-    if (Data.getBuffer().substr(PartOffset, 4) != "DXIL")
-      continue;
-    if (Error Err = parseDXILHeader(PartOffset + sizeof(dxbc::PartHeader)))
-      return Err;
+    dxbc::PartType PT =
+        dxbc::parsePartType(Data.getBuffer().substr(PartOffset, 4));
+    switch (PT) {
+    case dxbc::PartType::DXIL:
+      if (Error Err = parseDXILHeader(PartOffset + sizeof(dxbc::PartHeader)))
+        return Err;
+      break;
+    case dxbc::PartType::Unknown:
+      break;
+    }
   }
   return Error::success();
 }

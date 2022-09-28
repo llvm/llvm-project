@@ -125,6 +125,14 @@ struct ProgramHeader {
 
 static_assert(sizeof(ProgramHeader) == 24, "ProgramHeader Size incorrect!");
 
+#define CONTAINER_PART(Part) Part,
+enum class PartType {
+  Unknown = 0,
+#include "DXContainerConstants.def"
+};
+
+PartType parsePartType(StringRef S);
+
 } // namespace dxbc
 } // namespace llvm
 

@@ -54,6 +54,8 @@ struct DXILProgram {
 };
 
 struct Part {
+  Part() = default;
+  Part(std::string N, uint32_t S) : Name(N), Size(S) {}
   std::string Name;
   uint32_t Size;
   Optional<DXILProgram> Program;
