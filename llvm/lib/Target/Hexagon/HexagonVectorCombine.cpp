@@ -1001,6 +1001,7 @@ auto HexagonVectorCombine::getSizeOf(const Type *Ty, SizeKind Kind) const
   case Alloc:
     return DL.getTypeAllocSize(NcTy).getFixedValue();
   }
+  llvm_unreachable("Unhandled SizeKind enum");
 }
 
 auto HexagonVectorCombine::getTypeAlignment(Type *Ty) const -> int {
