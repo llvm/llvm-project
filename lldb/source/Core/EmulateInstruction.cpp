@@ -72,10 +72,10 @@ EmulateInstruction::FindPlugin(const ArchSpec &arch,
 
 EmulateInstruction::EmulateInstruction(const ArchSpec &arch) : m_arch(arch) {}
 
-bool EmulateInstruction::ReadRegister(const RegisterInfo *reg_info,
+bool EmulateInstruction::ReadRegister(const RegisterInfo &reg_info,
                                       RegisterValue &reg_value) {
   if (m_read_reg_callback != nullptr)
-    return m_read_reg_callback(this, m_baton, reg_info, reg_value);
+    return m_read_reg_callback(this, m_baton, &reg_info, reg_value);
   return false;
 }
 
@@ -84,7 +84,7 @@ bool EmulateInstruction::ReadRegister(lldb::RegisterKind reg_kind,
                                       RegisterValue &reg_value) {
   llvm::Optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
   if (reg_info)
-    return ReadRegister(&(*reg_info), reg_value);
+    return ReadRegister(*reg_info, reg_value);
   return false;
 }
 
@@ -100,7 +100,7 @@ uint64_t EmulateInstruction::ReadRegisterUnsigned(lldb::RegisterKind reg_kind,
   return fail_value;
 }
 
-uint64_t EmulateInstruction::ReadRegisterUnsigned(const RegisterInfo *reg_info,
+uint64_t EmulateInstruction::ReadRegisterUnsigned(const RegisterInfo &reg_info,
                                                   uint64_t fail_value,
                                                   bool *success_ptr) {
   RegisterValue reg_value;
