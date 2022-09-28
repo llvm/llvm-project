@@ -593,9 +593,7 @@ let SubtargetPredicate = isGFX12Plus in {
     let isCommutable = 1;
   }
 
-  def S_SUB_U64 : SOP2_64 <"s_sub_u64",
-    [(set SReg_64:$sdst, (UniformBinFrag<sub> i64:$src0, i64:$src1))]
-  >;
+  def S_SUB_U64 : SOP2_64<"s_sub_u64">;
 } // End SubtargetPredicate = isGFX12Plus
 
 // This pattern is restricted to certain subtargets (practically GFX8Plus)

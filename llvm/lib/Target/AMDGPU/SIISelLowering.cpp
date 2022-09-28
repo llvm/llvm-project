@@ -4025,20 +4025,21 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO: {
+    // For targets older than GFX12, we emit a sequence of 32-bit operations.
+    // For GFX12, we emit s_add_u64 and s_sub_u64.
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     const DebugLoc &DL = MI.getDebugLoc();
-
     MachineOperand &Dest = MI.getOperand(0);
     MachineOperand &Src0 = MI.getOperand(1);
     MachineOperand &Src1 = MI.getOperand(2);
-
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
-    if (IsAdd && Subtarget->hasScalarAddSub64())
-      BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_ADD_U64), Dest.getReg())
+    if (Subtarget->hasScalarAddSub64()) {
+      unsigned Opc = IsAdd ? AMDGPU::S_ADD_U64 : AMDGPU::S_SUB_U64;
+      BuildMI(*BB, MI, DL, TII->get(Opc), Dest.getReg())
           .addReg(Src0.getReg())
           .addReg(Src1.getReg());
-    else {
+    } else {
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
       const TargetRegisterClass *BoolRC = TRI->getBoolRC();
 
