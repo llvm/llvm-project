@@ -1061,7 +1061,7 @@ public:
     VisitType(T);
   }
   void VisitTypeOfType(const TypeOfType *T) {
-    AddQualType(T->getUnderlyingType());
+    AddQualType(T->getUnmodifiedType());
     VisitType(T);
   }
 

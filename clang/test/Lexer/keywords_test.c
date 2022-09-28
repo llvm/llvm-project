@@ -44,6 +44,7 @@ C2x_KEYWORD(true);
 C2x_KEYWORD(false);
 C2x_KEYWORD(static_assert);
 C2x_KEYWORD(typeof);
+C2x_KEYWORD(typeof_unqual);
 C2x_KEYWORD(thread_local);
 C2x_KEYWORD(alignas);
 C2x_KEYWORD(alignof);
@@ -97,6 +98,7 @@ void has_static_assert();
   char false; // c89-warning {{'false' is a keyword in C2x}}
   float alignof; // c89-warning {{'alignof' is a keyword in C2x}}
   int typeof; // c89-warning {{'typeof' is a keyword in C2x}}
+  int typeof_unqual; // c89-warning {{'typeof_unqual' is a keyword in C2x}}
   int alignas; // c89-warning {{'alignas' is a keyword in C2x}}
   int static_assert; // c89-warning {{'static_assert' is a keyword in C2x}}
 

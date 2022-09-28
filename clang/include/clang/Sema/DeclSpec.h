@@ -289,6 +289,8 @@ public:
   static const TST TST_typename = clang::TST_typename;
   static const TST TST_typeofType = clang::TST_typeofType;
   static const TST TST_typeofExpr = clang::TST_typeofExpr;
+  static const TST TST_typeof_unqualType = clang::TST_typeof_unqualType;
+  static const TST TST_typeof_unqualExpr = clang::TST_typeof_unqualExpr;
   static const TST TST_decltype = clang::TST_decltype;
   static const TST TST_decltype_auto = clang::TST_decltype_auto;
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
@@ -409,10 +411,11 @@ private:
 
   static bool isTypeRep(TST T) {
     return T == TST_atomic || T == TST_typename || T == TST_typeofType ||
-           isTransformTypeTrait(T);
+           T == TST_typeof_unqualType || isTransformTypeTrait(T);
   }
   static bool isExprRep(TST T) {
-    return (T == TST_typeofExpr || T == TST_decltype || T == TST_bitint);
+    return T == TST_typeofExpr || T == TST_typeof_unqualExpr ||
+           T == TST_decltype || T == TST_bitint;
   }
   static bool isTemplateIdRep(TST T) {
     return (T == TST_auto || T == TST_decltype_auto);
