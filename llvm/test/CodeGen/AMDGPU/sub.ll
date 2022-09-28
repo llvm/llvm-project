@@ -1,12 +1,12 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,PREGFX12 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89,PREGFX12 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89,PREGFX12 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX12 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone speculatable
 
 ; GCN-LABEL: {{^}}s_sub_i32:
-; GCN: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}]
+; GCN: s_load_{{dwordx4|b128}} s[[[#LOAD:]]:{{[0-9]+}}]
 ; GCN: s_sub_i32 s{{[0-9]+}}, s[[#LOAD + 2]], s[[#LOAD + 3]]
 define amdgpu_kernel void @s_sub_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
   %result = sub i32 %a, %b
@@ -15,7 +15,7 @@ define amdgpu_kernel void @s_sub_i32(i32 addrspace(1)* %out, i32 %a, i32 %b) {
 }
 
 ; GCN-LABEL: {{^}}s_sub_imm_i32:
-; GCN: s_load_dword [[A:s[0-9]+]]
+; GCN: s_load_{{dword|b32}} [[A:s[0-9]+]]
 ; GCN: s_sub_i32 s{{[0-9]+}}, 0x4d2, [[A]]
 define amdgpu_kernel void @s_sub_imm_i32(i32 addrspace(1)* %out, i32 %a) {
   %result = sub i32 1234, %a
@@ -128,7 +128,7 @@ define amdgpu_kernel void @test_sub_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16
   ret void
 }
 
-; PREGFX12-LABEL: {{^}}s_sub_i64:
+; GCN-LABEL: {{^}}s_sub_i64:
 ; PREGFX12: s_sub_u32
 ; PREGFX12: s_subb_u32
 ;
@@ -232,7 +232,7 @@ define amdgpu_kernel void @v_test_sub_v4i64(<4 x i64> addrspace(1)* %out, <4 x i
 ; GFX9: v_subrev_u32_e32 v0, s0, v0
 
 ; GCN: ; def vcc
-; GCN: ds_write_b32
+; GCN: ds_{{write|store}}_b32
 ; GCN: ; use vcc
 define amdgpu_ps void @sub_select_vop3(i32 inreg %s, i32 %v) {
   %vcc = call i64 asm sideeffect "; def vcc", "={vcc}"()
