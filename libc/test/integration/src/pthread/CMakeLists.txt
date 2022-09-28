@@ -110,3 +110,23 @@ add_integration_test(
     libc.src.pthread.pthread_getspecific
     libc.src.pthread.pthread_setspecific
 )
+
+add_integration_test(
+  pthread_once_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_once_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.pthread
+    libc.src.pthread.pthread_once
+    libc.src.pthread.pthread_mutex_destroy
+    libc.src.pthread.pthread_mutex_init
+    libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_unlock
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.__support.CPP.atomic
+)

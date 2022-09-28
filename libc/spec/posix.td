@@ -14,6 +14,9 @@ def PThreadStartT : NamedType<"__pthread_start_t">;
 def PThreadTSSDtorT : NamedType<"__pthread_tss_dtor_t">;
 def PThreadKeyT : NamedType<"pthread_key_t">;
 def PThreadKeyTPtr : PtrType<PThreadKeyT>;
+def PThreadOnceT : NamedType<"pthread_once_t">;
+def PThreadOnceTPtr : PtrType<PThreadOnceT>;
+def PThreadOnceCallback : NamedType<"__pthread_once_func_t">;
 
 def InoT : NamedType<"ino_t">;
 def UidT : NamedType<"uid_t">;
@@ -675,6 +678,8 @@ def POSIX : StandardSpec<"POSIX"> {
         PThreadKeyT,
         PThreadMutexAttrTType,
         PThreadMutexTType,
+        PThreadOnceCallback,
+        PThreadOnceT,
         PThreadStartT,
         PThreadTSSDtorT,
         PThreadTType,
@@ -860,6 +865,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "pthread_setspecific",
           RetValSpec<VoidPtr>,
           [ArgSpec<PThreadKeyT>, ArgSpec<ConstVoidPtr>]
+      >,
+      FunctionSpec<
+          "pthread_once",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadOnceTPtr>, ArgSpec<PThreadOnceCallback>]
       >,
     ]
   >;

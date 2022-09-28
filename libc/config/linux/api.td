@@ -234,6 +234,7 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
 
 def PThreadAPI : PublicAPI<"pthread.h"> {
   let Types = [
+      "__pthread_once_func_t",
       "__pthread_start_t",
       "__pthread_tss_dtor_t",
       "pthread_attr_t",
@@ -241,6 +242,7 @@ def PThreadAPI : PublicAPI<"pthread.h"> {
       "pthread_mutexattr_t",
       "pthread_t",
       "pthread_key_t",
+      "pthread_once_t",
   ];
 }
 
