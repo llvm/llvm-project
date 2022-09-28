@@ -6266,7 +6266,10 @@ cc_library(
 cc_library(
     name = "MlirOptLib",
     srcs = ["lib/Tools/mlir-opt/MlirOptMain.cpp"],
-    hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
+    hdrs = [
+        "include/mlir/Tools/mlir-opt/MlirOptMain.h",
+        "include/mlir/Tools/ParseUtilties.h",
+    ],
     includes = ["include"],
     deps = [
         ":BytecodeReader",
