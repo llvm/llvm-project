@@ -1056,6 +1056,10 @@ void DataAggregator::consumeRestOfLine() {
   Line += 1;
 }
 
+bool DataAggregator::checkNewLine() {
+  return ParsingBuf[0] == '\n';
+}
+
 ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
   PerfBranchSample Res;
 
@@ -2148,7 +2152,7 @@ DataAggregator::parseNameBuildIDPair() {
   // If one of the strings is missing, don't issue a parsing error, but still
   // do not return a value.
   consumeAllRemainingFS();
-  if (checkAndConsumeNewLine())
+  if (checkNewLine())
     return NoneType();
 
   ErrorOr<StringRef> NameStr = parseString(FieldSeparator, true);
