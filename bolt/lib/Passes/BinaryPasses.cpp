@@ -417,10 +417,14 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_BB_LINEAR, WorkFun, SkipFunc,
       "ReorderBasicBlocks");
+  const size_t NumAllProfiledFunctions =
+      BC.NumProfiledFuncs + BC.NumStaleProfileFuncs;
 
   outs() << "BOLT-INFO: basic block reordering modified layout of "
-         << format("%zu (%.2lf%%) functions\n",
+         << format("%zu functions (%.2lf%% of profiled, %.2lf%% of total)\n",
                    ModifiedFuncCount.load(std::memory_order_relaxed),
+                   100.0 * ModifiedFuncCount.load(std::memory_order_relaxed) /
+                       NumAllProfiledFunctions,
                    100.0 * ModifiedFuncCount.load(std::memory_order_relaxed) /
                        BC.getBinaryFunctions().size());
 
@@ -1383,6 +1387,7 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
   }
   BC.NumProfiledFuncs = ProfiledFunctions.size();
+  BC.NumStaleProfileFuncs = NumStaleProfileFunctions;
 
   const size_t NumAllProfiledFunctions =
       ProfiledFunctions.size() + NumStaleProfileFunctions;
