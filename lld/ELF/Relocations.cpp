@@ -297,17 +297,15 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &ss) {
 static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
                                uint64_t size) {
   Symbol old = sym;
+  Defined(sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
+          size, &sec)
+      .overwrite(sym);
 
-  sym.replace(Defined{sym.file, StringRef(), sym.binding, sym.stOther,
-                      sym.type, value, size, &sec});
-
-  sym.auxIdx = old.auxIdx;
-  sym.verdefIndex = old.verdefIndex;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  if (old.hasFlag(NEEDS_GOT))
-    sym.setFlags(NEEDS_GOT);
+  sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
+                  std::memory_order_relaxed);
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.

@@ -1129,6 +1129,8 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
       new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
     symbols[i]->isUsedInRegularObj = true;
+    symbols[i]->auxIdx = -1;
+    symbols[i]->dynsymIndex = 0;
   }
 }
 

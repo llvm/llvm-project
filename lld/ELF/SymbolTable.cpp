@@ -87,18 +87,12 @@ Symbol *SymbolTable::insert(StringRef name) {
   Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   symVector.push_back(sym);
 
-  // *sym was not initialized by a constructor. Fields that may get referenced
-  // when it is a placeholder must be initialized here.
+  // *sym was not initialized by a constructor. Initialize all Symbol fields.
+  memset(sym, 0, sizeof(Symbol));
   sym->setName(name);
-  sym->symbolKind = Symbol::PlaceholderKind;
   sym->partition = 1;
-  sym->setVisibility(STV_DEFAULT);
-  sym->isUsedInRegularObj = false;
-  sym->exportDynamic = false;
-  sym->inDynamicList = false;
-  sym->referenced = false;
-  sym->traced = false;
-  sym->scriptDefined = false;
+  sym->auxIdx = -1;
+  sym->verdefIndex = -1;
   sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
