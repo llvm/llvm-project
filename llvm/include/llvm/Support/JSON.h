@@ -53,6 +53,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <map>
 
 namespace llvm {
