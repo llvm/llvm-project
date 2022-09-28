@@ -320,6 +320,18 @@ Show all references of the symbol under the cursor.
 
 ![IMG](/tblgen-lsp-server/find_references.gif)
 
+#### Hover
+
+Hover over a symbol to see more information about it, such as its type,
+documentation, and more.
+
+![IMG](/tblgen-lsp-server/hover_def.png)
+
+Hovering over an overridden field will also show you information such as
+documentation from the base value:
+
+![IMG](/tblgen-lsp-server/hover_field.png)
+
 ## Language Server Design
 
 The design of the various language servers provided by MLIR are effectively the
