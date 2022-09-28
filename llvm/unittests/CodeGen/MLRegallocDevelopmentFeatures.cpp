@@ -7,18 +7,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "../../lib/CodeGen/MLRegallocEvictAdvisor.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <string>
 #include <vector>
 
 using testing::ContainerEq;
 using testing::Test;
+
+namespace {
+
+#include "MFCommon.inc"
 
 struct LRPosInfoIndexes {
   size_t StartIndex;
@@ -68,7 +84,9 @@ protected:
     const std::vector<TensorSpec> Inputs{
         TensorSpec::createSpec<int64_t>("instructions", InstructionsShape),
         TensorSpec::createSpec<int64_t>("instructions_mapping",
-                                        InstructionsMappingShape)};
+                                        InstructionsMappingShape),
+        TensorSpec::createSpec<float>("mbb_frequencies", MBBFrequencyShape),
+        TensorSpec::createSpec<int64_t>("mbb_mapping", InstructionsShape)};
     LLVMContext Ctx;
     return NoInferenceModelRunner(Ctx, Inputs);
   }
@@ -103,7 +121,10 @@ protected:
     SlotIndex LastIndex = OverlapProblem[MaxIndex].End;
     extractInstructionFeatures(
         OverlapProblem, &ModelRunner,
-        [](SlotIndex InputSlot) -> int { return 0; }, 0, 1, LastIndex);
+        [](SlotIndex InputSlot) -> int { return 0; },
+        [](SlotIndex InputSlot) -> float { return 0.0f; },
+        [](SlotIndex InputSlot) -> MachineBasicBlock * { return nullptr; }, 0,
+        1, 2, 3, LastIndex);
     std::vector<int64_t> MappingMatrix(
         ModelRunner.getTensor<int64_t>(1),
         ModelRunner.getTensor<int64_t>(1) +
@@ -154,7 +175,9 @@ TEST_F(RegallocDevelopmentFeaturesTest, InstructionOpcodesAreCorrect) {
       [FirstIndex](SlotIndex InputSlot) -> int {
         return FirstIndex.distance(InputSlot) / SlotIndex::InstrDist;
       },
-      0, 1, LastIndex);
+      [](SlotIndex InputSlot) -> float { return 0.0f; },
+      [](SlotIndex InputSlot) -> MachineBasicBlock * { return nullptr; }, 0, 1,
+      2, 3, LastIndex);
   for (size_t CurrentInstructionIndex = 0;
        CurrentInstructionIndex < ModelMaxSupportedInstructionCount;
        ++CurrentInstructionIndex) {
@@ -207,3 +230,62 @@ TEST_F(RegallocDevelopmentFeaturesTest, InternalMultiOverlap) {
   OverlapSetup.push_back({35, 60, 2});
   runOverlapTest(OverlapSetup);
 }
+
+TEST_F(RegallocDevelopmentFeaturesTest, SingleMBBTest) {
+  NoInferenceModelRunner ModelRunner = setupModelRunner();
+  SlotIndex CurrentIndex;
+  // set index to 1 so we can ensure that the mapping actually get set
+  std::map<MachineBasicBlock *, size_t> VisitedMBBs = {{nullptr, 1}};
+  extractMBBFrequency(
+      CurrentIndex, 0, VisitedMBBs,
+      [](SlotIndex InputSlot) -> float { return 1.0f; }, nullptr, &ModelRunner,
+      2, 3);
+  ASSERT_FLOAT_EQ(ModelRunner.getTensor<float>(2)[1], 1.0f);
+  ASSERT_EQ(ModelRunner.getTensor<int64_t>(3)[0], 1);
+}
+
+TEST_F(RegallocDevelopmentFeaturesTest, MBBFullTruncated) {
+  SmallVector<LRPosInfoIndexes, 1> OverlapSetup;
+  OverlapSetup.push_back({0, ModelMaxSupportedInstructionCount - 1, 0});
+  ilist<IndexListEntry> IndexList;
+  auto OverlapProblem = setupOverlapProblem(OverlapSetup, IndexList);
+  NoInferenceModelRunner ModelRunner = setupModelRunner();
+  SlotIndex LastIndex = OverlapProblem[0].End;
+  SlotIndex FirstIndex = OverlapProblem[0].Begin;
+
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  std::array<MachineBasicBlock *, ModelMaxSupportedInstructionCount>
+      MBBsForTest;
+  for (size_t I = 0; I < ModelMaxSupportedInstructionCount; ++I) {
+    MBBsForTest[I] = MF->CreateMachineBasicBlock();
+  }
+
+  extractInstructionFeatures(
+      OverlapProblem, &ModelRunner,
+      [](SlotIndex InputSlot) -> int { return 0; },
+      [FirstIndex](SlotIndex InputSlot) -> float {
+        return static_cast<float>(FirstIndex.distance(InputSlot) /
+                                  SlotIndex::InstrDist);
+      },
+      [FirstIndex, MBBsForTest](SlotIndex InputSlot) -> MachineBasicBlock * {
+        return MBBsForTest[FirstIndex.distance(InputSlot) /
+                           SlotIndex::InstrDist];
+      },
+      0, 1, 2, 3, LastIndex);
+  for (size_t MBBIndex = 0; MBBIndex < ModelMaxSupportedMBBCount; ++MBBIndex) {
+    ASSERT_FLOAT_EQ(ModelRunner.getTensor<float>(2)[MBBIndex],
+                    static_cast<float>(MBBIndex));
+    ASSERT_EQ(ModelRunner.getTensor<int64_t>(3)[MBBIndex],
+              static_cast<int64_t>(MBBIndex));
+  }
+  // the rest of the mapping values should be zero (truncated to 100 MBBs)
+  for (size_t MBBIndex = ModelMaxSupportedMBBCount;
+       MBBIndex < ModelMaxSupportedInstructionCount; ++MBBIndex) {
+    ASSERT_EQ(ModelRunner.getTensor<int64_t>(3)[MBBIndex],
+              static_cast<int64_t>(0));
+  }
+}
+
+} // end namespace

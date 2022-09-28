@@ -50,3 +50,16 @@
 ; There are a total of 23 eviction problems with this test.
 ; CHECK-COUNT-22: int64_list
 ; CHECK: key: \"is_free\"
+; Make sure that we're exporting the mbb_frequencies. Don't actually check
+; values due to all values being floating point/liable to change very easily.
+; CHECK: key: \"mbb_frequencies\"
+; Make sure that we have the mbb_mapping feature, and that the first couple
+; of values are correct.
+; CHECK: key: \"mbb_mapping\"
+; CHECK-NEXT: 0
+; CHECK-SAME: 0
+; CHECK-SAME: 0
+; CHECK-SAME: 0
+; CHECK-SAME: 0
+; CHECK-SAME: 1
+; CHECK-SAME: 1
