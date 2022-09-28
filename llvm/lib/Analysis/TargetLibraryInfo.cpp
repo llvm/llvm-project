@@ -1051,12 +1051,8 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     break;
   }
 
-  // FIXME: There is no guarantee that sizeof(size_t) is equal to
-  // sizeof(int*) for every target. So the assumption used here to derive
-  // the SizeTBits based on the size of an integer pointer in address space
-  // zero isn't always valid.
   unsigned IntBits = getIntSize();
-  unsigned SizeTBits = M.getDataLayout().getPointerSizeInBits(/*AddrSpace=*/0);
+  unsigned SizeTBits = getSizeTSize(M);
   unsigned Idx = 0;
 
   // Iterate over the type ids in the function prototype, matching each
@@ -1229,6 +1225,22 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
       M.getModuleFlag("wchar_size")))
     return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
   return 0;
+}
+
+unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
+  // There is really no guarantee that sizeof(size_t) is equal to sizeof(int*).
+  // If that isn't true then it should be possible to derive the SizeTTy from
+  // the target triple here instead and do an early return.
+
+  // Historically LLVM assume that size_t has same size as intptr_t (hence
+  // deriving the size from sizeof(int*) in address space zero). This should
+  // work for most targets. For future consideration: DataLayout also implement
+  // getIndexSizeInBits which might map better to size_t compared to
+  // getPointerSizeInBits. Hard coding address space zero here might be
+  // unfortunate as well. Maybe getDefaultGlobalsAddressSpace() or
+  // getAllocaAddrSpace() is better.
+  unsigned AddressSpace = 0;
+  return M.getDataLayout().getPointerSizeInBits(AddressSpace);
 }
 
 TargetLibraryInfoWrapperPass::TargetLibraryInfoWrapperPass()
