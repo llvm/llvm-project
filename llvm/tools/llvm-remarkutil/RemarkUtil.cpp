@@ -35,12 +35,14 @@ static cl::SubCommand
 static cl::SubCommand
     Bitstream2YAML("bitstream2yaml",
                    "Convert bitstream remarks to YAML remarks");
+static cl::SubCommand InstructionCount(
+    "instruction-count",
+    "Function instruction count information (requires asm-printer remarks)");
 } // namespace subopts
 
-// Conversions have the same command line options. AFAIK there is no way to
-// reuse them, so to avoid duplication, let's just stick this in a hideous
-// macro.
-#define CONVERSION_COMMAND_LINE_OPTIONS(SUBOPT)                                \
+// Keep input + output help + names consistent across the various modes via a
+// hideous macro.
+#define INPUT_OUTPUT_COMMAND_LINE_OPTIONS(SUBOPT)                              \
   static cl::opt<std::string> InputFileName(                                   \
       cl::Positional, cl::cat(RemarkUtilCategory), cl::init("-"),              \
       cl::desc("<input file>"), cl::sub(SUBOPT));                              \
@@ -52,7 +54,7 @@ namespace yaml2bitstream {
 static constexpr Format InputFormat = Format::YAML;
 /// Remark format to output.
 static constexpr Format OutputFormat = Format::Bitstream;
-CONVERSION_COMMAND_LINE_OPTIONS(subopts::YAML2Bitstream)
+INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::YAML2Bitstream)
 } // namespace yaml2bitstream
 
 namespace bitstream2yaml {
@@ -60,8 +62,17 @@ namespace bitstream2yaml {
 static constexpr Format InputFormat = Format::Bitstream;
 /// Remark format to output.
 static constexpr Format OutputFormat = Format::YAML;
-CONVERSION_COMMAND_LINE_OPTIONS(subopts::Bitstream2YAML)
+INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::Bitstream2YAML)
 } // namespace bitstream2yaml
+
+namespace instructioncount {
+static cl::opt<Format> InputFormat(
+    "parser", cl::desc("Input remark format to parse"),
+    cl::values(clEnumValN(Format::YAML, "yaml", "YAML"),
+               clEnumValN(Format::Bitstream, "bitstream", "Bitstream")),
+    cl::sub(subopts::InstructionCount));
+INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::InstructionCount)
+} // namespace instructioncount
 
 /// \returns A MemoryBuffer for the input file on success, and an Error
 /// otherwise.
@@ -75,19 +86,33 @@ getInputMemoryBuffer(StringRef InputFileName) {
   return std::move(*MaybeBuf);
 }
 
-/// \returns A ToolOutputFile which can be used for writing remarks on success,
-/// and an Error otherwise.
+/// \returns A ToolOutputFile which can be used for outputting the results of
+/// some tool mode.
+/// \p OutputFileName is the desired destination.
+/// \p Flags controls whether or not the file is opened for writing in text
+/// mode, as a binary, etc. See sys::fs::OpenFlags for more detail.
 static Expected<std::unique_ptr<ToolOutputFile>>
-getOutputFile(StringRef OutputFileName, Format OutputFormat) {
+getOutputFileWithFlags(StringRef OutputFileName, sys::fs::OpenFlags Flags) {
   if (OutputFileName == "")
     OutputFileName = "-";
-  auto Flags = OutputFormat == Format::YAML ? sys::fs::OF_TextWithCRLF
-                                            : sys::fs::OF_None;
   std::error_code ErrorCode;
   auto OF = std::make_unique<ToolOutputFile>(OutputFileName, ErrorCode, Flags);
   if (ErrorCode)
     return errorCodeToError(ErrorCode);
   return std::move(OF);
+}
+
+/// \returns A ToolOutputFile which can be used for writing remarks on success,
+/// and an Error otherwise.
+/// \p OutputFileName is the desired destination.
+/// \p OutputFormat
+static Expected<std::unique_ptr<ToolOutputFile>>
+getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat) {
+  assert((OutputFormat == Format::YAML || OutputFormat == Format::Bitstream) &&
+         "Expected one of YAML or Bitstream!");
+  return getOutputFileWithFlags(OutputFileName, OutputFormat == Format::YAML
+                                                    ? sys::fs::OF_TextWithCRLF
+                                                    : sys::fs::OF_None);
 }
 
 namespace yaml2bitstream {
@@ -125,7 +150,7 @@ tryParseRemarksFromYAMLFile(std::vector<std::unique_ptr<Remark>> &ParsedRemarks,
 static Error tryReserializeYAML2Bitstream(
     const std::vector<std::unique_ptr<Remark>> &ParsedRemarks,
     StringTable &StrTab) {
-  auto MaybeOF = getOutputFile(OutputFileName, OutputFormat);
+  auto MaybeOF = getOutputFileForRemarks(OutputFileName, OutputFormat);
   if (!MaybeOF)
     return MaybeOF.takeError();
   auto OF = std::move(*MaybeOF);
@@ -155,7 +180,7 @@ namespace bitstream2yaml {
 /// \returns An Error if reserialization fails, or Error::success() on success.
 static Error tryBitstream2YAML() {
   // Create the serializer.
-  auto MaybeOF = getOutputFile(OutputFileName, OutputFormat);
+  auto MaybeOF = getOutputFileForRemarks(OutputFileName, OutputFormat);
   if (!MaybeOF)
     return MaybeOF.takeError();
   auto OF = std::move(*MaybeOF);
@@ -186,6 +211,49 @@ static Error tryBitstream2YAML() {
 }
 } // namespace bitstream2yaml
 
+namespace instructioncount {
+/// Outputs all instruction count remarks in the file as a CSV.
+/// \returns Error::success() on success, and an Error otherwise.
+static Error tryInstructionCount() {
+  // Create the output buffer.
+  auto MaybeOF = getOutputFileWithFlags(OutputFileName,
+                                        /*Flags = */ sys::fs::OF_TextWithCRLF);
+  if (!MaybeOF)
+    return MaybeOF.takeError();
+  auto OF = std::move(*MaybeOF);
+  // Create a parser for the user-specified input format.
+  auto MaybeBuf = getInputMemoryBuffer(InputFileName);
+  if (!MaybeBuf)
+    return MaybeBuf.takeError();
+  auto MaybeParser = createRemarkParser(InputFormat, (*MaybeBuf)->getBuffer());
+  if (!MaybeParser)
+    return MaybeParser.takeError();
+  // Emit CSV header.
+  OF->os() << "Function,InstructionCount\n";
+  // Parse all remarks. Whenever we see an instruction count remark, output
+  // the file name and the number of instructions.
+  auto &Parser = **MaybeParser;
+  auto MaybeRemark = Parser.next();
+  for (; MaybeRemark; MaybeRemark = Parser.next()) {
+    auto &Remark = **MaybeRemark;
+    if (Remark.RemarkName != "InstructionCount")
+      continue;
+    auto *InstrCountArg = find_if(Remark.Args, [](const Argument &Arg) {
+      return Arg.Key == "NumInstructions";
+    });
+    assert(InstrCountArg != Remark.Args.end() &&
+           "Expected instruction count remarks to have a NumInstructions key?");
+    OF->os() << Remark.FunctionName << "," << InstrCountArg->Val << "\n";
+  }
+  auto E = MaybeRemark.takeError();
+  if (!E.isA<EndOfFileError>())
+    return E;
+  consumeError(std::move(E));
+  OF->keep();
+  return Error::success();
+}
+} // namespace instructioncount
+
 /// Handle user-specified suboptions (e.g. yaml2bitstream, bitstream2yaml).
 /// \returns An Error if the specified suboption fails or if no suboption was
 /// specified. Otherwise, Error::success().
@@ -194,6 +262,8 @@ static Error handleSuboptions() {
     return bitstream2yaml::tryBitstream2YAML();
   if (subopts::YAML2Bitstream)
     return yaml2bitstream::tryYAML2Bitstream();
+  if (subopts::InstructionCount)
+    return instructioncount::tryInstructionCount();
   return make_error<StringError>(
       "Please specify a subcommand. (See -help for options)",
       inconvertibleErrorCode());

@@ -19,6 +19,7 @@ Subcommands
 
   * :ref:`bitstream2yaml_subcommand` - Reserialize bitstream remarks to YAML.
   * :ref:`yaml2bitstream_subcommand` - Reserialize YAML remarks to bitstream.
+  * :ref:`instruction-count_subcommand` - Output function instruction counts.
 
 .. _bitstream2yaml_subcommand:
 
@@ -48,3 +49,26 @@ Summary
 
 Takes a YAML remark file as input, and reserializes that file in the bitstream
 format.
+
+.. _instruction-count_subcommand:
+
+instruction-count
+~~~~~~~~~~~~~~~~~
+
+.. program:: llvm-remarkutil instruction-count
+
+USAGE: :program:`llvm-remarkutil` instruction-count <input file> --parser=<bitstream|yaml> -o <output file>
+
+Summary
+^^^^^^^
+
+Outputs instruction count remarks for every function. Instruction count remarks
+encode the number of instructions in a function at assembly printing time.
+
+Instruction count remarks require asm-printer remarks.
+
+CSV format is as follows:
+
+::
+  Function,InstructionCount
+  foo,123
