@@ -914,6 +914,10 @@ public:
 
   uint32_t getStringTableSize() const { return StringTableSize; }
 
+  const export_directory_table_entry *getExportTable() const {
+    return ExportDirectory;
+  }
+
   const coff_load_configuration32 *getLoadConfig32() const {
     assert(!is64());
     return reinterpret_cast<const coff_load_configuration32 *>(LoadConfig);

@@ -1,0 +1,109 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test symbols %t | FileCheck %s
+
+# Checks that the symtab contains both symbols from the export table and the
+# COFF symbol table.
+
+# CHECK:          UserID DSX Type    File Address/Value {{.*}} Size            Flags           Name
+# CHECK-NEXT:     ------
+# CHECK-NEXT: 4294967295 D   Code    0x0000000180001020        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} exportFnAlias
+# CHECK-NEXT: 4294967295 D   Code    0x0000000180001010        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} exportFunc
+# CHECK-NEXT: 4294967295 D   Code    0x0000000180003000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} exportInt
+# CHECK-NEXT: 4294967295 D   Code    0x0000000180003004        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} exportIntAlias
+# CHECK-NEXT: 4294967295     Code    0x0000000180001000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} entry
+# CHECK-NEXT: 4294967295     Code    0x0000000180001010        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} exportFunc
+# CHECK-NEXT: 4294967295     Code    0x0000000180001020        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} aliasFunc
+# CHECK-NEXT: 4294967295     Invalid 0x0000000180003000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} exportInt
+# CHECK-NEXT: 4294967295     Invalid 0x0000000180003004        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} aliasInt
+# CHECK-NEXT: 4294967295     Invalid 0x0000000180003008        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} internalInt
+# CHECK-EMPTY:
+
+# Test file generated with:
+#   clang -O2 --target=x86_64-windows-msvc test.c -nostdlib -c -o test.obj
+#   lld-link -debug:symtab -dll -out:test.dll -entry:entry -export:exportFnAlias=aliasFunc -export:exportIntAlias=aliasInt test.obj
+# test.c:
+#   __declspec(dllexport) int exportInt;
+#   int aliasInt;
+#   int internalInt;
+#   void entry(void) {}
+#   __declspec(dllexport) void exportFunc(void) {}
+#   void aliasFunc(void) {}
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       6442450944
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_GUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 8192
+    Size:            156
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     33
+    SectionData:     C36666666666662E0F1F840000000000C36666666666662E0F1F840000000000C3
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     156
+    SectionData:     0000000000000000000000002820000001000000040000000400000042200000522000006220000073796D626F6C732D6578706F7274732E632E746D702E646C6C00201000001010000000300000043000006A20000078200000832000008D20000000000100020003006578706F7274466E416C696173006578706F727446756E63006578706F7274496E74006578706F7274496E74416C69617300
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  12288
+    VirtualSize:     12
+    SectionData:     ''
+symbols:
+  - Name:            entry
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            exportFunc
+    Value:           16
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            aliasFunc
+    Value:           32
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            exportInt
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            aliasInt
+    Value:           4
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            internalInt
+    Value:           8
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

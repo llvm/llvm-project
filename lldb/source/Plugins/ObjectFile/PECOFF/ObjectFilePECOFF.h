@@ -225,12 +225,6 @@ protected:
         data_dirs; // will contain num_data_dir_entries entries
   } coff_opt_header_t;
 
-  enum coff_data_dir_type {
-    coff_data_dir_export_table = 0,
-    coff_data_dir_import_table = 1,
-    coff_data_dir_exception_table = 3
-  };
-
   typedef struct section_header {
     char name[8] = {};
     uint32_t vmsize = 0;  // Virtual Size
@@ -243,29 +237,6 @@ protected:
     uint16_t nline = 0;   // Number of line table entries
     uint32_t flags = 0;
   } section_header_t;
-
-  typedef struct coff_symbol {
-    char name[8] = {};
-    uint32_t value = 0;
-    uint16_t sect = 0;
-    uint16_t type = 0;
-    uint8_t storage = 0;
-    uint8_t naux = 0;
-  } coff_symbol_t;
-
-  typedef struct export_directory_entry {
-    uint32_t characteristics = 0;
-    uint32_t time_date_stamp = 0;
-    uint16_t major_version = 0;
-    uint16_t minor_version = 0;
-    uint32_t name = 0;
-    uint32_t base = 0;
-    uint32_t number_of_functions = 0;
-    uint32_t number_of_names = 0;
-    uint32_t address_of_functions = 0;
-    uint32_t address_of_names = 0;
-    uint32_t address_of_name_ordinals = 0;
-  } export_directory_entry;
 
   static bool ParseDOSHeader(lldb_private::DataExtractor &data,
                              dos_header_t &dos_header);
@@ -297,6 +268,10 @@ protected:
 
 private:
   bool CreateBinary();
+  void AppendFromCOFFSymbolTable(lldb_private::SectionList *sect_list,
+                                 lldb_private::Symtab &symtab);
+  void AppendFromExportTable(lldb_private::SectionList *sect_list,
+                             lldb_private::Symtab &symtab);
 
   dos_header_t m_dos_header;
   coff_header_t m_coff_header;
