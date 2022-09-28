@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+experimental-zvfh,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
+; This file tests the code generation for `llvm.round.*` on scalable vector type.
+
 define <vscale x 1 x half> @round_nxv1f16(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: round_nxv1f16:
 ; CHECK:       # %bb.0:
