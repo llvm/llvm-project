@@ -200,6 +200,11 @@ void StackLifetime::calculateLocalLiveness() {
         }
       }
 
+      // Update block LiveIn set, noting whether it has changed.
+      if (LocalLiveIn.test(BlockInfo.LiveIn)) {
+        BlockInfo.LiveIn |= LocalLiveIn;
+      }
+
       // Compute LiveOut by subtracting out lifetimes that end in this
       // block, then adding in lifetimes that begin in this block.  If
       // we have both BEGIN and END markers in the same basic block
@@ -207,19 +212,13 @@ void StackLifetime::calculateLocalLiveness() {
       // because we already handle the case where the BEGIN comes
       // before the END when collecting the markers (and building the
       // BEGIN/END vectors).
-      BitVector LocalLiveOut = LocalLiveIn;
-      LocalLiveOut.reset(BlockInfo.End);
-      LocalLiveOut |= BlockInfo.Begin;
-
-      // Update block LiveIn set, noting whether it has changed.
-      if (LocalLiveIn.test(BlockInfo.LiveIn)) {
-        BlockInfo.LiveIn |= LocalLiveIn;
-      }
+      LocalLiveIn.reset(BlockInfo.End);
+      LocalLiveIn |= BlockInfo.Begin;
 
       // Update block LiveOut set, noting whether it has changed.
-      if (LocalLiveOut.test(BlockInfo.LiveOut)) {
+      if (LocalLiveIn.test(BlockInfo.LiveOut)) {
         Changed = true;
-        BlockInfo.LiveOut |= LocalLiveOut;
+        BlockInfo.LiveOut |= LocalLiveIn;
       }
     }
   } // while changed.
