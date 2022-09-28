@@ -1051,6 +1051,45 @@ if.end:
   ret void
 }
 
+define void @cycle(i1 %a) {
+; CHECK-LABEL: define void @cycle
+entry:
+; CHECK: entry:
+; CHECK-NEXT: Alive: <>
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+; CHECK-NEXT: Alive: <x>
+
+  br i1 %a, label %if.then, label %if.end
+; CHECK: br i1 %a, label %if.then, label %if.end
+; CHECK-NEXT: Alive: <x>
+
+if.then:
+; CHECK: if.then:
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %y)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %y)
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <y>
+; FIXME: Alive: <x y> is expected above.
+
+  br i1 %a, label %if.then, label %if.end
+; CHECK: br i1 %a, label %if.then, label %if.end
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <y>
+
+if.end:
+; CHECK: if.end:
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.start.p0i32(i64, i32* nocapture)
