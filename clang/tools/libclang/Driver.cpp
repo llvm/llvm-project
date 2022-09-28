@@ -13,6 +13,7 @@
 #include "clang-c/Driver.h"
 
 #include "CIndexDiagnostic.h"
+#include "CXDiagnosticSetDiagnosticConsumer.h"
 
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -22,21 +23,6 @@
 #include "llvm/Support/Host.h"
 
 using namespace clang;
-
-class CXDiagnosticSetDiagnosticConsumer : public DiagnosticConsumer {
-  SmallVector<StoredDiagnostic, 4> Errors;
-public:
-
-  void HandleDiagnostic(DiagnosticsEngine::Level level,
-  const Diagnostic &Info) override {
-    if (level >= DiagnosticsEngine::Error)
-      Errors.push_back(StoredDiagnostic(level, Info));
-  }
-
-  CXDiagnosticSet getDiagnosticSet() {
-    return cxdiag::createStoredDiags(Errors, LangOptions());
-  }
-};
 
 CXExternalActionList *
 clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
