@@ -178,4 +178,19 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
   ];
 }
 
+def SparseBufferRewrite : Pass<"sparse-buffer-rewrite", "ModuleOp"> {
+  let summary = "Rewrite sparse primitives on buffers to actual code";
+  let description = [{
+    A pass that rewrites sparse primitives on buffers to the MLIR implementation
+    of the primitives. For example, sparse_tensor.sort operator is implemented
+    in this pass.
+  }];
+  let constructor = "mlir::createSparseBufferRewritePass()";
+  let dependentDialects = [
+    "arith::ArithmeticDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES
