@@ -84,7 +84,7 @@ public:
 
   void SetType(RegisterValue::Type type) { m_type = type; }
 
-  RegisterValue::Type SetType(const RegisterInfo *reg_info);
+  RegisterValue::Type SetType(const RegisterInfo &reg_info);
 
   bool GetData(DataExtractor &data) const;
 
