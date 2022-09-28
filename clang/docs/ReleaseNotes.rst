@@ -70,8 +70,6 @@ code bases.
   results do not change before/after setting
   ``-Werror=incompatible-function-pointer-types`` to avoid incompatibility with
   Clang 16.
-- Clang now disallows types whose sizes aren't a multiple of their alignments to
-  be used as the element type of arrays.
 
   .. code-block:: c
 
@@ -79,6 +77,14 @@ code bases.
     void other(void) {
       void (*fp)(int *) = func; // Previously a warning, now a downgradable error.
     }
+
+- Clang now disallows types whose sizes aren't a multiple of their alignments
+  to be used as the element type of arrays.
+
+  .. code-block:: c
+
+  typedef char int8_a16 __attribute__((aligned(16)));
+  int8_a16 array[4]; // Now diagnosed as the element size not being a multiple of the array alignment.
 
 
 What's New in Clang |release|?
