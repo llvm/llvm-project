@@ -486,8 +486,10 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   // Tell ScalarEvolution that the loop is deleted. Do this before
   // deleting the loop so that ScalarEvolution can look at the loop
   // to determine what it needs to clean up.
-  if (SE)
+  if (SE) {
     SE->forgetLoop(L);
+    SE->forgetBlockAndLoopDispositions();
+  }
 
   Instruction *OldTerm = Preheader->getTerminator();
   assert(!OldTerm->mayHaveSideEffects() &&
