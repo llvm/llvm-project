@@ -319,6 +319,40 @@ bool mlir::sparse_tensor::isUniqueDim(RankedTensorType type, uint64_t d) {
   return true; // unannotated tensor is dense (and thus unique)
 }
 
+uint64_t mlir::sparse_tensor::toOrigDim(const SparseTensorEncodingAttr &enc,
+                                        uint64_t d) {
+  if (enc) {
+    auto order = enc.getDimOrdering();
+    if (order) {
+      assert(order.isPermutation());
+      return order.getDimPosition(d);
+    }
+  }
+  return d;
+}
+
+uint64_t mlir::sparse_tensor::toStoredDim(const SparseTensorEncodingAttr &enc,
+                                          uint64_t d) {
+  if (enc) {
+    auto order = enc.getDimOrdering();
+    if (order) {
+      assert(order.isPermutation());
+      return order.getPermutedPosition(d);
+    }
+  }
+  return d;
+}
+
+uint64_t mlir::sparse_tensor::toOrigDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  return toOrigDim(getSparseTensorEncoding(type), d);
+}
+
+uint64_t mlir::sparse_tensor::toStoredDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  return toStoredDim(getSparseTensorEncoding(type), d);
+}
+
 //===----------------------------------------------------------------------===//
 // TensorDialect Operations.
 //===----------------------------------------------------------------------===//

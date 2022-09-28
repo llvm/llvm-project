@@ -64,6 +64,21 @@ bool isOrderedDim(RankedTensorType type, uint64_t d);
 /// given dimension (0 <= d < rank).
 bool isUniqueDim(RankedTensorType type, uint64_t d);
 
+//
+// Reordering.
+//
+
+uint64_t toOrigDim(const SparseTensorEncodingAttr &enc, uint64_t d);
+uint64_t toStoredDim(const SparseTensorEncodingAttr &enc, uint64_t d);
+
+/// Convenience method to translate the given stored dimension
+/// to the original dimension (0 <= d < rank).
+uint64_t toOrigDim(RankedTensorType type, uint64_t d);
+
+/// Convenience method to translate the given original dimension
+/// to the stored dimension (0 <= d < rank).
+uint64_t toStoredDim(RankedTensorType type, uint64_t d);
+
 } // namespace sparse_tensor
 } // namespace mlir
 
