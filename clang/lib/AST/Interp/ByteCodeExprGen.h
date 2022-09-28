@@ -88,6 +88,7 @@ public:
   bool VisitMemberExpr(const MemberExpr *E);
   bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E);
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
+  bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
