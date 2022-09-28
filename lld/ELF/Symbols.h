@@ -259,8 +259,6 @@ private:
 
   bool shouldReplace(const Defined &other) const;
 
-  inline size_t getSymbolSize() const;
-
 protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
@@ -551,24 +549,6 @@ union SymbolUnion {
   alignas(SharedSymbol) char d[sizeof(SharedSymbol)];
   alignas(LazyObject) char e[sizeof(LazyObject)];
 };
-
-size_t Symbol::getSymbolSize() const {
-  switch (kind()) {
-  case CommonKind:
-    return sizeof(CommonSymbol);
-  case DefinedKind:
-    return sizeof(Defined);
-  case LazyObjectKind:
-    return sizeof(LazyObject);
-  case SharedKind:
-    return sizeof(SharedSymbol);
-  case UndefinedKind:
-    return sizeof(Undefined);
-  case PlaceholderKind:
-    return sizeof(Symbol);
-  }
-  llvm_unreachable("unknown symbol kind");
-}
 
 template <typename... T> Defined *makeDefined(T &&...args) {
   auto *sym = new (reinterpret_cast<Defined *>(
