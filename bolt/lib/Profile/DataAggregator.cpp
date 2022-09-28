@@ -2147,7 +2147,8 @@ DataAggregator::parseNameBuildIDPair() {
 
   // If one of the strings is missing, don't issue a parsing error, but still
   // do not return a value.
-  if (ParsingBuf[0] == '\n')
+  consumeAllRemainingFS();
+  if (checkAndConsumeNewLine())
     return NoneType();
 
   ErrorOr<StringRef> NameStr = parseString(FieldSeparator, true);
