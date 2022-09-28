@@ -181,7 +181,7 @@ void StackLifetime::calculateLocalLiveness() {
       BlockLifetimeInfo &BlockInfo = BlockLiveness.find(BB)->getSecond();
 
       // Compute LiveIn by unioning together the LiveOut sets of all preds.
-      BitVector LocalLiveIn;
+      BitVector BitsIn;
       for (const auto *PredBB : predecessors(BB)) {
         LivenessMap::const_iterator I = BlockLiveness.find(PredBB);
         // If a predecessor is unreachable, ignore it.
@@ -189,20 +189,20 @@ void StackLifetime::calculateLocalLiveness() {
           continue;
         switch (Type) {
         case LivenessType::May:
-          LocalLiveIn |= I->second.LiveOut;
+          BitsIn |= I->second.LiveOut;
           break;
         case LivenessType::Must:
-          if (LocalLiveIn.empty())
-            LocalLiveIn = I->second.LiveOut;
+          if (BitsIn.empty())
+            BitsIn = I->second.LiveOut;
           else
-            LocalLiveIn &= I->second.LiveOut;
+            BitsIn &= I->second.LiveOut;
           break;
         }
       }
 
       // Update block LiveIn set, noting whether it has changed.
-      if (LocalLiveIn.test(BlockInfo.LiveIn)) {
-        BlockInfo.LiveIn |= LocalLiveIn;
+      if (BitsIn.test(BlockInfo.LiveIn)) {
+        BlockInfo.LiveIn |= BitsIn;
       }
 
       // Compute LiveOut by subtracting out lifetimes that end in this
@@ -212,13 +212,13 @@ void StackLifetime::calculateLocalLiveness() {
       // because we already handle the case where the BEGIN comes
       // before the END when collecting the markers (and building the
       // BEGIN/END vectors).
-      LocalLiveIn.reset(BlockInfo.End);
-      LocalLiveIn |= BlockInfo.Begin;
+      BitsIn.reset(BlockInfo.End);
+      BitsIn |= BlockInfo.Begin;
 
       // Update block LiveOut set, noting whether it has changed.
-      if (LocalLiveIn.test(BlockInfo.LiveOut)) {
+      if (BitsIn.test(BlockInfo.LiveOut)) {
         Changed = true;
-        BlockInfo.LiveOut |= LocalLiveIn;
+        BlockInfo.LiveOut |= BitsIn;
       }
     }
   } // while changed.
