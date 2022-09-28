@@ -1993,8 +1993,9 @@ static void replaceCommonSymbols() {
       auto *bss = make<BssSection>("COMMON", s->size, s->alignment);
       bss->file = s->file;
       inputSections.push_back(bss);
-      s->replace(Defined{s->file, StringRef(), s->binding, s->stOther, s->type,
-                         /*value=*/0, s->size, bss});
+      Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
+              /*value=*/0, s->size, bss)
+          .overwrite(*s);
     }
   }
 }
@@ -2010,11 +2011,9 @@ static void demoteSharedAndLazySymbols() {
     if (!(s && !cast<SharedFile>(s->file)->isNeeded) && !sym->isLazy())
       continue;
 
-    bool used = sym->used;
     uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
-    sym->replace(
-        Undefined{nullptr, sym->getName(), binding, sym->stOther, sym->type});
-    sym->used = used;
+    Undefined(nullptr, sym->getName(), binding, sym->stOther, sym->type)
+        .overwrite(*sym);
     sym->versionId = VER_NDX_GLOBAL;
   }
 }
@@ -2569,8 +2568,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
                   [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx->nonPrevailingSyms) {
     Symbol &sym = *it.first;
-    sym.replace(Undefined{sym.file, sym.getName(), sym.binding, sym.stOther,
-                          sym.type, it.second});
+    Undefined(sym.file, sym.getName(), sym.binding, sym.stOther, sym.type,
+              it.second)
+        .overwrite(sym);
     cast<Undefined>(sym).nonPrevailing = true;
   }
   ctx->nonPrevailingSyms.clear();
