@@ -1,2 +1,8 @@
-RUN: %llvm-original-di-preservation %p/Inputs/sample.json %t.html
+RUN: %llvm-original-di-preservation %p/Inputs/sample.json %t.html | FileCheck %s
 RUN: diff -w %p/Inputs/expected-sample.html %t.html
+CHECK-NOT: Skipped lines:
+
+RUN: %llvm-original-di-preservation %p/Inputs/corrupted.json %t2.html | FileCheck %s -check-prefix=CORRUPTED
+RUN: diff -w %p/Inputs/expected-skipped.html %t2.html
+CORRUPTED: Skipped lines: 3
+CORRUPTED: Skipped bugs: 1
