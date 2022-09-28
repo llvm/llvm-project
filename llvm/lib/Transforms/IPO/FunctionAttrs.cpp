@@ -125,16 +125,20 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 static FunctionModRefBehavior
 checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
                           const SCCNodeSet &SCCNodes) {
-  FunctionModRefBehavior OrigMRB = AAR.getModRefBehavior(&F);
-  if (OrigMRB.doesNotAccessMemory())
+  FunctionModRefBehavior MRB = AAR.getModRefBehavior(&F);
+  if (MRB.doesNotAccessMemory())
     // Already perfect!
-    return OrigMRB;
+    return MRB;
 
   if (!ThisBody)
-    return OrigMRB;
+    return MRB;
 
+  // TODO: We should directly populate a FunctionModRefBehavior here.
   // Scan the function body for instructions that may read or write memory.
-  FunctionModRefBehavior MRB = FunctionModRefBehavior::none();
+  ModRefInfo MR = ModRefInfo::NoModRef;
+  // Track if the function accesses memory not based on pointer arguments or
+  // allocas.
+  bool AccessesNonArgsOrAlloca = false;
   // Returns true if Ptr is not based on a function argument.
   auto IsArgumentOrAlloca = [](const Value *Ptr) {
     const Value *UO = getUnderlyingObject(Ptr);
@@ -151,10 +155,11 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (!Call->hasOperandBundles() && Call->getCalledFunction() &&
           SCCNodes.count(Call->getCalledFunction()))
         continue;
-      FunctionModRefBehavior CallMRB = AAR.getModRefBehavior(Call);
+      FunctionModRefBehavior MRB = AAR.getModRefBehavior(Call);
+      ModRefInfo MRI = MRB.getModRef();
 
       // If the call doesn't access memory, we're done.
-      if (CallMRB.doesNotAccessMemory())
+      if (isNoModRef(MRI))
         continue;
 
       // A pseudo probe call shouldn't change any function attribute since it
@@ -164,60 +169,59 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (isa<PseudoProbeInst>(I))
         continue;
 
-      MRB |= CallMRB.getWithoutLoc(FunctionModRefBehavior::ArgMem);
+      if (!MRB.onlyAccessesArgPointees()) {
+        // The call could access any memory.
+        MR |= MRI;
+        AccessesNonArgsOrAlloca = true;
+        continue;
+      }
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      ModRefInfo ArgMR = CallMRB.getModRef(FunctionModRefBehavior::ArgMem);
-      if (ArgMR != ModRefInfo::NoModRef) {
-        for (const Use &U : Call->args()) {
-          const Value *Arg = U;
-          if (!Arg->getType()->isPtrOrPtrVectorTy())
-            continue;
+      for (const Use &U : Call->args()) {
+        const Value *Arg = U;
+        if (!Arg->getType()->isPtrOrPtrVectorTy())
+          continue;
 
-          MemoryLocation Loc =
-              MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata());
-          // Skip accesses to local or constant memory as they don't impact the
-          // externally visible mod/ref behavior.
-          if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
-            continue;
+        MemoryLocation Loc =
+            MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata());
+        // Skip accesses to local or constant memory as they don't impact the
+        // externally visible mod/ref behavior.
+        if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
+          continue;
 
-          MRB |= FunctionModRefBehavior::argMemOnly(ArgMR);
-          if (!IsArgumentOrAlloca(Loc.Ptr))
-            MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, ArgMR);
-        }
+        AccessesNonArgsOrAlloca |= !IsArgumentOrAlloca(Loc.Ptr);
+        MR |= MRI;
       }
       continue;
     }
 
-    ModRefInfo MR = ModRefInfo::NoModRef;
-    if (I.mayWriteToMemory())
-      MR |= ModRefInfo::Mod;
-    if (I.mayReadFromMemory())
-      MR |= ModRefInfo::Ref;
-    if (MR == ModRefInfo::NoModRef)
+    if (!I.mayReadOrWriteMemory())
       continue;
 
     Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(&I);
-    if (!Loc) {
-      // If no location is known, conservatively assume anything can be
-      // accessed.
-      MRB |= FunctionModRefBehavior(MR);
-      continue;
-    }
-
     // Ignore non-volatile accesses from local memory. (Atomic is okay here.)
-    if (!I.isVolatile() && AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
+    if (Loc && !I.isVolatile() &&
+        AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
       continue;
 
-    // The accessed location can be either only argument memory, or
-    // argument & other memory, but never inaccessible memory.
-    MRB |= FunctionModRefBehavior::argMemOnly(MR);
-    if (!IsArgumentOrAlloca(Loc->Ptr))
-      MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, MR);
+    AccessesNonArgsOrAlloca |= !Loc || !IsArgumentOrAlloca(Loc->Ptr);
+
+    // Any remaining instructions need to be taken seriously!  Check if they
+    // read or write memory.
+    //
+    // Writes memory, remember that.
+    if (I.mayWriteToMemory())
+      MR |= ModRefInfo::Mod;
+
+    // If this instruction may read memory, remember that.
+    if (I.mayReadFromMemory())
+      MR |= ModRefInfo::Ref;
   }
 
-  return OrigMRB & MRB;
+  if (!AccessesNonArgsOrAlloca)
+    return FunctionModRefBehavior::argMemOnly(MR);
+  return FunctionModRefBehavior(MR);
 }
 
 FunctionModRefBehavior llvm::computeFunctionBodyMemoryAccess(Function &F,
@@ -229,90 +233,91 @@ FunctionModRefBehavior llvm::computeFunctionBodyMemoryAccess(Function &F,
 template <typename AARGetterT>
 static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
                            SmallSet<Function *, 8> &Changed) {
-  FunctionModRefBehavior FMRB = FunctionModRefBehavior::none();
+  // Check if any of the functions in the SCC read or write memory.  If they
+  // write memory then they can't be marked readnone or readonly.
+  bool ReadsMemory = false;
+  bool WritesMemory = false;
+  // Check if all functions only access memory through their arguments.
+  bool ArgMemOnly = true;
   for (Function *F : SCCNodes) {
     // Call the callable parameter to look up AA results for this function.
     AAResults &AAR = AARGetter(*F);
     // Non-exact function definitions may not be selected at link time, and an
     // alternative version that writes to memory may be selected.  See the
     // comment on GlobalValue::isDefinitionExact for more details.
-    FMRB |= checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR,
-                                      SCCNodes);
-    // Reached bottom of the lattice, we will not be able to improve the result.
-    if (FMRB == FunctionModRefBehavior::unknown())
+    FunctionModRefBehavior FMRB =
+        checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
+    if (FMRB.doesNotAccessMemory())
+      continue;
+    ModRefInfo MR = FMRB.getModRef();
+    ReadsMemory |= isRefSet(MR);
+    WritesMemory |= isModSet(MR);
+    ArgMemOnly &= FMRB.onlyAccessesArgPointees();
+    // Reached neither readnone, readonly, writeonly nor argmemonly can be
+    // inferred. Exit.
+    if (ReadsMemory && WritesMemory && !ArgMemOnly)
       return;
   }
 
-  ModRefInfo MR = FMRB.getModRef();
+  assert((!ReadsMemory || !WritesMemory || ArgMemOnly) &&
+         "no memory attributes can be added for this SCC, should have exited "
+         "earlier");
+  // Success!  Functions in this SCC do not access memory, only read memory,
+  // only write memory, or only access memory through its arguments. Give them
+  // the appropriate attribute.
 
   for (Function *F : SCCNodes) {
-    if (F->doesNotAccessMemory())
-      // Already perfect!
-      continue;
-
-    if (FMRB.doesNotAccessMemory()) {
-      // For readnone, remove all other memory attributes.
-      AttributeMask AttrsToRemove;
-      AttrsToRemove.addAttribute(Attribute::ReadOnly);
-      AttrsToRemove.addAttribute(Attribute::WriteOnly);
-      AttrsToRemove.addAttribute(Attribute::ArgMemOnly);
-      AttrsToRemove.addAttribute(Attribute::InaccessibleMemOnly);
-      AttrsToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
-
-      ++NumReadNone;
-      F->removeFnAttrs(AttrsToRemove);
-      F->addFnAttr(Attribute::ReadNone);
-      Changed.insert(F);
-      continue;
-    }
-
-    // Add argmemonly, inaccessiblememonly, or inaccessible_or_argmemonly
-    // attributes if possible.
-    AttributeMask AttrsToRemove;
-    AttrsToRemove.addAttribute(Attribute::ArgMemOnly);
-    AttrsToRemove.addAttribute(Attribute::InaccessibleMemOnly);
-    AttrsToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
-    if (FMRB.onlyAccessesArgPointees() && !F->onlyAccessesArgMemory()) {
+    // If possible add argmemonly attribute to F, if it accesses memory.
+    if (ArgMemOnly && !F->onlyAccessesArgMemory() &&
+        (ReadsMemory || WritesMemory)) {
       NumArgMemOnly++;
-      F->removeFnAttrs(AttrsToRemove);
       F->addFnAttr(Attribute::ArgMemOnly);
-      Changed.insert(F);
-    } else if (FMRB.onlyAccessesInaccessibleMem() &&
-               !F->onlyAccessesInaccessibleMemory()) {
-      F->removeFnAttrs(AttrsToRemove);
-      F->addFnAttr(Attribute::InaccessibleMemOnly);
-      Changed.insert(F);
-    } else if (FMRB.onlyAccessesInaccessibleOrArgMem() &&
-               !F->onlyAccessesInaccessibleMemOrArgMem()) {
-      F->removeFnAttrs(AttrsToRemove);
-      F->addFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
       Changed.insert(F);
     }
 
     // The SCC contains functions both writing and reading from memory. We
     // cannot add readonly or writeonline attributes.
-    if (MR == ModRefInfo::ModRef)
+    if (ReadsMemory && WritesMemory)
+      continue;
+    if (F->doesNotAccessMemory())
+      // Already perfect!
       continue;
 
-    if (F->onlyReadsMemory() && MR == ModRefInfo::Ref)
+    if (F->onlyReadsMemory() && ReadsMemory)
+      // No change.
       continue;
 
-    if (F->onlyWritesMemory() && MR == ModRefInfo::Mod)
+    if (F->onlyWritesMemory() && WritesMemory)
       continue;
 
     Changed.insert(F);
 
-    // Add in the new attribute.
-    if (MR == ModRefInfo::Mod) {
-      ++NumWriteOnly;
-      F->removeFnAttr(Attribute::ReadOnly);
-      F->addFnAttr(Attribute::WriteOnly);
-    } else {
-      ++NumReadOnly;
-      assert(MR == ModRefInfo::Ref);
-      F->removeFnAttr(Attribute::WriteOnly);
-      F->addFnAttr(Attribute::ReadOnly);
+    // Clear out any existing attributes.
+    AttributeMask AttrsToRemove;
+    AttrsToRemove.addAttribute(Attribute::ReadOnly);
+    AttrsToRemove.addAttribute(Attribute::ReadNone);
+    AttrsToRemove.addAttribute(Attribute::WriteOnly);
+
+    if (!WritesMemory && !ReadsMemory) {
+      // Clear out any "access range attributes" if readnone was deduced.
+      AttrsToRemove.addAttribute(Attribute::ArgMemOnly);
+      AttrsToRemove.addAttribute(Attribute::InaccessibleMemOnly);
+      AttrsToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
     }
+    F->removeFnAttrs(AttrsToRemove);
+
+    // Add in the new attribute.
+    if (WritesMemory && !ReadsMemory)
+      F->addFnAttr(Attribute::WriteOnly);
+    else
+      F->addFnAttr(ReadsMemory ? Attribute::ReadOnly : Attribute::ReadNone);
+
+    if (WritesMemory && !ReadsMemory)
+      ++NumWriteOnly;
+    else if (ReadsMemory)
+      ++NumReadOnly;
+    else
+      ++NumReadNone;
   }
 }
 
