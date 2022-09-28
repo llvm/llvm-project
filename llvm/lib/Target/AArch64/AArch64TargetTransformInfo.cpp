@@ -2270,7 +2270,7 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   if (cast<VectorType>(Src)->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
-  return LT.first;
+  return LT.first * 2;
 }
 
 static unsigned getSVEGatherScatterOverhead(unsigned Opcode) {
