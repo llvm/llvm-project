@@ -4034,15 +4034,11 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MachineOperand &Src1 = MI.getOperand(2);
 
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
-    if (IsAdd && Subtarget->hasScalarAddSub64()) {
-      Register DestReg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-      Register Src0Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-      Register Src1Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-
-      BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_ADD_U64), DestReg)
-          .addReg(Src0Reg)
-          .addReg(Src1Reg);
-    } else {
+    if (IsAdd && Subtarget->hasScalarAddSub64())
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_ADD_U64), Dest.getReg())
+          .addReg(Src0.getReg())
+          .addReg(Src1.getReg());
+    else {
       const SIRegisterInfo *TRI = ST.getRegisterInfo();
       const TargetRegisterClass *BoolRC = TRI->getBoolRC();
 

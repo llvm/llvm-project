@@ -589,8 +589,7 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 } // End Defs = [SCC]
 
 let SubtargetPredicate = isGFX12Plus in {
-  def S_ADD_U64 : SOP2_64<"s_add_u64",
-    [(set SReg_64:$sdst, (UniformBinFrag<add> i64:$src0, i64:$src1))]>{
+  def S_ADD_U64 : SOP2_64<"s_add_u64">{
     let isCommutable = 1;
   }
 
