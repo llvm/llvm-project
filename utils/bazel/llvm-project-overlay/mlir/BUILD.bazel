@@ -6380,6 +6380,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefToLLVM",
         ":MemRefToSPIRV",
+        ":MemRefTransformOps",
         ":MemRefTransforms",
         ":NVGPUDialect",
         ":NVGPUPassIncGen",
@@ -8938,6 +8939,56 @@ cc_library(
         ":TensorDialect",
         ":Transforms",
         ":VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "MemRefTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":PDLDialect",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "MemRefTransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.td",
+    deps = [
+        ":MemRefTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "MemRefTransformOps",
+    srcs = glob(["lib/Dialect/MemRef/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/MemRef/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithmeticDialect",
+        ":IR",
+        ":MemRefDialect",
+        ":MemRefTransformOpsIncGen",
+        ":MemRefTransforms",
+        ":PDLDialect",
+        ":TransformDialect",
         "//llvm:Support",
     ],
 )
