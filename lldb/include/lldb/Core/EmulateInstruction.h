@@ -388,9 +388,9 @@ public:
                                        uint32_t reg_num, std::string &reg_name);
 
   // RegisterInfo variants
-  bool ReadRegister(const RegisterInfo *reg_info, RegisterValue &reg_value);
+  bool ReadRegister(const RegisterInfo &reg_info, RegisterValue &reg_value);
 
-  uint64_t ReadRegisterUnsigned(const RegisterInfo *reg_info,
+  uint64_t ReadRegisterUnsigned(const RegisterInfo &reg_info,
                                 uint64_t fail_value, bool *success_ptr);
 
   bool WriteRegister(const Context &context, const RegisterInfo *ref_info,

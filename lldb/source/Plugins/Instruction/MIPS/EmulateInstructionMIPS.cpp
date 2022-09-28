@@ -1266,7 +1266,7 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&(*reg_info_base), data_src))
+    if (!ReadRegister(*reg_info_base, data_src))
       return false;
 
     if (data_src.GetAsMemoryData(&(*reg_info_src), buffer,
@@ -1526,7 +1526,7 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&(*reg_info_base), data_src))
+    if (!ReadRegister(*reg_info_base, data_src))
       return false;
 
     if (data_src.GetAsMemoryData(&reg_info_src, buffer, reg_info_src.byte_size,
@@ -1608,7 +1608,7 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&(*reg_info_base), data_src))
+    if (!ReadRegister(*reg_info_base, data_src))
       return false;
 
     if (data_src.GetAsMemoryData(&(*reg_info_src), buffer,
