@@ -1070,22 +1070,19 @@ entry:
 if.then:
 ; CHECK: if.then:
 ; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
+; MUST-NEXT: Alive: <x>
   call void @llvm.lifetime.start.p0i8(i64 1, i8* %y)
 ; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %y)
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <y>
-; FIXME: Alive: <x y> is expected above.
+; CHECK-NEXT: Alive: <x y>
 
   br i1 %a, label %if.then, label %if.end
 ; CHECK: br i1 %a, label %if.then, label %if.end
-; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <y>
+; CHECK-NEXT: Alive: <x y>
 
 if.end:
 ; CHECK: if.end:
 ; MAY-NEXT: Alive: <x y>
-; MUST-NEXT: Alive: <>
+; MUST-NEXT: Alive: <x>
 
   ret void
 }
