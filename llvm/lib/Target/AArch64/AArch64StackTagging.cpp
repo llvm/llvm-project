@@ -306,8 +306,6 @@ public:
     initializeAArch64StackTaggingPass(*PassRegistry::getPassRegistry());
   }
 
-  bool isInterestingAlloca(const AllocaInst &AI);
-
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
   void untagAlloca(AllocaInst *AI, Instruction *InsertBefore, uint64_t Size);
@@ -413,22 +411,6 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
   return LastInst;
 }
 
-bool AArch64StackTagging::isInterestingAlloca(const AllocaInst &AI) {
-  // FIXME: support dynamic allocas
-  bool IsInteresting =
-      AI.getAllocatedType()->isSized() && AI.isStaticAlloca() &&
-      // alloca() may be called with 0 size, ignore it.
-      *AI.getAllocationSizeInBits(*DL) > 0 &&
-      // inalloca allocas are not treated as static, and we don't want
-      // dynamic alloca instrumentation for them as well.
-      !AI.isUsedWithInAlloca() &&
-      // swifterror allocas are register promoted by ISel
-      !AI.isSwiftError() &&
-      // safe allocas are not interesting
-      !(SSI && SSI->isSafe(AI));
-  return IsInteresting;
-}
-
 void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                     Value *Ptr, uint64_t Size) {
   auto SetTagZeroFunc =
@@ -495,8 +477,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
-  memtag::StackInfoBuilder SIB(
-      [this](const AllocaInst &AI) { return isInterestingAlloca(AI); });
+  memtag::StackInfoBuilder SIB(SSI);
   for (Instruction &I : instructions(F))
     SIB.visit(I);
   memtag::StackInfo &SInfo = SIB.get();
@@ -541,7 +522,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
-    assert(Info.AI && isInterestingAlloca(*Info.AI));
+    assert(Info.AI && SIB.isInterestingAlloca(*Info.AI));
     TrackingVH<Instruction> OldAI = Info.AI;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
