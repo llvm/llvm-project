@@ -1737,7 +1737,7 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
             VgprUse.insert(RegNo);
             // If at least one of Op's registers is in the score brackets, the
             // value is likely loaded outside of the loop.
-            if (Brackets.getRegScore(RegNo, VM_CNT) > 0) {
+            if (Brackets.getRegScore(RegNo, VM_CNT) > Brackets.getScoreLB(VM_CNT)) {
               UsesVgprLoadedOutside = true;
               break;
             }
