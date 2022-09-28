@@ -469,6 +469,7 @@ The MLIR extension adds language support for the
 
 - Syntax highlighting for `.td` files and `tablegen` markdown blocks
 - go-to-definition and cross references
+- Types and documentation on hover
 
 [tablegen-vscode features]: #
 
