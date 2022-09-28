@@ -26,9 +26,7 @@ class FuncOp;
 
 namespace mlir {
 
-#define GEN_PASS_DECL_SHAPETOSHAPELOWERING
-#define GEN_PASS_DECL_REMOVESHAPECONSTRAINTS
-#define GEN_PASS_DECL_SHAPEBUFFERIZE
+#define GEN_PASS_DECL
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 
 /// Creates an instance of the ShapeToShapeLowering pass that legalizes Shape
