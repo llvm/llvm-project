@@ -34,7 +34,7 @@ class SanitizerArgs {
   int BinaryMetadataFeatures = 0;
   int MsanTrackOrigins = 0;
   bool MsanUseAfterDtor = true;
-  bool MsanParamRetval = false;
+  bool MsanParamRetval = true;
   bool CfiCrossDso = false;
   bool CfiICallGeneralizePointers = false;
   bool CfiCanonicalJumpTables = false;
