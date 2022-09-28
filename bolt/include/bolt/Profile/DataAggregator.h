@@ -311,6 +311,10 @@ private:
   /// Consume the entire line
   void consumeRestOfLine();
 
+  /// True if the next token in the parsing buffer is a new line, but don't
+  /// consume it (peek only).
+  bool checkNewLine();
+
   /// Parse a single LBR entry as output by perf script -Fbrstack
   ErrorOr<LBREntry> parseLBREntry();
 
