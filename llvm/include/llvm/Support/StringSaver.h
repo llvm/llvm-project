@@ -24,8 +24,6 @@ class StringSaver final {
 public:
   StringSaver(BumpPtrAllocator &Alloc) : Alloc(Alloc) {}
 
-  BumpPtrAllocator &getAllocator() const { return Alloc; }
-
   // All returned strings are null-terminated: *save(S).end() == 0.
   StringRef save(const char *S) { return save(StringRef(S)); }
   StringRef save(StringRef S);
