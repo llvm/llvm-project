@@ -537,8 +537,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
         // Make sure we have enough room in "heap_data_up"
         if ((data_offset + *base_byte_size) <= heap_data_up->GetByteSize()) {
           const size_t bytes_copied = reg_value.GetAsMemoryData(
-              reg_info, heap_data_up->GetBytes() + data_offset, *base_byte_size,
-              byte_order, error);
+              *reg_info, heap_data_up->GetBytes() + data_offset,
+              *base_byte_size, byte_order, error);
           if (bytes_copied != *base_byte_size)
             return false;
           data_offset += bytes_copied;
@@ -577,7 +577,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
 
       const size_t curr_byte_size = std::min<size_t>(8, bytes_left);
       const size_t bytes_copied = reg_value.GetAsMemoryData(
-          reg_info, heap_data_up->GetBytes() + data_offset, curr_byte_size,
+          *reg_info, heap_data_up->GetBytes() + data_offset, curr_byte_size,
           byte_order, error);
       if (bytes_copied == 0)
         return false;
@@ -689,10 +689,10 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
                       reg_ctx->ReadRegister(x1_reg_info, x1_reg_value)) {
                     Status error;
                     if (x0_reg_value.GetAsMemoryData(
-                            x0_reg_info, heap_data_up->GetBytes() + 0, 8,
+                            *x0_reg_info, heap_data_up->GetBytes() + 0, 8,
                             byte_order, error) &&
                         x1_reg_value.GetAsMemoryData(
-                            x1_reg_info, heap_data_up->GetBytes() + 8, 8,
+                            *x1_reg_info, heap_data_up->GetBytes() + 8, 8,
                             byte_order, error)) {
                       DataExtractor data(
                           DataBufferSP(heap_data_up.release()), byte_order,
@@ -785,7 +785,7 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
           RegisterValue reg_value;
           if (reg_ctx->ReadRegister(v0_info, reg_value)) {
             Status error;
-            if (reg_value.GetAsMemoryData(v0_info, heap_data_up->GetBytes(),
+            if (reg_value.GetAsMemoryData(*v0_info, heap_data_up->GetBytes(),
                                           heap_data_up->GetByteSize(),
                                           byte_order, error)) {
               DataExtractor data(DataBufferSP(heap_data_up.release()),

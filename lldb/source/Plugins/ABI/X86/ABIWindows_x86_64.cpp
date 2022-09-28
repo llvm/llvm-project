@@ -517,9 +517,9 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
             RegisterValue reg_value;
             if (reg_ctx->ReadRegister(xmm_reg, reg_value)) {
               Status error;
-              if (reg_value.GetAsMemoryData(
-                      xmm_reg, heap_data_up->GetBytes(),
-                      heap_data_up->GetByteSize(), byte_order, error)) {
+              if (reg_value.GetAsMemoryData(*xmm_reg, heap_data_up->GetBytes(),
+                                            heap_data_up->GetByteSize(),
+                                            byte_order, error)) {
                 DataExtractor data(DataBufferSP(heap_data_up.release()),
                                    byte_order,
                                    process_sp->GetTarget()
