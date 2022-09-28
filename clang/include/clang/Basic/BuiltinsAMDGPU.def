@@ -259,6 +259,9 @@ TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_lh, "V4UiWUifV4fV4hV4hV4
 // GFX11+ only builtins.
 //===----------------------------------------------------------------------===//
 
+// TODO: This is a no-op in wave32. Should the builtin require wavefrontsize64?
+TARGET_BUILTIN(__builtin_amdgcn_permlane64, "UiUi", "nc", "gfx11-insts")
+
 //===----------------------------------------------------------------------===//
 // WMMA builtins.
 // Postfix w32 indicates the builtin requires wavefront size of 32.
