@@ -106,9 +106,19 @@ func.func @sparse_unannotated_load(%arg0: tensor<16x32xf64>) -> tensor<16x32xf64
 
 // -----
 
-func.func @sparse_unannotated_insert(%arg0: tensor<128xf64>, %arg1: memref<?xindex>, %arg2: f64) {
-  // expected-error@+1 {{'sparse_tensor.insert' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
-  sparse_tensor.insert %arg0, %arg1, %arg2 : tensor<128xf64>, memref<?xindex>, f64
+func.func @sparse_unannotated_insert(%arg0: tensor<128xf64>, %arg1: index, %arg2: f64) {
+  // expected-error@+1 {{'sparse_tensor.insert' 'tensor' must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
+  sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf64>
+  return
+}
+
+// -----
+
+#CSR = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+
+func.func @sparse_wrong_arity_insert(%arg0: tensor<128x64xf64, #CSR>, %arg1: index, %arg2: f64) {
+  // expected-error@+1 {{'sparse_tensor.insert' op incorrect number of indices}}
+  sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128x64xf64, #CSR>
   return
 }
 
@@ -117,18 +127,38 @@ func.func @sparse_unannotated_insert(%arg0: tensor<128xf64>, %arg1: memref<?xind
 func.func @sparse_unannotated_expansion(%arg0: tensor<128xf64>) {
   // expected-error@+1 {{'sparse_tensor.expand' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
   %values, %filled, %added, %count = sparse_tensor.expand %arg0
-    : tensor<128xf64> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+    : tensor<128xf64> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return
 }
 
 // -----
 
-func.func @sparse_unannotated_compression(%arg0: tensor<128xf64>, %arg1: memref<?xindex>,
-                                     %arg2: memref<?xf64>, %arg3: memref<?xi1>,
-				     %arg4: memref<?xindex>, %arg5: index) {
-  // expected-error@+1 {{'sparse_tensor.compress' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
-  sparse_tensor.compress %arg0, %arg1, %arg2, %arg3, %arg4, %arg5
-    : tensor<128xf64>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+func.func @sparse_unannotated_compression(%arg0: memref<?xf64>,
+                                          %arg1: memref<?xi1>,
+                                          %arg2: memref<?xindex>,
+                                          %arg3: index,
+                                          %arg4: tensor<8x8xf64>,
+                                          %arg5: index) {
+  // expected-error@+1 {{'sparse_tensor.compress' op operand #4 must be sparse tensor of any type values, but got 'tensor<8x8xf64>'}}
+  sparse_tensor.compress %arg0, %arg1, %arg2, %arg3 into %arg4[%arg5]
+    : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64>
+  return
+}
+
+// -----
+
+#CSR = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+
+func.func @sparse_wrong_arity_compression(%arg0: memref<?xf64>,
+                                          %arg1: memref<?xi1>,
+                                          %arg2: memref<?xindex>,
+                                          %arg3: index,
+                                          %arg4: tensor<8x8xf64, #CSR>,
+                                          %arg5: index) {
+  // expected-error@+1 {{'sparse_tensor.compress' op incorrect number of indices}}
+  sparse_tensor.compress %arg0, %arg1, %arg2, %arg3 into %arg4[%arg5,%arg5]
+    : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64, #CSR>
+  return
 }
 
 // -----

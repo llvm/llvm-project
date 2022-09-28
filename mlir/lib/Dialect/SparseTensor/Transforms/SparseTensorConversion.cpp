@@ -1144,10 +1144,21 @@ public:
   matchAndRewrite(InsertOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Note that the current regime only allows for strict lexicographic
-    // index order.
-    Type elemTp = op.getTensor().getType().cast<ShapedType>().getElementType();
+    // index order. All values are passed by reference through stack
+    // allocated memrefs.
+    Location loc = op->getLoc();
+    auto tp = op.getTensor().getType().cast<RankedTensorType>();
+    auto elemTp = tp.getElementType();
+    unsigned rank = tp.getRank();
+    auto mref = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
+    auto vref = genAllocaScalar(rewriter, loc, elemTp);
+    for (unsigned i = 0; i < rank; i++)
+      rewriter.create<memref::StoreOp>(loc, adaptor.getIndices()[i], mref,
+                                       constantIndex(rewriter, loc, i));
+    rewriter.create<memref::StoreOp>(loc, adaptor.getValue(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
-    replaceOpWithFuncCall(rewriter, op, name, {}, adaptor.getOperands(),
+    replaceOpWithFuncCall(rewriter, op, name, {},
+                          {adaptor.getTensor(), mref, vref},
                           EmitCInterface::On);
     return success();
   }
@@ -1212,9 +1223,21 @@ public:
     // all-zero/false by only iterating over the set elements, so the
     // complexity remains proportional to the sparsity of the expanded
     // access pattern.
-    Type elemTp = op.getTensor().getType().cast<ShapedType>().getElementType();
+    Value values = adaptor.getValues();
+    Value filled = adaptor.getFilled();
+    Value added = adaptor.getAdded();
+    Value count = adaptor.getCount();
+    Value tensor = adaptor.getTensor();
+    auto tp = op.getTensor().getType().cast<RankedTensorType>();
+    Type elemTp = tp.getElementType();
+    unsigned rank = tp.getRank();
+    auto mref = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
+    for (unsigned i = 0; i < rank - 1; i++)
+      rewriter.create<memref::StoreOp>(loc, adaptor.getIndices()[i], mref,
+                                       constantIndex(rewriter, loc, i));
     SmallString<12> name{"expInsert", primaryTypeFunctionSuffix(elemTp)};
-    replaceOpWithFuncCall(rewriter, op, name, {}, adaptor.getOperands(),
+    replaceOpWithFuncCall(rewriter, op, name, {},
+                          {tensor, mref, values, filled, added, count},
                           EmitCInterface::On);
     // Deallocate the buffers on exit of the loop nest.
     Operation *parent = op;
@@ -1225,9 +1248,9 @@ public:
          parent = parent->getParentOp())
       ;
     rewriter.setInsertionPointAfter(parent);
-    rewriter.create<memref::DeallocOp>(loc, adaptor.getOperands()[2]);
-    rewriter.create<memref::DeallocOp>(loc, adaptor.getOperands()[3]);
-    rewriter.create<memref::DeallocOp>(loc, adaptor.getOperands()[4]);
+    rewriter.create<memref::DeallocOp>(loc, values);
+    rewriter.create<memref::DeallocOp>(loc, filled);
+    rewriter.create<memref::DeallocOp>(loc, added);
     return success();
   }
 };

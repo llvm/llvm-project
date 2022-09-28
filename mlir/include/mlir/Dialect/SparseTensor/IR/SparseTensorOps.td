@@ -197,14 +197,18 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [NoSideEffect]>,
 // as our sparse abstractions evolve.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_InsertOp : SparseTensor_Op<"insert", []>,
-    Arguments<(ins AnySparseTensor:$tensor,
-               StridedMemRefRankOf<[Index], [1]>:$indices,
-               AnyType:$value)> {
+def SparseTensor_InsertOp : SparseTensor_Op<"insert",
+    [TypesMatchWith<"value type matches element type of tensor",
+                    "tensor", "value",
+                    "$_self.cast<ShapedType>().getElementType()">]>,
+    Arguments<(ins AnyType:$value,
+               AnySparseTensor:$tensor,
+               Variadic<Index>:$indices)> {
   string summary = "Inserts a value into given sparse tensor";
   string description = [{
-    Inserts the given value at given indices into the underlying sparse
-    storage format of the given tensor with the given indices. This
+    Inserts the given value at given indices into the underlying
+    sparse storage format of the given tensor with the given indices.
+    The arity of indices must match the rank of the tensor. This
     operation can only be applied when a tensor materializes unintialized
     with a `bufferization.alloc_tensor` operation and the final tensor
     is constructed with a `load` operation that has the `hasInserts`
@@ -219,17 +223,18 @@ def SparseTensor_InsertOp : SparseTensor_Op<"insert", []>,
 
     Note that this operation is "impure" in the sense that its behavior
     is solely defined by side-effects and not SSA values. The semantics
-    may be refined over time as our sparse abstractions evolve.
+    may be refined over time as our sparse abstractions evolve. In
+    particular, this operation is scheduled to be unified with the
+    dense counterpart `tensor.insert` that has proper SSA semantics.
 
     Example:
 
     ```mlir
-    sparse_tensor.insert %tensor, %indices, %val
-      : tensor<1024x1024xf64, #CSR>, memref<?xindex>, memref<f64>
+    sparse_tensor.insert %val into %tensor[%i,%j] : tensor<1024x1024xf64, #CSR>
     ```
   }];
-  let assemblyFormat = "$tensor `,` $indices `,` $value attr-dict `:`"
-                       " type($tensor) `,` type($indices) `,` type($value)";
+  let assemblyFormat = "$value `into` $tensor `[` $indices `]` attr-dict`:` type($tensor)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_PushBackOp : SparseTensor_Op<"push_back", []>,
@@ -294,29 +299,31 @@ def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
     Example:
 
     ```mlir
-    %values, %filled, %added, %count = sparse_tensor.expand %0
-      : tensor<4x4xf64, #CSR> to memref<?xf64>, memref<?xi1>, memref<?xindex>, index
+    %values, %filled, %added, %count = sparse_tensor.expand %tensor
+      : tensor<4x4xf64, #CSR> to memref<?xf64>, memref<?xi1>, memref<?xindex>
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($values)"
-                       " `,` type($filled) `,` type($added) `,` type($count)";
+                       " `,` type($filled) `,` type($added)";
 }
 
 def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
-    Arguments<(ins AnySparseTensor:$tensor,
-                   StridedMemRefRankOf<[Index],[1]>:$indices,
-                   AnyStridedMemRefOfRank<1>:$values,
+    Arguments<(ins AnyStridedMemRefOfRank<1>:$values,
                    StridedMemRefRankOf<[I1],[1]>:$filled,
                    StridedMemRefRankOf<[Index],[1]>:$added,
-                   Index:$count)> {
+                   Index:$count,
+                   AnySparseTensor:$tensor,
+		   Variadic<Index>:$indices)> {
   string summary = "Compressed an access pattern for insertion";
   string description = [{
     Finishes a single access pattern expansion by moving inserted elements
-    into the sparse storage scheme. The values and filled array are reset
-    in a *sparse* fashion by only iterating over set elements through an
-    indirection using the added array, so that the operations are kept
-    proportional to the number of nonzeros. See the 'expand' operation
-    for more details.
+    into the sparse storage scheme of the given tensor with the given
+    indices. The arity of indices is one less than the rank of the tensor,
+    with the remainder innermost indices defined through the added array.
+    The values and filled array are reset in a *sparse* fashion by only
+    iterating over set elements through an indirection using the added
+    array, so that the operations are kept proportional to the number of
+    nonzeros. See the `sparse_tensor.expand` operation for more details.
 
     Note that this operation is "impure" in the sense that its behavior
     is solely defined by side-effects and not SSA values. The semantics
@@ -325,15 +332,15 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
     Example:
 
     ```mlir
-    sparse_tensor.compress %0, %1, %values, %filled, %added, %2
-        : tensor<4x4xf64, #CSR>, memref<?xindex>, memref<?xf64>,
-          memref<?xi1>, memref<?xindex>, index
+    sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
+      : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<4x4xf64, #CSR>
     ```
   }];
-  let assemblyFormat = "$tensor `,` $indices `,` $values `,` $filled `,`"
-                       " $added `,` $count attr-dict `:` type($tensor) `,`"
-                       " type($indices) `,` type($values) `,` type($filled) `,`"
-                       " type($added) `,` type($count)";
+  let assemblyFormat = "$values `,` $filled `,` $added `,` $count"
+                       " `into` $tensor `[` $indices `]` attr-dict"
+		       " `:` type($values) `,` type($filled) `,` type($added)"
+		       " `,` type($tensor)";
+  let hasVerifier = 1;
 }
 
 def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
