@@ -62,6 +62,11 @@ def _site_initialize():
       m = importlib.import_module(f".{module_name}", __name__)
     except ModuleNotFoundError:
       return False
+    except ImportError:
+      message = (f"Error importing mlir initializer {module_name}. This may "
+      "happen in unclean incremental builds but is likely a real bug if "
+      "encountered otherwise and the MLIR Python API may not function.")
+      logging.warning(message, exc_info=True)
 
     logging.debug("Initializing MLIR with module: %s", module_name)
     if hasattr(m, "register_dialects"):
