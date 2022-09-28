@@ -106,13 +106,11 @@ static func::CallOp replaceOpWithFuncCall(RewriterBase &rewriter, Operation *op,
 /// Generates dimension size call.
 static Value genDimSizeCall(OpBuilder &builder, Location loc,
                             SparseTensorEncodingAttr &enc, Value src,
-                            int64_t idx) {
-  // Permute the index according to an optional dimension ordering.
-  if (AffineMap p = enc.getDimOrdering())
-    idx = p.getPermutedPosition(idx);
+                            uint64_t idx) {
   // Generate the call.
   StringRef name = "sparseDimSize";
-  SmallVector<Value, 2> params{src, constantIndex(builder, loc, idx)};
+  SmallVector<Value, 2> params{
+      src, constantIndex(builder, loc, toStoredDim(enc, idx))};
   Type iTp = builder.getIndexType();
   return createFuncCall(builder, loc, name, iTp, params, EmitCInterface::Off)
       .getResult(0);
@@ -266,13 +264,8 @@ static void newParams(OpBuilder &builder, SmallVector<Value, 8> &params,
   // default, or otherwise the "reverse" permutation of a given ordering, so
   // that indices can be mapped quickly to the right position.
   SmallVector<Value, 4> rev(sz);
-  if (AffineMap p = enc.getDimOrdering()) {
-    for (unsigned i = 0; i < sz; i++)
-      rev[p.getDimPosition(i)] = constantIndex(builder, loc, i);
-  } else {
-    for (unsigned i = 0; i < sz; i++)
-      rev[i] = constantIndex(builder, loc, i);
-  }
+  for (unsigned i = 0; i < sz; i++)
+    rev[toOrigDim(enc, i)] = constantIndex(builder, loc, i);
   params.push_back(genBuffer(builder, loc, rev));
   // Secondary and primary types encoding.
   Type elemTp = stp.getElementType();
@@ -1230,7 +1223,8 @@ public:
   matchAndRewrite(ExpandOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    ShapedType srcType = op.getTensor().getType().cast<ShapedType>();
+    RankedTensorType srcType =
+        op.getTensor().getType().cast<RankedTensorType>();
     Type eltType = srcType.getElementType();
     Type boolType = rewriter.getIntegerType(1);
     Type idxType = rewriter.getIndexType();
@@ -1239,9 +1233,7 @@ public:
     // Determine the size for access expansion (always the innermost stored
     // dimension size, translated back to original dimension).
     auto enc = getSparseTensorEncoding(srcType);
-    unsigned innerDim = srcType.getRank() - 1;
-    if (AffineMap p = enc.getDimOrdering())
-      innerDim = p.getDimPosition(innerDim);
+    unsigned innerDim = toOrigDim(srcType, srcType.getRank() - 1);
     auto sz = sizeFromPtrAtDim(rewriter, loc, enc, srcType, adaptor.getTensor(),
                                innerDim);
     // Allocate temporary buffers for values, filled-switch, and indices.

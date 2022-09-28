@@ -128,18 +128,6 @@ static AffineMap permute(MLIRContext *context, AffineMap m,
   return AffineMap::getPermutationMap(perm, context);
 }
 
-/// Helper method to apply dimension ordering permutation.
-static unsigned perm(const SparseTensorEncodingAttr &enc, unsigned d) {
-  if (enc) {
-    auto order = enc.getDimOrdering();
-    if (order) {
-      assert(order.isPermutation());
-      return order.getDimPosition(d);
-    }
-  }
-  return d;
-}
-
 /// Helper method to obtain the dimension level format from the encoding.
 //
 //  TODO: note that we store, but currently completely *ignore* the properties
@@ -214,7 +202,7 @@ static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
     assert(map.getNumResults() == op.getRank(t));
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       unsigned tensor = t->getOperandNumber();
-      AffineExpr a = map.getResult(perm(enc, d));
+      AffineExpr a = map.getResult(toOrigDim(enc, d));
       if (!findAffine(merger, tensor, a, toDimLevelFormat(enc, d)))
         return false; // inadmissible affine expression
     }
@@ -319,8 +307,8 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     // example, the tensor expresion A_ijk forces the ordering i < j < k
     // on the loop indices if no explicit dimension ordering is given.
     for (unsigned d = 1, rank = map.getNumResults(); d < rank; d++) {
-      AffineExpr f = map.getResult(perm(enc, d - 1));
-      AffineExpr t = map.getResult(perm(enc, d));
+      AffineExpr f = map.getResult(toOrigDim(enc, d - 1));
+      AffineExpr t = map.getResult(toOrigDim(enc, d));
       addAffineOrderings(adjM, inDegree, f, t, 0);
     }
     // Push unrelated loops into sparse iteration space, so these
@@ -359,7 +347,7 @@ static bool isMaterializing(Value val) {
 /// whether the out tensor in the tensor expression codegen is admissible.
 /// Sets `sparseOut` to the tensor and `outerParNest` to the outer injective
 /// nesting depth when a "truly dynamic" sparse tensor output occurs.
-static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
+static bool isAdmissibleTensorExp(Merger &merger, linalg::GenericOp op,
                                   std::vector<unsigned> &topSort, unsigned exp,
                                   OpOperand **sparseOut,
                                   unsigned &outerParNest) {
@@ -367,7 +355,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
   unsigned tensor = lhs->getOperandNumber();
   auto enc = getSparseTensorEncoding(lhs->get().getType());
   // An non-annotated output tensor is assumed dense, and becomes a random
-  // access n-dim memref. Admissable since insertions cannot occur.
+  // access n-dim memref. Admissible since insertions cannot occur.
   if (!enc)
     return true;
   // An all-dense annotated "sparse" output tensor becomes a linearized random
@@ -559,7 +547,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     // Scan all dimensions of current tensor.
     args.clear();
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-      AffineExpr a = map.getResult(perm(enc, d));
+      AffineExpr a = map.getResult(toOrigDim(enc, d));
       if (a.getKind() != AffineExprKind::DimId)
         continue; // compound
       unsigned idx = a.cast<AffineDimExpr>().getPosition();
@@ -587,7 +575,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
         assert(merger.isDimLevelType(tensor, idx, DimLvlType::kDense));
       }
       // Find upper bound in current dimension.
-      unsigned p = perm(enc, d);
+      unsigned p = toOrigDim(enc, d);
       Value up = linalg::createOrFoldDimOp(builder, loc, t->get(), p);
       if (ShapedType::isDynamic(shape[p]))
         args.push_back(up);
@@ -735,7 +723,7 @@ static Value genAffine(CodeGen &codegen, OpBuilder &builder, AffineExpr a,
 static Value genIndex(CodeGen &codegen, linalg::GenericOp op, OpOperand *t) {
   auto map = op.getTiedIndexingMap(t);
   auto enc = getSparseTensorEncoding(t->get().getType());
-  AffineExpr a = map.getResult(perm(enc, map.getNumResults() - 1));
+  AffineExpr a = map.getResult(toOrigDim(enc, map.getNumResults() - 1));
   assert(a.getKind() == AffineExprKind::DimId);
   unsigned idx = a.cast<AffineDimExpr>().getPosition();
   return codegen.loops[idx];
@@ -752,14 +740,14 @@ static Value genSubscript(CodeGen &codegen, OpBuilder &builder,
   if (enc) {
     // Note that currently, all sparse subscripts are simple.
     // TODO: accept affine too?
-    AffineExpr a = map.getResult(perm(enc, rank - 1));
+    AffineExpr a = map.getResult(toOrigDim(enc, rank - 1));
     assert(a.getKind() == AffineExprKind::DimId);
     unsigned idx = a.cast<AffineDimExpr>().getPosition();
     assert(codegen.pidxs[tensor][idx] != nullptr);
     args.push_back(codegen.pidxs[tensor][idx]); // position index
   } else {
     for (unsigned d = 0; d < rank; d++) {
-      AffineExpr a = map.getResult(perm(enc, d));
+      AffineExpr a = map.getResult(d);
       args.push_back(genAffine(codegen, builder, a, op.getLoc()));
     }
   }
@@ -1094,7 +1082,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     auto map = op.getTiedIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-      AffineExpr a = map.getResult(perm(enc, d));
+      AffineExpr a = map.getResult(toOrigDim(enc, d));
       if (!isInvariantAffine(codegen, a, ldx, atLevel))
         return; // still in play
     }
@@ -1882,7 +1870,7 @@ public:
     for (auto mask : allMask)
       if (computeIterationGraph(merger, op, topSort, mask)) {
         hasCycle = false;
-        if (isAdmissableTensorExp(merger, op, topSort, exp, &sparseOut,
+        if (isAdmissibleTensorExp(merger, op, topSort, exp, &sparseOut,
                                   outerParNest)) {
           isAdmissible = true;
           break;
