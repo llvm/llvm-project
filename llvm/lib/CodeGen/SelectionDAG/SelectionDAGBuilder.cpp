@@ -450,12 +450,22 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   // Handle cases such as i8 -> <1 x i1>
   EVT ValueSVT = ValueVT.getVectorElementType();
   if (ValueVT.getVectorNumElements() == 1 && ValueSVT != PartEVT) {
-    if (ValueSVT.getSizeInBits() == PartEVT.getSizeInBits())
+    unsigned ValueSize = ValueSVT.getSizeInBits();
+    if (ValueSize == PartEVT.getSizeInBits()) {
       Val = DAG.getNode(ISD::BITCAST, DL, ValueSVT, Val);
-    else
+    } else if (ValueSVT.isFloatingPoint() && PartEVT.isInteger()) {
+      // It's possible a scalar floating point type gets softened to integer and
+      // then promoted to a larger integer. If PartEVT is the larger integer
+      // we need to truncate it and then bitcast to the FP type.
+      assert(ValueSVT.bitsLT(PartEVT) && "Unexpected types");
+      EVT IntermediateType = EVT::getIntegerVT(*DAG.getContext(), ValueSize);
+      Val = DAG.getNode(ISD::TRUNCATE, DL, IntermediateType, Val);
+      Val = DAG.getBitcast(ValueSVT, Val);
+    } else {
       Val = ValueVT.isFloatingPoint()
                 ? DAG.getFPExtendOrRound(Val, DL, ValueSVT)
                 : DAG.getAnyExtOrTrunc(Val, DL, ValueSVT);
+    }
   }
 
   return DAG.getBuildVector(ValueVT, DL, Val);
@@ -681,7 +691,11 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       SDValue Widened = widenVectorToPartType(DAG, Val, DL, WidenVT);
       Val = DAG.getAnyExtOrTrunc(Widened, DL, PartVT);
     } else {
-      if (ValueVT.getVectorElementCount().isScalar()) {
+      // Don't extract an integer from a float vector. This can happen if the
+      // FP type gets softened to integer and then promoted. The promotion
+      // prevents it from being picked up by the earlier bitcast case.
+      if (ValueVT.getVectorElementCount().isScalar() &&
+          (!ValueVT.isFloatingPoint() || !PartVT.isInteger())) {
         Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
                           DAG.getVectorIdxConstant(0, DL));
       } else {
