@@ -407,7 +407,7 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
     return failure();
 
   // There is nothing to do for the merge block in the selection, which just
-  // contains a spv.mlir.merge op, itself. But we need to have an OpLabel
+  // contains a spirv.mlir.merge op, itself. But we need to have an OpLabel
   // instruction to start a new SPIR-V block for ops following this SelectionOp.
   // The block should use the <id> for the merge block.
   encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
@@ -472,8 +472,8 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
     return failure();
 
   // There is nothing to do for the merge block in the loop, which just contains
-  // a spv.mlir.merge op, itself. But we need to have an OpLabel instruction to
-  // start a new SPIR-V block for ops following this LoopOp. The block should
+  // a spirv.mlir.merge op, itself. But we need to have an OpLabel instruction
+  // to start a new SPIR-V block for ops following this LoopOp. The block should
   // use the <id> for the merge block.
   encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
   LLVM_DEBUG(llvm::dbgs() << "done merge ");
@@ -544,7 +544,7 @@ Serializer::processOp<spirv::EntryPointOp>(spirv::EntryPointOp op) {
   if (!funcID) {
     return op.emitError("missing <id> for function ")
            << op.getFn()
-           << "; function needs to be defined before spv.EntryPoint is "
+           << "; function needs to be defined before spirv.EntryPoint is "
               "serialized";
   }
   operands.push_back(funcID);
@@ -556,9 +556,10 @@ Serializer::processOp<spirv::EntryPointOp>(spirv::EntryPointOp op) {
     for (auto var : interface.getValue()) {
       auto id = getVariableID(var.cast<FlatSymbolRefAttr>().getValue());
       if (!id) {
-        return op.emitError("referencing undefined global variable."
-                            "spv.EntryPoint is at the end of spv.module. All "
-                            "referenced variables should already be defined");
+        return op.emitError(
+            "referencing undefined global variable."
+            "spirv.EntryPoint is at the end of spirv.module. All "
+            "referenced variables should already be defined");
       }
       operands.push_back(id);
     }
@@ -612,7 +613,7 @@ Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
 
   for (auto value : op.getArguments()) {
     auto valueID = getValueID(value);
-    assert(valueID && "cannot find a value for spv.FunctionCall");
+    assert(valueID && "cannot find a value for spirv.FunctionCall");
     operands.push_back(valueID);
   }
 

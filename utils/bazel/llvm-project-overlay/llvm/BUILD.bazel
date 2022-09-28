@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load(":template_rule.bzl", "template_rule")
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load(":tblgen.bzl", "gentbl")
 load(":config.bzl", "llvm_config_defines")
 load(":targets.bzl", "llvm_targets")
@@ -108,9 +108,8 @@ enum_targets_gen(
     targets = llvm_target_exegesis,
 )
 
-template_rule(
+expand_template(
     name = "abi_breaking_h_gen",
-    src = "include/llvm/Config/abi-breaking.h.cmake",
     out = "include/llvm/Config/abi-breaking.h",
     substitutions = {
         # Define to enable checks that alter the LLVM C++ ABI
@@ -119,6 +118,7 @@ template_rule(
         # Define to enable reverse iteration of unordered llvm containers
         "#cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION": "#define LLVM_ENABLE_REVERSE_ITERATION 0",
     },
+    template = "include/llvm/Config/abi-breaking.h.cmake",
 )
 
 # To enable diff testing out of tree
@@ -2640,13 +2640,13 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
-template_rule(
+expand_template(
     name = "dsymutil_main",
-    src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "dsymutil-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "dsymutil",
     },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(
@@ -2744,13 +2744,13 @@ cc_binary(
     ],
 )
 
-template_rule(
+expand_template(
     name = "ar_main",
-    src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-ar-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "llvm_ar",
     },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(
@@ -2946,13 +2946,13 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
-template_rule(
+expand_template(
     name = "cxxfilt_main",
-    src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-cxxfilt-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "llvm_cxxfilt",
     },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(
@@ -3515,13 +3515,13 @@ cc_binary(
     ],
 )
 
-template_rule(
+expand_template(
     name = "objcopy_main",
-    src = "cmake/modules/llvm-driver-template.cpp.in",
     out = "llvm-objcopy-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "llvm_objcopy",
     },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(

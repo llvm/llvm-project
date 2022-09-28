@@ -374,3 +374,9 @@ func.func @memref_realloc_dd(%src : memref<?xf32>, %d: index)
   %0 = memref.realloc %src(%d) : memref<?xf32> to memref<?xf32>
   return %0 : memref<?xf32>
 }
+
+// CHECK-LABEL: func @memref_extract_aligned_pointer
+func.func @memref_extract_aligned_pointer(%src : memref<?xf32>) -> index {
+  %0 = memref.extract_aligned_pointer_as_index %src : memref<?xf32> -> index
+  return %0 : index
+}

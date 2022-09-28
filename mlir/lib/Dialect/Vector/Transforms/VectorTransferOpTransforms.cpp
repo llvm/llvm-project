@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/Transforms/SideEffectUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -95,14 +96,32 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
 void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
   LLVM_DEBUG(DBGS() << "Candidate for dead store: " << *write.getOperation()
                     << "\n");
-  llvm::SmallVector<Operation *, 8> reads;
+  llvm::SmallVector<Operation *, 8> blockingAccesses;
   Operation *firstOverwriteCandidate = nullptr;
-  for (auto *user : write.getSource().getUsers()) {
+  Value source = write.getSource();
+  // Skip subview ops.
+  while (auto subView = source.getDefiningOp<memref::SubViewOp>())
+    source = subView.getSource();
+  llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
+                                           source.getUsers().end());
+  llvm::SmallDenseSet<Operation *, 32> processed;
+  while (!users.empty()) {
+    Operation *user = users.pop_back_val();
+    // If the user has already been processed skip.
+    if (!processed.insert(user).second)
+      continue;
+    if (auto subView = dyn_cast<memref::SubViewOp>(user)) {
+      users.append(subView->getUsers().begin(), subView->getUsers().end());
+      continue;
+    }
+    if (isSideEffectFree(user))
+      continue;
     if (user == write.getOperation())
       continue;
     if (auto nextWrite = dyn_cast<vector::TransferWriteOp>(user)) {
       // Check candidate that can override the store.
-      if (checkSameValueWAW(nextWrite, write) &&
+      if (write.getSource() == nextWrite.getSource() &&
+          checkSameValueWAW(nextWrite, write) &&
           postDominators.postDominates(nextWrite, write)) {
         if (firstOverwriteCandidate == nullptr ||
             postDominators.postDominates(firstOverwriteCandidate, nextWrite))
@@ -110,17 +129,17 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
         else
           assert(
               postDominators.postDominates(nextWrite, firstOverwriteCandidate));
+        continue;
       }
-    } else {
-      if (auto read = dyn_cast<vector::TransferReadOp>(user)) {
-        // Don't need to consider disjoint reads.
-        if (vector::isDisjointTransferSet(
-                cast<VectorTransferOpInterface>(write.getOperation()),
-                cast<VectorTransferOpInterface>(read.getOperation())))
-          continue;
-      }
-      reads.push_back(user);
     }
+    if (auto transferOp = dyn_cast<VectorTransferOpInterface>(user)) {
+      // Don't need to consider disjoint accesses.
+      if (vector::isDisjointTransferSet(
+              cast<VectorTransferOpInterface>(write.getOperation()),
+              cast<VectorTransferOpInterface>(transferOp.getOperation())))
+        continue;
+    }
+    blockingAccesses.push_back(user);
   }
   if (firstOverwriteCandidate == nullptr)
     return;
@@ -129,15 +148,16 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
   assert(writeAncestor &&
          "write op should be recursively part of the top region");
 
-  for (Operation *read : reads) {
-    Operation *readAncestor = findAncestorOpInRegion(topRegion, read);
-    // TODO: if the read and write have the same ancestor we could recurse in
-    // the region to know if the read is reachable with more precision.
-    if (readAncestor == nullptr || !isReachable(writeAncestor, readAncestor))
+  for (Operation *access : blockingAccesses) {
+    Operation *accessAncestor = findAncestorOpInRegion(topRegion, access);
+    // TODO: if the access and write have the same ancestor we could recurse in
+    // the region to know if the access is reachable with more precision.
+    if (accessAncestor == nullptr ||
+        !isReachable(writeAncestor, accessAncestor))
       continue;
-    if (!dominators.dominates(firstOverwriteCandidate, read)) {
-      LLVM_DEBUG(DBGS() << "Store may not be dead due to op: " << *read
-                        << "\n");
+    if (!dominators.dominates(firstOverwriteCandidate, accessAncestor)) {
+      LLVM_DEBUG(DBGS() << "Store may not be dead due to op: "
+                        << *accessAncestor << "\n");
       return;
     }
   }
@@ -164,8 +184,23 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
                     << "\n");
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
-  for (Operation *user : read.getSource().getUsers()) {
-    if (isa<vector::TransferReadOp>(user))
+  Value source = read.getSource();
+  // Skip subview ops.
+  while (auto subView = source.getDefiningOp<memref::SubViewOp>())
+    source = subView.getSource();
+  llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
+                                           source.getUsers().end());
+  llvm::SmallDenseSet<Operation *, 32> processed;
+  while (!users.empty()) {
+    Operation *user = users.pop_back_val();
+    // If the user has already been processed skip.
+    if (!processed.insert(user).second)
+      continue;
+    if (auto subView = dyn_cast<memref::SubViewOp>(user)) {
+      users.append(subView->getUsers().begin(), subView->getUsers().end());
+      continue;
+    }
+    if (isSideEffectFree(user) || isa<vector::TransferReadOp>(user))
       continue;
     if (auto write = dyn_cast<vector::TransferWriteOp>(user)) {
       // If there is a write, but we can prove that it is disjoint we can ignore
@@ -174,7 +209,8 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
               cast<VectorTransferOpInterface>(write.getOperation()),
               cast<VectorTransferOpInterface>(read.getOperation())))
         continue;
-      if (dominators.dominates(write, read) && checkSameValueRAW(write, read)) {
+      if (write.getSource() == read.getSource() &&
+          dominators.dominates(write, read) && checkSameValueRAW(write, read)) {
         if (lastwrite == nullptr || dominators.dominates(lastwrite, write))
           lastwrite = write;
         else

@@ -14,14 +14,14 @@ include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVOps.td"
 
 //===----------------------------------------------------------------------===//
-// spv.Bitcast
+// spirv.Bitcast
 //===----------------------------------------------------------------------===//
 
 def ConvertChainedBitcast : Pat<(SPV_BitcastOp (SPV_BitcastOp $operand)),
                                 (SPV_BitcastOp $operand)>;
 
 //===----------------------------------------------------------------------===//
-// spv.LogicalNot
+// spirv.LogicalNot
 //===----------------------------------------------------------------------===//
 
 def ConvertLogicalNotOfIEqual : Pat<
@@ -41,7 +41,7 @@ def ConvertLogicalNotOfLogicalNotEqual : Pat<
     (SPV_LogicalEqualOp $lhs, $rhs)>;
 
 //===----------------------------------------------------------------------===//
-// spv.Select -> spv.GL.*Clamp
+// spirv.Select -> spirv.GL.*Clamp
 //===----------------------------------------------------------------------===//
 
 def ValuesAreEqual : Constraint<CPred<"$0 == $1">>;

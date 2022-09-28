@@ -61,7 +61,8 @@ static AliasedResourceMap collectAliasedResources(spirv::ModuleOp moduleOp) {
 }
 
 /// Returns the element type if the given `type` is a runtime array resource:
-/// `!spv.ptr<!spv.struct<!spv.rtarray<...>>>`. Returns null type otherwise.
+/// `!spirv.ptr<!spirv.struct<!spirv.rtarray<...>>>`. Returns null type
+/// otherwise.
 static Type getRuntimeArrayElementType(Type type) {
   auto ptrType = type.dyn_cast<spirv::PointerType>();
   if (!ptrType)
@@ -154,9 +155,9 @@ static bool areSameBitwidthScalarType(Type a, Type b) {
 namespace {
 /// A class for analyzing aliased resources.
 ///
-/// Resources are expected to be spv.GlobalVarible that has a descriptor set and
-/// binding number. Such resources are of the type `!spv.ptr<!spv.struct<...>>`
-/// per Vulkan requirements.
+/// Resources are expected to be spirv.GlobalVarible that has a descriptor set
+/// and binding number. Such resources are of the type
+/// `!spirv.ptr<!spirv.struct<...>>` per Vulkan requirements.
 ///
 /// Right now, we only support the case that there is a single runtime array
 /// inside the struct.
@@ -410,7 +411,7 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
     }
 
     return rewriter.notifyMatchFailure(
-        acOp, "unsupported src/dst types for spv.AccessChain");
+        acOp, "unsupported src/dst types for spirv.AccessChain");
   }
 };
 
@@ -459,7 +460,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
 
       auto acOp = adaptor.getPtr().getDefiningOp<spirv::AccessChainOp>();
       if (!acOp)
-        return rewriter.notifyMatchFailure(loadOp, "ptr not spv.AccessChain");
+        return rewriter.notifyMatchFailure(loadOp, "ptr not spirv.AccessChain");
 
       auto i32Type = rewriter.getI32Type();
       Value oneValue = spirv::ConstantOp::getOne(i32Type, loc, rewriter);
@@ -477,7 +478,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       }
 
       // Create a vector of the components and then cast back to the larger
-      // bitwidth element type. For spv.bitcast, the lower-numbered components
+      // bitwidth element type. For spirv.bitcast, the lower-numbered components
       // of the vector map to lower-ordered bits of the larger bitwidth element
       // type.
       Type vectorType = srcElemType;
@@ -493,7 +494,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
     }
 
     return rewriter.notifyMatchFailure(
-        loadOp, "unsupported src/dst types for spv.Load");
+        loadOp, "unsupported src/dst types for spirv.Load");
   }
 };
 

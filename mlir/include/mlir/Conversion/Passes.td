@@ -408,7 +408,7 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
     resources. By default, parameters to a `gpu.func` op will be converted to
     global variables. These global variables will be assigned sequential binding
     numbers following their order in the original `gpu.func` op, starting from
-    0, in set 0. One can attach `spv.interface_var_abi` to those parameters
+    0, in set 0. One can attach `spirv.interface_var_abi` to those parameters
     to control the set and binding if wanted.
   }];
   let constructor = "mlir::createConvertGPUToSPIRVPass()";
@@ -541,10 +541,9 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
 // MemRefToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertMemRefToLLVM : Pass<"convert-memref-to-llvm", "ModuleOp"> {
+def MemRefToLLVMConversionPass : Pass<"convert-memref-to-llvm", "ModuleOp"> {
   let summary = "Convert operations from the MemRef dialect to the LLVM "
                 "dialect";
-  let constructor = "mlir::createMemRefToLLVMPass()";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
     Option<"useAlignedAlloc", "use-aligned-alloc", "bool", /*default=*/"false",

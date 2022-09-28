@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 
 class ObjCExceptionsTestCase(TestBase):
 
+    @skipIf(compiler="clang", compiler_version=['<', '13.0'])
     def test_objc_exceptions_at_throw(self):
         self.build()
 
@@ -123,6 +124,7 @@ class ObjCExceptionsTestCase(TestBase):
         for n in ["objc_exception_throw", "foo(int)", "main"]:
             self.assertIn(n, names, "%s is in the exception backtrace (%s)" % (n, names))
 
+    @skipIf(compiler="clang", compiler_version=['<', '13.0'])
     def test_objc_exceptions_at_abort(self):
         self.build()
 
@@ -179,6 +181,7 @@ class ObjCExceptionsTestCase(TestBase):
         for n in ["objc_exception_throw", "foo(int)", "rethrow(int)", "main"]:
             self.assertEqual(len([f for f in history_thread.frames if f.GetFunctionName() == n]), 1)
 
+    @skipIf(compiler="clang", compiler_version=['<', '13.0'])
     def test_cxx_exceptions_at_abort(self):
         self.build()
 

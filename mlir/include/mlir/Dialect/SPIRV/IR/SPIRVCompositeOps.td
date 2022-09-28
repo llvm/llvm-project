@@ -46,14 +46,14 @@ def SPV_CompositeConstructOp : SPV_Op<"CompositeConstruct", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    composite-construct-op ::= ssa-id `=` `spv.CompositeConstruct`
+    composite-construct-op ::= ssa-id `=` `spirv.CompositeConstruct`
                                (ssa-use (`,` ssa-use)* )? `:` composite-type
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.CompositeConstruct %1, %2, %3 : vector<3xf32>
+    %0 = spirv.CompositeConstruct %1, %2, %3 : vector<3xf32>
     ```
   }];
 
@@ -90,7 +90,7 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract",
     <!-- End of AutoGen section -->
 
     ```
-    composite-extract-op ::= ssa-id `=` `spv.CompositeExtract` ssa-use
+    composite-extract-op ::= ssa-id `=` `spirv.CompositeExtract` ssa-use
                              `[` integer-literal (',' integer-literal)* `]`
                              `:` composite-type
     ```
@@ -98,9 +98,9 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract",
     #### Example:
 
     ```mlir
-    %0 = spv.Variable : !spv.ptr<!spv.array<4x!spv.array<4xf32>>, Function>
-    %1 = spv.Load "Function" %0 ["Volatile"] : !spv.array<4x!spv.array<4xf32>>
-    %2 = spv.CompositeExtract %1[1 : i32] : !spv.array<4x!spv.array<4xf32>>
+    %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
+    %1 = spirv.Load "Function" %0 ["Volatile"] : !spirv.array<4x!spirv.array<4xf32>>
+    %2 = spirv.CompositeExtract %1[1 : i32] : !spirv.array<4x!spirv.array<4xf32>>
     ```
 
   }];
@@ -145,7 +145,7 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert",
     <!-- End of AutoGen section -->
 
     ```
-    composite-insert-op ::= ssa-id `=` `spv.CompositeInsert` ssa-use, ssa-use
+    composite-insert-op ::= ssa-id `=` `spirv.CompositeInsert` ssa-use, ssa-use
                             `[` integer-literal (',' integer-literal)* `]`
                             `:` object-type `into` composite-type
     ```
@@ -153,7 +153,7 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert",
     #### Example:
 
     ```mlir
-    %0 = spv.CompositeInsert %object, %composite[1 : i32] : f32 into !spv.array<4xf32>
+    %0 = spirv.CompositeInsert %object, %composite[1 : i32] : f32 into !spirv.array<4xf32>
     ```
   }];
 
@@ -201,7 +201,7 @@ def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic", [
     #### Example:
 
     ```
-    %2 = spv.VectorExtractDynamic %0[%1] : vector<8xf32>, i32
+    %2 = spirv.VectorExtractDynamic %0[%1] : vector<8xf32>, i32
     ```
   }];
 
@@ -254,7 +254,7 @@ def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic", [
 
     ```
     scalar-type ::= integer-type | float-type | boolean-type
-    vector-insert-dynamic-op ::= `spv.VectorInsertDynamic ` ssa-use `,`
+    vector-insert-dynamic-op ::= `spirv.VectorInsertDynamic ` ssa-use `,`
                                   ssa-use `[` ssa-use `]`
                                   `:` `vector<` integer-literal `x` scalar-type `>` `,`
                                   integer-type
@@ -264,7 +264,7 @@ def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic", [
 
     ```
     %scalar = ... : f32
-    %2 = spv.VectorInsertDynamic %scalar %0[%1] : f32, vector<8xf32>, i32
+    %2 = spirv.VectorInsertDynamic %scalar %0[%1] : f32, vector<8xf32>, i32
     ```
   }];
 
@@ -323,7 +323,7 @@ def SPV_VectorShuffleOp : SPV_Op<"VectorShuffle", [
     #### Example:
 
     ```mlir
-    %0 = spv.VectorShuffle [1: i32, 3: i32, 5: i32]
+    %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32]
                            %vector1: vector<4xf32>, %vector2: vector<2xf32>
                         -> vector<3xf32>
     ```

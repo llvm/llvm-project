@@ -51,7 +51,7 @@ def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
                                `vector<` integer-literal `x` float-type `>`
     localid-type ::= integer-type |
                    `vector<` integer-literal `x` integer-type `>`
-    group-broadcast-op ::= ssa-id `=` `spv.GroupBroadcast` scope ssa_use,
+    group-broadcast-op ::= ssa-id `=` `spirv.GroupBroadcast` scope ssa_use,
                    ssa_use `:` integer-float-scalar-vector-type `,` localid-type
     ```mlir
 
@@ -62,8 +62,8 @@ def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
     %vector_value = ... : vector<4xf32>
     %scalar_localid = ... : i32
     %vector_localid = ... : vector<3xi32>
-    %0 = spv.GroupBroadcast "Subgroup" %scalar_value, %scalar_localid : f32, i32
-    %1 = spv.GroupBroadcast "Workgroup" %vector_value, %vector_localid :
+    %0 = spirv.GroupBroadcast "Subgroup" %scalar_value, %scalar_localid : f32, i32
+    %1 = spirv.GroupBroadcast "Workgroup" %vector_value, %vector_localid :
       vector<4xf32>, vector<3xi32>
     ```
   }];
@@ -113,14 +113,14 @@ def SPV_KHRSubgroupBallotOp : SPV_KhrVendorOp<"SubgroupBallot", []> {
     <!-- End of AutoGen section -->
 
     ```
-    subgroup-ballot-op ::= ssa-id `=` `spv.KHR.SubgroupBallot`
+    subgroup-ballot-op ::= ssa-id `=` `spirv.KHR.SubgroupBallot`
                                 ssa-use `:` `vector` `<` 4 `x` `i32` `>`
     ```
 
     #### Example:
 
     ```mlir
-    %0 = spv.KHR.SubgroupBallot %predicate : vector<4xi32>
+    %0 = spirv.KHR.SubgroupBallot %predicate : vector<4xi32>
     ```
   }];
 
@@ -168,14 +168,14 @@ def SPV_INTELSubgroupBlockReadOp : SPV_IntelVendorOp<"SubgroupBlockRead", []> {
     <!-- End of AutoGen section -->
 
     ```
-    subgroup-block-read-INTEL-op ::= ssa-id `=` `spv.INTEL.SubgroupBlockRead`
+    subgroup-block-read-INTEL-op ::= ssa-id `=` `spirv.INTEL.SubgroupBlockRead`
                                 storage-class ssa_use `:` spirv-element-type
     ```mlir
 
     #### Example:
 
     ```
-    %0 = spv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : i32
+    %0 = spirv.INTEL.SubgroupBlockRead "StorageBuffer" %ptr : i32
     ```
   }];
 
@@ -218,14 +218,14 @@ def SPV_INTELSubgroupBlockWriteOp : SPV_IntelVendorOp<"SubgroupBlockWrite", []> 
     <!-- End of AutoGen section -->
 
     ```
-    subgroup-block-write-INTEL-op ::= ssa-id `=` `spv.INTEL.SubgroupBlockWrite`
+    subgroup-block-write-INTEL-op ::= ssa-id `=` `spirv.INTEL.SubgroupBlockWrite`
                       storage-class ssa_use `,` ssa-use `:` spirv-element-type
     ```mlir
 
     #### Example:
 
     ```
-    spv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : i32
+    spirv.INTEL.SubgroupBlockWrite "StorageBuffer" %ptr, %value : i32
     ```
   }];
 

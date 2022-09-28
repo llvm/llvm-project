@@ -61,14 +61,14 @@ def SPV_FAddOp : SPV_ArithmeticBinaryOp<"FAdd", SPV_Float, [Commutative]> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fadd-op ::= ssa-id `=` `spv.FAdd` ssa-use, ssa-use
+    fadd-op ::= ssa-id `=` `spirv.FAdd` ssa-use, ssa-use
                           `:` float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %4 = spv.FAdd %0, %1 : f32
-    %5 = spv.FAdd %2, %3 : vector<4xf32>
+    %4 = spirv.FAdd %0, %1 : f32
+    %5 = spirv.FAdd %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -91,15 +91,15 @@ def SPV_FDivOp : SPV_ArithmeticBinaryOp<"FDiv", SPV_Float, []> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fdiv-op ::= ssa-id `=` `spv.FDiv` ssa-use, ssa-use
+    fdiv-op ::= ssa-id `=` `spirv.FDiv` ssa-use, ssa-use
                           `:` float-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %4 = spv.FDiv %0, %1 : f32
-    %5 = spv.FDiv %2, %3 : vector<4xf32>
+    %4 = spirv.FDiv %0, %1 : f32
+    %5 = spirv.FDiv %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -126,14 +126,14 @@ def SPV_FModOp : SPV_ArithmeticBinaryOp<"FMod", SPV_Float, []> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmod-op ::= ssa-id `=` `spv.FMod` ssa-use, ssa-use
+    fmod-op ::= ssa-id `=` `spirv.FMod` ssa-use, ssa-use
                           `:` float-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %4 = spv.FMod %0, %1 : f32
-    %5 = spv.FMod %2, %3 : vector<4xf32>
+    %4 = spirv.FMod %0, %1 : f32
+    %5 = spirv.FMod %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -156,15 +156,15 @@ def SPV_FMulOp : SPV_ArithmeticBinaryOp<"FMul", SPV_Float, [Commutative]> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmul-op ::= `spv.FMul` ssa-use, ssa-use
+    fmul-op ::= `spirv.FMul` ssa-use, ssa-use
                           `:` float-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %4 = spv.FMul %0, %1 : f32
-    %5 = spv.FMul %2, %3 : vector<4xf32>
+    %4 = spirv.FMul %0, %1 : f32
+    %5 = spirv.FMul %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -191,14 +191,14 @@ def SPV_FNegateOp : SPV_ArithmeticUnaryOp<"FNegate", SPV_Float, []> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fmul-op ::= `spv.FNegate` ssa-use `:` float-scalar-vector-type
+    fmul-op ::= `spirv.FNegate` ssa-use `:` float-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.FNegate %0 : f32
-    %3 = spv.FNegate %2 : vector<4xf32>
+    %1 = spirv.FNegate %0 : f32
+    %3 = spirv.FNegate %2 : vector<4xf32>
     ```
   }];
 }
@@ -225,15 +225,15 @@ def SPV_FRemOp : SPV_ArithmeticBinaryOp<"FRem", SPV_Float, []> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    frem-op ::= ssa-id `=` `spv.FRemOp` ssa-use, ssa-use
+    frem-op ::= ssa-id `=` `spirv.FRemOp` ssa-use, ssa-use
                           `:` float-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %4 = spv.FRemOp %0, %1 : f32
-    %5 = spv.FRemOp %2, %3 : vector<4xf32>
+    %4 = spirv.FRemOp %0, %1 : f32
+    %5 = spirv.FRemOp %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -255,15 +255,15 @@ def SPV_FSubOp : SPV_ArithmeticBinaryOp<"FSub", SPV_Float, []> {
     ```
     float-scalar-vector-type ::= float-type |
                                  `vector<` integer-literal `x` float-type `>`
-    fsub-op ::= ssa-id `=` `spv.FRemOp` ssa-use, ssa-use
+    fsub-op ::= ssa-id `=` `spirv.FRemOp` ssa-use, ssa-use
                           `:` float-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %4 = spv.FRemOp %0, %1 : f32
-    %5 = spv.FRemOp %2, %3 : vector<4xf32>
+    %4 = spirv.FRemOp %0, %1 : f32
+    %5 = spirv.FRemOp %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -292,15 +292,15 @@ def SPV_IAddOp : SPV_ArithmeticBinaryOp<"IAdd",
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    iadd-op ::= ssa-id `=` `spv.IAdd` ssa-use, ssa-use
+    iadd-op ::= ssa-id `=` `spirv.IAdd` ssa-use, ssa-use
                           `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %4 = spv.IAdd %0, %1 : i32
-    %5 = spv.IAdd %2, %3 : vector<4xi32>
+    %4 = spirv.IAdd %0, %1 : i32
+    %5 = spirv.IAdd %2, %3 : vector<4xi32>
 
     ```
   }];
@@ -340,8 +340,8 @@ def SPV_IAddCarryOp : SPV_BinaryOp<"IAddCarry",
     #### Example:
 
     ```mlir
-    %2 = spv.IAddCarry %0, %1 : !spv.struct<(i32, i32)>
-    %2 = spv.IAddCarry %0, %1 : !spv.struct<(vector<2xi32>, vector<2xi32>)>
+    %2 = spirv.IAddCarry %0, %1 : !spirv.struct<(i32, i32)>
+    %2 = spirv.IAddCarry %0, %1 : !spirv.struct<(vector<2xi32>, vector<2xi32>)>
     ```
   }];
 
@@ -389,15 +389,15 @@ def SPV_IMulOp : SPV_ArithmeticBinaryOp<"IMul",
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    imul-op ::= ssa-id `=` `spv.IMul` ssa-use, ssa-use
+    imul-op ::= ssa-id `=` `spirv.IMul` ssa-use, ssa-use
                           `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %4 = spv.IMul %0, %1 : i32
-    %5 = spv.IMul %2, %3 : vector<4xi32>
+    %4 = spirv.IMul %0, %1 : i32
+    %5 = spirv.IMul %2, %3 : vector<4xi32>
 
     ```
   }];
@@ -429,15 +429,15 @@ def SPV_ISubOp : SPV_ArithmeticBinaryOp<"ISub",
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    isub-op ::= `spv.ISub` ssa-use, ssa-use
+    isub-op ::= `spirv.ISub` ssa-use, ssa-use
                           `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %4 = spv.ISub %0, %1 : i32
-    %5 = spv.ISub %2, %3 : vector<4xi32>
+    %4 = spirv.ISub %0, %1 : i32
+    %5 = spirv.ISub %2, %3 : vector<4xi32>
 
     ```
   }];
@@ -479,8 +479,8 @@ def SPV_ISubBorrowOp : SPV_BinaryOp<"ISubBorrow", SPV_AnyStruct, SPV_Integer,
     #### Example:
 
     ```mlir
-    %2 = spv.ISubBorrow %0, %1 : !spv.struct<(i32, i32)>
-    %2 = spv.ISubBorrow %0, %1 : !spv.struct<(vector<2xi32>, vector<2xi32>)>
+    %2 = spirv.ISubBorrow %0, %1 : !spirv.struct<(i32, i32)>
+    %2 = spirv.ISubBorrow %0, %1 : !spirv.struct<(vector<2xi32>, vector<2xi32>)>
     ```
   }];
 
@@ -525,15 +525,15 @@ def SPV_SDivOp : SPV_ArithmeticBinaryOp<"SDiv",
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    sdiv-op ::= ssa-id `=` `spv.SDiv` ssa-use, ssa-use
+    sdiv-op ::= ssa-id `=` `spirv.SDiv` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
 
     #### Example:
 
     ```mlir
-    %4 = spv.SDiv %0, %1 : i32
-    %5 = spv.SDiv %2, %3 : vector<4xi32>
+    %4 = spirv.SDiv %0, %1 : i32
+    %5 = spirv.SDiv %2, %3 : vector<4xi32>
 
     ```
   }];
@@ -565,14 +565,14 @@ def SPV_SModOp : SPV_ArithmeticBinaryOp<"SMod",
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    smod-op ::= ssa-id `=` `spv.SMod` ssa-use, ssa-use
+    smod-op ::= ssa-id `=` `spirv.SMod` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %4 = spv.SMod %0, %1 : i32
-    %5 = spv.SMod %2, %3 : vector<4xi32>
+    %4 = spirv.SMod %0, %1 : i32
+    %5 = spirv.SMod %2, %3 : vector<4xi32>
 
     ```
   }];
@@ -599,8 +599,8 @@ def SPV_SNegateOp : SPV_ArithmeticUnaryOp<"SNegate",
     #### Example:
 
     ```mlir
-    %1 = spv.SNegate %0 : i32
-    %3 = spv.SNegate %2 : vector<4xi32>
+    %1 = spirv.SNegate %0 : i32
+    %3 = spirv.SNegate %2 : vector<4xi32>
     ```
   }];
 }
@@ -631,14 +631,14 @@ def SPV_SRemOp : SPV_ArithmeticBinaryOp<"SRem",
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    srem-op ::= ssa-id `=` `spv.SRem` ssa-use, ssa-use
+    srem-op ::= ssa-id `=` `spirv.SRem` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %4 = spv.SRem %0, %1 : i32
-    %5 = spv.SRem %2, %3 : vector<4xi32>
+    %4 = spirv.SRem %0, %1 : i32
+    %5 = spirv.SRem %2, %3 : vector<4xi32>
 
     ```
   }];
@@ -665,14 +665,14 @@ def SPV_UDivOp : SPV_ArithmeticBinaryOp<"UDiv",
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    udiv-op ::= ssa-id `=` `spv.UDiv` ssa-use, ssa-use
+    udiv-op ::= ssa-id `=` `spirv.UDiv` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %4 = spv.UDiv %0, %1 : i32
-    %5 = spv.UDiv %2, %3 : vector<4xi32>
+    %4 = spirv.UDiv %0, %1 : i32
+    %5 = spirv.UDiv %2, %3 : vector<4xi32>
 
     ```
   }];
@@ -696,7 +696,7 @@ def SPV_VectorTimesScalarOp : SPV_Op<"VectorTimesScalar", [NoSideEffect]> {
     #### Example:
 
     ```mlir
-    %0 = spv.VectorTimesScalar %vector, %scalar : vector<4xf32>
+    %0 = spirv.VectorTimesScalar %vector, %scalar : vector<4xf32>
     ```
   }];
 
@@ -733,14 +733,14 @@ def SPV_UModOp : SPV_ArithmeticBinaryOp<"UMod",
     ```
     integer-scalar-vector-type ::= integer-type |
                                  `vector<` integer-literal `x` integer-type `>`
-    umod-op ::= ssa-id `=` `spv.UMod` ssa-use, ssa-use
+    umod-op ::= ssa-id `=` `spirv.UMod` ssa-use, ssa-use
                            `:` integer-scalar-vector-type
     ```
     #### Example:
 
     ```mlir
-    %4 = spv.UMod %0, %1 : i32
-    %5 = spv.UMod %2, %3 : vector<4xi32>
+    %4 = spirv.UMod %0, %1 : i32
+    %5 = spirv.UMod %2, %3 : vector<4xi32>
 
     ```
   }];

@@ -431,12 +431,12 @@ Legalizing operation : 'func.return'(0x608000002e20) {
   } -> FAILURE : unable to fold
 
   * Pattern : 'func.return -> ()' {
-    ** Insert  : 'spv.Return'(0x6070000453e0)
+    ** Insert  : 'spirv.Return'(0x6070000453e0)
     ** Replace : 'func.return'(0x608000002e20)
 
     //===-------------------------------------------===//
-    Legalizing operation : 'spv.Return'(0x6070000453e0) {
-      "spv.Return"() : () -> ()
+    Legalizing operation : 'spirv.Return'(0x6070000453e0) {
+      "spirv.Return"() : () -> ()
 
     } -> SUCCESS : operation marked legal by the target
     //===-------------------------------------------===//
@@ -448,5 +448,5 @@ Legalizing operation : 'func.return'(0x608000002e20) {
 This output is describing the legalization of an `func.return` operation. We
 first try to legalize by folding the operation, but that is unsuccessful for
 `func.return`. From there, a pattern is applied that replaces the `func.return`
-with a `spv.Return`. The newly generated `spv.Return` is then processed for
+with a `spirv.Return`. The newly generated `spirv.Return` is then processed for
 legalization, but is found to already legal as per the target.

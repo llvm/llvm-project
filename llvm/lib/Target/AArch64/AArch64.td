@@ -668,6 +668,7 @@ def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
 def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors", [
                                    FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
                                    FeatureBalanceFPOps,
                                    FeatureCustomCheapAsMoveHandling,
                                    FeaturePostRAScheduler]>;
@@ -675,12 +676,14 @@ def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
 def TuneA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
                                    "Cortex-A55 ARM processors", [
                                    FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
                                    FeaturePostRAScheduler,
                                    FeatureFuseAddress]>;
 
 def TuneA510    : SubtargetFeature<"a510", "ARMProcFamily", "CortexA510",
                                    "Cortex-A510 ARM processors", [
                                    FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
                                    FeaturePostRAScheduler
                                    ]>;
 
@@ -709,27 +712,32 @@ def TuneA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
 
 def TuneA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
                                    "Cortex-A73 ARM processors", [
-                                   FeatureFuseAES]>;
+                                   FeatureFuseAES,
+                                   FeatureFuseAdrpAdd]>;
 
 def TuneA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
                                    "Cortex-A75 ARM processors", [
-                                   FeatureFuseAES]>;
+                                   FeatureFuseAES,
+                                   FeatureFuseAdrpAdd]>;
 
 def TuneA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                    "Cortex-A76 ARM processors", [
                                    FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
                                    FeatureLSLFast]>;
 
 def TuneA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                    "Cortex-A77 ARM processors", [
                                    FeatureCmpBccFusion,
                                    FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
                                    FeatureLSLFast]>;
 
 def TuneA78 : SubtargetFeature<"a78", "ARMProcFamily", "CortexA78",
                                "Cortex-A78 ARM processors", [
                                FeatureCmpBccFusion,
                                FeatureFuseAES,
+                               FeatureFuseAdrpAdd,
                                FeatureLSLFast,
                                FeaturePostRAScheduler]>;
 
@@ -738,6 +746,7 @@ def TuneA78C : SubtargetFeature<"a78c", "ARMProcFamily",
                                 "Cortex-A78C ARM processors", [
                                 FeatureCmpBccFusion,
                                 FeatureFuseAES,
+                                FeatureFuseAdrpAdd,
                                 FeatureLSLFast,
                                 FeaturePostRAScheduler]>;
 
@@ -745,6 +754,7 @@ def TuneA710    : SubtargetFeature<"a710", "ARMProcFamily", "CortexA710",
                                    "Cortex-A710 ARM processors", [
                                    FeatureCmpBccFusion,
                                    FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
                                    FeatureLSLFast,
                                    FeaturePostRAScheduler]>;
 
@@ -757,6 +767,7 @@ def TuneX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   "Cortex-X1 ARM processors", [
                                   FeatureCmpBccFusion,
                                   FeatureFuseAES,
+                                  FeatureFuseAdrpAdd,
                                   FeatureLSLFast,
                                   FeaturePostRAScheduler]>;
 
@@ -764,6 +775,7 @@ def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
                                   "Cortex-X2 ARM processors", [
                                   FeatureCmpBccFusion,
                                   FeatureFuseAES,
+                                  FeatureFuseAdrpAdd,
                                   FeatureLSLFast,
                                   FeaturePostRAScheduler]>;
 
@@ -941,6 +953,7 @@ def TuneFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
 def TuneNeoverseE1 : SubtargetFeature<"neoversee1", "ARMProcFamily", "NeoverseE1",
                                       "Neoverse E1 ARM processors", [
                                       FeatureFuseAES,
+                                      FeatureFuseAdrpAdd,
                                       FeaturePostRAScheduler]>;
 
 def TuneNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily", "NeoverseN1",
@@ -953,18 +966,21 @@ def TuneNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily", "NeoverseN1
 def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2",
                                       "Neoverse N2 ARM processors", [
                                       FeatureFuseAES,
+                                      FeatureFuseAdrpAdd,
                                       FeatureLSLFast,
                                       FeaturePostRAScheduler]>;
 
 def TuneNeoverse512TVB : SubtargetFeature<"neoverse512tvb", "ARMProcFamily", "Neoverse512TVB",
                                       "Neoverse 512-TVB ARM processors", [
                                       FeatureFuseAES,
+                                      FeatureFuseAdrpAdd,
                                       FeatureLSLFast,
                                       FeaturePostRAScheduler]>;
 
 def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1",
                                       "Neoverse V1 ARM processors", [
                                       FeatureFuseAES,
+                                      FeatureFuseAdrpAdd,
                                       FeatureLSLFast,
                                       FeaturePostRAScheduler]>;
 

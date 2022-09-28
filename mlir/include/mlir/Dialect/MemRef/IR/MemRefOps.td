@@ -787,11 +787,49 @@ def MemRef_DmaWaitOp : MemRef_Op<"dma_wait"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ExtractMetadataOp
+// ExtractAlignedPointerAsIndexOp
+//===----------------------------------------------------------------------===//
+
+def MemRef_ExtractAlignedPointerAsIndexOp : MemRef_Op<"extract_aligned_pointer_as_index",
+    [NoSideEffect, SameVariadicResultSize]> {
+  let summary = "Extracts a memref's underlying aligned pointer as an index";
+  let description = [{
+    Extracts the underlying aligned pointer as an index.
+
+    This operation is useful for lowering to lower-level dialects while still
+    avoiding the need to define a pointer type in higher-level dialects such as
+    the memref dialect.
+
+    This operation is intended solely as step during lowering, it has no side
+    effects. A reverse operation that creates a memref from an index interpreted
+    as a pointer is explicitly discouraged.
+
+    Example:
+
+    ```
+      %0 = memref.extract_aligned_pointer_as_index %arg : memref<4x4xf32> -> index
+      %1 = arith.index_cast %0 : index to i64
+      %2 = llvm.inttoptr %1 : i64 to !llvm.ptr<f32>
+      call @foo(%2) : (!llvm.ptr<f32>) ->()
+    ```
+  }];
+
+  let arguments = (ins
+    AnyStridedMemRef:$source
+  );
+  let results = (outs Index:$aligned_pointer);
+
+  let assemblyFormat = [{
+    $source `:` type($source) `->` type(results) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ExtractStridedMetadataOp
 //===----------------------------------------------------------------------===//
 
 def MemRef_ExtractStridedMetadataOp : MemRef_Op<"extract_strided_metadata",
-    [SameVariadicResultSize]> {
+    [NoSideEffect, SameVariadicResultSize]> {
   let summary = "Extracts a buffer base with offset and strides";
   let description = [{
     Extracts a base buffer, offset and strides. This op allows additional layers

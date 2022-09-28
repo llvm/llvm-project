@@ -14058,6 +14058,8 @@ The behavior of '``llvm.memset.inline.*``' is equivalent to the behavior of
 '``llvm.memset.*``', but the generated code is guaranteed not to call any
 external functions.
 
+.. _int_sqrt:
+
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -19193,6 +19195,54 @@ Examples:
 
       %t = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> poison
+
+
+.. _int_vp_sqrt:
+
+'``llvm.vp.sqrt.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x float>  @llvm.vp.sqrt.v16f32 (<16 x float> <op>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x float>  @llvm.vp.sqrt.nxv4f32 (<vscale x 4 x float> <op>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x double>  @llvm.vp.sqrt.v256f64 (<256 x double> <op>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point square root of a vector of floating-point values.
+
+
+Arguments:
+""""""""""
+
+The first operand and the result have the same vector of floating-point type.
+The second operand is the vector mask and has the same number of elements as the
+result vector type. The third operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.sqrt``' intrinsic performs floating-point square root (:ref:`sqrt <int_sqrt>`) of
+the first vector operand on each enabled lane.  The result on disabled lanes is
+undefined. The operation is performed in the default floating-point environment.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x float> @llvm.vp.sqrt.v4f32(<4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
+      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
 
 
 .. _int_vp_fma:

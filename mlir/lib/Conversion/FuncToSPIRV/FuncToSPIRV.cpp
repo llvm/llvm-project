@@ -35,7 +35,7 @@ using namespace mlir;
 
 namespace {
 
-/// Converts func.return to spv.Return.
+/// Converts func.return to spirv.Return.
 class ReturnOpPattern final : public OpConversionPattern<func::ReturnOp> {
 public:
   using OpConversionPattern<func::ReturnOp>::OpConversionPattern;
@@ -56,7 +56,7 @@ public:
   }
 };
 
-/// Converts func.call to spv.FunctionCall.
+/// Converts func.call to spirv.FunctionCall.
 class CallOpPattern final : public OpConversionPattern<func::CallOp> {
 public:
   using OpConversionPattern<func::CallOp>::OpConversionPattern;
@@ -64,7 +64,7 @@ public:
   LogicalResult
   matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // multiple results func was not converted to spv.func
+    // multiple results func was not converted to spirv.func
     if (callOp.getNumResults() > 1)
       return failure();
     if (callOp.getNumResults() == 1) {
