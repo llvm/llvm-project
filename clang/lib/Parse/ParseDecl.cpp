@@ -4241,8 +4241,9 @@ void Parser::ParseDeclarationSpecifiers(
         continue;
       break;
 
-    // GNU typeof support.
+    // C2x/GNU typeof support.
     case tok::kw_typeof:
+    case tok::kw_typeof_unqual:
       ParseTypeofSpecifier(DS);
       continue;
 
@@ -5252,8 +5253,9 @@ bool Parser::isTypeSpecifierQualifier() {
 
     // GNU attributes support.
   case tok::kw___attribute:
-    // GNU typeof support.
+    // C2x/GNU typeof support.
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
 
     // type-specifiers
   case tok::kw_short:
@@ -5495,8 +5497,9 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
 
-    // GNU typeof support.
+    // C2x/GNU typeof support.
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
 
     // GNU attributes.
   case tok::kw___attribute:
@@ -7543,13 +7546,27 @@ void Parser::ParseMisplacedBracketDeclarator(Declarator &D) {
 ///           typeof ( expressions )
 ///           typeof ( type-name )
 /// [GNU/C++] typeof unary-expression
+/// [C2x]   typeof-specifier:
+///           typeof '(' typeof-specifier-argument ')'
+///           typeof_unqual '(' typeof-specifier-argument ')'
+///
+///         typeof-specifier-argument:
+///           expression
+///           type-name
 ///
 void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
-  assert(Tok.is(tok::kw_typeof) && "Not a typeof specifier");
+  assert(Tok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual) &&
+         "Not a typeof specifier");
+
+  bool IsUnqual = Tok.is(tok::kw_typeof_unqual);
+  const IdentifierInfo *II = Tok.getIdentifierInfo();
+  if (getLangOpts().C2x && !II->getName().startswith("__"))
+    Diag(Tok.getLocation(), diag::warn_c2x_compat_typeof_type_specifier)
+        << IsUnqual;
+
   Token OpTok = Tok;
   SourceLocation StartLoc = ConsumeToken();
-
-  const bool hasParens = Tok.is(tok::l_paren);
+  bool HasParens = Tok.is(tok::l_paren);
 
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated,
@@ -7560,7 +7577,7 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
   SourceRange CastRange;
   ExprResult Operand = Actions.CorrectDelayedTyposInExpr(
       ParseExprAfterUnaryExprOrTypeTrait(OpTok, isCastExpr, CastTy, CastRange));
-  if (hasParens)
+  if (HasParens)
     DS.setTypeArgumentRange(CastRange);
 
   if (CastRange.getEnd().isInvalid())
@@ -7578,7 +7595,9 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
     const char *PrevSpec = nullptr;
     unsigned DiagID;
     // Check for duplicate type specifiers (e.g. "int typeof(int)").
-    if (DS.SetTypeSpecType(DeclSpec::TST_typeofType, StartLoc, PrevSpec,
+    if (DS.SetTypeSpecType(IsUnqual ? DeclSpec::TST_typeof_unqualType
+                                    : DeclSpec::TST_typeofType,
+                           StartLoc, PrevSpec,
                            DiagID, CastTy,
                            Actions.getASTContext().getPrintingPolicy()))
       Diag(StartLoc, DiagID) << PrevSpec;
@@ -7601,7 +7620,9 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
   const char *PrevSpec = nullptr;
   unsigned DiagID;
   // Check for duplicate type specifiers (e.g. "int typeof(int)").
-  if (DS.SetTypeSpecType(DeclSpec::TST_typeofExpr, StartLoc, PrevSpec,
+  if (DS.SetTypeSpecType(IsUnqual ? DeclSpec::TST_typeof_unqualExpr
+                                  : DeclSpec::TST_typeofExpr,
+                         StartLoc, PrevSpec,
                          DiagID, Operand.get(),
                          Actions.getASTContext().getPrintingPolicy()))
     Diag(StartLoc, DiagID) << PrevSpec;
