@@ -6,8 +6,8 @@
 
 declare <vscale x 1 x half> @llvm.vp.ceil.nxv1f16(<vscale x 1 x half>, <vscale x 1 x i1>, i32)
 
-define <vscale x 1 x half> @vfabs_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv1f16:
+define <vscale x 1 x half> @vp_ceil_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI0_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI0_0)(a1)
@@ -26,8 +26,8 @@ define <vscale x 1 x half> @vfabs_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 
   ret <vscale x 1 x half> %v
 }
 
-define <vscale x 1 x half> @vfabs_vv_nxv1f16_unmasked(<vscale x 1 x half> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv1f16_unmasked:
+define <vscale x 1 x half> @vp_ceil_vv_nxv1f16_unmasked(<vscale x 1 x half> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv1f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI1_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI1_0)(a1)
@@ -48,8 +48,8 @@ define <vscale x 1 x half> @vfabs_vv_nxv1f16_unmasked(<vscale x 1 x half> %va, i
 
 declare <vscale x 2 x half> @llvm.vp.ceil.nxv2f16(<vscale x 2 x half>, <vscale x 2 x i1>, i32)
 
-define <vscale x 2 x half> @vfabs_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv2f16:
+define <vscale x 2 x half> @vp_ceil_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI2_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI2_0)(a1)
@@ -68,8 +68,8 @@ define <vscale x 2 x half> @vfabs_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 
   ret <vscale x 2 x half> %v
 }
 
-define <vscale x 2 x half> @vfabs_vv_nxv2f16_unmasked(<vscale x 2 x half> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv2f16_unmasked:
+define <vscale x 2 x half> @vp_ceil_vv_nxv2f16_unmasked(<vscale x 2 x half> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv2f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI3_0)(a1)
@@ -90,8 +90,8 @@ define <vscale x 2 x half> @vfabs_vv_nxv2f16_unmasked(<vscale x 2 x half> %va, i
 
 declare <vscale x 4 x half> @llvm.vp.ceil.nxv4f16(<vscale x 4 x half>, <vscale x 4 x i1>, i32)
 
-define <vscale x 4 x half> @vfabs_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv4f16:
+define <vscale x 4 x half> @vp_ceil_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI4_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI4_0)(a1)
@@ -110,8 +110,8 @@ define <vscale x 4 x half> @vfabs_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 
   ret <vscale x 4 x half> %v
 }
 
-define <vscale x 4 x half> @vfabs_vv_nxv4f16_unmasked(<vscale x 4 x half> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv4f16_unmasked:
+define <vscale x 4 x half> @vp_ceil_vv_nxv4f16_unmasked(<vscale x 4 x half> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv4f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI5_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI5_0)(a1)
@@ -132,8 +132,8 @@ define <vscale x 4 x half> @vfabs_vv_nxv4f16_unmasked(<vscale x 4 x half> %va, i
 
 declare <vscale x 8 x half> @llvm.vp.ceil.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, i32)
 
-define <vscale x 8 x half> @vfabs_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv8f16:
+define <vscale x 8 x half> @vp_ceil_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI6_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI6_0)(a1)
@@ -153,8 +153,8 @@ define <vscale x 8 x half> @vfabs_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 
   ret <vscale x 8 x half> %v
 }
 
-define <vscale x 8 x half> @vfabs_vv_nxv8f16_unmasked(<vscale x 8 x half> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv8f16_unmasked:
+define <vscale x 8 x half> @vp_ceil_vv_nxv8f16_unmasked(<vscale x 8 x half> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv8f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI7_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI7_0)(a1)
@@ -175,8 +175,8 @@ define <vscale x 8 x half> @vfabs_vv_nxv8f16_unmasked(<vscale x 8 x half> %va, i
 
 declare <vscale x 16 x half> @llvm.vp.ceil.nxv16f16(<vscale x 16 x half>, <vscale x 16 x i1>, i32)
 
-define <vscale x 16 x half> @vfabs_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv16f16:
+define <vscale x 16 x half> @vp_ceil_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI8_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI8_0)(a1)
@@ -196,8 +196,8 @@ define <vscale x 16 x half> @vfabs_vv_nxv16f16(<vscale x 16 x half> %va, <vscale
   ret <vscale x 16 x half> %v
 }
 
-define <vscale x 16 x half> @vfabs_vv_nxv16f16_unmasked(<vscale x 16 x half> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv16f16_unmasked:
+define <vscale x 16 x half> @vp_ceil_vv_nxv16f16_unmasked(<vscale x 16 x half> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv16f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI9_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI9_0)(a1)
@@ -218,8 +218,8 @@ define <vscale x 16 x half> @vfabs_vv_nxv16f16_unmasked(<vscale x 16 x half> %va
 
 declare <vscale x 32 x half> @llvm.vp.ceil.nxv32f16(<vscale x 32 x half>, <vscale x 32 x i1>, i32)
 
-define <vscale x 32 x half> @vfabs_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv32f16:
+define <vscale x 32 x half> @vp_ceil_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI10_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI10_0)(a1)
@@ -239,8 +239,8 @@ define <vscale x 32 x half> @vfabs_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
   ret <vscale x 32 x half> %v
 }
 
-define <vscale x 32 x half> @vfabs_vv_nxv32f16_unmasked(<vscale x 32 x half> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv32f16_unmasked:
+define <vscale x 32 x half> @vp_ceil_vv_nxv32f16_unmasked(<vscale x 32 x half> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv32f16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI11_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI11_0)(a1)
@@ -261,8 +261,8 @@ define <vscale x 32 x half> @vfabs_vv_nxv32f16_unmasked(<vscale x 32 x half> %va
 
 declare <vscale x 1 x float> @llvm.vp.ceil.nxv1f32(<vscale x 1 x float>, <vscale x 1 x i1>, i32)
 
-define <vscale x 1 x float> @vfabs_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv1f32:
+define <vscale x 1 x float> @vp_ceil_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI12_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI12_0)(a1)
@@ -281,8 +281,8 @@ define <vscale x 1 x float> @vfabs_vv_nxv1f32(<vscale x 1 x float> %va, <vscale 
   ret <vscale x 1 x float> %v
 }
 
-define <vscale x 1 x float> @vfabs_vv_nxv1f32_unmasked(<vscale x 1 x float> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv1f32_unmasked:
+define <vscale x 1 x float> @vp_ceil_vv_nxv1f32_unmasked(<vscale x 1 x float> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv1f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI13_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI13_0)(a1)
@@ -303,8 +303,8 @@ define <vscale x 1 x float> @vfabs_vv_nxv1f32_unmasked(<vscale x 1 x float> %va,
 
 declare <vscale x 2 x float> @llvm.vp.ceil.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
 
-define <vscale x 2 x float> @vfabs_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv2f32:
+define <vscale x 2 x float> @vp_ceil_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI14_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI14_0)(a1)
@@ -323,8 +323,8 @@ define <vscale x 2 x float> @vfabs_vv_nxv2f32(<vscale x 2 x float> %va, <vscale 
   ret <vscale x 2 x float> %v
 }
 
-define <vscale x 2 x float> @vfabs_vv_nxv2f32_unmasked(<vscale x 2 x float> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv2f32_unmasked:
+define <vscale x 2 x float> @vp_ceil_vv_nxv2f32_unmasked(<vscale x 2 x float> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI15_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI15_0)(a1)
@@ -345,8 +345,8 @@ define <vscale x 2 x float> @vfabs_vv_nxv2f32_unmasked(<vscale x 2 x float> %va,
 
 declare <vscale x 4 x float> @llvm.vp.ceil.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, i32)
 
-define <vscale x 4 x float> @vfabs_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv4f32:
+define <vscale x 4 x float> @vp_ceil_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI16_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI16_0)(a1)
@@ -366,8 +366,8 @@ define <vscale x 4 x float> @vfabs_vv_nxv4f32(<vscale x 4 x float> %va, <vscale 
   ret <vscale x 4 x float> %v
 }
 
-define <vscale x 4 x float> @vfabs_vv_nxv4f32_unmasked(<vscale x 4 x float> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv4f32_unmasked:
+define <vscale x 4 x float> @vp_ceil_vv_nxv4f32_unmasked(<vscale x 4 x float> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv4f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI17_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI17_0)(a1)
@@ -388,8 +388,8 @@ define <vscale x 4 x float> @vfabs_vv_nxv4f32_unmasked(<vscale x 4 x float> %va,
 
 declare <vscale x 8 x float> @llvm.vp.ceil.nxv8f32(<vscale x 8 x float>, <vscale x 8 x i1>, i32)
 
-define <vscale x 8 x float> @vfabs_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv8f32:
+define <vscale x 8 x float> @vp_ceil_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI18_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI18_0)(a1)
@@ -409,8 +409,8 @@ define <vscale x 8 x float> @vfabs_vv_nxv8f32(<vscale x 8 x float> %va, <vscale 
   ret <vscale x 8 x float> %v
 }
 
-define <vscale x 8 x float> @vfabs_vv_nxv8f32_unmasked(<vscale x 8 x float> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv8f32_unmasked:
+define <vscale x 8 x float> @vp_ceil_vv_nxv8f32_unmasked(<vscale x 8 x float> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv8f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI19_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI19_0)(a1)
@@ -431,8 +431,8 @@ define <vscale x 8 x float> @vfabs_vv_nxv8f32_unmasked(<vscale x 8 x float> %va,
 
 declare <vscale x 16 x float> @llvm.vp.ceil.nxv16f32(<vscale x 16 x float>, <vscale x 16 x i1>, i32)
 
-define <vscale x 16 x float> @vfabs_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv16f32:
+define <vscale x 16 x float> @vp_ceil_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI20_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI20_0)(a1)
@@ -452,8 +452,8 @@ define <vscale x 16 x float> @vfabs_vv_nxv16f32(<vscale x 16 x float> %va, <vsca
   ret <vscale x 16 x float> %v
 }
 
-define <vscale x 16 x float> @vfabs_vv_nxv16f32_unmasked(<vscale x 16 x float> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv16f32_unmasked:
+define <vscale x 16 x float> @vp_ceil_vv_nxv16f32_unmasked(<vscale x 16 x float> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv16f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI21_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI21_0)(a1)
@@ -474,8 +474,8 @@ define <vscale x 16 x float> @vfabs_vv_nxv16f32_unmasked(<vscale x 16 x float> %
 
 declare <vscale x 1 x double> @llvm.vp.ceil.nxv1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 
-define <vscale x 1 x double> @vfabs_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv1f64:
+define <vscale x 1 x double> @vp_ceil_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI22_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI22_0)(a1)
@@ -494,8 +494,8 @@ define <vscale x 1 x double> @vfabs_vv_nxv1f64(<vscale x 1 x double> %va, <vscal
   ret <vscale x 1 x double> %v
 }
 
-define <vscale x 1 x double> @vfabs_vv_nxv1f64_unmasked(<vscale x 1 x double> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv1f64_unmasked:
+define <vscale x 1 x double> @vp_ceil_vv_nxv1f64_unmasked(<vscale x 1 x double> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv1f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI23_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI23_0)(a1)
@@ -516,8 +516,8 @@ define <vscale x 1 x double> @vfabs_vv_nxv1f64_unmasked(<vscale x 1 x double> %v
 
 declare <vscale x 2 x double> @llvm.vp.ceil.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
 
-define <vscale x 2 x double> @vfabs_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv2f64:
+define <vscale x 2 x double> @vp_ceil_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI24_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI24_0)(a1)
@@ -537,8 +537,8 @@ define <vscale x 2 x double> @vfabs_vv_nxv2f64(<vscale x 2 x double> %va, <vscal
   ret <vscale x 2 x double> %v
 }
 
-define <vscale x 2 x double> @vfabs_vv_nxv2f64_unmasked(<vscale x 2 x double> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv2f64_unmasked:
+define <vscale x 2 x double> @vp_ceil_vv_nxv2f64_unmasked(<vscale x 2 x double> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI25_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI25_0)(a1)
@@ -559,8 +559,8 @@ define <vscale x 2 x double> @vfabs_vv_nxv2f64_unmasked(<vscale x 2 x double> %v
 
 declare <vscale x 4 x double> @llvm.vp.ceil.nxv4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 
-define <vscale x 4 x double> @vfabs_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv4f64:
+define <vscale x 4 x double> @vp_ceil_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI26_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI26_0)(a1)
@@ -580,8 +580,8 @@ define <vscale x 4 x double> @vfabs_vv_nxv4f64(<vscale x 4 x double> %va, <vscal
   ret <vscale x 4 x double> %v
 }
 
-define <vscale x 4 x double> @vfabs_vv_nxv4f64_unmasked(<vscale x 4 x double> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv4f64_unmasked:
+define <vscale x 4 x double> @vp_ceil_vv_nxv4f64_unmasked(<vscale x 4 x double> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv4f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI27_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI27_0)(a1)
@@ -602,8 +602,8 @@ define <vscale x 4 x double> @vfabs_vv_nxv4f64_unmasked(<vscale x 4 x double> %v
 
 declare <vscale x 7 x double> @llvm.vp.ceil.nxv7f64(<vscale x 7 x double>, <vscale x 7 x i1>, i32)
 
-define <vscale x 7 x double> @vfabs_vv_nxv7f64(<vscale x 7 x double> %va, <vscale x 7 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv7f64:
+define <vscale x 7 x double> @vp_ceil_vv_nxv7f64(<vscale x 7 x double> %va, <vscale x 7 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv7f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI28_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI28_0)(a1)
@@ -623,8 +623,8 @@ define <vscale x 7 x double> @vfabs_vv_nxv7f64(<vscale x 7 x double> %va, <vscal
   ret <vscale x 7 x double> %v
 }
 
-define <vscale x 7 x double> @vfabs_vv_nxv7f64_unmasked(<vscale x 7 x double> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv7f64_unmasked:
+define <vscale x 7 x double> @vp_ceil_vv_nxv7f64_unmasked(<vscale x 7 x double> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv7f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI29_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI29_0)(a1)
@@ -645,8 +645,8 @@ define <vscale x 7 x double> @vfabs_vv_nxv7f64_unmasked(<vscale x 7 x double> %v
 
 declare <vscale x 8 x double> @llvm.vp.ceil.nxv8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)
 
-define <vscale x 8 x double> @vfabs_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv8f64:
+define <vscale x 8 x double> @vp_ceil_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI30_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI30_0)(a1)
@@ -666,8 +666,8 @@ define <vscale x 8 x double> @vfabs_vv_nxv8f64(<vscale x 8 x double> %va, <vscal
   ret <vscale x 8 x double> %v
 }
 
-define <vscale x 8 x double> @vfabs_vv_nxv8f64_unmasked(<vscale x 8 x double> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv8f64_unmasked:
+define <vscale x 8 x double> @vp_ceil_vv_nxv8f64_unmasked(<vscale x 8 x double> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv8f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI31_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI31_0)(a1)
@@ -689,8 +689,8 @@ define <vscale x 8 x double> @vfabs_vv_nxv8f64_unmasked(<vscale x 8 x double> %v
 ; Test splitting.
 declare <vscale x 16 x double> @llvm.vp.ceil.nxv16f64(<vscale x 16 x double>, <vscale x 16 x i1>, i32)
 
-define <vscale x 16 x double> @vfabs_vv_nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv16f64:
+define <vscale x 16 x double> @vp_ceil_vv_nxv16f64(<vscale x 16 x double> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv16f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v1, v0
 ; CHECK-NEXT:    li a2, 0
@@ -754,8 +754,8 @@ define <vscale x 16 x double> @vfabs_vv_nxv16f64(<vscale x 16 x double> %va, <vs
   ret <vscale x 16 x double> %v
 }
 
-define <vscale x 16 x double> @vfabs_vv_nxv16f64_unmasked(<vscale x 16 x double> %va, i32 zeroext %evl) {
-; CHECK-LABEL: vfabs_vv_nxv16f64_unmasked:
+define <vscale x 16 x double> @vp_ceil_vv_nxv16f64_unmasked(<vscale x 16 x double> %va, i32 zeroext %evl) {
+; CHECK-LABEL: vp_ceil_vv_nxv16f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    mv a2, a0
