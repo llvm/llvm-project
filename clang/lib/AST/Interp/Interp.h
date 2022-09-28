@@ -183,6 +183,20 @@ bool Neg(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// 1) Pops the value from the stack.
+/// 2) Pushes the bitwise complemented value on the stack (~V).
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Comp(InterpState &S, CodePtr OpPC) {
+  const T &Val = S.Stk.pop<T>();
+  T Result;
+  if (!T::comp(Val, &Result)) {
+    S.Stk.push<T>(Result);
+    return true;
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // EQ, NE, GT, GE, LT, LE
 //===----------------------------------------------------------------------===//

@@ -3,6 +3,10 @@
 // RUN: %clang_cc1 -std=c++11 -verify=ref %s
 // RUN: %clang_cc1 -std=c++20 -verify=ref %s
 
+#define INT_MIN (~__INT_MAX__)
+#define INT_MAX __INT_MAX__
+
+
 static_assert(true, "");
 static_assert(false, ""); // expected-error{{failed}} ref-error{{failed}}
 static_assert(nullptr == nullptr, "");
@@ -65,6 +69,18 @@ static_assert(!5 == false, "");
 static_assert(!0, "");
 static_assert(-true, "");
 static_assert(-false, ""); //expected-error{{failed}} ref-error{{failed}}
+
+static_assert(~0 == -1, "");
+static_assert(~1 == -2, "");
+static_assert(~-1 == 0, "");
+static_assert(~255 == -256, "");
+static_assert(~INT_MIN == INT_MAX, "");
+static_assert(~INT_MAX == INT_MIN, "");
+
+enum E {};
+constexpr E e = static_cast<E>(0);
+static_assert(~e == -1, "");
+
 
 constexpr int m = 10;
 constexpr const int *p = &m;

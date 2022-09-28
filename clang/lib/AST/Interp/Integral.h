@@ -212,6 +212,11 @@ public:
     return false;
   }
 
+  static bool comp(Integral A, Integral *R) {
+    *R = Integral(~A.V);
+    return false;
+  }
+
 private:
   template <typename T> static bool CheckAddUB(T A, T B, T &R) {
     if constexpr (std::is_signed_v<T>) {
