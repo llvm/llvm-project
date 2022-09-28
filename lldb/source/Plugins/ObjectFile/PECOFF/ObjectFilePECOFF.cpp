@@ -826,6 +826,10 @@ void ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
     // Note: symbol name may be empty if it is only exported by ordinal.
     symbol.GetMangled().SetValue(ConstString(sym_name));
 
+    uint32_t ordinal;
+    llvm::cantFail(entry.getOrdinal(ordinal));
+    symbol.SetID(ordinal);
+
     uint32_t function_rva;
     if (auto err = entry.getExportRVA(function_rva)) {
       LLDB_LOG(log,
@@ -834,10 +838,19 @@ void ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
                sym_name, llvm::fmt_consume(std::move(err)));
       continue;
     }
+    // Skip the symbol if it doesn't look valid.
+    if (function_rva == 0 && sym_name.empty())
+      continue;
     symbol.GetAddressRef() =
         Address(m_coff_header_opt.image_base + function_rva, sect_list);
-    symbol.SetType(lldb::eSymbolTypeCode);
-    symbol.SetDebug(true);
+
+    // An exported symbol may be either code or data. Guess by checking whether
+    // the section containing the symbol is executable.
+    symbol.SetType(lldb::eSymbolTypeData);
+    if (auto section_sp = symbol.GetAddressRef().GetSection())
+      if (section_sp->GetPermissions() & ePermissionsExecutable)
+        symbol.SetType(lldb::eSymbolTypeCode);
+    symbol.SetExternal(true);
     symtab.AddSymbol(symbol);
   }
 }
