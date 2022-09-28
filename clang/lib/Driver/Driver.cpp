@@ -956,7 +956,9 @@ static void appendOneArg(InputArgList &Args, const Arg *Opt,
 bool Driver::readConfigFile(StringRef FileName) {
   // Try reading the given file.
   SmallVector<const char *, 32> NewCfgArgs;
-  if (!llvm::cl::readConfigFile(FileName, Saver, NewCfgArgs, getVFS())) {
+  llvm::cl::ExpansionContext ExpCtx(Alloc, llvm::cl::tokenizeConfigFile);
+  ExpCtx.setVFS(&getVFS());
+  if (!ExpCtx.readConfigFile(FileName, NewCfgArgs)) {
     Diag(diag::err_drv_cannot_read_config_file) << FileName;
     return true;
   }

@@ -60,9 +60,10 @@ private:
       if (!SeenRSPFile)
         continue;
       llvm::BumpPtrAllocator Alloc;
-      llvm::StringSaver Saver(Alloc);
-      llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, false,
-                                    llvm::StringRef(Cmd.Directory), *FS);
+      llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+      ECtx.setVFS(FS.get())
+          .setCurrentDir(Cmd.Directory)
+          .expandResponseFiles(Argv);
       // Don't assign directly, Argv aliases CommandLine.
       std::vector<std::string> ExpandedArgv(Argv.begin(), Argv.end());
       Cmd.CommandLine = std::move(ExpandedArgv);
