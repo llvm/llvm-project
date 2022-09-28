@@ -657,6 +657,11 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     assert(!isSubRegister(ScratchRSrcReg, BasePtrReg));
   }
 
+  // SGPR used to preserve EXEC MASK around WWM spill/copy instructions.
+  Register ExecCopyReg = MFI->getSGPRForEXECCopy();
+  if (ExecCopyReg)
+    reserveRegisterTuples(Reserved, ExecCopyReg);
+
   // Reserve VGPRs/AGPRs.
   //
   unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
@@ -720,9 +725,6 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, Reg);
 
   for (MCPhysReg Reg : MFI->getVGPRSpillAGPRs())
-    reserveRegisterTuples(Reserved, Reg);
-
-  for (auto Reg : MFI->getSGPRSpillVGPRs())
     reserveRegisterTuples(Reserved, Reg);
 
   return Reserved;
@@ -1080,6 +1082,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_AV32_SAVE:
   case AMDGPU::SI_SPILL_AV32_CFI_SAVE:
   case AMDGPU::SI_SPILL_AV32_RESTORE:
+  case AMDGPU::SI_SPILL_WWM_V32_SAVE:
+  case AMDGPU::SI_SPILL_WWM_V32_RESTORE:
     return 1;
   default: llvm_unreachable("Invalid spill opcode");
   }
@@ -2073,6 +2077,40 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   }
 }
 
+static void insertScratchExecCopy(MachineFunction &MF, MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, Register Reg,
+                                  RegScavenger *RS) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  bool IsWave32 = ST.isWave32();
+  if (RS->isRegUsed(AMDGPU::SCC)) {
+    // Insert two move instructions, one to save the original value of EXEC and
+    // the other to turn on all bits in EXEC. This is required as we can't use
+    // the single instruction S_OR_SAVEEXEC that clobbers SCC.
+    unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    MCRegister Exec = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Reg).addReg(Exec, RegState::Kill);
+    BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
+  } else {
+    const unsigned OrSaveExec =
+        IsWave32 ? AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
+    auto SaveExec =
+        BuildMI(MBB, MBBI, DL, TII->get(OrSaveExec), Reg).addImm(-1);
+    SaveExec->getOperand(3).setIsDead(); // Mark SCC as dead.
+  }
+}
+
+static void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                        Register Reg) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+  MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+  BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec).addReg(Reg, RegState::Kill);
+}
+
 bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                         int SPAdj, unsigned FIOperandNum,
                                         RegScavenger *RS) const {
@@ -2198,7 +2236,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV128_SAVE:
     case AMDGPU::SI_SPILL_AV96_SAVE:
     case AMDGPU::SI_SPILL_AV64_SAVE:
-    case AMDGPU::SI_SPILL_AV32_SAVE: {
+    case AMDGPU::SI_SPILL_AV32_SAVE:
+    case AMDGPU::SI_SPILL_WWM_V32_SAVE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
@@ -2207,11 +2246,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                             : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
       auto MBB = MI->getParent();
+      bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
+      if (IsWWMRegSpill)
+        insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(), RS);
+
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS, nullptr, NeedsCFI);
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
+      if (IsWWMRegSpill)
+        restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());
+
       MI->eraseFromParent();
       return true;
     }
@@ -2244,7 +2290,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV224_RESTORE:
     case AMDGPU::SI_SPILL_AV256_RESTORE:
     case AMDGPU::SI_SPILL_AV512_RESTORE:
-    case AMDGPU::SI_SPILL_AV1024_RESTORE: {
+    case AMDGPU::SI_SPILL_AV1024_RESTORE:
+    case AMDGPU::SI_SPILL_WWM_V32_RESTORE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
@@ -2253,10 +2300,17 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
                                             : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
       auto MBB = MI->getParent();
+      bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
+      if (IsWWMRegSpill)
+        insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(), RS);
+
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS);
+      if (IsWWMRegSpill)
+        restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());
+
       MI->eraseFromParent();
       return true;
     }

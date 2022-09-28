@@ -19,8 +19,9 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[8:9]
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v41, s4, 0
-; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
+; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    ; implicit-def: $vgpr40
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
+; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s31, 1
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
@@ -53,8 +54,9 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v41, exec_lo, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v41, exec_hi, 1
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v41, s4, 2
-; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
+; CFI-SAVES-SPILL-TO-VGPR-NEXT:    ; implicit-def: $vgpr40
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
+; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s31, 1
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33

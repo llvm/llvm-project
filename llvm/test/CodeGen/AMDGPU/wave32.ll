@@ -1121,9 +1121,10 @@ declare void @external_void_func_void() #1
 ; GCN-NEXT: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
 
 
-; GCN-DAG: v_writelane_b32 v40, s30, 0
+; GCN-NEXT: ; implicit-def: $vgpr40
 ; GFX1064: s_addk_i32 s32, 0x400
 ; GFX1032: s_addk_i32 s32, 0x200
+; GCN-DAG: v_writelane_b32 v40, s30, 0
 ; GCN-DAG: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
 ; GCN-DAG: v_readlane_b32 s30, v40, 0

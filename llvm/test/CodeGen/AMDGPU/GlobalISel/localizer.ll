@@ -239,8 +239,9 @@ define void @sink_null_insert_pt(ptr addrspace(4) %arg0) {
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX9-NEXT:    v_writelane_b32 v41, s16, 0
-; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX9-NEXT:    ; implicit-def: $vgpr40
 ; GFX9-NEXT:    s_addk_i32 s32, 0x400
+; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0

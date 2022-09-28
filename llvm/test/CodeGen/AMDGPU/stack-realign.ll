@@ -165,8 +165,8 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN: v_writelane_b32 [[VGPR_REG_1]], s34, 1
 ; GCN: v_writelane_b32 [[VGPR_REG_1]], [[FP_SCRATCH_COPY]], 0
 ; GCN: s_mov_b32 s34, s32
-; GCN: v_writelane_b32 [[VGPR_REG]], s30, 0
 ; GCN: s_add_i32 s32, s32, 0x30000
+; GCN: v_writelane_b32 [[VGPR_REG]], s30, 0
 ; GCN: v_writelane_b32 [[VGPR_REG]], s31, 1
 ; GCN: v_mov_b32_e32 v32, 0
 ; GCN: buffer_store_dword v32, off, s[0:3], s33 offset:1024

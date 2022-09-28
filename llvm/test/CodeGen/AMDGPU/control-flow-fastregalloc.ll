@@ -10,7 +10,7 @@
 
 
 ; GCN-LABEL: {{^}}divergent_if_endif:
-; VGPR: workitem_private_segment_byte_size = 12{{$}}
+; VGPR: workitem_private_segment_byte_size = 16{{$}}
 
 
 ; GCN: {{^}}; %bb.0:
@@ -82,7 +82,7 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}divergent_loop:
-; VGPR: workitem_private_segment_byte_size = 16{{$}}
+; VGPR: workitem_private_segment_byte_size = 20{{$}}
 
 ; GCN: {{^}}; %bb.0:
 ; GCN-DAG: s_mov_b32 m0, -1

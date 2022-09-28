@@ -264,7 +264,10 @@ entry:
 ; W64-O0: s_cbranch_execz [[TERMBB:.LBB[0-9]+_[0-9]+]]
 
 ; W64-O0: ; %bb.{{[0-9]+}}: ; %bb1
-; W64-O0-DAG: buffer_store_dword {{v[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s32 offset:[[IDX_OFF:[0-9]+]] ; 4-byte Folded Spill
+; W64-O0: buffer_load_dword
+; W64-O0: buffer_store_dword
+; W64-O0: buffer_store_dword {{v[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, s32 offset:[[IDX_OFF:[0-9]+]] ; 4-byte Folded Spill
+; W64-O0: buffer_load_dword
 ; W64-O0-DAG: s_mov_b64 s[[[SAVEEXEC0:[0-9]+]]:[[SAVEEXEC1:[0-9]+]]], exec
 ; W64-O0: v_writelane_b32 [[VSAVEEXEC:v[0-9]+]], s[[SAVEEXEC0]], [[SAVEEXEC_IDX0:[0-9]+]]
 ; W64-O0: v_writelane_b32 [[VSAVEEXEC]], s[[SAVEEXEC1]], [[SAVEEXEC_IDX1:[0-9]+]]
@@ -290,6 +293,8 @@ entry:
 ; W64-O0-DAG: s_mov_b32 s[[S2:[0-9]+]], s[[SRSRCTMP2]]
 ; W64-O0-DAG: s_mov_b32 s[[S3:[0-9]+]], s[[SRSRCTMP3]]
 ; W64-O0: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], [[AND]]
+; W64-O0: buffer_store_dword
+; W64-O0: buffer_load_dword
 ; W64-O0: buffer_load_dword [[IDX:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, s32  offset:[[IDX_OFF]] ; 4-byte Folded Reload
 ; W64-O0: buffer_load_format_x [[RES:v[0-9]+]], [[IDX]], s[[[S0]]:[[S3]]], {{.*}} idxen
 ; W64-O0: s_waitcnt vmcnt(0)
