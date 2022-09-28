@@ -215,6 +215,13 @@ def G_PREFETCH : AArch64GenericInstruction {
   let hasSideEffects = 1;
 }
 
+// Generic bitwise insert if true.
+def G_BIT : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+}
+
 def : GINodeEquiv<G_REV16, AArch64rev16>;
 def : GINodeEquiv<G_REV32, AArch64rev32>;
 def : GINodeEquiv<G_REV64, AArch64rev64>;
@@ -244,6 +251,8 @@ def : GINodeEquiv<G_FCMGEZ, AArch64fcmgez>;
 def : GINodeEquiv<G_FCMGTZ, AArch64fcmgtz>;
 def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
 def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
+
+def : GINodeEquiv<G_BIT, AArch64bit>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
