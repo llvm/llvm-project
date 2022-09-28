@@ -76,15 +76,10 @@ uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
   return bytes_copied;
 }
 
-uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo *reg_info,
+uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo &reg_info,
                                           const void *src, uint32_t src_len,
                                           lldb::ByteOrder src_byte_order,
                                           Status &error) {
-  if (reg_info == nullptr) {
-    error.SetErrorString("invalid register info argument.");
-    return 0;
-  }
-
   // Moving from addr into a register
   //
   // Case 1: src_len == dst_len
@@ -107,12 +102,12 @@ uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo *reg_info,
     return 0;
   }
 
-  const uint32_t dst_len = reg_info->byte_size;
+  const uint32_t dst_len = reg_info.byte_size;
 
   if (src_len > dst_len) {
     error.SetErrorStringWithFormat(
         "%u bytes is too big to store in register %s (%u bytes)", src_len,
-        reg_info->name, dst_len);
+        reg_info.name, dst_len);
     return 0;
   }
 
@@ -120,7 +115,7 @@ uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo *reg_info,
   // register value
   DataExtractor src_data(src, src_len, src_byte_order, 4);
 
-  error = SetValueFromData(reg_info, src_data, 0, true);
+  error = SetValueFromData(&reg_info, src_data, 0, true);
   if (error.Fail())
     return 0;
 

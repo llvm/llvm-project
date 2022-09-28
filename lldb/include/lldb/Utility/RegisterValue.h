@@ -99,7 +99,7 @@ public:
                            uint32_t dst_len, lldb::ByteOrder dst_byte_order,
                            Status &error) const;
 
-  uint32_t SetFromMemoryData(const RegisterInfo *reg_info, const void *src,
+  uint32_t SetFromMemoryData(const RegisterInfo &reg_info, const void *src,
                              uint32_t src_len, lldb::ByteOrder src_byte_order,
                              Status &error);
 
