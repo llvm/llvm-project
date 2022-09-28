@@ -902,10 +902,10 @@ static void sortSegmentsAndSections() {
 
       if (!isecPriorities.empty()) {
         if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-          llvm::stable_sort(merged->inputs,
-                            [&](InputSection *a, InputSection *b) {
-                              return isecPriorities[a] > isecPriorities[b];
-                            });
+          llvm::stable_sort(
+              merged->inputs, [&](InputSection *a, InputSection *b) {
+                return isecPriorities.lookup(a) > isecPriorities.lookup(b);
+              });
         }
       }
     }
