@@ -24,17 +24,14 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -761,10 +758,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  legacy::PassManager Passes;
-  Passes.add(createVerifierPass());
-  Passes.add(createPrintModulePass(Out->os()));
-  Passes.run(*M.get());
+  // Check that the generated module is accepted by the verifier.
+  if (verifyModule(*M.get(), &Out->os()))
+    report_fatal_error("Broken module found, compilation aborted!");
+
+  // Output textual IR.
+  M->print(Out->os(), nullptr);
+
   Out->keep();
 
   return 0;
