@@ -371,6 +371,9 @@ def warn_cxx11_compat_decltype_auto_type_specifier : Warning<
 def ext_auto_type : Extension<
   "'__auto_type' is a GNU extension">,
   InGroup<GNUAutoType>;
+def warn_c2x_compat_typeof_type_specifier : Warning<
+  "'%select{typeof|typeof_unqual}0' is incompatible with C standards before "
+  "C2x">, InGroup<CPre2xCompat>, DefaultIgnore;
 def ext_for_range : ExtWarn<
   "range-based for loop is a C++11 extension">, InGroup<CXX11>;
 def warn_cxx98_compat_for_range : Warning<

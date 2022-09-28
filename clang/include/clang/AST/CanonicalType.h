@@ -529,7 +529,7 @@ struct CanProxyAdaptor<FunctionProtoType>
 
 template<>
 struct CanProxyAdaptor<TypeOfType> : public CanProxyBase<TypeOfType> {
-  LLVM_CLANG_CANPROXY_TYPE_ACCESSOR(getUnderlyingType)
+  LLVM_CLANG_CANPROXY_TYPE_ACCESSOR(getUnmodifiedType)
 };
 
 template<>
