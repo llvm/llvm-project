@@ -346,7 +346,11 @@ private:
   unsigned getEncodedAlign(MaybeAlign Alignment) { return encode(Alignment); }
 
   unsigned getTypeID(Type *T, const Value *V = nullptr);
-  unsigned getTypeID(Type *T, const Function *F);
+  /// getGlobalObjectValueTypeID - returns the element type for a GlobalObject
+  ///
+  /// GlobalObject types are saved by PointerTypeAnalysis as pointers to the
+  /// GlobalObject, but in the bitcode writer we need the pointer element type.
+  unsigned getGlobalObjectValueTypeID(Type *T, const GlobalObject *G);
 };
 
 } // namespace dxil
@@ -551,18 +555,30 @@ unsigned DXILBitcodeWriter::getEncodedBinaryOpcode(unsigned Opcode) {
 }
 
 unsigned DXILBitcodeWriter::getTypeID(Type *T, const Value *V) {
-  if (!T->isOpaquePointerTy())
+  if (!T->isOpaquePointerTy() &&
+      // For Constant, always check PointerMap to make sure OpaquePointer in
+      // things like constant struct/array works.
+      (!V || !isa<Constant>(V)))
     return VE.getTypeID(T);
   auto It = PointerMap.find(V);
   if (It != PointerMap.end())
     return VE.getTypeID(It->second);
+  // For Constant, return T when cannot find in PointerMap.
+  // FIXME: support ConstantPointerNull which could map to more than one
+  // TypedPointerType.
+  // See https://github.com/llvm/llvm-project/issues/57942.
+  if (V && isa<Constant>(V) && !isa<ConstantPointerNull>(V))
+    return VE.getTypeID(T);
   return VE.getTypeID(I8PtrTy);
 }
 
-unsigned DXILBitcodeWriter::getTypeID(Type *T, const Function *F) {
-  auto It = PointerMap.find(F);
-  if (It != PointerMap.end())
-    return VE.getTypeID(It->second);
+unsigned DXILBitcodeWriter::getGlobalObjectValueTypeID(Type *T,
+                                                       const GlobalObject *G) {
+  auto It = PointerMap.find(G);
+  if (It != PointerMap.end()) {
+    TypedPointerType *PtrTy = cast<TypedPointerType>(It->second);
+    return VE.getTypeID(PtrTy->getElementType());
+  }
   return VE.getTypeID(T);
 }
 
@@ -1209,7 +1225,10 @@ void DXILBitcodeWriter::writeModuleInfo() {
   };
   for (const GlobalVariable &GV : M.globals()) {
     UpdateMaxAlignment(GV.getAlign());
-    MaxGlobalType = std::max(MaxGlobalType, getTypeID(GV.getValueType(), &GV));
+    // Use getGlobalObjectValueTypeID to look up the enumerated type ID for
+    // Global Variable types.
+    MaxGlobalType = std::max(
+        MaxGlobalType, getGlobalObjectValueTypeID(GV.getValueType(), &GV));
     if (GV.hasSection()) {
       // Give section names unique ID's.
       unsigned &Entry = SectionMap[std::string(GV.getSection())];
@@ -1281,7 +1300,7 @@ void DXILBitcodeWriter::writeModuleInfo() {
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
     //             comdat]
-    Vals.push_back(getTypeID(GV.getValueType(), &GV));
+    Vals.push_back(getGlobalObjectValueTypeID(GV.getValueType(), &GV));
     Vals.push_back(
         GV.getType()->getAddressSpace() << 2 | 2 |
         (GV.isConstant() ? 1 : 0)); // HLSL Change - bitwise | was used with
@@ -1317,7 +1336,7 @@ void DXILBitcodeWriter::writeModuleInfo() {
     // FUNCTION:  [type, callingconv, isproto, linkage, paramattrs, alignment,
     //             section, visibility, gc, unnamed_addr, prologuedata,
     //             dllstorageclass, comdat, prefixdata, personalityfn]
-    Vals.push_back(getTypeID(F.getFunctionType(), &F));
+    Vals.push_back(getGlobalObjectValueTypeID(F.getFunctionType(), &F));
     Vals.push_back(F.getCallingConv());
     Vals.push_back(F.isDeclaration());
     Vals.push_back(getEncodedLinkage(F));
@@ -1971,7 +1990,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
     // If we need to switch types, do so now.
     if (V->getType() != LastTy) {
       LastTy = V->getType();
-      Record.push_back(getTypeID(LastTy));
+      Record.push_back(getTypeID(LastTy, V));
       Stream.EmitRecord(bitc::CST_CODE_SETTYPE, Record,
                         CONSTANTS_SETTYPE_ABBREV);
       Record.clear();
@@ -2106,7 +2125,8 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         if (Instruction::isCast(CE->getOpcode())) {
           Code = bitc::CST_CODE_CE_CAST;
           Record.push_back(getEncodedCastOpcode(CE->getOpcode()));
-          Record.push_back(getTypeID(C->getOperand(0)->getType()));
+          Record.push_back(
+              getTypeID(C->getOperand(0)->getType(), C->getOperand(0)));
           Record.push_back(VE.getValueID(C->getOperand(0)));
           AbbrevToUse = CONSTANTS_CE_CAST_Abbrev;
         } else {
@@ -2127,7 +2147,8 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
         Record.push_back(getTypeID(GO->getSourceElementType()));
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
-          Record.push_back(getTypeID(C->getOperand(i)->getType()));
+          Record.push_back(
+              getTypeID(C->getOperand(i)->getType(), C->getOperand(i)));
           Record.push_back(VE.getValueID(C->getOperand(i)));
         }
         break;
@@ -2529,7 +2550,7 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(VE.getAttributeListID(CI.getAttributes()));
     Vals.push_back((CI.getCallingConv() << 1) | unsigned(CI.isTailCall()) |
                    unsigned(CI.isMustTailCall()) << 14 | 1 << 15);
-    Vals.push_back(getTypeID(FTy, CI.getCalledFunction()));
+    Vals.push_back(getGlobalObjectValueTypeID(FTy, CI.getCalledFunction()));
     pushValueAndType(CI.getCalledOperand(), InstID, Vals); // Callee
 
     // Emit value #'s for the fixed parameters.
