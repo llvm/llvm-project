@@ -415,7 +415,7 @@ void Symbol::resolveUndefined(const Undefined &other) {
   // existing undefined symbol for better error message later.
   if (isPlaceholder() || (isShared() && other.visibility() != STV_DEFAULT) ||
       (isUndefined() && other.binding != STB_WEAK && other.discardedSecIdx)) {
-    replace(other);
+    other.overwrite(*this);
     return;
   }
 
@@ -607,22 +607,22 @@ void Symbol::resolveCommon(const CommonSymbol &other) {
     // files were linked into a shared object first should not change the
     // regular rule that picks the largest st_size.
     uint64_t size = s->size;
-    replace(other);
+    other.overwrite(*this);
     if (size > cast<CommonSymbol>(this)->size)
       cast<CommonSymbol>(this)->size = size;
   } else {
-    replace(other);
+    other.overwrite(*this);
   }
 }
 
 void Symbol::resolveDefined(const Defined &other) {
   if (shouldReplace(other))
-    replace(other);
+    other.overwrite(*this);
 }
 
 void Symbol::resolveLazy(const LazyObject &other) {
   if (isPlaceholder()) {
-    replace(other);
+    other.overwrite(*this);
     return;
   }
 
@@ -631,7 +631,7 @@ void Symbol::resolveLazy(const LazyObject &other) {
   if (LLVM_UNLIKELY(isCommon()) && elf::config->fortranCommon &&
       other.file->shouldExtractForCommon(getName())) {
     ctx->backwardReferences.erase(this);
-    replace(other);
+    other.overwrite(*this);
     other.extract();
     return;
   }
@@ -647,7 +647,7 @@ void Symbol::resolveLazy(const LazyObject &other) {
   // Symbols.h for the details.
   if (isWeak()) {
     uint8_t ty = type;
-    replace(other);
+    other.overwrite(*this);
     type = ty;
     binding = STB_WEAK;
     return;
@@ -661,7 +661,7 @@ void Symbol::resolveLazy(const LazyObject &other) {
 
 void Symbol::resolveShared(const SharedSymbol &other) {
   if (isPlaceholder()) {
-    replace(other);
+    other.overwrite(*this);
     return;
   }
   if (isCommon()) {
@@ -674,7 +674,7 @@ void Symbol::resolveShared(const SharedSymbol &other) {
     // An undefined symbol with non default visibility must be satisfied
     // in the same DSO.
     uint8_t bind = binding;
-    replace(other);
+    other.overwrite(*this);
     binding = bind;
   } else if (traced)
     printTraceSymbol(other, getName());
