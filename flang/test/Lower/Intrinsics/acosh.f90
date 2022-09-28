@@ -20,3 +20,20 @@ end function
 
 ! ALL-LABEL: @_QPtest_real8
 ! ALL: {{%[A-Za-z0-9._]+}} = fir.call @acosh({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+
+function test_complex4(x)
+  complex :: x, test_complex4
+  test_complex4 = acosh(x)
+end function
+
+! ALL-LABEL: @_QPtest_complex4
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cacoshf({{%[A-Za-z0-9._]+}}) : (!fir.complex<4>) -> !fir.complex<4>
+
+function test_complex8(x)
+  complex(kind=8) :: x, test_complex8
+  test_complex8 = acosh(x)
+end function
+
+! ALL-LABEL: @_QPtest_complex8
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cacosh({{%[A-Za-z0-9._]+}}) : (!fir.complex<8>) -> !fir.complex<8>
+

@@ -53,10 +53,10 @@ end subroutine
 
 ! CHECK-LABEL: private @fir.exp.z4.z4
 ! CHECK-SAME: (%[[ARG32_OUTLINE]]: !fir.complex<4>) -> !fir.complex<4>
-! CHECK: %[[RESULT32_OUTLINE]] = fir.call @__fc_exp_1(%[[ARG32_OUTLINE]]) : (!fir.complex<4>) -> !fir.complex<4>
+! CHECK: %[[RESULT32_OUTLINE]] = fir.call @cexpf(%[[ARG32_OUTLINE]]) : (!fir.complex<4>) -> !fir.complex<4>
 ! CHECK: return %[[RESULT32_OUTLINE]] : !fir.complex<4>
 
 ! CHECK-LABEL: private @fir.exp.z8.z8
 ! CHECK-SAME: (%[[ARG64_OUTLINE]]: !fir.complex<8>) -> !fir.complex<8>
-! CHECK: %[[RESULT64_OUTLINE]] = fir.call @__fz_exp_1(%[[ARG64_OUTLINE]]) : (!fir.complex<8>) -> !fir.complex<8>
+! CHECK: %[[RESULT64_OUTLINE]] = fir.call @cexp(%[[ARG64_OUTLINE]]) : (!fir.complex<8>) -> !fir.complex<8>
 ! CHECK: return %[[RESULT64_OUTLINE]] : !fir.complex<8>
