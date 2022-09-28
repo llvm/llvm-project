@@ -24,6 +24,7 @@ namespace mlir {
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
 #define GEN_PASS_DEF_SPARSETENSORCONVERSIONPASS
 #define GEN_PASS_DEF_SPARSETENSORCODEGEN
+#define GEN_PASS_DEF_SPARSEBUFFERREWRITE
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -198,6 +199,20 @@ struct SparseTensorCodegenPass
   }
 };
 
+struct SparseBufferRewritePass
+    : public impl::SparseBufferRewriteBase<SparseBufferRewritePass> {
+
+  SparseBufferRewritePass() = default;
+  SparseBufferRewritePass(const SparseBufferRewritePass &pass) = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateSparseBufferRewriting(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -240,4 +255,8 @@ std::unique_ptr<Pass> mlir::createSparseTensorConversionPass(
 
 std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {
   return std::make_unique<SparseTensorCodegenPass>();
+}
+
+std::unique_ptr<Pass> mlir::createSparseBufferRewritePass() {
+  return std::make_unique<SparseBufferRewritePass>();
 }
