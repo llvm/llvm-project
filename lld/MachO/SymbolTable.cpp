@@ -45,6 +45,21 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
   return {sym, p.second};
 }
 
+namespace {
+struct DuplicateSymbolDiag {
+  // Pair containing source location and source file
+  const std::pair<std::string, std::string> src1;
+  const std::pair<std::string, std::string> src2;
+  const Symbol *sym;
+
+  DuplicateSymbolDiag(const std::pair<std::string, std::string> src1,
+                      const std::pair<std::string, std::string> src2,
+                      const Symbol *sym)
+      : src1(src1), src2(src2), sym(sym) {}
+};
+SmallVector<DuplicateSymbolDiag> dupSymDiags;
+} // namespace
+
 Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
@@ -80,17 +95,13 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
         }
       } else {
-        std::string src1 = defined->getSourceLocation();
-        std::string src2 = isec ? isec->getSourceLocation(value) : "";
+        std::string srcLoc1 = defined->getSourceLocation();
+        std::string srcLoc2 = isec ? isec->getSourceLocation(value) : "";
+        std::string srcFile1 = toString(defined->getFile());
+        std::string srcFile2 = toString(file);
 
-        std::string message =
-            "duplicate symbol: " + toString(*defined) + "\n>>> defined in ";
-        if (!src1.empty())
-          message += src1 + "\n>>>            ";
-        message += toString(defined->getFile()) + "\n>>> defined in ";
-        if (!src2.empty())
-          message += src2 + "\n>>>            ";
-        error(message + toString(file));
+        dupSymDiags.push_back({make_pair(srcLoc1, srcFile1),
+                               make_pair(srcLoc2, srcFile2), defined});
       }
 
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -364,6 +375,21 @@ struct UndefinedDiag {
 };
 
 MapVector<const Undefined *, UndefinedDiag> undefs;
+}
+
+void macho::reportPendingDuplicateSymbols() {
+  for (const auto &duplicate : dupSymDiags) {
+    if (!config->deadStripDuplicates || duplicate.sym->isLive()) {
+      std::string message =
+          "duplicate symbol: " + toString(*duplicate.sym) + "\n>>> defined in ";
+      if (!duplicate.src1.first.empty())
+        message += duplicate.src1.first + "\n>>>            ";
+      message += duplicate.src1.second + "\n>>> defined in ";
+      if (!duplicate.src2.first.empty())
+        message += duplicate.src2.first + "\n>>>            ";
+      error(message + duplicate.src2.second);
+    }
+  }
 }
 
 void macho::reportPendingUndefinedSymbols() {
