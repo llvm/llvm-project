@@ -13,7 +13,7 @@
 
 namespace mlir {
 
-#define GEN_PASS_DECL_TENSORBUFFERIZE
+#define GEN_PASS_DECL
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 
 /// Creates an instance of `tensor` dialect bufferization pass.

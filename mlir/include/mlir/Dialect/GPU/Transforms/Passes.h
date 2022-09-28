@@ -27,10 +27,7 @@ namespace func {
 class FuncOp;
 } // namespace func
 
-#define GEN_PASS_DECL_GPULAUNCHSINKINDEXCOMPUTATIONS
-#define GEN_PASS_DECL_GPUKERNELOUTLINING
-#define GEN_PASS_DECL_GPUASYNCREGION
-#define GEN_PASS_DECL_GPUMAPPARALLELLOOPS
+#define GEN_PASS_DECL
 #include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
 
 /// Pass that moves ops which are likely an index computation into gpu.launch
