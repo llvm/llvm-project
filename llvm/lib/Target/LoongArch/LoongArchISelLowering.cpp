@@ -1965,6 +1965,16 @@ bool LoongArchTargetLowering::isFMAFasterThanFMulAndFAdd(
   return false;
 }
 
+Register LoongArchTargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  return LoongArch::R4;
+}
+
+Register LoongArchTargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  return LoongArch::R5;
+}
+
 //===----------------------------------------------------------------------===//
 //                           LoongArch Inline Assembly Support
 //===----------------------------------------------------------------------===//
