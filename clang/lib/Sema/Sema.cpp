@@ -46,6 +46,7 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -2683,4 +2684,27 @@ Sema::FPFeaturesStateRAII::~FPFeaturesStateRAII() {
   S.CurFPFeatures = OldFPFeaturesState;
   S.FpPragmaStack.CurrentValue = OldOverrides;
   S.PP.setCurrentFPEvalMethod(OldFPPragmaLocation, OldEvalMethod);
+}
+
+bool Sema::isDeclaratorFunctionLike(Declarator &D) {
+  assert(D.getCXXScopeSpec().isSet() &&
+         "can only be called for qualified names");
+
+  auto LR = LookupResult(*this, D.getIdentifier(), D.getBeginLoc(),
+                         LookupOrdinaryName, forRedeclarationInCurContext());
+  DeclContext *DC = computeDeclContext(D.getCXXScopeSpec(),
+                                       !D.getDeclSpec().isFriendSpecified());
+  if (!DC)
+    return false;
+
+  LookupQualifiedName(LR, DC);
+  bool Result = std::all_of(LR.begin(), LR.end(), [](Decl *Dcl) {
+    if (NamedDecl *ND = dyn_cast<NamedDecl>(Dcl)) {
+      ND = ND->getUnderlyingDecl();
+      return isa<FunctionDecl>(ND) || isa<FunctionTemplateDecl>(ND) ||
+             isa<UsingDecl>(ND);
+    }
+    return false;
+  });
+  return Result;
 }

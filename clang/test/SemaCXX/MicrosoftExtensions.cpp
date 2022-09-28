@@ -594,7 +594,7 @@ typedef char __unaligned *aligned_type; // expected-error {{expected ';' after t
 
 namespace PR32750 {
 template<typename T> struct A {};
-template<typename T> struct B : A<A<T>> { A<T>::C::D d; }; // expected-error {{missing 'typename' prior to dependent type name 'A<T>::C::D'}}
+template<typename T> struct B : A<A<T>> { A<T>::C::D d; }; // expected-warning {{implicit 'typename' is a C++20 extension}}
 }
 
 #else

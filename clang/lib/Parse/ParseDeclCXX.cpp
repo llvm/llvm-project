@@ -1273,7 +1273,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   if (Tok.is(tok::annot_template_id)) {
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     if (TemplateId->mightBeType()) {
-      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/ true);
+      AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::No,
+                                    /*IsClassName=*/true);
 
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       TypeResult Type = getTypeAnnotation(Tok);
@@ -1315,7 +1316,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
       return true;
     if (Tok.is(tok::annot_template_id) &&
         takeTemplateIdAnnotation(Tok)->mightBeType())
-      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/ true);
+      AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::No,
+                                    /*IsClassName=*/true);
 
     // If we didn't end up with a typename token, there's nothing more we
     // can do.
@@ -1336,7 +1338,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
       *Id, IdLoc, getCurScope(), &SS, /*isClassName=*/true, false, nullptr,
       /*IsCtorOrDtorName=*/false,
       /*WantNontrivialTypeSourceInfo=*/true,
-      /*IsClassTemplateDeductionContext*/ false, &CorrectedII);
+      /*IsClassTemplateDeductionContext=*/false, ImplicitTypenameContext::No,
+      &CorrectedII);
   if (!Type) {
     Diag(IdLoc, diag::err_expected_class_name);
     return true;
@@ -3763,7 +3766,8 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
                                            ? takeTemplateIdAnnotation(Tok)
                                            : nullptr;
     if (TemplateId && TemplateId->mightBeType()) {
-      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/ true);
+      AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::No,
+                                    /*IsClassName=*/true);
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       TemplateTypeTy = getTypeAnnotation(Tok);
       ConsumeAnnotationToken();
