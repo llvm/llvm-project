@@ -1217,7 +1217,7 @@ bool EmulateInstructionMIPS64::Emulate_LD(llvm::MCInst &insn) {
     Context context;
     context.type = eContextRegisterLoad;
 
-    return WriteRegister(context, &(*reg_info_src), data_src);
+    return WriteRegister(context, *reg_info_src, data_src);
   }
 
   return false;
