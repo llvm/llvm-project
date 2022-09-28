@@ -1480,6 +1480,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->dedupLiterals =
       args.hasFlag(OPT_deduplicate_literals, OPT_icf_eq, false) ||
       config->icfLevel != ICFLevel::none;
+  config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
   config->ignoreOptimizationHints = args.hasArg(OPT_ignore_optimization_hints);
