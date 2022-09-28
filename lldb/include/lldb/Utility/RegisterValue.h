@@ -95,7 +95,7 @@ public:
   // value, or pad the destination with zeroes if the register byte size is
   // shorter that "dst_len" (all while correctly abiding the "dst_byte_order").
   // Returns the number of bytes copied into "dst".
-  uint32_t GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
+  uint32_t GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
                            uint32_t dst_len, lldb::ByteOrder dst_byte_order,
                            Status &error) const;
 

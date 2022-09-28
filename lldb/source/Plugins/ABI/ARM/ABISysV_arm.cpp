@@ -1693,7 +1693,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       if ((data_offset + vfp_byte_size) <= data_sp->GetByteSize()) {
         Status error;
         const size_t bytes_copied = reg_value.GetAsMemoryData(
-            reg_info, data_sp->GetBytes() + data_offset, vfp_byte_size,
+            *reg_info, data_sp->GetBytes() + data_offset, vfp_byte_size,
             byte_order, error);
         if (bytes_copied != vfp_byte_size)
           break;

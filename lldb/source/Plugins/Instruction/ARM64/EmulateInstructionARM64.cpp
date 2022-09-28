@@ -827,7 +827,7 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     if (!ReadRegister(*reg_info_Rt, data_Rt))
       return false;
 
-    if (data_Rt.GetAsMemoryData(&(*reg_info_Rt), buffer, reg_info_Rt->byte_size,
+    if (data_Rt.GetAsMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
                                 eByteOrderLittle, error) == 0)
       return false;
 
@@ -837,9 +837,8 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     if (!ReadRegister(*reg_info_Rt2, data_Rt2))
       return false;
 
-    if (data_Rt2.GetAsMemoryData(&(*reg_info_Rt2), buffer,
-                                 reg_info_Rt2->byte_size, eByteOrderLittle,
-                                 error) == 0)
+    if (data_Rt2.GetAsMemoryData(*reg_info_Rt2, buffer, reg_info_Rt2->byte_size,
+                                 eByteOrderLittle, error) == 0)
       return false;
 
     if (!WriteMemory(context_t2, address + size, buffer,
@@ -998,7 +997,7 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
     if (!ReadRegister(*reg_info_Rt, data_Rt))
       return false;
 
-    if (data_Rt.GetAsMemoryData(&(*reg_info_Rt), buffer, reg_info_Rt->byte_size,
+    if (data_Rt.GetAsMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
                                 eByteOrderLittle, error) == 0)
       return false;
 
