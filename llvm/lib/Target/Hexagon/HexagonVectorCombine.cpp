@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <deque>
 #include <map>
+#include <optional>
 #include <set>
 #include <utility>
 #include <vector>
@@ -74,7 +75,7 @@ public:
   // Create a ConstantInt of type returned by getIntTy with the value Val.
   ConstantInt *getConstInt(int Val) const;
   // Get the integer value of V, if it exists.
-  Optional<APInt> getIntValue(const Value *Val) const;
+  std::optional<APInt> getIntValue(const Value *Val) const;
   // Is V a constant 0, or a vector of 0s?
   bool isZero(const Value *Val) const;
   // Is V an undef value?
@@ -106,7 +107,7 @@ public:
   Value *createHvxIntrinsic(IRBuilder<> &Builder, Intrinsic::ID IntID,
                             Type *RetTy, ArrayRef<Value *> Args) const;
 
-  Optional<int> calculatePointerDifference(Value *Ptr0, Value *Ptr1) const;
+  std::optional<int> calculatePointerDifference(Value *Ptr0, Value *Ptr1) const;
 
   template <typename T = std::vector<Instruction *>>
   bool isSafeToMoveBeforeInBB(const Instruction &In,
@@ -222,8 +223,8 @@ private:
   };
 
   Align getAlignFromValue(const Value *V) const;
-  Optional<MemoryLocation> getLocation(const Instruction &In) const;
-  Optional<AddrInfo> getAddrInfo(Instruction &In) const;
+  std::optional<MemoryLocation> getLocation(const Instruction &In) const;
+  std::optional<AddrInfo> getAddrInfo(Instruction &In) const;
   bool isHvx(const AddrInfo &AI) const;
   // This function is only used for assertions at the moment.
   [[maybe_unused]] bool isSectorTy(Type *Ty) const;
@@ -378,7 +379,8 @@ auto AlignVectors::getAlignFromValue(const Value *V) const -> Align {
   return C->getAlignValue();
 }
 
-auto AlignVectors::getAddrInfo(Instruction &In) const -> Optional<AddrInfo> {
+auto AlignVectors::getAddrInfo(Instruction &In) const
+    -> std::optional<AddrInfo> {
   if (auto *L = isCandidate<LoadInst>(&In))
     return AddrInfo(HVC, L, L->getPointerOperand(), L->getType(),
                     L->getAlign());
@@ -397,7 +399,7 @@ auto AlignVectors::getAddrInfo(Instruction &In) const -> Optional<AddrInfo> {
                       getAlignFromValue(II->getArgOperand(2)));
     }
   }
-  return Optional<AddrInfo>();
+  return std::nullopt;
 }
 
 auto AlignVectors::isHvx(const AddrInfo &AI) const -> bool {
@@ -977,10 +979,10 @@ auto HexagonVectorCombine::isZero(const Value *Val) const -> bool {
 }
 
 auto HexagonVectorCombine::getIntValue(const Value *Val) const
-    -> Optional<APInt> {
+    -> std::optional<APInt> {
   if (auto *CI = dyn_cast<ConstantInt>(Val))
     return CI->getValue();
-  return None;
+  return std::nullopt;
 }
 
 auto HexagonVectorCombine::isUndef(const Value *Val) const -> bool {
@@ -1308,7 +1310,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
 
 auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
                                                       Value *Ptr1) const
-    -> Optional<int> {
+    -> std::optional<int> {
   struct Builder : IRBuilder<> {
     Builder(BasicBlock *B) : IRBuilder<>(B) {}
     ~Builder() {
@@ -1344,19 +1346,19 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
   Ptr0 = StripBitCast(Ptr0);
   Ptr1 = StripBitCast(Ptr1);
   if (!isa<GetElementPtrInst>(Ptr0) || !isa<GetElementPtrInst>(Ptr1))
-    return None;
+    return std::nullopt;
 
   auto *Gep0 = cast<GetElementPtrInst>(Ptr0);
   auto *Gep1 = cast<GetElementPtrInst>(Ptr1);
   if (Gep0->getPointerOperand() != Gep1->getPointerOperand())
-    return None;
+    return std::nullopt;
 
   Builder B(Gep0->getParent());
   int Scale = getSizeOf(Gep0->getSourceElementType(), Alloc);
 
   // FIXME: for now only check GEPs with a single index.
   if (Gep0->getNumOperands() != 2 || Gep1->getNumOperands() != 2)
-    return None;
+    return std::nullopt;
 
   Value *Idx0 = Gep0->getOperand(1);
   Value *Idx1 = Gep1->getOperand(1);
@@ -1370,7 +1372,7 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
   KnownBits Known1 = computeKnownBits(Idx1, DL, 0, &AC, Gep1, &DT);
   APInt Unknown = ~(Known0.Zero | Known0.One) | ~(Known1.Zero | Known1.One);
   if (Unknown.isAllOnes())
-    return None;
+    return std::nullopt;
 
   Value *MaskU = ConstantInt::get(Idx0->getType(), Unknown);
   Value *AndU0 = Simplify(CallBuilder(B, CreateAnd(Idx0, MaskU)));
@@ -1380,7 +1382,7 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
   if (auto *C = dyn_cast<ConstantInt>(SubU)) {
     Diff0 = C->getSExtValue();
   } else {
-    return None;
+    return std::nullopt;
   }
 
   Value *MaskK = ConstantInt::get(MaskU->getType(), ~Unknown);
@@ -1391,7 +1393,7 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
   if (auto *C = dyn_cast<ConstantInt>(SubK)) {
     Diff1 = C->getSExtValue();
   } else {
-    return None;
+    return std::nullopt;
   }
 
   return (Diff0 + Diff1) * Scale;
