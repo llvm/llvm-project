@@ -869,6 +869,26 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
     llvm::cantFail(entry.getOrdinal(ordinal));
     symbol.SetID(ordinal);
 
+    bool is_forwarder;
+    llvm::cantFail(entry.isForwarder(is_forwarder));
+    if (is_forwarder) {
+      // Forwarder exports are redirected by the loader transparently, but keep
+      // it in symtab and make a note using the symbol name.
+      llvm::StringRef forwarder_name;
+      if (auto err = entry.getForwardTo(forwarder_name)) {
+        LLDB_LOG(log,
+                 "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+                 "forwarder name of forwarder export '{0}': {1}",
+                 sym_name, llvm::fmt_consume(std::move(err)));
+        continue;
+      }
+      llvm::SmallString<256> new_name = {symbol.GetDisplayName().GetStringRef(),
+                                         " (forwarded to ", forwarder_name,
+                                         ")"};
+      symbol.GetMangled().SetDemangledName(ConstString(new_name.str()));
+      symbol.SetDemangledNameIsSynthesized(true);
+    }
+
     uint32_t function_rva;
     if (auto err = entry.getExportRVA(function_rva)) {
       LLDB_LOG(log,
@@ -886,9 +906,10 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
     // An exported symbol may be either code or data. Guess by checking whether
     // the section containing the symbol is executable.
     symbol.SetType(lldb::eSymbolTypeData);
-    if (auto section_sp = symbol.GetAddressRef().GetSection())
-      if (section_sp->GetPermissions() & ePermissionsExecutable)
-        symbol.SetType(lldb::eSymbolTypeCode);
+    if (!is_forwarder)
+      if (auto section_sp = symbol.GetAddressRef().GetSection())
+        if (section_sp->GetPermissions() & ePermissionsExecutable)
+          symbol.SetType(lldb::eSymbolTypeCode);
     symbol.SetExternal(true);
     uint32_t idx = symtab.AddSymbol(symbol);
     export_list.push_back(std::make_pair(function_rva, idx));
