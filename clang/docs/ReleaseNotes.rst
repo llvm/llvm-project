@@ -99,6 +99,9 @@ Major New Features
 
 Bug Fixes
 ---------
+- Correct ``_Static_assert`` to accept the same set of extended integer
+  constant expressions as is accpted in other contexts that accept them.
+  This fixes `Issue 57687 <https://github.com/llvm/llvm-project/issues/57687>`_.
 - Fixes an accepts-invalid bug in C when using a ``_Noreturn`` function
   specifier on something other than a function declaration. This fixes
   `Issue 56800 <https://github.com/llvm/llvm-project/issues/56800>`_.
