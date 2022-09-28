@@ -4,7 +4,7 @@
 program p
   ! CHECK-DAG: [[I:%[0-9]+]] = fir.alloca i32 {{{.*}}uniq_name = "_QFEi"}
   ! CHECK-DAG: [[N:%[0-9]+]] = fir.alloca i32 {{{.*}}uniq_name = "_QFEn"}
-  ! CHECK: [[T:%[0-9]+]] = fir.address_of(@_QFEt) : !fir.ref<!fir.array<3xi32>>
+  ! CHECK: [[T:%[0-9]+]] = fir.alloca !fir.array<3xi32> {bindc_name = "t", uniq_name = "_QFEt"}
   integer :: n, foo, t(3)
   ! CHECK: [[N]]
   ! CHECK-COUNT-3: fir.coordinate_of [[T]]
