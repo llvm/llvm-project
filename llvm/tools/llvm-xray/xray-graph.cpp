@@ -17,6 +17,8 @@
 #include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/XRay/Trace.h"
 
+#include <cmath>
+
 using namespace llvm;
 using namespace llvm::xray;
 
