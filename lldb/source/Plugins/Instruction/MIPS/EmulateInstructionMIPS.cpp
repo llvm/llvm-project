@@ -1321,7 +1321,7 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(address);
 
-    return WriteRegister(context, &(*reg_info_src), data_src);
+    return WriteRegister(context, *reg_info_src, data_src);
   }
 
   return false;
@@ -1661,7 +1661,7 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address);
 
-    return WriteRegister(context, &(*reg_info_src), data_src);
+    return WriteRegister(context, *reg_info_src, data_src);
   }
 
   return false;
@@ -1723,7 +1723,7 @@ bool EmulateInstructionMIPS::Emulate_LWM16_32(llvm::MCInst &insn) {
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address + (i * 4));
 
-    if (!WriteRegister(context, &(*reg_info_dst), data_dst))
+    if (!WriteRegister(context, *reg_info_dst, data_dst))
       return false;
   }
 

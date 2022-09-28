@@ -2713,7 +2713,7 @@ bool EmulateInstructionARM::EmulateVPOP(const uint32_t opcode,
       data = MemARead(context, addr, reg_byte_size, 0, &success);
       if (!success)
         return false;
-      if (!WriteRegisterUnsigned(context, &(*dwarf_reg), data))
+      if (!WriteRegisterUnsigned(context, *dwarf_reg, data))
         return false;
       addr += reg_byte_size;
     }
