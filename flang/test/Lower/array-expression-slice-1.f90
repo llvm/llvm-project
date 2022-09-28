@@ -18,10 +18,10 @@
 ! CHECK-DAG:         %[[VAL_23:.*]] = arith.constant 1 : i32
 ! CHECK-DAG:         %[[VAL_24:.*]] = arith.constant 0 : i32
 ! CHECK-DAG:         %[[VAL_25:.*]] = fir.address_of(@_QFEa1) : !fir.ref<!fir.array<10x10xf32>>
-! CHECK-DAG:         %[[VAL_26:.*]] = fir.address_of(@_QFEa2) : !fir.ref<!fir.array<3xf32>>
+! CHECK-DAG:         %[[VAL_26:.*]] = fir.alloca !fir.array<3xf32> {bindc_name = "a2", uniq_name = "_QFEa2"}
 ! CHECK-DAG:         %[[VAL_27:.*]] = fir.address_of(@_QFEa3) : !fir.ref<!fir.array<10xf32>>
 ! CHECK-DAG:         %[[VAL_28:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
-! CHECK-DAG:         %[[VAL_29:.*]] = fir.address_of(@_QFEiv) : !fir.ref<!fir.array<3xi32>>
+! CHECK-DAG:         %[[VAL_29:.*]] = fir.alloca !fir.array<3xi32> {bindc_name = "iv", uniq_name = "_QFEiv"}
 ! CHECK-DAG:         %[[VAL_30:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFEj"}
 ! CHECK-DAG:         %[[VAL_31:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFEk"}
 ! CHECK:         fir.store %[[VAL_24]] to %[[VAL_31]] : !fir.ref<i32>

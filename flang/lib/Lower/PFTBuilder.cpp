@@ -24,19 +24,6 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
     "no-structured-fir", llvm::cl::desc("disable generation of structured FIR"),
     llvm::cl::init(false), llvm::cl::Hidden);
 
-static llvm::cl::opt<bool> nonRecursiveProcedures(
-    "non-recursive-procedures",
-    llvm::cl::desc("Make procedures non-recursive by default. This was the "
-                   "default for all Fortran standards prior to 2018."),
-    llvm::cl::init(/*2018 standard=*/false));
-
-static llvm::cl::opt<bool> mainProgramGlobals(
-    "main-program-globals",
-    llvm::cl::desc(
-        "Allocate all variables in the main program as global variables and "
-        "not on the stack regardless of type, kind, and rank."),
-    llvm::cl::init(/*2018 standard=*/false), llvm::cl::Hidden);
-
 using namespace Fortran;
 
 namespace {
@@ -1268,40 +1255,8 @@ bool Fortran::lower::definedInCommonBlock(const semantics::Symbol &sym) {
   return semantics::FindCommonBlockContaining(sym);
 }
 
-static bool isReentrant(const Fortran::semantics::Scope &scope) {
-  if (scope.kind() == Fortran::semantics::Scope::Kind::MainProgram)
-    return false;
-  if (scope.kind() == Fortran::semantics::Scope::Kind::Subprogram) {
-    const Fortran::semantics::Symbol *sym = scope.symbol();
-    assert(sym && "Subprogram scope must have a symbol");
-    return sym->attrs().test(semantics::Attr::RECURSIVE) ||
-           (!sym->attrs().test(semantics::Attr::NON_RECURSIVE) &&
-            Fortran::lower::defaultRecursiveFunctionSetting());
-  }
-  if (scope.kind() == Fortran::semantics::Scope::Kind::Module)
-    return false;
-  return true;
-}
-
 /// Is the symbol `sym` a global?
 bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
-  if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->init())
-      return true;
-    if (!isReentrant(sym.owner())) {
-      // Turn array and character of non re-entrant programs (like the main
-      // program) into global memory.
-      if (const Fortran::semantics::DeclTypeSpec *symTy = sym.GetType())
-        if (symTy->category() == semantics::DeclTypeSpec::Character)
-          if (auto e = symTy->characterTypeSpec().length().GetExplicit())
-            return true;
-      if (!details->shape().empty() || !details->coshape().empty())
-        return true;
-    }
-    if (mainProgramGlobals &&
-        sym.owner().kind() == Fortran::semantics::Scope::Kind::MainProgram)
-      return true;
-  }
   return semantics::IsSaved(sym) || lower::definedInCommonBlock(sym) ||
          semantics::IsNamedConstant(sym);
 }
@@ -1693,14 +1648,6 @@ Fortran::lower::createPFT(const parser::Program &root,
   PFTBuilder walker(semanticsContext);
   Walk(root, walker);
   return walker.result();
-}
-
-// FIXME: FlangDriver
-// This option should be integrated with the real driver as the default of
-// RECURSIVE vs. NON_RECURSIVE may be changed by other command line options,
-// etc., etc.
-bool Fortran::lower::defaultRecursiveFunctionSetting() {
-  return !nonRecursiveProcedures;
 }
 
 void Fortran::lower::dumpPFT(llvm::raw_ostream &outputStream,
