@@ -330,6 +330,7 @@ def generate_html_report(di_location_bugs, di_subprogram_bugs, di_var_bugs, \
 def get_json(file):
   json_parsed = None
   di_checker_data = []
+  skipped_lines = 0
 
   # The file contains json object per line.
   # An example of the line (formatted json):
@@ -356,11 +357,11 @@ def get_json(file):
       try:
         json_object = loads(json_object_line)
       except:
-        print ("error: No valid di-checker data found.")
-        sys.exit(1)
-      di_checker_data.append(json_object)
+        skipped_lines += 1
+      else:
+        di_checker_data.append(json_object)
 
-  return di_checker_data
+  return (di_checker_data, skipped_lines)
 
 # Parse the program arguments.
 def parse_program_args(parser):
@@ -377,7 +378,7 @@ def Main():
     print ("error: The output file must be '.html'.")
     sys.exit(1)
 
-  debug_info_bugs = get_json(opts.file_name)
+  (debug_info_bugs, skipped_lines) = get_json(opts.file_name)
 
   # Use the defaultdict in order to make multidim dicts.
   di_location_bugs = defaultdict(lambda: defaultdict(dict))
@@ -389,24 +390,37 @@ def Main():
   di_sp_bugs_summary = OrderedDict()
   di_var_bugs_summary = OrderedDict()
 
+  skipped_bugs = 0
   # Map the bugs into the file-pass pairs.
   for bugs_per_pass in debug_info_bugs:
-    bugs_file = bugs_per_pass["file"]
-    bugs_pass = bugs_per_pass["pass"]
-
-    bugs = bugs_per_pass["bugs"][0]
+    try:
+      bugs_file = bugs_per_pass["file"]
+      bugs_pass = bugs_per_pass["pass"]
+      bugs = bugs_per_pass["bugs"][0]
+    except:
+      skipped_lines += 1
+      continue
 
     di_loc_bugs = []
     di_sp_bugs = []
     di_var_bugs = []
 
     for bug in bugs:
-      bugs_metadata = bug["metadata"]
+      try:
+        bugs_metadata = bug["metadata"]
+      except:
+        skipped_bugs += 1
+        continue
+
       if bugs_metadata == "DILocation":
-        action = bug["action"]
-        bb_name = bug["bb-name"]
-        fn_name = bug["fn-name"]
-        instr = bug["instr"]
+        try:
+          action = bug["action"]
+          bb_name = bug["bb-name"]
+          fn_name = bug["fn-name"]
+          instr = bug["instr"]
+        except:
+          skipped_bugs += 1
+          continue
         di_loc_bugs.append(DILocBug(action, bb_name, fn_name, instr))
 
         # Fill the summary dict.
@@ -415,8 +429,12 @@ def Main():
         else:
           di_location_bugs_summary[bugs_pass] = 1
       elif bugs_metadata == "DISubprogram":
-        action = bug["action"]
-        name = bug["name"]
+        try:
+          action = bug["action"]
+          name = bug["name"]
+        except:
+          skipped_bugs += 1
+          continue
         di_sp_bugs.append(DISPBug(action, name))
 
         # Fill the summary dict.
@@ -425,9 +443,13 @@ def Main():
         else:
           di_sp_bugs_summary[bugs_pass] = 1
       elif bugs_metadata == "dbg-var-intrinsic":
-        action = bug["action"]
-        fn_name = bug["fn-name"]
-        name = bug["name"]
+        try:
+          action = bug["action"]
+          fn_name = bug["fn-name"]
+          name = bug["name"]
+        except:
+          skipped_bugs += 1
+          continue
         di_var_bugs.append(DIVarBug(action, name, fn_name))
 
         # Fill the summary dict.
@@ -436,8 +458,9 @@ def Main():
         else:
           di_var_bugs_summary[bugs_pass] = 1
       else:
-        print ("error: Unsupported metadata.")
-        sys.exit(1)
+        # Unsupported metadata.
+        skipped_bugs += 1
+        continue
 
     di_location_bugs[bugs_file][bugs_pass] = di_loc_bugs
     di_subprogram_bugs[bugs_file][bugs_pass] = di_sp_bugs
@@ -446,6 +469,11 @@ def Main():
   generate_html_report(di_location_bugs, di_subprogram_bugs, di_variable_bugs, \
                        di_location_bugs_summary, di_sp_bugs_summary, \
                        di_var_bugs_summary, opts.html_file)
+
+  if skipped_lines > 0:
+    print ("Skipped lines: " + str(skipped_lines))
+  if skipped_bugs > 0:
+    print ("Skipped bugs: " + str(skipped_bugs))
 
 if __name__ == "__main__":
   Main()
