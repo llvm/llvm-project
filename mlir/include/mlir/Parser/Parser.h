@@ -37,38 +37,48 @@ namespace detail {
 template <typename ContainerOpT>
 inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
     Block *parsedBlock, MLIRContext *context, Location sourceFileLoc) {
-  static_assert(
-      ContainerOpT::template hasTrait<OpTrait::OneRegion>() &&
-          (ContainerOpT::template hasTrait<OpTrait::NoTerminator>() ||
-           OpTrait::template hasSingleBlockImplicitTerminator<
-               ContainerOpT>::value),
-      "Expected `ContainerOpT` to have a single region with a single "
-      "block that has an implicit terminator or does not require one");
 
   // Check to see if we parsed a single instance of this operation.
   if (llvm::hasSingleElement(*parsedBlock)) {
-    if (ContainerOpT op = dyn_cast<ContainerOpT>(parsedBlock->front())) {
+    if (ContainerOpT op = dyn_cast<ContainerOpT>(&parsedBlock->front())) {
       op->remove();
       return op;
     }
   }
 
-  // If not, then build a new one to contain the parsed operations.
-  OpBuilder builder(context);
-  ContainerOpT op = builder.create<ContainerOpT>(sourceFileLoc);
-  OwningOpRef<ContainerOpT> opRef(op);
-  assert(op->getNumRegions() == 1 && llvm::hasSingleElement(op->getRegion(0)) &&
-         "expected generated operation to have a single region with a single "
-         "block");
-  Block *opBlock = &op->getRegion(0).front();
-  opBlock->getOperations().splice(opBlock->begin(),
-                                  parsedBlock->getOperations());
+  // If not, then build a new top-level op if a concrete operation type was
+  // specified.
+  if constexpr (std::is_same_v<ContainerOpT, Operation *>) {
+    return emitError(sourceFileLoc)
+               << "source must contain a single top-level operation, found: "
+               << parsedBlock->getOperations().size(),
+           nullptr;
+  } else {
+    static_assert(
+        ContainerOpT::template hasTrait<OpTrait::OneRegion>() &&
+            (ContainerOpT::template hasTrait<OpTrait::NoTerminator>() ||
+             OpTrait::template hasSingleBlockImplicitTerminator<
+                 ContainerOpT>::value),
+        "Expected `ContainerOpT` to have a single region with a single "
+        "block that has an implicit terminator or does not require one");
 
-  // After splicing, verify just this operation to ensure it can properly
-  // contain the operations inside of it.
-  if (failed(op.verifyInvariants()))
-    return OwningOpRef<ContainerOpT>();
-  return opRef;
+    OpBuilder builder(context);
+    ContainerOpT op = builder.create<ContainerOpT>(sourceFileLoc);
+    OwningOpRef<ContainerOpT> opRef(op);
+    assert(op->getNumRegions() == 1 &&
+           llvm::hasSingleElement(op->getRegion(0)) &&
+           "expected generated operation to have a single region with a single "
+           "block");
+    Block *opBlock = &op->getRegion(0).front();
+    opBlock->getOperations().splice(opBlock->begin(),
+                                    parsedBlock->getOperations());
+
+    // After splicing, verify just this operation to ensure it can properly
+    // contain the operations inside of it.
+    if (failed(op.verifyInvariants()))
+      return OwningOpRef<ContainerOpT>();
+    return opRef;
+  }
 }
 } // namespace detail
 
@@ -141,7 +151,7 @@ inline OwningOpRef<ContainerOpT> parseSourceFile(const ParserConfig &config,
 /// failure is returned. `ContainerOpT` is required to have a single region
 /// containing a single block, and must implement the
 /// `SingleBlockImplicitTerminator` trait.
-template <typename ContainerOpT>
+template <typename ContainerOpT = Operation *>
 inline OwningOpRef<ContainerOpT>
 parseSourceFile(const llvm::SourceMgr &sourceMgr, const ParserConfig &config) {
   return detail::parseSourceFile<ContainerOpT>(config, sourceMgr);
@@ -155,7 +165,7 @@ parseSourceFile(const llvm::SourceMgr &sourceMgr, const ParserConfig &config) {
 /// failure is returned. `ContainerOpT` is required to have a single region
 /// containing a single block, and must implement the
 /// `SingleBlockImplicitTerminator` trait.
-template <typename ContainerOpT>
+template <typename ContainerOpT = Operation *>
 inline OwningOpRef<ContainerOpT> parseSourceFile(StringRef filename,
                                                  const ParserConfig &config) {
   return detail::parseSourceFile<ContainerOpT>(config, filename);
@@ -169,7 +179,7 @@ inline OwningOpRef<ContainerOpT> parseSourceFile(StringRef filename,
 /// registered in the context, and failure is returned. `ContainerOpT` is
 /// required to have a single region containing a single block, and must
 /// implement the `SingleBlockImplicitTerminator` trait.
-template <typename ContainerOpT>
+template <typename ContainerOpT = Operation *>
 inline OwningOpRef<ContainerOpT> parseSourceFile(llvm::StringRef filename,
                                                  llvm::SourceMgr &sourceMgr,
                                                  const ParserConfig &config) {
@@ -184,7 +194,7 @@ inline OwningOpRef<ContainerOpT> parseSourceFile(llvm::StringRef filename,
 /// failure is returned. `ContainerOpT` is required to have a single region
 /// containing a single block, and must implement the
 /// `SingleBlockImplicitTerminator` trait.
-template <typename ContainerOpT>
+template <typename ContainerOpT = Operation *>
 inline OwningOpRef<ContainerOpT> parseSourceString(llvm::StringRef sourceStr,
                                                    const ParserConfig &config) {
   LocationAttr sourceFileLoc;
