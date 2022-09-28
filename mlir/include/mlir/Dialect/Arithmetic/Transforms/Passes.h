@@ -14,10 +14,7 @@
 namespace mlir {
 namespace arith {
 
-#define GEN_PASS_DECL_ARITHMETICBUFFERIZE
-#define GEN_PASS_DECL_ARITHMETICEMULATEWIDEINT
-#define GEN_PASS_DECL_ARITHMETICEXPANDOPS
-#define GEN_PASS_DECL_ARITHMETICUNSIGNEDWHENEQUIVALENT
+#define GEN_PASS_DECL
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h.inc"
 
 class WideIntEmulationConverter;
