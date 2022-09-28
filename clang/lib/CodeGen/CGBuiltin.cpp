@@ -9538,32 +9538,32 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                               "cls");
   }
 
-  if (BuiltinID == clang::AArch64::BI__builtin_arm_frint32zf ||
-      BuiltinID == clang::AArch64::BI__builtin_arm_frint32z) {
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_rint32zf ||
+      BuiltinID == clang::AArch64::BI__builtin_arm_rint32z) {
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     llvm::Type *Ty = Arg->getType();
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_frint32z, Ty),
                               Arg, "frint32z");
   }
 
-  if (BuiltinID == clang::AArch64::BI__builtin_arm_frint64zf ||
-      BuiltinID == clang::AArch64::BI__builtin_arm_frint64z) {
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_rint64zf ||
+      BuiltinID == clang::AArch64::BI__builtin_arm_rint64z) {
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     llvm::Type *Ty = Arg->getType();
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_frint64z, Ty),
                               Arg, "frint64z");
   }
 
-  if (BuiltinID == clang::AArch64::BI__builtin_arm_frint32xf ||
-      BuiltinID == clang::AArch64::BI__builtin_arm_frint32x) {
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_rint32xf ||
+      BuiltinID == clang::AArch64::BI__builtin_arm_rint32x) {
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     llvm::Type *Ty = Arg->getType();
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_frint32x, Ty),
                               Arg, "frint32x");
   }
 
-  if (BuiltinID == clang::AArch64::BI__builtin_arm_frint64xf ||
-      BuiltinID == clang::AArch64::BI__builtin_arm_frint64x) {
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_rint64xf ||
+      BuiltinID == clang::AArch64::BI__builtin_arm_rint64x) {
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     llvm::Type *Ty = Arg->getType();
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_frint64x, Ty),
