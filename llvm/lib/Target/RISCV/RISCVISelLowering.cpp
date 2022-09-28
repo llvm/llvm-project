@@ -660,8 +660,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, VT, Legal);
 
-      setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND},
-                         VT, Custom);
+      setOperationAction(
+          {ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND, ISD::FROUNDEVEN},
+          VT, Custom);
 
       setOperationAction(FloatingPointVecReduceOps, VT, Custom);
 
@@ -904,7 +905,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
 
-        setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND},
+        setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
+                            ISD::FROUNDEVEN},
                            VT, Custom);
 
         setCondCodeAction(VFPCCToExpand, VT, Expand);
@@ -2036,6 +2038,7 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   case ISD::FFLOOR:
   case ISD::VP_FFLOOR:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
   case ISD::VP_FROUND:
   case ISD::VP_FROUNDEVEN: {
     RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Op.getOpcode());
@@ -3639,6 +3642,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FCEIL:
   case ISD::FFLOOR:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
