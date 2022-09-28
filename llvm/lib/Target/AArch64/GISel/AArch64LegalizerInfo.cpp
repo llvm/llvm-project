@@ -507,10 +507,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
-      .legalForCartesianProduct({s8, s16, s32, s64}, {p0})
-      .legalFor({{v2s64, v2p0}})
-      .maxScalar(0, s64)
-      .widenScalarToNextPow2(0, /*Min*/ 8);
+      .legalFor({{s64, p0}, {v2s64, v2p0}})
+      .widenScalarToNextPow2(0, 64)
+      .clampScalar(0, s64, s64);
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .unsupportedIf([&](const LegalityQuery &Query) {
