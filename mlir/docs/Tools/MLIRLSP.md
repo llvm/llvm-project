@@ -123,6 +123,14 @@ symbol, such as a `func.func`, within the file.
 
 ![IMG](/mlir-lsp-server/navigation.gif)
 
+#### Bytecode Editing and Inspection
+
+The language server provides support for interacting with MLIR bytecode files,
+enabling IDEs to transparently view and edit bytecode files in the same way
+as textual `.mlir` files.
+
+![IMG](/mlir-lsp-server/bytecode_edit.gif)
+
 ## PDLL LSP Language Server : `mlir-pdll-lsp-server`
 
 MLIR provides an implementation of an LSP language server for `.pdll` text files
@@ -155,7 +163,8 @@ Example:
 ```
 
 - filepath: <string> - Absolute file path of the file.
-- includes: <string> - Semi-colon delimited list of absolute include directories.
+- includes: <string> - Semi-colon delimited list of absolute include
+  directories.
 
 #### Build System Integration
 
@@ -243,9 +252,9 @@ The language server provides additional information inline with the source code.
 Editors usually render this using read-only virtual text snippets interspersed
 with code. Hints may be shown for:
 
-* types of local variables
-* names of operand and result groups
-* constraint and rewrite arguments
+- types of local variables
+- names of operand and result groups
+- constraint and rewrite arguments
 
 ![IMG](/mlir-pdll-lsp-server/inlay_hints.png)
 
@@ -280,7 +289,8 @@ Example:
 ```
 
 - filepath: <string> - Absolute file path of the file.
-- includes: <string> - Semi-colon delimited list of absolute include directories.
+- includes: <string> - Semi-colon delimited list of absolute include
+  directories.
 
 #### Build System Integration
 
