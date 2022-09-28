@@ -83,7 +83,7 @@ def create_include_graph(path: pathlib.Path) -> List[str]:
 def print_csv(graph: List[str]) -> None:
     for includes in graph:
         header = includes[0]
-        for include in sorted(includes[1:]):
+        for include in sorted(set(includes[1:])):
             if header == include:
                 sys.exit(f"Cycle detected: header {header} includes itself.")
             print(f"{header} {include}")
