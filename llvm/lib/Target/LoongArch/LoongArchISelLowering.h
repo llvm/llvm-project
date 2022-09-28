@@ -114,6 +114,12 @@ public:
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
 
+  Register
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+
+  Register
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
