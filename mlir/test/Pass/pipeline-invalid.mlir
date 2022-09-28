@@ -1,4 +1,4 @@
-// RUN: mlir-opt --no-implicit-module --canonicalize --verify-diagnostics --split-input-file
+// RUN: mlir-opt --no-implicit-module --canonicalize --verify-diagnostics --split-input-file %s
 
 // expected-error@below {{trying to schedule a pass on an operation not marked as 'IsolatedFromAbove'}}
 arith.constant 0
