@@ -210,3 +210,54 @@ namespace div {
                                    // expected-note {{value 2147483648 is outside the range}} \
 
 };
+
+namespace cond {
+  constexpr bool isEven(int n) {
+    return n % 2 == 0 ? true : false;
+  }
+  static_assert(isEven(2), "");
+  static_assert(!isEven(3), "");
+  static_assert(isEven(100), "");
+
+  constexpr int M = 5 ? 10 : 20;
+  static_assert(M == 10, "");
+
+  static_assert(5 ? 13 : 16 == 13, "");
+  static_assert(0 ? 13 : 16 == 16, "");
+
+  static_assert(number ?: -15 == number, "");
+  static_assert(0 ?: 100 == 100 , "");
+
+#if __cplusplus >= 201402L
+  constexpr int N = 20;
+  constexpr int foo() {
+    int m = N > 0 ? 5 : 10;
+
+    return m == 5 ? isEven(m) : true;
+  }
+  static_assert(foo() == false, "");
+
+  constexpr int dontCallMe(unsigned m) {
+    if (m == 0) return 0;
+    return dontCallMe(m - 2);
+  }
+
+  // Can't call this because it will run into infinite recursion.
+  constexpr int assertNotReached() {
+    return dontCallMe(3);
+  }
+
+  constexpr int testCond() {
+    return true ? 5 : assertNotReached();
+  }
+
+  constexpr int testCond2() {
+    return false ? assertNotReached() : 10;
+  }
+
+  static_assert(testCond() == 5, "");
+  static_assert(testCond2() == 10, "");
+
+#endif
+
+};

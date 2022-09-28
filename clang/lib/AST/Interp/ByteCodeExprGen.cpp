@@ -347,6 +347,37 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   return this->visit(E->getSourceExpr());
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *E) {
+  const Expr *Condition = E->getCond();
+  const Expr *TrueExpr = E->getTrueExpr();
+  const Expr *FalseExpr = E->getFalseExpr();
+
+  LabelTy LabelEnd = this->getLabel();   // Label after the operator.
+  LabelTy LabelFalse = this->getLabel(); // Label for the false expr.
+
+  if (!this->visit(Condition))
+    return false;
+  if (!this->jumpFalse(LabelFalse))
+    return false;
+
+  if (!this->visit(TrueExpr))
+    return false;
+  if (!this->jump(LabelEnd))
+    return false;
+
+  this->emitLabel(LabelFalse);
+
+  if (!this->visit(FalseExpr))
+    return false;
+
+  this->fallthrough(LabelEnd);
+  this->emitLabel(LabelEnd);
+
+  return true;
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);
