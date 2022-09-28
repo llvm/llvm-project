@@ -509,7 +509,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
       Value *Scaled =
           ScaledOps.empty()
               ? Constant::getNullValue(Ty)
-              : expandCodeForImpl(SE.getAddExpr(ScaledOps), Ty, false);
+              : expandCodeForImpl(SE.getAddExpr(ScaledOps), Ty);
       GepIndices.push_back(Scaled);
 
       // Collect struct field index operands.
@@ -570,7 +570,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
            SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
     // Expand the operands for a plain byte offset.
-    Value *Idx = expandCodeForImpl(SE.getAddExpr(Ops), Ty, false);
+    Value *Idx = expandCodeForImpl(SE.getAddExpr(Ops), Ty);
 
     // Fold a GEP with constant operands.
     if (Constant *CLHS = dyn_cast<Constant>(V))
@@ -787,14 +787,14 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
       Sum = expandAddToGEP(NewOps.begin(), NewOps.end(), PTy, Ty, Sum);
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
-      Value *W = expandCodeForImpl(SE.getNegativeSCEV(Op), Ty, false);
+      Value *W = expandCodeForImpl(SE.getNegativeSCEV(Op), Ty);
       Sum = InsertNoopCastOfTo(Sum, Ty);
       Sum = InsertBinop(Instruction::Sub, Sum, W, SCEV::FlagAnyWrap,
                         /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple add.
-      Value *W = expandCodeForImpl(Op, Ty, false);
+      Value *W = expandCodeForImpl(Op, Ty);
       Sum = InsertNoopCastOfTo(Sum, Ty);
       // Canonicalize a constant to the RHS.
       if (isa<Constant>(Sum)) std::swap(Sum, W);
@@ -845,7 +845,7 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
 
     // Calculate powers with exponents 1, 2, 4, 8 etc. and include those of them
     // that are needed into the result.
-    Value *P = expandCodeForImpl(I->second, Ty, false);
+    Value *P = expandCodeForImpl(I->second, Ty);
     Value *Result = nullptr;
     if (Exponent & 1)
       Result = P;
@@ -904,7 +904,7 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
 Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
 
-  Value *LHS = expandCodeForImpl(S->getLHS(), Ty, false);
+  Value *LHS = expandCodeForImpl(S->getLHS(), Ty);
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(S->getRHS())) {
     const APInt &RHS = SC->getAPInt();
     if (RHS.isPowerOf2())
@@ -913,7 +913,7 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
                          SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
   }
 
-  Value *RHS = expandCodeForImpl(S->getRHS(), Ty, false);
+  Value *RHS = expandCodeForImpl(S->getRHS(), Ty);
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
@@ -1292,7 +1292,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
          "Can't expand add recurrences without a loop preheader!");
   Value *StartV =
       expandCodeForImpl(Normalized->getStart(), ExpandTy,
-                        L->getLoopPreheader()->getTerminator(), false);
+                        L->getLoopPreheader()->getTerminator());
 
   // StartV must have been be inserted into L's preheader to dominate the new
   // phi.
@@ -1311,7 +1311,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
     Step = SE.getNegativeSCEV(Step);
   // Expand the step somewhere that dominates the loop header.
   Value *StepV = expandCodeForImpl(
-      Step, IntTy, &*L->getHeader()->getFirstInsertionPt(), false);
+      Step, IntTy, &*L->getHeader()->getFirstInsertionPt());
 
   // The no-wrap behavior proved by IsIncrement(NUW|NSW) is only applicable if
   // we actually do emit an addition.  It does not apply if we emit a
@@ -1469,7 +1469,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
         // Expand the step somewhere that dominates the loop header.
         SCEVInsertPointGuard Guard(Builder, this);
         StepV = expandCodeForImpl(
-            Step, IntTy, &*L->getHeader()->getFirstInsertionPt(), false);
+            Step, IntTy, &*L->getHeader()->getFirstInsertionPt());
       }
       Result = expandIVInc(PN, StepV, L, ExpandTy, IntTy, useSubtract);
     }
@@ -1489,7 +1489,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
     // Invert the result.
     if (InvertStep)
       Result = Builder.CreateSub(
-          expandCodeForImpl(Normalized->getStart(), TruncTy, false), Result);
+          expandCodeForImpl(Normalized->getStart(), TruncTy), Result);
   }
 
   // Re-apply any non-loop-dominating scale.
@@ -1497,14 +1497,14 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
     assert(S->isAffine() && "Can't linearly scale non-affine recurrences.");
     Result = InsertNoopCastOfTo(Result, IntTy);
     Result = Builder.CreateMul(Result,
-                               expandCodeForImpl(PostLoopScale, IntTy, false));
+                               expandCodeForImpl(PostLoopScale, IntTy));
   }
 
   // Re-apply any non-loop-dominating offset.
   if (PostLoopOffset) {
     if (PointerType *PTy = dyn_cast<PointerType>(ExpandTy)) {
       if (Result->getType()->isIntegerTy()) {
-        Value *Base = expandCodeForImpl(PostLoopOffset, ExpandTy, false);
+        Value *Base = expandCodeForImpl(PostLoopOffset, ExpandTy);
         Result = expandAddToGEP(SE.getUnknown(Result), PTy, IntTy, Base);
       } else {
         Result = expandAddToGEP(PostLoopOffset, PTy, IntTy, Result);
@@ -1512,7 +1512,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
     } else {
       Result = InsertNoopCastOfTo(Result, IntTy);
       Result = Builder.CreateAdd(
-          Result, expandCodeForImpl(PostLoopOffset, IntTy, false));
+          Result, expandCodeForImpl(PostLoopOffset, IntTy));
     }
   }
 
@@ -1555,7 +1555,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     BasicBlock::iterator NewInsertPt =
         findInsertPointAfter(cast<Instruction>(V), &*Builder.GetInsertPoint());
     V = expandCodeForImpl(SE.getTruncateExpr(SE.getUnknown(V), Ty), nullptr,
-                          &*NewInsertPt, false);
+                          &*NewInsertPt);
     return V;
   }
 
@@ -1657,7 +1657,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 
 Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
   Value *V =
-      expandCodeForImpl(S->getOperand(), S->getOperand()->getType(), false);
+      expandCodeForImpl(S->getOperand(), S->getOperand()->getType());
   return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
                            GetOptimalInsertionPointForCastOf(V));
 }
@@ -1665,24 +1665,24 @@ Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
 Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   Value *V = expandCodeForImpl(
-      S->getOperand(), SE.getEffectiveSCEVType(S->getOperand()->getType()),
-      false);
+      S->getOperand(), SE.getEffectiveSCEVType(S->getOperand()->getType())
+      );
   return Builder.CreateTrunc(V, Ty);
 }
 
 Value *SCEVExpander::visitZeroExtendExpr(const SCEVZeroExtendExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   Value *V = expandCodeForImpl(
-      S->getOperand(), SE.getEffectiveSCEVType(S->getOperand()->getType()),
-      false);
+      S->getOperand(), SE.getEffectiveSCEVType(S->getOperand()->getType())
+      );
   return Builder.CreateZExt(V, Ty);
 }
 
 Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
   Type *Ty = SE.getEffectiveSCEVType(S->getType());
   Value *V = expandCodeForImpl(
-      S->getOperand(), SE.getEffectiveSCEVType(S->getOperand()->getType()),
-      false);
+      S->getOperand(), SE.getEffectiveSCEVType(S->getOperand()->getType())
+      );
   return Builder.CreateSExt(V, Ty);
 }
 
@@ -1694,7 +1694,7 @@ Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
   if (IsSequential)
     LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
-    Value *RHS = expandCodeForImpl(S->getOperand(i), Ty, false);
+    Value *RHS = expandCodeForImpl(S->getOperand(i), Ty);
     if (IsSequential && i != 0)
       RHS = Builder.CreateFreeze(RHS);
     Value *Sel;
@@ -1732,13 +1732,13 @@ Value *SCEVExpander::visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S) {
 }
 
 Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty,
-                                       Instruction *IP, bool Root) {
+                                       Instruction *IP) {
   setInsertPoint(IP);
-  Value *V = expandCodeForImpl(SH, Ty, Root);
+  Value *V = expandCodeForImpl(SH, Ty);
   return V;
 }
 
-Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
+Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty) {
   // Expand the code for this SCEV.
   Value *V = expand(SH);
 
@@ -2367,9 +2367,9 @@ Value *SCEVExpander::expandCodeForPredicate(const SCEVPredicate *Pred,
 Value *SCEVExpander::expandComparePredicate(const SCEVComparePredicate *Pred,
                                             Instruction *IP) {
   Value *Expr0 =
-      expandCodeForImpl(Pred->getLHS(), Pred->getLHS()->getType(), IP, false);
+      expandCodeForImpl(Pred->getLHS(), Pred->getLHS()->getType(), IP);
   Value *Expr1 =
-      expandCodeForImpl(Pred->getRHS(), Pred->getRHS()->getType(), IP, false);
+      expandCodeForImpl(Pred->getRHS(), Pred->getRHS()->getType(), IP);
 
   Builder.SetInsertPoint(IP);
   auto InvPred = ICmpInst::getInversePredicate(Pred->getPredicate());
@@ -2403,15 +2403,15 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
 
   IntegerType *CountTy = IntegerType::get(Loc->getContext(), SrcBits);
   Builder.SetInsertPoint(Loc);
-  Value *TripCountVal = expandCodeForImpl(ExitCount, CountTy, Loc, false);
+  Value *TripCountVal = expandCodeForImpl(ExitCount, CountTy, Loc);
 
   IntegerType *Ty =
       IntegerType::get(Loc->getContext(), SE.getTypeSizeInBits(ARTy));
 
-  Value *StepValue = expandCodeForImpl(Step, Ty, Loc, false);
+  Value *StepValue = expandCodeForImpl(Step, Ty, Loc);
   Value *NegStepValue =
-      expandCodeForImpl(SE.getNegativeSCEV(Step), Ty, Loc, false);
-  Value *StartValue = expandCodeForImpl(Start, ARTy, Loc, false);
+      expandCodeForImpl(SE.getNegativeSCEV(Step), Ty, Loc);
+  Value *StartValue = expandCodeForImpl(Start, ARTy, Loc);
 
   ConstantInt *Zero =
       ConstantInt::get(Loc->getContext(), APInt::getZero(DstBits));
