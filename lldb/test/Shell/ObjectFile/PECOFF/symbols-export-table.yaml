@@ -15,7 +15,7 @@
 # CHECK-NEXT: 4294967295     Code       0x0000000180001020        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} aliasFunc
 # CHECK-NEXT: 4294967295   X Additional 0x0000000180003000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} exportInt
 # CHECK-NEXT: 4294967295     Data       0x0000000180003004        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} aliasInt
-# CHECK-NEXT: 4294967295     Invalid    0x0000000180003008        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} internalInt
+# CHECK-NEXT: 4294967295     Data       0x0000000180003008        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} internalInt
 # CHECK-EMPTY:
 
 # Test file generated with:

@@ -6,7 +6,7 @@
 
 # CHECK: Type     File Address/Value {{.*}} Size            Flags           Name
 # CHECK: Code     0x0000000040001000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} entry
-# CHECK:          0x0000000040002000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} variable
+# CHECK: Data     0x0000000040002000        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} variable
 # CHECK: Absolute 0x00000000deadbeef        0x{{[0-9a-f]+}} 0x{{[0-9a-f]+}} absolute_symbol
 
 --- !COFF
