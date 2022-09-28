@@ -7,58 +7,58 @@
 
 #include <arm_acle.h>
 
-// CHECK-LABEL: test_frint32zf
+// CHECK-LABEL: test_rint32zf
 // CHECK:  [[RND:%.*]] =  call float @llvm.aarch64.frint32z.f32(float %a)
 // CHECK:  ret float [[RND]]
-float test_frint32zf(float a) {
-  return __frint32zf(a);
+float test_rint32zf(float a) {
+  return __rint32zf(a);
 }
 
-// CHECK-LABEL: test_frint32z
+// CHECK-LABEL: test_rint32z
 // CHECK:  [[RND:%.*]] =  call double @llvm.aarch64.frint32z.f64(double %a)
 // CHECK:  ret double [[RND]]
-double test_frint32z(double a) {
-  return __frint32z(a);
+double test_rint32z(double a) {
+  return __rint32z(a);
 }
 
-// CHECK-LABEL: test_frint64zf
+// CHECK-LABEL: test_rint64zf
 // CHECK:  [[RND:%.*]] =  call float @llvm.aarch64.frint64z.f32(float %a)
 // CHECK:  ret float [[RND]]
-float test_frint64zf(float a) {
-  return __frint64zf(a);
+float test_rint64zf(float a) {
+  return __rint64zf(a);
 }
 
-// CHECK-LABEL: test_frint64z
+// CHECK-LABEL: test_rint64z
 // CHECK:  [[RND:%.*]] =  call double @llvm.aarch64.frint64z.f64(double %a)
 // CHECK:  ret double [[RND]]
-double test_frint64z(double a) {
-  return __frint64z(a);
+double test_rint64z(double a) {
+  return __rint64z(a);
 }
 
-// CHECK-LABEL: test_frint32xf
+// CHECK-LABEL: test_rint32xf
 // CHECK:  [[RND:%.*]] =  call float @llvm.aarch64.frint32x.f32(float %a)
 // CHECK:  ret float [[RND]]
-float test_frint32xf(float a) {
-  return __frint32xf(a);
+float test_rint32xf(float a) {
+  return __rint32xf(a);
 }
 
-// CHECK-LABEL: test_frint32x
+// CHECK-LABEL: test_rint32x
 // CHECK:  [[RND:%.*]] =  call double @llvm.aarch64.frint32x.f64(double %a)
 // CHECK:  ret double [[RND]]
-double test_frint32x(double a) {
-  return __frint32x(a);
+double test_rint32x(double a) {
+  return __rint32x(a);
 }
 
-// CHECK-LABEL: test_frint64xf
+// CHECK-LABEL: test_rint64xf
 // CHECK:  [[RND:%.*]] =  call float @llvm.aarch64.frint64x.f32(float %a)
 // CHECK:  ret float [[RND]]
-float test_frint64xf(float a) {
-  return __frint64xf(a);
+float test_rint64xf(float a) {
+  return __rint64xf(a);
 }
 
-// CHECK-LABEL: test_frint64x
+// CHECK-LABEL: test_rint64x
 // CHECK:  [[RND:%.*]] =  call double @llvm.aarch64.frint64x.f64(double %a)
 // CHECK:  ret double [[RND]]
-double test_frint64x(double a) {
-  return __frint64x(a);
+double test_rint64x(double a) {
+  return __rint64x(a);
 }
