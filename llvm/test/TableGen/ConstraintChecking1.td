@@ -2,5 +2,5 @@
 
 include "ConstraintChecking.inc"
 
-// CHECK: [[FILE]]:[[@LINE+1]]:1: error: Unrecognized constraint '$dest1 ~ $src2' in 'Foo'
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: Unrecognized constraint '$dest1 ~ $src2' in 'Foo'
 def Foo : TestInstructionWithConstraints<"$dest1 ~ $src2">;

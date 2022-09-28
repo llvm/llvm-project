@@ -63,6 +63,10 @@ SMLoc TGLexer::getLoc() const {
   return SMLoc::getFromPointer(TokStart);
 }
 
+SMRange TGLexer::getLocRange() const {
+  return {getLoc(), SMLoc::getFromPointer(CurPtr)};
+}
+
 /// ReturnError - Set the error to the specified string at the specified
 /// location.  This is defined to always return tgtok::Error.
 tgtok::TokKind TGLexer::ReturnError(SMLoc Loc, const Twine &Msg) {
