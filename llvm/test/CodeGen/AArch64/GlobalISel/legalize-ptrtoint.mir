@@ -3,6 +3,137 @@
 
 ...
 ---
+name: p0_s64
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: p0_s64
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: %int:_(s64) = G_PTRTOINT %ptr(p0)
+    ; CHECK-NEXT: $x0 = COPY %int(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %ptr:_(p0) = COPY $x0
+    %int:_(s64) = G_PTRTOINT %ptr
+    $x0 = COPY %int
+    RET_ReallyLR implicit $x0
+...
+---
+name: p0_s32
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: p0_s32
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT %ptr(p0)
+    ; CHECK-NEXT: %int:_(s32) = G_TRUNC [[PTRTOINT]](s64)
+    ; CHECK-NEXT: $w0 = COPY %int(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %ptr:_(p0) = COPY $x0
+    %int:_(s32) = G_PTRTOINT %ptr
+    $w0 = COPY %int
+    RET_ReallyLR implicit $w0
+...
+---
+name: p0_s16
+body: |
+  bb.0:
+    liveins: $x0, $h0
+    ; CHECK-LABEL: name: p0_s16
+    ; CHECK: liveins: $x0, $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT %ptr(p0)
+    ; CHECK-NEXT: %int:_(s16) = G_TRUNC [[PTRTOINT]](s64)
+    ; CHECK-NEXT: $h0 = COPY %int(s16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
+    %ptr:_(p0) = COPY $x0
+    %int:_(s16) = G_PTRTOINT %ptr
+    $h0 = COPY %int
+    RET_ReallyLR implicit $h0
+...
+---
+name: p0_s8
+body: |
+  bb.0:
+    liveins: $x0, $b0
+    ; CHECK-LABEL: name: p0_s8
+    ; CHECK: liveins: $x0, $b0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT %ptr(p0)
+    ; CHECK-NEXT: %int:_(s8) = G_TRUNC [[PTRTOINT]](s64)
+    ; CHECK-NEXT: $b0 = COPY %int(s8)
+    ; CHECK-NEXT: RET_ReallyLR implicit $b0
+    %ptr:_(p0) = COPY $x0
+    %int:_(s8) = G_PTRTOINT %ptr
+    $b0 = COPY %int
+    RET_ReallyLR implicit $b0
+...
+---
+name: p0_s1
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: p0_s1
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT %ptr(p0)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[PTRTOINT]](s64)
+    ; CHECK-NEXT: %ext:_(s32) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %ptr:_(p0) = COPY $x0
+    %int:_(s1) = G_PTRTOINT %ptr
+    %ext:_(s32) = G_ZEXT %int
+    $w0 = COPY %ext
+    RET_ReallyLR implicit $w0
+...
+---
+name: p0_s128
+body: |
+  bb.0:
+    liveins: $x0, $q0
+    ; CHECK-LABEL: name: p0_s128
+    ; CHECK: liveins: $x0, $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT %ptr(p0)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %int:_(s128) = G_MERGE_VALUES [[PTRTOINT]](s64), [[C]](s64)
+    ; CHECK-NEXT: $q0 = COPY %int(s128)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %ptr:_(p0) = COPY $x0
+    %int:_(s128) = G_PTRTOINT %ptr
+    $q0 = COPY %int
+    RET_ReallyLR implicit $q0
+...
+---
+name: p0_s88
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: p0_s88
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT %ptr(p0)
+    ; CHECK-NEXT: %trunc:_(s32) = G_TRUNC [[PTRTOINT]](s64)
+    ; CHECK-NEXT: $w0 = COPY %trunc(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %ptr:_(p0) = COPY $x0
+    %int:_(s88) = G_PTRTOINT %ptr
+    %trunc:_(s32) = G_TRUNC %int
+    $w0 = COPY %trunc
+    RET_ReallyLR implicit $w0
+
+...
+---
 name:            v2s64_v2p0_legal
 tracksRegLiveness: true
 body:             |
@@ -11,10 +142,11 @@ body:             |
 
     ; CHECK-LABEL: name: v2s64_v2p0_legal
     ; CHECK: liveins: $q0
-    ; CHECK: %ptr:_(<2 x p0>) = COPY $q0
-    ; CHECK: %int:_(<2 x s64>) = G_PTRTOINT %ptr(<2 x p0>)
-    ; CHECK: $q0 = COPY %int(<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(<2 x p0>) = COPY $q0
+    ; CHECK-NEXT: %int:_(<2 x s64>) = G_PTRTOINT %ptr(<2 x p0>)
+    ; CHECK-NEXT: $q0 = COPY %int(<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %ptr:_(<2 x p0>) = COPY $q0
     %int:_(<2 x s64>) = G_PTRTOINT %ptr(<2 x p0>)
     $q0 = COPY %int(<2 x s64>)
