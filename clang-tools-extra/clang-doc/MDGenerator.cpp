@@ -189,9 +189,9 @@ static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
 
   llvm::SmallString<64> BasePath = I.getRelativeFilePath("");
 
-  if (!I.Children.Namespaces.empty()) {
+  if (!I.ChildNamespaces.empty()) {
     writeHeader("Namespaces", 2, OS);
-    for (const auto &R : I.Children.Namespaces) {
+    for (const auto &R : I.ChildNamespaces) {
       OS << "* ";
       writeNameLink(BasePath, R, OS);
       OS << "\n";
@@ -199,9 +199,9 @@ static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
     writeNewLine(OS);
   }
 
-  if (!I.Children.Records.empty()) {
+  if (!I.ChildRecords.empty()) {
     writeHeader("Records", 2, OS);
-    for (const auto &R : I.Children.Records) {
+    for (const auto &R : I.ChildRecords) {
       OS << "* ";
       writeNameLink(BasePath, R, OS);
       OS << "\n";
@@ -209,15 +209,15 @@ static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
     writeNewLine(OS);
   }
 
-  if (!I.Children.Functions.empty()) {
+  if (!I.ChildFunctions.empty()) {
     writeHeader("Functions", 2, OS);
-    for (const auto &F : I.Children.Functions)
+    for (const auto &F : I.ChildFunctions)
       genMarkdown(CDCtx, F, OS);
     writeNewLine(OS);
   }
-  if (!I.Children.Enums.empty()) {
+  if (!I.ChildEnums.empty()) {
     writeHeader("Enums", 2, OS);
-    for (const auto &E : I.Children.Enums)
+    for (const auto &E : I.ChildEnums)
       genMarkdown(CDCtx, E, OS);
     writeNewLine(OS);
   }
@@ -259,21 +259,21 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
     writeNewLine(OS);
   }
 
-  if (!I.Children.Records.empty()) {
+  if (!I.ChildRecords.empty()) {
     writeHeader("Records", 2, OS);
-    for (const auto &R : I.Children.Records)
+    for (const auto &R : I.ChildRecords)
       writeLine(R.Name, OS);
     writeNewLine(OS);
   }
-  if (!I.Children.Functions.empty()) {
+  if (!I.ChildFunctions.empty()) {
     writeHeader("Functions", 2, OS);
-    for (const auto &F : I.Children.Functions)
+    for (const auto &F : I.ChildFunctions)
       genMarkdown(CDCtx, F, OS);
     writeNewLine(OS);
   }
-  if (!I.Children.Enums.empty()) {
+  if (!I.ChildEnums.empty()) {
     writeHeader("Enums", 2, OS);
-    for (const auto &E : I.Children.Enums)
+    for (const auto &E : I.ChildEnums)
       genMarkdown(CDCtx, E, OS);
     writeNewLine(OS);
   }

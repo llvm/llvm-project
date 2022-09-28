@@ -24,6 +24,12 @@ llvm::Error decodeRecord(const Record &R, llvm::SmallVectorImpl<char> &Field,
   return llvm::Error::success();
 }
 
+llvm::Error decodeRecord(const Record &R, std::string &Field,
+                         llvm::StringRef Blob) {
+  Field.assign(Blob.begin(), Blob.end());
+  return llvm::Error::success();
+}
+
 llvm::Error decodeRecord(const Record &R, SymbolID &Field,
                          llvm::StringRef Blob) {
   if (R[0] != BitCodeConstants::USRHashSize)
@@ -98,7 +104,6 @@ llvm::Error decodeRecord(const Record &R, InfoType &Field,
   case InfoType::IT_function:
   case InfoType::IT_default:
   case InfoType::IT_enum:
-  case InfoType::IT_typedef:
     Field = IT;
     return llvm::Error::success();
   }
@@ -225,23 +230,6 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for EnumInfo");
-  }
-}
-
-llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
-                        TypedefInfo *I) {
-  switch (ID) {
-  case TYPEDEF_USR:
-    return decodeRecord(R, I->USR, Blob);
-  case TYPEDEF_NAME:
-    return decodeRecord(R, I->Name, Blob);
-  case TYPEDEF_DEFLOCATION:
-    return decodeRecord(R, I->DefLoc, Blob);
-  case TYPEDEF_IS_USING:
-    return decodeRecord(R, I->IsUsing, Blob);
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid field for TypedefInfo");
   }
 }
 
@@ -436,11 +424,6 @@ template <> llvm::Error addTypeInfo(EnumInfo *I, TypeInfo &&T) {
   return llvm::Error::success();
 }
 
-template <> llvm::Error addTypeInfo(TypedefInfo *I, TypeInfo &&T) {
-  I->Underlying = std::move(T);
-  return llvm::Error::success();
-}
-
 template <typename T> llvm::Error addReference(T I, Reference &&R, FieldId F) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid type cannot contain Reference");
@@ -492,17 +475,6 @@ template <> llvm::Error addReference(EnumInfo *I, Reference &&R, FieldId F) {
   }
 }
 
-template <> llvm::Error addReference(TypedefInfo *I, Reference &&R, FieldId F) {
-  switch (F) {
-  case FieldId::F_namespace:
-    I->Namespace.emplace_back(std::move(R));
-    return llvm::Error::success();
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid type cannot contain Reference");
-  }
-}
-
 template <>
 llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
   switch (F) {
@@ -510,10 +482,10 @@ llvm::Error addReference(NamespaceInfo *I, Reference &&R, FieldId F) {
     I->Namespace.emplace_back(std::move(R));
     return llvm::Error::success();
   case FieldId::F_child_namespace:
-    I->Children.Namespaces.emplace_back(std::move(R));
+    I->ChildNamespaces.emplace_back(std::move(R));
     return llvm::Error::success();
   case FieldId::F_child_record:
-    I->Children.Records.emplace_back(std::move(R));
+    I->ChildRecords.emplace_back(std::move(R));
     return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -548,7 +520,7 @@ template <> llvm::Error addReference(RecordInfo *I, Reference &&R, FieldId F) {
     I->VirtualParents.emplace_back(std::move(R));
     return llvm::Error::success();
   case FieldId::F_child_record:
-    I->Children.Records.emplace_back(std::move(R));
+    I->ChildRecords.emplace_back(std::move(R));
     return llvm::Error::success();
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -562,37 +534,32 @@ void addChild(T I, ChildInfoType &&R) {
   exit(1);
 }
 
-// Namespace children:
 template <> void addChild(NamespaceInfo *I, FunctionInfo &&R) {
-  I->Children.Functions.emplace_back(std::move(R));
+  I->ChildFunctions.emplace_back(std::move(R));
 }
+
 template <> void addChild(NamespaceInfo *I, EnumInfo &&R) {
-  I->Children.Enums.emplace_back(std::move(R));
-}
-template <> void addChild(NamespaceInfo *I, TypedefInfo &&R) {
-  I->Children.Typedefs.emplace_back(std::move(R));
+  I->ChildEnums.emplace_back(std::move(R));
 }
 
-// Record children:
 template <> void addChild(RecordInfo *I, FunctionInfo &&R) {
-  I->Children.Functions.emplace_back(std::move(R));
-}
-template <> void addChild(RecordInfo *I, EnumInfo &&R) {
-  I->Children.Enums.emplace_back(std::move(R));
-}
-template <> void addChild(RecordInfo *I, TypedefInfo &&R) {
-  I->Children.Typedefs.emplace_back(std::move(R));
+  I->ChildFunctions.emplace_back(std::move(R));
 }
 
-// Other types of children:
+template <> void addChild(RecordInfo *I, EnumInfo &&R) {
+  I->ChildEnums.emplace_back(std::move(R));
+}
+
 template <> void addChild(EnumInfo *I, EnumValueInfo &&R) {
   I->Members.emplace_back(std::move(R));
 }
+
 template <> void addChild(RecordInfo *I, BaseRecordInfo &&R) {
   I->Bases.emplace_back(std::move(R));
 }
+
 template <> void addChild(BaseRecordInfo *I, FunctionInfo &&R) {
-  I->Children.Functions.emplace_back(std::move(R));
+  I->ChildFunctions.emplace_back(std::move(R));
 }
 
 // Read records from bitcode into a given info.
@@ -719,13 +686,6 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
     addChild(I, std::move(EV));
     return llvm::Error::success();
   }
-  case BI_TYPEDEF_BLOCK_ID: {
-    TypedefInfo TI;
-    if (auto Err = readBlock(ID, &TI))
-      return Err;
-    addChild(I, std::move(TI));
-    return llvm::Error::success();
-  }
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid subblock type");
@@ -826,8 +786,6 @@ ClangDocBitcodeReader::readBlockToInfo(unsigned ID) {
     return createInfo<RecordInfo>(ID);
   case BI_ENUM_BLOCK_ID:
     return createInfo<EnumInfo>(ID);
-  case BI_TYPEDEF_BLOCK_ID:
-    return createInfo<TypedefInfo>(ID);
   case BI_FUNCTION_BLOCK_ID:
     return createInfo<FunctionInfo>(ID);
   default:
@@ -867,7 +825,6 @@ ClangDocBitcodeReader::readBitcode() {
     case BI_NAMESPACE_BLOCK_ID:
     case BI_RECORD_BLOCK_ID:
     case BI_ENUM_BLOCK_ID:
-    case BI_TYPEDEF_BLOCK_ID:
     case BI_FUNCTION_BLOCK_ID: {
       auto InfoOrErr = readBlockToInfo(ID);
       if (!InfoOrErr)

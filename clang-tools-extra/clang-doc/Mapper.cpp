@@ -71,14 +71,6 @@ bool MapASTVisitor::VisitFunctionDecl(const FunctionDecl *D) {
   return mapDecl(D);
 }
 
-bool MapASTVisitor::VisitTypedefDecl(const TypedefDecl *D) {
-  return mapDecl(D);
-}
-
-bool MapASTVisitor::VisitTypeAliasDecl(const TypeAliasDecl *D) {
-  return mapDecl(D);
-}
-
 comments::FullComment *
 MapASTVisitor::getComment(const NamedDecl *D, const ASTContext &Context) const {
   RawComment *Comment = Context.getRawCommentForDeclNoCache(D);

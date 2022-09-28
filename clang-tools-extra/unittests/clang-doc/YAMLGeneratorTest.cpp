@@ -28,16 +28,15 @@ TEST(YAMLGeneratorTest, emitNamespaceYAML) {
   I.Path = "path/to/A";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.Children.Namespaces.emplace_back(EmptySID, "ChildNamespace",
-                                     InfoType::IT_namespace,
-                                     "path/to/A/Namespace");
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "path/to/A/Namespace");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Name = "OneFunction";
-  I.Children.Functions.back().Access = AccessSpecifier::AS_none;
-  I.Children.Enums.emplace_back();
-  I.Children.Enums.back().Name = "OneEnum";
+  I.ChildNamespaces.emplace_back(EmptySID, "ChildNamespace",
+                                 InfoType::IT_namespace, "path/to/A/Namespace");
+  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                              "path/to/A/Namespace");
+  I.ChildFunctions.emplace_back();
+  I.ChildFunctions.back().Name = "OneFunction";
+  I.ChildFunctions.back().Access = AccessSpecifier::AS_none;
+  I.ChildEnums.emplace_back();
+  I.ChildEnums.back().Name = "OneEnum";
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -101,8 +100,8 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   I.TagType = TagTypeKind::TTK_Class;
   I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
                        AccessSpecifier::AS_public, true);
-  I.Bases.back().Children.Functions.emplace_back();
-  I.Bases.back().Children.Functions.back().Name = "InheritedFunctionOne";
+  I.Bases.back().ChildFunctions.emplace_back();
+  I.Bases.back().ChildFunctions.back().Name = "InheritedFunctionOne";
   I.Bases.back().Members.emplace_back(TypeInfo("int", "path/to/int"), "N",
                                       AccessSpecifier::AS_private);
   // F is in the global namespace
@@ -110,12 +109,12 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record,
                                 "path/to/G");
 
-  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                                  "path/to/A/r");
-  I.Children.Functions.emplace_back();
-  I.Children.Functions.back().Name = "OneFunction";
-  I.Children.Enums.emplace_back();
-  I.Children.Enums.back().Name = "OneEnum";
+  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                              "path/to/A/r");
+  I.ChildFunctions.emplace_back();
+  I.ChildFunctions.back().Name = "OneFunction";
+  I.ChildEnums.emplace_back();
+  I.ChildEnums.back().Name = "OneEnum";
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -326,30 +325,6 @@ Members:
   - Name:            'X'
     Value:           '-9876'
     Expr:            'FOO_BAR + 2'
-...
-)raw";
-  EXPECT_EQ(Expected, Actual.str());
-}
-
-TEST(YAMLGeneratorTest, enumTypedefYAML) {
-  TypedefInfo I;
-  I.Name = "MyUsing";
-  I.Underlying = TypeInfo("int");
-  I.IsUsing = true;
-
-  auto G = getYAMLGenerator();
-  assert(G);
-  std::string Buffer;
-  llvm::raw_string_ostream Actual(Buffer);
-  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
-  assert(!Err);
-  std::string Expected =
-      R"raw(---
-USR:             '0000000000000000000000000000000000000000'
-Name:            'MyUsing'
-Underlying:
-  Name:            'int'
-IsUsing:         true
 ...
 )raw";
   EXPECT_EQ(Expected, Actual.str());

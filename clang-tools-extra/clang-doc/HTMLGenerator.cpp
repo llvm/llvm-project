@@ -734,29 +734,28 @@ genHTML(const NamespaceInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
   llvm::SmallString<64> BasePath = I.getRelativeFilePath("");
 
   std::vector<std::unique_ptr<TagNode>> ChildNamespaces =
-      genReferencesBlock(I.Children.Namespaces, "Namespaces", BasePath);
+      genReferencesBlock(I.ChildNamespaces, "Namespaces", BasePath);
   AppendVector(std::move(ChildNamespaces), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
-      genReferencesBlock(I.Children.Records, "Records", BasePath);
+      genReferencesBlock(I.ChildRecords, "Records", BasePath);
   AppendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
-      genFunctionsBlock(I.Children.Functions, CDCtx, BasePath);
+      genFunctionsBlock(I.ChildFunctions, CDCtx, BasePath);
   AppendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
-      genEnumsBlock(I.Children.Enums, CDCtx);
+      genEnumsBlock(I.ChildEnums, CDCtx);
   AppendVector(std::move(ChildEnums), Out);
 
-  if (!I.Children.Namespaces.empty())
+  if (!I.ChildNamespaces.empty())
     InfoIndex.Children.emplace_back("Namespaces", "Namespaces");
-  if (!I.Children.Records.empty())
+  if (!I.ChildRecords.empty())
     InfoIndex.Children.emplace_back("Records", "Records");
-  if (!I.Children.Functions.empty())
+  if (!I.ChildFunctions.empty())
     InfoIndex.Children.emplace_back(
-        genInfoIndexItem(I.Children.Functions, "Functions"));
-  if (!I.Children.Enums.empty())
-    InfoIndex.Children.emplace_back(
-        genInfoIndexItem(I.Children.Enums, "Enums"));
+        genInfoIndexItem(I.ChildFunctions, "Functions"));
+  if (!I.ChildEnums.empty())
+    InfoIndex.Children.emplace_back(genInfoIndexItem(I.ChildEnums, "Enums"));
 
   return Out;
 }
@@ -803,26 +802,25 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
       genRecordMembersBlock(I.Members, I.Path);
   AppendVector(std::move(Members), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
-      genReferencesBlock(I.Children.Records, "Records", I.Path);
+      genReferencesBlock(I.ChildRecords, "Records", I.Path);
   AppendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
-      genFunctionsBlock(I.Children.Functions, CDCtx, I.Path);
+      genFunctionsBlock(I.ChildFunctions, CDCtx, I.Path);
   AppendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
-      genEnumsBlock(I.Children.Enums, CDCtx);
+      genEnumsBlock(I.ChildEnums, CDCtx);
   AppendVector(std::move(ChildEnums), Out);
 
   if (!I.Members.empty())
     InfoIndex.Children.emplace_back("Members", "Members");
-  if (!I.Children.Records.empty())
+  if (!I.ChildRecords.empty())
     InfoIndex.Children.emplace_back("Records", "Records");
-  if (!I.Children.Functions.empty())
+  if (!I.ChildFunctions.empty())
     InfoIndex.Children.emplace_back(
-        genInfoIndexItem(I.Children.Functions, "Functions"));
-  if (!I.Children.Enums.empty())
-    InfoIndex.Children.emplace_back(
-        genInfoIndexItem(I.Children.Enums, "Enums"));
+        genInfoIndexItem(I.ChildFunctions, "Functions"));
+  if (!I.ChildEnums.empty())
+    InfoIndex.Children.emplace_back(genInfoIndexItem(I.ChildEnums, "Enums"));
 
   return Out;
 }

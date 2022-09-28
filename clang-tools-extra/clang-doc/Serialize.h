@@ -39,29 +39,17 @@ namespace serialize {
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
-
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
-
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
-
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
-
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
-         StringRef File, bool IsFileInRootDir, bool PublicOnly);
-
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypedefDecl *D, const FullComment *FC, int LineNumber,
-         StringRef File, bool IsFileInRootDir, bool PublicOnly);
-
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypeAliasDecl *D, const FullComment *FC, int LineNumber,
          StringRef File, bool IsFileInRootDir, bool PublicOnly);
 
 // Function to hash a given USR value for storage.
