@@ -268,10 +268,12 @@ protected:
 
 private:
   bool CreateBinary();
+  typedef std::vector<std::pair<uint32_t, uint32_t>> rva_symbol_list_t;
   void AppendFromCOFFSymbolTable(lldb_private::SectionList *sect_list,
-                                 lldb_private::Symtab &symtab);
-  void AppendFromExportTable(lldb_private::SectionList *sect_list,
-                             lldb_private::Symtab &symtab);
+                                 lldb_private::Symtab &symtab,
+                                 const rva_symbol_list_t &sorted_exports);
+  rva_symbol_list_t AppendFromExportTable(lldb_private::SectionList *sect_list,
+                                          lldb_private::Symtab &symtab);
 
   dos_header_t m_dos_header;
   coff_header_t m_coff_header;

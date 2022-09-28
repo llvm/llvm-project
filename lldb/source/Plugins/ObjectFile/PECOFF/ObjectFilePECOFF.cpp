@@ -761,12 +761,18 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
 
 void ObjectFilePECOFF::ParseSymtab(Symtab &symtab) {
   SectionList *sect_list = GetSectionList();
-  AppendFromExportTable(sect_list, symtab);
-  AppendFromCOFFSymbolTable(sect_list, symtab);
+  rva_symbol_list_t sorted_exports = AppendFromExportTable(sect_list, symtab);
+  AppendFromCOFFSymbolTable(sect_list, symtab, sorted_exports);
 }
 
-void ObjectFilePECOFF::AppendFromCOFFSymbolTable(SectionList *sect_list,
-                                                 Symtab &symtab) {
+static bool RVASymbolListCompareRVA(const std::pair<uint32_t, uint32_t> &a,
+                                    const std::pair<uint32_t, uint32_t> &b) {
+  return a.first < b.first;
+}
+
+void ObjectFilePECOFF::AppendFromCOFFSymbolTable(
+    SectionList *sect_list, Symtab &symtab,
+    const ObjectFilePECOFF::rva_symbol_list_t &sorted_exports) {
   const uint32_t num_syms = m_binary->getNumberOfSymbols();
   if (num_syms == 0)
     return;
@@ -795,22 +801,52 @@ void ObjectFilePECOFF::AppendFromCOFFSymbolTable(SectionList *sect_list,
     if (section_number >= 1) {
       symbol.GetAddressRef() = Address(
           sect_list->FindSectionByID(section_number), coff_sym_ref.getValue());
-      symbol.SetType(MapSymbolType(coff_sym_ref.getType()));
+      const auto symbol_type = MapSymbolType(coff_sym_ref.getType());
+      symbol.SetType(symbol_type);
+
+      // Check for duplicate of exported symbols:
+      const uint32_t symbol_rva = symbol.GetAddressRef().GetFileAddress() -
+                                  m_coff_header_opt.image_base;
+      const auto &first_match = std::lower_bound(
+          sorted_exports.begin(), sorted_exports.end(),
+          std::make_pair(symbol_rva, 0), RVASymbolListCompareRVA);
+      for (auto it = first_match;
+           it != sorted_exports.end() && it->first == symbol_rva; ++it) {
+        Symbol *exported = symtab.SymbolAtIndex(it->second);
+        if (symbol_type != lldb::eSymbolTypeInvalid)
+          exported->SetType(symbol_type);
+        if (exported->GetMangled() == symbol.GetMangled()) {
+          symbol.SetExternal(true);
+          // We don't want the symbol to be duplicated (e.g. when running
+          // `disas -n func`), but we also don't want to erase this entry (to
+          // preserve the original symbol order), so we mark it as additional.
+          symbol.SetType(lldb::eSymbolTypeAdditional);
+        } else {
+          // It is possible for a symbol to be exported in a different name
+          // from its original. In this case keep both entries so lookup using
+          // either names will work. If this symbol has an invalid type, replace
+          // it with the type from the export symbol.
+          if (symbol.GetType() == lldb::eSymbolTypeInvalid)
+            symbol.SetType(exported->GetType());
+        }
+      }
     }
     symtab.AddSymbol(symbol);
   }
 }
 
-void ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
-                                             Symtab &symtab) {
+ObjectFilePECOFF::rva_symbol_list_t
+ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
+                                        Symtab &symtab) {
   const auto *export_table = m_binary->getExportTable();
   if (!export_table)
-    return;
+    return {};
   const uint32_t num_syms = export_table->AddressTableEntries;
   if (num_syms == 0)
-    return;
+    return {};
 
   Log *log = GetLog(LLDBLog::Object);
+  rva_symbol_list_t export_list;
   symtab.Reserve(symtab.GetNumSymbols() + num_syms);
   // Read each export table entry, ordered by ordinal instead of by name.
   for (const auto &entry : m_binary->export_directories()) {
@@ -851,8 +887,12 @@ void ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
       if (section_sp->GetPermissions() & ePermissionsExecutable)
         symbol.SetType(lldb::eSymbolTypeCode);
     symbol.SetExternal(true);
-    symtab.AddSymbol(symbol);
+    uint32_t idx = symtab.AddSymbol(symbol);
+    export_list.push_back(std::make_pair(function_rva, idx));
   }
+  std::stable_sort(export_list.begin(), export_list.end(),
+                   RVASymbolListCompareRVA);
+  return export_list;
 }
 
 std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
