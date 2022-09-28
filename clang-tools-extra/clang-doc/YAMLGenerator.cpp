@@ -23,7 +23,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(CommentInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(EnumInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(EnumValueInfo)
-LLVM_YAML_IS_SEQUENCE_VECTOR(TypedefInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<CommentInfo>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::SmallString<16>)
@@ -138,10 +137,9 @@ static void RecordInfoMapping(IO &IO, RecordInfo &I) {
   IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());
   IO.mapOptional("VirtualParents", I.VirtualParents,
                  llvm::SmallVector<Reference, 4>());
-  IO.mapOptional("ChildRecords", I.Children.Records, std::vector<Reference>());
-  IO.mapOptional("ChildFunctions", I.Children.Functions);
-  IO.mapOptional("ChildEnums", I.Children.Enums);
-  IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
+  IO.mapOptional("ChildRecords", I.ChildRecords, std::vector<Reference>());
+  IO.mapOptional("ChildFunctions", I.ChildFunctions);
+  IO.mapOptional("ChildEnums", I.ChildEnums);
 }
 
 static void CommentInfoMapping(IO &IO, CommentInfo &I) {
@@ -205,13 +203,11 @@ template <> struct MappingTraits<MemberTypeInfo> {
 template <> struct MappingTraits<NamespaceInfo> {
   static void mapping(IO &IO, NamespaceInfo &I) {
     InfoMapping(IO, I);
-    IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
+    IO.mapOptional("ChildNamespaces", I.ChildNamespaces,
                    std::vector<Reference>());
-    IO.mapOptional("ChildRecords", I.Children.Records,
-                   std::vector<Reference>());
-    IO.mapOptional("ChildFunctions", I.Children.Functions);
-    IO.mapOptional("ChildEnums", I.Children.Enums);
-    IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
+    IO.mapOptional("ChildRecords", I.ChildRecords, std::vector<Reference>());
+    IO.mapOptional("ChildFunctions", I.ChildFunctions);
+    IO.mapOptional("ChildEnums", I.ChildEnums);
   }
 };
 
@@ -245,14 +241,6 @@ template <> struct MappingTraits<EnumInfo> {
     IO.mapOptional("Scoped", I.Scoped, false);
     IO.mapOptional("BaseType", I.BaseType);
     IO.mapOptional("Members", I.Members);
-  }
-};
-
-template <> struct MappingTraits<TypedefInfo> {
-  static void mapping(IO &IO, TypedefInfo &I) {
-    SymbolInfoMapping(IO, I);
-    IO.mapOptional("Underlying", I.Underlying.Type);
-    IO.mapOptional("IsUsing", I.IsUsing, false);
   }
 };
 
@@ -313,9 +301,6 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_function:
     InfoYAML << *static_cast<clang::doc::FunctionInfo *>(I);
-    break;
-  case InfoType::IT_typedef:
-    InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

@@ -90,18 +90,6 @@ void reduceChildren(std::vector<EnumInfo> &Children,
   }
 }
 
-void reduceChildren(std::vector<TypedefInfo> &Children,
-                    std::vector<TypedefInfo> &&ChildrenToMerge) {
-  for (auto &ChildToMerge : ChildrenToMerge) {
-    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
-    if (mergeIdx == -1) {
-      Children.push_back(std::move(ChildToMerge));
-      continue;
-    }
-    Children[mergeIdx].merge(std::move(ChildToMerge));
-  }
-}
-
 } // namespace
 
 // Dispatch function.
@@ -120,8 +108,6 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return reduce<EnumInfo>(Values);
   case InfoType::IT_function:
     return reduce<FunctionInfo>(Values);
-  case InfoType::IT_typedef:
-    return reduce<TypedefInfo>(Values);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
@@ -223,11 +209,10 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
 void NamespaceInfo::merge(NamespaceInfo &&Other) {
   assert(mergeable(Other));
   // Reduce children if necessary.
-  reduceChildren(Children.Namespaces, std::move(Other.Children.Namespaces));
-  reduceChildren(Children.Records, std::move(Other.Children.Records));
-  reduceChildren(Children.Functions, std::move(Other.Children.Functions));
-  reduceChildren(Children.Enums, std::move(Other.Children.Enums));
-  reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
+  reduceChildren(ChildNamespaces, std::move(Other.ChildNamespaces));
+  reduceChildren(ChildRecords, std::move(Other.ChildRecords));
+  reduceChildren(ChildFunctions, std::move(Other.ChildFunctions));
+  reduceChildren(ChildEnums, std::move(Other.ChildEnums));
   mergeBase(std::move(Other));
 }
 
@@ -245,10 +230,9 @@ void RecordInfo::merge(RecordInfo &&Other) {
   if (VirtualParents.empty())
     VirtualParents = std::move(Other.VirtualParents);
   // Reduce children if necessary.
-  reduceChildren(Children.Records, std::move(Other.Children.Records));
-  reduceChildren(Children.Functions, std::move(Other.Children.Functions));
-  reduceChildren(Children.Enums, std::move(Other.Children.Enums));
-  reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
+  reduceChildren(ChildRecords, std::move(Other.ChildRecords));
+  reduceChildren(ChildFunctions, std::move(Other.ChildFunctions));
+  reduceChildren(ChildEnums, std::move(Other.ChildEnums));
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -276,15 +260,6 @@ void FunctionInfo::merge(FunctionInfo &&Other) {
   SymbolInfo::merge(std::move(Other));
 }
 
-void TypedefInfo::merge(TypedefInfo &&Other) {
-  assert(mergeable(Other));
-  if (!IsUsing)
-    IsUsing = Other.IsUsing;
-  if (Underlying.Type.Name == "")
-    Underlying = Other.Underlying;
-  SymbolInfo::merge(std::move(Other));
-}
-
 llvm::SmallString<16> Info::extractName() const {
   if (!Name.empty())
     return Name;
@@ -306,9 +281,6 @@ llvm::SmallString<16> Info::extractName() const {
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_enum:
     return llvm::SmallString<16>("@nonymous_enum_" +
-                                 toHex(llvm::toStringRef(USR)));
-  case InfoType::IT_typedef:
-    return llvm::SmallString<16>("@nonymous_typedef_" +
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_function:
     return llvm::SmallString<16>("@nonymous_function_" +
