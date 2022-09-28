@@ -43,15 +43,15 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   I.Name = "Namespace";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.ChildNamespaces.emplace_back(EmptySID, "ChildNamespace",
-                                 InfoType::IT_namespace, "Namespace");
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                              "Namespace");
-  I.ChildFunctions.emplace_back();
-  I.ChildFunctions.back().Access = AccessSpecifier::AS_none;
-  I.ChildFunctions.back().Name = "OneFunction";
-  I.ChildEnums.emplace_back();
-  I.ChildEnums.back().Name = "OneEnum";
+  I.Children.Namespaces.emplace_back(EmptySID, "ChildNamespace",
+                                     InfoType::IT_namespace, "Namespace");
+  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                                  "Namespace");
+  I.Children.Functions.emplace_back();
+  I.Children.Functions.back().Access = AccessSpecifier::AS_none;
+  I.Children.Functions.back().Name = "OneFunction";
+  I.Children.Enums.emplace_back();
+  I.Children.Enums.back().Name = "OneEnum";
 
   auto G = getHTMLGenerator();
   assert(G);
@@ -158,12 +158,12 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, PathTo);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
-  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
-                              "X/Y/Z/r");
-  I.ChildFunctions.emplace_back();
-  I.ChildFunctions.back().Name = "OneFunction";
-  I.ChildEnums.emplace_back();
-  I.ChildEnums.back().Name = "OneEnum";
+  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record,
+                                  "X/Y/Z/r");
+  I.Children.Functions.emplace_back();
+  I.Children.Functions.back().Name = "OneFunction";
+  I.Children.Enums.emplace_back();
+  I.Children.Enums.back().Name = "OneEnum";
 
   auto G = getHTMLGenerator();
   assert(G);
