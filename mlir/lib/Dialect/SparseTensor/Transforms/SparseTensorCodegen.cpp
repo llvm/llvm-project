@@ -103,37 +103,28 @@ static Optional<Value> sizeFromTensorAtDim(OpBuilder &rewriter, Location loc,
 
 /// Returns field index of sparse tensor type for pointers/indices, when set.
 static unsigned getFieldIndex(Type type, unsigned ptrDim, unsigned idxDim) {
-  auto enc = getSparseTensorEncoding(type);
-  assert(enc);
+  assert(getSparseTensorEncoding(type));
   RankedTensorType rType = type.cast<RankedTensorType>();
   unsigned field = 2; // start past sizes
   unsigned ptr = 0;
   unsigned idx = 0;
   for (unsigned r = 0, rank = rType.getShape().size(); r < rank; r++) {
-    switch (enc.getDimLevelType()[r]) {
-    case SparseTensorEncodingAttr::DimLevelType::Dense:
-      break; // no fields
-    case SparseTensorEncodingAttr::DimLevelType::Compressed:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+    if (isCompressedDim(rType, r)) {
       if (ptr++ == ptrDim)
         return field;
       field++;
       if (idx++ == idxDim)
         return field;
       field++;
-      break;
-    case SparseTensorEncodingAttr::DimLevelType::Singleton:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+    } else if (isSingletonDim(rType, r)) {
       if (idx++ == idxDim)
         return field;
       field++;
-      break;
+    } else {
+      assert(isDenseDim(rType, r)); // no fields
     }
   }
+  assert(ptrDim == -1u && idxDim == -1u);
   return field + 1; // return values field index
 }
 
@@ -176,7 +167,7 @@ convertSparseTensorType(Type type, SmallVectorImpl<Type> &fields) {
   // The dimSizes array.
   fields.push_back(MemRefType::get({rank}, indexType));
   // The memSizes array.
-  unsigned lastField = getFieldIndex(type, -1, -1);
+  unsigned lastField = getFieldIndex(type, -1u, -1u);
   fields.push_back(MemRefType::get({lastField - 2}, indexType));
   // Per-dimension storage.
   for (unsigned r = 0; r < rank; r++) {
@@ -184,22 +175,13 @@ convertSparseTensorType(Type type, SmallVectorImpl<Type> &fields) {
     // As a result, the compound type can be constructed directly in the given
     // order. Clients of this type know what field is what from the sparse
     // tensor type.
-    switch (enc.getDimLevelType()[r]) {
-    case SparseTensorEncodingAttr::DimLevelType::Dense:
-      break; // no fields
-    case SparseTensorEncodingAttr::DimLevelType::Compressed:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+    if (isCompressedDim(rType, r)) {
       fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, ptrType));
       fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, idxType));
-      break;
-    case SparseTensorEncodingAttr::DimLevelType::Singleton:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+    } else if (isSingletonDim(rType, r)) {
       fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, idxType));
-      break;
+    } else {
+      assert(isDenseDim(rType, r)); // no fields
     }
   }
   // The values array.
@@ -254,7 +236,7 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
       builder.create<memref::AllocOp>(loc, MemRefType::get({rank}, indexType));
   fields.push_back(dimSizes);
   // The sizes array.
-  unsigned lastField = getFieldIndex(type, -1, -1);
+  unsigned lastField = getFieldIndex(type, -1u, -1u);
   Value memSizes = builder.create<memref::AllocOp>(
       loc, MemRefType::get({lastField - 2}, indexType));
   fields.push_back(memSizes);
@@ -265,25 +247,16 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
     builder.create<memref::StoreOp>(loc, sizes[ro], dimSizes,
                                     constantIndex(builder, loc, r));
     linear = builder.create<arith::MulIOp>(loc, linear, sizes[ro]);
-    // Allocate fiels.
-    switch (enc.getDimLevelType()[r]) {
-    case SparseTensorEncodingAttr::DimLevelType::Dense:
-      break; // no fields
-    case SparseTensorEncodingAttr::DimLevelType::Compressed:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+    // Allocate fields.
+    if (isCompressedDim(rType, r)) {
       fields.push_back(createAllocation(builder, loc, ptrType, heuristic));
       fields.push_back(createAllocation(builder, loc, idxType, heuristic));
       allDense = false;
-      break;
-    case SparseTensorEncodingAttr::DimLevelType::Singleton:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+    } else if (isSingletonDim(rType, r)) {
       fields.push_back(createAllocation(builder, loc, idxType, heuristic));
       allDense = false;
-      break;
+    } else {
+      assert(isDenseDim(rType, r)); // no fields
     }
   }
   // The values array. For all-dense, the full length is required.
@@ -507,7 +480,8 @@ public:
   matchAndRewrite(ExpandOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    ShapedType srcType = op.getTensor().getType().cast<ShapedType>();
+    RankedTensorType srcType =
+        op.getTensor().getType().cast<RankedTensorType>();
     Type eltType = srcType.getElementType();
     Type boolType = rewriter.getIntegerType(1);
     Type idxType = rewriter.getIndexType();
@@ -561,17 +535,18 @@ public:
   matchAndRewrite(CompressOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    ShapedType srcType = op.getTensor().getType().cast<ShapedType>();
-    Type eltType = srcType.getElementType();
+    RankedTensorType dstType =
+        op.getTensor().getType().cast<RankedTensorType>();
+    Type eltType = dstType.getElementType();
     Value values = adaptor.getValues();
     Value filled = adaptor.getFilled();
     Value added = adaptor.getAdded();
     Value count = adaptor.getCount();
-
-    //
-    // TODO: need to implement "std::sort(added, added + count);" for ordered
-    //
-
+    // If the innermost dimension is ordered, we need to sort the indices
+    // in the "added" array prior to applying the compression.
+    unsigned rank = dstType.getShape().size();
+    if (isOrderedDim(dstType, rank - 1))
+      rewriter.create<SortOp>(loc, count, ValueRange{added}, ValueRange{});
     // While performing the insertions, we also need to reset the elements
     // of the values/filled-switch by only iterating over the set elements,
     // to ensure that the runtime complexity remains proportional to the
@@ -699,7 +674,7 @@ public:
   static unsigned getIndexForOp(UnrealizedConversionCastOp /*tuple*/,
                                 ToPointersOp op) {
     uint64_t dim = op.getDimension().getZExtValue();
-    return getFieldIndex(op.getTensor().getType(), /*ptrDim=*/dim, -1);
+    return getFieldIndex(op.getTensor().getType(), /*ptrDim=*/dim, -1u);
   }
 };
 
@@ -712,7 +687,7 @@ public:
   static unsigned getIndexForOp(UnrealizedConversionCastOp /*tuple*/,
                                 ToIndicesOp op) {
     uint64_t dim = op.getDimension().getZExtValue();
-    return getFieldIndex(op.getTensor().getType(), -1, /*idxDim=*/dim);
+    return getFieldIndex(op.getTensor().getType(), -1u, /*idxDim=*/dim);
   }
 };
 

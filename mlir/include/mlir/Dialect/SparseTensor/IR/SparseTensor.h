@@ -27,9 +27,43 @@
 
 namespace mlir {
 namespace sparse_tensor {
+
 /// Convenience method to get a sparse encoding attribute from a type.
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
+
+//
+// Dimension level types.
+//
+
+bool isDenseDim(SparseTensorEncodingAttr::DimLevelType dltp);
+bool isCompressedDim(SparseTensorEncodingAttr::DimLevelType dltp);
+bool isSingletonDim(SparseTensorEncodingAttr::DimLevelType dltp);
+
+/// Convenience method to test for dense dimension (0 <= d < rank).
+bool isDenseDim(RankedTensorType type, uint64_t d);
+
+/// Convenience method to test for compressed dimension (0 <= d < rank).
+bool isCompressedDim(RankedTensorType type, uint64_t d);
+
+/// Convenience method to test for singleton dimension (0 <= d < rank).
+bool isSingletonDim(RankedTensorType type, uint64_t d);
+
+//
+// Dimension level properties.
+//
+
+bool isOrderedDim(SparseTensorEncodingAttr::DimLevelType dltp);
+bool isUniqueDim(SparseTensorEncodingAttr::DimLevelType dltp);
+
+/// Convenience method to test for ordered property in the
+/// given dimension (0 <= d < rank).
+bool isOrderedDim(RankedTensorType type, uint64_t d);
+
+/// Convenience method to test for unique property in the
+/// given dimension (0 <= d < rank).
+bool isUniqueDim(RankedTensorType type, uint64_t d);
+
 } // namespace sparse_tensor
 } // namespace mlir
 
