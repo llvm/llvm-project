@@ -814,6 +814,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalFor({{s64, s32}, {s64, s64}});
 
+  // TODO: Custom legalization for vector types.
+  // TODO: Custom legalization for mismatched types.
+  // TODO: s16 support.
+  getActionDefinitionsBuilder(G_FCOPYSIGN).customFor({{s32, s32}, {s64, s64}});
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -856,6 +861,8 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET:
     return legalizeMemOps(MI, Helper);
+  case TargetOpcode::G_FCOPYSIGN:
+    return legalizeFCopySign(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1437,4 +1444,64 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
   }
 
   return false;
+}
+
+bool AArch64LegalizerInfo::legalizeFCopySign(MachineInstr &MI,
+                                             LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  assert(DstTy.isScalar() && "Only expected scalars right now!");
+  const unsigned DstSize = DstTy.getSizeInBits();
+  assert((DstSize == 32 || DstSize == 64) && "Unexpected dst type!");
+  assert(MRI.getType(MI.getOperand(2).getReg()) == DstTy &&
+         "Expected homogeneous types!");
+
+  // We want to materialize a mask with the high bit set.
+  uint64_t EltMask;
+  LLT VecTy;
+
+  // TODO: s16 support.
+  switch (DstSize) {
+  default:
+    llvm_unreachable("Unexpected type for G_FCOPYSIGN!");
+  case 64: {
+    // AdvSIMD immediate moves cannot materialize out mask in a single
+    // instruction for 64-bit elements. Instead, materialize zero and then
+    // negate it.
+    EltMask = 0;
+    VecTy = LLT::fixed_vector(2, DstTy);
+    break;
+  }
+  case 32:
+    EltMask = 0x80000000ULL;
+    VecTy = LLT::fixed_vector(4, DstTy);
+    break;
+  }
+
+  // Widen In1 and In2 to 128 bits. We want these to eventually become
+  // INSERT_SUBREGs.
+  auto Undef = MIRBuilder.buildUndef(VecTy);
+  auto Zero = MIRBuilder.buildConstant(DstTy, 0);
+  auto Ins1 = MIRBuilder.buildInsertVectorElement(
+      VecTy, Undef, MI.getOperand(1).getReg(), Zero);
+  auto Ins2 = MIRBuilder.buildInsertVectorElement(
+      VecTy, Undef, MI.getOperand(2).getReg(), Zero);
+
+  // Construct the mask.
+  auto Mask = MIRBuilder.buildConstant(VecTy, EltMask);
+  if (DstSize == 64)
+    Mask = MIRBuilder.buildFNeg(VecTy, Mask);
+
+  auto Sel = MIRBuilder.buildInstr(AArch64::G_BIT, {VecTy}, {Ins1, Ins2, Mask});
+
+  // Build an unmerge whose 0th elt is the original G_FCOPYSIGN destination. We
+  // want this to eventually become an EXTRACT_SUBREG.
+  SmallVector<Register, 2> DstRegs(1, Dst);
+  for (unsigned I = 1, E = VecTy.getNumElements(); I < E; ++I)
+    DstRegs.push_back(MRI.createGenericVirtualRegister(DstTy));
+  MIRBuilder.buildUnmerge(DstRegs, Sel);
+  MI.eraseFromParent();
+  return true;
 }
