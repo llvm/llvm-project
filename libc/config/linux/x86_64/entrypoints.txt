@@ -22,6 +22,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
+    # sched.h entrypoints
+    libc.src.sched.sched_getaffinity
+    libc.src.sched.sched_setaffinity
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero
