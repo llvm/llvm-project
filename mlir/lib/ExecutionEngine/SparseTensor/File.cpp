@@ -83,6 +83,33 @@ void SparseTensorFile::assertMatchesShape(uint64_t rank,
            "Dimension size mismatch");
 }
 
+bool SparseTensorFile::canReadAs(PrimaryType valTy) const {
+  switch (valueKind_) {
+  case ValueKind::kInvalid:
+    assert(false && "Must readHeader() before calling canReadAs()");
+    return false; // In case assertions are disabled.
+  case ValueKind::kPattern:
+    return true;
+  case ValueKind::kInteger:
+    // When the file is specified to store integer values, we still
+    // allow implicitly converting those to floating primary-types.
+    return isRealPrimaryType(valTy);
+  case ValueKind::kReal:
+    // When the file is specified to store real/floating values, then
+    // we disallow implicit conversion to integer primary-types.
+    return isFloatingPrimaryType(valTy);
+  case ValueKind::kComplex:
+    // When the file is specified to store complex values, then we
+    // require a complex primary-type.
+    return isComplexPrimaryType(valTy);
+  case ValueKind::kUndefined:
+    // The "extended" FROSTT format doesn't specify a ValueKind.
+    // So we allow implicitly converting the stored values to both
+    // integer and floating primary-types.
+    return isRealPrimaryType(valTy);
+  }
+}
+
 /// Helper to convert C-style strings (i.e., '\0' terminated) to lower case.
 static inline char *toLower(char *token) {
   for (char *c = token; *c; ++c)
