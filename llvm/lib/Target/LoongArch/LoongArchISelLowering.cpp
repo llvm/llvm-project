@@ -2024,25 +2024,12 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
     case 'I':
     case 'K':
       return C_Immediate;
-    case 'k':
-      return C_Memory;
     }
   }
 
-  if (Constraint == "ZC" || Constraint == "ZB")
-    return C_Memory;
+  // TODO: handle 'k", "ZB" and "ZC".
 
-  // 'm' is handled here.
   return TargetLowering::getConstraintType(Constraint);
-}
-
-unsigned LoongArchTargetLowering::getInlineAsmMemConstraint(
-    StringRef ConstraintCode) const {
-  return StringSwitch<unsigned>(ConstraintCode)
-      .Case("k", InlineAsm::Constraint_k)
-      .Case("ZB", InlineAsm::Constraint_ZB)
-      .Case("ZC", InlineAsm::Constraint_ZC)
-      .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
