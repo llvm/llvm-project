@@ -1075,7 +1075,7 @@ public:
     C.ScaleCost = 0;
   }
 
-  bool isLess(const Cost &Other);
+  bool isLess(const Cost &Other) const;
 
   void Lose();
 
@@ -1474,7 +1474,7 @@ void Cost::Lose() {
 }
 
 /// Choose the lower cost.
-bool Cost::isLess(const Cost &Other) {
+bool Cost::isLess(const Cost &Other) const {
   if (InsnsCost.getNumOccurrences() > 0 && InsnsCost &&
       C.Insns != Other.C.Insns)
     return C.Insns < Other.C.Insns;
