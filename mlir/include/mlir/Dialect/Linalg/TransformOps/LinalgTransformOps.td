@@ -786,8 +786,8 @@ def MapNestedForeachThreadToGpuThreads :
       The operation alters the block size of the given gpu_launch using 
       blockDim argument.
 
-      Return modes:
-      =============
+      #### Return modes:
+      
       This operation ignores non-gpu_launch ops and drops them in the return.
 
       If any scf.foreach_thread with tensors is found, the transform definitely 
@@ -801,8 +801,7 @@ def MapNestedForeachThreadToGpuThreads :
       producing a new SSA value to satisfy chaining and linearity of the IR 
       properties.
 
-      Example:
-      ========
+      #### Example:
 
       ```
       gpu.launch blocks(%bx, %by, %bz) in (%x = %0, %y = %1, %z = %2)
