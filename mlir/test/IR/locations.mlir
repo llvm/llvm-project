@@ -82,3 +82,10 @@ func.func @location_name_child_is_name() {
 
 // CHECK-ALIAS: #[[LOC]] = loc("out_of_line_location")
 #loc = loc("out_of_line_location")
+
+// CHECK-LABEL: @optional_location_specifier
+// CHECK: test.attr_with_loc("foo" loc("foo_loc"))
+func.func @optional_location_specifier() {
+  test.attr_with_loc("foo" loc("foo_loc"))
+  return
+}
