@@ -161,9 +161,9 @@ public:
         return false;
       return true;
     });
-    target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
-                           mlir::arith::ArithmeticDialect,
-                           mlir::func::FuncDialect>();
+    target
+        .addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
+                         mlir::arith::ArithDialect, mlir::func::FuncDialect>();
 
     if (mlir::failed(mlir::applyPartialConversion(function, target,
                                                   std::move(patterns)))) {
