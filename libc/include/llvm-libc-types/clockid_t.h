@@ -1,4 +1,4 @@
-//===-- C standard library header time.h ----------------------------------===//
+//===-- Definition of the type clockid_t ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TIME_H
-#define LLVM_LIBC_TIME_H
+#ifndef __LLVM_LIBC_TYPES_CLOCKID_T_H__
+#define __LLVM_LIBC_TYPES_CLOCKID_T_H__
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/time-macros.h>
+typedef int clockid_t;
 
-%%public_api()
-
-#endif // LLVM_LIBC_TIME_H
+#endif // __LLVM_LIBC_TYPES_CLOCKID_T_H__
