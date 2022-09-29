@@ -222,67 +222,6 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
 
 
 //===----------------------------------------------------------------------===//
-// Reduce op.
-//===----------------------------------------------------------------------===//
-
-def TensorOrMemref :
-  AnyTypeOf<[AnyMemRef, AnyRankedTensor], "", "::mlir::ShapedType">;
-
-def ReduceOp : LinalgStructuredBase_Op<"reduce", [
-      SameVariadicOperandSize, SingleBlockImplicitTerminator<"YieldOp">
-    ]> {
-  let summary = "Reduce operator";
-  let description = [{
-    Executes `combiner` on the `dimensions` of `inputs` and returns the
-    reduced result. The `dimensions` attribute needs to list the reduction
-    dimensions in increasing order.
-
-    Example:
-    ```
-      %reduce = linalg.reduce
-          ins(%input:tensor<16x32x64xf32>)
-          outs(%init:tensor<16x64xf32>)
-          dimensions = [1]
-          (%in: f32, %out: f32) {
-            %0 = arith.addf %in, %out: f32
-            linalg.yield %0: f32
-          }
-    ```
-  }];
-
-  let arguments = (ins
-    // Input arg
-    Variadic<TensorOrMemref>:$inputs,
-    // Output arg
-    Variadic<TensorOrMemref>:$inits,
-
-    DenseI64ArrayAttr:$dimensions
-  );
-  let results = (outs Variadic<TensorOrMemref>);
-  let regions = (region SizedRegion<1>:$combiner);
-
-  let extraClassDeclaration = structuredOpsBaseDecls # [{
-    // Declare functions necessary for LinalgStructuredInterface.
-    ArrayAttr getIteratorTypes();
-    ArrayAttr getIndexingMaps();
-
-    // Implement functions necessary for DestinationStyleOpInterface.
-    mlir::ValueRange getOutputs() { return getInits(); }
-    unsigned getNumInputs() { return getInputs().size(); };
-    unsigned getNumOutputs() { return getInits().size(); };
-    static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-                              mlir::ArrayRef<mlir::NamedAttribute>)>
-    getRegionBuilder() {
-      return nullptr;
-    }
-  }];
-
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-}
-
-
-//===----------------------------------------------------------------------===//
 // Named Linalg ops, implemented as a declarative configurations of generic ops.
 //===----------------------------------------------------------------------===//
 

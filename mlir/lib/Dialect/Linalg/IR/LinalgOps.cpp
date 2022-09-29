@@ -124,8 +124,7 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
 static ParseResult
 parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
                              SmallVectorImpl<Type> &inputTypes,
-                             SmallVectorImpl<Type> &outputTypes,
-                             bool addOperandSegmentSizes = true) {
+                             SmallVectorImpl<Type> &outputTypes) {
   SMLoc inputsOperandsLoc, outputsOperandsLoc;
   SmallVector<OpAsmParser::UnresolvedOperand, 4> inputsOperands,
       outputsOperands;
@@ -156,12 +155,10 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
                              result.operands))
     return failure();
 
-  if (addOperandSegmentSizes) {
-    result.addAttribute("operand_segment_sizes",
-                        parser.getBuilder().getDenseI32ArrayAttr(
-                            {static_cast<int32_t>(inputsOperands.size()),
-                             static_cast<int32_t>(outputsOperands.size())}));
-  }
+  result.addAttribute("operand_segment_sizes",
+                      parser.getBuilder().getDenseI32ArrayAttr(
+                          {static_cast<int32_t>(inputsOperands.size()),
+                           static_cast<int32_t>(outputsOperands.size())}));
   return success();
 }
 
@@ -1181,209 +1178,6 @@ void GenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult GenericOp::fold(ArrayRef<Attribute>,
                               SmallVectorImpl<OpFoldResult> &) {
   return foldMemRefCast(*this);
-}
-
-//===----------------------------------------------------------------------===//
-// ReduceOp
-//===----------------------------------------------------------------------===//
-
-ArrayAttr ReduceOp::getIteratorTypes() {
-  int64_t inputRank = getInputs()[0].getType().cast<ShapedType>().getRank();
-  SmallVector<StringRef> iteratorTypes(inputRank,
-                                       getParallelIteratorTypeName());
-  for (int64_t reductionDim : getDimensions())
-    iteratorTypes[reductionDim] = getReductionIteratorTypeName();
-  return Builder(getContext()).getStrArrayAttr(iteratorTypes);
-}
-
-ArrayAttr ReduceOp::getIndexingMaps() {
-  int64_t inputRank = getInputs()[0].getType().cast<ShapedType>().getRank();
-  SmallVector<AffineMap> affineMaps(
-      getNumInputs(),
-      AffineMap::getMultiDimIdentityMap(inputRank, getContext()));
-  AffineMap resultMap =
-      AffineMap::getMultiDimIdentityMap(inputRank, getContext())
-          .dropResults(getDimensions());
-  for (int64_t i = 0, e = getNumOutputs(); i < e; ++i)
-    affineMaps.push_back(resultMap);
-  return Builder(getContext()).getAffineMapArrayAttr(affineMaps);
-}
-
-void ReduceOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  SmallVector<Value> inputBuffers = getInputBufferOperands();
-  SmallVector<Value> outputBuffers = getOutputBufferOperands();
-  getGenericEffectsImpl(effects, getOperation()->getResults(), inputBuffers,
-                        outputBuffers);
-}
-
-static ParseResult parseDstStyleOp(
-    OpAsmParser &parser, OperationState &result,
-    function_ref<ParseResult(OpAsmParser &, NamedAttrList &)> parseAttrsFn =
-        nullptr) {
-  // Parse `ins` and `outs`.
-  SmallVector<Type, 4> inputTypes, outputTypes;
-  if (parseCommonStructuredOpParts(parser, result, inputTypes, outputTypes,
-                                   /*addOperandSegmentSizes=*/false))
-    return failure();
-
-  // Add result types.
-  for (Type outputType : outputTypes) {
-    if (!outputType.isa<RankedTensorType>())
-      return failure();
-    result.addTypes(outputType);
-  }
-
-  // Parse required attributes.
-  if (parseAttrsFn && failed(parseAttrsFn(parser, result.attributes)))
-    return failure();
-
-  // Parse optional attributes.
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  return success();
-}
-
-static ParseResult parseDenseI64ArrayAttr(OpAsmParser &parser,
-                                          NamedAttrList &attributes,
-                                          StringRef attributeName) {
-  if (parser.parseKeyword(attributeName) || parser.parseEqual())
-    return failure();
-
-  attributes.set(attributeName, DenseI64ArrayAttr::parse(parser, Type{}));
-  return success();
-}
-
-ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
-  if (parseDstStyleOp(
-          parser, result, [&](OpAsmParser &parser, NamedAttrList &attributes) {
-            return parseDenseI64ArrayAttr(parser, attributes, "dimensions");
-          }))
-    return failure();
-
-  SmallVector<OpAsmParser::Argument> regionArgs;
-  if (parser.parseArgumentList(regionArgs, OpAsmParser::Delimiter::Paren,
-                               /*allowType=*/true, /*allowAttrs=*/true)) {
-    return failure();
-  }
-
-  Region *body = result.addRegion();
-  if (parser.parseRegion(*body, regionArgs))
-    return failure();
-
-  return success();
-}
-
-static void printDenseI64ArrayAttr(OpAsmPrinter &p, StringRef attributeName,
-                                   ArrayRef<int64_t> attributeValue) {
-  p << " " << attributeName << " = [" << attributeValue << "] ";
-}
-
-void ReduceOp::print(OpAsmPrinter &p) {
-  printCommonStructuredOpParts(p, getInputs(), getOutputs());
-  printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
-  p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
-
-  p << "(";
-  llvm::interleaveComma(getCombiner().getArguments(), p,
-                        [&](auto arg) { p.printRegionArgument(arg); });
-  p << ") ";
-
-  p.printRegion(getCombiner(), /*printEntryBlockArgs=*/false);
-}
-
-LogicalResult ReduceOp::verify() {
-  ArrayRef<int64_t> dimensionsRef = getDimensions();
-
-  for (int64_t i = 1; i < getNumInputs(); ++i) {
-    if (getInputs()[i].getType().cast<ShapedType>().getShape() !=
-        getInputs()[0].getType().cast<ShapedType>().getShape()) {
-      return emitOpError() << "expects all inputs to have the same shapes. "
-                              "Shape at input-index "
-                           << i
-                           << " is not equal to the shape at input-index 0.";
-    }
-  }
-  for (int64_t i = 1; i < getNumOutputs(); ++i) {
-    if (getInits()[i].getType().cast<ShapedType>().getShape() !=
-        getInits()[0].getType().cast<ShapedType>().getShape()) {
-      return emitOpError() << "expects all outputs to have the same shapes. "
-                              "Shape at output-index "
-                           << i
-                           << " is not equal to the shape at output-index 0.";
-    }
-  }
-  auto inputType = getInputs()[0].getType().cast<ShapedType>();
-  auto initType = getInits()[0].getType().cast<ShapedType>();
-
-  DenseSet<int64_t> dimensionsToReduce;
-  int64_t lastDimension = -1;
-  for (int64_t dimension : dimensionsRef) {
-    if (dimension < 0 || dimension >= inputType.getRank()) {
-      return emitOpError()
-             << "dimensions for reduction should be in the range [0, "
-             << inputType.getRank() - 1 << "].";
-    }
-    if (dimension <= lastDimension) {
-      return emitOpError()
-             << "reduction dimensions are not in increasing order: "
-             << dimensionsRef;
-    }
-
-    lastDimension = dimension;
-    dimensionsToReduce.insert(dimension);
-  }
-
-  auto inputDims = inputType.getShape();
-  auto initDims = initType.getShape();
-
-  // Input dimensions that will be left after the reduction.
-  SmallVector<int64_t> reducedInputDims;
-  for (const auto &en : llvm::enumerate(inputDims)) {
-    if (!dimensionsToReduce.count(en.index()))
-      reducedInputDims.push_back(en.value());
-  }
-
-  if (reducedInputDims.size() != initType.getRank()) {
-    return emitOpError() << "number of dimensions after reduction "
-                         << reducedInputDims.size()
-                         << " doesn't match the init rank "
-                         << initType.getRank();
-  }
-
-  if (reducedInputDims != initDims)
-    return emitOpError() << "init dimensions [" << initDims
-                         << "] doesn't match input dimensions after reduction ["
-                         << reducedInputDims << "]";
-
-  Block *block = getBody();
-  if (block->getNumArguments() != this->getNumOperands())
-    return emitOpError()
-           << "mismatching number of operands and block arguments";
-
-  // Check that the first block arguments match the element type of the inputs.
-  for (auto [input, bbArg] : llvm::zip(getInputs(), block->getArguments())) {
-    Type inputElementType = input.getType().cast<ShapedType>().getElementType();
-    if (inputElementType != bbArg.getType())
-      return emitOpError()
-             << "input element type " << inputElementType
-             << " does not match corresponding block argument type "
-             << bbArg.getType();
-  }
-
-  // Check that the last block arguments match the element type of the outputs.
-  for (auto [output, bbArg] : llvm::zip(
-           getOutputs(), block->getArguments().take_back(getNumOutputs()))) {
-    auto outputElementType =
-        output.getType().cast<ShapedType>().getElementType();
-    if (outputElementType != bbArg.getType())
-      return emitOpError()
-             << "output element type " << outputElementType
-             << " does not match corresponding block argument type "
-             << bbArg.getType();
-  }
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
