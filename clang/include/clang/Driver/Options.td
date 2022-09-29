@@ -3055,14 +3055,14 @@ def flto_EQ : Joined<["-"], "flto=">,
   HelpText<"Set LTO mode">, Values<"thin,full">;
 def flto_EQ_jobserver : Flag<["-"], "flto=jobserver">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
-def disable_cir_passes : Flag<["-"], "disable-cir-passes">,
+def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Disable CIR transformations pipeline">,
-  MarshallingInfoFlag<FrontendOpts<"DisableCIRPasses">>;
-def disable_cir_verifier : Flag<["-"], "disable-cir-verifier">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRDisablePasses">>;
+def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Disable CIR module verifier">,
-  MarshallingInfoFlag<FrontendOpts<"DisableCIRVerifier">>;
+  HelpText<"ClangIR: Disable MLIR module verifier">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
 def flto_EQ_auto : Flag<["-"], "flto=auto">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
 def flto : Flag<["-"], "flto">,
