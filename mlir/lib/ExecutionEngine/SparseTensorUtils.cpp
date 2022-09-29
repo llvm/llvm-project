@@ -45,23 +45,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/SparseTensorUtils.h"
+
+#ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
+
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 #include "mlir/ExecutionEngine/SparseTensor/File.h"
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 
-#ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
-
-#include <algorithm>
-#include <cassert>
-#include <cctype>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <limits>
 #include <numeric>
 
 using namespace mlir::sparse_tensor;
@@ -71,9 +62,9 @@ namespace {
 /// Initializes sparse tensor from an external COO-flavored format.
 template <typename V>
 static SparseTensorStorage<uint64_t, uint64_t, V> *
-toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
-                   uint64_t *indices, uint64_t *perm, uint8_t *sparse) {
-  const DimLevelType *sparsity = (DimLevelType *)(sparse);
+toMLIRSparseTensor(uint64_t rank, uint64_t nse, const uint64_t *shape,
+                   const V *values, const uint64_t *indices,
+                   const uint64_t *perm, const DimLevelType *sparsity) {
 #ifndef NDEBUG
   // Verify that perm is a permutation of 0..(rank-1).
   std::vector<uint64_t> order(perm, perm + rank);
@@ -108,16 +99,15 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
 
 /// Converts a sparse tensor to an external COO-flavored format.
 template <typename V>
-static void fromMLIRSparseTensor(void *tensor, uint64_t *pRank, uint64_t *pNse,
-                                 uint64_t **pShape, V **pValues,
-                                 uint64_t **pIndices) {
-  assert(tensor);
-  auto sparseTensor =
-      static_cast<SparseTensorStorage<uint64_t, uint64_t, V> *>(tensor);
-  uint64_t rank = sparseTensor->getRank();
+static void
+fromMLIRSparseTensor(const SparseTensorStorage<uint64_t, uint64_t, V> *tensor,
+                     uint64_t *pRank, uint64_t *pNse, uint64_t **pShape,
+                     V **pValues, uint64_t **pIndices) {
+  assert(tensor && "Received nullptr for tensor");
+  uint64_t rank = tensor->getRank();
   std::vector<uint64_t> perm(rank);
   std::iota(perm.begin(), perm.end(), 0);
-  SparseTensorCOO<V> *coo = sparseTensor->toCOO(perm.data());
+  SparseTensorCOO<V> *coo = tensor->toCOO(perm.data());
 
   const std::vector<Element<V>> &elements = coo->getElements();
   uint64_t nse = elements.size();
@@ -458,7 +448,11 @@ void endInsert(void *tensor) {
 
 #define IMPL_OUTSPARSETENSOR(VNAME, V)                                         \
   void outSparseTensor##VNAME(void *coo, void *dest, bool sort) {              \
-    return outSparseTensor<V>(coo, dest, sort);                                \
+    assert(coo && "Got nullptr for COO object");                               \
+    auto &coo_ = *static_cast<SparseTensorCOO<V> *>(coo);                      \
+    if (sort)                                                                  \
+      coo_.sort();                                                             \
+    return writeExtFROSTT(coo_, static_cast<char *>(dest));                    \
   }
 FOREVERY_V(IMPL_OUTSPARSETENSOR)
 #undef IMPL_OUTSPARSETENSOR
@@ -495,13 +489,14 @@ void readSparseTensorShape(char *filename, std::vector<uint64_t> *out) {
   out->assign(dimSizes, dimSizes + rank);
 }
 
+// We can't use `static_cast` here because `DimLevelType` is an enum-class.
 // TODO: generalize beyond 64-bit indices.
 #define IMPL_CONVERTTOMLIRSPARSETENSOR(VNAME, V)                               \
   void *convertToMLIRSparseTensor##VNAME(                                      \
       uint64_t rank, uint64_t nse, uint64_t *shape, V *values,                 \
       uint64_t *indices, uint64_t *perm, uint8_t *sparse) {                    \
     return toMLIRSparseTensor<V>(rank, nse, shape, values, indices, perm,      \
-                                 sparse);                                      \
+                                 reinterpret_cast<DimLevelType *>(sparse));    \
   }
 FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
 #undef IMPL_CONVERTTOMLIRSPARSETENSOR
@@ -516,7 +511,9 @@ FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
   void convertFromMLIRSparseTensor##VNAME(void *tensor, uint64_t *pRank,       \
                                           uint64_t *pNse, uint64_t **pShape,   \
                                           V **pValues, uint64_t **pIndices) {  \
-    fromMLIRSparseTensor<V>(tensor, pRank, pNse, pShape, pValues, pIndices);   \
+    fromMLIRSparseTensor<V>(                                                   \
+        static_cast<SparseTensorStorage<uint64_t, uint64_t, V> *>(tensor),     \
+        pRank, pNse, pShape, pValues, pIndices);                               \
   }
 FOREVERY_V(IMPL_CONVERTFROMMLIRSPARSETENSOR)
 #undef IMPL_CONVERTFROMMLIRSPARSETENSOR
