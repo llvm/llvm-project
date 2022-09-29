@@ -41,10 +41,19 @@
 namespace mlir {
 namespace sparse_tensor {
 
+//===----------------------------------------------------------------------===//
 // This forward decl is sufficient to split `SparseTensorStorageBase` into
 // its own header, but isn't sufficient for `SparseTensorStorage` to join it.
 template <typename V>
 class SparseTensorEnumeratorBase;
+
+// These macros ensure consistent error messages, without risk of incuring
+// an additional method call to do so.
+#define ASSERT_VALID_DIM(d)                                                    \
+  assert(d < getRank() && "Dimension index is out of bounds");
+#define ASSERT_COMPRESSED_DIM(d)                                               \
+  assert(isCompressedDim(d) && "Dimension is not compressed");
+#define ASSERT_DENSE_DIM(d) assert(isDenseDim(d) && "Dimension is not dense");
 
 /// Abstract base class for `SparseTensorStorage<P,I,V>`.  This class
 /// takes responsibility for all the `<P,I,V>`-independent aspects
@@ -82,7 +91,7 @@ public:
 
   /// Safely lookup the size of the given (storage-order) dimension.
   uint64_t getDimSize(uint64_t d) const {
-    assert(d < getRank());
+    ASSERT_VALID_DIM(d);
     return dimSizes[d];
   }
 
@@ -95,13 +104,13 @@ public:
 
   /// Safely check if the (storage-order) dimension uses dense storage.
   bool isDenseDim(uint64_t d) const {
-    assert(d < getRank());
+    ASSERT_VALID_DIM(d);
     return dimTypes[d] == DimLevelType::kDense;
   }
 
   /// Safely check if the (storage-order) dimension uses compressed storage.
   bool isCompressedDim(uint64_t d) const {
-    assert(d < getRank());
+    ASSERT_VALID_DIM(d);
     switch (dimTypes[d]) {
     case DimLevelType::kCompressed:
     case DimLevelType::kCompressedNu:
@@ -115,7 +124,7 @@ public:
 
   /// Safely check if the (storage-order) dimension uses singleton storage.
   bool isSingletonDim(uint64_t d) const {
-    assert(d < getRank());
+    ASSERT_VALID_DIM(d);
     switch (dimTypes[d]) {
     case DimLevelType::kSingleton:
     case DimLevelType::kSingletonNu:
@@ -129,7 +138,7 @@ public:
 
   /// Safely check if the (storage-order) dimension is ordered.
   bool isOrderedDim(uint64_t d) const {
-    assert(d < getRank());
+    ASSERT_VALID_DIM(d);
     switch (dimTypes[d]) {
     case DimLevelType::kCompressedNo:
     case DimLevelType::kCompressedNuNo:
@@ -143,7 +152,7 @@ public:
 
   /// Safely check if the (storage-order) dimension is unique.
   bool isUniqueDim(uint64_t d) const {
-    assert(d < getRank());
+    ASSERT_VALID_DIM(d);
     switch (dimTypes[d]) {
     case DimLevelType::kCompressedNu:
     case DimLevelType::kCompressedNuNo:
@@ -193,10 +202,11 @@ public:
 
 private:
   const std::vector<uint64_t> dimSizes;
-  std::vector<uint64_t> rev;
+  std::vector<uint64_t> rev; // conceptually `const`
   const std::vector<DimLevelType> dimTypes;
 };
 
+//===----------------------------------------------------------------------===//
 // This forward decl is necessary for defining `SparseTensorStorage`,
 // but isn't sufficient for splitting it off.
 template <typename P, typename I, typename V>
@@ -269,11 +279,11 @@ public:
 
   /// Partially specialize these getter methods based on template types.
   void getPointers(std::vector<P> **out, uint64_t d) final {
-    assert(d < getRank());
+    ASSERT_VALID_DIM(d);
     *out = &pointers[d];
   }
   void getIndices(std::vector<I> **out, uint64_t d) final {
-    assert(d < getRank());
+    ASSERT_VALID_DIM(d);
     *out = &indices[d];
   }
   void getValues(std::vector<V> **out) final { *out = &values; }
@@ -304,18 +314,18 @@ public:
     // Restore insertion path for first insert.
     const uint64_t lastDim = getRank() - 1;
     uint64_t index = added[0];
+    assert(filled[index] && "added index is not filled");
     cursor[lastDim] = index;
     lexInsert(cursor, values[index]);
-    assert(filled[index]);
     values[index] = 0;
     filled[index] = false;
     // Subsequent insertions are quick.
-    for (uint64_t i = 1; i < count; i++) {
+    for (uint64_t i = 1; i < count; ++i) {
       assert(index < added[i] && "non-lexicographic insertion");
       index = added[i];
+      assert(filled[index] && "added index is not filled");
       cursor[lastDim] = index;
       insPath(cursor, lastDim, added[i - 1] + 1, values[index]);
-      assert(filled[index]);
       values[index] = 0;
       filled[index] = false;
     }
@@ -360,7 +370,7 @@ private:
   /// does not check that `pos` is semantically valid (i.e., larger than
   /// the previous position and smaller than `indices[d].capacity()`).
   void appendPointer(uint64_t d, uint64_t pos, uint64_t count = 1) {
-    assert(isCompressedDim(d));
+    ASSERT_COMPRESSED_DIM(d);
     assert(pos <= std::numeric_limits<P>::max() &&
            "Pointer value is too large for the P-type");
     pointers[d].insert(pointers[d].end(), count, static_cast<P>(pos));
@@ -381,7 +391,7 @@ private:
              "Index value is too large for the I-type");
       indices[d].push_back(static_cast<I>(i));
     } else { // Dense dimension.
-      assert(isDenseDim(d));
+      ASSERT_DENSE_DIM(d);
       assert(i >= full && "Index was already filled");
       if (i == full)
         return; // Short-circuit, since it'll be a nop.
@@ -397,7 +407,7 @@ private:
   /// does not check that `i` is semantically valid (i.e., in bounds
   /// for `dimSizes[d]` and not elsewhere occurring in the same segment).
   void writeIndex(uint64_t d, uint64_t pos, uint64_t i) {
-    assert(isCompressedDim(d));
+    ASSERT_COMPRESSED_DIM(d);
     // Subscript assignment to `std::vector` requires that the `pos`-th
     // entry has been initialized; thus we must be sure to check `size()`
     // here, instead of `capacity()` as would be ideal.
@@ -432,7 +442,7 @@ private:
   ///     and pointwise less-than).
   void fromCOO(const std::vector<Element<V>> &elements, uint64_t lo,
                uint64_t hi, uint64_t d) {
-    uint64_t rank = getRank();
+    const uint64_t rank = getRank();
     assert(d <= rank && hi <= elements.size());
     // Once dimensions are exhausted, insert the numerical values.
     if (d == rank) {
@@ -444,11 +454,11 @@ private:
     uint64_t full = 0;
     while (lo < hi) { // If `hi` is unchanged, then `lo < elements.size()`.
       // Find segment in interval with same index elements in this dimension.
-      uint64_t i = elements[lo].indices[d];
+      const uint64_t i = elements[lo].indices[d];
       uint64_t seg = lo + 1;
-      bool merge = isUniqueDim(d);
-      while (merge && seg < hi && elements[seg].indices[d] == i)
-        seg++;
+      if (isUniqueDim(d))
+        while (seg < hi && elements[seg].indices[d] == i)
+          ++seg;
       // Handle segment in interval for sparse or dense dimension.
       appendIndex(d, full, i);
       full = i + 1;
@@ -469,7 +479,7 @@ private:
     } else if (isSingletonDim(d)) {
       return;
     } else { // Dense dimension.
-      assert(isDenseDim(d));
+      ASSERT_DENSE_DIM(d);
       const uint64_t sz = getDimSizes()[d];
       assert(sz >= full && "Segment is overfull");
       count = detail::checkedMul(count, sz - full);
@@ -486,9 +496,9 @@ private:
 
   /// Wraps up a single insertion path, inner to outer.
   void endPath(uint64_t diff) {
-    uint64_t rank = getRank();
-    assert(diff <= rank);
-    for (uint64_t i = 0; i < rank - diff; i++) {
+    const uint64_t rank = getRank();
+    assert(diff <= rank && "Dimension-diff is out of bounds");
+    for (uint64_t i = 0; i < rank - diff; ++i) {
       const uint64_t d = rank - i - 1;
       finalizeSegment(d, idx[d] + 1);
     }
@@ -496,10 +506,10 @@ private:
 
   /// Continues a single insertion path, outer to inner.
   void insPath(const uint64_t *cursor, uint64_t diff, uint64_t top, V val) {
-    uint64_t rank = getRank();
-    assert(diff < rank);
-    for (uint64_t d = diff; d < rank; d++) {
-      uint64_t i = cursor[d];
+    ASSERT_VALID_DIM(diff);
+    const uint64_t rank = getRank();
+    for (uint64_t d = diff; d < rank; ++d) {
+      const uint64_t i = cursor[d];
       appendIndex(d, top, i);
       top = 0;
       idx[d] = i;
@@ -509,7 +519,8 @@ private:
 
   /// Finds the lexicographic differing dimension.
   uint64_t lexDiff(const uint64_t *cursor) const {
-    for (uint64_t r = 0, rank = getRank(); r < rank; r++)
+    const uint64_t rank = getRank();
+    for (uint64_t r = 0; r < rank; ++r)
       if (cursor[r] > idx[r])
         return r;
       else
@@ -529,6 +540,10 @@ private:
   std::vector<uint64_t> idx; // index cursor for lexicographic insertion.
 };
 
+#undef ASSERT_COMPRESSED_DIM
+#undef ASSERT_VALID_DIM
+
+//===----------------------------------------------------------------------===//
 /// A (higher-order) function object for enumerating the elements of some
 /// `SparseTensorStorage` under a permutation.  That is, the `forallElements`
 /// method encapsulates the loop-nest for enumerating the elements of
@@ -566,7 +581,7 @@ public:
     assert(rank == getRank() && "Permutation rank mismatch");
     const auto &rev = src.getRev();           // source-order -> semantic-order
     const auto &dimSizes = src.getDimSizes(); // in source storage-order
-    for (uint64_t s = 0; s < rank; s++) {     // `s` source storage-order
+    for (uint64_t s = 0; s < rank; ++s) {     // `s` source storage-order
       uint64_t t = perm[rev[s]];              // `t` target-order
       reord[s] = t;
       permsz[t] = dimSizes[s];
@@ -604,17 +619,19 @@ protected:
   std::vector<uint64_t> cursor; // in target order.
 };
 
+//===----------------------------------------------------------------------===//
 template <typename P, typename I, typename V>
 class SparseTensorEnumerator final : public SparseTensorEnumeratorBase<V> {
   using Base = SparseTensorEnumeratorBase<V>;
+  using StorageImpl = SparseTensorStorage<P, I, V>;
 
 public:
   /// Constructs an enumerator with the given permutation for mapping
   /// the semantic-ordering of dimensions to the desired target-ordering.
   ///
   /// Precondition: `perm` must be valid for `rank`.
-  SparseTensorEnumerator(const SparseTensorStorage<P, I, V> &tensor,
-                         uint64_t rank, const uint64_t *perm)
+  SparseTensorEnumerator(const StorageImpl &tensor, uint64_t rank,
+                         const uint64_t *perm)
       : Base(tensor, rank, perm) {}
 
   ~SparseTensorEnumerator() final = default;
@@ -628,8 +645,7 @@ private:
   void forallElements(ElementConsumer<V> yield, uint64_t parentPos,
                       uint64_t d) {
     // Recover the `<P,I,V>` type parameters of `src`.
-    const auto &src =
-        static_cast<const SparseTensorStorage<P, I, V> &>(this->src);
+    const auto &src = static_cast<const StorageImpl &>(this->src);
     if (d == Base::getRank()) {
       assert(parentPos < src.values.size() &&
              "Value position is out of bounds");
@@ -647,18 +663,18 @@ private:
       const std::vector<I> &indicesD = src.indices[d];
       assert(pstop <= indicesD.size() && "Index position is out of bounds");
       uint64_t &cursorReordD = this->cursor[this->reord[d]];
-      for (uint64_t pos = pstart; pos < pstop; pos++) {
+      for (uint64_t pos = pstart; pos < pstop; ++pos) {
         cursorReordD = static_cast<uint64_t>(indicesD[pos]);
         forallElements(yield, pos, d + 1);
       }
     } else if (src.isSingletonDim(d)) {
       MLIR_SPARSETENSOR_FATAL("unsupported dimension level type");
     } else { // Dense dimension.
-      assert(src.isDenseDim(d));
+      assert(src.isDenseDim(d)); // TODO: reuse the ASSERT_DENSE_DIM message
       const uint64_t sz = src.getDimSizes()[d];
       const uint64_t pstart = parentPos * sz;
       uint64_t &cursorReordD = this->cursor[this->reord[d]];
-      for (uint64_t i = 0; i < sz; i++) {
+      for (uint64_t i = 0; i < sz; ++i) {
         cursorReordD = i;
         forallElements(yield, pstart + i, d + 1);
       }
@@ -666,6 +682,7 @@ private:
   }
 };
 
+//===----------------------------------------------------------------------===//
 /// Statistics regarding the number of nonzero subtensors in
 /// a source tensor, for direct sparse=>sparse conversion a la
 /// <https://arxiv.org/abs/2001.02609>.
@@ -733,49 +750,35 @@ private:
 // Definitions of the ctors and factories of `SparseTensorStorage<P,I,V>`.
 
 namespace detail {
-
-// TODO: try to unify this with `SparseTensorFile::assertMatchesShape`
-// which is used by `openSparseTensorCOO`.  It's easy enough to resolve
-// the `std::vector` vs pointer mismatch for `dimSizes`; but it's trickier
-// to resolve the presence/absence of `perm` (without introducing extra
-// overhead), so perhaps the code duplication is unavoidable.
-//
 /// Asserts that the `dimSizes` (in target-order) under the `perm` (mapping
 /// semantic-order to target-order) are a refinement of the desired `shape`
 /// (in semantic-order).
 ///
 /// Precondition: `perm` and `shape` must be valid for `rank`.
-inline void assertPermutedSizesMatchShape(const std::vector<uint64_t> &dimSizes,
-                                          uint64_t rank, const uint64_t *perm,
-                                          const uint64_t *shape) {
-  assert(perm && shape);
-  assert(rank == dimSizes.size() && "Rank mismatch");
-  for (uint64_t r = 0; r < rank; r++)
-    assert((shape[r] == 0 || shape[r] == dimSizes[perm[r]]) &&
-           "Dimension size mismatch");
-}
-
+void assertPermutedSizesMatchShape(const std::vector<uint64_t> &dimSizes,
+                                   uint64_t rank, const uint64_t *perm,
+                                   const uint64_t *shape);
 } // namespace detail
 
 template <typename P, typename I, typename V>
 SparseTensorStorage<P, I, V> *SparseTensorStorage<P, I, V>::newSparseTensor(
     uint64_t rank, const uint64_t *shape, const uint64_t *perm,
     const DimLevelType *sparsity, SparseTensorCOO<V> *coo) {
-  SparseTensorStorage<P, I, V> *n = nullptr;
   if (coo) {
     const auto &coosz = coo->getDimSizes();
+#ifndef NDEBUG
     detail::assertPermutedSizesMatchShape(coosz, rank, perm, shape);
-    n = new SparseTensorStorage<P, I, V>(coosz, perm, sparsity, coo);
-  } else {
-    std::vector<uint64_t> permsz(rank);
-    for (uint64_t r = 0; r < rank; r++) {
-      assert(shape[r] > 0 && "Dimension size zero has trivial storage");
-      permsz[perm[r]] = shape[r];
-    }
-    // We pass the null `coo` to ensure we select the intended constructor.
-    n = new SparseTensorStorage<P, I, V>(permsz, perm, sparsity, coo);
+#endif
+    return new SparseTensorStorage<P, I, V>(coosz, perm, sparsity, coo);
   }
-  return n;
+  // else
+  std::vector<uint64_t> permsz(rank);
+  for (uint64_t r = 0; r < rank; ++r) {
+    assert(shape[r] > 0 && "Dimension size zero has trivial storage");
+    permsz[perm[r]] = shape[r];
+  }
+  // We pass the null `coo` to ensure we select the intended constructor.
+  return new SparseTensorStorage<P, I, V>(permsz, perm, sparsity, coo);
 }
 
 template <typename P, typename I, typename V>
@@ -786,7 +789,9 @@ SparseTensorStorage<P, I, V> *SparseTensorStorage<P, I, V>::newSparseTensor(
   SparseTensorEnumeratorBase<V> *enumerator;
   source->newEnumerator(&enumerator, rank, perm);
   const auto &permsz = enumerator->permutedSizes();
+#ifndef NDEBUG
   detail::assertPermutedSizesMatchShape(permsz, rank, perm, shape);
+#endif
   auto *tensor =
       new SparseTensorStorage<P, I, V>(permsz, perm, sparsity, *source);
   delete enumerator;
@@ -805,7 +810,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
   //       we should really use nnz and dense/sparse distribution.
   bool allDense = true;
   uint64_t sz = 1;
-  for (uint64_t r = 0, rank = getRank(); r < rank; r++) {
+  for (uint64_t r = 0, rank = getRank(); r < rank; ++r) {
     if (isCompressedDim(r)) {
       // TODO: Take a parameter between 1 and `dimSizes[r]`, and multiply
       // `sz` by that before reserving. (For now we just use 1.)
@@ -819,7 +824,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
       sz = 1;
       allDense = false;
     } else { // Dense dimension.
-      assert(isDenseDim(r));
+      ASSERT_DENSE_DIM(r);
       sz = detail::checkedMul(sz, getDimSizes()[r]);
     }
   }
@@ -851,7 +856,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
     nnz.initialize(*enumerator);
     // Initialize "pointers" overhead (and allocate "indices", "values").
     uint64_t parentSz = 1; // assembled-size (not dimension-size) of `r-1`.
-    for (uint64_t rank = getRank(), r = 0; r < rank; r++) {
+    for (uint64_t rank = getRank(), r = 0; r < rank; ++r) {
       if (isCompressedDim(r)) {
         pointers[r].reserve(parentSz + 1);
         pointers[r].push_back(0);
@@ -882,7 +887,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
   // The yieldPos loop
   enumerator->forallElements([this](const std::vector<uint64_t> &ind, V val) {
     uint64_t parentSz = 1, parentPos = 0;
-    for (uint64_t rank = getRank(), r = 0; r < rank; r++) {
+    for (uint64_t rank = getRank(), r = 0; r < rank; ++r) {
       if (isCompressedDim(r)) {
         // If `parentPos == parentSz` then it's valid as an array-lookup;
         // however, it's semantically invalid here since that entry
@@ -900,7 +905,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
       } else if (isSingletonDim(r)) {
         // the new parentPos equals the old parentPos.
       } else { // Dense dimension.
-        assert(isDenseDim(r));
+        ASSERT_DENSE_DIM(r);
         parentPos = parentPos * getDimSizes()[r] + ind[r];
       }
       parentSz = assembledSize(parentSz, r);
@@ -911,7 +916,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
   // No longer need the enumerator, so we'll delete it ASAP.
   delete enumerator;
   // The finalizeYieldPos loop
-  for (uint64_t parentSz = 1, rank = getRank(), r = 0; r < rank; r++) {
+  for (uint64_t parentSz = 1, rank = getRank(), r = 0; r < rank; ++r) {
     if (isCompressedDim(r)) {
       assert(parentSz == pointers[r].size() - 1 &&
              "Actual pointers size doesn't match the expected size");
@@ -919,7 +924,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
       assert(pointers[r][parentSz - 1] == pointers[r][parentSz] &&
              "Pointers got corrupted");
       // TODO: optimize this by using `memmove` or similar.
-      for (uint64_t n = 0; n < parentSz; n++) {
+      for (uint64_t n = 0; n < parentSz; ++n) {
         const uint64_t parentPos = parentSz - n;
         pointers[r][parentPos] = pointers[r][parentPos - 1];
       }
@@ -931,5 +936,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
 
 } // namespace sparse_tensor
 } // namespace mlir
+
+#undef ASSERT_DENSE_DIM
 
 #endif // MLIR_EXECUTIONENGINE_SPARSETENSOR_STORAGE_H

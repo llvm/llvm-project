@@ -25,8 +25,6 @@
 
 #include "mlir/ExecutionEngine/SparseTensor/File.h"
 
-#ifdef MLIR_SPARSETENSOR_DEFINE_FUNCTIONS // We are building this library
-
 #include <cctype>
 #include <cstring>
 
@@ -80,7 +78,7 @@ void SparseTensorFile::readHeader() {
 void SparseTensorFile::assertMatchesShape(uint64_t rank,
                                           const uint64_t *shape) const {
   assert(rank == getRank() && "Rank mismatch");
-  for (uint64_t r = 0; r < rank; r++)
+  for (uint64_t r = 0; r < rank; ++r)
     assert((shape[r] == 0 || shape[r] == idata[2 + r]) &&
            "Dimension size mismatch");
 }
@@ -152,12 +150,10 @@ void SparseTensorFile::readExtFROSTTHeader() {
   if (sscanf(line, "%" PRIu64 "%" PRIu64 "\n", idata, idata + 1) != 2)
     MLIR_SPARSETENSOR_FATAL("Cannot find metadata in %s\n", filename);
   // Followed by a line with the dimension sizes (one per rank).
-  for (uint64_t r = 0; r < idata[0]; r++)
+  for (uint64_t r = 0; r < idata[0]; ++r)
     if (fscanf(file, "%" PRIu64, idata + 2 + r) != 1)
       MLIR_SPARSETENSOR_FATAL("Cannot find dimension size %s\n", filename);
   readLine(); // end of line
   // The FROSTT format does not define the data type of the nonzero elements.
   valueKind_ = ValueKind::kUndefined;
 }
-
-#endif // MLIR_SPARSETENSOR_DEFINE_FUNCTIONS

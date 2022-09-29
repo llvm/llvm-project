@@ -18,8 +18,6 @@
 
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 
-#ifdef MLIR_SPARSETENSOR_DEFINE_FUNCTIONS // We are building this library
-
 using namespace mlir::sparse_tensor;
 
 SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
@@ -55,7 +53,7 @@ SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
 
 void SparseTensorNNZ::forallIndices(uint64_t stopDim,
                                     SparseTensorNNZ::NNZConsumer yield) const {
-  assert(stopDim < getRank() && "Stopping-dimension is out of bounds");
+  assert(stopDim < getRank() && "Dimension out of bounds");
   assert(dimTypes[stopDim] == DimLevelType::kCompressed &&
          "Cannot look up non-compressed dimensions");
   forallIndices(yield, stopDim, 0, 0);
@@ -63,7 +61,7 @@ void SparseTensorNNZ::forallIndices(uint64_t stopDim,
 
 void SparseTensorNNZ::add(const std::vector<uint64_t> &ind) {
   uint64_t parentPos = 0;
-  for (uint64_t rank = getRank(), r = 0; r < rank; r++) {
+  for (uint64_t rank = getRank(), r = 0; r < rank; ++r) {
     if (dimTypes[r] == DimLevelType::kCompressed)
       nnz[r][parentPos]++;
     parentPos = parentPos * dimSizes[r] + ind[r];
@@ -84,5 +82,3 @@ void SparseTensorNNZ::forallIndices(SparseTensorNNZ::NNZConsumer yield,
       forallIndices(yield, stopDim, pstart + i, d + 1);
   }
 }
-
-#endif // MLIR_SPARSETENSOR_DEFINE_FUNCTIONS
