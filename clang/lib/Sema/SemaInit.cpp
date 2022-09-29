@@ -695,10 +695,10 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         //   member of reference type uninitialized, the program is
         //   ill-formed.
         SemaRef.Diag(Loc, diag::err_init_reference_member_uninitialized)
-          << Field->getType()
-          << ILE->getSyntacticForm()->getSourceRange();
-        SemaRef.Diag(Field->getLocation(),
-                     diag::note_uninit_reference_member);
+            << Field->getType()
+            << (ILE->isSyntacticForm() ? ILE : ILE->getSyntacticForm())
+                   ->getSourceRange();
+        SemaRef.Diag(Field->getLocation(), diag::note_uninit_reference_member);
       }
       hadError = true;
       return;
