@@ -51,7 +51,7 @@ struct PR10839 {
 
 namespace PR14120 {
   struct A {
-    static void operator()(int& i) { ++i; } // expected-error{{overloaded 'operator()' cannot be a static member function}}
+    static void operator()(int& i) { ++i; } // expected-warning{{is a C++2b extension}}
   };
   void f() {
     int i = 0;
