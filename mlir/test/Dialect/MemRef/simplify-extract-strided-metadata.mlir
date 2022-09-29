@@ -750,3 +750,15 @@ func.func @extract_strided_metadata_of_alloc_with_strided(%arg : index)
   return %base, %offset, %size, %stride :
       memref<i16>, index, index, index
 }
+
+// -----
+
+// CHECK-LABEL: extract_aligned_pointer_as_index
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<f32>
+func.func @extract_aligned_pointer_as_index(%arg0: memref<f32>) -> index {
+  // CHECK-NOT: memref.subview
+  //     CHECK: memref.extract_aligned_pointer_as_index %[[ARG0]]
+  %c = memref.subview %arg0[] [] [] : memref<f32> to memref<f32>
+  %r = memref.extract_aligned_pointer_as_index %arg0: memref<f32> -> index
+  return %r : index
+}
