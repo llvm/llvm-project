@@ -15,17 +15,36 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LogicalResult.h"
 
 namespace cir {
-void runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
-                       bool enableVerifier) {
+mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
+                                      mlir::MLIRContext *mlirCtx,
+                                      bool enableVerifier, bool enableLifetime,
+                                      llvm::StringRef lifetimeOpts,
+                                      bool &passOptParsingFailure) {
   mlir::PassManager pm(mlirCtx);
+  passOptParsingFailure = false;
+
   pm.addPass(mlir::createMergeCleanupsPass());
+
+  // TODO(CIR): Make this actually propagate errors correctly. This is stubbed
+  // in to get rebases going.
+  auto errorHandler = [](const llvm::Twine &) -> mlir::LogicalResult {
+    return mlir::LogicalResult::failure();
+  };
+
+  if (enableLifetime) {
+    auto lifetimePass = mlir::createLifetimeCheckPass();
+    if (lifetimePass->initializeOptions(lifetimeOpts, errorHandler).failed()) {
+      passOptParsingFailure = true;
+      return mlir::failure();
+    }
+    pm.addPass(std::move(lifetimePass));
+  }
+
   pm.enableVerifier(enableVerifier);
 
-  auto result = !mlir::failed(pm.run(theModule));
-  if (!result)
-    llvm::report_fatal_error(
-        "CIR codegen: MLIR pass manager fails when running CIR passes!");
+  return pm.run(theModule);
 }
 } // namespace cir

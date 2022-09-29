@@ -3065,6 +3065,19 @@ def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
 def flto_EQ_auto : Flag<["-"], "flto=auto">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
+def clangir_verify_diagnostics : Flag<["-"], "clangir-verify-diagnostics">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Enable diagnostic verification in MLIR, similar to clang's -verify">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRVerifyDiags">>;
+def fclangir_lifetime_check_EQ : Joined<["-"], "fclangir-lifetime-check=">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  HelpText<"Run lifetime checker">,
+  MarshallingInfoString<FrontendOpts<"ClangIRLifetimeCheckOpts">>;
+def fclangir_lifetime_check : Flag<["-"], "fclangir-lifetime-check">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  Alias<fclangir_lifetime_check_EQ>, AliasArgs<["history=invalid,null"]>,
+  HelpText<"Run lifetime checker">;
+
 def flto : Flag<["-"], "flto">,
   Visibility<[ClangOption, CLOption, CC1Option, FC1Option, FlangOption]>,
   Group<f_Group>,

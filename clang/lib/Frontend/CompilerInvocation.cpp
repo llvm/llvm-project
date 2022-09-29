@@ -3096,6 +3096,15 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_clangir_disable_verifier))
     Opts.ClangIRDisableCIRVerifier = true;
 
+  if (Args.hasArg(OPT_clangir_verify_diagnostics))
+    Opts.ClangIRVerifyDiags = true;
+
+  if (const Arg *A = Args.getLastArg(OPT_fclangir_lifetime_check,
+                                     OPT_fclangir_lifetime_check_EQ)) {
+    Opts.ClangIRLifetimeCheck = true;
+    Opts.ClangIRLifetimeCheckOpts = A->getValue();
+  }
+
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
   if (Args.hasArg(OPT_aux_target_feature))
