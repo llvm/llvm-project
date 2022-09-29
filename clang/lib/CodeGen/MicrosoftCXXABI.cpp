@@ -2083,6 +2083,8 @@ MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
   // Start defining the function.
   CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
                     FunctionArgs, MD->getLocation(), SourceLocation());
+
+  ApplyDebugLocation AL(CGF, MD->getLocation());
   setCXXABIThisValue(CGF, loadIncomingCXXThis(CGF));
 
   // Load the vfptr and then callee from the vftable.  The callee should have
