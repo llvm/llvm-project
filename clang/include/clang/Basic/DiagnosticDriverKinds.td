@@ -349,8 +349,8 @@ def err_drv_incompatible_omp_arch : Error<"OpenMP target architecture '%0' point
 def err_drv_omp_host_ir_file_not_found : Error<
   "provided host compiler IR file '%0' is required to generate code for OpenMP "
   "target regions but cannot be found">;
-def err_drv_cir_multiple_input : Error<
-  "clangir (cir) generation requires exactly one input source file">;
+def err_drv_cir_pass_opt_parsing : Error<
+  "clangir pass option '%0' not recognized">;
 def err_drv_omp_host_target_not_supported : Error<
   "target '%0' is not a supported OpenMP host target">;
 def err_drv_expecting_fopenmp_with_fopenmp_targets : Error<

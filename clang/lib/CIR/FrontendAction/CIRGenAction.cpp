@@ -46,6 +46,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
@@ -57,6 +58,17 @@
 
 using namespace cir;
 using namespace clang;
+
+static std::string sanitizePassOptions(llvm::StringRef o) {
+  std::string opts{o};
+  // MLIR pass options are space separated, but we use ';' in clang since
+  // space aren't well supported, switch it back.
+  for (unsigned i = 0, e = opts.size(); i < e; ++i)
+    if (opts[i] == ';')
+      opts[i] = ' ';
+  // If arguments are surrounded with '"', trim them off
+  return llvm::StringRef(opts).trim('"').str();
+}
 
 namespace cir {
 class CIRGenConsumer : public clang::ASTConsumer {
@@ -128,8 +140,8 @@ public:
     // Note that this method is called after `HandleTopLevelDecl` has already
     // ran all over the top level decls. Here clang mostly wraps defered and
     // global codegen, followed by running CIR passes.
-
     gen->HandleTranslationUnit(C);
+
     if (!feOptions.ClangIRDisableCIRVerifier)
       if (!gen->verifyModule()) {
         llvm::report_fatal_error(
@@ -140,15 +152,65 @@ public:
     auto mlirMod = gen->getModule();
     auto mlirCtx = gen->takeContext();
 
+    auto setupCIRPipelineAndExecute = [&] {
+      // Sanitize passes options. MLIR uses spaces between pass options
+      // and since that's hard to fly in clang, we currently use ';'.
+      std::string lifetimeOpts;
+      if (feOptions.ClangIRLifetimeCheck)
+        lifetimeOpts = sanitizePassOptions(feOptions.ClangIRLifetimeCheckOpts);
+
+      // Setup and run CIR pipeline.
+      bool passOptParsingFailure = false;
+      if (runCIRToCIRPasses(mlirMod, mlirCtx.get(),
+                            !feOptions.ClangIRDisableCIRVerifier,
+                            feOptions.ClangIRLifetimeCheck, lifetimeOpts,
+                            passOptParsingFailure)
+              .failed()) {
+        if (passOptParsingFailure)
+          diagnosticsEngine.Report(diag::err_drv_cir_pass_opt_parsing)
+              << feOptions.ClangIRLifetimeCheckOpts;
+        else
+          llvm::report_fatal_error("CIR codegen: MLIR pass manager fails "
+                                   "when running CIR passes!");
+        return;
+      }
+    };
+
     switch (action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (outputStream && mlirMod) {
-
-        // Run CIR cleanup, in the future also the relevent raising and
-        // some code analysis.
         if (!feOptions.ClangIRDisablePasses) {
-          runCIRToCIRPasses(mlirMod, mlirCtx.get(),
-                            !feOptions.ClangIRDisableCIRVerifier);
+          // Handle source manager properly given that lifetime analysis
+          // might emit warnings and remarks.
+          auto &clangSourceMgr = C.getSourceManager();
+          FileID MainFileID = clangSourceMgr.getMainFileID();
+
+          std::unique_ptr<llvm::MemoryBuffer> FileBuf =
+              llvm::MemoryBuffer::getMemBuffer(
+                  clangSourceMgr.getBufferOrFake(MainFileID));
+
+          llvm::SourceMgr mlirSourceMgr;
+          mlirSourceMgr.AddNewSourceBuffer(std::move(FileBuf), llvm::SMLoc());
+
+          if (feOptions.ClangIRVerifyDiags) {
+            mlir::SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
+                mlirSourceMgr, mlirCtx.get());
+            mlirCtx->printOpOnDiagnostic(false);
+            setupCIRPipelineAndExecute();
+
+            // Verify the diagnostic handler to make sure that each of the
+            // diagnostics matched.
+            if (sourceMgrHandler.verify().failed()) {
+              // FIXME: we fail ungracefully, there's probably a better way
+              // to communicate non-zero return so tests can actually fail.
+              llvm::sys::RunInterruptHandlers();
+              exit(1);
+            }
+          } else {
+            mlir::SourceMgrDiagnosticHandler sourceMgrHandler(mlirSourceMgr,
+                                                              mlirCtx.get());
+            setupCIRPipelineAndExecute();
+          }
         }
 
         // Emit remaining defaulted C++ methods
