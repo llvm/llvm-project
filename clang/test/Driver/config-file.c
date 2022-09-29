@@ -8,6 +8,7 @@
 //--- Config file (full path) in output of -###
 //
 // RUN: %clang --config %S/Inputs/config-1.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-HHH
+// RUN: %clang --config=%S/Inputs/config-1.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-HHH
 // CHECK-HHH: Configuration file: {{.*}}Inputs{{.}}config-1.cfg
 // CHECK-HHH: -Werror
 // CHECK-HHH: -std=c99
