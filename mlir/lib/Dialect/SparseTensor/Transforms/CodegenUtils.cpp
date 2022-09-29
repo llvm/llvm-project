@@ -199,3 +199,52 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
     return builder.create<complex::NotEqualOp>(loc, v, zero);
   llvm_unreachable("Non-numeric type");
 }
+
+void mlir::sparse_tensor::translateIndicesArray(
+    OpBuilder &builder, Location loc,
+    ArrayRef<ReassociationIndices> reassociation, ValueRange srcIndices,
+    ArrayRef<Value> srcShape, ArrayRef<Value> dstShape,
+    SmallVectorImpl<Value> &dstIndices) {
+  unsigned i = 0;
+  unsigned start = 0;
+  unsigned dstRank = dstShape.size();
+  unsigned srcRank = srcShape.size();
+  assert(srcRank == srcIndices.size());
+  bool isCollapse = srcRank > dstRank;
+  ArrayRef<Value> shape = isCollapse ? srcShape : dstShape;
+  // Iterate over reassociation map.
+  for (const auto &map : llvm::enumerate(reassociation)) {
+    // Prepare strides information in dimension slice.
+    Value linear = constantIndex(builder, loc, 1);
+    for (unsigned j = start, end = start + map.value().size(); j < end; j++) {
+      linear = builder.create<arith::MulIOp>(loc, linear, shape[j]);
+    }
+    // Start expansion.
+    Value val;
+    if (!isCollapse)
+      val = srcIndices[i];
+    // Iterate over dimension slice.
+    for (unsigned j = start, end = start + map.value().size(); j < end; j++) {
+      linear = builder.create<arith::DivUIOp>(loc, linear, shape[j]);
+      if (isCollapse) {
+        Value old = srcIndices[j];
+        Value mul = builder.create<arith::MulIOp>(loc, old, linear);
+        val = val ? builder.create<arith::AddIOp>(loc, val, mul) : mul;
+      } else {
+        Value old = val;
+        val = builder.create<arith::DivUIOp>(loc, val, linear);
+        assert(dstIndices.size() == j);
+        dstIndices.push_back(val);
+        val = builder.create<arith::RemUIOp>(loc, old, linear);
+      }
+    }
+    // Finalize collapse.
+    if (isCollapse) {
+      assert(dstIndices.size() == i);
+      dstIndices.push_back(val);
+    }
+    start += map.value().size();
+    i++;
+  }
+  assert(dstIndices.size() == dstRank);
+}
