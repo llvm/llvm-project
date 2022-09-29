@@ -421,17 +421,17 @@ private:
     // Sort intervals on the left and right of the middle point.
     if (NewBucketSize > 1) {
       // Sort the intervals in ascending order by their beginning point.
-      std::sort(IntervalsLeft.begin() + NewBucketStart,
-                IntervalsLeft.begin() + NewBucketStart + NewBucketSize,
-                [](const DataType *LHS, const DataType *RHS) {
-                  return LHS->left() < RHS->left();
-                });
+      std::stable_sort(IntervalsLeft.begin() + NewBucketStart,
+                       IntervalsLeft.begin() + NewBucketStart + NewBucketSize,
+                       [](const DataType *LHS, const DataType *RHS) {
+                         return LHS->left() < RHS->left();
+                       });
       // Sort the intervals in descending order by their ending point.
-      std::sort(IntervalsRight.begin() + NewBucketStart,
-                IntervalsRight.begin() + NewBucketStart + NewBucketSize,
-                [](const DataType *LHS, const DataType *RHS) {
-                  return LHS->right() > RHS->right();
-                });
+      std::stable_sort(IntervalsRight.begin() + NewBucketStart,
+                       IntervalsRight.begin() + NewBucketStart + NewBucketSize,
+                       [](const DataType *LHS, const DataType *RHS) {
+                         return LHS->right() > RHS->right();
+                       });
     }
 
     if (PointsBeginIndex <= MiddleIndex - 1) {
@@ -626,14 +626,14 @@ public:
   /// Ascending: return the intervals with the smallest at the front.
   /// Descending: return the intervals with the biggest at the front.
   static void sortIntervals(IntervalReferences &IntervalSet, Sorting Sort) {
-    std::sort(IntervalSet.begin(), IntervalSet.end(),
-              [Sort](const DataType *RHS, const DataType *LHS) {
-                return Sort == Sorting::Ascending
-                           ? (LHS->right() - LHS->left()) >
-                                 (RHS->right() - RHS->left())
-                           : (LHS->right() - LHS->left()) <
-                                 (RHS->right() - RHS->left());
-              });
+    std::stable_sort(IntervalSet.begin(), IntervalSet.end(),
+                     [Sort](const DataType *RHS, const DataType *LHS) {
+                       return Sort == Sorting::Ascending
+                                  ? (LHS->right() - LHS->left()) >
+                                        (RHS->right() - RHS->left())
+                                  : (LHS->right() - LHS->left()) <
+                                        (RHS->right() - RHS->left());
+                     });
   }
 
   /// Print the interval tree.
@@ -654,7 +654,7 @@ public:
       Points.push_back(Data.right());
       References.push_back(std::addressof(Data));
     }
-    std::sort(Points.begin(), Points.end());
+    std::stable_sort(Points.begin(), Points.end());
     auto Last = std::unique(Points.begin(), Points.end());
     Points.erase(Last, Points.end());
 
