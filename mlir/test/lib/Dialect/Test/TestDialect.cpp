@@ -1031,6 +1031,26 @@ void PolyForOp::getAsmBlockArgumentNames(Region &region,
 }
 
 //===----------------------------------------------------------------------===//
+// TestAttrWithLoc - parse/printOptionalLocationSpecifier
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseOptionalLoc(OpAsmParser &p, Attribute &loc) {
+  Optional<Location> result;
+  SMLoc sourceLoc = p.getCurrentLocation();
+  if (p.parseOptionalLocationSpecifier(result))
+    return failure();
+  if (result)
+    loc = *result;
+  else
+    loc = p.getEncodedSourceLoc(sourceLoc);
+  return success();
+}
+
+static void printOptionalLoc(OpAsmPrinter &p, Operation *op, Attribute loc) {
+  p.printOptionalLocationSpecifier(loc.cast<LocationAttr>());
+}
+
+//===----------------------------------------------------------------------===//
 // Test removing op with inner ops.
 //===----------------------------------------------------------------------===//
 

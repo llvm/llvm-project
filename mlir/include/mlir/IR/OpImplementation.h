@@ -327,6 +327,9 @@ public:
   using AsmPrinter::AsmPrinter;
   ~OpAsmPrinter() override;
 
+  /// Print a loc(...) specifier if printing debug info is enabled.
+  virtual void printOptionalLocationSpecifier(Location loc) = 0;
+
   /// Print a newline and indent the printer to the start of the current
   /// operation.
   virtual void printNewline() = 0;
