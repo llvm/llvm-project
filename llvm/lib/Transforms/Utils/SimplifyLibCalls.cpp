@@ -3209,11 +3209,13 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
 
   // Decode the second character of the format string.
   if (FormatStr[1] == 'c') {
-    // fprintf(F, "%c", chr) --> fputc(chr, F)
+    // fprintf(F, "%c", chr) --> fputc((int)chr, F)
     if (!CI->getArgOperand(2)->getType()->isIntegerTy())
       return nullptr;
-    return copyFlags(
-        *CI, emitFPutC(CI->getArgOperand(2), CI->getArgOperand(0), B, TLI));
+    Type *IntTy = B.getIntNTy(TLI->getIntSize());
+    Value *V = B.CreateIntCast(CI->getArgOperand(2), IntTy, /*isSigned*/ true,
+                               "chari");
+    return copyFlags(*CI, emitFPutC(V, CI->getArgOperand(0), B, TLI));
   }
 
   if (FormatStr[1] == 's') {
@@ -3280,7 +3282,9 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilderBase &B) {
     if (Bytes == 1 && CI->use_empty()) { // fwrite(S,1,1,F) -> fputc(S[0],F)
       Value *Char = B.CreateLoad(B.getInt8Ty(),
                                  castToCStr(CI->getArgOperand(0), B), "char");
-      Value *NewCI = emitFPutC(Char, CI->getArgOperand(3), B, TLI);
+      Type *IntTy = B.getIntNTy(TLI->getIntSize());
+      Value *Cast = B.CreateIntCast(Char, IntTy, /*isSigned*/ true, "chari");
+      Value *NewCI = emitFPutC(Cast, CI->getArgOperand(3), B, TLI);
       return NewCI ? ConstantInt::get(CI->getType(), 1) : nullptr;
     }
   }
