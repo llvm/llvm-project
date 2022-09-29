@@ -260,23 +260,21 @@ define i16 @test_min_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
-; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP4]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[ENTRY:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i16 [[EXTRACTED]], [[VAL]]
-; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i16 [[EXTRACTED]], i16 [[VAL]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle i16 [[EXTRACTED]], [[VAL:%.*]]
+; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP4]], i16 [[EXTRACTED]], i16 [[VAL]]
 ; CHECK-NEXT:    [[EXTENDED:%.*]] = zext i16 [[NEW]] to i32
 ; CHECK-NEXT:    [[SHIFTED2:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
-; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
-; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg i32* [[ALIGNEDADDR1]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; CHECK:       atomicrmw.end:
 ; CHECK-NEXT:    [[SHIFTED3:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
