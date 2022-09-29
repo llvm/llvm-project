@@ -811,10 +811,12 @@ define i64 @or_large_constant(i64 %x) {
 ;
 ; X64-LABEL: or_large_constant:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    cmpq $2, %rdi
-; X64-NEXT:    setl %al
-; X64-NEXT:    leaq -1(%rax,%rax), %rax
+; X64-NEXT:    setge %cl
+; X64-NEXT:    negq %rcx
+; X64-NEXT:    movabsq $549755813889, %rax # imm = 0x8000000001
+; X64-NEXT:    orq %rcx, %rax
 ; X64-NEXT:    retq
 entry:
   %cmp = icmp sgt i64 %x, 1
