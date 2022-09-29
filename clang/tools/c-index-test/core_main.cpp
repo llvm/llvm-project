@@ -28,6 +28,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -686,6 +687,10 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           CXDependencyMode_Full);
   CXDependencyScannerWorker Worker =
       clang_experimental_DependencyScannerWorker_create_v0(Service);
+  auto DisposeWorkerAndService = llvm::make_scope_exit([&]() {
+    clang_experimental_DependencyScannerWorker_dispose_v0(Worker);
+    clang_experimental_DependencyScannerService_dispose_v0(Service);
+  });
 
   auto Callback = [&](CXModuleDependencySet *MDS) {
     llvm::outs() << "modules:\n";
@@ -768,9 +773,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
     llvm::outs() << "\n";
   };
 
-  bool Failed = true;
-  CXString Error;
   if (options::DeprecatedDriverCommand) {
+    CXString Error;
     CXFileDependencies *Result =
         clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
             Worker, Args.size(), Args.data(),
@@ -779,41 +783,47 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
             LookupOutputCB.Context, LookupOutputCB.Callback,
             /*Options=*/0, &Error);
     if (Result) {
-      Failed = false;
       llvm::outs() << "dependencies:\n";
       HandleCommand(Result->ContextHash, Result->ModuleDeps, Result->FileDeps,
                     Result->BuildArguments);
       clang_experimental_FileDependencies_dispose(Result);
+      return 0;
     }
-  } else {
-    CXFileDependenciesList *Result = nullptr;
-    clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
-        Worker, Args.size(), Args.data(),
-        ModuleName ? ModuleName->c_str() : nullptr, WorkingDirectory.c_str(),
-        CB.Context, CB.Callback, LookupOutputCB.Context,
-        LookupOutputCB.Callback,
-        /*Options=*/0, &Result, &Error);
-    if (Result) {
-      Failed = false;
-      llvm::outs() << "dependencies:\n";
-      for (size_t I = 0; I < Result->NumCommands; ++I)
-        HandleCommand(
-            Result->Commands[I].ContextHash, Result->Commands[I].ModuleDeps,
-            Result->Commands[I].FileDeps, Result->Commands[I].BuildArguments);
-      clang_experimental_FileDependenciesList_dispose(Result);
-    }
-  }
-
-  if (Failed) {
     llvm::errs() << "error: failed to get dependencies\n";
     llvm::errs() << clang_getCString(Error) << "\n";
     clang_disposeString(Error);
     return 1;
   }
 
-  clang_experimental_DependencyScannerWorker_dispose_v0(Worker);
-  clang_experimental_DependencyScannerService_dispose_v0(Service);
-  return 0;
+  CXFileDependenciesList *Result = nullptr;
+  CXDiagnosticSet Diags;
+  auto DisposeDiagnosticSet =
+      llvm::make_scope_exit([&]() { clang_disposeDiagnosticSet(Diags); });
+  CXErrorCode Err =
+      clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
+          Worker, Args.size(), Args.data(),
+          ModuleName ? ModuleName->c_str() : nullptr, WorkingDirectory.c_str(),
+          CB.Context, CB.Callback, LookupOutputCB.Context,
+          LookupOutputCB.Callback,
+          /*Options=*/0, &Result, &Diags);
+  if (Err == CXError_Success) {
+    llvm::outs() << "dependencies:\n";
+    for (size_t I = 0; I < Result->NumCommands; ++I)
+      HandleCommand(
+          Result->Commands[I].ContextHash, Result->Commands[I].ModuleDeps,
+          Result->Commands[I].FileDeps, Result->Commands[I].BuildArguments);
+    clang_experimental_FileDependenciesList_dispose(Result);
+    return 0;
+  }
+  llvm::errs() << "error: failed to get dependencies\n";
+  for (unsigned I = 0, N = clang_getNumDiagnosticsInSet(Diags); I < N; ++I) {
+    CXDiagnostic Diag = clang_getDiagnosticInSet(Diags, I);
+    CXString Spelling = clang_getDiagnosticSpelling(Diag);
+    llvm::errs() << clang_getCString(Spelling) << "\n";
+    clang_disposeString(Spelling);
+    clang_disposeDiagnostic(Diag);
+  }
+  return 1;
 }
 
 static void printSymbol(const IndexRecordDecl &Rec, raw_ostream &OS) {

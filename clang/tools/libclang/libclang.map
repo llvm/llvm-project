@@ -475,6 +475,7 @@ LLVM_16 {
     clang_getUnqualifiedType;
     clang_getNonReferenceType;
     clang_CXXMethod_isDeleted;
+    clang_experimental_DependencyScannerWorker_getFileDependencies_v5;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol
