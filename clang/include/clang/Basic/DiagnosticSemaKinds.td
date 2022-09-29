@@ -5235,6 +5235,8 @@ def note_template_exception_spec_instantiation_here : Note<
   "in instantiation of exception specification for %0 requested here">;
 def note_template_requirement_instantiation_here : Note<
   "in instantiation of requirement here">;
+def note_template_requirement_params_instantiation_here : Note<
+  "in instantiation of requirement parameters here">;
 def warn_var_template_missing : Warning<"instantiation of variable %q0 "
   "required here, but no definition is available">,
   InGroup<UndefinedVarTemplate>;

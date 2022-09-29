@@ -9135,6 +9135,9 @@ public:
       // We are normalizing a constraint expression.
       ConstraintNormalization,
 
+      // Instantiating a Requires Expression parameter clause.
+      RequirementParameterInstantiation,
+
       // We are substituting into the parameter mapping of an atomic constraint
       // during normalization.
       ParameterMappingSubstitution,
@@ -9464,6 +9467,11 @@ public:
                           concepts::NestedRequirement *Req, ConstraintsCheck,
                           SourceRange InstantiationRange = SourceRange());
 
+    /// \brief Note that we are checking a requires clause.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
+                          const RequiresExpr *E,
+                          sema::TemplateDeductionInfo &DeductionInfo,
+                          SourceRange InstantiationRange);
     /// Note that we have finished instantiating this template.
     void Clear();
 

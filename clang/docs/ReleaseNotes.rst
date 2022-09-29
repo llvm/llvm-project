@@ -172,7 +172,10 @@ Bug Fixes
 - The template arguments of a variable template being accessed as a
   member will now be represented in the AST.
 - Fix incorrect handling of inline builtins with asm labels.
-
+- Finished implementing C++ DR2565, which results in a requirement becoming
+  not satisfied in the event of an instantiation failures in a requires expression's
+  parameter list. We previously handled this correctly in a constraint evaluation
+  context, but not in a requires clause evaluated as a boolean.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
