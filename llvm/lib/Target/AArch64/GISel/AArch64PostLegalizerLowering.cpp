@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -370,22 +371,60 @@ static bool matchDup(MachineInstr &MI, MachineRegisterInfo &MRI,
   return false;
 }
 
+// Check if an EXT instruction can handle the shuffle mask when the vector
+// sources of the shuffle are the same.
+static bool isSingletonExtMask(ArrayRef<int> M, LLT Ty) {
+  unsigned NumElts = Ty.getNumElements();
+
+  // Assume that the first shuffle index is not UNDEF.  Fail if it is.
+  if (M[0] < 0)
+    return false;
+
+  // If this is a VEXT shuffle, the immediate value is the index of the first
+  // element.  The other shuffle indices must be the successive elements after
+  // the first one.
+  unsigned ExpectedElt = M[0];
+  for (unsigned I = 1; I < NumElts; ++I) {
+    // Increment the expected index.  If it wraps around, just follow it
+    // back to index zero and keep going.
+    ++ExpectedElt;
+    if (ExpectedElt == NumElts)
+      ExpectedElt = 0;
+
+    if (M[I] < 0)
+      continue; // Ignore UNDEF indices.
+    if (ExpectedElt != static_cast<unsigned>(M[I]))
+      return false;
+  }
+
+  return true;
+}
+
 static bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
                      ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   Register Dst = MI.getOperand(0).getReg();
-  auto ExtInfo = getExtMask(MI.getOperand(3).getShuffleMask(),
-                            MRI.getType(Dst).getNumElements());
-  if (!ExtInfo)
-    return false;
-  bool ReverseExt;
-  uint64_t Imm;
-  std::tie(ReverseExt, Imm) = *ExtInfo;
+  LLT DstTy = MRI.getType(Dst);
   Register V1 = MI.getOperand(1).getReg();
   Register V2 = MI.getOperand(2).getReg();
+  auto Mask = MI.getOperand(3).getShuffleMask();
+  uint64_t Imm;
+  auto ExtInfo = getExtMask(Mask, DstTy.getNumElements());
+  uint64_t ExtFactor = MRI.getType(V1).getScalarSizeInBits() / 8;
+
+  if (!ExtInfo) {
+    if (!getOpcodeDef<GImplicitDef>(V2, MRI) ||
+        !isSingletonExtMask(Mask, DstTy))
+      return false;
+
+    Imm = Mask[0] * ExtFactor;
+    MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V1, Imm});
+    return true;
+  }
+  bool ReverseExt;
+  std::tie(ReverseExt, Imm) = *ExtInfo;
   if (ReverseExt)
     std::swap(V1, V2);
-  uint64_t ExtFactor = MRI.getType(V1).getScalarSizeInBits() / 8;
   Imm *= ExtFactor;
   MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V2, Imm});
   return true;
