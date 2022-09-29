@@ -337,6 +337,60 @@ static void createSortFunc(OpBuilder &builder, ModuleOp module,
 
 namespace {
 
+/// Sparse rewriting rule for the push_back operator.
+struct PushBackRewriter : OpRewritePattern<PushBackOp> {
+public:
+  using OpRewritePattern<PushBackOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(PushBackOp op,
+                                PatternRewriter &rewriter) const override {
+    // Rewrite push_back(buffer, value) to:
+    // if (size(buffer) >= capacity(buffer))
+    //    new_capacity = capacity(buffer)*2
+    //    new_buffer = realloc(buffer, new_capacity)
+    // buffer = new_buffer
+    // store(buffer, value)
+    // size(buffer)++
+    Location loc = op->getLoc();
+    Value c0 = constantIndex(rewriter, loc, 0);
+    Value buffer = op.getInBuffer();
+    Value capacity = rewriter.create<memref::DimOp>(loc, buffer, c0);
+    Value idx = constantIndex(rewriter, loc, op.getIdx().getZExtValue());
+    Value bufferSizes = op.getBufferSizes();
+    Value size = rewriter.create<memref::LoadOp>(loc, bufferSizes, idx);
+    Value cond = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge,
+                                                size, capacity);
+    Value value = op.getValue();
+    auto bufferType =
+        MemRefType::get({ShapedType::kDynamicSize}, value.getType());
+    scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, bufferType, cond,
+                                                /*else=*/true);
+    // True branch.
+    rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    Value c2 = constantIndex(rewriter, loc, 2);
+    capacity = rewriter.create<arith::MulIOp>(loc, capacity, c2);
+    Value newBuffer =
+        rewriter.create<memref::ReallocOp>(loc, bufferType, buffer, capacity);
+    rewriter.create<scf::YieldOp>(loc, newBuffer);
+
+    // False branch.
+    rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    rewriter.create<scf::YieldOp>(loc, buffer);
+
+    // Add the value to the end of the buffer.
+    rewriter.setInsertionPointAfter(ifOp);
+    buffer = ifOp.getResult(0);
+    rewriter.create<memref::StoreOp>(loc, value, buffer, size);
+
+    // Increment the size of the buffer by 1.
+    Value c1 = constantIndex(rewriter, loc, 1);
+    size = rewriter.create<arith::AddIOp>(loc, size, c1);
+    rewriter.create<memref::StoreOp>(loc, size, bufferSizes, idx);
+
+    rewriter.replaceOp(op, buffer);
+    return success();
+  }
+};
+
 /// Sparse rewriting rule for the sort operator.
 struct SortRewriter : public OpRewritePattern<SortOp> {
 public:
@@ -378,5 +432,5 @@ public:
 //===---------------------------------------------------------------------===//
 
 void mlir::populateSparseBufferRewriting(RewritePatternSet &patterns) {
-  patterns.add<SortRewriter>(patterns.getContext());
+  patterns.add<PushBackRewriter, SortRewriter>(patterns.getContext());
 }
