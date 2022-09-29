@@ -130,7 +130,7 @@ public:
     // global codegen, followed by running CIR passes.
 
     gen->HandleTranslationUnit(C);
-    if (!feOptions.DisableCIRVerifier)
+    if (!feOptions.ClangIRDisableCIRVerifier)
       if (!gen->verifyModule()) {
         llvm::report_fatal_error(
             "CIR codegen: module verification error before running CIR passes");
@@ -146,9 +146,9 @@ public:
 
         // Run CIR cleanup, in the future also the relevent raising and
         // some code analysis.
-        if (!feOptions.DisableCIRPasses) {
+        if (!feOptions.ClangIRDisablePasses) {
           runCIRToCIRPasses(mlirMod, mlirCtx.get(),
-                            !feOptions.DisableCIRVerifier);
+                            !feOptions.ClangIRDisableCIRVerifier);
         }
 
         // Emit remaining defaulted C++ methods

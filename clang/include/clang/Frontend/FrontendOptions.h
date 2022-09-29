@@ -415,10 +415,10 @@ public:
   unsigned UseClangIRPipeline : 1;
 
   /// Disable Clang IR specific (CIR) passes
-  unsigned DisableCIRPasses : 1;
+  unsigned ClangIRDisablePasses : 1;
 
   /// Disable Clang IR (CIR) verifier
-  unsigned DisableCIRVerifier : 1;
+  unsigned ClangIRDisableCIRVerifier : 1;
 
   CodeCompleteOptions CodeCompleteOpts;
 
@@ -602,8 +602,8 @@ public:
         EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
-        UseClangIRPipeline(false), DisableCIRPasses(false),
-        DisableCIRVerifier(false), TimeTraceGranularity(500) {}
+        UseClangIRPipeline(false), ClangIRDisablePasses(false),
+        ClangIRDisableCIRVerifier(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
