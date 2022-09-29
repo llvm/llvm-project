@@ -9,7 +9,7 @@ module attributes {
     //       CHECK:   spirv.func
     //  CHECK-SAME:     {{%.*}}: f32
     //   CHECK-NOT:     spirv.interface_var_abi
-    //  CHECK-SAME:     {{%.*}}: !spirv.ptr<f32, CrossWorkgroup>
+    //  CHECK-SAME:     {{%.*}}: !spirv.ptr<!spirv.array<12 x f32>, CrossWorkgroup>
     //   CHECK-NOT:     spirv.interface_var_abi
     //  CHECK-SAME:     spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[32, 4, 1]> : vector<3xi32>>
     gpu.func @basic_module_structure(%arg0 : f32, %arg1 : memref<12xf32, #spirv.storage_class<CrossWorkgroup>>) kernel
