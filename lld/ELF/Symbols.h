@@ -111,7 +111,7 @@ public:
   uint8_t symbolKind;
 
   // The partition whose dynamic symbol table contains this symbol's definition.
-  uint8_t partition = 1;
+  uint8_t partition;
 
   // True if this symbol is preemptible at load time.
   uint8_t isPreemptible : 1;
@@ -263,12 +263,8 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k), isPreemptible(false),
-        isUsedInRegularObj(false), used(false), exportDynamic(false),
-        inDynamicList(false), referenced(false), referencedAfterWrap(false),
-        traced(false), hasVersionSuffix(false), isInIplt(false),
-        gotInIgot(false), folded(false), needsTocRestore(false),
-        scriptDefined(false), dsoProtected(false) {}
+        binding(binding), stOther(stOther), symbolKind(k),
+        exportDynamic(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
     if (sym.traced)
@@ -307,7 +303,7 @@ public:
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
   // entries during postScanRelocations();
-  std::atomic<uint16_t> flags = 0;
+  std::atomic<uint16_t> flags;
 
   // A symAux index used to access GOT/PLT entry indexes. This is allocated in
   // postScanRelocations().
@@ -551,11 +547,11 @@ union SymbolUnion {
 };
 
 template <typename... T> Defined *makeDefined(T &&...args) {
-  auto *sym = new (reinterpret_cast<Defined *>(
-      getSpecificAllocSingleton<SymbolUnion>().Allocate()))
-      Defined(std::forward<T>(args)...);
-  sym->auxIdx = -1;
-  return sym;
+  auto *sym = getSpecificAllocSingleton<SymbolUnion>().Allocate();
+  memset(sym, 0, sizeof(Symbol));
+  auto &s = *new (reinterpret_cast<Defined *>(sym)) Defined(std::forward<T>(args)...);
+  s.auxIdx = -1;
+  return &s;
 }
 
 void reportDuplicate(const Symbol &sym, const InputFile *newFile,
