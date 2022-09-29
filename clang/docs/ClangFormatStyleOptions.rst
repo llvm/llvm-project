@@ -3861,6 +3861,35 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**RequiresExpressionIndentation** (``RequiresExpressionIndentationKind``) :versionbadge:`clang-format 16`
+  The indentation used for requires expression bodies.
+
+  Possible values:
+
+  * ``REI_OuterScope`` (in configuration: ``OuterScope``)
+    Align requires expression body relative to the indentation level of the
+    outer scope the requires expression resides in.
+    This is the default.
+
+    .. code-block:: c++
+
+       template <typename T>
+       concept C = requires(T t) {
+         ...
+       }
+
+  * ``REI_Keyword`` (in configuration: ``Keyword``)
+    Align requires expression body relative to the `requires` keyword.
+
+    .. code-block:: c++
+
+       template <typename T>
+       concept C = requires(T t) {
+                     ...
+                   }
+
+
+
 **SeparateDefinitionBlocks** (``SeparateDefinitionStyle``) :versionbadge:`clang-format 14`
   Specifies the use of empty lines to separate definition blocks, including
   classes, structs, enums, and functions.

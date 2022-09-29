@@ -1406,8 +1406,10 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     CurrentState.NestedBlockIndent = State.Column + Current.ColumnWidth + 1;
   if (Current.isOneOf(TT_LambdaLSquare, TT_LambdaArrow))
     CurrentState.LastSpace = State.Column;
-  if (Current.is(TT_RequiresExpression))
+  if (Current.is(TT_RequiresExpression) &&
+      Style.RequiresExpressionIndentation == FormatStyle::REI_Keyword) {
     CurrentState.NestedBlockIndent = State.Column;
+  }
 
   // Insert scopes created by fake parenthesis.
   const FormatToken *Previous = Current.getPreviousNonComment();
