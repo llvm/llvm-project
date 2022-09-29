@@ -211,7 +211,7 @@ class SplitOp:
       static_split_point = split_point
       dynamic_split_point = None
     else:
-      static_split_point = _get_int64_attr(ShapedType._get_dynamic_size())
+      static_split_point = _get_int64_attr(ShapedType.get_dynamic_size())
       dynamic_split_point = _get_op_result_or_value(split_point)
 
     pdl_operation_type = pdl.OperationType.get()
@@ -255,7 +255,7 @@ class TileOp:
           static_sizes.append(size)
         else:
           static_sizes.append(
-              IntegerAttr.get(i64_type, ShapedType._get_dynamic_size()))
+              IntegerAttr.get(i64_type, ShapedType.get_dynamic_size()))
           dynamic_sizes.append(_get_op_result_or_value(size))
       sizes_attr = ArrayAttr.get(static_sizes)
 
