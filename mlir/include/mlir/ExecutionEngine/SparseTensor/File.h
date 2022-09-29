@@ -86,6 +86,10 @@ public:
   /// Checks if a header has been successfully read.
   bool isValid() const { return valueKind_ != ValueKind::kInvalid; }
 
+  /// Checks if the file's ValueKind can be converted into the given
+  /// tensor PrimaryType.  Is only valid after parsing the header.
+  bool canReadAs(PrimaryType valTy) const;
+
   /// Gets the MME "pattern" property setting.  Is only valid after
   /// parsing the header.
   bool isPattern() const {
@@ -208,16 +212,10 @@ openSparseTensorCOO(const char *filename, uint64_t rank, const uint64_t *shape,
   stfile.openFile();
   stfile.readHeader();
   // Check tensor element type against the value type in the input file.
-  SparseTensorFile::ValueKind valueKind = stfile.getValueKind();
-  bool tensorIsInteger =
-      (valTp >= PrimaryType::kI64 && valTp <= PrimaryType::kI8);
-  bool tensorIsReal = (valTp >= PrimaryType::kF64 && valTp <= PrimaryType::kI8);
-  if ((valueKind == SparseTensorFile::ValueKind::kReal && tensorIsInteger) ||
-      (valueKind == SparseTensorFile::ValueKind::kComplex && tensorIsReal)) {
+  if (!stfile.canReadAs(valTp))
     MLIR_SPARSETENSOR_FATAL(
         "Tensor element type %d not compatible with values in file %s\n",
         static_cast<int>(valTp), filename);
-  }
   stfile.assertMatchesShape(rank, shape);
   // Prepare sparse tensor object with per-dimension sizes
   // and the number of nonzeros as initial capacity.
