@@ -960,12 +960,12 @@ void MipsGotSection::build() {
   // Update SymbolAux::gotIdx field to use this
   // value later in the `sortMipsSymbols` function.
   for (auto &p : primGot->global) {
-    if (p.first->auxIdx == uint32_t(-1))
+    if (p.first->auxIdx == 0)
       p.first->allocateAux();
     symAux.back().gotIdx = p.second;
   }
   for (auto &p : primGot->relocs) {
-    if (p.first->auxIdx == uint32_t(-1))
+    if (p.first->auxIdx == 0)
       p.first->allocateAux();
     symAux.back().gotIdx = p.second;
   }
