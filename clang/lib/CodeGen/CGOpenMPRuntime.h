@@ -1654,65 +1654,16 @@ public:
 
   /// Struct that keeps all the relevant information that should be kept
   /// throughout a 'target data' region.
-  class TargetDataInfo {
-    /// Set to true if device pointer information have to be obtained.
-    bool RequiresDevicePointerInfo = false;
-    /// Set to true if Clang emits separate runtime calls for the beginning and
-    /// end of the region.  These calls might have separate map type arrays.
-    bool SeparateBeginEndCalls = false;
-
+  class TargetDataInfo : public llvm::OpenMPIRBuilder::TargetDataInfo {
   public:
-    /// The array of base pointer passed to the runtime library.
-    llvm::Value *BasePointersArray = nullptr;
-    /// The array of section pointers passed to the runtime library.
-    llvm::Value *PointersArray = nullptr;
-    /// The array of sizes passed to the runtime library.
-    llvm::Value *SizesArray = nullptr;
-    /// The array of map types passed to the runtime library for the beginning
-    /// of the region or for the entire region if there are no separate map
-    /// types for the region end.
-    llvm::Value *MapTypesArray = nullptr;
-    /// The array of map types passed to the runtime library for the end of the
-    /// region, or nullptr if there are no separate map types for the region
-    /// end.
-    llvm::Value *MapTypesArrayEnd = nullptr;
-    /// The array of user-defined mappers passed to the runtime library.
-    llvm::Value *MappersArray = nullptr;
-    /// The array of original declaration names of mapped pointers sent to the
-    /// runtime library for debugging
-    llvm::Value *MapNamesArray = nullptr;
-    /// Indicate whether any user-defined mapper exists.
-    bool HasMapper = false;
-    /// The total number of pointers passed to the runtime library.
-    unsigned NumberOfPtrs = 0u;
+    explicit TargetDataInfo() : llvm::OpenMPIRBuilder::TargetDataInfo() {}
+    explicit TargetDataInfo(bool RequiresDevicePointerInfo,
+                            bool SeparateBeginEndCalls)
+        : llvm::OpenMPIRBuilder::TargetDataInfo(RequiresDevicePointerInfo,
+                                                SeparateBeginEndCalls) {}
     /// Map between the a declaration of a capture and the corresponding base
     /// pointer address where the runtime returns the device pointers.
     llvm::DenseMap<const ValueDecl *, Address> CaptureDeviceAddrMap;
-
-    explicit TargetDataInfo() {}
-    explicit TargetDataInfo(bool RequiresDevicePointerInfo,
-                            bool SeparateBeginEndCalls)
-        : RequiresDevicePointerInfo(RequiresDevicePointerInfo),
-          SeparateBeginEndCalls(SeparateBeginEndCalls) {}
-    /// Clear information about the data arrays.
-    void clearArrayInfo() {
-      BasePointersArray = nullptr;
-      PointersArray = nullptr;
-      SizesArray = nullptr;
-      MapTypesArray = nullptr;
-      MapTypesArrayEnd = nullptr;
-      MapNamesArray = nullptr;
-      MappersArray = nullptr;
-      HasMapper = false;
-      NumberOfPtrs = 0u;
-    }
-    /// Return true if the current target data information has valid arrays.
-    bool isValid() {
-      return BasePointersArray && PointersArray && SizesArray &&
-             MapTypesArray && (!HasMapper || MappersArray) && NumberOfPtrs;
-    }
-    bool requiresDevicePointerInfo() { return RequiresDevicePointerInfo; }
-    bool separateBeginEndCalls() { return SeparateBeginEndCalls; }
   };
 
   /// Emit the target data mapping code associated with \a D.
@@ -1727,7 +1678,7 @@ public:
                                    const OMPExecutableDirective &D,
                                    const Expr *IfCond, const Expr *Device,
                                    const RegionCodeGenTy &CodeGen,
-                                   TargetDataInfo &Info);
+                                   CGOpenMPRuntime::TargetDataInfo &Info);
 
   /// Emit the data mapping/movement code associated with the directive
   /// \a D that should be of the form 'target [{enter|exit} data | update]'.
@@ -2487,7 +2438,7 @@ public:
   void emitTargetDataCalls(CodeGenFunction &CGF,
                            const OMPExecutableDirective &D, const Expr *IfCond,
                            const Expr *Device, const RegionCodeGenTy &CodeGen,
-                           TargetDataInfo &Info) override;
+                           CGOpenMPRuntime::TargetDataInfo &Info) override;
 
   /// Emit the data mapping/movement code associated with the directive
   /// \a D that should be of the form 'target [{enter|exit} data | update]'.

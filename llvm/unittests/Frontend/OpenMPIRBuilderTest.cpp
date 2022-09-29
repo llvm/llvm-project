@@ -5312,4 +5312,55 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroupWithTasks) {
   verifyDFSOrder(F, RefOrder);
 }
 
+TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::TargetDataRTArgs RTArgs;
+  OpenMPIRBuilder::TargetDataInfo Info(true, false);
+
+  auto VoidPtrTy = Type::getInt8PtrTy(Builder.getContext());
+  auto VoidPtrPtrTy = VoidPtrTy->getPointerTo(0);
+  auto Int64Ty = Type::getInt64Ty(Builder.getContext());
+  auto Int64PtrTy = Type::getInt64PtrTy(Builder.getContext());
+  auto Array4VoidPtrTy = ArrayType::get(VoidPtrTy, 4);
+  auto Array4Int64PtrTy = ArrayType::get(Int64Ty, 4);
+
+  Info.RTArgs.BasePointersArray =
+      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo(0));
+  Info.RTArgs.PointersArray =
+      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
+  Info.RTArgs.SizesArray =
+      ConstantPointerNull::get(Array4Int64PtrTy->getPointerTo());
+  Info.RTArgs.MapTypesArray =
+      ConstantPointerNull::get(Array4Int64PtrTy->getPointerTo());
+  Info.RTArgs.MapNamesArray =
+      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
+  Info.RTArgs.MappersArray =
+      ConstantPointerNull::get(Array4VoidPtrTy->getPointerTo());
+  Info.NumberOfPtrs = 4;
+
+  OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info, false, false);
+
+  EXPECT_NE(RTArgs.BasePointersArray, nullptr);
+  EXPECT_NE(RTArgs.PointersArray, nullptr);
+  EXPECT_NE(RTArgs.SizesArray, nullptr);
+  EXPECT_NE(RTArgs.MapTypesArray, nullptr);
+  EXPECT_NE(RTArgs.MappersArray, nullptr);
+  EXPECT_NE(RTArgs.MapNamesArray, nullptr);
+  EXPECT_EQ(RTArgs.MapTypesArrayEnd, nullptr);
+
+  EXPECT_EQ(RTArgs.BasePointersArray->getType(), VoidPtrPtrTy);
+  RTArgs.BasePointersArray->getType()->dump();
+  VoidPtrTy->dump();
+  EXPECT_EQ(RTArgs.PointersArray->getType(), VoidPtrPtrTy);
+  EXPECT_EQ(RTArgs.SizesArray->getType(), Int64PtrTy);
+  RTArgs.SizesArray->getType()->dump();
+  Int64PtrTy->dump();
+  EXPECT_EQ(RTArgs.MapTypesArray->getType(), Int64PtrTy);
+  EXPECT_EQ(RTArgs.MappersArray->getType(), VoidPtrPtrTy);
+  EXPECT_EQ(RTArgs.MapNamesArray->getType(), VoidPtrPtrTy);
+}
 } // namespace
