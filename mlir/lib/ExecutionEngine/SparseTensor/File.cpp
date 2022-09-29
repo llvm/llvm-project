@@ -1,0 +1,163 @@
+//===- File.cpp - Parsing sparse tensors from files -----------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements parsing and printing of files in one of the
+// following external formats:
+//
+// (1) Matrix Market Exchange (MME): *.mtx
+//     https://math.nist.gov/MatrixMarket/formats.html
+//
+// (2) Formidable Repository of Open Sparse Tensors and Tools (FROSTT): *.tns
+//     http://frostt.io/tensors/file-formats.html
+//
+// This file is part of the lightweight runtime support library for sparse
+// tensor manipulations.  The functionality of the support library is meant
+// to simplify benchmarking, testing, and debugging MLIR code operating on
+// sparse tensors.  However, the provided functionality is **not** part of
+// core MLIR itself.
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/ExecutionEngine/SparseTensor/File.h"
+
+#ifdef MLIR_SPARSETENSOR_DEFINE_FUNCTIONS // We are building this library
+
+#include <cctype>
+#include <cstring>
+
+using namespace mlir::sparse_tensor;
+
+/// Opens the file for reading.
+void SparseTensorFile::openFile() {
+  if (file)
+    MLIR_SPARSETENSOR_FATAL("Already opened file %s\n", filename);
+  file = fopen(filename, "r");
+  if (!file)
+    MLIR_SPARSETENSOR_FATAL("Cannot find file %s\n", filename);
+}
+
+/// Closes the file.
+void SparseTensorFile::closeFile() {
+  if (file) {
+    fclose(file);
+    file = nullptr;
+  }
+}
+
+// TODO(wrengr/bixia): figure out how to reorganize the element-parsing
+// loop of `openSparseTensorCOO` into methods of this class, so we can
+// avoid leaking access to the `line` pointer (both for general hygiene
+// and because we can't mark it const due to the second argument of
+// `strtoul`/`strtoud` being `char * *restrict` rather than
+// `char const* *restrict`).
+//
+/// Attempts to read a line from the file.
+char *SparseTensorFile::readLine() {
+  if (fgets(line, kColWidth, file))
+    return line;
+  MLIR_SPARSETENSOR_FATAL("Cannot read next line of %s\n", filename);
+}
+
+/// Reads and parses the file's header.
+void SparseTensorFile::readHeader() {
+  assert(file && "Attempt to readHeader() before openFile()");
+  if (strstr(filename, ".mtx"))
+    readMMEHeader();
+  else if (strstr(filename, ".tns"))
+    readExtFROSTTHeader();
+  else
+    MLIR_SPARSETENSOR_FATAL("Unknown format %s\n", filename);
+  assert(isValid() && "Failed to read the header");
+}
+
+/// Asserts the shape subsumes the actual dimension sizes.  Is only
+/// valid after parsing the header.
+void SparseTensorFile::assertMatchesShape(uint64_t rank,
+                                          const uint64_t *shape) const {
+  assert(rank == getRank() && "Rank mismatch");
+  for (uint64_t r = 0; r < rank; r++)
+    assert((shape[r] == 0 || shape[r] == idata[2 + r]) &&
+           "Dimension size mismatch");
+}
+
+/// Helper to convert string to lower case.
+static inline char *toLower(char *token) {
+  for (char *c = token; *c; ++c)
+    *c = tolower(*c);
+  return token;
+}
+
+/// Read the MME header of a general sparse matrix of type real.
+void SparseTensorFile::readMMEHeader() {
+  char header[64];
+  char object[64];
+  char format[64];
+  char field[64];
+  char symmetry[64];
+  // Read header line.
+  if (fscanf(file, "%63s %63s %63s %63s %63s\n", header, object, format, field,
+             symmetry) != 5)
+    MLIR_SPARSETENSOR_FATAL("Corrupt header in %s\n", filename);
+  // Process `field`, which specify pattern or the data type of the values.
+  if (strcmp(toLower(field), "pattern") == 0)
+    valueKind_ = ValueKind::kPattern;
+  else if (strcmp(toLower(field), "real") == 0)
+    valueKind_ = ValueKind::kReal;
+  else if (strcmp(toLower(field), "integer") == 0)
+    valueKind_ = ValueKind::kInteger;
+  else if (strcmp(toLower(field), "complex") == 0)
+    valueKind_ = ValueKind::kComplex;
+  else
+    MLIR_SPARSETENSOR_FATAL("Unexpected header field value in %s\n", filename);
+
+  // Set properties.
+  isSymmetric_ = (strcmp(toLower(symmetry), "symmetric") == 0);
+  // Make sure this is a general sparse matrix.
+  if (strcmp(toLower(header), "%%matrixmarket") ||
+      strcmp(toLower(object), "matrix") ||
+      strcmp(toLower(format), "coordinate") ||
+      (strcmp(toLower(symmetry), "general") && !isSymmetric_))
+    MLIR_SPARSETENSOR_FATAL("Cannot find a general sparse matrix in %s\n",
+                            filename);
+  // Skip comments.
+  while (true) {
+    readLine();
+    if (line[0] != '%')
+      break;
+  }
+  // Next line contains M N NNZ.
+  idata[0] = 2; // rank
+  if (sscanf(line, "%" PRIu64 "%" PRIu64 "%" PRIu64 "\n", idata + 2, idata + 3,
+             idata + 1) != 3)
+    MLIR_SPARSETENSOR_FATAL("Cannot find size in %s\n", filename);
+}
+
+/// Read the "extended" FROSTT header. Although not part of the documented
+/// format, we assume that the file starts with optional comments followed
+/// by two lines that define the rank, the number of nonzeros, and the
+/// dimensions sizes (one per rank) of the sparse tensor.
+void SparseTensorFile::readExtFROSTTHeader() {
+  // Skip comments.
+  while (true) {
+    readLine();
+    if (line[0] != '#')
+      break;
+  }
+  // Next line contains RANK and NNZ.
+  if (sscanf(line, "%" PRIu64 "%" PRIu64 "\n", idata, idata + 1) != 2)
+    MLIR_SPARSETENSOR_FATAL("Cannot find metadata in %s\n", filename);
+  // Followed by a line with the dimension sizes (one per rank).
+  for (uint64_t r = 0; r < idata[0]; r++)
+    if (fscanf(file, "%" PRIu64, idata + 2 + r) != 1)
+      MLIR_SPARSETENSOR_FATAL("Cannot find dimension size %s\n", filename);
+  readLine(); // end of line
+  // The FROSTT format does not define the data type of the nonzero elements.
+  valueKind_ = ValueKind::kUndefined;
+}
+
+#endif // MLIR_SPARSETENSOR_DEFINE_FUNCTIONS
