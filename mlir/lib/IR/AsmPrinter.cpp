@@ -531,6 +531,11 @@ private:
     return success();
   }
 
+  /// Consider the given location to be printed for an alias.
+  void printOptionalLocationSpecifier(Location loc) override {
+    printAttribute(loc);
+  }
+
   /// Print the given set of attributes with names not included within
   /// 'elidedAttrs'.
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
@@ -2681,6 +2686,12 @@ public:
   //===--------------------------------------------------------------------===//
   // OpAsmPrinter methods
   //===--------------------------------------------------------------------===//
+
+  /// Print a loc(...) specifier if printing debug info is enabled. Locations
+  /// may be deferred with an alias.
+  void printOptionalLocationSpecifier(Location loc) override {
+    printTrailingLocation(loc);
+  }
 
   /// Print a newline and indent the printer to the start of the current
   /// operation.
