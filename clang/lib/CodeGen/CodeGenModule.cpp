@@ -7656,6 +7656,13 @@ CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
   // Either we emit Xteam code for all reduction variables or none at all
   for (const auto *C : D.getClausesOfKind<OMPReductionClause>()) {
     for (const Expr *Ref : C->varlists()) {
+      // Only scalar variables supported today
+      if (!isa<DeclRefExpr>(Ref))
+        return std::make_pair(NxNotScalarRed, VarMap);
+      const ValueDecl *ValDecl = cast<DeclRefExpr>(Ref)->getDecl();
+      if (!isa<VarDecl>(ValDecl))
+        return std::make_pair(NxNotScalarRed, VarMap);
+
       llvm::Type *RefType = getTypes().ConvertTypeForMem(Ref->getType());
       // TODO support more data types
       if (!RefType->isFloatTy() && !RefType->isDoubleTy() &&
@@ -7664,12 +7671,7 @@ CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
       if (RefType->isIntegerTy() && RefType->getPrimitiveSizeInBits() != 32 &&
           RefType->getPrimitiveSizeInBits() != 64)
         return std::make_pair(NxUnsupportedRedIntSize, VarMap);
-      // Only scalar variables supported today
-      if (!isa<DeclRefExpr>(Ref))
-        return std::make_pair(NxNotScalarRed, VarMap);
-      const ValueDecl *ValDecl = cast<DeclRefExpr>(Ref)->getDecl();
-      if (!isa<VarDecl>(ValDecl))
-        return std::make_pair(NxNotScalarRed, VarMap);
+
       const VarDecl *VD = cast<VarDecl>(ValDecl);
       // Address of the local var will be populated later
       VarMap.insert(std::make_pair(VD, std::make_pair(Ref, InitAddr)));
