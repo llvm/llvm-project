@@ -81,4 +81,5 @@ int main(int, const char**) {
 #if !defined(TEST_COMPILER_GCC)
   static_assert(test());
 #endif
+  return 0;
 }
