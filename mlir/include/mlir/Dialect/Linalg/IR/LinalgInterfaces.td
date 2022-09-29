@@ -488,7 +488,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.iterator_types();
+        return $_op.getIteratorTypes();
       }]
     >,
     InterfaceMethod<
@@ -781,7 +781,8 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     }
 
     ValueRange outputs() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation()).outputs();
+      return cast<DestinationStyleOpInterface>(*this->getOperation())
+          .getOutputs();
     }
 
     int64_t getNumOutputs() {
@@ -921,7 +922,8 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
 // The 'DestinationStyleOpInterface' provides access to the methods relevant
 // for destination-style ops. A destination-style operation has 'n' input
 // arguments and 'm' output arguments. Each op that wants to implement
-// DestinationStyleOpInterface needs to define inputs() and outputs() methods.
+// DestinationStyleOpInterface needs to define inputs() and getOutputs()
+// methods.
 def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
   let cppNamespace = "::mlir::linalg";
   let methods = [
@@ -952,14 +954,14 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
         return $_op.getInputs().size();
       }]
     >,
-    // `outputs` must be defined by each op that wants to implement the
+    // `getOutputs` must be defined by each op that wants to implement the
     // DestinationStyleOpInterface.
     InterfaceMethod<
       /*desc=*/[{
         Return the output shape operands.
       }],
       /*retTy=*/"ValueRange",
-      /*methodName=*/"outputs",
+      /*methodName=*/"getOutputs",
       /*args=*/(ins)
     >,
     InterfaceMethod<
@@ -971,7 +973,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.outputs().size();
+        return $_op.getOutputs().size();
       }]
     >,
     InterfaceMethod<
