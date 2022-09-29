@@ -127,7 +127,7 @@ llvm::Optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD) {
   if (auto Idx = getGlobal(VD))
     return Idx;
 
-  if (auto Idx = createGlobal(VD)) {
+  if (auto Idx = createGlobal(VD, nullptr)) {
     GlobalIndices[VD] = *Idx;
     return Idx;
   }
@@ -153,7 +153,8 @@ llvm::Optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
   return {};
 }
 
-llvm::Optional<unsigned> Program::createGlobal(const ValueDecl *VD) {
+llvm::Optional<unsigned> Program::createGlobal(const ValueDecl *VD,
+                                               const Expr *Init) {
   bool IsStatic, IsExtern;
   if (auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = !Var->hasLocalStorage();
@@ -162,7 +163,7 @@ llvm::Optional<unsigned> Program::createGlobal(const ValueDecl *VD) {
     IsStatic = false;
     IsExtern = true;
   }
-  if (auto Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern)) {
+  if (auto Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern, Init)) {
     for (const Decl *P = VD; P; P = P->getPreviousDecl())
       GlobalIndices[P] = *Idx;
     return *Idx;
@@ -175,7 +176,8 @@ llvm::Optional<unsigned> Program::createGlobal(const Expr *E) {
 }
 
 llvm::Optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
-                                               bool IsStatic, bool IsExtern) {
+                                               bool IsStatic, bool IsExtern,
+                                               const Expr *Init) {
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
@@ -310,7 +312,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
 
 Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       bool IsConst, bool IsTemporary,
-                                      bool IsMutable) {
+                                      bool IsMutable, const Expr *Init) {
   // Classes and structures.
   if (auto *RT = Ty->getAs<RecordType>()) {
     if (auto *Record = getOrCreateRecord(RT->getDecl()))

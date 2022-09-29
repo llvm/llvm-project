@@ -69,7 +69,7 @@ public:
   llvm::Optional<unsigned> getOrCreateDummy(const ParmVarDecl *PD);
 
   /// Creates a global and returns its index.
-  llvm::Optional<unsigned> createGlobal(const ValueDecl *VD);
+  llvm::Optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *E);
 
   /// Creates a global from a lifetime-extended temporary.
   llvm::Optional<unsigned> createGlobal(const Expr *E);
@@ -111,7 +111,8 @@ public:
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
                                bool IsConst = false, bool IsTemporary = false,
-                               bool IsMutable = false);
+                               bool IsMutable = false,
+                               const Expr *Init = nullptr);
 
   /// Context to manage declaration lifetimes.
   class DeclScope {
@@ -134,7 +135,8 @@ private:
   friend class DeclScope;
 
   llvm::Optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
-                                        bool IsStatic, bool IsExtern);
+                                        bool IsStatic, bool IsExtern,
+                                        const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;
