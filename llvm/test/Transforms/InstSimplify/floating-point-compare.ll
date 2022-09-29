@@ -999,10 +999,14 @@ define <2 x i1> @known_positive_une_with_negative_constant_splat_vec(<2 x i32> %
   ret <2 x i1> %cmp
 }
 
-; FIXME: Miscompile.
+; TODO: This could fold to true.
 define i1 @pr58046(i64 %arg) {
 ; CHECK-LABEL: @pr58046(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[FP:%.*]] = uitofp i64 [[ARG:%.*]] to double
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double -0.000000e+00, [[FP]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv double 1.000000e+00, [[MUL]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[DIV]], 0xFFF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fp = uitofp i64 %arg to double
   %mul = fmul double -0.000000e+00, %fp
