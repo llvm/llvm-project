@@ -2761,18 +2761,15 @@ ListenerSP ProcessAttachInfo::GetListenerForProcess(Debugger &debugger) {
 }
 
 Status Process::WillLaunch(Module *module) {
-  GetTarget().ResetBreakpointHitCounts();
   return DoWillLaunch(module);
 }
 
 Status Process::WillAttachToProcessWithID(lldb::pid_t pid) {
-  GetTarget().ResetBreakpointHitCounts();
   return DoWillAttachToProcessWithID(pid);
 }
 
 Status Process::WillAttachToProcessWithName(const char *process_name,
                                             bool wait_for_launch) {
-  GetTarget().ResetBreakpointHitCounts();
   return DoWillAttachToProcessWithName(process_name, wait_for_launch);
 }
 
