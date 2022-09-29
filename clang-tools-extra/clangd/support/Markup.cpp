@@ -393,6 +393,9 @@ void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
   OS << '\n';
 }
 
+BulletList::BulletList() = default;
+BulletList::~BulletList() = default;
+
 void BulletList::renderMarkdown(llvm::raw_ostream &OS) const {
   for (auto &D : Items) {
     // Instead of doing this we might prefer passing Indent to children to get
