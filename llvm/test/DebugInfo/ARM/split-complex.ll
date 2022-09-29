@@ -1,3 +1,4 @@
+; XFAIL: aarch64-pc-windows-msvc
 ; RUN: %llc_dwarf -O0 -filetype=obj -o %t.o %s
 ; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
 target datalayout = "e-m:o-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
