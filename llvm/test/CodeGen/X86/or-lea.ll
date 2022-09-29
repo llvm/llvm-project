@@ -792,3 +792,34 @@ define i64 @or_sext8_64(i64 %x) {
   %or = or i64 %sext, 8
   ret i64 %or
 }
+
+define i64 @or_large_constant(i64 %x) {
+; X86-LABEL: or_large_constant:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    movl $1, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, %eax
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    sbbl %edx, %edx
+; X86-NEXT:    orl $1, %eax
+; X86-NEXT:    orl $128, %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: or_large_constant:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpq $2, %rdi
+; X64-NEXT:    setl %al
+; X64-NEXT:    leaq -1(%rax,%rax), %rax
+; X64-NEXT:    retq
+entry:
+  %cmp = icmp sgt i64 %x, 1
+  %zext = zext i1 %cmp to i64
+  %sub = sub i64 0, %zext
+  %or = or i64 %sub, 549755813889   ; 0x8000000001
+  ret i64 %or
+}
