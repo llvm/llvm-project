@@ -167,21 +167,21 @@ CoreSimulatorSupport::OSVersion::OSVersion() : OSVersion("", "") {}
 
 CoreSimulatorSupport::ModelIdentifier
 CoreSimulatorSupport::DeviceType::GetModelIdentifier() {
-  if (!m_model_identifier.hasValue()) {
+  if (!m_model_identifier.has_value()) {
     auto utf8_model_id = [[m_dev modelIdentifier] UTF8String];
     if (utf8_model_id && *utf8_model_id)
       m_model_identifier = ModelIdentifier(utf8_model_id);
   }
 
-  if (m_model_identifier.hasValue())
-    return m_model_identifier.getValue();
+  if (m_model_identifier.has_value())
+    return m_model_identifier.value();
   else
     return ModelIdentifier();
 }
 
 CoreSimulatorSupport::OSVersion
 CoreSimulatorSupport::DeviceRuntime::GetVersion() {
-  if (!m_os_version.hasValue()) {
+  if (!m_os_version.has_value()) {
     auto utf8_ver_string = [[m_dev versionString] UTF8String];
     auto utf8_build_ver = [[m_dev buildVersionString] UTF8String];
     if (utf8_ver_string && *utf8_ver_string && utf8_build_ver &&
@@ -190,8 +190,8 @@ CoreSimulatorSupport::DeviceRuntime::GetVersion() {
     }
   }
 
-  if (m_os_version.hasValue())
-    return m_os_version.getValue();
+  if (m_os_version.has_value())
+    return m_os_version.value();
   return OSVersion();
 }
 
@@ -218,18 +218,18 @@ std::string CoreSimulatorSupport::Device::GetUDID() const {
 }
 
 CoreSimulatorSupport::DeviceType CoreSimulatorSupport::Device::GetDeviceType() {
-  if (!m_dev_type.hasValue())
+  if (!m_dev_type.has_value())
     m_dev_type = DeviceType([m_dev deviceType]);
 
-  return m_dev_type.getValue();
+  return m_dev_type.value();
 }
 
 CoreSimulatorSupport::DeviceRuntime
 CoreSimulatorSupport::Device::GetDeviceRuntime() {
-  if (!m_dev_runtime.hasValue())
+  if (!m_dev_runtime.has_value())
     m_dev_runtime = DeviceRuntime([m_dev runtime]);
 
-  return m_dev_runtime.getValue();
+  return m_dev_runtime.value();
 }
 
 bool CoreSimulatorSupport::
