@@ -51,7 +51,7 @@ To use this framework, we need to provide two things (and an optional third):
 ## Conversion Target
 
 For our purposes, we want to convert the compute-intensive `Toy` operations into
-a combination of operations from the `Affine`, `Arithmetic`, `Func`, and `MemRef` dialects
+a combination of operations from the `Affine`, `Arith`, `Func`, and `MemRef` dialects
 for further optimization. To start off the lowering, we first define our
 conversion target:
 
@@ -63,8 +63,8 @@ void ToyToAffineLoweringPass::runOnOperation() {
 
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
-  // `Affine`, `Arithmetic`, `Func`, and `MemRef` dialects.
-  target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
+  // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
+  target.addLegalDialect<AffineDialect, arith::ArithDialect,
                          func::FuncDialect, memref::MemRefDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail

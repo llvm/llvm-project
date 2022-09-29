@@ -15,7 +15,7 @@
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -388,7 +388,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
 
   target.addIllegalDialect<gpu::GPUDialect>();
 
-  mlir::arith::populateArithmeticToLLVMConversionPatterns(converter, patterns);
+  mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
   mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateMemRefToLLVMConversionPatterns(converter, patterns);

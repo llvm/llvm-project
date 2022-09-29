@@ -13,7 +13,7 @@
 #include "mlir/Conversion/TensorToLinalg/TensorToLinalgPass.h"
 
 #include "mlir/Conversion/TensorToLinalg/TensorToLinalg.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 
@@ -31,9 +31,9 @@ class ConvertTensorToLinalgPass
   void runOnOperation() override {
     auto &context = getContext();
     ConversionTarget target(context);
-    target.addLegalDialect<mlir::arith::ArithmeticDialect,
-                           mlir::linalg::LinalgDialect,
-                           mlir::tensor::TensorDialect>();
+    target
+        .addLegalDialect<mlir::arith::ArithDialect, mlir::linalg::LinalgDialect,
+                         mlir::tensor::TensorDialect>();
     target.addIllegalOp<mlir::tensor::PadOp>();
 
     RewritePatternSet patterns(&context);

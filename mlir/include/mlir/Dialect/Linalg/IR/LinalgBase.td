@@ -35,7 +35,7 @@ def Linalg_Dialect : Dialect {
   }];
   let cppNamespace = "::mlir::linalg";
   let dependentDialects = [
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "AffineDialect",
     "math::MathDialect",
     "memref::MemRefDialect",

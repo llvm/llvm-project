@@ -40,9 +40,9 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRAffineDialect
   MLIRAffineUtils
   MLIRAnalysis
-  MLIRArithmeticDialect
-  MLIRArithmeticTransforms
-  MLIRArithmeticUtils
+  MLIRArithDialect
+  MLIRArithTransforms
+  MLIRArithUtils
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRComplexDialect

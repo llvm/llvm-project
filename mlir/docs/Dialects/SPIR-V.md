@@ -1079,7 +1079,7 @@ returns an SSA value generated from an `spirv.mlir.addressof` operation.
 
 Using the above infrastructure, conversions are implemented from
 
-*   [Arithmetic Dialect][MlirArithmeticDialect]
+*   [Arith Dialect][MlirArithDialect]
 *   [GPU Dialect][MlirGpuDialect] : A gpu.module is converted to a `spirv.module`.
     A gpu.function within this module is lowered as an entry function.
 

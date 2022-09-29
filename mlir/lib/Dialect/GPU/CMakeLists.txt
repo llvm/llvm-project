@@ -33,7 +33,7 @@ add_mlir_dialect_library(MLIRGPUOps
   MLIRGPUOpInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRDLTIDialect
   MLIRInferIntRangeInterface
   MLIRIR
@@ -67,7 +67,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineUtils
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRAsyncDialect
   MLIRDataLayoutInterfaces
   MLIRExecutionEngineUtils

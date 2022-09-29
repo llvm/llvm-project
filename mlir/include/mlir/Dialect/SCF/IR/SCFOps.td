@@ -23,7 +23,7 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
-  let dependentDialects = ["arith::ArithmeticDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
 }
 
 // Base class for SCF dialect ops.

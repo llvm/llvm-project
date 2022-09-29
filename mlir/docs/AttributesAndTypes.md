@@ -14,8 +14,8 @@ from the [MLIR LangRef](LangRef.md).
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`arith.cmpi` operation](Dialects/ArithmeticOps.md#arithcmpi-mlirarithcmpiop), or
-the underlying value of a [`arith.constant` operation](Dialects/ArithmeticOps.md#arithconstant-mlirarithconstantop).
+[`arith.cmpi` operation](Dialects/ArithOps.md#arithcmpi-mlirarithcmpiop), or
+the underlying value of a [`arith.constant` operation](Dialects/ArithOps.md#arithconstant-mlirarithconstantop).
 Each operation has an attribute dictionary, which associates a set of attribute
 names to attribute values.
 
@@ -24,7 +24,7 @@ names to attribute values.
 Every SSA value, such as operation results or block arguments, in MLIR has a type
 defined by the type system. MLIR has an open type system with no fixed list of types,
 and there are no restrictions on the abstractions they represent. For example, take
-the following [Arithmetic AddI operation](Dialects/ArithmeticOps.md#arithaddi-mlirarithaddiop):
+the following [Arithmetic AddI operation](Dialects/ArithOps.md#arithaddi-mlirarithaddiop):
 
 ```mlir
   %result = arith.addi %lhs, %rhs : i64

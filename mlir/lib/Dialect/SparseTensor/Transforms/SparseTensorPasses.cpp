@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -127,7 +127,7 @@ struct SparseTensorConversionPass
     target.addLegalOp<complex::ConstantOp, complex::NotEqualOp, linalg::FillOp,
                       linalg::YieldOp, tensor::ExtractOp>();
     target.addLegalDialect<
-        arith::ArithmeticDialect, bufferization::BufferizationDialect,
+        arith::ArithDialect, bufferization::BufferizationDialect,
         LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
     // Translate strategy flags to strategy options.
     SparseTensorConversionOptions options(
@@ -182,7 +182,7 @@ struct SparseTensorCodegenPass
     // The following operations and dialects may be introduced by the
     // codegen rules, and are therefore marked as legal.
     target.addLegalOp<linalg::FillOp>();
-    target.addLegalDialect<arith::ArithmeticDialect,
+    target.addLegalDialect<arith::ArithDialect,
                            bufferization::BufferizationDialect,
                            memref::MemRefDialect, scf::SCFDialect>();
     target.addLegalOp<UnrealizedConversionCastOp>();

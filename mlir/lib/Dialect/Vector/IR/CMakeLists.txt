@@ -9,7 +9,7 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRVectorOpsEnumsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRDialectUtils

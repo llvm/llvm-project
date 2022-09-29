@@ -9,7 +9,7 @@
 #ifndef MEMREF_OPS
 #define MEMREF_OPS
 
-include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"

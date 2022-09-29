@@ -8,7 +8,7 @@
 
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -377,7 +377,7 @@ void ConvertMathToFuncsPass::runOnOperation() {
   patterns.add<IPowIOpLowering>(patterns.getContext(), getPowerFuncOpByType);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<arith::ArithmeticDialect, cf::ControlFlowDialect,
+  target.addLegalDialect<arith::ArithDialect, cf::ControlFlowDialect,
                          func::FuncDialect, vector::VectorDialect>();
   target.addIllegalOp<math::IPowIOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))

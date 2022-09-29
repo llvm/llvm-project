@@ -13,7 +13,7 @@
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 
 #include "mlir/AsmParser/AsmParser.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"

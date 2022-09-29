@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -54,7 +54,7 @@ static struct LLVMInitializer {
 static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   PassManager pm(module.getContext());
   pm.addPass(mlir::createMemRefToLLVMConversionPass());
-  pm.addNestedPass<func::FuncOp>(mlir::createArithmeticToLLVMConversionPass());
+  pm.addNestedPass<func::FuncOp>(mlir::createArithToLLVMConversionPass());
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);
