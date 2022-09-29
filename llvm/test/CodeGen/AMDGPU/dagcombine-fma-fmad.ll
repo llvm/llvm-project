@@ -240,10 +240,11 @@ define amdgpu_ps float @fmac_sequence_innermost_fmul_sgpr(float inreg %a, float 
 define amdgpu_ps float @fmac_sequence_innermost_fmul_multiple_use(float inreg %a, float inreg %b, float inreg %c, float inreg %d, float inreg %e, float inreg %f, float %g) #0 {
 ; GCN-LABEL: fmac_sequence_innermost_fmul_multiple_use:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mac_f32_e64 v0, s2, s3
-; GCN-NEXT:    v_fmac_f32_e64 v0, s0, s1
-; GCN-NEXT:    v_fma_f32 v1, s5, s4, v0
-; GCN-NEXT:    v_fmac_f32_e32 v0, s5, v1
+; GCN-NEXT:    v_mul_f32_e64 v1, s2, s3
+; GCN-NEXT:    v_fmac_f32_e64 v1, s0, s1
+; GCN-NEXT:    v_fma_f32 v2, s5, s4, v1
+; GCN-NEXT:    v_fmac_f32_e32 v1, s5, v2
+; GCN-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GCN-NEXT:    ; return to shader part epilog
   %t0 = fmul fast float %a, %b
   %t1 = fmul fast float %c, %d

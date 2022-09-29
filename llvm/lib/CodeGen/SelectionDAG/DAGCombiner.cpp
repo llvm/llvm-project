@@ -14300,7 +14300,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
     }
 
     SDValue TmpFMA = FMA;
-    while (E && isFusedOp(TmpFMA)) {
+    while (E && isFusedOp(TmpFMA) && TmpFMA.hasOneUse()) {
       SDValue FMul = TmpFMA->getOperand(2);
       if (FMul.getOpcode() == ISD::FMUL && FMul.hasOneUse()) {
         SDValue C = FMul.getOperand(0);
