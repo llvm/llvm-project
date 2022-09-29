@@ -241,7 +241,11 @@ public:
   // For example, if "this" is an undefined symbol and a new symbol is
   // a defined symbol, "this" is replaced with the new symbol.
   void mergeProperties(const Symbol &other);
-  void resolve(const Symbol &other);
+  void resolve(const Undefined &other);
+  void resolve(const CommonSymbol &other);
+  void resolve(const Defined &other);
+  void resolve(const LazyObject &other);
+  void resolve(const SharedSymbol &other);
 
   // If this is a lazy symbol, extract an input file and add the symbol
   // in the file to the symbol table. Calling this function on
@@ -251,12 +255,6 @@ public:
   void checkDuplicate(const Defined &other) const;
 
 private:
-  void resolveUndefined(const Undefined &other);
-  void resolveCommon(const CommonSymbol &other);
-  void resolveDefined(const Defined &other);
-  void resolveLazy(const LazyObject &other);
-  void resolveShared(const SharedSymbol &other);
-
   bool shouldReplace(const Defined &other) const;
 
 protected:
