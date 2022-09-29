@@ -320,6 +320,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
     return true;
 
   case RequirementInstantiation:
+  case RequirementParameterInstantiation:
   case DefaultTemplateArgumentChecking:
   case DeclaringSpecialMember:
   case DeclaringImplicitEqualityComparison:
@@ -505,6 +506,13 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
           /*Template=*/nullptr, /*TemplateArgs=*/None) {}
 
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation, const RequiresExpr *RE,
+    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef, CodeSynthesisContext::RequirementParameterInstantiation,
+          PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
+          /*Template=*/nullptr, /*TemplateArgs=*/None, &DeductionInfo) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -539,6 +547,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::ParameterMappingSubstitution,
           PointOfInstantiation, InstantiationRange, Template) {}
+
 
 void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
@@ -845,6 +854,12 @@ void Sema::PrintInstantiationStack() {
                    diag::note_template_requirement_instantiation_here)
         << Active->InstantiationRange;
       break;
+    case CodeSynthesisContext::RequirementParameterInstantiation:
+      assert("how do we get here?!");
+      Diags.Report(Active->PointOfInstantiation,
+                   diag::note_template_requirement_params_instantiation_here)
+          << Active->InstantiationRange;
+      break;
 
     case CodeSynthesisContext::NestedRequirementConstraintsCheck:
       Diags.Report(Active->PointOfInstantiation,
@@ -1003,6 +1018,7 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::DeducedTemplateArgumentSubstitution:
     case CodeSynthesisContext::ConstraintSubstitution:
     case CodeSynthesisContext::RequirementInstantiation:
+    case CodeSynthesisContext::RequirementParameterInstantiation:
       // We're either substituting explicitly-specified template arguments,
       // deduced template arguments, a constraint expression or a requirement
       // in a requires expression, so SFINAE applies.
@@ -1348,6 +1364,12 @@ namespace {
     TransformExprRequirement(concepts::ExprRequirement *Req);
     concepts::NestedRequirement *
     TransformNestedRequirement(concepts::NestedRequirement *Req);
+    ExprResult TransformRequiresTypeParams(
+        SourceLocation KWLoc, SourceLocation RBraceLoc, const RequiresExpr *RE,
+        RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> Params,
+        SmallVectorImpl<QualType> &PTypes,
+        SmallVectorImpl<ParmVarDecl *> &TransParams,
+        Sema::ExtParameterInfoBuilder &PInfos);
 
   private:
     ExprResult transformNonTypeTemplateParmRef(NonTypeTemplateParmDecl *parm,
@@ -2063,6 +2085,37 @@ createSubstDiag(Sema &S, TemplateDeductionInfo &Info, EntityPrinter Printer) {
   return new (S.Context) concepts::Requirement::SubstitutionDiagnostic{
       StringRef(EntityBuf, Entity.size()), ErrorLoc,
       StringRef(MessageBuf, Message.size())};
+}
+
+ExprResult TemplateInstantiator::TransformRequiresTypeParams(
+    SourceLocation KWLoc, SourceLocation RBraceLoc, const RequiresExpr *RE,
+    RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> Params,
+    SmallVectorImpl<QualType> &PTypes,
+    SmallVectorImpl<ParmVarDecl *> &TransParams,
+    Sema::ExtParameterInfoBuilder &PInfos) {
+
+  TemplateDeductionInfo Info(KWLoc);
+  Sema::InstantiatingTemplate TypeInst(SemaRef, KWLoc,
+                                       RE, Info,
+                                       SourceRange{KWLoc, RBraceLoc});
+  Sema::SFINAETrap Trap(SemaRef);
+
+  unsigned ErrorIdx;
+  if (getDerived().TransformFunctionTypeParams(
+          KWLoc, Params, /*ParamTypes=*/nullptr, /*ParamInfos=*/nullptr, PTypes,
+          &TransParams, PInfos, &ErrorIdx) ||
+      Trap.hasErrorOccurred()) {
+    SmallVector<concepts::Requirement *, 4> TransReqs;
+    ParmVarDecl *FailedDecl = Params[ErrorIdx];
+    // Add a 'failed' Requirement to contain the error that caused the failure
+    // here.
+    TransReqs.push_back(RebuildTypeRequirement(createSubstDiag(
+        SemaRef, Info, [&](llvm::raw_ostream &OS) { OS << *FailedDecl; })));
+    return getDerived().RebuildRequiresExpr(KWLoc, Body, TransParams, TransReqs,
+                                            RBraceLoc);
+  }
+
+  return ExprResult{};
 }
 
 concepts::TypeRequirement *
