@@ -42,6 +42,8 @@ extern "C" {
 #pragma omp end declare variant
 
 #ifdef __AMDGCN__
+// -fcuda-is-device defines __CUDA_ARCH__
+#undef __CUDA_ARCH__
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
 // __NO_INLINE__ prevents some x86 optimized macro definitions in system headers
