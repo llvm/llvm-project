@@ -1149,6 +1149,10 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) const {
     if (SubArch == MipsSubArch_r6)
       return "mipsisa64r6el";
     break;
+  case Triple::aarch64:
+    if (SubArch == AArch64SubArch_arm64ec)
+      return "arm64ec";
+    break;
   default:
     break;
   }
