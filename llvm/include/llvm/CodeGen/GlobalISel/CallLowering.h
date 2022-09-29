@@ -352,6 +352,9 @@ protected:
   ISD::ArgFlagsTy getAttributesForArgIdx(const CallBase &Call,
                                          unsigned ArgIdx) const;
 
+  /// \returns Flags corresponding to the attributes on the return from \p Call.
+  ISD::ArgFlagsTy getAttributesForReturn(const CallBase &Call) const;
+
   /// Adds flags to \p Flags based off of the attributes in \p Attrs.
   /// \p OpIdx is the index in \p Attrs to add flags from.
   void addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
