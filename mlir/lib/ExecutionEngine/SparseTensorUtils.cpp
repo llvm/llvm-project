@@ -78,11 +78,13 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, const uint64_t *shape,
                    const uint64_t *perm, const DimLevelType *sparsity) {
 #ifndef NDEBUG
   // Verify that perm is a permutation of 0..(rank-1).
-  std::vector<uint64_t> order(perm, perm + rank);
-  std::sort(order.begin(), order.end());
-  for (uint64_t i = 0; i < rank; ++i)
-    if (i != order[i])
+  std::vector<bool> seen(rank, false);
+  for (uint64_t i = 0; i < rank; ++i) {
+    const uint64_t j = perm[i];
+    if (j >= rank || seen[j])
       MLIR_SPARSETENSOR_FATAL("Not a permutation of 0..%" PRIu64 "\n", rank);
+    seen[j] = true;
+  }
 
   // Verify that the sparsity values are supported.
   for (uint64_t i = 0; i < rank; ++i)
