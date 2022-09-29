@@ -1483,7 +1483,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F,
 
   if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
     for (auto *Inst : IntrinToInstrument)
-      instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
+      instrumentMemIntrinsic(Inst);
   }
 
   ShadowBase = nullptr;
