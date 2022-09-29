@@ -672,7 +672,8 @@ if(COMPILER_RT_USE_LIBCXX)
     # Don't use libcxx if LLVM_ENABLE_PROJECTS does not enable it.
     set(COMPILER_RT_LIBCXX_PATH ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
     set(COMPILER_RT_LIBCXXABI_PATH ${LLVM_EXTERNAL_LIBCXXABI_SOURCE_DIR})
-  else()
+  endif()
+  if(NOT IS_DIRECTORY ${COMPILER_RT_LIBCXX_PATH})
     foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxx
                           ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx
                           ${LLVM_MAIN_SRC_DIR}/../libcxx
