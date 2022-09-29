@@ -5,6 +5,10 @@ declare i8 @llvm.smin.i8(i8, i8)
 declare i8 @llvm.smax.i8(i8, i8)
 declare i8 @llvm.umin.i8(i8, i8)
 declare i8 @llvm.umax.i8(i8, i8)
+declare <4 x i8> @llvm.smin.v4i8(<4 x i8>, <4 x i8>)
+declare <4 x i8> @llvm.smax.v4i8(<4 x i8>, <4 x i8>)
+declare <4 x i8> @llvm.umin.v4i8(<4 x i8>, <4 x i8>)
+declare <4 x i8> @llvm.umax.v4i8(<4 x i8>, <4 x i8>)
 
 ; smin
 
@@ -1936,4 +1940,192 @@ define i8 @eq_yx_umax_tval_wrong_op(i8 %x, i8 %y, i8 %z) {
   %m = call i8 @llvm.umax.i8(i8 %z, i8 %x)
   %r = select i1 %i, i8 %m, i8 %x
   ret i8 %r
+}
+
+; TODO: select with smin pred
+
+define <4 x i8> @slt_xy_smin_select_y_shuf_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @slt_xy_smin_select_y_shuf_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp slt <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[X]], <4 x i8> [[Y]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[Y]], <4 x i8> [[M]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp slt <4 x i8> %x, %y
+  %m = call <4 x i8> @llvm.smin.v4i8(<4 x i8> %x, <4 x i8> %y)
+  %s = shufflevector <4 x i8> %y, <4 x i8> %m, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @sgt_xy_smin_select_y_shuf_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @sgt_xy_smin_select_y_shuf_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp sgt <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[X]], <4 x i8> [[Y]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[Y]], <4 x i8> [[M]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp sgt <4 x i8> %x, %y
+  %m = call <4 x i8> @llvm.smin.v4i8(<4 x i8> %x, <4 x i8> %y)
+  %s = shufflevector <4 x i8> %y, <4 x i8> %m, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @slt_xy_smin_select_x_shuf_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @slt_xy_smin_select_x_shuf_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp slt <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[X]], <4 x i8> [[Y]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[M]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp slt <4 x i8> %x, %y
+  %m = call <4 x i8> @llvm.smin.v4i8(<4 x i8> %x, <4 x i8> %y)
+  %s = shufflevector <4 x i8> %x, <4 x i8> %m, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
+}
+
+; TODO: select with non-strict smax pred
+
+define <4 x i8> @sge_xy_smax_select_y_shuf_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @sge_xy_smax_select_y_shuf_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp sge <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.smax.v4i8(<4 x i8> [[Y]], <4 x i8> [[X]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[Y]], <4 x i8> [[M]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp sge <4 x i8> %x, %y
+  %m = call <4 x i8> @llvm.smax.v4i8(<4 x i8> %y, <4 x i8> %x)
+  %s = shufflevector <4 x i8> %y, <4 x i8> %m, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @sle_yx_smax_select_y_shuf_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @sle_yx_smax_select_y_shuf_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp sge <4 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.smax.v4i8(<4 x i8> [[Y]], <4 x i8> [[X]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[Y]], <4 x i8> [[M]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp sge <4 x i8> %y, %x
+  %m = call <4 x i8> @llvm.smax.v4i8(<4 x i8> %y, <4 x i8> %x)
+  %s = shufflevector <4 x i8> %y, <4 x i8> %m, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @sge_xy_smax_select_x_shuf_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @sge_xy_smax_select_x_shuf_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp sge <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.smax.v4i8(<4 x i8> [[Y]], <4 x i8> [[X]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[M]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp sge <4 x i8> %x, %y
+  %m = call <4 x i8> @llvm.smax.v4i8(<4 x i8> %y, <4 x i8> %x)
+  %s = shufflevector <4 x i8> %x, <4 x i8> %m, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
+}
+
+; TODO: select with non-strict inverted umin pred
+
+define <4 x i8> @uge_xy_umin_select_y_shuf_tval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @uge_xy_umin_select_y_shuf_tval(
+; CHECK-NEXT:    [[I:%.*]] = icmp uge <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.umin.v4i8(<4 x i8> [[X]], <4 x i8> [[Y]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[M]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[S]], <4 x i8> [[X]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp uge <4 x i8> %x, %y
+  %m = call <4 x i8> @llvm.umin.v4i8(<4 x i8> %x, <4 x i8> %y)
+  %s = shufflevector <4 x i8> %m, <4 x i8> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+  %r = select <4 x i1> %i, <4 x i8> %s, <4 x i8> %x
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @uge_xy_umin_select_y_shuf_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @uge_xy_umin_select_y_shuf_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp uge <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.umin.v4i8(<4 x i8> [[X]], <4 x i8> [[Y]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[M]], <4 x i8> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp uge <4 x i8> %x, %y
+  %m = call <4 x i8> @llvm.umin.v4i8(<4 x i8> %x, <4 x i8> %y)
+  %s = shufflevector <4 x i8> %m, <4 x i8> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @uge_xy_umin_select_x_shuf_tval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @uge_xy_umin_select_x_shuf_tval(
+; CHECK-NEXT:    [[I:%.*]] = icmp uge <4 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.umin.v4i8(<4 x i8> [[X]], <4 x i8> [[Y]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[M]], <4 x i8> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[S]], <4 x i8> [[X]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp uge <4 x i8> %x, %y
+  %m = call <4 x i8> @llvm.umin.v4i8(<4 x i8> %x, <4 x i8> %y)
+  %s = shufflevector <4 x i8> %m, <4 x i8> %x, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+  %r = select <4 x i1> %i, <4 x i8> %s, <4 x i8> %x
+  ret <4 x i8> %r
+}
+
+; TODO: select with swapped umax pred
+
+define <4 x i8> @ult_yx_umax_select_y_shuf_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @ult_yx_umax_select_y_shuf_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp ult <4 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.umax.v4i8(<4 x i8> [[Y]], <4 x i8> [[X]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[Y]], <4 x i8> [[M]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp ult <4 x i8> %y, %x
+  %m = call <4 x i8> @llvm.umax.v4i8(<4 x i8> %y, <4 x i8> %x)
+  %s = shufflevector <4 x i8> %y, <4 x i8> %m, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @ult_yx_umax_select_y_shuf_tval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @ult_yx_umax_select_y_shuf_tval(
+; CHECK-NEXT:    [[I:%.*]] = icmp ult <4 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.umax.v4i8(<4 x i8> [[Y]], <4 x i8> [[X]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[Y]], <4 x i8> [[M]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[S]], <4 x i8> [[X]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp ult <4 x i8> %y, %x
+  %m = call <4 x i8> @llvm.umax.v4i8(<4 x i8> %y, <4 x i8> %x)
+  %s = shufflevector <4 x i8> %y, <4 x i8> %m, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+  %r = select <4 x i1> %i, <4 x i8> %s, <4 x i8> %x
+  ret <4 x i8> %r
+}
+
+define <4 x i8> @ult_yx_umax_select_y_shuf_mask_fval(<4 x i8> %x, <4 x i8> %y) {
+; CHECK-LABEL: @ult_yx_umax_select_y_shuf_mask_fval(
+; CHECK-NEXT:    [[I:%.*]] = icmp ult <4 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call <4 x i8> @llvm.umax.v4i8(<4 x i8> [[Y]], <4 x i8> [[X]])
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i8> [[Y]], <4 x i8> [[M]], <4 x i32> <i32 5, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[I]], <4 x i8> [[X]], <4 x i8> [[S]]
+; CHECK-NEXT:    ret <4 x i8> [[R]]
+;
+  %i = icmp ult <4 x i8> %y, %x
+  %m = call <4 x i8> @llvm.umax.v4i8(<4 x i8> %y, <4 x i8> %x)
+  %s = shufflevector <4 x i8> %y, <4 x i8> %m, <4 x i32> <i32 5, i32 1, i32 2, i32 3>
+  %r = select <4 x i1> %i, <4 x i8> %x, <4 x i8> %s
+  ret <4 x i8> %r
 }
