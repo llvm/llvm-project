@@ -732,7 +732,8 @@ bool mlirAttributeIsAStridedLayout(MlirAttribute attr) {
 }
 
 MlirAttribute mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset,
-                                       intptr_t numStrides, int64_t *strides) {
+                                       intptr_t numStrides,
+                                       const int64_t *strides) {
   return wrap(StridedLayoutAttr::get(unwrap(ctx), offset,
                                      ArrayRef<int64_t>(strides, numStrides)));
 }

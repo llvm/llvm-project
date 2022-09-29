@@ -523,3 +523,22 @@ def testArrayAttr():
     array = array + [StringAttr.get("c")]
     # CHECK: concat: ["a", "b", "c"]
     print("concat: ", array)
+
+
+# CHECK-LABEL: TEST: testStridedLayoutAttr
+@run
+def testStridedLayoutAttr():
+  with Context():
+    attr = StridedLayoutAttr.get(42, [5, 7, 13])
+    # CHECK: strided<[5, 7, 13], offset: 42>
+    print(attr)
+    # CHECK: 42
+    print(attr.offset)
+    # CHECK: 3
+    print(len(attr.strides))
+    # CHECK: 5
+    print(attr.strides[0])
+    # CHECK: 7
+    print(attr.strides[1])
+    # CHECK: 13
+    print(attr.strides[2])
