@@ -887,14 +887,14 @@ Configuration files can be either specified on the command line or loaded
 from default locations. If both variants are present, the default configuration
 files are loaded first.
 
-The command line option ``--config`` can be used to specify explicit
+The command line option ``--config=`` can be used to specify explicit
 configuration files in a Clang invocation. If the option is used multiple times,
 all specified files are loaded, in order. For example:
 
 ::
 
-    clang --config /home/user/cfgs/testing.txt
-    clang --config debug.cfg --config runtimes.cfg
+    clang --config=/home/user/cfgs/testing.txt
+    clang --config=debug.cfg --config=runtimes.cfg
 
 If the provided argument contains a directory separator, it is considered as
 a file path, and options are read from that file. Otherwise the argument is
@@ -966,7 +966,7 @@ configuration file.
 In cases where a configuration file is deployed alongside SDK contents, the
 SDK directory can remain fully portable by using ``<CFGDIR>`` prefixed paths.
 In this way, the user may only need to specify a root configuration file with
-``--config`` to establish every aspect of the SDK with the compiler:
+``--config=`` to establish every aspect of the SDK with the compiler:
 
 ::
 
