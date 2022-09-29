@@ -263,8 +263,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
-      return (*this)->getAttrOfType<IntegerAttr>(
-          getNumWorkgroupAttributionsAttrName()).getInt();
+      auto attr = (*this)->getAttrOfType<IntegerAttr>(
+          getNumWorkgroupAttributionsAttrName());
+      return attr ? attr.getInt() : 0;
     }
 
     /// Returns a list of block arguments that correspond to buffers located in

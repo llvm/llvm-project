@@ -284,3 +284,10 @@ module attributes {gpu.container_module} {
     return
   }
 }
+
+// Just check that this doesn't crash.
+gpu.module @module {
+  "gpu.func"() ({
+    gpu.return
+  }) {function_type = () -> (), sym_name = "func"} : () -> ()
+}
