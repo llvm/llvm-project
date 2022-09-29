@@ -342,7 +342,8 @@ MLIRDocument::MLIRDocument(MLIRContext &context, const lsp::URIForFile &uri,
     return;
   }
 
-  ParserConfig config(&context, &fallbackResourceMap);
+  ParserConfig config(&context, /*verifyAfterParse=*/true,
+                      &fallbackResourceMap);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
   if (failed(parseAsmSourceFile(sourceMgr, &parsedIR, config, &asmState))) {
     // If parsing failed, clear out any of the current state.
@@ -1296,7 +1297,8 @@ lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
   FallbackAsmResourceMap fallbackResourceMap;
 
   // Setup the parser config.
-  ParserConfig parserConfig(&tempContext, &fallbackResourceMap);
+  ParserConfig parserConfig(&tempContext, /*verifyAfterParse=*/true,
+                            &fallbackResourceMap);
 
   // Try to parse the given source file.
   Block parsedBlock;

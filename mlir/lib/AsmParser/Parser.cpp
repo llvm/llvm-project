@@ -802,7 +802,7 @@ ParseResult OperationParser::finalize() {
     return failure();
 
   // Verify that the parsed operations are valid.
-  if (failed(verify(topLevelOp)))
+  if (state.config.shouldVerifyAfterParse() && failed(verify(topLevelOp)))
     return failure();
 
   // If we are populating the parser state, finalize the top-level operation.

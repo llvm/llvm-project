@@ -1,4 +1,5 @@
 add_mlir_unittest(MLIRParserTests
+  ParserTest.cpp
   ResourceTest.cpp
 
   DEPENDS

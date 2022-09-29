@@ -66,7 +66,7 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
   // untouched.
   PassReproducerOptions reproOptions;
   FallbackAsmResourceMap fallbackResourceMap;
-  ParserConfig config(context, &fallbackResourceMap);
+  ParserConfig config(context, /*verifyAfterParse=*/true, &fallbackResourceMap);
   reproOptions.attachResourceParser(config);
 
   // Parse the input file and reset the context threading state.
