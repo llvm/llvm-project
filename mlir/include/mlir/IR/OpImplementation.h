@@ -356,13 +356,8 @@ public:
   /// Print a comma separated list of operands.
   template <typename IteratorType>
   void printOperands(IteratorType it, IteratorType end) {
-    if (it == end)
-      return;
-    printOperand(*it);
-    for (++it; it != end; ++it) {
-      getStream() << ", ";
-      printOperand(*it);
-    }
+    llvm::interleaveComma(llvm::make_range(it, end), getStream(),
+                          [this](Value value) { printOperand(value); });
   }
 
   /// Print the given successor.
