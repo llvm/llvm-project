@@ -3884,11 +3884,12 @@ The fields used by CP for code objects before V3 also match those specified in
      63:32   4 bytes PRIVATE_SEGMENT_FIXED_SIZE      The amount of fixed
                                                      private address space
                                                      memory required for a
-                                                     work-item in bytes.
-                                                     Additional space may need to
-                                                     be added to this value if
-                                                     the call stack has
-                                                     non-inlined function calls.
+                                                     work-item in bytes.  When
+                                                     this cannot be predicted,
+                                                     code object v4 and older
+                                                     sets this value to be
+                                                     higher than the minimum
+                                                     requirement.
      95:64   4 bytes KERNARG_SIZE                    The size of the kernarg
                                                      memory pointed to by the
                                                      AQL dispatch packet. The
