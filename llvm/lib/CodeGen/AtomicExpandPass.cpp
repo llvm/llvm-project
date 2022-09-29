@@ -828,9 +828,15 @@ void AtomicExpand::expandPartwordAtomicRMW(
       createMaskInstrs(Builder, AI, AI->getType(), AI->getPointerOperand(),
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
-  Value *ValOperand_Shifted =
-      Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
-                        PMV.ShiftAmt, "ValOperand_Shifted");
+  Value *ValOperand_Shifted = nullptr;
+  if (AI->getOperation() == AtomicRMWInst::Xchg ||
+      AI->getOperation() == AtomicRMWInst::Add ||
+      AI->getOperation() == AtomicRMWInst::Sub ||
+      AI->getOperation() == AtomicRMWInst::Nand) {
+    ValOperand_Shifted =
+        Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
+                          PMV.ShiftAmt, "ValOperand_Shifted");
+  }
 
   auto PerformPartwordOp = [&](IRBuilder<> &Builder, Value *Loaded) {
     return performMaskedAtomicOp(AI->getOperation(), Builder, Loaded,
