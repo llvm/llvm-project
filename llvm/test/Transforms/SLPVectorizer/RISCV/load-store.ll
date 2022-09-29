@@ -222,7 +222,13 @@ entry:
 define void @store_stepvector_i32(ptr %dest) {
 ; CHECK-LABEL: @store_stepvector_i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <4 x i32> <i32 0, i32 1, i32 2, i32 3>, ptr [[DEST:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[DEST:%.*]], align 4
+; CHECK-NEXT:    [[INC1:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 1
+; CHECK-NEXT:    store i32 1, ptr [[INC1]], align 2
+; CHECK-NEXT:    [[INC2:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 2
+; CHECK-NEXT:    store i32 2, ptr [[INC2]], align 2
+; CHECK-NEXT:    [[INC3:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 3
+; CHECK-NEXT:    store i32 3, ptr [[INC3]], align 2
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: @store_stepvector_i32(
@@ -250,7 +256,13 @@ entry:
 define void @store_arbitrary_constant_i32(ptr %dest) {
 ; CHECK-LABEL: @store_arbitrary_constant_i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <4 x i32> <i32 0, i32 -33, i32 44, i32 77>, ptr [[DEST:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[DEST:%.*]], align 4
+; CHECK-NEXT:    [[INC1:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 1
+; CHECK-NEXT:    store i32 -33, ptr [[INC1]], align 2
+; CHECK-NEXT:    [[INC2:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 2
+; CHECK-NEXT:    store i32 44, ptr [[INC2]], align 2
+; CHECK-NEXT:    [[INC3:%.*]] = getelementptr inbounds i32, ptr [[DEST]], i64 3
+; CHECK-NEXT:    store i32 77, ptr [[INC3]], align 2
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: @store_arbitrary_constant_i32(

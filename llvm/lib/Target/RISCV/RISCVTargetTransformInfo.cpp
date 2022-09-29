@@ -666,12 +666,17 @@ InstructionCost RISCVTTIImpl::getStoreImmCost(Type *Ty,
     // currently have here.
     return 0;
 
-  APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
-  // Add a cost of address load + the cost of the vector load.
-  return RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
-                                    getST()->getFeatureBits()) +
-    getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
-                    /*AddressSpace=*/0, CostKind);
+  if (OpInfo.isUniform())
+    // vmv.x.i, vmv.v.x, or vfmv.v.f
+    // We ignore the cost of the scalar constant materialization to be consistent
+    // with how we treat scalar constants themselves just above.
+    return 1;
+
+  // Add a cost of address generation + the cost of the vector load. The
+  // address is expected to be a PC relative offset to a constant pool entry
+  // using auipc/addi.
+  return 2 + getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
+                             /*AddressSpace=*/0, CostKind);
 }
 
 
