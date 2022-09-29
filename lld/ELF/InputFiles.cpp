@@ -1131,7 +1131,6 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
                                eSym.st_value, eSym.st_size, sec);
     symbols[i]->partition = 1;
     symbols[i]->isUsedInRegularObj = true;
-    symbols[i]->auxIdx = -1;
   }
 }
 
