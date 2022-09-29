@@ -25,6 +25,18 @@ entry:
   ret i32 %l
 }
 
+define i32 @test_only_read_arg_already_has_argmemonly(i32* %ptr) argmemonly {
+; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
+; CHECK-LABEL: @test_only_read_arg_already_has_argmemonly(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[L]]
+;
+entry:
+  %l = load i32, i32* %ptr
+  ret i32 %l
+}
+
 define i32 @test_read_global() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly willreturn
 ; CHECK-LABEL: @test_read_global(
