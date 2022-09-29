@@ -24,12 +24,14 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
 
+#define NO_LOOP_XTEAM_RED "no-loop-xteam-red"
 
 namespace {
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
@@ -1268,10 +1270,15 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
     // For AMDGPU, check if a no-loop or a Xteam reduction kernel should
     // be generated and if so, set metadata that can be used by codegen.
     if (CGM.getLangOpts().OpenMPIsDevice && CGM.getTriple().isAMDGCN()) {
-      if (!CGM.checkAndSetNoLoopKernel(D))
-        CGM.checkAndSetXteamRedKernel(D);
+      CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetNoLoopKernel(D);
+      DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                      CGM.emitNxResult("[No-Loop]", D, NxStatus));
+      if (NxStatus) {
+        NxStatus = CGM.checkAndSetXteamRedKernel(D);
+        DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                        CGM.emitNxResult("[Xteam]", D, NxStatus));
+      }
     }
-
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
   } else

@@ -7071,12 +7071,14 @@ void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
 namespace {
 class NoLoopChecker final : public ConstStmtVisitor<NoLoopChecker> {
 public:
-  NoLoopChecker() : RejectNoLoop{false} {}
-  bool isRejectNoLoop() const { return RejectNoLoop; }
+  NoLoopChecker() : NoLoopCheckStatus{CodeGenModule::NxSuccess} {}
+  CodeGenModule::NoLoopXteamErr getNoLoopCheckStatus() const {
+    return NoLoopCheckStatus;
+  }
 
   // Reject if there is a nested OpenMP directive
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D) {
-    RejectNoLoop = true;
+    NoLoopCheckStatus = CodeGenModule::NxNestedOmpDirective;
     // No need to continue visiting any more
   }
 
@@ -7087,7 +7089,7 @@ public:
       if (FD) {
         std::string Name = FD->getNameInfo().getAsString();
         if (Name.find("omp_") == 0) {
-          RejectNoLoop = true;
+          NoLoopCheckStatus = CodeGenModule::NxNestedOmpCall;
           // No need to continue visiting any more
           return;
         }
@@ -7113,7 +7115,7 @@ public:
   }
 
 private:
-  bool RejectNoLoop;
+  CodeGenModule::NoLoopXteamErr NoLoopCheckStatus;
 };
 
 /// Ensure no-loop codegen can handle the step. The visitor will reject any
@@ -7229,6 +7231,107 @@ private:
 };
 
 } // namespace
+
+void CodeGenModule::emitNxResult(std::string StatusMsg,
+                                 const OMPExecutableDirective &D,
+                                 NoLoopXteamErr Status) {
+  if (Status)
+    StatusMsg += ": Failed: ";
+  else
+    StatusMsg += ": Succeeded";
+  switch (Status) {
+  case NxSuccess:
+    break;
+  case NxOptionDisabled:
+    StatusMsg += "Command line option disabled";
+    break;
+  case NxUnsupportedDirective:
+    StatusMsg += "Unsupported directive";
+    break;
+  case NxUnsupportedSplitDirective:
+    StatusMsg += "Unsupported split directive";
+    break;
+  case NxNoStmt:
+    StatusMsg += "No statement found";
+    break;
+  case NxUnsupportedTargetClause:
+    StatusMsg += "Unsupported target clause";
+    break;
+  case NxNotLoopDirective:
+    StatusMsg += "Not a loop directive";
+    break;
+  case NxNotCapturedStmt:
+    StatusMsg += "Not a captured statement";
+    break;
+  case NxNotExecutableStmt:
+    StatusMsg += "Not an executable directive";
+    break;
+  case NxUnsupportedNestedSplitDirective:
+    StatusMsg += "Unsupported nested split directive";
+    break;
+  case NxSplitConstructImproperlyNested:
+    StatusMsg += "Improperly nested split construct";
+    break;
+  case NxNestedOmpDirective:
+    StatusMsg += "Nested OpenMP directive";
+    break;
+  case NxNestedOmpCall:
+    StatusMsg += "Nested OpenMP API call";
+    break;
+  case NxNoSingleForStmt:
+    StatusMsg += "Could not find a single FOR statement";
+    break;
+  case NxUnsupportedLoopInit:
+    StatusMsg += "Unsupported loop initialization expression";
+    break;
+  case NxUnsupportedLoopStop:
+    StatusMsg += "Unsupported loop condition expression";
+    break;
+  case NxUnsupportedLoopStep:
+    StatusMsg += "Unsupported loop increment expression";
+    break;
+  case NxGuidedOrRuntimeSched:
+    StatusMsg += "Guided or runtime schedule not supported";
+    break;
+  case NxNonUnitStaticChunk:
+    StatusMsg += "Schedule clause with non-unit chunk size";
+    break;
+  case NxUnsupportedRedType:
+    StatusMsg += "Unsupported reduction variable type";
+    break;
+  case NxUnsupportedRedIntSize:
+    StatusMsg +=
+        "Integer reduction variable with the specified size not supported";
+    break;
+  case NxNotScalarRed:
+    StatusMsg += "Non-scalar reduction variable";
+    break;
+  case NxNotBinOpRed:
+    StatusMsg += "Only binary reduction operator supported";
+    break;
+  case NxUnsupportedRedOp:
+    StatusMsg += "Unsupported reduction operator";
+    break;
+  case NxNoRedVar:
+    StatusMsg += "No reduction variable found";
+    break;
+  case NxMultRedVar:
+    StatusMsg += "Multiple reduction variables in the same loop not supported";
+    break;
+  case NxUnsupportedRedExpr:
+    StatusMsg += "Unsupported reduction expression found";
+    break;
+  }
+
+  SourceLocation L = D.getBeginLoc();
+  SourceManager &SM = getContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(L);
+  const char *FileName = PLoc.isValid() ? PLoc.getFilename() : nullptr;
+  unsigned LineNo =
+      PLoc.isValid() ? PLoc.getLine() : SM.getExpansionLineNumber(L);
+
+  llvm::dbgs() << StatusMsg << ": " << FileName << ": " << LineNo << "\n";
+}
 
 const ForStmt *CodeGenModule::getSingleForStmt(const Stmt *S) {
   if (!isa<CapturedStmt>(S))
@@ -7413,18 +7516,20 @@ const Expr *CodeGenModule::getBinaryExprStep(const Expr *Inc,
   llvm_unreachable("Unexpected operator type in step computation");
 }
 
-bool CodeGenModule::isForStmtNoLoopConforming(const OMPExecutableDirective &D,
-                                              const Stmt *OMPStmt) {
+CodeGenModule::NoLoopXteamErr
+CodeGenModule::getNoLoopForStmtStatus(const OMPExecutableDirective &D,
+                                      const Stmt *OMPStmt) {
   NoLoopChecker Checker;
   Checker.Visit(OMPStmt);
-  if (Checker.isRejectNoLoop())
-    return false;
+  NoLoopXteamErr NxStatus = NxSuccess;
+  if ((NxStatus = Checker.getNoLoopCheckStatus()))
+    return NxStatus;
 
   // Now ensure that code generation will handle this construct
 
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
   if (FStmt == nullptr)
-    return false;
+    return NxNoSingleForStmt;
 
   assert(isa<OMPLoopDirective>(D) && "Expected a loop directive");
   const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
@@ -7432,32 +7537,41 @@ bool CodeGenModule::isForStmtNoLoopConforming(const OMPExecutableDirective &D,
   // Ensure loop init and condition are supported
   const VarDecl *VD = checkLoopInit(LD);
   if (VD == nullptr)
-    return false;
+    return NxUnsupportedLoopInit;
 
-  if (!checkLoopStep(LD.getInc(), VD) || !checkLoopStop(LD, *FStmt))
-    return false;
+  if (!checkLoopStep(LD.getInc(), VD))
+    return NxUnsupportedLoopStep;
 
-  return true;
+  if (!checkLoopStop(LD, *FStmt))
+    return NxUnsupportedLoopStop;
+
+  return NxSuccess;
 }
 
-bool CodeGenModule::isForStmtXteamRedConforming(const OMPExecutableDirective &D,
-                                                const Stmt *OMPStmt,
-                                                const XteamRedVarMap &RVM) {
-  if (!isForStmtNoLoopConforming(D, OMPStmt))
-    return false;
+CodeGenModule::NoLoopXteamErr
+CodeGenModule::getXteamRedForStmtStatus(const OMPExecutableDirective &D,
+                                        const Stmt *OMPStmt,
+                                        const XteamRedVarMap &RVM) {
+  NoLoopXteamErr NxStatus = NxSuccess;
+  if ((NxStatus = getNoLoopForStmtStatus(D, OMPStmt)))
+    return NxStatus;
   // The above check ensures that there is only one statement corresponding to
   // the directive
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
+  assert(FStmt != nullptr && "Unexpected missing For Stmt");
   XteamRedExprChecker Chk(RVM);
   Chk.Visit(FStmt);
-  return Chk.isSupported();
+  if (!Chk.isSupported())
+    return NxUnsupportedRedExpr;
+  return NxSuccess;
 }
 
-bool CodeGenModule::isScheduleNoLoopCompatible(const OMPLoopDirective &LD) {
+CodeGenModule::NoLoopXteamErr
+CodeGenModule::getNoLoopCompatibleSchedStatus(const OMPLoopDirective &LD) {
   for (const auto *C : LD.getClausesOfKind<OMPScheduleClause>()) {
     OpenMPScheduleClauseKind SchedKind = C->getScheduleKind();
     if (SchedKind == OMPC_SCHEDULE_guided || SchedKind == OMPC_SCHEDULE_runtime)
-      return false;
+      return NxGuidedOrRuntimeSched;
     // No need to examine the monotonic ordering-modifier since with No-Loop,
     // each thread executes a single iteration. Monotonic refers to ordering
     // of iterations within a thread which does not apply here.
@@ -7468,7 +7582,7 @@ bool CodeGenModule::isScheduleNoLoopCompatible(const OMPLoopDirective &LD) {
             SchedKind == OMPC_SCHEDULE_auto) &&
            "Unexpected schedule");
 
-    // Return true if either auto or chunk size is 1.
+    // Return success if either auto or chunk size is 1.
     const Expr *ChunkExpr = C->getChunkSize();
     if (SchedKind == OMPC_SCHEDULE_auto) {
       assert(ChunkExpr == nullptr && "Chunk size unexpected");
@@ -7480,14 +7594,14 @@ bool CodeGenModule::isScheduleNoLoopCompatible(const OMPLoopDirective &LD) {
         HasChunkSizeOne = EvaluatedChunk.getLimitedValue() == 1;
       }
       if (!HasChunkSizeOne)
-        return false;
+        return NxNonUnitStaticChunk;
     }
   }
-  return true;
+  return NxSuccess;
 }
 
-bool CodeGenModule::areCombinedClausesNoLoopCompatible(
-    const OMPExecutableDirective &D) {
+CodeGenModule::NoLoopXteamErr
+CodeGenModule::getNoLoopCombinedClausesStatus(const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
       D.hasClausesOfKind<OMPDependClause>() ||
       D.hasClausesOfKind<OMPDeviceClause>() ||
@@ -7504,13 +7618,13 @@ bool CodeGenModule::areCombinedClausesNoLoopCompatible(
       D.hasClausesOfKind<OMPCopyinClause>() ||
       D.hasClausesOfKind<OMPProcBindClause>() ||
       D.hasClausesOfKind<OMPOrderedClause>())
-    return false;
+    return NxUnsupportedTargetClause;
   if (!isa<OMPLoopDirective>(D))
-    return false;
-  return isScheduleNoLoopCompatible(cast<OMPLoopDirective>(D));
+    return NxNotLoopDirective;
+  return getNoLoopCompatibleSchedStatus(cast<OMPLoopDirective>(D));
 }
 
-bool CodeGenModule::areCombinedClausesXteamRedCompatible(
+CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedCombinedClausesStatus(
     const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
       D.hasClausesOfKind<OMPDependClause>() ||
@@ -7527,15 +7641,15 @@ bool CodeGenModule::areCombinedClausesXteamRedCompatible(
       D.hasClausesOfKind<OMPCopyinClause>() ||
       D.hasClausesOfKind<OMPProcBindClause>() ||
       D.hasClausesOfKind<OMPOrderedClause>())
-    return false;
+    return NxUnsupportedTargetClause;
   if (!isa<OMPLoopDirective>(D))
-    return false;
-  return isScheduleNoLoopCompatible(cast<OMPLoopDirective>(D));
+    return NxNotLoopDirective;
+  return getNoLoopCompatibleSchedStatus(cast<OMPLoopDirective>(D));
 }
 
 /// Given a directive, collect metadata for the reduction variables for Xteam
 /// reduction, if applicable
-std::pair<bool, CodeGenModule::XteamRedVarMap>
+std::pair<CodeGenModule::NoLoopXteamErr, CodeGenModule::XteamRedVarMap>
 CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
   XteamRedVarMap VarMap;
   Address InitAddr = Address::invalid();
@@ -7546,16 +7660,16 @@ CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
       // TODO support more data types
       if (!RefType->isFloatTy() && !RefType->isDoubleTy() &&
           !RefType->isIntegerTy())
-        return std::make_pair(false, VarMap);
+        return std::make_pair(NxUnsupportedRedType, VarMap);
       if (RefType->isIntegerTy() && RefType->getPrimitiveSizeInBits() != 32 &&
           RefType->getPrimitiveSizeInBits() != 64)
-        return std::make_pair(false, VarMap);
+        return std::make_pair(NxUnsupportedRedIntSize, VarMap);
       // Only scalar variables supported today
       if (!isa<DeclRefExpr>(Ref))
-        return std::make_pair(false, VarMap);
+        return std::make_pair(NxNotScalarRed, VarMap);
       const ValueDecl *ValDecl = cast<DeclRefExpr>(Ref)->getDecl();
       if (!isa<VarDecl>(ValDecl))
-        return std::make_pair(false, VarMap);
+        return std::make_pair(NxNotScalarRed, VarMap);
       const VarDecl *VD = cast<VarDecl>(ValDecl);
       // Address of the local var will be populated later
       VarMap.insert(std::make_pair(VD, std::make_pair(Ref, InitAddr)));
@@ -7563,49 +7677,50 @@ CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
     // Now make sure that we support all the operators. Today, only sum
     for (const Expr *Ref : C->reduction_ops()) {
       if (!isa<BinaryOperator>(Ref))
-        return std::make_pair(false, VarMap);
+        return std::make_pair(NxNotBinOpRed, VarMap);
       auto BinExpr = cast<BinaryOperator>(Ref);
       if (BinExpr->getOpcode() != BO_Assign)
-        return std::make_pair(false, VarMap);
+        return std::make_pair(NxNotBinOpRed, VarMap);
       auto BinExprRhs = BinExpr->getRHS()->IgnoreImpCasts();
       if (!isa<BinaryOperator>(BinExprRhs) ||
           cast<BinaryOperator>(BinExprRhs)->getOpcode() != BO_Add)
-        return std::make_pair(false, VarMap);
+        return std::make_pair(NxUnsupportedRedOp, VarMap);
     }
   }
   if (VarMap.size() == 0)
-    return std::make_pair(false, VarMap);
+    return std::make_pair(NxNoRedVar, VarMap);
   // TODO support multiple reduction operations in the same loop with the new
   // DeviceRTL APIs.
   if (VarMap.size() > 1)
-    return std::make_pair(false, VarMap);
-  return std::make_pair(true, VarMap);
+    return std::make_pair(NxMultRedVar, VarMap);
+  return std::make_pair(NxSuccess, VarMap);
 }
 
 // If a no-loop kernel is found, then a non-empty map is returned,
 // otherwise the map is empty
-bool CodeGenModule::checkAndSetNoLoopTargetConstruct(
+CodeGenModule::NoLoopXteamErr CodeGenModule::checkAndSetNoLoopTargetConstruct(
     const OMPExecutableDirective &D) {
+  NoLoopXteamErr NxStatus = NxSuccess;
   if (D.getDirectiveKind() != llvm::omp::Directive::OMPD_target)
-    return false;
+    return NxUnsupportedDirective;
 
-  auto disableNoLoopTarget = [](const OMPExecutableDirective &D) {
+  auto disableNoLoopTarget = [this](const OMPExecutableDirective &D) {
     if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
         D.hasClausesOfKind<OMPDependClause>() ||
         D.hasClausesOfKind<OMPDeviceClause>() ||
         D.hasClausesOfKind<OMPInReductionClause>() ||
         D.hasClausesOfKind<OMPThreadLimitClause>())
-      return true;
-    return false;
+      return NxUnsupportedTargetClause;
+    return NxSuccess;
   };
   // First, check legality with the clauses
-  if (disableNoLoopTarget(D))
-    return false;
+  if ((NxStatus = disableNoLoopTarget(D)))
+    return NxStatus;
 
   const Stmt *AssocStmt = D.getAssociatedStmt();
   const Stmt *NoLoopOutermostStmt = AssocStmt;
   if (!isa<CapturedStmt>(AssocStmt))
-    return false;
+    return NxNotCapturedStmt;
   while (AssocStmt->getStmtClass() == Stmt::CapturedStmtClass) {
     AssocStmt = cast<CapturedStmt>(AssocStmt)->getCapturedDecl()->getBody();
   }
@@ -7613,11 +7728,11 @@ bool CodeGenModule::checkAndSetNoLoopTargetConstruct(
     const CompoundStmt &CompStmt = cast<CompoundStmt>(*AssocStmt);
     // We require proper nesting of the constructs
     if (CompStmt.size() != 1)
-      return false;
+      return NxSplitConstructImproperlyNested;
     AssocStmt = CompStmt.body_front();
   }
   if (!isa<OMPExecutableDirective>(AssocStmt))
-    return false;
+    return NxNotExecutableStmt;
   const OMPExecutableDirective *AssocDir =
       cast<OMPExecutableDirective>(AssocStmt);
   // For now, these are the nested constructs supported
@@ -7625,18 +7740,18 @@ bool CodeGenModule::checkAndSetNoLoopTargetConstruct(
           llvm::omp::Directive::OMPD_teams_distribute_parallel_for &&
       AssocDir->getDirectiveKind() !=
           llvm::omp::Directive::OMPD_teams_distribute_parallel_for_simd)
-    return false;
+    return NxUnsupportedNestedSplitDirective;
 
   assert(AssocDir->hasAssociatedStmt());
   AssocStmt = AssocDir->getAssociatedStmt();
 
   // Check the clauses of the nested combined construct
-  if (!areCombinedClausesNoLoopCompatible(*AssocDir))
-    return false;
+  if ((NxStatus = getNoLoopCombinedClausesStatus(*AssocDir)))
+    return NxStatus;
 
   // Make sure codegen can handle it
-  if (!isForStmtNoLoopConforming(*AssocDir, AssocStmt))
-    return false;
+  if ((NxStatus = getNoLoopForStmtStatus(*AssocDir, AssocStmt)))
+    return NxStatus;
 
   assert(NoLoopOutermostStmt != AssocStmt);
   NoLoopIntermediateStmts IntermediateStmts;
@@ -7646,12 +7761,14 @@ bool CodeGenModule::checkAndSetNoLoopTargetConstruct(
   setNoLoopKernel(NoLoopOutermostStmt, IntermediateStmts);
 
   // All checks passed
-  return true;
+  return NxSuccess;
 }
 
-bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
+CodeGenModule::NoLoopXteamErr
+CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
+  NoLoopXteamErr NxStatus = NxSuccess;
   if (!getLangOpts().OpenMPTargetIgnoreEnvVars)
-    return false;
+    return NxOptionDisabled;
 
   if (D.getDirectiveKind() !=
           llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for &&
@@ -7659,10 +7776,10 @@ bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
           llvm::omp::Directive::
               OMPD_target_teams_distribute_parallel_for_simd &&
       D.getDirectiveKind() != llvm::omp::Directive::OMPD_target)
-    return false;
+    return NxUnsupportedDirective;
 
   if (!D.hasAssociatedStmt())
-    return false;
+    return NxNoStmt;
   const Stmt *AssocStmt = D.getAssociatedStmt();
 
   // Currently, we handle 2 categories of target constructs. The first is a
@@ -7670,51 +7787,52 @@ bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
   // The second is a combined "target teams distribute parallel for" construct.
   if (D.getDirectiveKind() == llvm::omp::Directive::OMPD_target)
     return checkAndSetNoLoopTargetConstruct(D);
-  else {
-    // Handle combined construct
-    if (!areCombinedClausesNoLoopCompatible(D))
-      return false;
-    if (!isForStmtNoLoopConforming(D, AssocStmt))
-      return false;
 
-    NoLoopIntermediateStmts IntermediateStmts;
-    // Push top-level directive
-    IntermediateStmts.push_back(&D);
-    setNoLoopKernel(AssocStmt, IntermediateStmts);
+  // Handle combined construct
+  if ((NxStatus = getNoLoopCombinedClausesStatus(D)))
+    return NxStatus;
+  if ((NxStatus = getNoLoopForStmtStatus(D, AssocStmt)))
+    return NxStatus;
 
-    // All checks passed
-    return true;
-  }
+  NoLoopIntermediateStmts IntermediateStmts;
+  // Push top-level directive
+  IntermediateStmts.push_back(&D);
+  setNoLoopKernel(AssocStmt, IntermediateStmts);
+
+  // All checks passed
+  return NxSuccess;
 }
 
-bool CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
+CodeGenModule::NoLoopXteamErr
+CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
+  NoLoopXteamErr NxStatus = NxSuccess;
   if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
       !getLangOpts().OpenMPTargetNewRuntime)
-    return false;
+    return NxOptionDisabled;
 
   // Allowing only a combined construct for now
   if (D.getDirectiveKind() !=
           llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for &&
       D.getDirectiveKind() !=
           llvm::omp::Directive::OMPD_target_teams_distribute_parallel_for_simd)
-    return false;
+    return NxUnsupportedDirective;
 
   if (!D.hasAssociatedStmt())
-    return false;
+    return NxNoStmt;
   const Stmt *AssocStmt = D.getAssociatedStmt();
 
   // For now, keep the reduction helpers separate. Revisit merging with noloop
   // later
-  if (!areCombinedClausesXteamRedCompatible(D))
-    return false;
+  if ((NxStatus = getXteamRedCombinedClausesStatus(D)))
+    return NxStatus;
 
-  std::pair<bool, CodeGenModule::XteamRedVarMap> RedVarMapPair =
+  std::pair<NoLoopXteamErr, CodeGenModule::XteamRedVarMap> RedVarMapPair =
       collectXteamRedVars(D);
-  if (!RedVarMapPair.first)
-    return false;
+  if (RedVarMapPair.first)
+    return RedVarMapPair.first;
 
-  if (!isForStmtXteamRedConforming(D, AssocStmt, RedVarMapPair.second))
-    return false;
+  if ((NxStatus = getXteamRedForStmtStatus(D, AssocStmt, RedVarMapPair.second)))
+    return NxStatus;
 
   // We don't yet handle intermediate statements, so the top-level is the only
   // directive to be pushed.
@@ -7728,7 +7846,7 @@ bool CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
                     std::make_pair(IntermediateStmts, RedVarMapPair.second));
 
   // All checks passed
-  return true;
+  return NxSuccess;
 }
 
 void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {

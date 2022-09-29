@@ -299,6 +299,36 @@ public:
 
   typedef std::vector<Structor> CtorList;
 
+  enum NoLoopXteamErr {
+    NxSuccess,
+    NxOptionDisabled,
+    NxUnsupportedDirective,
+    NxUnsupportedSplitDirective,
+    NxNoStmt,
+    NxUnsupportedTargetClause,
+    NxNotLoopDirective,
+    NxNotCapturedStmt,
+    NxNotExecutableStmt,
+    NxUnsupportedNestedSplitDirective,
+    NxSplitConstructImproperlyNested,
+    NxNestedOmpDirective,
+    NxNestedOmpCall,
+    NxNoSingleForStmt,
+    NxUnsupportedLoopInit,
+    NxUnsupportedLoopStop,
+    NxUnsupportedLoopStep,
+    NxGuidedOrRuntimeSched,
+    NxNonUnitStaticChunk,
+    NxUnsupportedRedType,
+    NxUnsupportedRedIntSize,
+    NxNotScalarRed,
+    NxNotBinOpRed,
+    NxUnsupportedRedOp,
+    NxNoRedVar,
+    NxMultRedVar,
+    NxUnsupportedRedExpr
+  };
+
   /// Top-level and nested OpenMP directives that may use no-loop codegen.
   using NoLoopIntermediateStmts =
       llvm::SmallVector<const OMPExecutableDirective *, 3>;
@@ -1560,8 +1590,12 @@ public:
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
 
+  // Should be called under debug mode for printing analysis result.
+  void emitNxResult(std::string StatusMsg, const OMPExecutableDirective &D,
+                    NoLoopXteamErr Status);
+
   /// Given the schedule clause, can No-Loop code be generated?
-  bool isScheduleNoLoopCompatible(const OMPLoopDirective &LD);
+  NoLoopXteamErr getNoLoopCompatibleSchedStatus(const OMPLoopDirective &LD);
 
   /// Helper functions for generating a NoLoop kernel
   /// For a captured statement, get the single For statement, if it exists,
@@ -1586,7 +1620,7 @@ public:
   /// top-level statement to the intermediate statements. For a combined
   /// construct, there are no intermediate statements. Used for a combined
   /// construct
-  bool checkAndSetNoLoopKernel(const OMPExecutableDirective &D);
+  NoLoopXteamErr checkAndSetNoLoopKernel(const OMPExecutableDirective &D);
 
   /// Given a top-level target construct for no-loop codegen, get the
   /// intermediate OpenMP constructs
@@ -1605,7 +1639,7 @@ public:
   /// If we are able to generate a Xteam reduction kernel for this directive,
   /// return true, otherwise return false. If successful, metadata for the
   /// reduction variables are created for subsequent codegen phases to work on.
-  bool checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
+  NoLoopXteamErr checkAndSetXteamRedKernel(const OMPExecutableDirective &D);
 
   /// Given a ForStmt for which Xteam codegen will be done, return the
   /// intermediate statements for a split directive.
@@ -1844,25 +1878,29 @@ private:
                                                StringRef Suffix);
 
   /// Top level checker for no-loop on the for statement
-  bool isForStmtNoLoopConforming(const OMPExecutableDirective &, const Stmt *);
+  NoLoopXteamErr getNoLoopForStmtStatus(const OMPExecutableDirective &,
+                                        const Stmt *);
 
   /// Top level checker for xteam reduction of the loop
-  bool isForStmtXteamRedConforming(const OMPExecutableDirective &, const Stmt *,
-                                   const XteamRedVarMap &);
+  NoLoopXteamErr getXteamRedForStmtStatus(const OMPExecutableDirective &,
+                                          const Stmt *, const XteamRedVarMap &);
 
   /// Used for a target construct
-  bool checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
+  NoLoopXteamErr
+  checkAndSetNoLoopTargetConstruct(const OMPExecutableDirective &D);
 
   /// Are clauses on a combined OpenMP construct compatible with no-loop
   /// codegen?
-  bool areCombinedClausesNoLoopCompatible(const OMPExecutableDirective &D);
+  NoLoopXteamErr
+  getNoLoopCombinedClausesStatus(const OMPExecutableDirective &D);
 
   /// Are clauses on a combined OpenMP construct compatible with xteam
   /// reduction codegen?
-  bool areCombinedClausesXteamRedCompatible(const OMPExecutableDirective &D);
+  NoLoopXteamErr
+  getXteamRedCombinedClausesStatus(const OMPExecutableDirective &D);
 
   /// Collect the reduction variables that may satisfy Xteam criteria
-  std::pair<bool, CodeGenModule::XteamRedVarMap>
+  std::pair<NoLoopXteamErr, CodeGenModule::XteamRedVarMap>
   collectXteamRedVars(const OMPExecutableDirective &D);
 
   /// Populate the map used for no-loop codegen
