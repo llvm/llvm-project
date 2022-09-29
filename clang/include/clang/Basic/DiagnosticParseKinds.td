@@ -1004,7 +1004,8 @@ def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_lambda_decl_specifier_repeated : Error<
-  "%select{'mutable'|'constexpr'|'consteval'}0 cannot appear multiple times in a lambda declarator">;
+  "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
+  "appear multiple times in a lambda declarator">;
 def err_lambda_capture_misplaced_ellipsis : Error<
   "ellipsis in pack %select{|init-}0capture must appear %select{after|before}0 "
   "the name of the capture">;
@@ -1042,6 +1043,17 @@ def warn_cxx17_compat_lambda_template_parameter_list: Warning<
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_lambda_template_parameter_list_empty : Error<
   "lambda template parameter list cannot be empty">;
+
+// C++2b static lambdas
+def err_static_lambda: ExtWarn<
+  "static lambdas are a C++2b extension">, InGroup<CXX2b>;
+def warn_cxx20_compat_static_lambda: ExtWarn<
+  "static lambdas are incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
+def err_static_mutable_lambda : Error<
+  "lambda cannot be both mutable and static">;
+def err_static_lambda_captures : Error<
+  "a static lambda cannot have any captures">;
 
 // Availability attribute
 def err_expected_version : Error<
