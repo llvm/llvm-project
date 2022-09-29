@@ -110,7 +110,7 @@ private:
 
   /// Since expressions can only jump forward, predicated execution is
   /// used to deal with if-else statements.
-  bool isActive() { return CurrentLabel == ActiveLabel; }
+  bool isActive() const { return CurrentLabel == ActiveLabel; }
 
   /// Helper to invoke a method.
   bool ExecuteCall(Function *F, Pointer &&This, const SourceInfo &Info);
