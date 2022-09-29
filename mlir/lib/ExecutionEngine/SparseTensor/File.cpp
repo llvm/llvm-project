@@ -117,6 +117,16 @@ static inline char *toLower(char *token) {
   return token;
 }
 
+/// Idiomatic name for checking string equality.
+static inline bool streq(const char *lhs, const char *rhs) {
+  return strcmp(lhs, rhs) == 0;
+}
+
+/// Idiomatic name for checking string inequality.
+static inline bool strne(const char *lhs, const char *rhs) {
+  return strcmp(lhs, rhs); // aka `!= 0`
+}
+
 /// Read the MME header of a general sparse matrix of type real.
 void SparseTensorFile::readMMEHeader() {
   char header[64];
@@ -128,25 +138,29 @@ void SparseTensorFile::readMMEHeader() {
   if (fscanf(file, "%63s %63s %63s %63s %63s\n", header, object, format, field,
              symmetry) != 5)
     MLIR_SPARSETENSOR_FATAL("Corrupt header in %s\n", filename);
+  // Convert all to lowercase up front (to avoid accidental redundancy).
+  toLower(header);
+  toLower(object);
+  toLower(format);
+  toLower(field);
+  toLower(symmetry);
   // Process `field`, which specify pattern or the data type of the values.
-  if (strcmp(toLower(field), "pattern") == 0)
+  if (streq(field, "pattern"))
     valueKind_ = ValueKind::kPattern;
-  else if (strcmp(toLower(field), "real") == 0)
+  else if (streq(field, "real"))
     valueKind_ = ValueKind::kReal;
-  else if (strcmp(toLower(field), "integer") == 0)
+  else if (streq(field, "integer"))
     valueKind_ = ValueKind::kInteger;
-  else if (strcmp(toLower(field), "complex") == 0)
+  else if (streq(field, "complex"))
     valueKind_ = ValueKind::kComplex;
   else
     MLIR_SPARSETENSOR_FATAL("Unexpected header field value in %s\n", filename);
-
   // Set properties.
-  isSymmetric_ = (strcmp(toLower(symmetry), "symmetric") == 0);
+  isSymmetric_ = streq(symmetry, "symmetric");
   // Make sure this is a general sparse matrix.
-  if (strcmp(toLower(header), "%%matrixmarket") ||
-      strcmp(toLower(object), "matrix") ||
-      strcmp(toLower(format), "coordinate") ||
-      (strcmp(toLower(symmetry), "general") && !isSymmetric_))
+  if (strne(header, "%%matrixmarket") || strne(object, "matrix") ||
+      strne(format, "coordinate") ||
+      (strne(symmetry, "general") && !isSymmetric_))
     MLIR_SPARSETENSOR_FATAL("Cannot find a general sparse matrix in %s\n",
                             filename);
   // Skip comments.
