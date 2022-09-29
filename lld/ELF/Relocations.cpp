@@ -1748,7 +1748,7 @@ void elf::postScanRelocations() {
           {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &dummy});
   }
 
-  assert(symAux.empty());
+  assert(symAux.size() == 1);
   for (Symbol *sym : symtab->getSymbols())
     fn(*sym);
 
