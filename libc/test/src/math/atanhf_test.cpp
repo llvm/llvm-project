@@ -26,7 +26,7 @@ TEST(LlvmLibcAtanhfTest, SpecialNumbers) {
   errno = 0;
   __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ(aNaN, __llvm_libc::atanhf(aNaN));
-  EXPECT_FP_EXCEPTION(FE_INVALID);
+  EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
   __llvm_libc::fputil::clear_except(FE_ALL_EXCEPT);

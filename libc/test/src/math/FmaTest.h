@@ -23,7 +23,7 @@ private:
   using Func = T (*)(T, T, T);
   using FPBits = __llvm_libc::fputil::FPBits<T>;
   using UIntType = typename FPBits::UIntType;
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_nan(1));
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
   const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
   const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
   const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());
