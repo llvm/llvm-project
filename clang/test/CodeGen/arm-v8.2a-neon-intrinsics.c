@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple armv8.2a-linux-gnu -target-abi apcs-gnu -target-feature +neon -target-feature +fullfp16 \
-// RUN: -fallow-half-arguments-and-returns -S -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: -S -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg \
 // RUN: | FileCheck %s
 

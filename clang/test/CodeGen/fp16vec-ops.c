@@ -1,6 +1,6 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios9 -emit-llvm -o - -fallow-half-arguments-and-returns %s | FileCheck %s --check-prefix=CHECK
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-ios9 -emit-llvm -o - -fallow-half-arguments-and-returns %s | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-ios9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macos10.13 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK
 
 typedef __fp16 half4 __attribute__ ((vector_size (8)));

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7s-apple-darwin -target-abi apcs-gnu\
-// RUN:  -target-cpu swift -fallow-half-arguments-and-returns \
+// RUN:  -target-cpu swift \
 // RUN:  -target-feature +fullfp16 -ffreestanding \
 // RUN:  -flax-vector-conversions=none \
 // RUN:  -disable-O0-optnone -emit-llvm -o - %s \

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:     -fallow-half-arguments-and-returns -S -disable-O0-optnone \
+// RUN:     -S -disable-O0-optnone \
 // RUN:  -flax-vector-conversions=none -emit-llvm -o - %s | opt -S -mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:     -fallow-half-arguments-and-returns -S -disable-O0-optnone \
+// RUN:     -S -disable-O0-optnone \
 // RUN:  -ffp-exception-behavior=strict -fexperimental-strict-floating-point \
 // RUN:  -flax-vector-conversions=none -emit-llvm -o - %s | opt -S -mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,CONSTRAINED %s

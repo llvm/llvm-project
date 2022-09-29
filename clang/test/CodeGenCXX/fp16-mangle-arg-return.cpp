@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple arm-arm-none-eabi -fallow-half-arguments-and-returns %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple aarch64-arm-none-eabi -fallow-half-arguments-and-returns %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple arm-arm-none-eabi %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple aarch64-arm-none-eabi %s | FileCheck %s
 
 // Test name-mangling of __fp16 passed directly as a function argument
 // (when that is permitted).

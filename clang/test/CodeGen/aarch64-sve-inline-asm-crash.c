@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: not %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns \
+// RUN: not %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve \
 // RUN:   -target-feature +neon -S -O1 -o - %s 2>&1 | FileCheck %s
 
 // Set a vector constraint for an sve predicate register
