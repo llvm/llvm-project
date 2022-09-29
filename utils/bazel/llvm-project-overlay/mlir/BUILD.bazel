@@ -2064,7 +2064,6 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/SparseTensor/Transforms/Passes.h",
-        "include/mlir/ExecutionEngine/SparseTensorUtils.h",
     ],
     includes = ["include"],
     deps = [
@@ -2091,7 +2090,7 @@ cc_library(
         ":TensorDialect",
         ":Transforms",
         ":VectorDialect",
-        ":mlir_c_runner_utils",
+        ":mlir_sparse_tensor_utils",
         "//llvm:Support",
     ],
 )
@@ -6548,19 +6547,70 @@ cc_binary(
 )
 
 cc_library(
+    name = "_mlir_float16_utils",
+    srcs = ["lib/ExecutionEngine/Float16bits.cpp"],
+    hdrs = ["include/mlir/ExecutionEngine/Float16bits.h"],
+    copts = ["-Dmlir_float16_utils_EXPORTS"],
+    includes = ["include"],
+)
+
+# Indirection to avoid 'libmlir_float16_utils.so' filename clash.
+alias(
+    name = "mlir_float16_utils",
+    actual = "_mlir_float16_utils",
+)
+
+cc_binary(
+    name = "libmlir_float16_utils.so",
+    linkshared = True,
+    linkstatic = False,
+    deps = [":mlir_float16_utils"],
+)
+
+# Unlike mlir_float16_utils, mlir_c_runner_utils, etc, we do *not* make
+# this a shared library: because on the CMake side, doing so causes
+# issues when building on Windows.
+#
+# We relist Float16bits.h because Enums.h includes it; rather than
+# forcing all direct-dependants state that they also directly-depend
+# on :mlir_float16_utils (to satisfy the layering_check).
+cc_library(
+    name = "mlir_sparse_tensor_utils",
+    srcs = [
+        "lib/ExecutionEngine/SparseTensor/File.cpp",
+        "lib/ExecutionEngine/SparseTensor/NNZ.cpp",
+        "lib/ExecutionEngine/SparseTensor/Storage.cpp",
+    ],
+    hdrs = [
+        "include/mlir/ExecutionEngine/Float16bits.h",
+        "include/mlir/ExecutionEngine/SparseTensor/COO.h",
+        "include/mlir/ExecutionEngine/SparseTensor/CheckedMul.h",
+        "include/mlir/ExecutionEngine/SparseTensor/Enums.h",
+        "include/mlir/ExecutionEngine/SparseTensor/ErrorHandling.h",
+        "include/mlir/ExecutionEngine/SparseTensor/File.h",
+        "include/mlir/ExecutionEngine/SparseTensor/Storage.h",
+    ],
+    copts = ["-Dmlir_sparse_tensor_utils_EXPORTS"],
+    includes = ["include"],
+    deps = [":mlir_float16_utils"],
+)
+
+# We relist Enums.h because SparseTensorUtils.h includes/reexports it
+# as part of the public API.
+cc_library(
     name = "_mlir_c_runner_utils",
     srcs = [
         "lib/ExecutionEngine/CRunnerUtils.cpp",
-        "lib/ExecutionEngine/Float16bits.cpp",
         "lib/ExecutionEngine/SparseTensorUtils.cpp",
     ],
     hdrs = [
         "include/mlir/ExecutionEngine/CRunnerUtils.h",
-        "include/mlir/ExecutionEngine/Float16bits.h",
         "include/mlir/ExecutionEngine/Msan.h",
+        "include/mlir/ExecutionEngine/SparseTensor/Enums.h",
         "include/mlir/ExecutionEngine/SparseTensorUtils.h",
     ],
     includes = ["include"],
+    deps = [":mlir_sparse_tensor_utils"],
 )
 
 # Indirection to avoid 'libmlir_c_runner_utils.so' filename clash.
