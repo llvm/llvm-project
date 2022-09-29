@@ -12,7 +12,7 @@
 
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -39,8 +39,8 @@ struct TosaToLinalgNamed
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
-        .insert<arith::ArithmeticDialect, linalg::LinalgDialect,
-                math::MathDialect, tensor::TensorDialect, scf::SCFDialect>();
+        .insert<arith::ArithDialect, linalg::LinalgDialect, math::MathDialect,
+                tensor::TensorDialect, scf::SCFDialect>();
   }
 
   void runOnOperation() override {

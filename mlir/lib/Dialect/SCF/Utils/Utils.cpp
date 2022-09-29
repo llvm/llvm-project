@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BlockAndValueMapping.h"

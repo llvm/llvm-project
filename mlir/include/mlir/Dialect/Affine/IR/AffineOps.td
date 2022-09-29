@@ -13,7 +13,7 @@
 #ifndef AFFINE_OPS
 #define AFFINE_OPS
 
-include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -23,7 +23,7 @@ def Affine_Dialect : Dialect {
   let name = "affine";
   let cppNamespace = "mlir";
   let hasConstantMaterializer = 1;
-  let dependentDialects = ["arith::ArithmeticDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
 }
 
 // Base class for Affine dialect ops.

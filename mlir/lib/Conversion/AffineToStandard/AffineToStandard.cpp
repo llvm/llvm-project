@@ -554,7 +554,7 @@ class LowerAffinePass
     populateAffineToStdConversionPatterns(patterns);
     populateAffineToVectorConversionPatterns(patterns);
     ConversionTarget target(getContext());
-    target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
+    target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            scf::SCFDialect, VectorDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

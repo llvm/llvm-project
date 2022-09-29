@@ -15,7 +15,7 @@
 #define MLIR_DIALECT_AFFINE_IR_AFFINEOPS_H
 
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"

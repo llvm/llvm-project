@@ -9,7 +9,7 @@ add_mlir_dialect_library(MLIRSparseTensorDialect
   MLIRSparseTensorOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRDialect
   MLIRIR
   MLIRInferTypeOpInterface

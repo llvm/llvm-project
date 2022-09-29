@@ -56,7 +56,7 @@ if (MLIR_ENABLE_VULKAN_RUNNER)
   set(LIBS
     ${conversion_libs}
     MLIRAnalysis
-    MLIRArithmeticDialect
+    MLIRArithDialect
     MLIRExecutionEngine
     MLIRFuncDialect
     MLIRGPUOps

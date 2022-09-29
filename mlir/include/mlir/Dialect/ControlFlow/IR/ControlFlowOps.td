@@ -22,7 +22,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def ControlFlow_Dialect : Dialect {
   let name = "cf";
   let cppNamespace = "::mlir::cf";
-  let dependentDialects = ["arith::ArithmeticDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
   let description = [{
     This dialect contains low-level, i.e. non-region based, control flow
     constructs. These constructs generally represent control flow directly

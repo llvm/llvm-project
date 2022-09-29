@@ -158,8 +158,8 @@ Example:
 
 ```yaml
 --- !FileInfo:
-  filepath: "/home/user/llvm/mlir/lib/Dialect/Arithmetic/IR/ArithmeticCanonicalization.pdll"
-  includes: "/home/user/llvm/mlir/lib/Dialect/Arithmetic/IR;/home/user/llvm/mlir/include"
+  filepath: "/home/user/llvm/mlir/lib/Dialect/Arith/IR/ArithCanonicalization.pdll"
+  includes: "/home/user/llvm/mlir/lib/Dialect/Arith/IR;/home/user/llvm/mlir/include"
 ```
 
 - filepath: <string> - Absolute file path of the file.
@@ -284,8 +284,8 @@ Example:
 
 ```yaml
 --- !FileInfo:
-  filepath: "/home/user/llvm/mlir/lib/Dialect/Arithmetic/IR/ArithmeticCanonicalization.td"
-  includes: "/home/user/llvm/mlir/lib/Dialect/Arithmetic/IR;/home/user/llvm/mlir/include"
+  filepath: "/home/user/llvm/mlir/lib/Dialect/Arith/IR/ArithCanonicalization.td"
+  includes: "/home/user/llvm/mlir/lib/Dialect/Arith/IR;/home/user/llvm/mlir/include"
 ```
 
 - filepath: <string> - Absolute file path of the file.

@@ -19,7 +19,7 @@ def MemRef_Dialect : Dialect {
     manipulation ops, which are not strongly associated with any particular
     other dialect or domain abstraction.
   }];
-  let dependentDialects = ["arith::ArithmeticDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
   let hasConstantMaterializer = 1;
 
   let emitAccessorPrefix = kEmitAccessorPrefix_Both;
