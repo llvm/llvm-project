@@ -83,7 +83,7 @@ void SparseTensorFile::assertMatchesShape(uint64_t rank,
            "Dimension size mismatch");
 }
 
-/// Helper to convert string to lower case.
+/// Helper to convert C-style strings (i.e., '\0' terminated) to lower case.
 static inline char *toLower(char *token) {
   for (char *c = token; *c; ++c)
     *c = tolower(*c);

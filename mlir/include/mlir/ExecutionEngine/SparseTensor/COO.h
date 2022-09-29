@@ -26,14 +26,21 @@
 namespace mlir {
 namespace sparse_tensor {
 
-/// A sparse tensor element in coordinate scheme (value and indices).
-/// For example, a rank-1 vector element would look like
+/// An element of a sparse tensor in coordinate-scheme representation
+/// (i.e., a pair of indices and value).  For example, a rank-1 vector
+/// element would look like
 ///   ({i}, a[i])
-/// and a rank-5 tensor element like
+/// and a rank-5 tensor element would look like
 ///   ({i,j,k,l,m}, a[i,j,k,l,m])
-/// We use pointer to a shared index pool rather than e.g. a direct
-/// vector since that (1) reduces the per-element memory footprint, and
-/// (2) centralizes the memory reservation and (re)allocation to one place.
+///
+/// The indices are represented as a (non-owning) pointer into a shared
+/// pool of indices, rather than being stored directly in this object.
+/// This significantly improves performance because it: (1) reduces
+/// the per-element memory footprint, and (2) centralizes the memory
+/// management for indices.  The only downside is that the indices
+/// themselves cannot be retrieved without knowing the rank of the
+/// tensor to which this element belongs (and that rank is not stored
+/// in this object).
 template <typename V>
 struct Element final {
   Element(const uint64_t *ind, V val) : indices(ind), value(val){};
@@ -48,11 +55,11 @@ template <typename V>
 using ElementConsumer =
     const std::function<void(const std::vector<uint64_t> &, V)> &;
 
-/// A memory-resident sparse tensor in coordinate scheme (collection of
-/// elements). This data structure is used to read a sparse tensor from
-/// any external format into memory and sort the elements lexicographically
-/// by indices before passing it back to the client (most packed storage
-/// formats require the elements to appear in lexicographic index order).
+/// A memory-resident sparse tensor in coordinate-scheme representation
+/// (a collection of `Element`s).  This data structure is used as
+/// an intermediate representation; e.g., for reading sparse tensors
+/// from external formats into memory, or for certain conversions between
+/// different `SparseTensorStorage` formats.
 template <typename V>
 class SparseTensorCOO final {
 public:
@@ -70,6 +77,8 @@ public:
   /// fully permuted coordinate scheme.
   ///
   /// Precondition: `dimSizes` and `perm` must be valid for `rank`.
+  ///
+  /// Asserts: the elements of `dimSizes` are non-zero.
   static SparseTensorCOO<V> *newSparseTensorCOO(uint64_t rank,
                                                 const uint64_t *dimSizes,
                                                 const uint64_t *perm,
@@ -85,13 +94,21 @@ public:
   /// Get the rank of the tensor.
   uint64_t getRank() const { return dimSizes.size(); }
 
-  /// Getter for the dimension-sizes array.
+  /// Get the dimension-sizes array.
   const std::vector<uint64_t> &getDimSizes() const { return dimSizes; }
 
-  /// Getter for the elements array.
+  /// Get the elements array.
   const std::vector<Element<V>> &getElements() const { return elements; }
 
-  /// Adds element as indices and value.
+  /// Adds an element to the tensor.  This method does not check whether
+  /// `ind` is already associated with a value, it adds it regardless.
+  /// Resolving such conflicts is left up to clients of the iterator
+  /// interface.
+  ///
+  /// Asserts:
+  /// * is not in iterator mode
+  /// * the `ind` is valid for `rank`
+  /// * the elements of `ind` are valid for `dimSizes`.
   void add(const std::vector<uint64_t> &ind, V val) {
     assert(!iteratorLocked && "Attempt to add() after startIterator()");
     const uint64_t *base = indices.data();
@@ -117,7 +134,10 @@ public:
     elements.emplace_back(base + size, val);
   }
 
-  /// Sorts elements lexicographically by index.
+  /// Sorts elements lexicographically by index.  If an index is mapped to
+  /// multiple values, then the relative order of those values is unspecified.
+  ///
+  /// Asserts: is not in iterator mode.
   void sort() {
     assert(!iteratorLocked && "Attempt to sort() after startIterator()");
     // TODO: we may want to cache an `isSorted` bit, to avoid
@@ -134,13 +154,17 @@ public:
               });
   }
 
-  /// Switch into iterator mode.
+  /// Switch into iterator mode.  If already in iterator mode, then
+  /// resets the position to the first element.
   void startIterator() {
     iteratorLocked = true;
     iteratorPos = 0;
   }
 
-  /// Get the next element.
+  /// Get the next element.  If there are no remaining elements, then
+  /// returns nullptr and switches out of iterator mode.
+  ///
+  /// Asserts: is in iterator mode.
   const Element<V> *getNext() {
     assert(iteratorLocked && "Attempt to getNext() before startIterator()");
     if (iteratorPos < elements.size())
