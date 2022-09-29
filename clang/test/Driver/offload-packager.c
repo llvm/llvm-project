@@ -34,7 +34,7 @@
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
-// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
 // RUN: clang-offload-packager %t.out \
 // RUN:   --image=file=%t-sm_70.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
 // RUN:   --image=file=%t-gfx908.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
@@ -45,7 +45,7 @@
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
-// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -o %t.bc -fembed-offload-object=%t.out
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -o %t.bc -fembed-offload-object=%t.out
 // RUN: clang-offload-packager %t.out \
 // RUN:   --image=file=%t-sm_70.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
 // RUN:   --image=file=%t-gfx908.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908

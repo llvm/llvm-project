@@ -400,9 +400,9 @@
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
 // GEXTREFS: "-debug-info-kind={{standalone|constructor}}"
 
-// RUN: not %clang -cc1 -debug-info-kind=watkind 2>&1 | FileCheck -check-prefix=BADSTRING1 %s
+// RUN: not %clang_cc1 -debug-info-kind=watkind 2>&1 | FileCheck -check-prefix=BADSTRING1 %s
 // BADSTRING1: error: invalid value 'watkind' in '-debug-info-kind=watkind'
-// RUN: not %clang -cc1 -debugger-tuning=gmodal 2>&1 | FileCheck -check-prefix=BADSTRING2 %s
+// RUN: not %clang_cc1 -debugger-tuning=gmodal 2>&1 | FileCheck -check-prefix=BADSTRING2 %s
 // BADSTRING2: error: invalid value 'gmodal' in '-debugger-tuning=gmodal'
 
 // RUN: %clang -### -fdebug-macro    %s 2>&1 | FileCheck -check-prefix=MACRO %s
