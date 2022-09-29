@@ -133,6 +133,8 @@ static cl::opt<bool>
                       cl::desc("Embed final IR as bitcode after all "
                                "optimisations and transformations have run."));
 
+extern bool YkAllocLLVMBBAddrMapSection;
+
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
 const char DbgTimerName[] = "emit";
@@ -1324,6 +1326,20 @@ static unsigned getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
          (const_cast<MachineBasicBlock &>(MBB).canFallThrough() << 3);
 }
 
+void emitYkBBAddrMapSymbol(const MachineFunction &MF, MCStreamer &OutStreamer,
+                           bool Start) {
+  std::string SymName("ykllvm.bbaddrmap.");
+  SymName.append(MF.getName().str());
+  if (Start)
+    SymName.append(".start");
+  else
+    SymName.append(".end");
+
+  MCSymbol *Sym = MF.getContext().getOrCreateSymbol(SymName);
+  OutStreamer.emitSymbolAttribute(Sym, llvm::MCSA_Global);
+  OutStreamer.emitLabel(Sym);
+}
+
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
@@ -1333,6 +1349,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
 
   OutStreamer->pushSection();
   OutStreamer->switchSection(BBAddrMapSection);
+
+  // Add the `ykllvm.bbaddrmap.<func>.start` symbol.
+  if (YkAllocLLVMBBAddrMapSection)
+    emitYkBBAddrMapSymbol(MF, *OutStreamer, true);
+
   OutStreamer->AddComment("version");
   OutStreamer->emitInt8(OutStreamer->getContext().getBBAddrMapVersion());
   OutStreamer->AddComment("feature");
@@ -1421,6 +1442,11 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(I);
     }
   }
+
+  // Add the `ykllvm.bbaddrmap.<func>.end` symbol.
+  if (YkAllocLLVMBBAddrMapSection)
+    emitYkBBAddrMapSymbol(MF, *OutStreamer, false);
+
   OutStreamer->popSection();
 }
 
