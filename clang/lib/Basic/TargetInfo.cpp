@@ -34,6 +34,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   VLASupported = true;
   NoAsmVariants = false;
   HasLegalHalfType = false;
+  HalfArgsAndReturns = false;
   HasFloat128 = false;
   HasIbm128 = false;
   HasFloat16 = false;

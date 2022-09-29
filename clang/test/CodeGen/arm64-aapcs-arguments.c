@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -target-abi aapcs -ffreestanding -fallow-half-arguments-and-returns -emit-llvm -w -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -target-abi aapcs -ffreestanding -emit-llvm -w -o - %s | FileCheck %s
 
 // AAPCS clause C.8 says: If the argument has an alignment of 16 then the NGRN
 // is rounded up to the next even number.

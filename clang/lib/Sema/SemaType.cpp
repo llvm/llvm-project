@@ -2859,7 +2859,8 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
   }
 
   // Functions cannot return half FP.
-  if (T->isHalfType() && !getLangOpts().HalfArgsAndReturns) {
+  if (T->isHalfType() && !getLangOpts().NativeHalfArgsAndReturns &&
+      !Context.getTargetInfo().allowHalfArgsAndReturns()) {
     Diag(Loc, diag::err_parameters_retval_cannot_have_fp16_type) << 1 <<
       FixItHint::CreateInsertion(Loc, "*");
     return true;
@@ -2971,7 +2972,8 @@ QualType Sema::BuildFunctionType(QualType T,
     if (ParamType->isVoidType()) {
       Diag(Loc, diag::err_param_with_void_type);
       Invalid = true;
-    } else if (ParamType->isHalfType() && !getLangOpts().HalfArgsAndReturns) {
+    } else if (ParamType->isHalfType() && !getLangOpts().NativeHalfArgsAndReturns &&
+               !Context.getTargetInfo().allowHalfArgsAndReturns()) {
       // Disallow half FP arguments.
       Diag(Loc, diag::err_parameters_retval_cannot_have_fp16_type) << 0 <<
         FixItHint::CreateInsertion(Loc, "*");
@@ -5211,7 +5213,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                 << T << 0 /*pointer hint*/;
             D.setInvalidType(true);
           }
-        } else if (!S.getLangOpts().HalfArgsAndReturns) {
+        } else if (!S.getLangOpts().NativeHalfArgsAndReturns &&
+                   !S.Context.getTargetInfo().allowHalfArgsAndReturns()) {
           S.Diag(D.getIdentifierLoc(),
             diag::err_parameters_retval_cannot_have_fp16_type) << 1;
           D.setInvalidType(true);
@@ -5448,7 +5451,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                 D.setInvalidType();
                 Param->setInvalidDecl();
               }
-            } else if (!S.getLangOpts().HalfArgsAndReturns) {
+            } else if (!S.getLangOpts().NativeHalfArgsAndReturns &&
+                       !S.Context.getTargetInfo().allowHalfArgsAndReturns()) {
               S.Diag(Param->getLocation(),
                 diag::err_parameters_retval_cannot_have_fp16_type) << 0;
               D.setInvalidType();
