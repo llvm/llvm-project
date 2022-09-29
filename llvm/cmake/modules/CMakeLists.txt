@@ -176,6 +176,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN LLVMConfigExtensions.cmake EXCLUDE
     PATTERN LLVMConfigVersion.cmake EXCLUDE
     PATTERN LLVM-Config.cmake EXCLUDE
+    PATTERN GetHostTriple.cmake EXCLUDE
     PATTERN llvm-driver-template.cpp.in)
 
   if (NOT LLVM_ENABLE_IDE)
