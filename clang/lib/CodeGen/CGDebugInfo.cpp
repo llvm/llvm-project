@@ -2768,8 +2768,12 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
 
     llvm::DIBuilder DIB(CGM.getModule());
     SmallString<0> PCM;
-    if (!llvm::sys::path::is_absolute(Mod.getASTFile()))
-      PCM = Mod.getPath();
+    if (!llvm::sys::path::is_absolute(Mod.getASTFile())) {
+      if (CGM.getHeaderSearchOpts().ModuleFileHomeIsCwd)
+        PCM = getCurrentDirname();
+      else
+        PCM = Mod.getPath();
+    }
     llvm::sys::path::append(PCM, Mod.getASTFile());
     DIB.createCompileUnit(
         TheCU->getSourceLanguage(),
