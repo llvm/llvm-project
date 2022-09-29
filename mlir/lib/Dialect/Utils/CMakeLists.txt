@@ -5,6 +5,6 @@ add_mlir_library(MLIRDialectUtils
   StaticValueUtils.cpp
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticUtils
+  MLIRArithUtils
   MLIRIR
 )

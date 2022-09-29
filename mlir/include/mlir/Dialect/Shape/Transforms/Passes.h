@@ -30,9 +30,8 @@ namespace mlir {
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 
 /// Creates an instance of the ShapeToShapeLowering pass that legalizes Shape
-/// dialect to be convertible to Arithmetic. For example, `shape.num_elements`
-/// get transformed to `shape.reduce`, which can be lowered to SCF and
-/// Arithmetic.
+/// dialect to be convertible to Arith. For example, `shape.num_elements` get
+/// transformed to `shape.reduce`, which can be lowered to SCF and Arith.
 std::unique_ptr<Pass> createShapeToShapeLowering();
 
 /// Collects a set of patterns to rewrite ops within the Shape dialect.

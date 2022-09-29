@@ -13,7 +13,7 @@ Dialects are the mechanism by which to engage with and extend the MLIR
 ecosystem. They allow for defining new [attributes](LangRef.md#attributes),
 [operations](LangRef.md#operations), and [types](LangRef.md#type-system).
 Dialects are used to model a variety of different abstractions; from traditional
-[arithmetic](Dialects/ArithmeticOps.md) to
+[arithmetic](Dialects/ArithOps.md) to
 [pattern rewrites](Dialects/PDLOps.md); and is one of the most fundamental
 aspects of MLIR.
 
@@ -122,7 +122,7 @@ dialect. Dialect dependencies can be recorded using the `dependentDialects` dial
 def MyDialect : Dialect {
   // Here we register the Arithmetic and Func dialect as dependencies of our `MyDialect`.
   let dependentDialects = [
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "func::FuncDialect"
   ];
 }

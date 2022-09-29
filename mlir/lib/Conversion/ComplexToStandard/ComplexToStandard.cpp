@@ -8,7 +8,7 @@
 
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -1095,7 +1095,7 @@ void ConvertComplexToStandardPass::runOnOperation() {
   populateComplexToStandardConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<arith::ArithmeticDialect, math::MathDialect>();
+  target.addLegalDialect<arith::ArithDialect, math::MathDialect>();
   target.addLegalOp<complex::CreateOp, complex::ImOp, complex::ReOp>();
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
