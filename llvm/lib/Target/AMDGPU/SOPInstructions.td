@@ -738,6 +738,7 @@ class SOPK_Real<SOPK_Pseudo ps> :
   let SOPK = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let UseNamedOperandTable = 1;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;

@@ -1685,6 +1685,7 @@ private:
   bool validateBLGP(const MCInst &Inst, const OperandVector &Operands);
   bool validateGWS(const MCInst &Inst, const OperandVector &Operands);
   bool validateDivScale(const MCInst &Inst);
+  bool validateWaitCnt(const MCInst &Inst, const OperandVector &Operands);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
   bool validateLdsDMA(uint64_t Enc, const MCInst &Inst,
@@ -4454,6 +4455,29 @@ bool AMDGPUAsmParser::validateBLGP(const MCInst &Inst,
   return false;
 }
 
+bool AMDGPUAsmParser::validateWaitCnt(const MCInst &Inst,
+                                      const OperandVector &Operands) {
+  if (!isGFX11Plus())
+    return true;
+
+  unsigned Opc = Inst.getOpcode();
+  if (Opc != AMDGPU::S_WAITCNT_EXPCNT_gfx11 &&
+      Opc != AMDGPU::S_WAITCNT_LGKMCNT_gfx11 &&
+      Opc != AMDGPU::S_WAITCNT_VMCNT_gfx11 &&
+      Opc != AMDGPU::S_WAITCNT_VSCNT_gfx11)
+    return true;
+
+  int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sdst);
+  assert(Src0Idx >= 0 && Inst.getOperand(Src0Idx).isReg());
+  auto Reg = mc2PseudoReg(Inst.getOperand(Src0Idx).getReg());
+  if (Reg == AMDGPU::SGPR_NULL)
+    return true;
+
+  SMLoc RegLoc = getRegLoc(Reg, Operands);
+  Error(RegLoc, "src0 must be null");
+  return false;
+}
+
 // gfx90a has an undocumented limitation:
 // DS_GWS opcodes must use even aligned registers.
 bool AMDGPUAsmParser::validateGWS(const MCInst &Inst,
@@ -4692,6 +4716,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
 
   if (!validateDivScale(Inst)) {
     Error(IDLoc, "ABS not allowed in VOP3B instructions");
+    return false;
+  }
+  if (!validateWaitCnt(Inst, Operands)) {
     return false;
   }
   if (!validateExeczVcczOperands(Operands)) {
