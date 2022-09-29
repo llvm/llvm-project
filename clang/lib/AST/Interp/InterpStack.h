@@ -48,12 +48,12 @@ public:
   }
 
   /// Returns a reference to the value on the top of the stack.
-  template <typename T> T &peek() {
+  template <typename T> T &peek() const {
     return *reinterpret_cast<T *>(peek(aligned_size<T>()));
   }
 
   /// Returns a pointer to the top object.
-  void *top() { return Chunk ? peek(0) : nullptr; }
+  void *top() const { return Chunk ? peek(0) : nullptr; }
 
   /// Returns the size of the stack in bytes.
   size_t size() const { return StackSize; }
@@ -72,7 +72,7 @@ private:
   /// Grows the stack to accommodate a value and returns a pointer to it.
   void *grow(size_t Size);
   /// Returns a pointer from the top of the stack.
-  void *peek(size_t Size);
+  void *peek(size_t Size) const;
   /// Shrinks the stack.
   void shrink(size_t Size);
 
@@ -94,10 +94,13 @@ private:
         : Next(nullptr), Prev(Prev), End(reinterpret_cast<char *>(this + 1)) {}
 
     /// Returns the size of the chunk, minus the header.
-    size_t size() { return End - start(); }
+    size_t size() const { return End - start(); }
 
     /// Returns a pointer to the start of the data region.
     char *start() { return reinterpret_cast<char *>(this + 1); }
+    const char *start() const {
+      return reinterpret_cast<const char *>(this + 1);
+    }
   };
   static_assert(sizeof(StackChunk) < ChunkSize, "Invalid chunk size");
 
