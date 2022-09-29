@@ -99,12 +99,6 @@ Symbol *SymbolTable::insert(StringRef name) {
   return sym;
 }
 
-Symbol *SymbolTable::addSymbol(const Symbol &newSym) {
-  Symbol *sym = insert(newSym.getName());
-  sym->resolve(newSym);
-  return sym;
-}
-
 // This variant of addSymbol is used by BinaryFile::parse to check duplicate
 // symbol errors.
 Symbol *SymbolTable::addAndCheckDuplicate(const Defined &newSym) {
