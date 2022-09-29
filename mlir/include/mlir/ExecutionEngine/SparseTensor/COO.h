@@ -54,7 +54,7 @@ using ElementConsumer =
 /// by indices before passing it back to the client (most packed storage
 /// formats require the elements to appear in lexicographic index order).
 template <typename V>
-struct SparseTensorCOO final {
+class SparseTensorCOO final {
 public:
   SparseTensorCOO(const std::vector<uint64_t> &dimSizes, uint64_t capacity)
       : dimSizes(dimSizes) {
@@ -63,6 +63,33 @@ public:
       indices.reserve(capacity * getRank());
     }
   }
+
+  /// Factory method. Permutes the original dimensions according to
+  /// the given ordering and expects subsequent add() calls to honor
+  /// that same ordering for the given indices. The result is a
+  /// fully permuted coordinate scheme.
+  ///
+  /// Precondition: `dimSizes` and `perm` must be valid for `rank`.
+  static SparseTensorCOO<V> *newSparseTensorCOO(uint64_t rank,
+                                                const uint64_t *dimSizes,
+                                                const uint64_t *perm,
+                                                uint64_t capacity = 0) {
+    std::vector<uint64_t> permsz(rank);
+    for (uint64_t r = 0; r < rank; r++) {
+      assert(dimSizes[r] > 0 && "Dimension size zero has trivial storage");
+      permsz[perm[r]] = dimSizes[r];
+    }
+    return new SparseTensorCOO<V>(permsz, capacity);
+  }
+
+  /// Get the rank of the tensor.
+  uint64_t getRank() const { return dimSizes.size(); }
+
+  /// Getter for the dimension-sizes array.
+  const std::vector<uint64_t> &getDimSizes() const { return dimSizes; }
+
+  /// Getter for the elements array.
+  const std::vector<Element<V>> &getElements() const { return elements; }
 
   /// Adds element as indices and value.
   void add(const std::vector<uint64_t> &ind, V val) {
@@ -107,15 +134,6 @@ public:
               });
   }
 
-  /// Get the rank of the tensor.
-  uint64_t getRank() const { return dimSizes.size(); }
-
-  /// Getter for the dimension-sizes array.
-  const std::vector<uint64_t> &getDimSizes() const { return dimSizes; }
-
-  /// Getter for the elements array.
-  const std::vector<Element<V>> &getElements() const { return elements; }
-
   /// Switch into iterator mode.
   void startIterator() {
     iteratorLocked = true;
@@ -129,24 +147,6 @@ public:
       return &(elements[iteratorPos++]);
     iteratorLocked = false;
     return nullptr;
-  }
-
-  /// Factory method. Permutes the original dimensions according to
-  /// the given ordering and expects subsequent add() calls to honor
-  /// that same ordering for the given indices. The result is a
-  /// fully permuted coordinate scheme.
-  ///
-  /// Precondition: `dimSizes` and `perm` must be valid for `rank`.
-  static SparseTensorCOO<V> *newSparseTensorCOO(uint64_t rank,
-                                                const uint64_t *dimSizes,
-                                                const uint64_t *perm,
-                                                uint64_t capacity = 0) {
-    std::vector<uint64_t> permsz(rank);
-    for (uint64_t r = 0; r < rank; r++) {
-      assert(dimSizes[r] > 0 && "Dimension size zero has trivial storage");
-      permsz[perm[r]] = dimSizes[r];
-    }
-    return new SparseTensorCOO<V>(permsz, capacity);
   }
 
 private:

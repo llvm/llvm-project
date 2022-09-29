@@ -41,31 +41,6 @@
 namespace mlir {
 namespace sparse_tensor {
 
-namespace detail {
-
-// TODO: try to unify this with `SparseTensorFile::assertMatchesShape`
-// which is used by `openSparseTensorCOO`.  It's easy enough to resolve
-// the `std::vector` vs pointer mismatch for `dimSizes`; but it's trickier
-// to resolve the presence/absence of `perm` (without introducing extra
-// overhead), so perhaps the code duplication is unavoidable.
-//
-/// Asserts that the `dimSizes` (in target-order) under the `perm` (mapping
-/// semantic-order to target-order) are a refinement of the desired `shape`
-/// (in semantic-order).
-///
-/// Precondition: `perm` and `shape` must be valid for `rank`.
-inline void assertPermutedSizesMatchShape(const std::vector<uint64_t> &dimSizes,
-                                          uint64_t rank, const uint64_t *perm,
-                                          const uint64_t *shape) {
-  assert(perm && shape);
-  assert(rank == dimSizes.size() && "Rank mismatch");
-  for (uint64_t r = 0; r < rank; r++)
-    assert((shape[r] == 0 || shape[r] == dimSizes[perm[r]]) &&
-           "Dimension size mismatch");
-}
-
-} // namespace detail
-
 // This forward decl is sufficient to split `SparseTensorStorageBase` into
 // its own header, but isn't sufficient for `SparseTensorStorage` to join it.
 template <typename V>
@@ -78,6 +53,16 @@ class SparseTensorEnumeratorBase;
 /// specialization, which the C-API relies on to catch type errors
 /// arising from our use of opaque pointers.
 class SparseTensorStorageBase {
+protected:
+  // Since this class is virtual, we must disallow public copying in
+  // order to avoid "slicing".  Since this class has data members,
+  // that means making copying protected.
+  // <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rc-copy-virtual>
+  SparseTensorStorageBase(const SparseTensorStorageBase &) = default;
+  // Copy-assignment would be implicitly deleted (because `dimSizes`
+  // is const), so we explicitly delete it for clarity.
+  SparseTensorStorageBase &operator=(const SparseTensorStorageBase &) = delete;
+
 public:
   /// Constructs a new storage object.  The `perm` maps the tensor's
   /// semantic-ordering of dimensions to this object's storage-order.
@@ -206,16 +191,6 @@ public:
   /// Finishes insertion.
   virtual void endInsert() = 0;
 
-protected:
-  // Since this class is virtual, we must disallow public copying in
-  // order to avoid "slicing".  Since this class has data members,
-  // that means making copying protected.
-  // <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#Rc-copy-virtual>
-  SparseTensorStorageBase(const SparseTensorStorageBase &) = default;
-  // Copy-assignment would be implicitly deleted (because `dimSizes`
-  // is const), so we explicitly delete it for clarity.
-  SparseTensorStorageBase &operator=(const SparseTensorStorageBase &) = delete;
-
 private:
   const std::vector<uint64_t> dimSizes;
   std::vector<uint64_t> rev;
@@ -254,47 +229,7 @@ public:
   /// Precondition: `perm` and `sparsity` must be valid for `dimSizes.size()`.
   SparseTensorStorage(const std::vector<uint64_t> &dimSizes,
                       const uint64_t *perm, const DimLevelType *sparsity,
-                      SparseTensorCOO<V> *coo)
-      : SparseTensorStorage(dimSizes, perm, sparsity) {
-    // Provide hints on capacity of pointers and indices.
-    // TODO: needs much fine-tuning based on actual sparsity; currently
-    //       we reserve pointer/index space based on all previous dense
-    //       dimensions, which works well up to first sparse dim; but
-    //       we should really use nnz and dense/sparse distribution.
-    bool allDense = true;
-    uint64_t sz = 1;
-    for (uint64_t r = 0, rank = getRank(); r < rank; r++) {
-      if (isCompressedDim(r)) {
-        // TODO: Take a parameter between 1 and `dimSizes[r]`, and multiply
-        // `sz` by that before reserving. (For now we just use 1.)
-        pointers[r].reserve(sz + 1);
-        pointers[r].push_back(0);
-        indices[r].reserve(sz);
-        sz = 1;
-        allDense = false;
-      } else if (isSingletonDim(r)) {
-        indices[r].reserve(sz);
-        sz = 1;
-        allDense = false;
-      } else { // Dense dimension.
-        assert(isDenseDim(r));
-        sz = detail::checkedMul(sz, getDimSizes()[r]);
-      }
-    }
-    // Then assign contents from coordinate scheme tensor if provided.
-    if (coo) {
-      // Ensure both preconditions of `fromCOO`.
-      assert(coo->getDimSizes() == getDimSizes() && "Tensor size mismatch");
-      coo->sort();
-      // Now actually insert the `elements`.
-      const std::vector<Element<V>> &elements = coo->getElements();
-      uint64_t nnz = elements.size();
-      values.reserve(nnz);
-      fromCOO(elements, 0, nnz, 0);
-    } else if (allDense) {
-      values.resize(sz, 0);
-    }
-  }
+                      SparseTensorCOO<V> *coo);
 
   /// Constructs a sparse tensor storage scheme with the given dimensions,
   /// permutation, and per-dimension dense/sparse annotations, using
@@ -306,6 +241,29 @@ public:
   SparseTensorStorage(const std::vector<uint64_t> &dimSizes,
                       const uint64_t *perm, const DimLevelType *sparsity,
                       const SparseTensorStorageBase &tensor);
+
+  /// Factory method. Constructs a sparse tensor storage scheme with the given
+  /// dimensions, permutation, and per-dimension dense/sparse annotations,
+  /// using the coordinate scheme tensor for the initial contents if provided.
+  /// In the latter case, the coordinate scheme must respect the same
+  /// permutation as is desired for the new sparse tensor storage.
+  ///
+  /// Precondition: `shape`, `perm`, and `sparsity` must be valid for `rank`.
+  static SparseTensorStorage<P, I, V> *
+  newSparseTensor(uint64_t rank, const uint64_t *shape, const uint64_t *perm,
+                  const DimLevelType *sparsity, SparseTensorCOO<V> *coo);
+
+  /// Factory method. Constructs a sparse tensor storage scheme with
+  /// the given dimensions, permutation, and per-dimension dense/sparse
+  /// annotations, using the sparse tensor for the initial contents.
+  ///
+  /// Preconditions:
+  /// * `shape`, `perm`, and `sparsity` must be valid for `rank`.
+  /// * The `tensor` must have the same value type `V`.
+  static SparseTensorStorage<P, I, V> *
+  newSparseTensor(uint64_t rank, const uint64_t *shape, const uint64_t *perm,
+                  const DimLevelType *sparsity,
+                  const SparseTensorStorageBase *source);
 
   ~SparseTensorStorage() final = default;
 
@@ -394,55 +352,6 @@ public:
     assert(coo->getElements().size() == values.size());
     delete enumerator;
     return coo;
-  }
-
-  /// Factory method. Constructs a sparse tensor storage scheme with the given
-  /// dimensions, permutation, and per-dimension dense/sparse annotations,
-  /// using the coordinate scheme tensor for the initial contents if provided.
-  /// In the latter case, the coordinate scheme must respect the same
-  /// permutation as is desired for the new sparse tensor storage.
-  ///
-  /// Precondition: `shape`, `perm`, and `sparsity` must be valid for `rank`.
-  static SparseTensorStorage<P, I, V> *
-  newSparseTensor(uint64_t rank, const uint64_t *shape, const uint64_t *perm,
-                  const DimLevelType *sparsity, SparseTensorCOO<V> *coo) {
-    SparseTensorStorage<P, I, V> *n = nullptr;
-    if (coo) {
-      const auto &coosz = coo->getDimSizes();
-      detail::assertPermutedSizesMatchShape(coosz, rank, perm, shape);
-      n = new SparseTensorStorage<P, I, V>(coosz, perm, sparsity, coo);
-    } else {
-      std::vector<uint64_t> permsz(rank);
-      for (uint64_t r = 0; r < rank; r++) {
-        assert(shape[r] > 0 && "Dimension size zero has trivial storage");
-        permsz[perm[r]] = shape[r];
-      }
-      // We pass the null `coo` to ensure we select the intended constructor.
-      n = new SparseTensorStorage<P, I, V>(permsz, perm, sparsity, coo);
-    }
-    return n;
-  }
-
-  /// Factory method. Constructs a sparse tensor storage scheme with
-  /// the given dimensions, permutation, and per-dimension dense/sparse
-  /// annotations, using the sparse tensor for the initial contents.
-  ///
-  /// Preconditions:
-  /// * `shape`, `perm`, and `sparsity` must be valid for `rank`.
-  /// * The `tensor` must have the same value type `V`.
-  static SparseTensorStorage<P, I, V> *
-  newSparseTensor(uint64_t rank, const uint64_t *shape, const uint64_t *perm,
-                  const DimLevelType *sparsity,
-                  const SparseTensorStorageBase *source) {
-    assert(source && "Got nullptr for source");
-    SparseTensorEnumeratorBase<V> *enumerator;
-    source->newEnumerator(&enumerator, rank, perm);
-    const auto &permsz = enumerator->permutedSizes();
-    detail::assertPermutedSizesMatchShape(permsz, rank, perm, shape);
-    auto *tensor =
-        new SparseTensorStorage<P, I, V>(permsz, perm, sparsity, *source);
-    delete enumerator;
-    return tensor;
   }
 
 private:
@@ -819,6 +728,115 @@ private:
   const std::vector<DimLevelType> &dimTypes;
   std::vector<std::vector<uint64_t>> nnz;
 };
+
+//===----------------------------------------------------------------------===//
+// Definitions of the ctors and factories of `SparseTensorStorage<P,I,V>`.
+
+namespace detail {
+
+// TODO: try to unify this with `SparseTensorFile::assertMatchesShape`
+// which is used by `openSparseTensorCOO`.  It's easy enough to resolve
+// the `std::vector` vs pointer mismatch for `dimSizes`; but it's trickier
+// to resolve the presence/absence of `perm` (without introducing extra
+// overhead), so perhaps the code duplication is unavoidable.
+//
+/// Asserts that the `dimSizes` (in target-order) under the `perm` (mapping
+/// semantic-order to target-order) are a refinement of the desired `shape`
+/// (in semantic-order).
+///
+/// Precondition: `perm` and `shape` must be valid for `rank`.
+inline void assertPermutedSizesMatchShape(const std::vector<uint64_t> &dimSizes,
+                                          uint64_t rank, const uint64_t *perm,
+                                          const uint64_t *shape) {
+  assert(perm && shape);
+  assert(rank == dimSizes.size() && "Rank mismatch");
+  for (uint64_t r = 0; r < rank; r++)
+    assert((shape[r] == 0 || shape[r] == dimSizes[perm[r]]) &&
+           "Dimension size mismatch");
+}
+
+} // namespace detail
+
+template <typename P, typename I, typename V>
+SparseTensorStorage<P, I, V> *SparseTensorStorage<P, I, V>::newSparseTensor(
+    uint64_t rank, const uint64_t *shape, const uint64_t *perm,
+    const DimLevelType *sparsity, SparseTensorCOO<V> *coo) {
+  SparseTensorStorage<P, I, V> *n = nullptr;
+  if (coo) {
+    const auto &coosz = coo->getDimSizes();
+    detail::assertPermutedSizesMatchShape(coosz, rank, perm, shape);
+    n = new SparseTensorStorage<P, I, V>(coosz, perm, sparsity, coo);
+  } else {
+    std::vector<uint64_t> permsz(rank);
+    for (uint64_t r = 0; r < rank; r++) {
+      assert(shape[r] > 0 && "Dimension size zero has trivial storage");
+      permsz[perm[r]] = shape[r];
+    }
+    // We pass the null `coo` to ensure we select the intended constructor.
+    n = new SparseTensorStorage<P, I, V>(permsz, perm, sparsity, coo);
+  }
+  return n;
+}
+
+template <typename P, typename I, typename V>
+SparseTensorStorage<P, I, V> *SparseTensorStorage<P, I, V>::newSparseTensor(
+    uint64_t rank, const uint64_t *shape, const uint64_t *perm,
+    const DimLevelType *sparsity, const SparseTensorStorageBase *source) {
+  assert(source && "Got nullptr for source");
+  SparseTensorEnumeratorBase<V> *enumerator;
+  source->newEnumerator(&enumerator, rank, perm);
+  const auto &permsz = enumerator->permutedSizes();
+  detail::assertPermutedSizesMatchShape(permsz, rank, perm, shape);
+  auto *tensor =
+      new SparseTensorStorage<P, I, V>(permsz, perm, sparsity, *source);
+  delete enumerator;
+  return tensor;
+}
+
+template <typename P, typename I, typename V>
+SparseTensorStorage<P, I, V>::SparseTensorStorage(
+    const std::vector<uint64_t> &dimSizes, const uint64_t *perm,
+    const DimLevelType *sparsity, SparseTensorCOO<V> *coo)
+    : SparseTensorStorage(dimSizes, perm, sparsity) {
+  // Provide hints on capacity of pointers and indices.
+  // TODO: needs much fine-tuning based on actual sparsity; currently
+  //       we reserve pointer/index space based on all previous dense
+  //       dimensions, which works well up to first sparse dim; but
+  //       we should really use nnz and dense/sparse distribution.
+  bool allDense = true;
+  uint64_t sz = 1;
+  for (uint64_t r = 0, rank = getRank(); r < rank; r++) {
+    if (isCompressedDim(r)) {
+      // TODO: Take a parameter between 1 and `dimSizes[r]`, and multiply
+      // `sz` by that before reserving. (For now we just use 1.)
+      pointers[r].reserve(sz + 1);
+      pointers[r].push_back(0);
+      indices[r].reserve(sz);
+      sz = 1;
+      allDense = false;
+    } else if (isSingletonDim(r)) {
+      indices[r].reserve(sz);
+      sz = 1;
+      allDense = false;
+    } else { // Dense dimension.
+      assert(isDenseDim(r));
+      sz = detail::checkedMul(sz, getDimSizes()[r]);
+    }
+  }
+  // Then assign contents from coordinate scheme tensor if provided.
+  if (coo) {
+    // Ensure both preconditions of `fromCOO`.
+    assert(coo->getDimSizes() == getDimSizes() && "Tensor size mismatch");
+    coo->sort();
+    // Now actually insert the `elements`.
+    const std::vector<Element<V>> &elements = coo->getElements();
+    uint64_t nnz = elements.size();
+    values.reserve(nnz);
+    fromCOO(elements, 0, nnz, 0);
+  } else if (allDense) {
+    values.resize(sz, 0);
+  }
+}
 
 template <typename P, typename I, typename V>
 SparseTensorStorage<P, I, V>::SparseTensorStorage(
