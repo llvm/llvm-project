@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -1742,30 +1743,6 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty) {
   // Expand the code for this SCEV.
   Value *V = expand(SH);
 
-  if (PreserveLCSSA) {
-    if (auto *Inst = dyn_cast<Instruction>(V)) {
-      // Create a temporary instruction to at the current insertion point, so we
-      // can hand it off to the helper to create LCSSA PHIs if required for the
-      // new use.
-      // FIXME: Ideally formLCSSAForInstructions (used in fixupLCSSAFormFor)
-      // would accept a insertion point and return an LCSSA phi for that
-      // insertion point, so there is no need to insert & remove the temporary
-      // instruction.
-      Type *ToTy;
-      if (Inst->getType()->isIntegerTy())
-        ToTy = Inst->getType()->getPointerTo();
-      else
-        ToTy = Type::getInt32Ty(Inst->getContext());
-      Instruction *Tmp = CastInst::CreateBitOrPointerCast(
-          Inst, ToTy, "tmp.lcssa.user", &*Builder.GetInsertPoint());
-      V = fixupLCSSAFormFor(Tmp, 0);
-
-      // Clean up temporary instruction.
-      Tmp->eraseFromParent();
-    }
-  }
-
-  InsertedExpressions[std::make_pair(SH, &*Builder.GetInsertPoint())] = V;
   if (Ty) {
     assert(SE.getTypeSizeInBits(Ty) == SE.getTypeSizeInBits(SH->getType()) &&
            "non-trivial casts should be done with the SCEVs directly!");
@@ -1870,9 +1847,10 @@ Value *SCEVExpander::expand(const SCEV *S) {
 
   // Expand the expression into instructions.
   Value *V = FindValueInExprValueMap(S, InsertPt);
-  if (!V)
+  if (!V) {
     V = visit(S);
-  else {
+    V = fixupLCSSAFormFor(V);
+  } else {
     // If we're reusing an existing instruction, we are effectively CSEing two
     // copies of the instruction (with potentially different flags).  As such,
     // we need to drop any poison generating flags unless we can prove that
@@ -1899,18 +1877,6 @@ void SCEVExpander::rememberInstruction(Value *I) {
       InsertedValues.insert(V);
   };
   DoInsert(I);
-
-  if (!PreserveLCSSA)
-    return;
-
-  if (auto *Inst = dyn_cast<Instruction>(I)) {
-    // A new instruction has been added, which might introduce new uses outside
-    // a defining loop. Fix LCSSA from for each operand of the new instruction,
-    // if required.
-    for (unsigned OpIdx = 0, OpEnd = Inst->getNumOperands(); OpIdx != OpEnd;
-         OpIdx++)
-      fixupLCSSAFormFor(Inst, OpIdx);
-  }
 }
 
 /// replaceCongruentIVs - Check for congruent phis in this loop header and
@@ -2541,21 +2507,36 @@ Value *SCEVExpander::expandUnionPredicate(const SCEVUnionPredicate *Union,
   return Builder.CreateOr(Checks);
 }
 
-Value *SCEVExpander::fixupLCSSAFormFor(Instruction *User, unsigned OpIdx) {
-  assert(PreserveLCSSA);
-  SmallVector<Instruction *, 1> ToUpdate;
+Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
+  auto *DefI = dyn_cast<Instruction>(V);
+  if (!PreserveLCSSA || !DefI)
+    return V;
 
-  auto *OpV = User->getOperand(OpIdx);
-  auto *OpI = dyn_cast<Instruction>(OpV);
-  if (!OpI)
-    return OpV;
-
-  Loop *DefLoop = SE.LI.getLoopFor(OpI->getParent());
-  Loop *UseLoop = SE.LI.getLoopFor(User->getParent());
+  Instruction *InsertPt = &*Builder.GetInsertPoint();
+  Loop *DefLoop = SE.LI.getLoopFor(DefI->getParent());
+  Loop *UseLoop = SE.LI.getLoopFor(InsertPt->getParent());
   if (!DefLoop || UseLoop == DefLoop || DefLoop->contains(UseLoop))
-    return OpV;
+    return V;
 
-  ToUpdate.push_back(OpI);
+  // Create a temporary instruction to at the current insertion point, so we
+  // can hand it off to the helper to create LCSSA PHIs if required for the
+  // new use.
+  // FIXME: Ideally formLCSSAForInstructions (used in fixupLCSSAFormFor)
+  // would accept a insertion point and return an LCSSA phi for that
+  // insertion point, so there is no need to insert & remove the temporary
+  // instruction.
+  Type *ToTy;
+  if (DefI->getType()->isIntegerTy())
+    ToTy = DefI->getType()->getPointerTo();
+  else
+    ToTy = Type::getInt32Ty(DefI->getContext());
+  Instruction *User =
+      CastInst::CreateBitOrPointerCast(DefI, ToTy, "tmp.lcssa.user", InsertPt);
+  auto RemoveUserOnExit =
+      make_scope_exit([User]() { User->eraseFromParent(); });
+
+  SmallVector<Instruction *, 1> ToUpdate;
+  ToUpdate.push_back(DefI);
   SmallVector<PHINode *, 16> PHIsToRemove;
   formLCSSAForInstructions(ToUpdate, SE.DT, SE.LI, &SE, Builder, &PHIsToRemove);
   for (PHINode *PN : PHIsToRemove) {
@@ -2566,7 +2547,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Instruction *User, unsigned OpIdx) {
     PN->eraseFromParent();
   }
 
-  return User->getOperand(OpIdx);
+  return User->getOperand(0);
 }
 
 namespace {

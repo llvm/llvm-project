@@ -499,10 +499,9 @@ private:
 
   void fixupInsertPoints(Instruction *I);
 
-  /// If required, create LCSSA PHIs for \p Users' operand \p OpIdx. If new
-  /// LCSSA PHIs have been created, return the LCSSA PHI available at \p User.
-  /// If no PHIs have been created, return the unchanged operand \p OpIdx.
-  Value *fixupLCSSAFormFor(Instruction *User, unsigned OpIdx);
+  /// Create LCSSA PHIs for \p V, if it is required for uses at the Builder's
+  /// current insertion point.
+  Value *fixupLCSSAFormFor(Value *V);
 };
 
 /// Helper to remove instructions inserted during SCEV expansion, unless they
