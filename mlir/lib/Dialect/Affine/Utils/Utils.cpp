@@ -650,15 +650,8 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op) {
   return success();
 }
 
-/// Ensure that all operations that could be executed after `start`
-/// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path
-/// between the operations) do not have the potential memory effect
-/// `EffectType` on `memOp`. `memOp`  is an operation that reads or writes to
-/// a memref. For example, if `EffectType` is MemoryEffects::Write, this method
-/// will check if there is no write to the memory between `start` and `memOp`
-/// that would change the read within `memOp`.
 template <typename EffectType, typename T>
-static bool hasNoInterveningEffect(Operation *start, T memOp) {
+bool mlir::hasNoInterveningEffect(Operation *start, T memOp) {
   auto isLocallyAllocated = [](Value memref) {
     auto *defOp = memref.getDefiningOp();
     return defOp && hasSingleEffect<MemoryEffects::Allocate>(defOp, memref);
@@ -874,7 +867,7 @@ static LogicalResult forwardStoreToLoad(
 
     // 3. Ensure there is no intermediate operation which could replace the
     // value in memory.
-    if (!hasNoInterveningEffect<MemoryEffects::Write>(storeOp, loadOp))
+    if (!mlir::hasNoInterveningEffect<MemoryEffects::Write>(storeOp, loadOp))
       continue;
 
     // We now have a candidate for forwarding.
@@ -900,6 +893,10 @@ static LogicalResult forwardStoreToLoad(
   loadOpsToErase.push_back(loadOp);
   return success();
 }
+
+template bool mlir::hasNoInterveningEffect<mlir::MemoryEffects::Read,
+                                           mlir::AffineReadOpInterface>(
+    mlir::Operation *, mlir::AffineReadOpInterface);
 
 // This attempts to find stores which have no impact on the final result.
 // A writing op writeA will be eliminated if there exists an op writeB if
@@ -937,7 +934,7 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
 
     // There cannot be an operation which reads from memory between
     // the two writes.
-    if (!hasNoInterveningEffect<MemoryEffects::Read>(writeA, writeB))
+    if (!mlir::hasNoInterveningEffect<MemoryEffects::Read>(writeA, writeB))
       continue;
 
     opsToErase.push_back(writeA);
@@ -973,8 +970,8 @@ static void loadCSE(AffineReadOpInterface loadA,
       continue;
 
     // 3. There is no write between loadA and loadB.
-    if (!hasNoInterveningEffect<MemoryEffects::Write>(loadB.getOperation(),
-                                                      loadA))
+    if (!mlir::hasNoInterveningEffect<MemoryEffects::Write>(
+            loadB.getOperation(), loadA))
       continue;
 
     // Check if two values have the same shape. This is needed for affine vector
