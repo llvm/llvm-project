@@ -33,6 +33,13 @@
 namespace mlir {
 namespace sparse_tensor {
 
+// TODO: benchmark whether to keep various methods inline vs moving them
+// off to the cpp file.
+
+// TODO: consider distinguishing separate classes for before vs
+// after reading the header; so as to statically avoid the need
+// to `assert(isValid())`.
+
 /// This class abstracts over the information stored in file headers,
 /// as well as providing the buffers and methods for parsing those headers.
 class SparseTensorFile final {
@@ -46,7 +53,7 @@ public:
     kUndefined = 5
   };
 
-  explicit SparseTensorFile(char *filename) : filename(filename) {
+  explicit SparseTensorFile(const char *filename) : filename(filename) {
     assert(filename && "Received nullptr for filename");
   }
 
@@ -109,7 +116,7 @@ public:
   /// Safely gets the size of the given dimension.  Is only valid
   /// after parsing the header.
   uint64_t getDimSize(uint64_t d) const {
-    assert(d < getRank());
+    assert(d < getRank() && "Dimension out of bounds");
     return idata[2 + d];
   }
 
@@ -122,7 +129,7 @@ private:
   void readExtFROSTTHeader();
 
   static constexpr int kColWidth = 1025;
-  const char *filename;
+  const char *const filename;
   FILE *file = nullptr;
   ValueKind valueKind_ = ValueKind::kInvalid;
   bool isSymmetric_ = false;
@@ -184,7 +191,7 @@ inline void readCOOValue(SparseTensorCOO<V> *coo,
 /// sparse tensor in coordinate scheme.
 template <typename V>
 inline SparseTensorCOO<V> *
-openSparseTensorCOO(char *filename, uint64_t rank, const uint64_t *shape,
+openSparseTensorCOO(const char *filename, uint64_t rank, const uint64_t *shape,
                     const uint64_t *perm, PrimaryType valTp) {
   SparseTensorFile stfile(filename);
   stfile.openFile();
@@ -208,11 +215,12 @@ openSparseTensorCOO(char *filename, uint64_t rank, const uint64_t *shape,
                                                      perm, nnz);
   // Read all nonzero elements.
   std::vector<uint64_t> indices(rank);
-  for (uint64_t k = 0; k < nnz; k++) {
+  for (uint64_t k = 0; k < nnz; ++k) {
     char *linePtr = stfile.readLine();
-    for (uint64_t r = 0; r < rank; r++) {
+    for (uint64_t r = 0; r < rank; ++r) {
+      // Parse the 1-based index.
       uint64_t idx = strtoul(linePtr, &linePtr, 10);
-      // Add 0-based index.
+      // Add the 0-based index.
       indices[perm[r]] = idx - 1;
     }
     detail::readCOOValue(coo, indices, &linePtr, stfile.isPattern(),
@@ -223,28 +231,25 @@ openSparseTensorCOO(char *filename, uint64_t rank, const uint64_t *shape,
   return coo;
 }
 
-/// Writes the sparse tensor to `dest` in extended FROSTT format.
+/// Writes the sparse tensor to `filename` in extended FROSTT format.
 template <typename V>
-inline void outSparseTensor(void *tensor, void *dest, bool sort) {
-  assert(tensor && dest);
-  auto coo = static_cast<SparseTensorCOO<V> *>(tensor);
-  if (sort)
-    coo->sort();
-  char *filename = static_cast<char *>(dest);
-  auto &dimSizes = coo->getDimSizes();
-  auto &elements = coo->getElements();
-  uint64_t rank = coo->getRank();
-  uint64_t nnz = elements.size();
+inline void writeExtFROSTT(const SparseTensorCOO<V> &coo,
+                           const char *filename) {
+  assert(filename && "Got nullptr for filename");
+  auto &dimSizes = coo.getDimSizes();
+  auto &elements = coo.getElements();
+  const uint64_t rank = coo.getRank();
+  const uint64_t nnz = elements.size();
   std::fstream file;
   file.open(filename, std::ios_base::out | std::ios_base::trunc);
   assert(file.is_open());
   file << "; extended FROSTT format\n" << rank << " " << nnz << std::endl;
-  for (uint64_t r = 0; r < rank - 1; r++)
+  for (uint64_t r = 0; r < rank - 1; ++r)
     file << dimSizes[r] << " ";
   file << dimSizes[rank - 1] << std::endl;
-  for (uint64_t i = 0; i < nnz; i++) {
+  for (uint64_t i = 0; i < nnz; ++i) {
     auto &idx = elements[i].indices;
-    for (uint64_t r = 0; r < rank; r++)
+    for (uint64_t r = 0; r < rank; ++r)
       file << (idx[r] + 1) << " ";
     file << elements[i].value << std::endl;
   }

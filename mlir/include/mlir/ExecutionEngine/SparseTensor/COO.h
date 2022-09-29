@@ -36,8 +36,8 @@ namespace sparse_tensor {
 /// (2) centralizes the memory reservation and (re)allocation to one place.
 template <typename V>
 struct Element final {
-  Element(uint64_t *ind, V val) : indices(ind), value(val){};
-  uint64_t *indices; // pointer into shared index pool
+  Element(const uint64_t *ind, V val) : indices(ind), value(val){};
+  const uint64_t *indices; // pointer into shared index pool
   V value;
 };
 
@@ -75,7 +75,7 @@ public:
                                                 const uint64_t *perm,
                                                 uint64_t capacity = 0) {
     std::vector<uint64_t> permsz(rank);
-    for (uint64_t r = 0; r < rank; r++) {
+    for (uint64_t r = 0; r < rank; ++r) {
       assert(dimSizes[r] > 0 && "Dimension size zero has trivial storage");
       permsz[perm[r]] = dimSizes[r];
     }
@@ -94,11 +94,11 @@ public:
   /// Adds element as indices and value.
   void add(const std::vector<uint64_t> &ind, V val) {
     assert(!iteratorLocked && "Attempt to add() after startIterator()");
-    uint64_t *base = indices.data();
+    const uint64_t *base = indices.data();
     uint64_t size = indices.size();
     uint64_t rank = getRank();
     assert(ind.size() == rank && "Element rank mismatch");
-    for (uint64_t r = 0; r < rank; r++) {
+    for (uint64_t r = 0; r < rank; ++r) {
       assert(ind[r] < dimSizes[r] && "Index is too large for the dimension");
       indices.push_back(ind[r]);
     }
@@ -107,9 +107,9 @@ public:
     // only happens if we did not set the initial capacity right, and then only
     // for every internal vector reallocation (which with the doubling rule
     // should only incur an amortized linear overhead).
-    uint64_t *newBase = indices.data();
+    const uint64_t *newBase = indices.data();
     if (newBase != base) {
-      for (uint64_t i = 0, n = elements.size(); i < n; i++)
+      for (uint64_t i = 0, n = elements.size(); i < n; ++i)
         elements[i].indices = newBase + (elements[i].indices - base);
       base = newBase;
     }
@@ -125,7 +125,7 @@ public:
     uint64_t rank = getRank();
     std::sort(elements.begin(), elements.end(),
               [rank](const Element<V> &e1, const Element<V> &e2) {
-                for (uint64_t r = 0; r < rank; r++) {
+                for (uint64_t r = 0; r < rank; ++r) {
                   if (e1.indices[r] == e2.indices[r])
                     continue;
                   return e1.indices[r] < e2.indices[r];
