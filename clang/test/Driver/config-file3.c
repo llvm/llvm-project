@@ -1,6 +1,7 @@
 // REQUIRES: shell
 // REQUIRES: x86-registered-target
 
+// RUN: unset CLANG_NO_DEFAULT_CONFIG
 // RUN: rm -rf %t && mkdir %t
 
 //--- If config file is specified by relative path (workdir/cfg-s2), it is searched for by that path.

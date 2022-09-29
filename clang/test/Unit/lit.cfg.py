@@ -71,3 +71,8 @@ for shlibpath_var in find_shlibpath_var():
 else:
     lit_config.warning("unable to inject shared library path on '{}'"
                        .format(platform.system()))
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
