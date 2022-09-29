@@ -41,6 +41,14 @@ class Program final {
 public:
   Program(Context &Ctx) : Ctx(Ctx) {}
 
+  ~Program() {
+    // Records might actually allocate memory themselves, but they
+    // are allocated using a BumpPtrAllocator. Call their desctructors
+    // here manually so they are properly freeing their resources.
+    for (auto RecordPair : Records)
+      RecordPair.second->~Record();
+  }
+
   /// Marshals a native pointer to an ID for embedding in bytecode.
   unsigned getOrCreateNativePointer(const void *Ptr);
 
