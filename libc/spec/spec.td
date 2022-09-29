@@ -113,6 +113,8 @@ def FILERestrictedPtr : RestrictedPtrType<FILE>;
 
 def PThreadTType : NamedType<"pthread_t">;
 
+def PidT : NamedType<"pid_t">;
+
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;
 

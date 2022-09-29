@@ -193,6 +193,10 @@ def ErrnoAPI : PublicAPI<"errno.h"> {
   ];
 }
 
+def SchedAPI : PublicAPI<"sched.h"> {
+  let Types = ["pid_t", "size_t", "cpu_set_t"];
+}
+
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
   let Types = ["off_t", "size_t"];
   let Macros = [

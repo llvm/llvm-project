@@ -26,7 +26,6 @@ def ClockIdT : NamedType<"clockid_t">;
 def BlkSizeT : NamedType<"blksize_t">;
 def BlkCntT : NamedType<"blkcnt_t">;
 def NLinkT : NamedType<"nlink_t">;
-def PidT : NamedType<"pid_t">;
 
 def StatType : NamedType<"struct stat">;
 def StatTypePtr : PtrType<StatType>;
