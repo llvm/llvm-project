@@ -160,6 +160,7 @@ struct SparseTensorCodegenPass
     // Most ops in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
     target.addLegalOp<SortOp>();
+    target.addLegalOp<PushBackOp>();
     // All dynamic rules below accept new function, call, return, and various
     // tensor and bufferization operations as legal output of the rewriting
     // provided that all sparse tensor types have been fully rewritten.
