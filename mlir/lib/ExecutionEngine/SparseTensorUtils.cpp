@@ -12,34 +12,6 @@
 // operates on sparse tensors. The provided functionality is **not** part
 // of core MLIR, however.
 //
-//===----------------------------------------------------------------------===//
-
-#include "mlir/ExecutionEngine/SparseTensorUtils.h"
-#include "mlir/ExecutionEngine/SparseTensor/COO.h"
-#include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
-#include "mlir/ExecutionEngine/SparseTensor/File.h"
-#include "mlir/ExecutionEngine/SparseTensor/Storage.h"
-
-#ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
-
-#include <algorithm>
-#include <cassert>
-#include <cctype>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <limits>
-#include <numeric>
-
-using namespace mlir::sparse_tensor;
-
-//===----------------------------------------------------------------------===//
-//
-// Internal support for storing and reading sparse tensors.
-//
 // The following memory-resident sparse storage schemes are supported:
 //
 // (a) A coordinate scheme for temporarily storing and lexicographically
@@ -71,6 +43,28 @@ using namespace mlir::sparse_tensor;
 // only visible as an opaque pointer.
 //
 //===----------------------------------------------------------------------===//
+
+#include "mlir/ExecutionEngine/SparseTensorUtils.h"
+#include "mlir/ExecutionEngine/SparseTensor/COO.h"
+#include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
+#include "mlir/ExecutionEngine/SparseTensor/File.h"
+#include "mlir/ExecutionEngine/SparseTensor/Storage.h"
+
+#ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
+
+#include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <limits>
+#include <numeric>
+
+using namespace mlir::sparse_tensor;
 
 namespace {
 
