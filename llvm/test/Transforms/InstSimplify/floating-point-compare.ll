@@ -999,6 +999,18 @@ define <2 x i1> @known_positive_une_with_negative_constant_splat_vec(<2 x i32> %
   ret <2 x i1> %cmp
 }
 
+; FIXME: Miscompile.
+define i1 @pr58046(i64 %arg) {
+; CHECK-LABEL: @pr58046(
+; CHECK-NEXT:    ret i1 false
+;
+  %fp = uitofp i64 %arg to double
+  %mul = fmul double -0.000000e+00, %fp
+  %div = fdiv double 1.000000e+00, %mul
+  %cmp = fcmp oeq double %div, 0xFFF0000000000000
+  ret i1 %cmp
+}
+
 define i1 @nonans1(double %in1, double %in2) {
 ; CHECK-LABEL: @nonans1(
 ; CHECK-NEXT:    ret i1 false
