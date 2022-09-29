@@ -350,6 +350,8 @@ public:
     // buffer = new_buffer
     // store(buffer, value)
     // size(buffer)++
+    //
+    // The capacity check is skipped when the attribute inbounds is presented.
     Location loc = op->getLoc();
     Value c0 = constantIndex(rewriter, loc, 0);
     Value buffer = op.getInBuffer();
@@ -357,28 +359,34 @@ public:
     Value idx = constantIndex(rewriter, loc, op.getIdx().getZExtValue());
     Value bufferSizes = op.getBufferSizes();
     Value size = rewriter.create<memref::LoadOp>(loc, bufferSizes, idx);
-    Value cond = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::uge,
-                                                size, capacity);
     Value value = op.getValue();
-    auto bufferType =
-        MemRefType::get({ShapedType::kDynamicSize}, value.getType());
-    scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, bufferType, cond,
-                                                /*else=*/true);
-    // True branch.
-    rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    Value c2 = constantIndex(rewriter, loc, 2);
-    capacity = rewriter.create<arith::MulIOp>(loc, capacity, c2);
-    Value newBuffer =
-        rewriter.create<memref::ReallocOp>(loc, bufferType, buffer, capacity);
-    rewriter.create<scf::YieldOp>(loc, newBuffer);
 
-    // False branch.
-    rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    rewriter.create<scf::YieldOp>(loc, buffer);
+    if (!op.getInbounds()) {
+      Value cond = rewriter.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::uge, size, capacity);
+
+      auto bufferType =
+          MemRefType::get({ShapedType::kDynamicSize}, value.getType());
+      scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, bufferType, cond,
+                                                  /*else=*/true);
+      // True branch.
+      rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      Value c2 = constantIndex(rewriter, loc, 2);
+      capacity = rewriter.create<arith::MulIOp>(loc, capacity, c2);
+      Value newBuffer =
+          rewriter.create<memref::ReallocOp>(loc, bufferType, buffer, capacity);
+      rewriter.create<scf::YieldOp>(loc, newBuffer);
+
+      // False branch.
+      rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      rewriter.create<scf::YieldOp>(loc, buffer);
+
+      // Prepare for adding the value to the end of the buffer.
+      rewriter.setInsertionPointAfter(ifOp);
+      buffer = ifOp.getResult(0);
+    }
 
     // Add the value to the end of the buffer.
-    rewriter.setInsertionPointAfter(ifOp);
-    buffer = ifOp.getResult(0);
     rewriter.create<memref::StoreOp>(loc, value, buffer, size);
 
     // Increment the size of the buffer by 1.
