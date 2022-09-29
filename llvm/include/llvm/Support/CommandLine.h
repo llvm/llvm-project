@@ -31,6 +31,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -2065,56 +2066,88 @@ void tokenizeConfigFile(StringRef Source, StringSaver &Saver,
                         SmallVectorImpl<const char *> &NewArgv,
                         bool MarkEOLs = false);
 
-/// Reads command line options from the given configuration file.
-///
-/// \param [in] CfgFileName Path to configuration file.
-/// \param [in] Saver  Objects that saves allocated strings.
-/// \param [out] Argv Array to which the read options are added.
-/// \return true if the file was successfully read.
-///
-/// It reads content of the specified file, tokenizes it and expands "@file"
-/// commands resolving file names in them relative to the directory where
-/// CfgFilename resides. It also expands "<CFGDIR>" to the base path of the
-/// current config file.
-///
-bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
-                    SmallVectorImpl<const char *> &Argv,
-                    llvm::vfs::FileSystem &FS);
+/// Contains options that control response file expansion.
+class ExpansionContext {
+  /// Provides persistent storage for parsed strings.
+  StringSaver Saver;
 
-/// Expand response files on a command line recursively using the given
-/// StringSaver and tokenization strategy.  Argv should contain the command line
-/// before expansion and will be modified in place. If requested, Argv will
-/// also be populated with nullptrs indicating where each response file line
-/// ends, which is useful for the "/link" argument that needs to consume all
-/// remaining arguments only until the next end of line, when in a response
-/// file.
-///
-/// \param [in] Saver Delegates back to the caller for saving parsed strings.
-/// \param [in] Tokenizer Tokenization strategy. Typically Unix or Windows.
-/// \param [in,out] Argv Command line into which to expand response files.
-/// \param [in] MarkEOLs Mark end of lines and the end of the response file
-/// with nullptrs in the Argv vector.
-/// \param [in] RelativeNames true if names of nested response files must be
-/// resolved relative to including file.
-/// \param [in] ExpandBasePath If true, "<CFGDIR>" expands to the base path of
-/// the current response file.
-/// \param [in] FS File system used for all file access when running the tool.
-/// \param [in] CurrentDir Path used to resolve relative rsp files. If set to
-/// None, the file system current directory is used instead.
+  /// Tokenization strategy. Typically Unix or Windows.
+  TokenizerCallback Tokenizer;
+
+  /// File system used for all file access when running the expansion.
+  vfs::FileSystem *FS;
+
+  /// Path used to resolve relative rsp files. If empty, the file system
+  /// current directory is used instead.
+  StringRef CurrentDir;
+
+  /// True if names of nested response files must be resolved relative to
+  /// including file.
+  bool RelativeNames = false;
+
+  /// If true, mark end of lines and the end of the response file with nullptrs
+  /// in the Argv vector.
+  bool MarkEOLs = false;
+
+  /// If true, body of config file is expanded.
+  bool InConfigFile = false;
+
+  llvm::Error expandResponseFile(StringRef FName,
+                                 SmallVectorImpl<const char *> &NewArgv);
+
+public:
+  ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T);
+
+  ExpansionContext &setMarkEOLs(bool X) {
+    MarkEOLs = X;
+    return *this;
+  }
+
+  ExpansionContext &setRelativeNames(bool X) {
+    RelativeNames = X;
+    return *this;
+  }
+
+  ExpansionContext &setCurrentDir(StringRef X) {
+    CurrentDir = X;
+    return *this;
+  }
+
+  ExpansionContext &setVFS(vfs::FileSystem *X) {
+    FS = X;
+    return *this;
+  }
+
+  /// Reads command line options from the given configuration file.
+  ///
+  /// \param [in] CfgFile Path to configuration file.
+  /// \param [out] Argv Array to which the read options are added.
+  /// \return true if the file was successfully read.
+  ///
+  /// It reads content of the specified file, tokenizes it and expands "@file"
+  /// commands resolving file names in them relative to the directory where
+  /// CfgFilename resides. It also expands "<CFGDIR>" to the base path of the
+  /// current config file.
+  bool readConfigFile(StringRef CfgFile, SmallVectorImpl<const char *> &Argv);
+
+  /// Expands constructs "@file" in the provided array of arguments recursively.
+  bool expandResponseFiles(SmallVectorImpl<const char *> &Argv);
+};
+
+/// A convenience helper which concatenates the options specified by the
+/// environment variable EnvVar and command line options, then expands
+/// response files recursively.
 /// \return true if all @files were expanded successfully or there were none.
-bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
-                         SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                         bool RelativeNames, bool ExpandBasePath,
-                         llvm::Optional<llvm::StringRef> CurrentDir,
-                         llvm::vfs::FileSystem &FS);
+bool expandResponseFiles(int Argc, const char *const *Argv, const char *EnvVar,
+                         SmallVectorImpl<const char *> &NewArgv);
 
-/// An overload of ExpandResponseFiles() that uses
-/// llvm::vfs::getRealFileSystem().
-bool ExpandResponseFiles(
-    StringSaver &Saver, TokenizerCallback Tokenizer,
-    SmallVectorImpl<const char *> &Argv, bool MarkEOLs = false,
-    bool RelativeNames = false, bool ExpandBasePath = false,
-    llvm::Optional<llvm::StringRef> CurrentDir = llvm::None);
+/// A convenience helper which supports the typical use case of expansion
+/// function call.
+inline bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
+                                SmallVectorImpl<const char *> &Argv) {
+  ExpansionContext ECtx(Saver.getAllocator(), Tokenizer);
+  return ECtx.expandResponseFiles(Argv);
+}
 
 /// A convenience helper which concatenates the options specified by the
 /// environment variable EnvVar and command line options, then expands response
