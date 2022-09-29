@@ -32,7 +32,7 @@
 // DEFAULT-LINUX-SAME: "-target-feature" "+d"
 // DEFAULT-LINUX-SAME: "-target-feature" "+c"
 
-// RUN: not %clang_cc1 -triple riscv64-unknown-elf -target-feature +e 2>&1 | FileCheck %s -check-prefix=RV64-WITH-E
+// RUN: not %clang -cc1 -triple riscv64-unknown-elf -target-feature +e 2>&1 | FileCheck %s -check-prefix=RV64-WITH-E
 
 // RV64-WITH-E: error: invalid feature combination: standard user-level extension 'e' requires 'rv32'
 
