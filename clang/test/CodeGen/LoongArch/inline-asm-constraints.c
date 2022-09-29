@@ -15,12 +15,24 @@ void test_f(void) {
   asm volatile ("" :: "f"(d));
 }
 
+void test_k(int *p, int idx) {
+// CHECK-LABEL: define{{.*}} void @test_k(ptr noundef %p, i32 noundef{{.*}} %idx)
+// CHECK: call void asm sideeffect "", "*k"(ptr elementtype(i32) %{{.*}})
+  asm volatile("" :: "k"(*(p+idx)));
+}
+
 void test_l(void) {
 // CHECK-LABEL: define{{.*}} void @test_l()
 // CHECK: call void asm sideeffect "", "l"(i32 32767)
   asm volatile ("" :: "l"(32767));
 // CHECK: call void asm sideeffect "", "l"(i32 -32768)
   asm volatile ("" :: "l"(-32768));
+}
+
+void test_m(int *p) {
+// CHECK-LABEL: define{{.*}} void @test_m(ptr noundef %p)
+// CHECK: call void asm sideeffect "", "*m"(ptr nonnull elementtype(i32) %{{.*}})
+  asm volatile("" :: "m"(*(p+4)));
 }
 
 void test_I(void) {
@@ -37,4 +49,16 @@ void test_K(void) {
   asm volatile ("" :: "K"(4095));
 // CHECK: call void asm sideeffect "", "K"(i32 0)
   asm volatile ("" :: "K"(0));
+}
+
+void test_ZB(int *p) {
+// CHECK-LABEL: define{{.*}} void @test_ZB(ptr noundef %p)
+// CHECK: call void asm sideeffect "", "*^ZB"(ptr elementtype(i32) %p)
+  asm volatile ("" :: "ZB"(*p));
+}
+
+void test_ZC(int *p) {
+// CHECK-LABEL: define{{.*}} void @test_ZC(ptr noundef %p)
+// CHECK: call void asm sideeffect "", "*^ZC"(ptr elementtype(i32) %p)
+  asm volatile ("" :: "ZC"(*p));
 }

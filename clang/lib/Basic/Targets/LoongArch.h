@@ -55,6 +55,7 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
+  std::string convertConstraint(const char *&Constraint) const override;
 
   bool hasBitIntType() const override { return true; }
 };
