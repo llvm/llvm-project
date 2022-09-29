@@ -21,7 +21,7 @@ namespace interp {
 class Program;
 
 /// Structure/Class descriptor.
-class Record {
+class Record final {
 public:
   /// Describes a record field.
   struct Field {

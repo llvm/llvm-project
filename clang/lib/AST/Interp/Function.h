@@ -29,7 +29,7 @@ enum PrimType : uint32_t;
 /// Describes a scope block.
 ///
 /// The block gathers all the descriptors of the locals defined in this block.
-class Scope {
+class Scope final {
 public:
   /// Information about a local's storage.
   struct Local {
@@ -56,7 +56,7 @@ private:
 ///
 /// Contains links to the bytecode of the function, as well as metadata
 /// describing all arguments and stack-local variables.
-class Function {
+class Function final {
 public:
   using ParamDescriptor = std::pair<PrimType, Descriptor *>;
 

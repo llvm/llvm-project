@@ -53,7 +53,7 @@ template <> struct Repr<64, true> { using Type = int64_t; };
 /// These wrappers are required to shared an interface between APSint and
 /// builtin primitive numeral types, while optimising for storage and
 /// allowing methods operating on primitive type to compile to fast code.
-template <unsigned Bits, bool Signed> class Integral {
+template <unsigned Bits, bool Signed> class Integral final {
 private:
   template <unsigned OtherBits, bool OtherSigned> friend class Integral;
 
