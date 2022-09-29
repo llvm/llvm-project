@@ -29,7 +29,12 @@ namespace mlir {
 namespace sparse_tensor {
 namespace detail {
 
-/// A version of `operator*` on `uint64_t` which checks for overflows.
+// TODO: would be better to use various architectures' intrinsics to
+// detect the overflow directly, instead of doing the assertion beforehand
+// (which requires an expensive division).
+//
+/// A version of `operator*` on `uint64_t` which guards against overflows
+/// (when assertions are enabled).
 inline uint64_t checkedMul(uint64_t lhs, uint64_t rhs) {
   assert((lhs == 0 || rhs <= std::numeric_limits<uint64_t>::max() / lhs) &&
          "Integer overflow");

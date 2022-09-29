@@ -45,11 +45,14 @@ namespace sparse_tensor {
 class SparseTensorFile final {
 public:
   enum class ValueKind {
+    // The value before calling `readHeader`.
     kInvalid = 0,
+    // Values that can be set by `readMMEHeader`.
     kPattern = 1,
     kReal = 2,
     kInteger = 3,
     kComplex = 4,
+    // The value set by `readExtFROSTTHeader`.
     kUndefined = 5
   };
 
@@ -80,6 +83,7 @@ public:
 
   ValueKind getValueKind() const { return valueKind_; }
 
+  /// Checks if a header has been successfully read.
   bool isValid() const { return valueKind_ != ValueKind::kInvalid; }
 
   /// Gets the MME "pattern" property setting.  Is only valid after
@@ -125,7 +129,13 @@ public:
   void assertMatchesShape(uint64_t rank, const uint64_t *shape) const;
 
 private:
+  /// Read the MME header of a general sparse matrix of type real.
   void readMMEHeader();
+
+  /// Read the "extended" FROSTT header. Although not part of the
+  /// documented format, we assume that the file starts with optional
+  /// comments followed by two lines that define the rank, the number of
+  /// nonzeros, and the dimensions sizes (one per rank) of the sparse tensor.
   void readExtFROSTTHeader();
 
   static constexpr int kColWidth = 1025;
@@ -137,6 +147,7 @@ private:
   char line[kColWidth];
 };
 
+//===----------------------------------------------------------------------===//
 namespace detail {
 
 // Adds a value to a tensor in coordinate scheme. If is_symmetric_value is true,
@@ -153,8 +164,8 @@ inline void addValue(T *coo, V value, const std::vector<uint64_t> indices,
     coo->add({indices[1], indices[0]}, value);
 }
 
-// Reads an element of a complex type for the current indices in coordinate
-// scheme.
+/// Reads an element of a complex type for the current indices in
+/// coordinate scheme.
 template <typename V>
 inline void readCOOValue(SparseTensorCOO<std::complex<V>> *coo,
                          const std::vector<uint64_t> indices, char **linePtr,

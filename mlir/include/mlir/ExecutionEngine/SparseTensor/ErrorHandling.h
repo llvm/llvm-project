@@ -28,11 +28,12 @@
 #include <cstdio>
 #include <cstdlib>
 
-// This macro helps minimize repetition of this idiom, as well as ensuring
-// we have some additional output indicating where the error is coming from.
-// (Since `fprintf` doesn't provide a stacktrace, this helps make it easier
-// to track down whether an error is coming from our code vs somewhere else
-// in MLIR.)
+/// This macro helps minimize repetition of the printf-and-exit idiom,
+/// as well as ensuring that we print some additional output indicating
+/// where the error is coming from--- to make it easier to determine
+/// whether some particular error is coming from the runtime library's
+/// code vs from somewhere else in the MLIR stack.  (Since that can be
+/// hard to determine without the stacktraces provided by assertion failures.)
 #define MLIR_SPARSETENSOR_FATAL(...)                                           \
   do {                                                                         \
     fprintf(stderr, "SparseTensorUtils: " __VA_ARGS__);                        \
