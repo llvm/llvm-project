@@ -16,7 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/ExecutionEngine/SparseTensorUtils.h"
+#include "mlir/ExecutionEngine/SparseTensor/Enums.h"
 #include "mlir/IR/Builders.h"
 
 namespace mlir {
