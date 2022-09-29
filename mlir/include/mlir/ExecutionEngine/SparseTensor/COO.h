@@ -48,6 +48,26 @@ struct Element final {
   V value;
 };
 
+/// Closure object for `operator<` on `Element` with a given rank.
+template <typename V>
+struct ElementLT final {
+  ElementLT(uint64_t rank) : rank(rank) {}
+
+  /// Compare two elements a la `operator<`.
+  ///
+  /// Precondition: the elements must both be valid for `rank`.
+  bool operator()(const Element<V> &e1, const Element<V> &e2) const {
+    for (uint64_t d = 0; d < rank; ++d) {
+      if (e1.indices[d] == e2.indices[d])
+        continue;
+      return e1.indices[d] < e2.indices[d];
+    }
+    return false;
+  }
+
+  const uint64_t rank;
+};
+
 /// The type of callback functions which receive an element.  We avoid
 /// packaging the coordinates and value together as an `Element` object
 /// because this helps keep code somewhat cleaner.
@@ -64,7 +84,8 @@ template <typename V>
 class SparseTensorCOO final {
 public:
   SparseTensorCOO(const std::vector<uint64_t> &dimSizes, uint64_t capacity)
-      : dimSizes(dimSizes) {
+      : dimSizes(dimSizes), isSorted(true), iteratorLocked(false),
+        iteratorPos(0) {
     if (capacity) {
       elements.reserve(capacity);
       indices.reserve(capacity * getRank());
@@ -100,6 +121,9 @@ public:
   /// Get the elements array.
   const std::vector<Element<V>> &getElements() const { return elements; }
 
+  /// Returns the `operator<` closure object for the COO's element type.
+  ElementLT<V> getElementLT() const { return ElementLT<V>(getRank()); }
+
   /// Adds an element to the tensor.  This method does not check whether
   /// `ind` is already associated with a value, it adds it regardless.
   /// Resolving such conflicts is left up to clients of the iterator
@@ -130,8 +154,11 @@ public:
         elements[i].indices = newBase + (elements[i].indices - base);
       base = newBase;
     }
-    // Add element as (pointer into shared index pool, value) pair.
-    elements.emplace_back(base + size, val);
+    // Add the new element and update the sorted bit.
+    Element<V> addedElem(base + size, val);
+    if (!elements.empty() && isSorted)
+      isSorted = getElementLT()(elements.back(), addedElem);
+    elements.push_back(addedElem);
   }
 
   /// Sorts elements lexicographically by index.  If an index is mapped to
@@ -140,18 +167,10 @@ public:
   /// Asserts: is not in iterator mode.
   void sort() {
     assert(!iteratorLocked && "Attempt to sort() after startIterator()");
-    // TODO: we may want to cache an `isSorted` bit, to avoid
-    // unnecessary/redundant sorting.
-    uint64_t rank = getRank();
-    std::sort(elements.begin(), elements.end(),
-              [rank](const Element<V> &e1, const Element<V> &e2) {
-                for (uint64_t r = 0; r < rank; ++r) {
-                  if (e1.indices[r] == e2.indices[r])
-                    continue;
-                  return e1.indices[r] < e2.indices[r];
-                }
-                return false;
-              });
+    if (isSorted)
+      return;
+    std::sort(elements.begin(), elements.end(), getElementLT());
+    isSorted = true;
   }
 
   /// Switch into iterator mode.  If already in iterator mode, then
@@ -177,8 +196,9 @@ private:
   const std::vector<uint64_t> dimSizes; // per-dimension sizes
   std::vector<Element<V>> elements;     // all COO elements
   std::vector<uint64_t> indices;        // shared index pool
-  bool iteratorLocked = false;
-  unsigned iteratorPos = 0;
+  bool isSorted;
+  bool iteratorLocked;
+  unsigned iteratorPos;
 };
 
 } // namespace sparse_tensor
