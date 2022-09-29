@@ -914,27 +914,55 @@ following the rules described in the next paragraphs. Loading default
 configuration files can be disabled entirely via passing
 the ``--no-default-config`` flag.
 
-The name of the default configuration file is deduced from the clang executable
-name.  For example, if the Clang executable is named ``armv7l-clang`` (it may
-be a symbolic link to ``clang``), then Clang will search for file
-``armv7l.cfg`` in the directory where Clang resides.
+First, the algorithm searches for a configuration file named
+``<triple>-<driver>.cfg`` where `triple` is the triple for the target being
+built for, and `driver` is the name of the currently used driver. The algorithm
+first attempts to use the canonical name for the driver used, then falls back
+to the one found in the executable name.
 
-If a driver mode is specified in invocation, Clang tries to find a file specific
-for the specified mode. For example, if the executable file is named
-``x86_64-clang-cl``, Clang first looks for ``x86_64-clang-cl.cfg`` and if it is
-not found, looks for ``x86_64.cfg``.
+The following canonical driver names are used:
 
-If the command line contains options that effectively change target architecture
-(these are ``-m32``, ``-EL``, and some others) and the configuration file starts
-with an architecture name, Clang tries to load the configuration file for the
-effective architecture. For example, invocation:
+- ``clang`` for the ``gcc`` driver (used to compile C programs)
+- ``clang++`` for the ``gxx`` driver (used to compile C++ programs)
+- ``clang-cpp`` for the ``cpp`` driver (pure preprocessor)
+- ``clang-cl`` for the ``cl`` driver
+- ``flang`` for the ``flang`` driver
+- ``clang-dxc`` for the ``dxc`` driver
 
-::
+For example, when calling ``x86_64-pc-linux-gnu-clang-g++``,
+the driver will first attempt to use the configuration file named::
 
-    x86_64-clang -m32 abc.c
+    x86_64-pc-linux-gnu-clang++.cfg
 
-causes Clang search for a file ``i368.cfg`` first, and if no such file is found,
-Clang looks for the file ``x86_64.cfg``.
+If this file is not found, it will attempt to use the name found
+in the executable instead::
+
+    x86_64-pc-linux-gnu-clang-g++.cfg
+
+Note that options such as ``--driver-mode=``, ``--target=``, ``-m32`` affect
+the search algorithm. For example, the aforementioned executable called with
+``-m32`` argument will instead search for::
+
+    i386-pc-linux-gnu-clang++.cfg
+
+If none of the aforementioned files are found, the driver will instead search
+for separate driver and target configuration files and attempt to load both.
+The former is named ``<driver>.cfg`` while the latter is named
+``<triple>.cfg``. Similarly to the previous variants, the canonical driver name
+will be preferred, and the compiler will fall back to the actual name.
+
+For example, ``x86_64-pc-linux-gnu-clang-g++`` will attempt to load two
+configuration files named respectively::
+
+    clang++.cfg
+    x86_64-pc-linux-gnu.cfg
+
+with fallback to trying::
+
+    clang-g++.cfg
+    x86_64-pc-linux-gnu.cfg
+
+It is not an error if either of these files is not found.
 
 The configuration file consists of command-line options specified on one or
 more lines. Lines composed of whitespace characters only are ignored as well as
