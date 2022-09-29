@@ -3,12 +3,12 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple riscv32 -target-feature +f -target-feature +d \
 // RUN:   -target-feature +v -target-feature +zfh -target-feature +experimental-zvfh \
 // RUN:   -disable-O0-optnone \
-// RUN:   -fallow-half-arguments-and-returns -emit-llvm %s -o - \
+// RUN:   -emit-llvm %s -o - \
 // RUN:   | opt -S -mem2reg | FileCheck --check-prefix=CHECK-RV32 %s
 // RUN: %clang_cc1 -no-opaque-pointers -triple riscv64 -target-feature +f -target-feature +d \
 // RUN:   -target-feature +v -target-feature +zfh -target-feature +experimental-zvfh \
 // RUN:   -disable-O0-optnone \
-// RUN:   -fallow-half-arguments-and-returns -emit-llvm %s -o - \
+// RUN:   -emit-llvm %s -o - \
 // RUN:   | opt -S -mem2reg | FileCheck --check-prefix=CHECK-RV64 %s
 
 #include <riscv_vector.h>

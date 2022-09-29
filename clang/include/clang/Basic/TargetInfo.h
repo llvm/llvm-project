@@ -201,6 +201,7 @@ protected:
   bool NoAsmVariants;  // True if {|} are normal characters.
   bool HasLegalHalfType; // True if the backend supports operations on the half
                          // LLVM IR type.
+  bool HalfArgsAndReturns;
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
@@ -620,6 +621,9 @@ public:
 
   /// Determine whether _Float16 is supported on this target.
   virtual bool hasLegalHalfType() const { return HasLegalHalfType; }
+
+  /// Whether half args and returns are supported.
+  virtual bool allowHalfArgsAndReturns() const { return HalfArgsAndReturns; }
 
   /// Determine whether the __float128 type is supported on this target.
   virtual bool hasFloat128Type() const { return HasFloat128; }
