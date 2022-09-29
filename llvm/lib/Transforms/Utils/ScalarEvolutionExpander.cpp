@@ -1751,20 +1751,16 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty) {
       // would accept a insertion point and return an LCSSA phi for that
       // insertion point, so there is no need to insert & remove the temporary
       // instruction.
-      Instruction *Tmp;
+      Type *ToTy;
       if (Inst->getType()->isIntegerTy())
-        Tmp = cast<Instruction>(Builder.CreateIntToPtr(
-            Inst, Inst->getType()->getPointerTo(), "tmp.lcssa.user"));
-      else {
-        assert(Inst->getType()->isPointerTy());
-        Tmp = cast<Instruction>(Builder.CreatePtrToInt(
-            Inst, Type::getInt32Ty(Inst->getContext()), "tmp.lcssa.user"));
-      }
+        ToTy = Inst->getType()->getPointerTo();
+      else
+        ToTy = Type::getInt32Ty(Inst->getContext());
+      Instruction *Tmp = CastInst::CreateBitOrPointerCast(
+          Inst, ToTy, "tmp.lcssa.user", &*Builder.GetInsertPoint());
       V = fixupLCSSAFormFor(Tmp, 0);
 
       // Clean up temporary instruction.
-      InsertedValues.erase(Tmp);
-      InsertedPostIncValues.erase(Tmp);
       Tmp->eraseFromParent();
     }
   }
