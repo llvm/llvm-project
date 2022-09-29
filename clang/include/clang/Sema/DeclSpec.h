@@ -2766,6 +2766,10 @@ struct LambdaIntroducer {
   LambdaIntroducer()
     : Default(LCD_None) {}
 
+  bool hasLambdaCapture() const {
+    return Captures.size() > 0 || Default != LCD_None;
+  }
+
   /// Append a capture in a lambda introducer.
   void addCapture(LambdaCaptureKind Kind,
                   SourceLocation Loc,
