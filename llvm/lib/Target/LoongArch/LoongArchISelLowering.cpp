@@ -544,8 +544,24 @@ void LoongArchTargetLowering::ReplaceNodeResults(
            "Unexpected custom legalisation");
     SDValue Src = N->getOperand(0);
     EVT VT = EVT::getFloatingPointVT(N->getValueSizeInBits(0));
-    SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, VT, Src);
-    Results.push_back(DAG.getNode(ISD::BITCAST, DL, N->getValueType(0), Dst));
+    if (getTypeAction(*DAG.getContext(), Src.getValueType()) !=
+        TargetLowering::TypeSoftenFloat) {
+      SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, VT, Src);
+      Results.push_back(DAG.getNode(ISD::BITCAST, DL, N->getValueType(0), Dst));
+      return;
+    }
+    // If the FP type needs to be softened, emit a library call using the 'si'
+    // version. If we left it to default legalization we'd end up with 'di'.
+    RTLIB::Libcall LC;
+    LC = RTLIB::getFPTOSINT(Src.getValueType(), N->getValueType(0));
+    MakeLibCallOptions CallOptions;
+    EVT OpVT = Src.getValueType();
+    CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0), true);
+    SDValue Chain = SDValue();
+    SDValue Result;
+    std::tie(Result, Chain) =
+        makeLibCall(DAG, LC, N->getValueType(0), Src, CallOptions, DL, Chain);
+    Results.push_back(Result);
     break;
   }
   case ISD::BITCAST: {
