@@ -704,7 +704,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   int ImmLitIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::imm);
-  if (Res && ImmLitIdx != -1)
+  bool isVOP2 = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP2;
+  if (Res && ImmLitIdx != -1 && (isVOP2 || AMDGPU::isVOPD(MI.getOpcode())))
     Res = convertFMAanyK(MI, ImmLitIdx);
 
   // if the opcode was not recognized we'll assume a Size of 4 bytes
