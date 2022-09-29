@@ -1634,10 +1634,18 @@ void UnwrappedLineParser::parseStructuralElement(
       parseJavaScriptEs6ImportExport();
       return;
     }
-    if (!Style.isCpp())
-      break;
-    // Handle C++ "(inline|export) namespace".
-    [[fallthrough]];
+    if (Style.isCpp()) {
+      nextToken();
+      if (FormatTok->is(Keywords.kw_import)) {
+        parseModuleImport();
+        return;
+      }
+      if (FormatTok->is(tok::kw_namespace)) {
+        parseNamespace();
+        return;
+      }
+    }
+    break;
   case tok::kw_inline:
     nextToken();
     if (FormatTok->is(tok::kw_namespace)) {
