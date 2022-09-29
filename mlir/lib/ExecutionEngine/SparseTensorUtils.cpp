@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a light-weight runtime support library that is useful
-// for sparse tensor manipulations. The functionality provided in this library
-// is meant to simplify benchmarking, testing, and debugging MLIR code that
-// operates on sparse tensors. The provided functionality is **not** part
-// of core MLIR, however.
+// This file implements a light-weight runtime support library for
+// manipulating sparse tensors from MLIR.  More specifically, it provides
+// C-API wrappers so that MLIR-generated code can call into the C++ runtime
+// support library.  The functionality provided in this library is meant
+// to simplify benchmarking, testing, and debugging of MLIR code operating
+// on sparse tensors.  However, the provided functionality is **not**
+// part of core MLIR itself.
 //
 // The following memory-resident sparse storage schemes are supported:
 //
@@ -57,9 +59,18 @@
 
 using namespace mlir::sparse_tensor;
 
+//===----------------------------------------------------------------------===//
+//
+// Implementation details for public functions, which don't have a good
+// place to live in the C++ library this file is wrapping.
+//
+//===----------------------------------------------------------------------===//
+
 namespace {
 
 /// Initializes sparse tensor from an external COO-flavored format.
+/// Used by `IMPL_CONVERTTOMLIRSPARSETENSOR`.
+// TODO: generalize beyond 64-bit indices.
 template <typename V>
 static SparseTensorStorage<uint64_t, uint64_t, V> *
 toMLIRSparseTensor(uint64_t rank, uint64_t nse, const uint64_t *shape,
@@ -98,6 +109,14 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, const uint64_t *shape,
 }
 
 /// Converts a sparse tensor to an external COO-flavored format.
+/// Used by `IMPL_CONVERTFROMMLIRSPARSETENSOR`.
+//
+// TODO: Currently, values are copied from SparseTensorStorage to
+// SparseTensorCOO, then to the output.  We may want to reduce the number
+// of copies.
+//
+// TODO: generalize beyond 64-bit indices, no dim ordering, all dimensions
+// compressed
 template <typename V>
 static void
 fromMLIRSparseTensor(const SparseTensorStorage<uint64_t, uint64_t, V> *tensor,
@@ -490,7 +509,6 @@ void readSparseTensorShape(char *filename, std::vector<uint64_t> *out) {
 }
 
 // We can't use `static_cast` here because `DimLevelType` is an enum-class.
-// TODO: generalize beyond 64-bit indices.
 #define IMPL_CONVERTTOMLIRSPARSETENSOR(VNAME, V)                               \
   void *convertToMLIRSparseTensor##VNAME(                                      \
       uint64_t rank, uint64_t nse, uint64_t *shape, V *values,                 \
@@ -501,12 +519,6 @@ void readSparseTensorShape(char *filename, std::vector<uint64_t> *out) {
 FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
 #undef IMPL_CONVERTTOMLIRSPARSETENSOR
 
-// TODO: Currently, values are copied from SparseTensorStorage to
-// SparseTensorCOO, then to the output.  We may want to reduce the number
-// of copies.
-//
-// TODO: generalize beyond 64-bit indices, no dim ordering, all dimensions
-// compressed
 #define IMPL_CONVERTFROMMLIRSPARSETENSOR(VNAME, V)                             \
   void convertFromMLIRSparseTensor##VNAME(void *tensor, uint64_t *pRank,       \
                                           uint64_t *pNse, uint64_t **pShape,   \

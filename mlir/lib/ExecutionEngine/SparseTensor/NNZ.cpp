@@ -20,6 +20,13 @@
 
 using namespace mlir::sparse_tensor;
 
+//===----------------------------------------------------------------------===//
+/// Allocate the statistics structure for the desired sizes and
+/// sparsity (in the target tensor's storage-order).  This constructor
+/// does not actually populate the statistics, however; for that see
+/// `initialize`.
+///
+/// Precondition: `dimSizes` must not contain zeros.
 SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
                                  const std::vector<DimLevelType> &sparsity)
     : dimSizes(dimSizes), dimTypes(sparsity), nnz(getRank()) {
@@ -51,6 +58,10 @@ SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
   }
 }
 
+/// Lexicographically enumerates all indicies for dimensions strictly
+/// less than `stopDim`, and passes their nnz statistic to the callback.
+/// Since our use-case only requires the statistic not the coordinates
+/// themselves, we do not bother to construct those coordinates.
 void SparseTensorNNZ::forallIndices(uint64_t stopDim,
                                     SparseTensorNNZ::NNZConsumer yield) const {
   assert(stopDim < getRank() && "Dimension out of bounds");
@@ -59,6 +70,11 @@ void SparseTensorNNZ::forallIndices(uint64_t stopDim,
   forallIndices(yield, stopDim, 0, 0);
 }
 
+/// Adds a new element (i.e., increment its statistics).  We use
+/// a method rather than inlining into the lambda in `initialize`,
+/// to avoid spurious templating over `V`.  And this method is private
+/// to avoid needing to re-assert validity of `ind` (which is guaranteed
+/// by `forallElements`).
 void SparseTensorNNZ::add(const std::vector<uint64_t> &ind) {
   uint64_t parentPos = 0;
   for (uint64_t rank = getRank(), r = 0; r < rank; ++r) {
@@ -68,6 +84,7 @@ void SparseTensorNNZ::add(const std::vector<uint64_t> &ind) {
   }
 }
 
+/// Recursive component of the public `forallIndices`.
 void SparseTensorNNZ::forallIndices(SparseTensorNNZ::NNZConsumer yield,
                                     uint64_t stopDim, uint64_t parentPos,
                                     uint64_t d) const {

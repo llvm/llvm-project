@@ -86,7 +86,7 @@ public:
   /// Get the rank of the tensor.
   uint64_t getRank() const { return dimSizes.size(); }
 
-  /// Getter for the dimension-sizes array, in storage-order.
+  /// Get the dimension-sizes array, in storage-order.
   const std::vector<uint64_t> &getDimSizes() const { return dimSizes; }
 
   /// Safely lookup the size of the given (storage-order) dimension.
@@ -95,11 +95,11 @@ public:
     return dimSizes[d];
   }
 
-  /// Getter for the "reverse" permutation, which maps this object's
+  /// Get the "reverse" permutation, which maps this object's
   /// storage-order to the tensor's semantic-order.
   const std::vector<uint64_t> &getRev() const { return rev; }
 
-  /// Getter for the dimension-types array, in storage-order.
+  /// Get the dimension-types array, in storage-order.
   const std::vector<DimLevelType> &getDimTypes() const { return dimTypes; }
 
   /// Safely check if the (storage-order) dimension uses dense storage.
@@ -171,11 +171,13 @@ public:
   FOREVERY_V(DECL_NEWENUMERATOR)
 #undef DECL_NEWENUMERATOR
 
-  /// Overhead storage.
+  /// Pointers-overhead storage.
 #define DECL_GETPOINTERS(PNAME, P)                                             \
   virtual void getPointers(std::vector<P> **, uint64_t);
   FOREVERY_FIXED_O(DECL_GETPOINTERS)
 #undef DECL_GETPOINTERS
+
+  /// Indices-overhead storage.
 #define DECL_GETINDICES(INAME, I)                                              \
   virtual void getIndices(std::vector<I> **, uint64_t);
   FOREVERY_FIXED_O(DECL_GETINDICES)
@@ -213,11 +215,12 @@ template <typename P, typename I, typename V>
 class SparseTensorEnumerator;
 
 /// A memory-resident sparse tensor using a storage scheme based on
-/// per-dimension sparse/dense annotations. This data structure provides a
-/// bufferized form of a sparse tensor type. In contrast to generating setup
-/// methods for each differently annotated sparse tensor, this method provides
-/// a convenient "one-size-fits-all" solution that simply takes an input tensor
-/// and annotations to implement all required setup in a general manner.
+/// per-dimension sparse/dense annotations.  This data structure provides
+/// a bufferized form of a sparse tensor type.  In contrast to generating
+/// setup methods for each differently annotated sparse tensor, this
+/// method provides a convenient "one-size-fits-all" solution that simply
+/// takes an input tensor and annotations to implement all required setup
+/// in a general manner.
 template <typename P, typename I, typename V>
 class SparseTensorStorage final : public SparseTensorStorageBase {
   /// Private constructor to share code between the other constructors.
@@ -339,6 +342,9 @@ public:
       endPath(0);
   }
 
+  /// Allocate a new enumerator for this classes `<P,I,V>` types and
+  /// erase the `<P,I>` parts from the type.  Callers must make sure to
+  /// delete the enumerator when they're done with it.
   void newEnumerator(SparseTensorEnumeratorBase<V> **out, uint64_t rank,
                      const uint64_t *perm) const final {
     *out = new SparseTensorEnumerator<P, I, V>(*this, rank, perm);
