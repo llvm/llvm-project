@@ -84,9 +84,9 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   OpBuilder::InsertionGuard guard(b);
   b.setInsertionPoint(op);
 
-  std::pair<int64_t, unsigned> control = controlSplitReductionFn(op);
-  int64_t ratio = control.first;
-  unsigned insertSplitDimension = control.second;
+  SplitReductionOptions control = controlSplitReductionFn(op);
+  int64_t ratio = control.ratio;
+  unsigned insertSplitDimension = control.index;
   if (ratio <= 1)
     return b.notifyMatchFailure(op, "split ratio needs to be greater than 1");
 
@@ -125,17 +125,32 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     for (unsigned idx : llvm::seq<unsigned>(0, map.getNumResults())) {
       unsigned dim = map.getDimPosition(idx);
       if (reductionDim == dim) {
-        newShape.push_back(ratio);
-        newShape.push_back(op.getShape(operand)[idx] / ratio);
+        if (control.innerParallel) {
+          newShape.push_back(op.getShape(operand)[idx] / ratio);
+          newShape.push_back(ratio);
+        } else {
+          newShape.push_back(ratio);
+          newShape.push_back(op.getShape(operand)[idx] / ratio);
+        }
         reassociation.push_back({index++, index++});
-        exprs.push_back(b.getAffineDimExpr(insertSplitDimension));
-        exprs.push_back(
-            b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
+        if (control.innerParallel) {
+          exprs.push_back(b.getAffineDimExpr(reductionDim));
+          exprs.push_back(b.getAffineDimExpr(reductionDim + 1));
+        } else {
+          exprs.push_back(b.getAffineDimExpr(insertSplitDimension));
+          exprs.push_back(
+              b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
+        }
         continue;
       }
       newShape.push_back(op.getShape(operand)[idx]);
-      exprs.push_back(
-          b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
+      if (control.innerParallel) {
+        exprs.push_back(
+            b.getAffineDimExpr(dim <= reductionDim ? dim : dim + 1));
+      } else {
+        exprs.push_back(
+            b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
+      }
       reassociation.push_back({index++});
     }
     newMaps.push_back(
@@ -163,14 +178,23 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
        llvm::seq<unsigned>(0, oldOutputMap.getNumResults() + 1)) {
     if (idx == insertSplitDimension) {
       newOutputShape.push_back(ratio);
-      outputExpr.push_back(b.getAffineDimExpr(insertSplitDimension));
+      if (control.innerParallel) {
+        outputExpr.push_back(b.getAffineDimExpr(reductionDim + 1));
+      } else {
+        outputExpr.push_back(b.getAffineDimExpr(insertSplitDimension));
+      }
       continue;
     }
-    unsigned oldDim = idx < insertSplitDimension ? idx : idx - 1;
-    newOutputShape.push_back(oldShape[oldDim]);
-    unsigned dim = oldOutputMap.getDimPosition(oldDim);
-    outputExpr.push_back(
-        b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
+    unsigned oldIdx = idx < insertSplitDimension ? idx : idx - 1;
+    newOutputShape.push_back(oldShape[oldIdx]);
+    unsigned dim = oldOutputMap.getDimPosition(oldIdx);
+    if (control.innerParallel) {
+      outputExpr.push_back(
+          b.getAffineDimExpr(dim <= reductionDim ? dim : dim + 1));
+    } else {
+      outputExpr.push_back(
+          b.getAffineDimExpr(dim < insertSplitDimension ? dim : dim + 1));
+    }
   }
   Value initOrAllocTensor;
   if (useAlloc) {
@@ -192,9 +216,11 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
                                    op.getContext()));
   SmallVector<StringRef> newIteratorTypes;
   for (auto &it : llvm::enumerate(op.iterator_types())) {
-    if (insertSplitDimension == it.index())
+    if (insertSplitDimension == it.index() && !control.innerParallel)
       newIteratorTypes.push_back(getParallelIteratorTypeName());
     newIteratorTypes.push_back(it.value().cast<StringAttr>().getValue());
+    if (insertSplitDimension == it.index() && control.innerParallel)
+      newIteratorTypes.push_back(getParallelIteratorTypeName());
   }
   // Create the new op matching the original op with an extra parallel
   // dimension.
@@ -275,9 +301,12 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   b.setInsertionPoint(op);
 
   // Matcher part, enforce preconditions.
-  std::pair<int64_t, unsigned> control = controlSplitReductionFn(op);
-  int64_t splitFactor = control.first;
-  unsigned insertSplitDimension = control.second;
+  SplitReductionOptions control = controlSplitReductionFn(op);
+  if (control.innerParallel)
+    return b.notifyMatchFailure(op, "innerParallel not supported");
+
+  int64_t splitFactor = control.ratio;
+  unsigned insertSplitDimension = control.index;
   if (splitFactor <= 1)
     return b.notifyMatchFailure(op, "split factor needs to be greater than 1");
 

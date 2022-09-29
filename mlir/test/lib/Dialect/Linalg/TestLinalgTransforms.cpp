@@ -103,6 +103,10 @@ struct TestLinalgTransforms
       *this, "test-split-reduction",
       llvm::cl::desc("Test split reduction transformation"),
       llvm::cl::init(false)};
+  Option<bool> testSplitReductionInnerParallel{
+      *this, "test-split-reduction-inner-parallel",
+      llvm::cl::desc("Test split reduction with inner parallel transformation"),
+      llvm::cl::init(false)};
   ListOption<int64_t> peeledLoops{
       *this, "peeled-loops",
       llvm::cl::desc("Loops to be peeled when test-tile-pattern")};
@@ -499,7 +503,21 @@ static void applySplitReduction(func::FuncOp funcOp) {
       patterns,
       [](LinalgOp op) {
         unsigned insertDimIndex = op.getNumLoops() - 1;
-        return std::make_pair(4, insertDimIndex);
+        return SplitReductionOptions{4, insertDimIndex, false};
+      },
+      LinalgTransformationFilter(
+          ArrayRef<StringAttr>{},
+          StringAttr::get(funcOp.getContext(), "SPLIT")));
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
+static void applySplitReductionInnerParallel(func::FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  linalg::populateSplitReductionPattern(
+      patterns,
+      [](LinalgOp op) {
+        unsigned insertDimIndex = op.getNumLoops() - 1;
+        return SplitReductionOptions{4, insertDimIndex, true};
       },
       LinalgTransformationFilter(
           ArrayRef<StringAttr>{},
@@ -560,6 +578,8 @@ void TestLinalgTransforms::runOnOperation() {
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
   if (testSplitReduction)
     return applySplitReduction(getOperation());
+  if (testSplitReductionInnerParallel)
+    return applySplitReductionInnerParallel(getOperation());
   if (testBubbleUpExtractSliceOpPattern)
     return applyBubbleUpExtractSliceOpPattern(getOperation());
   if (testSwapExtractSliceWithFill)

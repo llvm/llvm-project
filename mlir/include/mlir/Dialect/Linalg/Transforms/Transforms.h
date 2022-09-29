@@ -1363,14 +1363,22 @@ public:
   }
 };
 
-/// Function signature to control reduction splitting. This returns a pair
-/// containing a ratio and a dimension index. The ratio is used to split the
-/// reduction dimension. The dimension index is used to control where the extra
-/// dimension is added to the intermediate tensor shape. If the ratio value is
-/// less or equal to 1 then nothing will be done.
+/// Split Reduction options.
+struct SplitReductionOptions {
+  // Ratio used to split the reduction dimension.  If the ratio is <= 1, nothing
+  // will be done.
+  int64_t ratio = 0;
+  // Index where the extra dimension is added to the intermediate tensor shape.
+  unsigned index = 0;
+  // If the inner dimension after splitting is parallel or reduction.
+  bool innerParallel = false;
+};
+
+/// Function signature to control reduction splitting. This returns
+/// `SplitReductionOptions`.
 // TODO: don't use unsigned unless doing bit manipulation.
 using ControlSplitReductionFn =
-    std::function<std::pair<int64_t, unsigned>(LinalgOp op)>;
+    std::function<SplitReductionOptions(LinalgOp op)>;
 
 /// Patterns to apply `splitReduction` below.
 void populateSplitReductionPattern(
