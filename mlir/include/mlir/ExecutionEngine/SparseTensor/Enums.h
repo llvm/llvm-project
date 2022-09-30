@@ -157,6 +157,63 @@ enum class MLIR_SPARSETENSOR_EXPORT DimLevelType : uint8_t {
   kSingletonNuNo = 8,
 };
 
+/// Check if the `DimLevelType` is dense.
+constexpr MLIR_SPARSETENSOR_EXPORT bool isDenseDLT(DimLevelType dlt) {
+  return dlt == DimLevelType::kDense;
+}
+
+/// Check if the `DimLevelType` is compressed (regardless of properties).
+constexpr MLIR_SPARSETENSOR_EXPORT bool isCompressedDLT(DimLevelType dlt) {
+  switch (dlt) {
+  case DimLevelType::kCompressed:
+  case DimLevelType::kCompressedNu:
+  case DimLevelType::kCompressedNo:
+  case DimLevelType::kCompressedNuNo:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Check if the `DimLevelType` is singleton (regardless of properties).
+constexpr MLIR_SPARSETENSOR_EXPORT bool isSingletonDLT(DimLevelType dlt) {
+  switch (dlt) {
+  case DimLevelType::kSingleton:
+  case DimLevelType::kSingletonNu:
+  case DimLevelType::kSingletonNo:
+  case DimLevelType::kSingletonNuNo:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Check if the `DimLevelType` is ordered (regardless of storage format).
+constexpr MLIR_SPARSETENSOR_EXPORT bool isOrderedDLT(DimLevelType dlt) {
+  switch (dlt) {
+  case DimLevelType::kCompressedNo:
+  case DimLevelType::kCompressedNuNo:
+  case DimLevelType::kSingletonNo:
+  case DimLevelType::kSingletonNuNo:
+    return false;
+  default:
+    return true;
+  }
+}
+
+/// Check if the `DimLevelType` is unique (regardless of storage format).
+constexpr MLIR_SPARSETENSOR_EXPORT bool isUniqueDLT(DimLevelType dlt) {
+  switch (dlt) {
+  case DimLevelType::kCompressedNu:
+  case DimLevelType::kCompressedNuNo:
+  case DimLevelType::kSingletonNu:
+  case DimLevelType::kSingletonNuNo:
+    return false;
+  default:
+    return true;
+  }
+}
+
 } // namespace sparse_tensor
 } // namespace mlir
 
