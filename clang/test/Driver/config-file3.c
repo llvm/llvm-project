@@ -50,48 +50,43 @@
 // RUN: touch %t/testdmode/clang++.cfg
 // RUN: touch %t/testdmode/clang-g++.cfg
 // RUN: touch %t/testdmode/clang.cfg
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1 --implicit-check-not 'Configuration file:'
 //
-// FULL1-NOT: Configuration file:
 // FULL1: Configuration file: {{.*}}/testdmode/x86_64-unknown-linux-gnu-clang++.cfg
-// FULL1-NOT: Configuration file:
 
 //--- -m32 overrides triple.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ -m32 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-I386
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ -m32 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-I386 --implicit-check-not 'Configuration file:'
 //
-// FULL1-I386-NOT: Configuration file:
 // FULL1-I386: Configuration file: {{.*}}/testdmode/i386-unknown-linux-gnu-clang++.cfg
-// FULL1-I386-NOT: Configuration file:
 
 //--- --target= also works for overriding triple.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --target=i386-unknown-linux-gnu --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-I386
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --target=i386-unknown-linux-gnu --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-I386 --implicit-check-not 'Configuration file:'
 
 //--- With --target= + -m64, -m64 takes precedence.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --target=i386-unknown-linux-gnu -m64 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --target=i386-unknown-linux-gnu -m64 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1 --implicit-check-not 'Configuration file:'
 
 //--- i386 prefix also works for 32-bit.
 //
-// RUN: %t/testdmode/i386-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-I386
+// RUN: %t/testdmode/i386-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-I386 --implicit-check-not 'Configuration file:'
 
 //--- i386 prefix + -m64 also works for 64-bit.
 //
-// RUN: %t/testdmode/i386-unknown-linux-gnu-clang-g++ -m64 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1
+// RUN: %t/testdmode/i386-unknown-linux-gnu-clang-g++ -m64 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1 --implicit-check-not 'Configuration file:'
 
 //--- File specified by --config= is loaded after the one inferred from the executable.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --config=i386-qqq.cfg -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix EXPLICIT
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --config=i386-qqq.cfg -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix EXPLICIT --implicit-check-not 'Configuration file:'
 //
 // EXPLICIT: Configuration file: {{.*}}/testdmode/x86_64-unknown-linux-gnu-clang++.cfg
 // EXPLICIT-NEXT: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
 
 //--- --no-default-config --config= loads only specified file.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --no-default-config --config=i386-qqq.cfg -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix EXPLICIT-ONLY
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir=%S/Inputs/config --config-user-dir= --no-default-config --config=i386-qqq.cfg -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix EXPLICIT-ONLY --implicit-check-not 'Configuration file:'
 //
-// EXPLICIT-ONLY-NOT: Configuration file: {{.*}}/testdmode/x86_64-unknown-linux-gnu-clang++.cfg
 // EXPLICIT-ONLY: Configuration file: {{.*}}/Inputs/config/i386-qqq.cfg
 
 //--- --no-default-config disables default filenames.
@@ -102,65 +97,53 @@
 
 //--- --driver-mode= is respected.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --driver-mode=gcc --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-GCC
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --driver-mode=gcc --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-GCC --implicit-check-not 'Configuration file:'
 //
-// FULL1-GCC-NOT: Configuration file:
 // FULL1-GCC: Configuration file: {{.*}}/testdmode/x86_64-unknown-linux-gnu-clang.cfg
-// FULL1-GCC-NOT: Configuration file:
 
 //--- "clang" driver symlink should yield the "*-clang" configuration file.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-GCC
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1-GCC --implicit-check-not 'Configuration file:'
 
 //--- "clang" + --driver-mode= should yield "*-clang++".
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang --driver-mode=g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang --driver-mode=g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1 --implicit-check-not 'Configuration file:'
 
 //--- Clang started via name prefix that is not valid is forcing that prefix instead of target triple.
 //
-// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix QQQ
+// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix QQQ --implicit-check-not 'Configuration file:'
 //
-// QQQ-NOT: Configuration file:
 // QQQ: Configuration file: {{.*}}/testdmode/qqq-clang-g++.cfg
-// QQQ-NOT: Configuration file:
 
 //--- Explicit --target= overrides the triple even with non-standard name prefix.
 //
-// RUN: %t/testdmode/qqq-clang-g++ --target=x86_64-unknown-linux-gnu --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1
+// RUN: %t/testdmode/qqq-clang-g++ --target=x86_64-unknown-linux-gnu --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL1 --implicit-check-not 'Configuration file:'
 
 //--- "x86_64" prefix does not form a valid triple either.
 //
-// RUN: %t/testdmode/x86_64-clang --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix X86_64
+// RUN: %t/testdmode/x86_64-clang --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix X86_64 --implicit-check-not 'Configuration file:'
 //
-// X86_64-NOT: Configuration file:
 // X86_64: Configuration file: {{.*}}/testdmode/x86_64-clang.cfg
-// X86_64-NOT: Configuration file:
 
 //--- Try cheribsd prefix using misordered triple components.
 //
-// RUN: %t/testdmode/cheribsd-riscv64-hybrid-clang++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix CHERIBSD
+// RUN: %t/testdmode/cheribsd-riscv64-hybrid-clang++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix CHERIBSD --implicit-check-not 'Configuration file:'
 //
-// CHERIBSD-NOT: Configuration file:
 // CHERIBSD: Configuration file: {{.*}}/testdmode/cheribsd-riscv64-hybrid-clang++.cfg
-// CHERIBSD-NOT: Configuration file:
 
 //--- Test fallback to x86_64-unknown-linux-gnu-clang-g++.cfg.
 //
 // RUN: rm %t/testdmode/x86_64-unknown-linux-gnu-clang++.cfg
 // RUN: rm %t/testdmode/i386-unknown-linux-gnu-clang++.cfg
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL2
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL2 --implicit-check-not 'Configuration file:'
 //
-// FULL2-NOT: Configuration file:
 // FULL2: Configuration file: {{.*}}/testdmode/x86_64-unknown-linux-gnu-clang-g++.cfg
-// FULL2-NOT: Configuration file:
 
 //--- FULL2 + -m32.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ -m32 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL2-I386
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ -m32 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL2-I386 --implicit-check-not 'Configuration file:'
 //
-// FULL2-I386-NOT: Configuration file:
 // FULL2-I386: Configuration file: {{.*}}/testdmode/i386-unknown-linux-gnu-clang-g++.cfg
-// FULL2-I386-NOT: Configuration file:
 
 //--- Test fallback to x86_64-unknown-linux-gnu-clang.cfg + clang++.cfg.
 //
@@ -171,92 +154,67 @@
 // RUN: rm %t/testdmode/i386-unknown-linux-gnu-clang-g++.cfg
 // RUN: rm %t/testdmode/x86_64-unknown-linux-gnu-clang.cfg
 // RUN: rm %t/testdmode/i386-unknown-linux-gnu-clang.cfg
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL3
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL3 --implicit-check-not 'Configuration file:'
 //
-// FULL3-NOT: Configuration file:
 // FULL3: Configuration file: {{.*}}/testdmode/clang++.cfg
-// FULL3-NOT: Configuration file:
 // FULL3: Configuration file: {{.*}}/testdmode/x86_64-unknown-linux-gnu.cfg
-// FULL3-NOT: Configuration file:
 
 //--- FULL3 + -m32.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ -m32 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL3-I386
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ -m32 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL3-I386 --implicit-check-not 'Configuration file:'
 //
-// FULL3-I386-NOT: Configuration file:
 // FULL3-I386: Configuration file: {{.*}}/testdmode/clang++.cfg
-// FULL3-I386-NOT: Configuration file:
 // FULL3-I386: Configuration file: {{.*}}/testdmode/i386-unknown-linux-gnu.cfg
-// FULL3-I386-NOT: Configuration file:
 
 //--- FULL3 + --driver-mode=.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --driver-mode=gcc --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL3-GCC
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --driver-mode=gcc --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL3-GCC --implicit-check-not 'Configuration file:'
 //
-// FULL3-GCC-NOT: Configuration file:
 // FULL3-GCC: Configuration file: {{.*}}/testdmode/clang.cfg
-// FULL3-GCC-NOT: Configuration file:
 // FULL3-GCC: Configuration file: {{.*}}/testdmode/x86_64-unknown-linux-gnu.cfg
-// FULL3-GCC-NOT: Configuration file:
 
 //--- QQQ fallback.
 //
-// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix QQQ-FALLBACK
+// RUN: %t/testdmode/qqq-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix QQQ-FALLBACK --implicit-check-not 'Configuration file:'
 //
-// QQQ-FALLBACK-NOT: Configuration file:
 // QQQ-FALLBACK: Configuration file: {{.*}}/testdmode/clang++.cfg
-// QQQ-FALLBACK-NOT: Configuration file:
 // QQQ-FALLBACK: Configuration file: {{.*}}/testdmode/qqq.cfg
-// QQQ-FALLBACK-NOT: Configuration file:
 
 //--- "x86_64" falback.
 //
-// RUN: %t/testdmode/x86_64-clang --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix X86_64-FALLBACK
+// RUN: %t/testdmode/x86_64-clang --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix X86_64-FALLBACK --implicit-check-not 'Configuration file:'
 //
-// X86_64-FALLBACK-NOT: Configuration file:
 // X86_64-FALLBACK: Configuration file: {{.*}}/testdmode/clang.cfg
-// X86_64-FALLBACK-NOT: Configuration file:
 // X86_64-FALLBACK: Configuration file: {{.*}}/testdmode/x86_64.cfg
-// X86_64-FALLBACK-NOT: Configuration file:
 
 //--- cheribsd fallback.
 //
-// RUN: %t/testdmode/cheribsd-riscv64-hybrid-clang++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix CHERIBSD-FALLBACK
+// RUN: %t/testdmode/cheribsd-riscv64-hybrid-clang++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix CHERIBSD-FALLBACK --implicit-check-not 'Configuration file:'
 //
-// CHERIBSD-FALLBACK-NOT: Configuration file:
 // CHERIBSD-FALLBACK: Configuration file: {{.*}}/testdmode/clang++.cfg
-// CHERIBSD-FALLBACK-NOT: Configuration file:
 // CHERIBSD-FALLBACK: Configuration file: {{.*}}/testdmode/cheribsd-riscv64-hybrid.cfg
-// CHERIBSD-FALLBACK-NOT: Configuration file:
 
 //--- Test fallback to x86_64-unknown-linux-gnu.cfg + clang-g++.cfg.
 //
 // RUN: rm %t/testdmode/clang++.cfg
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL4
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL4 --implicit-check-not 'Configuration file:'
 //
-// FULL4-NOT: Configuration file:
 // FULL4: Configuration file: {{.*}}/testdmode/clang-g++.cfg
-// FULL4-NOT: Configuration file:
 // FULL4: Configuration file: {{.*}}/testdmode/x86_64-unknown-linux-gnu.cfg
-// FULL4-NOT: Configuration file:
 
 //--- Test fallback to clang-g++.cfg if x86_64-unknown-linux-gnu-clang.cfg does not exist.
 //
 // RUN: rm %t/testdmode/x86_64-unknown-linux-gnu.cfg
 // RUN: rm %t/testdmode/i386-unknown-linux-gnu.cfg
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL5
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL5 --implicit-check-not 'Configuration file:'
 //
-// FULL5-NOT: Configuration file:
 // FULL5: Configuration file: {{.*}}/testdmode/clang-g++.cfg
-// FULL5-NOT: Configuration file:
 
 //--- FULL5 + -m32.
 //
-// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ -m32 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL5-I386
+// RUN: %t/testdmode/x86_64-unknown-linux-gnu-clang-g++ -m32 --config-system-dir= --config-user-dir= -no-canonical-prefixes --version 2>&1 | FileCheck %s -check-prefix FULL5-I386 --implicit-check-not 'Configuration file:'
 //
-// FULL5-I386-NOT: Configuration file:
 // FULL5-I386: Configuration file: {{.*}}/testdmode/clang-g++.cfg
-// FULL5-I386-NOT: Configuration file:
 
 //--- Test that incorrect driver mode config file is not used.
 //
