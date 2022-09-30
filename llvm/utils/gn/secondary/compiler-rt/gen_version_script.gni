@@ -25,7 +25,8 @@ template("gen_version_script") {
       ]
     }
   } else {
-    source_set(target_name) {}
+    source_set(target_name) {
+    }
     not_needed(invoker,
                [
                  "extra",
