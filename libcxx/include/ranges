@@ -198,6 +198,14 @@ namespace std::ranges {
   template<class T>
   inline constexpr bool enable_borrowed_range<take_view<T>> = enable_borrowed_range<T>;
 
+    // [range.take.while], take while view
+  template<view V, class Pred>
+    requires input_range<V> && is_object_v<Pred> &&
+             indirect_unary_predicate<const Pred, iterator_t<V>>
+    class take_while_view;
+
+  namespace views { inline constexpr unspecified take_while = unspecified; }
+
   template<copy_constructible T>
     requires is_object_v<T>
   class single_view;
@@ -311,6 +319,7 @@ namespace std {
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/take_view.h>
+#include <__ranges/take_while_view.h>
 #include <__ranges/transform_view.h>
 #include <__ranges/view_interface.h>
 #include <__ranges/views.h>
