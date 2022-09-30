@@ -173,6 +173,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
 
   Instruction *NewInst = nullptr;
   switch (Inst.getOpcode()) {
+  // Note: We do not fold sitofp -> uitofp here because that could be more
+  // expensive in codegen and may not be reversible in the backend.
   case Instruction::SExt: {
     // If the source value is not negative, this is a zext.
     Value *Op0 = Inst.getOperand(0);
