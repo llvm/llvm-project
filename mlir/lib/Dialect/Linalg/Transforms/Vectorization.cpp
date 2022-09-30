@@ -215,7 +215,7 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
   if (vectorType.getRank() > 0) {
     // 0-d case is still special: do not invert the reindexing map.
     AffineMap map =
-        reindexIndexingMap(linalgOp.getTiedIndexingMap(outputOperand));
+        reindexIndexingMap(linalgOp.getMatchingIndexingMap(outputOperand));
     SmallVector<int64_t> transposeShape =
         applyPermutationMap(inversePermutation(map), vectorType.getShape());
     assert(!transposeShape.empty() && "unexpected empty transpose shape");
@@ -479,12 +479,12 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
     // } else {
     if (opOperand->getOperandNumber() < linalgOp.getNumInputs()) {
       map = inverseAndBroadcastProjectedPermutation(
-          linalgOp.getTiedIndexingMap(opOperand));
+          linalgOp.getMatchingIndexingMap(opOperand));
       readType = VectorType::get(commonVectorShape,
                                  getElementTypeOrSelf(opOperand->get()));
     } else {
       map = inversePermutation(
-          reindexIndexingMap(linalgOp.getTiedIndexingMap(opOperand)));
+          reindexIndexingMap(linalgOp.getMatchingIndexingMap(opOperand)));
       readType = VectorType::get(map.compose(linalgOp.getShape(opOperand)),
                                  getElementTypeOrSelf(opOperand->get()));
     }
@@ -545,7 +545,7 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
     return failure();
   }
   for (OpOperand *opOperand : op.getOutputOperands()) {
-    AffineMap indexingMap = op.getTiedIndexingMap(opOperand);
+    AffineMap indexingMap = op.getMatchingIndexingMap(opOperand);
     if (indexingMap.isPermutation())
       continue;
 

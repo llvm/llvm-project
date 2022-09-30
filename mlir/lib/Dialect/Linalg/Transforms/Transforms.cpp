@@ -172,7 +172,7 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     OpBuilder &b, linalg::LinalgOp opToPad, OpOperand *opOperand,
     ArrayRef<int64_t> paddingDimensions, ArrayRef<Attribute> paddingValues,
     ArrayRef<bool> packPaddings) {
-  AffineMap indexingMap = opToPad.getTiedIndexingMap(opOperand);
+  AffineMap indexingMap = opToPad.getMatchingIndexingMap(opOperand);
   ArrayRef<int64_t> shape = opToPad.getShape(opOperand);
 
   // Collect the shape dimension that are a function of the `paddingDimensions`.

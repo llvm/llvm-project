@@ -34,7 +34,7 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
   for (auto *opOperand : linalgOp.getInputAndOutputOperands()) {
     if (llvm::is_contained(droppedOperands, opOperand))
       continue;
-    indexingMaps.push_back(linalgOp.getTiedIndexingMap(opOperand));
+    indexingMaps.push_back(linalgOp.getMatchingIndexingMap(opOperand));
   }
   return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
 }
@@ -658,7 +658,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
            << linalgOp.getNumInputsAndOutputs() << ")";
 
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-    AffineMap indexingMap = linalgOp.getTiedIndexingMap(opOperand);
+    AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
 
     // Symbols disallowed.
     if (indexingMap.getNumSymbols() != 0)
@@ -696,7 +696,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
     for (int64_t &range : endLoopRangeValues)
       range -= 1;
     for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-      AffineMap indexingMap = linalgOp.getTiedIndexingMap(opOperand);
+      AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
       SmallVector<int64_t, 4> startIndices =
           indexingMap.compose(startLoopRangeValues);
       SmallVector<int64_t, 4> endIndices =

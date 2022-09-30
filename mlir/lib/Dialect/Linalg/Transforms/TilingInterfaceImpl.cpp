@@ -62,7 +62,7 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
     Value toStore = map.lookupOrDefault(operand.value());
     OpOperand *storeInto = linalgOp.getOutputOperand(operand.index());
     auto indices = getIndicesForAccess(
-        b, loc, linalgOp.getTiedIndexingMap(storeInto), ivs);
+        b, loc, linalgOp.getMatchingIndexingMap(storeInto), ivs);
     b.create<memref::StoreOp>(loc, toStore,
                               linalgOp.getOutputOperand(operand.index())->get(),
                               indices);
@@ -162,10 +162,10 @@ struct LinalgOpTilingInterface
         }));
 
     OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
-    SliceParameters sliceParams =
-        computeSliceParameters(b, loc, outOperand->get(), sizes,
-                               linalgOp.getTiedIndexingMap(outOperand), offsets,
-                               /*ubs*/ {}, subShapeSizes, true);
+    SliceParameters sliceParams = computeSliceParameters(
+        b, loc, outOperand->get(), sizes,
+        linalgOp.getMatchingIndexingMap(outOperand), offsets,
+        /*ubs*/ {}, subShapeSizes, true);
     resultOffsets = sliceParams.offsets;
     resultSizes = sliceParams.sizes;
     return success();
@@ -182,7 +182,7 @@ struct LinalgOpTilingInterface
     // map the offsets and sizes from the result to iteration space tiles
     // (filling in full extent for dimensions not used to access the result).
     AffineMap indexingMap =
-        linalgOp.getTiedIndexingMapForResult(op->getResult(resultNumber));
+        linalgOp.getIndexingMapMatchingResult(op->getResult(resultNumber));
     if (!indexingMap.isProjectedPermutation()) {
       return op->emitOpError(
           "unhandled tiled implementation generation when result is not "
@@ -238,7 +238,7 @@ struct LinalgOpTilingInterface
         continue;
       }
       SmallVector<Value> indices = getIndicesForAccess(
-          builder, linalgOpLoc, linalgOp.getTiedIndexingMap(operand), ivs);
+          builder, linalgOpLoc, linalgOp.getMatchingIndexingMap(operand), ivs);
       Value load =
           builder.create<memref::LoadOp>(linalgOpLoc, operand->get(), indices);
       indexedValues.push_back(load);

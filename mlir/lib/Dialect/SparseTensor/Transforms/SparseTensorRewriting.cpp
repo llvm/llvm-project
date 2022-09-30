@@ -170,9 +170,9 @@ public:
     if (!op.hasTensorSemantics() || op.getNumInputs() != 2 ||
         op.getNumResults() != 1 ||
         op.getNumParallelLoops() != op.getNumLoops() ||
-        !op.getTiedIndexingMap(op.getOutputOperand(0)).isIdentity() ||
-        !op.getTiedIndexingMap(op.getInputOperand(0)).isIdentity() ||
-        !op.getTiedIndexingMap(op.getInputOperand(1)).isIdentity())
+        !op.getMatchingIndexingMap(op.getOutputOperand(0)).isIdentity() ||
+        !op.getMatchingIndexingMap(op.getInputOperand(0)).isIdentity() ||
+        !op.getMatchingIndexingMap(op.getInputOperand(1)).isIdentity())
       return failure();
     // Find consuming OP2(sparse, other) or OP2(other, sparse). The other
     // operand can be sparse or dense, since the point of this rewriting rule
