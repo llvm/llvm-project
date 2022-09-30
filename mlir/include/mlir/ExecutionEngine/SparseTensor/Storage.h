@@ -131,35 +131,35 @@ public:
 #define DECL_NEWENUMERATOR(VNAME, V)                                           \
   virtual void newEnumerator(SparseTensorEnumeratorBase<V> **, uint64_t,       \
                              const uint64_t *) const;
-  FOREVERY_V(DECL_NEWENUMERATOR)
+  MLIR_SPARSETENSOR_FOREVERY_V(DECL_NEWENUMERATOR)
 #undef DECL_NEWENUMERATOR
 
   /// Pointers-overhead storage.
 #define DECL_GETPOINTERS(PNAME, P)                                             \
   virtual void getPointers(std::vector<P> **, uint64_t);
-  FOREVERY_FIXED_O(DECL_GETPOINTERS)
+  MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETPOINTERS)
 #undef DECL_GETPOINTERS
 
   /// Indices-overhead storage.
 #define DECL_GETINDICES(INAME, I)                                              \
   virtual void getIndices(std::vector<I> **, uint64_t);
-  FOREVERY_FIXED_O(DECL_GETINDICES)
+  MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETINDICES)
 #undef DECL_GETINDICES
 
   /// Primary storage.
 #define DECL_GETVALUES(VNAME, V) virtual void getValues(std::vector<V> **);
-  FOREVERY_V(DECL_GETVALUES)
+  MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETVALUES)
 #undef DECL_GETVALUES
 
   /// Element-wise insertion in lexicographic index order.
 #define DECL_LEXINSERT(VNAME, V) virtual void lexInsert(const uint64_t *, V);
-  FOREVERY_V(DECL_LEXINSERT)
+  MLIR_SPARSETENSOR_FOREVERY_V(DECL_LEXINSERT)
 #undef DECL_LEXINSERT
 
   /// Expanded insertion.
 #define DECL_EXPINSERT(VNAME, V)                                               \
   virtual void expInsert(uint64_t *, V *, bool *, uint64_t *, uint64_t);
-  FOREVERY_V(DECL_EXPINSERT)
+  MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 #undef DECL_EXPINSERT
 
   /// Finishes insertion.
