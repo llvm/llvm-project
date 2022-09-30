@@ -10341,6 +10341,13 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
         return DAG.getNode(ISD::OR, DL, VT, Cond, N2);
       }
 
+      // select Cond, C, -1 --> or (sext (not Cond)), C
+      if (C2->isAllOnes()) {
+        SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
+        NotCond = DAG.getSExtOrTrunc(NotCond, DL, VT);
+        return DAG.getNode(ISD::OR, DL, VT, NotCond, N1);
+      }
+
       if (SDValue V = foldSelectOfConstantsUsingSra(N, DAG))
         return V;
     }
