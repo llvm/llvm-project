@@ -1,4 +1,3 @@
-; RUN: opt -Oz -S -enable-new-pm=0  < %s | FileCheck %s
 ; RUN: opt -passes='default<Oz>' -S < %s | FileCheck %s
 
 ; Forcing vectorization should allow for more aggressive loop-rotation with
