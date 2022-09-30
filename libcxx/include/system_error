@@ -256,6 +256,13 @@ public:
 _LIBCPP_FUNC_VIS const error_category& generic_category() _NOEXCEPT;
 _LIBCPP_FUNC_VIS const error_category& system_category() _NOEXCEPT;
 
+namespace __adl_only {
+    // Those cause ADL to trigger but they are not viable candidates,
+    // so they are never actually selected.
+    void make_error_condition() = delete;
+    void make_error_code() = delete;
+} // namespace __adl_only
+
 class _LIBCPP_TYPE_VIS error_condition
 {
     int __val_;
@@ -273,7 +280,10 @@ public:
         error_condition(_Ep __e,
               typename enable_if<is_error_condition_enum<_Ep>::value>::type* = nullptr
                                                                      ) _NOEXCEPT
-            {*this = make_error_condition(__e);}
+            {
+                using __adl_only::make_error_condition;
+                *this = make_error_condition(__e);
+            }
 
     _LIBCPP_INLINE_VISIBILITY
     void assign(int __val, const error_category& __cat) _NOEXCEPT
@@ -290,7 +300,11 @@ public:
             error_condition&
         >::type
         operator=(_Ep __e) _NOEXCEPT
-            {*this = make_error_condition(__e); return *this;}
+            {
+                using __adl_only::make_error_condition;
+                *this = make_error_condition(__e);
+                return *this;
+            }
 
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT
@@ -336,7 +350,10 @@ public:
         error_code(_Ep __e,
                    typename enable_if<is_error_code_enum<_Ep>::value>::type* = nullptr
                                                                      ) _NOEXCEPT
-            {*this = make_error_code(__e);}
+            {
+                using __adl_only::make_error_code;
+                *this = make_error_code(__e);
+            }
 
     _LIBCPP_INLINE_VISIBILITY
     void assign(int __val, const error_category& __cat) _NOEXCEPT
@@ -353,7 +370,11 @@ public:
             error_code&
         >::type
         operator=(_Ep __e) _NOEXCEPT
-            {*this = make_error_code(__e); return *this;}
+            {
+                using __adl_only::make_error_code;
+                *this = make_error_code(__e);
+                return *this;
+            }
 
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT
