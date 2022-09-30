@@ -9,15 +9,9 @@ define amdgpu_kernel void @vectorLoadCombine(<4 x i8>* %in, i32* %out) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_load_dword v2, v[0:1]
-; GCN-NEXT:    s_mov_b32 s0, 0x6050400
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_bfe_u32 v3, v2, 8, 8
-; GCN-NEXT:    v_and_b32_e32 v4, 0xff0000, v2
-; GCN-NEXT:    v_perm_b32 v3, v3, v2, s0
-; GCN-NEXT:    v_and_b32_e32 v2, 0xff000000, v2
-; GCN-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -79,3 +73,188 @@ entry:
   store i32 %insert3, i32* %out
   ret void
 }
+define i32 @load_2xi16_combine(i16 addrspace(1)* %p) #0 {
+; GCN-LABEL: load_2xi16_combine:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v0, v[0:1], off
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 1
+  %p.0 = load i16, i16 addrspace(1)* %p, align 4
+  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 4
+  %zext.0 = zext i16 %p.0 to i32
+  %zext.1 = zext i16 %p.1 to i32
+  %shl.1 = shl i32 %zext.1, 16
+  %or = or i32 %zext.0, %shl.1
+  ret i32 %or
+}
+
+define i32 @load_2xi16_noncombine(i16 addrspace(1)* %p) #0 {
+; GCN-LABEL: load_2xi16_noncombine:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_load_ushort v2, v[0:1], off
+; GCN-NEXT:    global_load_ushort v3, v[0:1], off offset:4
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_lshl_or_b32 v0, v3, 16, v2
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 2
+  %p.0 = load i16, i16 addrspace(1)* %p, align 4
+  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 4
+  %zext.0 = zext i16 %p.0 to i32
+  %zext.1 = zext i16 %p.1 to i32
+  %shl.1 = shl i32 %zext.1, 16
+  %or = or i32 %zext.0, %shl.1
+  ret i32 %or
+}
+
+define i64 @load_2xi32_combine(i32 addrspace(1)* %p) #0 {
+; GCN-LABEL: load_2xi32_combine:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %gep.p = getelementptr i32, i32 addrspace(1)* %p, i32 1
+  %p.0 = load i32, i32 addrspace(1)* %p, align 4
+  %p.1 = load i32, i32 addrspace(1)* %gep.p, align 4
+  %zext.0 = zext i32 %p.0 to i64
+  %zext.1 = zext i32 %p.1 to i64
+  %shl.1 = shl i64 %zext.1, 32
+  %or = or i64 %zext.0, %shl.1
+  ret i64 %or
+}
+
+define i64 @load_2xi32_noncombine(i32 addrspace(1)* %p) #0 {
+; GCN-LABEL: load_2xi32_noncombine:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v2, v[0:1], off
+; GCN-NEXT:    global_load_dword v3, v[0:1], off offset:8
+; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, v3
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %gep.p = getelementptr i32, i32 addrspace(1)* %p, i32 2
+  %p.0 = load i32, i32 addrspace(1)* %p, align 4
+  %p.1 = load i32, i32 addrspace(1)* %gep.p, align 4
+  %zext.0 = zext i32 %p.0 to i64
+  %zext.1 = zext i32 %p.1 to i64
+  %shl.1 = shl i64 %zext.1, 32
+  %or = or i64 %zext.0, %shl.1
+  ret i64 %or
+}
+
+define i64 @load_4xi16_combine(i16 addrspace(1)* %p) #0 {
+; GCN-LABEL: load_4xi16_combine:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 1
+  %gep.2p = getelementptr i16, i16 addrspace(1)* %p, i32 2
+  %gep.3p = getelementptr i16, i16 addrspace(1)* %p, i32 3
+  %p.0 = load i16, i16 addrspace(1)* %p, align 4
+  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 4
+  %p.2 = load i16, i16 addrspace(1)* %gep.2p, align 4
+  %p.3 = load i16, i16 addrspace(1)* %gep.3p, align 4
+  %zext.0 = zext i16 %p.0 to i64
+  %zext.1 = zext i16 %p.1 to i64
+  %zext.2 = zext i16 %p.2 to i64
+  %zext.3 = zext i16 %p.3 to i64
+  %shl.1 = shl i64 %zext.1, 16
+  %or.1 = or i64 %zext.0, %shl.1
+  %shl.2 = shl i64 %zext.2, 32
+  %or.2 = or i64 %or.1, %shl.2
+  %shl.3 = shl i64 %zext.3, 48
+  %or.3 = or i64 %or.2, %shl.3
+  ret i64 %or.3
+}
+
+
+define i64 @load_4xi16_noncombine(i16 addrspace(1)* %p) #0 {
+; GCN-LABEL: load_4xi16_noncombine:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_load_dwordx2 v[2:3], v[0:1], off
+; GCN-NEXT:    s_mov_b32 s4, 0xffff
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
+; GCN-NEXT:    v_bfi_b32 v0, s4, v2, v3
+; GCN-NEXT:    v_or_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 3
+  %gep.2p = getelementptr i16, i16 addrspace(1)* %p, i32 2
+  %gep.3p = getelementptr i16, i16 addrspace(1)* %p, i32 1
+  %p.0 = load i16, i16 addrspace(1)* %p, align 4
+  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 4
+  %p.2 = load i16, i16 addrspace(1)* %gep.2p, align 4
+  %p.3 = load i16, i16 addrspace(1)* %gep.3p, align 4
+  %zext.0 = zext i16 %p.0 to i64
+  %zext.1 = zext i16 %p.1 to i64
+  %zext.2 = zext i16 %p.2 to i64
+  %zext.3 = zext i16 %p.3 to i64
+  %shl.1 = shl i64 %zext.1, 16
+  %or.1 = or i64 %zext.0, %shl.1
+  %shl.2 = shl i64 %zext.2, 32
+  %or.2 = or i64 %or.1, %shl.2
+  %shl.3 = shl i64 %zext.3, 48
+  %or.3 = or i64 %or.2, %shl.3
+  ret i64 %or.3
+}
+
+define i64 @load_3xi16_combine(i16 addrspace(1)* %p) #0 {
+; GCN-LABEL: load_3xi16_combine:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_load_dword v2, v[0:1], off
+; GCN-NEXT:    global_load_ushort v3, v[0:1], off offset:4
+; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, v3
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 1
+  %gep.2p = getelementptr i16, i16 addrspace(1)* %p, i32 2
+  %p.0 = load i16, i16 addrspace(1)* %p, align 4
+  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 4
+  %p.2 = load i16, i16 addrspace(1)* %gep.2p, align 4
+  %zext.0 = zext i16 %p.0 to i64
+  %zext.1 = zext i16 %p.1 to i64
+  %zext.2 = zext i16 %p.2 to i64
+  %shl.1 = shl i64 %zext.1, 16
+  %or.1 = or i64 %zext.0, %shl.1
+  %shl.2 = shl i64 %zext.2, 32
+  %or.2 = or i64 %or.1, %shl.2
+  ret i64 %or.2
+}
+
+define i64 @load_3xi16_noncombine(i16 addrspace(1)* %p) #0 {
+; GCN-LABEL: load_3xi16_noncombine:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_load_ushort v2, v[0:1], off
+; GCN-NEXT:    global_load_dword v3, v[0:1], off offset:4
+; GCN-NEXT:    s_mov_b32 s4, 0xffff0000
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_and_or_b32 v0, v3, s4, v2
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v3
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 3
+  %gep.2p = getelementptr i16, i16 addrspace(1)* %p, i32 2
+  %p.0 = load i16, i16 addrspace(1)* %p, align 4
+  %p.1 = load i16, i16 addrspace(1)* %gep.p, align 4
+  %p.2 = load i16, i16 addrspace(1)* %gep.2p, align 4
+  %zext.0 = zext i16 %p.0 to i64
+  %zext.1 = zext i16 %p.1 to i64
+  %zext.2 = zext i16 %p.2 to i64
+  %shl.1 = shl i64 %zext.1, 16
+  %or.1 = or i64 %zext.0, %shl.1
+  %shl.2 = shl i64 %zext.2, 32
+  %or.2 = or i64 %or.1, %shl.2
+  ret i64 %or.2
+}
+
