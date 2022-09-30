@@ -220,6 +220,11 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       if (!this->emitStore(*T, BO))
         return false;
       return DiscardResult ? this->emitPopPtr(BO) : true;
+    case BO_And:
+      return Discard(this->emitBitAnd(*T, BO));
+    case BO_Or:
+    case BO_LAnd:
+    case BO_LOr:
     default:
       return this->bail(BO);
     }
