@@ -56,8 +56,6 @@ if [[ "$ZLIB_SRC" == ""  ||
 fi
 ZLIB_SRC=$(readlink -f $ZLIB_SRC)
 
-J="${J:-50}"
-
 CLANG="${CLANG:-`which clang`}"
 CLANG_DIR=$(readlink -f $(dirname "$CLANG"))
 
@@ -71,7 +69,6 @@ TBLGEN=$CLANG_DIR/llvm-tblgen
 OPT=$CLANG_DIR/opt
 AR=$CLANG_DIR/llvm-ar
 LINK=$CLANG_DIR/llvm-link
-TARGET_TRIPLE=$($CC -print-target-triple)
 
 for F in $CC $CXX $TBLGEN $LINK $OPT $AR; do
   if [[ ! -x "$F" ]]; then
@@ -86,20 +83,26 @@ LLVM_BUILD=${BUILD_DIR}/llvm
 SYMBOLIZER_BUILD=${BUILD_DIR}/symbolizer
 
 FLAGS=${FLAGS:-}
-FLAGS="$FLAGS -fPIC -flto -Oz -g0 -DNDEBUG"
+TARGET_TRIPLE=$($CC -print-target-triple $FLAGS)
+if [[ "$FLAGS" =~ "-m32" ]] ; then
+  # Avoid new wrappers.
+  FLAGS+=" -U_FILE_OFFSET_BITS"
+fi
+FLAGS+=" -fPIC -flto -Oz -g0 -DNDEBUG -target $TARGET_TRIPLE -Wno-unused-command-line-argument"
+LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
 # Build zlib.
 mkdir -p ${ZLIB_BUILD}
 cd ${ZLIB_BUILD}
 cp -r ${ZLIB_SRC}/* .
 AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
-make -j${J} libz.a
+make -j libz.a
 
 # Build and install libcxxabi and libcxx.
 if [[ ! -d ${LIBCXX_BUILD} ]]; then
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
-  LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined -Wno-unused-command-line-argument"
+  LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
   cmake -GNinja \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -112,8 +115,7 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
     -DLIBCXX_ENABLE_ASSERTIONS=OFF \
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
-    -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
-    -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}" \
+    -DCMAKE_SHARED_LINKER_FLAGS="$LINKFLAGS" \
   $LLVM_SRC/../runtimes
 fi
 cd ${LIBCXX_BUILD}
@@ -131,11 +133,10 @@ if [[ ! -d ${LLVM_BUILD} ]]; then
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
-    -DCMAKE_C_FLAGS_RELEASE="${LLVM_CFLAGS}" \
-    -DCMAKE_CXX_FLAGS_RELEASE="${LLVM_CXXFLAGS}" \
-    -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -fuse-ld=lld -L${LIBCXX_BUILD}/lib" \
+    -DCMAKE_C_FLAGS="${LLVM_CFLAGS}" \
+    -DCMAKE_CXX_FLAGS="${LLVM_CXXFLAGS}" \
+    -DCMAKE_EXE_LINKER_FLAGS="$LINKFLAGS -stdlib=libc++ -L${LIBCXX_BUILD}/lib" \
     -DLLVM_TABLEGEN=$TBLGEN \
-    -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}" \
     -DLLVM_ENABLE_ZLIB=ON \
     -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_THREADS=OFF \
