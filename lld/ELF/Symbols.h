@@ -344,6 +344,7 @@ public:
   }
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, DefinedKind);
+    sym.verdefIndex = -1;
     auto &s = static_cast<Defined &>(sym);
     s.value = value;
     s.size = size;
