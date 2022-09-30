@@ -1,29 +1,26 @@
-; RUN: opt -passes='require<demanded-bits>,constraint-elimination,require<demanded-bits>' -disable-verify -verify-cfg-preserved -debug-pass-manager -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='require<demanded-bits>,constraint-elimination,require<demanded-bits>' -disable-verify -verify-cfg-preserved=false -debug-pass-manager -disable-output %s 2>&1 | FileCheck %s
 
 ; Check that constraint-elimination properly invalidates anlyses.
 
 ; FIXME: ssub simplification currently doesn't properly set the change status
 ;        after modifying the IR, which causes DemandedBits to be preserved.
 
-; CHECK:      Running analysis: InnerAnalysisManagerProxy<llvm::FunctionAnalysisManager, llvm::Module> on [module]
-; CHECK-NEXT: Running analysis: PreservedCFGCheckerAnalysis on ssub_no_overflow_due_to_or_conds
-; CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::DemandedBitsAnalysis, llvm::Function> on ssub_no_overflow_due_to_or_conds
+; CHECK:      Running pass: RequireAnalysisPass
 ; CHECK-NEXT: Running analysis: DemandedBitsAnalysis on ssub_no_overflow_due_to_or_conds
 ; CHECK-NEXT: Running analysis: AssumptionAnalysis on ssub_no_overflow_due_to_or_conds
 ; CHECK-NEXT: Running analysis: TargetIRAnalysis on ssub_no_overflow_due_to_or_conds
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on ssub_no_overflow_due_to_or_conds
-; CHECK-NEXT: Running pass: ConstraintEliminationPass on ssub_no_overflow_due_to_or_conds (10 instructions)
-; CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::DemandedBitsAnalysis, llvm::Function> on ssub_no_overflow_due_to_or_conds
+; CHECK-NEXT: Running pass: ConstraintEliminationPass on ssub_no_overflow_due_to_or_conds
+; CHECK-NEXT: Running pass: RequireAnalysisPass
 
-; CHECK-NEXT: Running analysis: PreservedCFGCheckerAnalysis on uge_zext
-; CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::DemandedBitsAnalysis, llvm::Function> on uge_zext (6 instructions)
+; CHECK-NEXT: Running pass: RequireAnalysisPass
 ; CHECK-NEXT: Running analysis: DemandedBitsAnalysis on uge_zext
 ; CHECK-NEXT: Running analysis: AssumptionAnalysis on uge_zext
 ; CHECK-NEXT: Running analysis: TargetIRAnalysis on uge_zext
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on uge_zext
-; CHECK-NEXT: Running pass: ConstraintEliminationPass on uge_zext (6 instructions)
+; CHECK-NEXT: Running pass: ConstraintEliminationPass on uge_zext
 ; CHECK-NEXT: Invalidating analysis: DemandedBitsAnalysis on uge_zext
-; CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::DemandedBitsAnalysis, llvm::Function> on uge_zext (6 instructions)
+; CHECK-NEXT: Running pass: RequireAnalysisPass
 ; CHECK-NEXT: Running analysis: DemandedBitsAnalysis on uge_zext
 
 declare { i8, i1 } @llvm.ssub.with.overflow.i8(i8, i8)
