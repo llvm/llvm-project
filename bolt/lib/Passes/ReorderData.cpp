@@ -182,14 +182,14 @@ void ReorderData::assignMemData(BinaryContext &BC) {
 
     for (const BinaryBasicBlock &BB : BF) {
       for (const MCInst &Inst : BB) {
-        auto ErrorOrMemAccesssProfile =
+        auto ErrorOrMemAccessProfile =
             BC.MIB->tryGetAnnotationAs<MemoryAccessProfile>(
                 Inst, "MemoryAccessProfile");
-        if (!ErrorOrMemAccesssProfile)
+        if (!ErrorOrMemAccessProfile)
           continue;
 
         const MemoryAccessProfile &MemAccessProfile =
-            ErrorOrMemAccesssProfile.get();
+            ErrorOrMemAccessProfile.get();
         for (const AddressAccess &AccessInfo :
              MemAccessProfile.AddressAccessInfo) {
           if (BinaryData *BD = AccessInfo.MemoryObject) {
@@ -238,14 +238,14 @@ ReorderData::sortedByFunc(BinaryContext &BC, const BinarySection &Section,
         continue;
 
       for (const MCInst &Inst : BB) {
-        auto ErrorOrMemAccesssProfile =
+        auto ErrorOrMemAccessProfile =
             BC.MIB->tryGetAnnotationAs<MemoryAccessProfile>(
                 Inst, "MemoryAccessProfile");
-        if (!ErrorOrMemAccesssProfile)
+        if (!ErrorOrMemAccessProfile)
           continue;
 
         const MemoryAccessProfile &MemAccessProfile =
-            ErrorOrMemAccesssProfile.get();
+            ErrorOrMemAccessProfile.get();
         for (const AddressAccess &AccessInfo :
              MemAccessProfile.AddressAccessInfo) {
           if (AccessInfo.MemoryObject)
