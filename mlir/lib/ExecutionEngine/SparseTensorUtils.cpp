@@ -351,7 +351,7 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
     ref->sizes[0] = v->size();                                                 \
     ref->strides[0] = 1;                                                       \
   }
-FOREVERY_V(IMPL_SPARSEVALUES)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_SPARSEVALUES)
 #undef IMPL_SPARSEVALUES
 
 #define IMPL_GETOVERHEAD(NAME, TYPE, LIB)                                      \
@@ -367,12 +367,12 @@ FOREVERY_V(IMPL_SPARSEVALUES)
   }
 #define IMPL_SPARSEPOINTERS(PNAME, P)                                          \
   IMPL_GETOVERHEAD(sparsePointers##PNAME, P, getPointers)
-FOREVERY_O(IMPL_SPARSEPOINTERS)
+MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSEPOINTERS)
 #undef IMPL_SPARSEPOINTERS
 
 #define IMPL_SPARSEINDICES(INAME, I)                                           \
   IMPL_GETOVERHEAD(sparseIndices##INAME, I, getIndices)
-FOREVERY_O(IMPL_SPARSEINDICES)
+MLIR_SPARSETENSOR_FOREVERY_O(IMPL_SPARSEINDICES)
 #undef IMPL_SPARSEINDICES
 #undef IMPL_GETOVERHEAD
 
@@ -393,7 +393,7 @@ FOREVERY_O(IMPL_SPARSEINDICES)
     static_cast<SparseTensorCOO<V> *>(coo)->add(indices, *value);              \
     return coo;                                                                \
   }
-FOREVERY_V(IMPL_ADDELT)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_ADDELT)
 #undef IMPL_ADDELT
 
 #define IMPL_GETNEXT(VNAME, V)                                                 \
@@ -414,7 +414,7 @@ FOREVERY_V(IMPL_ADDELT)
     *value = elem->value;                                                      \
     return true;                                                               \
   }
-FOREVERY_V(IMPL_GETNEXT)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
 #undef IMPL_GETNEXT
 
 #define IMPL_LEXINSERT(VNAME, V)                                               \
@@ -428,7 +428,7 @@ FOREVERY_V(IMPL_GETNEXT)
     V *value = vref->data + vref->offset;                                      \
     static_cast<SparseTensorStorageBase *>(tensor)->lexInsert(cursor, *value); \
   }
-FOREVERY_V(IMPL_LEXINSERT)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_LEXINSERT)
 #undef IMPL_LEXINSERT
 
 #define IMPL_EXPINSERT(VNAME, V)                                               \
@@ -449,7 +449,7 @@ FOREVERY_V(IMPL_LEXINSERT)
     static_cast<SparseTensorStorageBase *>(tensor)->expInsert(                 \
         cursor, values, filled, added, count);                                 \
   }
-FOREVERY_V(IMPL_EXPINSERT)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_EXPINSERT)
 #undef IMPL_EXPINSERT
 
 //===----------------------------------------------------------------------===//
@@ -475,7 +475,7 @@ void endInsert(void *tensor) {
       coo_.sort();                                                             \
     return writeExtFROSTT(coo_, static_cast<char *>(dest));                    \
   }
-FOREVERY_V(IMPL_OUTSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTSPARSETENSOR)
 #undef IMPL_OUTSPARSETENSOR
 
 void delSparseTensor(void *tensor) {
@@ -486,7 +486,7 @@ void delSparseTensor(void *tensor) {
   void delSparseTensorCOO##VNAME(void *coo) {                                  \
     delete static_cast<SparseTensorCOO<V> *>(coo);                             \
   }
-FOREVERY_V(IMPL_DELCOO)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_DELCOO)
 #undef IMPL_DELCOO
 
 char *getTensorFilename(index_type id) {
@@ -518,7 +518,7 @@ void readSparseTensorShape(char *filename, std::vector<uint64_t> *out) {
     return toMLIRSparseTensor<V>(rank, nse, shape, values, indices, perm,      \
                                  reinterpret_cast<DimLevelType *>(sparse));    \
   }
-FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
 #undef IMPL_CONVERTTOMLIRSPARSETENSOR
 
 #define IMPL_CONVERTFROMMLIRSPARSETENSOR(VNAME, V)                             \
@@ -529,7 +529,7 @@ FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
         static_cast<SparseTensorStorage<uint64_t, uint64_t, V> *>(tensor),     \
         pRank, pNse, pShape, pValues, pIndices);                               \
   }
-FOREVERY_V(IMPL_CONVERTFROMMLIRSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_CONVERTFROMMLIRSPARSETENSOR)
 #undef IMPL_CONVERTFROMMLIRSPARSETENSOR
 
 } // extern "C"
