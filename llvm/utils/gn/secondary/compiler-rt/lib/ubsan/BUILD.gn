@@ -108,9 +108,11 @@ static_library("ubsan_static") {
   complete_static_lib = true
   configs -= [
     "//llvm/utils/gn/build:llvm_code",
+    "//llvm/utils/gn/build:no_rtti",
     "//llvm/utils/gn/build:thin_archive",
   ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
+  sources = [ "ubsan_init_standalone_preinit.cpp" ]
   deps = [
     ":sources",
     ":standalone_sources",
