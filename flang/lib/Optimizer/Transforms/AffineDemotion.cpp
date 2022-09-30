@@ -135,7 +135,7 @@ public:
   matchAndRewrite(memref::AllocOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::AllocaOp>(op, convertMemRef(op.getType()),
-                                               op.memref());
+                                               op.getMemref());
     return success();
   }
 };
