@@ -86,20 +86,20 @@ LLVM_BUILD=${BUILD_DIR}/llvm
 SYMBOLIZER_BUILD=${BUILD_DIR}/symbolizer
 
 FLAGS=${FLAGS:-}
-FLAGS="$FLAGS -fPIC -flto -Os -g0 -DNDEBUG"
+FLAGS="$FLAGS -fPIC -flto -Oz -g0 -DNDEBUG"
 
 # Build zlib.
 mkdir -p ${ZLIB_BUILD}
 cd ${ZLIB_BUILD}
 cp -r ${ZLIB_SRC}/* .
-CC=$CC CFLAGS="$FLAGS" RANLIB=/bin/true ./configure --static
+AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
 make -j${J} libz.a
 
 # Build and install libcxxabi and libcxx.
 if [[ ! -d ${LIBCXX_BUILD} ]]; then
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
-  LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
+  LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined -Wno-unused-command-line-argument"
   cmake -GNinja \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -109,11 +109,10 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
     -DCMAKE_CXX_FLAGS_RELEASE="${LIBCXX_FLAGS}" \
     -DLIBCXXABI_ENABLE_ASSERTIONS=OFF \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
-    -DLIBCXXABI_ENABLE_SHARED=OFF \
     -DLIBCXX_ENABLE_ASSERTIONS=OFF \
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
-    -DLIBCXX_ENABLE_SHARED=OFF \
+    -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
     -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}" \
   $LLVM_SRC/../runtimes
 fi
@@ -121,7 +120,8 @@ cd ${LIBCXX_BUILD}
 ninja cxx cxxabi
 
 FLAGS="${FLAGS} -fno-rtti -fno-exceptions"
-LLVM_FLAGS="${FLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include/${TARGET_TRIPLE}/c++/v1 -isystem ${LIBCXX_BUILD}/include/c++/v1 -Wno-error=global-constructors"
+LLVM_CFLAGS="${FLAGS} -Wno-global-constructors"
+LLVM_CXXFLAGS="${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include -isystem ${LIBCXX_BUILD}/include/c++/v1"
 
 # Build LLVM.
 if [[ ! -d ${LLVM_BUILD} ]]; then
@@ -131,8 +131,9 @@ if [[ ! -d ${LLVM_BUILD} ]]; then
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
-    -DCMAKE_C_FLAGS_RELEASE="${LLVM_FLAGS}" \
-    -DCMAKE_CXX_FLAGS_RELEASE="${LLVM_FLAGS}" \
+    -DCMAKE_C_FLAGS_RELEASE="${LLVM_CFLAGS}" \
+    -DCMAKE_CXX_FLAGS_RELEASE="${LLVM_CXXFLAGS}" \
+    -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -fuse-ld=lld -L${LIBCXX_BUILD}/lib" \
     -DLLVM_TABLEGEN=$TBLGEN \
     -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}" \
     -DLLVM_ENABLE_ZLIB=ON \
@@ -149,7 +150,7 @@ mkdir ${SYMBOLIZER_BUILD}
 cd ${SYMBOLIZER_BUILD}
 
 echo "Compiling..."
-SYMBOLIZER_FLAGS="$LLVM_FLAGS -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -std=c++17"
+SYMBOLIZER_FLAGS="$LLVM_CXXFLAGS -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -std=c++17"
 $CXX $SYMBOLIZER_FLAGS ${SRC_DIR}/sanitizer_symbolize.cpp ${SRC_DIR}/sanitizer_wrappers.cpp -c
 $AR rc symbolizer.a sanitizer_symbolize.o sanitizer_wrappers.o
 
