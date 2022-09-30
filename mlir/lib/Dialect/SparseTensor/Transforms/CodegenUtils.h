@@ -28,9 +28,128 @@ class Value;
 namespace sparse_tensor {
 
 //===----------------------------------------------------------------------===//
-// ExecutionEngine/SparseTensorUtils helper functions.
+// SparseTensorLoopEmiter class, manages sparse tensors and helps to generate
+// loop structure to (co-iterate) sparse tensors.
+//
+// An example usage:
+// To generate following loops over T1<?x?> and T2<?x?>
+//
+// for i in T1[0] {
+//   for j : T2[0] {
+//     for k : T1[1] {}
+//     for k : T2[1] {}
+//   }
+// }
+//
+// One can use
+//
+// SparseTensorLoopEmiter loopEmiter({T1, T1});
+// loopEmiter.initializeLoopEmit();
+// loopEmiter.enterLoopOverTensorAtDim(T1, 0);
+// loopEmiter.enterLoopOverTensorAtDim(T2, 0);
+// loopEmiter.enterLoopOverTensorAtDim(T1, 1);
+// loopEmiter.exitCurrentLoop();
+// loopEmiter.enterLoopOverTensorAtDim(T2, 1);
+// for 0 -> 3:
+//    loopEmiter.exitCurrentLoop();
 //===----------------------------------------------------------------------===//
 
+// TODO: Sparsification should also rely on this class to generate loops.
+class SparseTensorLoopEmitter {
+public:
+  /// Constructor: take an array of tensors inputs, on which the generated loops
+  /// will iterate on. The index of the tensor in the array is also the
+  /// tensor id (tid) used in related functions.
+  explicit SparseTensorLoopEmitter(ValueRange tensors);
+
+  ///
+  /// Core functions.
+  ///
+
+  /// Starts a loop emitting session:
+  /// 1. Generates all the buffers needed to iterate tensors.
+  /// 2. Generates the lo/hi bounds to iterate tensors[0].
+  void initializeLoopEmit(OpBuilder &builder, Location loc);
+
+  // TODO: Gets rid of `dim` in the argument list? Track the dimension we
+  // are currently at internally. Then it would be enterNextDimForTensor.
+
+  /// Emits loop over tensor[dim], it assumes that loops between
+  /// tensor[0...dim - 1] have already been generated.
+  /// It also prepares to enter tensor[dim + 1].
+  Operation *enterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
+                                      size_t tid, size_t dim,
+                                      ArrayRef<Value> reduc = {});
+
+  /// Emits a coiteration loop over a set of tensors.
+  // TODO: not yet implemented
+  void enterCoiterationOverTensorsAtDims(OpBuilder &builder, Location loc,
+                                         ArrayRef<size_t> ts,
+                                         ArrayRef<size_t> ds);
+
+  /// Emits extra locals, since the locals might not be in simplified lattices
+  /// point used to generate the loops, but are still required to generates
+  /// expressions.
+  Value emitExtraLocalsForTensorsAtDims(OpBuilder &builder, Location loc,
+                                        size_t tid, size_t dim);
+
+  void exitCurrentLoop();
+
+  /// Return the array of coordinate for all the loop generated till now.
+  void getCoordinateArray(SmallVectorImpl<Value> &coords) {
+    for (auto &l : loopStack)
+      coords.push_back(l.idx);
+  }
+
+  ///
+  /// Getters.
+  ///
+
+  Value getTensorValueBuffer(size_t tid) { return valBuffer[tid]; }
+  Value getLastLevelTensorPointerIndex(size_t tid) {
+    return pidxs[tid].back();
+  };
+
+private:
+  struct LoopLevelInfo {
+    LoopLevelInfo(ArrayRef<size_t> ts, ArrayRef<size_t> ds, Value idx)
+        : tensors(ts), dims(ds), idx(idx) {}
+    llvm::SmallVector<size_t, 4> tensors;
+    llvm::SmallVector<size_t, 4> dims;
+    Value idx;
+  };
+
+  /// Return false if tid[dim] is a dense dimension that does not need to be
+  /// prepared (to be used by sparsification for needUniv).
+  bool prepareLoopOverTensorAtDim(OpBuilder &builder, Location loc, size_t tid,
+                                  size_t dim);
+
+  /// Input (TODO: and output) tensors.
+  std::vector<Value> tensors;
+  /// The dim type array for each tensor.
+  std::vector<std::vector<SparseTensorEncodingAttr::DimLevelType>> dims;
+  /// Sparse iteration information (by tensor and dim). These arrays
+  /// are updated to remain current within the current loop.
+  std::vector<std::vector<Value>> pidxs;
+  std::vector<std::vector<Value>> coord;
+  std::vector<std::vector<Value>> highs;
+  /// Universal dense indices and upper bounds (by index). The sizes array is
+  /// set once with the inferred dimension sizes.
+  std::vector<std::vector<Value>> sizes;
+  std::vector<std::vector<Value>> ptrBuffer; // to_pointers
+  std::vector<std::vector<Value>> idxBuffer; // to_indices
+  std::vector<Value> valBuffer;              // to_value
+
+  std::vector<LoopLevelInfo> loopStack;
+  // TODO: not yet used, it should track the current level for each tensor
+  // to help eliminate `dim` paramters from above APIs.
+  std::vector<size_t> curLv;
+};
+
+//===----------------------------------------------------------------------===//
+// ExecutionEngine/SparseTensorUtils helper functions.
+//===----------------------------------------------------------------------===//
+//
 /// Converts an overhead storage bitwidth to its internal type-encoding.
 OverheadType overheadTypeEncoding(unsigned width);
 
