@@ -138,7 +138,7 @@ body:             |
 
   ; Verify that the vreg is different immediately after register coalescing.
   ; DOESCOALESCE-NOT:   %10:gr64 ADD64ri32
-  ; DOESCOALESCE:       %{{[0-9]+}}:gr64 = ADD64ri32
+  ; DOESCOALESCE:       %{{[0-9]+}}:gr64_with_sub_8bit = ADD64ri32
   ; Verify that all these registers land in r14.
   ; CHECK:              renamable $r14 = ADD64ri32 killed renamable $r14
   
@@ -148,12 +148,12 @@ body:             |
     %2:gr64 = PHI %9, %bb.0, %10, %bb.1, debug-instr-number 1, debug-location !13
   ; CHECK:              DBG_PHI $r14, 1
     DBG_INSTR_REF 1, 0, !12, !DIExpression(), debug-location !13
-    %14:gr64 = ADD64rr killed %2, %6, implicit-def $eflags, debug-location !13
+    %2:gr64 = ADD64rr killed %2, %6, implicit-def $eflags, debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
-    $rdi = COPY %14, debug-location !13
+    $rdi = COPY %2, debug-location !13
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, debug-location !13
     ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13
-    %13:gr32 = COPY %14.sub_32bit, debug-location !13
+    %13:gr32 = COPY %2.sub_32bit, debug-location !13
     $eax = COPY %13, debug-location !13
     RET64 implicit $eax, debug-location !13
 
