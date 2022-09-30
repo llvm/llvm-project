@@ -578,12 +578,12 @@ func.func @affine_store(%arg0 : index) {
   affine.for %i0 = 0 to 10 {
     affine.store %1, %0[%i0 - symbol(%arg0) + 7] : memref<10xf32>
   }
-// CHECK:       %c-1 = arith.constant -1 : index
-// CHECK-NEXT:  %[[a:.*]] = arith.muli %arg0, %c-1 : index
+// CHECK:       %[[cm1:.*]] = arith.constant -1 : index
+// CHECK-NEXT:  %[[a:.*]] = arith.muli %{{.*}}, %[[cm1]] : index
 // CHECK-NEXT:  %[[b:.*]] = arith.addi %{{.*}}, %[[a]] : index
-// CHECK-NEXT:  %c7 = arith.constant 7 : index
-// CHECK-NEXT:  %[[c:.*]] = arith.addi %[[b]], %c7 : index
-// CHECK-NEXT:  store %cst, %0[%[[c]]] : memref<10xf32>
+// CHECK-NEXT:  %[[c7:.*]] = arith.constant 7 : index
+// CHECK-NEXT:  %[[c:.*]] = arith.addi %[[b]], %[[c7]] : index
+// CHECK-NEXT:  store %{{.*}}, %{{.*}}[%[[c]]] : memref<10xf32>
   return
 }
 
@@ -620,11 +620,11 @@ func.func @affine_dma_start(%arg0 : index) {
     affine.dma_start %0[%i0 + 7], %1[%arg0 + 11], %2[%c0], %c64
         : memref<100xf32>, memref<100xf32, 2>, memref<1xi32>
   }
-// CHECK:       %c7 = arith.constant 7 : index
-// CHECK-NEXT:  %[[a:.*]] = arith.addi %{{.*}}, %c7 : index
-// CHECK-NEXT:  %c11 = arith.constant 11 : index
-// CHECK-NEXT:  %[[b:.*]] = arith.addi %arg0, %c11 : index
-// CHECK-NEXT:  dma_start %0[%[[a]]], %1[%[[b]]], %c64, %2[%c0] : memref<100xf32>, memref<100xf32, 2>, memref<1xi32>
+// CHECK:       %[[c7:.*]] = arith.constant 7 : index
+// CHECK-NEXT:  %[[a:.*]] = arith.addi %{{.*}}, %[[c7]] : index
+// CHECK-NEXT:  %[[c11:.*]] = arith.constant 11 : index
+// CHECK-NEXT:  %[[b:.*]] = arith.addi %{{.*}}, %[[c11]] : index
+// CHECK-NEXT:  dma_start %{{.*}}[%[[a]]], %{{.*}}[%[[b]]], %{{.*}}, %{{.*}}[%{{.*}}] : memref<100xf32>, memref<100xf32, 2>, memref<1xi32>
   return
 }
 
@@ -636,9 +636,9 @@ func.func @affine_dma_wait(%arg0 : index) {
     affine.dma_wait %2[%i0 + %arg0 + 17], %c64 : memref<1xi32>
   }
 // CHECK:       %[[a:.*]] = arith.addi %{{.*}}, %arg0 : index
-// CHECK-NEXT:  %c17 = arith.constant 17 : index
-// CHECK-NEXT:  %[[b:.*]] = arith.addi %[[a]], %c17 : index
-// CHECK-NEXT:  dma_wait %0[%[[b]]], %c64 : memref<1xi32>
+// CHECK-NEXT:  %[[c17:.*]] = arith.constant 17 : index
+// CHECK-NEXT:  %[[b:.*]] = arith.addi %[[a]], %[[c17]] : index
+// CHECK-NEXT:  dma_wait %{{.*}}[%[[b]]], %{{.*}} : memref<1xi32>
   return
 }
 

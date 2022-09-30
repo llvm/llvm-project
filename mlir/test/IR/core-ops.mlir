@@ -234,16 +234,16 @@ func.func @calls(%arg0: i32) {
 
 // CHECK-LABEL: func @memref_cast(%arg0
 func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>>) {
-  // CHECK: %0 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
+  // CHECK: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
   %0 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
 
-  // CHECK: %1 = memref.cast %arg1 : memref<?xf32> to memref<4xf32>
+  // CHECK: memref.cast %{{.*}} : memref<?xf32> to memref<4xf32>
   %1 = memref.cast %arg1 : memref<?xf32> to memref<4xf32>
 
-  // CHECK: {{%.*}} = memref.cast %arg2 : memref<64x16x4xf32, strided<[64, 4, 1]>> to memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>>
+  // CHECK: memref.cast %{{.*}} : memref<64x16x4xf32, strided<[64, 4, 1]>> to memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>>
   %2 = memref.cast %arg2 : memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>> to memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>>
 
-  // CHECK: {{%.*}} = memref.cast {{%.*}} : memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>> to memref<64x16x4xf32, strided<[64, 4, 1]>>
+  // CHECK: memref.cast {{%.*}} : memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>> to memref<64x16x4xf32, strided<[64, 4, 1]>>
   %3 = memref.cast %2 : memref<64x16x4xf32, strided<[?, ?, ?], offset: ?>> to memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>>
 
   // CHECK: memref.cast %{{.*}} : memref<4xf32> to memref<*xf32>
@@ -263,15 +263,15 @@ func.func private @unranked_memref_roundtrip(memref<*xf32, 4>)
 func.func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
   // Test two dynamic sizes and dynamic offset.
-  // CHECK: %{{.*}} = memref.view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
+  // CHECK: memref.view {{.*}} : memref<2048xi8> to memref<?x?xf32>
   %1 = memref.view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
 
   // Test one dynamic size and dynamic offset.
-  // CHECK: %{{.*}} = memref.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
+  // CHECK: memref.view {{.*}} : memref<2048xi8> to memref<4x?xf32>
   %3 = memref.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
 
   // Test static sizes and static offset.
-  // CHECK: %{{.*}} = memref.view %0[{{.*}}][] : memref<2048xi8> to memref<64x4xf32>
+  // CHECK: memref.view {{.*}} : memref<2048xi8> to memref<64x4xf32>
   %c0 = arith.constant 0: index
   %5 = memref.view %0[%c0][] : memref<2048xi8> to memref<64x4xf32>
   return
