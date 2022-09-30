@@ -433,12 +433,9 @@ FailureOr<TileLoopNest> mlir::linalg::tileConsumerAndFuseProducers(
 
   // Search the number of outer parallel loops to separate them from possible
   // inner reduction dimensions.
-  SmallVector<StringAttr> iterTypes =
-      llvm::to_vector<6>(consumerOp.iterator_types().getAsRange<StringAttr>());
+  SmallVector<StringRef> iterTypes = consumerOp.getIteratorTypesArray();
   applyPermutationToVector(iterTypes, tileInterchange);
-  auto *it = find_if(iterTypes, [&](StringAttr iterType) {
-    return !isParallelIterator(iterType);
-  });
+  auto *it = find_if_not(iterTypes, isParallelIterator);
   int64_t split = std::distance(iterTypes.begin(), it);
 
   // Helper to fuse the producers greedily using a queue of fusion candidates.
