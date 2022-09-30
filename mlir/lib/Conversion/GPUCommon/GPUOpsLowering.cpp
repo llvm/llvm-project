@@ -204,7 +204,7 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
       getOrDefineFunction(moduleOp, loc, rewriter, "__ockl_printf_begin",
                           LLVM::LLVMFunctionType::get(llvmI64, {llvmI64}));
   LLVM::LLVMFuncOp ocklAppendArgs;
-  if (!adaptor.args().empty()) {
+  if (!adaptor.getArgs().empty()) {
     ocklAppendArgs = getOrDefineFunction(
         moduleOp, loc, rewriter, "__ockl_printf_append_args",
         LLVM::LLVMFunctionType::get(
@@ -230,7 +230,7 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
     (formatStringPrefix + Twine(stringNumber++)).toStringRef(stringConstName);
   } while (moduleOp.lookupSymbol(stringConstName));
 
-  llvm::SmallString<20> formatString(adaptor.format());
+  llvm::SmallString<20> formatString(adaptor.getFormat());
   formatString.push_back('\0'); // Null terminate for C
   size_t formatStringSize = formatString.size_in_bytes();
 
@@ -258,12 +258,12 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
   auto appendFormatCall = rewriter.create<LLVM::CallOp>(
       loc, ocklAppendStringN,
       ValueRange{printfDesc, stringStart, stringLen,
-                 adaptor.args().empty() ? oneI32 : zeroI32});
+                 adaptor.getArgs().empty() ? oneI32 : zeroI32});
   printfDesc = appendFormatCall.getResult();
 
   // __ockl_printf_append_args takes 7 values per append call
   constexpr size_t argsPerAppend = 7;
-  size_t nArgs = adaptor.args().size();
+  size_t nArgs = adaptor.getArgs().size();
   for (size_t group = 0; group < nArgs; group += argsPerAppend) {
     size_t bound = std::min(group + argsPerAppend, nArgs);
     size_t numArgsThisCall = bound - group;
@@ -273,7 +273,7 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
     arguments.push_back(
         rewriter.create<LLVM::ConstantOp>(loc, llvmI32, numArgsThisCall));
     for (size_t i = group; i < bound; ++i) {
-      Value arg = adaptor.args()[i];
+      Value arg = adaptor.getArgs()[i];
       if (auto floatType = arg.getType().dyn_cast<FloatType>()) {
         if (!floatType.isF64())
           arg = rewriter.create<LLVM::FPExtOp>(
@@ -325,7 +325,7 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
     (formatStringPrefix + Twine(stringNumber++)).toStringRef(stringConstName);
   } while (moduleOp.lookupSymbol(stringConstName));
 
-  llvm::SmallString<20> formatString(adaptor.format());
+  llvm::SmallString<20> formatString(adaptor.getFormat());
   formatString.push_back('\0'); // Null terminate for C
   auto globalType =
       LLVM::LLVMArrayType::get(llvmI8, formatString.size_in_bytes());
@@ -345,7 +345,7 @@ LogicalResult GPUPrintfOpToLLVMCallLowering::matchAndRewrite(
       loc, i8Ptr, globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
 
   // Construct arguments and function call
-  auto argsRange = adaptor.args();
+  auto argsRange = adaptor.getArgs();
   SmallVector<Value, 4> printfArgs;
   printfArgs.reserve(argsRange.size() + 1);
   printfArgs.push_back(stringStart);

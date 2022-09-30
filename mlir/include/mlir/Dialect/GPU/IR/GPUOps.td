@@ -932,7 +932,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
                  Optional<GPU_AsyncToken>:$asyncToken);
 
   let extraClassDeclaration = [{
-    MemRefType getType() { return memref().getType().cast<MemRefType>(); }
+    MemRefType getType() { return getMemref().getType().cast<MemRefType>(); }
   }];
 
   let assemblyFormat = [{
@@ -1209,7 +1209,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
 
   let extraClassDeclaration = [{
     gpu::MMAMatrixType getType() {
-      return res().getType().cast<gpu::MMAMatrixType>();
+      return getRes().getType().cast<gpu::MMAMatrixType>();
     }
   }];
 
@@ -1270,7 +1270,7 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
 
   let extraClassDeclaration = [{
     gpu::MMAMatrixType getType() {
-      return res().getType().cast<gpu::MMAMatrixType>();
+      return getRes().getType().cast<gpu::MMAMatrixType>();
     }
   }];
 

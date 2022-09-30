@@ -77,7 +77,7 @@ private:
     if (auto waitOp = llvm::dyn_cast<gpu::WaitOp>(op)) {
       if (currentToken)
         waitOp.addAsyncDependency(currentToken);
-      currentToken = waitOp.asyncToken();
+      currentToken = waitOp.getAsyncToken();
       return success();
     }
     builder.setInsertionPoint(op);
@@ -132,7 +132,8 @@ private:
   }
 
   Value createWaitOp(Location loc, Type resultType, ValueRange operands) {
-    return builder.create<gpu::WaitOp>(loc, resultType, operands).asyncToken();
+    return builder.create<gpu::WaitOp>(loc, resultType, operands)
+        .getAsyncToken();
   }
 
   OpBuilder builder;
@@ -194,7 +195,7 @@ struct GpuAsyncRegionPass::DeferWaitCallback {
     // async.execute's region is currently restricted to one block.
     for (auto &op : llvm::reverse(executeOp.getBody()->without_terminator())) {
       if (auto waitOp = dyn_cast<gpu::WaitOp>(op)) {
-        if (!waitOp.asyncToken())
+        if (!waitOp.getAsyncToken())
           worklist.push_back(waitOp);
         return;
       }
