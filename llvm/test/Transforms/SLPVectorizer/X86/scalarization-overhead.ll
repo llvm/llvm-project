@@ -39,7 +39,29 @@ entry:
   %call = call i16 @check_i16(i16 noundef 1, i16 noundef %reass.mul24, i16 noundef 5120)
   unreachable
 }
-
 declare i16 @check_i16(i16, i16, i16)
 
 
+define void @PR58054() {
+; CHECK-LABEL: @PR58054(
+; CHECK-NEXT:    [[VAL:%.*]] = add i64 poison, poison
+; CHECK-NEXT:    [[VAL2:%.*]] = add i64 poison, poison
+; CHECK-NEXT:    [[VAL3:%.*]] = mul i64 [[VAL2]], [[VAL]]
+; CHECK-NEXT:    [[VAL4:%.*]] = mul i64 [[VAL3]], [[VAL2]]
+; CHECK-NEXT:    [[VAL5:%.*]] = mul i64 [[VAL4]], [[VAL2]]
+; CHECK-NEXT:    [[VAL7:%.*]] = add i64 [[VAL]], [[VAL5]]
+; CHECK-NEXT:    [[VAL8:%.*]] = sitofp i64 [[VAL7]] to double
+; CHECK-NEXT:    call void @wibble(i32 poison, double [[VAL8]], i64 poison)
+; CHECK-NEXT:    unreachable
+;
+  %val = add i64 poison, poison
+  %val2 = add i64 poison, poison
+  %val3 = mul i64 %val2, %val
+  %val4 = mul i64 %val3, %val2
+  %val5 = mul i64 %val4, %val2
+  %val7 = add i64 %val, %val5
+  %val8 = sitofp i64 %val7 to double
+  call void @wibble(i32 poison, double %val8, i64 poison)
+  unreachable
+}
+declare void @wibble(i32, double, i64)
