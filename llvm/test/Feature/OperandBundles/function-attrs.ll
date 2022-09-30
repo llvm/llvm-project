@@ -1,4 +1,4 @@
-; RUN: opt -S -function-attrs < %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -S -passes=inferattrs,function-attrs < %s | FileCheck %s
 
 declare void @f_readonly() readonly
 declare void @f_readnone() readnone
