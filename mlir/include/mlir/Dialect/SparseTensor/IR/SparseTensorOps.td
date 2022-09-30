@@ -815,6 +815,12 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      ```
   }];
 
+  let builders = [
+    OpBuilder<(
+      ins "Value":$tensor,
+      "function_ref<void(OpBuilder &, Location, ValueRange)>")>
+  ];
+
   let regions = (region AnyRegion:$region);
   let assemblyFormat = "`in` $tensor attr-dict `:` type($tensor)  `do` $region";
   let hasVerifier = 1;
