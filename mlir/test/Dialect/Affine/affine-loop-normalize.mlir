@@ -168,9 +168,9 @@ func.func @loop_with_multiple_upper_bounds(%arg0: memref<?x?xf32>, %arg1 : index
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG0]][%[[IIIV]], %[[KKIV]]] : memref<1024x1024xf32>
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG1]][%[[KKIV]], %[[JJIV]]] : memref<1024x1024xf32>
 // CHECK-NEXT:                %{{.*}} = affine.load %[[ARG2]][%[[IIIV]], %[[JJIV]]] : memref<1024x1024xf32>
-// CHECK-NEXT:                %{{.*}} = arith.mulf %9, %10 : f32
-// CHECK-NEXT:                %{{.*}} = arith.addf %11, %12 : f32
-// CHECK-NEXT:                affine.store %{{.*}}, %[[ARG2]][%6, %7] : memref<1024x1024xf32>
+// CHECK-NEXT:                %{{.*}} = arith.mulf 
+// CHECK-NEXT:                %{{.*}} = arith.addf 
+// CHECK-NEXT:                affine.store %{{.*}}, %[[ARG2]]{{.*}} : memref<1024x1024xf32>
 // CHECK-NEXT:              }
 // CHECK-NEXT:            }
 // CHECK-NEXT:          }
