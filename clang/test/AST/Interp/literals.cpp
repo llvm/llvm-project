@@ -261,3 +261,11 @@ namespace cond {
 #endif
 
 };
+
+namespace band {
+  static_assert((10 & 1) == 0, "");
+  static_assert((10 & 10) == 10, "");
+
+  static_assert((1337 & -1) == 1337, "");
+  static_assert((0 & gimme(12)) == 0, "");
+};

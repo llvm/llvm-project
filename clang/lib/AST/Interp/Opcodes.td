@@ -59,6 +59,11 @@ def NumberTypeClass : TypeClass {
                Uint32, Sint64, Uint64];
 }
 
+def IntegerTypeClass : TypeClass {
+  let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
+               Uint32, Sint64, Uint64];
+}
+
 def AluTypeClass : TypeClass {
   let Types = !listconcat(NumberTypeClass.Types, [Bool]);
 }
@@ -100,6 +105,11 @@ class Opcode {
 
 class AluOpcode : Opcode {
   let Types = [AluTypeClass];
+  let HasGroup = 1;
+}
+
+class IntegerOpcode : Opcode {
+  let Types = [IntegerTypeClass];
   let HasGroup = 1;
 }
 
@@ -401,6 +411,7 @@ def Rem : Opcode {
   let Types = [NumberTypeClass];
   let HasGroup = 1;
 }
+def BitAnd : IntegerOpcode;
 def Div : Opcode {
   let Types = [NumberTypeClass];
   let HasGroup = 1;
