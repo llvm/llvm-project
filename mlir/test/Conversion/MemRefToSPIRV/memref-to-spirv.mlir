@@ -121,16 +121,16 @@ module attributes {
 
 // CHECK-LABEL: @load_store_zero_rank_float
 func.func @load_store_zero_rank_float(%arg0: memref<f32, #spirv.storage_class<CrossWorkgroup>>, %arg1: memref<f32, #spirv.storage_class<CrossWorkgroup>>) {
-  //      CHECK: [[ARG0:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<f32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<f32, CrossWorkgroup>
-  //      CHECK: [[ARG1:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<f32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<f32, CrossWorkgroup>
+  //      CHECK: [[ARG0:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<f32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<!spirv.array<1 x f32>, CrossWorkgroup>
+  //      CHECK: [[ARG1:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<f32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<!spirv.array<1 x f32>, CrossWorkgroup>
   //      CHECK: [[ZERO1:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.PtrAccessChain [[ARG0]][
+  //      CHECK: spirv.AccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO1]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Load "CrossWorkgroup" %{{.*}} : f32
   %0 = memref.load %arg0[] : memref<f32, #spirv.storage_class<CrossWorkgroup>>
   //      CHECK: [[ZERO2:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.PtrAccessChain [[ARG1]][
+  //      CHECK: spirv.AccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO2]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Store "CrossWorkgroup" %{{.*}} : f32
@@ -140,16 +140,16 @@ func.func @load_store_zero_rank_float(%arg0: memref<f32, #spirv.storage_class<Cr
 
 // CHECK-LABEL: @load_store_zero_rank_int
 func.func @load_store_zero_rank_int(%arg0: memref<i32, #spirv.storage_class<CrossWorkgroup>>, %arg1: memref<i32, #spirv.storage_class<CrossWorkgroup>>) {
-  //      CHECK: [[ARG0:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<i32, #spirv.storage_class<CrossWorkgroup>> to  !spirv.ptr<i32, CrossWorkgroup>
-  //      CHECK: [[ARG1:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<i32, #spirv.storage_class<CrossWorkgroup>> to  !spirv.ptr<i32, CrossWorkgroup>
+  //      CHECK: [[ARG0:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<i32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<!spirv.array<1 x i32>, CrossWorkgroup>
+  //      CHECK: [[ARG1:%.*]] = builtin.unrealized_conversion_cast {{.+}} : memref<i32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<!spirv.array<1 x i32>, CrossWorkgroup>
   //      CHECK: [[ZERO1:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.PtrAccessChain [[ARG0]][
+  //      CHECK: spirv.AccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO1]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Load "CrossWorkgroup" %{{.*}} : i32
   %0 = memref.load %arg0[] : memref<i32, #spirv.storage_class<CrossWorkgroup>>
   //      CHECK: [[ZERO2:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.PtrAccessChain [[ARG1]][
+  //      CHECK: spirv.AccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO2]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Store "CrossWorkgroup" %{{.*}} : i32
@@ -173,14 +173,13 @@ func.func @load_store_unknown_dim(%i: index, %source: memref<?xi32, #spirv.stora
 // CHECK-LABEL: func @load_i1
 //  CHECK-SAME: (%[[SRC:.+]]: memref<4xi1, #spirv.storage_class<CrossWorkgroup>>, %[[IDX:.+]]: index)
 func.func @load_i1(%src: memref<4xi1, #spirv.storage_class<CrossWorkgroup>>, %i : index) -> i1 {
-  // CHECK-DAG: %[[SRC_CAST:.+]] = builtin.unrealized_conversion_cast %[[SRC]] : memref<4xi1, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<i8, CrossWorkgroup>
+  // CHECK-DAG: %[[SRC_CAST:.+]] = builtin.unrealized_conversion_cast %[[SRC]] : memref<4xi1, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<!spirv.array<4 x i8>, CrossWorkgroup>
   // CHECK-DAG: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
   // CHECK: %[[ZERO_0:.+]] = spirv.Constant 0 : i32
-  // CHECK: %[[ZERO_1:.+]] = spirv.Constant 0 : i32
   // CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
   // CHECK: %[[MUL:.+]] = spirv.IMul %[[ONE]], %[[IDX_CAST]] : i32
-  // CHECK: %[[ADD:.+]] = spirv.IAdd %[[ZERO_1]], %[[MUL]] : i32
-  // CHECK: %[[ADDR:.+]] = spirv.PtrAccessChain %[[SRC_CAST]][%[[ADD]]]
+  // CHECK: %[[ADD:.+]] = spirv.IAdd %[[ZERO_0]], %[[MUL]] : i32
+  // CHECK: %[[ADDR:.+]] = spirv.AccessChain %[[SRC_CAST]][%[[ADD]]]
   // CHECK: %[[VAL:.+]] = spirv.Load "CrossWorkgroup" %[[ADDR]] : i8
   // CHECK: %[[ONE_I8:.+]] = spirv.Constant 1 : i8
   // CHECK: %[[BOOL:.+]] = spirv.IEqual %[[VAL]], %[[ONE_I8]] : i8
@@ -194,14 +193,13 @@ func.func @load_i1(%src: memref<4xi1, #spirv.storage_class<CrossWorkgroup>>, %i 
 //  CHECK-SAME: %[[IDX:.+]]: index
 func.func @store_i1(%dst: memref<4xi1, #spirv.storage_class<CrossWorkgroup>>, %i: index) {
   %true = arith.constant true
-  // CHECK-DAG: %[[DST_CAST:.+]] = builtin.unrealized_conversion_cast %[[DST]] : memref<4xi1, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<i8, CrossWorkgroup>
+  // CHECK-DAG: %[[DST_CAST:.+]] = builtin.unrealized_conversion_cast %[[DST]] : memref<4xi1, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<!spirv.array<4 x i8>, CrossWorkgroup>
   // CHECK-DAG: %[[IDX_CAST:.+]] = builtin.unrealized_conversion_cast %[[IDX]]
   // CHECK: %[[ZERO_0:.+]] = spirv.Constant 0 : i32
-  // CHECK: %[[ZERO_1:.+]] = spirv.Constant 0 : i32
   // CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
   // CHECK: %[[MUL:.+]] = spirv.IMul %[[ONE]], %[[IDX_CAST]] : i32
-  // CHECK: %[[ADD:.+]] = spirv.IAdd %[[ZERO_1]], %[[MUL]] : i32
-  // CHECK: %[[ADDR:.+]] = spirv.PtrAccessChain %[[DST_CAST]][%[[ADD]]]
+  // CHECK: %[[ADD:.+]] = spirv.IAdd %[[ZERO_0]], %[[MUL]] : i32
+  // CHECK: %[[ADDR:.+]] = spirv.AccessChain %[[DST_CAST]][%[[ADD]]]
   // CHECK: %[[ZERO_I8:.+]] = spirv.Constant 0 : i8
   // CHECK: %[[ONE_I8:.+]] = spirv.Constant 1 : i8
   // CHECK: %[[RES:.+]] = spirv.Select %{{.+}}, %[[ONE_I8]], %[[ZERO_I8]] : i1, i8
