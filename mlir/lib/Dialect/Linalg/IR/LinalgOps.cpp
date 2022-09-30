@@ -1345,7 +1345,7 @@ LogicalResult ReduceOp::verify() {
       reducedInputDims.push_back(en.value());
   }
 
-  if (reducedInputDims.size() != initType.getRank()) {
+  if (reducedInputDims.size() != static_cast<size_t>(initType.getRank())) {
     return emitOpError() << "number of dimensions after reduction "
                          << reducedInputDims.size()
                          << " doesn't match the init rank "
