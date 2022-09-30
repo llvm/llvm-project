@@ -9025,7 +9025,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // (select (and (x , 0x1) != 0), (z ^ y) ), y -> (-(and (x , 0x1)) & z ) ^ y
     // (select (and (x , 0x1) == 0), y, (z | y) ) -> (-(and (x , 0x1)) & z ) | y
     // (select (and (x , 0x1) != 0), (z | y) ), y -> (-(and (x , 0x1)) & z ) | y
-    if (isNullConstant(RHS) && (CCVal == ISD::SETEQ || CCVal == ISD::SETNE) &&
+    if (isNullConstant(RHS) && ISD::isIntEqualitySetCC(CCVal) &&
         LHS.getOpcode() == ISD::AND && isOneConstant(LHS.getOperand(1))) {
       unsigned Opcode;
       SDValue Src1, Src2;
@@ -9057,7 +9057,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
       if (isOrXorPattern()) {
         SDValue Neg;
-        unsigned int CmpSz = LHS.getSimpleValueType().getSizeInBits();
+        unsigned CmpSz = LHS.getSimpleValueType().getSizeInBits();
         // We need mask of all zeros or ones with same size of the other
         // operands.
         if (CmpSz > VT.getSizeInBits())
