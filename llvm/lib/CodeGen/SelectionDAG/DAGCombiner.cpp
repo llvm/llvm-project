@@ -10293,12 +10293,12 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
       return NotCond;
     }
 
-      // select Cond, 0, -1 --> sext (!Cond)
-      if (C1->isZero() && C2->isAllOnes()) {
-        SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
-        NotCond = DAG.getSExtOrTrunc(NotCond, DL, VT);
-        return NotCond;
-      }
+    // select Cond, 0, -1 --> sext (!Cond)
+    if (C1->isZero() && C2->isAllOnes()) {
+      SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
+      NotCond = DAG.getSExtOrTrunc(NotCond, DL, VT);
+      return NotCond;
+    }
 
     // Use a target hook because some targets may prefer to transform in the
     // other direction.
