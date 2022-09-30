@@ -751,6 +751,9 @@ public:
   /// Transform G_ADD(G_SUB(y, x), x) to y.
   bool matchAddSubSameReg(MachineInstr &MI, Register &Src);
 
+  bool matchBuildVectorIdentityFold(MachineInstr &MI, Register &MatchInfo);
+  bool matchTruncBuildVectorFold(MachineInstr &MI, Register &MatchInfo);
+
   /// \returns true if it is possible to simplify a select instruction \p MI
   /// to a min/max instruction of some sort.
   bool matchSimplifySelectToMinMax(MachineInstr &MI, BuildFnTy &MatchInfo);
