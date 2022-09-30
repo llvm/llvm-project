@@ -253,6 +253,10 @@ BEGIN_REGISTER_VP(vp_fmuladd, 3, 4, VP_FMULADD, -1)
 VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fmuladd)
 END_REGISTER_VP(vp_fmuladd, VP_FMULADD)
 
+// llvm.vp.copysign(x,y,mask,vlen)
+BEGIN_REGISTER_VP(vp_copysign, 2, 3, VP_FCOPYSIGN, -1)
+END_REGISTER_VP(vp_copysign, VP_FCOPYSIGN)
+
 // llvm.vp.minnum(x, y, mask,vlen)
 BEGIN_REGISTER_VP(vp_minnum, 2, 3, VP_FMINNUM, -1)
 END_REGISTER_VP(vp_minnum, VP_FMINNUM)
