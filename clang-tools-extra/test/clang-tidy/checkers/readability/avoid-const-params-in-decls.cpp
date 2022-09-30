@@ -170,12 +170,17 @@ void NF(const int*);
 void NF(const int* const*);
 void NF(alias_const_type);
 
-// Regression test for when the 'const' token is not in the code.
+// Regression tests involving macros, which are ignored by default.
 #define CONCAT(a, b) a##b
 void ConstNotVisible(CONCAT(cons, t) int i);
-// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: parameter 'i'
-// We warn, but we can't give a fix
-// CHECK-FIXES: void ConstNotVisible(CONCAT(cons, t) int i);
+
+#define CONST_INT_PARAM const int i
+void ConstInMacro(CONST_INT_PARAM);
+
+#define DECLARE_FUNCTION_WITH_ARG(x) struct InsideMacro{ x }
+DECLARE_FUNCTION_WITH_ARG(
+    void member_function(const int i);
+);
 
 // Regression test. We should not warn (or crash) on lambda expressions
 auto lambda_with_name = [](const int n) {};
