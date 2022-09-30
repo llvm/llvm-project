@@ -19,7 +19,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, symlinkat,
                    (const char *path1, int fd, const char *path2)) {
-  long ret = __llvm_libc::syscall(SYS_symlinkat, path1, fd, path2);
+  long ret = __llvm_libc::syscall_impl(SYS_symlinkat, path1, fd, path2);
   if (ret < 0) {
     errno = -ret;
     return -1;

@@ -29,7 +29,7 @@ LLVM_LIBC_FUNCTION(int, openat, (int dfd, const char *path, int flags, ...)) {
     va_end(varargs);
   }
 
-  int fd = __llvm_libc::syscall(SYS_openat, dfd, path, flags, mode_flags);
+  int fd = __llvm_libc::syscall_impl(SYS_openat, dfd, path, flags, mode_flags);
   if (fd > 0)
     return fd;
 

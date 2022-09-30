@@ -154,6 +154,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.rmdir
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
+    libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
