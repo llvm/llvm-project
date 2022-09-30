@@ -1550,14 +1550,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampMaxNumElements(1, S16, 2) // TODO: Make 4?
     .clampMaxNumElements(0, S16, 64);
 
-  // TODO: Don't fully scalarize v2s16 pieces? Or combine out those
-  // pre-legalize.
-  if (ST.hasVOP3PInsts()) {
-    getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
-      .customFor({V2S16, V2S16})
-      .lower();
-  } else
-    getActionDefinitionsBuilder(G_SHUFFLE_VECTOR).lower();
+  getActionDefinitionsBuilder(G_SHUFFLE_VECTOR).lower();
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -1764,8 +1757,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return legalizeInsertVectorElt(MI, MRI, B);
-  case TargetOpcode::G_SHUFFLE_VECTOR:
-    return legalizeShuffleVector(MI, MRI, B);
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS:
     return legalizeSinCos(MI, MRI, B);
@@ -2402,26 +2393,6 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
 
   MI.eraseFromParent();
   return true;
-}
-
-bool AMDGPULegalizerInfo::legalizeShuffleVector(
-  MachineInstr &MI, MachineRegisterInfo &MRI,
-  MachineIRBuilder &B) const {
-  const LLT V2S16 = LLT::fixed_vector(2, 16);
-
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src0 = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(Dst);
-  LLT SrcTy = MRI.getType(Src0);
-
-  if (SrcTy == V2S16 && DstTy == V2S16 &&
-      AMDGPU::isLegalVOP3PShuffleMask(MI.getOperand(3).getShuffleMask()))
-    return true;
-
-  MachineIRBuilder HelperBuilder(MI);
-  GISelObserverWrapper DummyObserver;
-  LegalizerHelper Helper(B.getMF(), DummyObserver, HelperBuilder);
-  return Helper.lowerShuffleVector(MI) == LegalizerHelper::Legalized;
 }
 
 bool AMDGPULegalizerInfo::legalizeSinCos(
