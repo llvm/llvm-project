@@ -61,7 +61,6 @@ def CH : X86Reg<"ch", 5>;
 def BH : X86Reg<"bh", 7>;
 
 // X86-64 only, requires REX.
-let CostPerUse = [1] in {
 def SIL  : X86Reg<"sil",   6>;
 def DIL  : X86Reg<"dil",   7>;
 def BPL  : X86Reg<"bpl",   5>;
@@ -74,7 +73,6 @@ def R12B : X86Reg<"r12b", 12>;
 def R13B : X86Reg<"r13b", 13>;
 def R14B : X86Reg<"r14b", 14>;
 def R15B : X86Reg<"r15b", 15>;
-}
 
 let isArtificial = 1 in {
 // High byte of the low 16 bits of the super-register:
@@ -126,8 +124,7 @@ def SP : X86Reg<"sp", 4, [SPL,SPH]>;
 def IP : X86Reg<"ip", 0>;
 
 // X86-64 only, requires REX.
-let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CostPerUse = [1],
-    CoveredBySubRegs = 1 in {
+let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CoveredBySubRegs = 1 in {
 def R8W  : X86Reg<"r8w",   8, [R8B,R8BH]>;
 def R9W  : X86Reg<"r9w",   9, [R9B,R9BH]>;
 def R10W : X86Reg<"r10w", 10, [R10B,R10BH]>;
@@ -152,8 +149,7 @@ def EIP : X86Reg<"eip", 0, [IP, HIP]>, DwarfRegNum<[-2, 8, 8]>;
 }
 
 // X86-64 only, requires REX
-let SubRegIndices = [sub_16bit, sub_16bit_hi], CostPerUse = [1],
-    CoveredBySubRegs = 1 in {
+let SubRegIndices = [sub_16bit, sub_16bit_hi], CoveredBySubRegs = 1 in {
 def R8D  : X86Reg<"r8d",   8, [R8W,R8WH]>;
 def R9D  : X86Reg<"r9d",   9, [R9W,R9WH]>;
 def R10D : X86Reg<"r10d", 10, [R10W,R10WH]>;
@@ -176,7 +172,6 @@ def RBP : X86Reg<"rbp", 5, [EBP]>, DwarfRegNum<[6, -2, -2]>;
 def RSP : X86Reg<"rsp", 4, [ESP]>, DwarfRegNum<[7, -2, -2]>;
 
 // These also require REX.
-let CostPerUse = [1] in {
 def R8  : X86Reg<"r8",   8, [R8D]>,  DwarfRegNum<[ 8, -2, -2]>;
 def R9  : X86Reg<"r9",   9, [R9D]>,  DwarfRegNum<[ 9, -2, -2]>;
 def R10 : X86Reg<"r10", 10, [R10D]>, DwarfRegNum<[10, -2, -2]>;
@@ -186,7 +181,7 @@ def R13 : X86Reg<"r13", 13, [R13D]>, DwarfRegNum<[13, -2, -2]>;
 def R14 : X86Reg<"r14", 14, [R14D]>, DwarfRegNum<[14, -2, -2]>;
 def R15 : X86Reg<"r15", 15, [R15D]>, DwarfRegNum<[15, -2, -2]>;
 def RIP : X86Reg<"rip",  0, [EIP]>,  DwarfRegNum<[16, -2, -2]>;
-}}
+}
 
 // MMX Registers. These are actually aliased to ST0 .. ST7
 def MM0 : X86Reg<"mm0", 0>, DwarfRegNum<[41, 29, 29]>;
@@ -219,7 +214,6 @@ def XMM6: X86Reg<"xmm6", 6>, DwarfRegNum<[23, 27, 27]>;
 def XMM7: X86Reg<"xmm7", 7>, DwarfRegNum<[24, 28, 28]>;
 
 // X86-64 only
-let CostPerUse = [1] in {
 def XMM8:  X86Reg<"xmm8",   8>, DwarfRegNum<[25, -2, -2]>;
 def XMM9:  X86Reg<"xmm9",   9>, DwarfRegNum<[26, -2, -2]>;
 def XMM10: X86Reg<"xmm10", 10>, DwarfRegNum<[27, -2, -2]>;
@@ -245,8 +239,6 @@ def XMM28:  X86Reg<"xmm28", 28>, DwarfRegNum<[79, -2, -2]>;
 def XMM29:  X86Reg<"xmm29", 29>, DwarfRegNum<[80, -2, -2]>;
 def XMM30:  X86Reg<"xmm30", 30>, DwarfRegNum<[81, -2, -2]>;
 def XMM31:  X86Reg<"xmm31", 31>, DwarfRegNum<[82, -2, -2]>;
-
-} // CostPerUse
 
 // YMM0-15 registers, used by AVX instructions and
 // YMM16-31 registers, used by AVX-512 instructions.

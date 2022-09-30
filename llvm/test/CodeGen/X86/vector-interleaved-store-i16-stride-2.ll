@@ -192,9 +192,9 @@ define void @vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.vec) nounwind {
 ; SSE-NEXT:    movdqa (%rsi), %xmm4
 ; SSE-NEXT:    movdqa 16(%rsi), %xmm5
 ; SSE-NEXT:    movdqa 32(%rsi), %xmm6
-; SSE-NEXT:    movdqa 48(%rsi), %xmm8
-; SSE-NEXT:    movdqa %xmm0, %xmm7
-; SSE-NEXT:    punpckhwd {{.*#+}} xmm7 = xmm7[4],xmm4[4],xmm7[5],xmm4[5],xmm7[6],xmm4[6],xmm7[7],xmm4[7]
+; SSE-NEXT:    movdqa 48(%rsi), %xmm7
+; SSE-NEXT:    movdqa %xmm0, %xmm8
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm8 = xmm8[4],xmm4[4],xmm8[5],xmm4[5],xmm8[6],xmm4[6],xmm8[7],xmm4[7]
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
 ; SSE-NEXT:    movdqa %xmm1, %xmm4
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
@@ -203,8 +203,8 @@ define void @vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.vec) nounwind {
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm6[4],xmm5[5],xmm6[5],xmm5[6],xmm6[6],xmm5[7],xmm6[7]
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm6[0],xmm2[1],xmm6[1],xmm2[2],xmm6[2],xmm2[3],xmm6[3]
 ; SSE-NEXT:    movdqa %xmm3, %xmm6
-; SSE-NEXT:    punpckhwd {{.*#+}} xmm6 = xmm6[4],xmm8[4],xmm6[5],xmm8[5],xmm6[6],xmm8[6],xmm6[7],xmm8[7]
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm8[0],xmm3[1],xmm8[1],xmm3[2],xmm8[2],xmm3[3],xmm8[3]
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm6 = xmm6[4],xmm7[4],xmm6[5],xmm7[5],xmm6[6],xmm7[6],xmm6[7],xmm7[7]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm7[0],xmm3[1],xmm7[1],xmm3[2],xmm7[2],xmm3[3],xmm7[3]
 ; SSE-NEXT:    movdqa %xmm3, 96(%rdx)
 ; SSE-NEXT:    movdqa %xmm6, 112(%rdx)
 ; SSE-NEXT:    movdqa %xmm2, 64(%rdx)
@@ -212,7 +212,7 @@ define void @vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %out.vec) nounwind {
 ; SSE-NEXT:    movdqa %xmm1, 32(%rdx)
 ; SSE-NEXT:    movdqa %xmm4, 48(%rdx)
 ; SSE-NEXT:    movdqa %xmm0, (%rdx)
-; SSE-NEXT:    movdqa %xmm7, 16(%rdx)
+; SSE-NEXT:    movdqa %xmm8, 16(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: vf32:

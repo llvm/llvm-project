@@ -355,7 +355,7 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ;
 ; AVX1-LABEL: sad_avx64i8:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -382,15 +382,15 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX1-NEXT:    jne .LBB2_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm4, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; AVX1-NEXT:    vpaddd %xmm8, %xmm8, %xmm7
-; AVX1-NEXT:    vpaddd %xmm8, %xmm8, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm7
+; AVX1-NEXT:    vpaddd %xmm1, %xmm1, %xmm8
+; AVX1-NEXT:    vpaddd %xmm1, %xmm8, %xmm8
+; AVX1-NEXT:    vpaddd %xmm7, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm8, %xmm1
-; AVX1-NEXT:    vpaddd %xmm7, %xmm8, %xmm7
-; AVX1-NEXT:    vpaddd %xmm7, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm5, %xmm4, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2

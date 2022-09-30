@@ -341,7 +341,7 @@ return:
 define void @another_count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: another_count_up_signed:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
@@ -350,22 +350,22 @@ define void @another_count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB6_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %r8, %rax
-; CHECK-NEXT:    sarq $8, %rax
+; CHECK-NEXT:    movq %rax, %r8
+; CHECK-NEXT:    sarq $8, %r8
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
-; CHECK-NEXT:    movsd %xmm3, (%rdi,%rax,8)
-; CHECK-NEXT:    movq %rcx, %rax
-; CHECK-NEXT:    sarq $24, %rax
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%r8,8)
+; CHECK-NEXT:    movq %rcx, %r8
+; CHECK-NEXT:    sarq $24, %r8
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
-; CHECK-NEXT:    movsd %xmm3, (%rdi,%rax,8)
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%r8,8)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdx)
 ; CHECK-NEXT:    addq $8, %rdx
 ; CHECK-NEXT:    addq $16777216, %rcx # imm = 0x1000000
-; CHECK-NEXT:    addq $256, %r8 # imm = 0x100
+; CHECK-NEXT:    addq $256, %rax # imm = 0x100
 ; CHECK-NEXT:    decq %rsi
 ; CHECK-NEXT:    jne .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %return

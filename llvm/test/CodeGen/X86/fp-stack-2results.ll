@@ -68,11 +68,11 @@ define void @call1(ptr%P1, ptr%P2) {
 ; x86_64-NEXT:    .cfi_def_cfa_offset 32
 ; x86_64-NEXT:    .cfi_offset %rbx, -24
 ; x86_64-NEXT:    .cfi_offset %r14, -16
-; x86_64-NEXT:    movq %rsi, %r14
-; x86_64-NEXT:    movq %rdi, %rbx
+; x86_64-NEXT:    movq %rsi, %rbx
+; x86_64-NEXT:    movq %rdi, %r14
 ; x86_64-NEXT:    callq test@PLT
-; x86_64-NEXT:    fstpt (%rbx)
 ; x86_64-NEXT:    fstpt (%r14)
+; x86_64-NEXT:    fstpt (%rbx)
 ; x86_64-NEXT:    addq $8, %rsp
 ; x86_64-NEXT:    .cfi_def_cfa_offset 24
 ; x86_64-NEXT:    popq %rbx
@@ -121,12 +121,12 @@ define void @call2(ptr%P1, ptr%P2) {
 ; x86_64-NEXT:    .cfi_def_cfa_offset 32
 ; x86_64-NEXT:    .cfi_offset %rbx, -24
 ; x86_64-NEXT:    .cfi_offset %r14, -16
-; x86_64-NEXT:    movq %rsi, %r14
-; x86_64-NEXT:    movq %rdi, %rbx
+; x86_64-NEXT:    movq %rsi, %rbx
+; x86_64-NEXT:    movq %rdi, %r14
 ; x86_64-NEXT:    callq test@PLT
 ; x86_64-NEXT:    fxch %st(1)
-; x86_64-NEXT:    fstpt (%rbx)
 ; x86_64-NEXT:    fstpt (%r14)
+; x86_64-NEXT:    fstpt (%rbx)
 ; x86_64-NEXT:    addq $8, %rsp
 ; x86_64-NEXT:    .cfi_def_cfa_offset 24
 ; x86_64-NEXT:    popq %rbx
