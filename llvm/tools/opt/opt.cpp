@@ -456,7 +456,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "dot-regions",          "dot-regions-only",
       "view-regions",         "view-regions-only",
       "select-optimize",      "expand-large-div-rem",
-      "structurizecfg"};
+      "structurizecfg",       "fix-irreducible"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
