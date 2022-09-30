@@ -409,7 +409,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 
   // Add extra constraints for variables that are known positive.
   for (auto &KV : KnownPositiveVariables) {
-    if (!KV.second)
+    if (!KV.second || (Value2Index.find(KV.first) == Value2Index.end() &&
+                       NewIndices.find(KV.first) == NewIndices.end()))
       continue;
     SmallVector<int64_t, 8> C(Value2Index.size() + NewIndices.size() + 1, 0);
     C[GetOrAddIndex(KV.first)] = -1;
