@@ -209,11 +209,13 @@ private:
 /// TransformOpInterface. The operations implementing this interface and the
 /// surrounding structure are referred to as transform IR. The operations to
 /// which transformations apply are referred to as payload IR. The state thus
-/// contains the mapping between values defined in the transform IR ops and
-/// payload IR ops. It assumes that each value in the transform IR can be used
-/// at most once (since transformations are likely to change the payload IR ops
-/// the value corresponds to). Checks that transform IR values correspond to
-/// disjoint sets of payload IR ops throughout the transformation.
+/// contains the many-to-many mapping between values defined in the transform IR
+/// ops and payload IR ops. The "expensive-checks" option can be passed to
+/// the constructor at transformation execution time that transform IR values
+/// used as operands by a transform IR operation are not associated with
+/// dangling pointers to payload IR operations that are known to have been
+/// erased by previous transformation through the same or a different transform
+/// IR value.
 ///
 /// A reference to this class is passed as an argument to "apply" methods of the
 /// transform op interface. Thus the "apply" method can call
@@ -235,9 +237,10 @@ class TransformState {
   /// operations in the payload IR.
   using TransformOpMapping = DenseMap<Value, SmallVector<Operation *>>;
 
-  /// Mapping between a payload IR operation and the transform IR value it is
-  /// currently associated with.
-  using TransformOpReverseMapping = DenseMap<Operation *, Value>;
+  /// Mapping between a payload IR operation and the transform IR values it is
+  /// associated with.
+  using TransformOpReverseMapping =
+      DenseMap<Operation *, SmallVector<Value, 2>>;
 
   /// Bidirectional mappings between transform IR values and payload IR
   /// operations.
@@ -249,7 +252,7 @@ class TransformState {
 public:
   /// Creates a state for transform ops living in the given region. The parent
   /// operation of the region. The second argument points to the root operation
-  /// in the payload IR beind transformed, which may or may not contain the
+  /// in the payload IR being transformed, which may or may not contain the
   /// region with transform ops. Additional options can be provided through the
   /// trailing configuration object.
   TransformState(Region &region, Operation *root,
@@ -263,9 +266,10 @@ public:
   /// This is helpful for transformations that apply to a particular handle.
   ArrayRef<Operation *> getPayloadOps(Value value) const;
 
-  /// Returns the Transform IR handle for the given Payload IR op if it exists
-  /// in the state, null otherwise.
-  Value getHandleForPayloadOp(Operation *op) const;
+  /// Populates `handles` with all handles pointing to the given Payload IR op.
+  /// Returns success if such handles exist, failure otherwise.
+  LogicalResult getHandlesForPayloadOp(Operation *op,
+                                       SmallVectorImpl<Value> &handles) const;
 
   /// Applies the transformation specified by the given transform op and updates
   /// the state accordingly.
@@ -275,13 +279,13 @@ public:
   /// list of operations in the payload IR. The arguments must be defined in
   /// blocks of the currently processed transform IR region, typically after a
   /// region scope is defined.
-  LogicalResult mapBlockArguments(BlockArgument argument,
-                                  ArrayRef<Operation *> operations) {
+  void mapBlockArguments(BlockArgument argument,
+                         ArrayRef<Operation *> operations) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(argument.getParentRegion() == regionStack.back() &&
            "mapping block arguments from a region other than the active one");
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-    return setPayloadOps(argument, operations);
+    setPayloadOps(argument, operations);
   }
 
   // Forward declarations to support limited visibility.
@@ -379,7 +383,8 @@ public:
     const TransformState &getTransformState() const { return state; }
 
     /// Replaces the given payload op with another op. If the replacement op is
-    /// null, removes the association of the payload op with its handle.
+    /// null, removes the association of the payload op with its handle. Returns
+    /// failure if the op is not associated with any handle.
     LogicalResult replacePayloadOp(Operation *op, Operation *replacement);
 
   private:
@@ -451,20 +456,29 @@ private:
     return it->second;
   }
 
-  /// Sets the payload IR ops associated with the given transform IR value.
-  /// Fails if this would result in multiple transform IR values with uses
-  /// corresponding to the same payload IR ops. For example, a hypothetical
-  /// "find function by name" transform op would (indirectly) call this
-  /// function for its result. Having two such calls in a row with for different
-  /// values, e.g. coming from different ops:
+  /// Removes the mapping between the given payload IR operation and the given
+  /// transform IR value.
+  void dropReverseMapping(Mappings &mappings, Operation *op, Value value);
+
+  /// Sets the payload IR ops associated with the given transform IR value
+  /// (handle). A payload op may be associated multiple handles as long as
+  /// at most one of them gets consumed by further transformations.
+  /// For example, a hypothetical "find function by name" may be called twice in
+  /// a row to produce two handles pointing to the same function:
   ///
   ///   %0 = transform.find_func_by_name { name = "myfunc" }
   ///   %1 = transform.find_func_by_name { name = "myfunc" }
   ///
-  /// would lead to both values pointing to the same operation. The second call
-  /// to setPayloadOps will fail, unless the association with the %0 value is
-  /// removed first by calling update/removePayloadOps.
-  LogicalResult setPayloadOps(Value value, ArrayRef<Operation *> targets);
+  /// which is valid by itself. However, calling a hypothetical "rewrite and
+  /// rename function" transform on both handles:
+  ///
+  ///   transform.rewrite_and_rename %0 { new_name = "func" }
+  ///   transform.rewrite_and_rename %1 { new_name = "func" }
+  ///
+  /// is invalid given the transformation "consumes" the handle as expressed
+  /// by side effects. Practically, a transformation consuming a handle means
+  /// that the associated payload operation may no longer exist.
+  void setPayloadOps(Value value, ArrayRef<Operation *> targets);
 
   /// Forgets the payload IR ops associated with the given transform IR value.
   void removePayloadOps(Value value);
@@ -473,24 +487,18 @@ private:
   /// The callback function is called once per associated operation and is
   /// expected to return the modified operation or nullptr. In the latter case,
   /// the corresponding operation is no longer associated with the transform IR
-  /// value. May fail if the operation produced by the update callback is
-  /// already associated with a different Transform IR handle value.
-  LogicalResult
-  updatePayloadOps(Value value,
-                   function_ref<Operation *(Operation *)> callback);
-
-  /// Attempts to record the mapping between the given Payload IR operation and
-  /// the given Transform IR handle. Fails and reports an error if the operation
-  /// is already tracked by another handle.
-  static LogicalResult tryEmplaceReverseMapping(Mappings &map, Operation *op,
-                                                Value handle);
+  /// value.
+  void updatePayloadOps(Value value,
+                        function_ref<Operation *(Operation *)> callback);
 
   /// If the operand is a handle consumed by the operation, i.e. has the "free"
   /// memory effect associated with it, identifies other handles that are
   /// pointing to payload IR operations nested in the operations pointed to by
-  /// the consumed handle. Marks all such handles as invalidated so trigger
+  /// the consumed handle. Marks all such handles as invalidated to trigger
   /// errors if they are used.
   void recordHandleInvalidation(OpOperand &handle);
+  void recordHandleInvalidationOne(OpOperand &handle, Operation *payloadOp,
+                                   Value otherHandle);
 
   /// Checks that the operation does not use invalidated handles as operands.
   /// Reports errors and returns failure if it does. Otherwise, invalidates the
@@ -566,9 +574,9 @@ namespace detail {
 /// Maps the only block argument of the op with PossibleTopLevelTransformOpTrait
 /// to either the list of operations associated with its operand or the root of
 /// the payload IR, depending on what is available in the context.
-LogicalResult
-mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
-                                             Operation *op, Region &region);
+void mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
+                                                  Operation *op,
+                                                  Region &region);
 
 /// Verification hook for PossibleTopLevelTransformOpTrait.
 LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
@@ -605,18 +613,17 @@ public:
   /// Sets up the mapping between the entry block of the given region of this op
   /// and the relevant list of Payload IR operations in the given state. The
   /// state is expected to be already scoped at the region of this operation.
-  /// Returns failure if the mapping failed, e.g., the value is already mapped.
-  LogicalResult mapBlockArguments(TransformState &state, Region &region) {
+  void mapBlockArguments(TransformState &state, Region &region) {
     assert(region.getParentOp() == this->getOperation() &&
            "op comes from the wrong region");
-    return detail::mapPossibleTopLevelTransformOpBlockArguments(
+    detail::mapPossibleTopLevelTransformOpBlockArguments(
         state, this->getOperation(), region);
   }
-  LogicalResult mapBlockArguments(TransformState &state) {
+  void mapBlockArguments(TransformState &state) {
     assert(
         this->getOperation()->getNumRegions() == 1 &&
         "must indicate the region to map if the operation has more than one");
-    return mapBlockArguments(state, this->getOperation()->getRegion(0));
+    mapBlockArguments(state, this->getOperation()->getRegion(0));
   }
 };
 
