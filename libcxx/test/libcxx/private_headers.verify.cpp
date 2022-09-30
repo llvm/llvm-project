@@ -526,6 +526,7 @@ END-SCRIPT
 #include <__ranges/size.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/size.h'}}
 #include <__ranges/subrange.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/subrange.h'}}
 #include <__ranges/take_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/take_view.h'}}
+#include <__ranges/take_while_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/take_while_view.h'}}
 #include <__ranges/transform_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/transform_view.h'}}
 #include <__ranges/view_interface.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/view_interface.h'}}
 #include <__ranges/views.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/views.h'}}

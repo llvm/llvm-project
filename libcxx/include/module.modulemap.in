@@ -1031,6 +1031,7 @@ module std [system] {
       module size                   { private header "__ranges/size.h" }
       module subrange               { private header "__ranges/subrange.h" }
       module take_view              { private header "__ranges/take_view.h" }
+      module take_while_view        { private header "__ranges/take_while_view.h" }
       module transform_view         {
         private header "__ranges/transform_view.h"
         export functional.__functional.bind_back
