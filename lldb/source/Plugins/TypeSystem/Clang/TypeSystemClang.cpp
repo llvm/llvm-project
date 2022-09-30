@@ -6562,6 +6562,8 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
             child_is_base_class, tmp_child_is_deref_of_parent, valobj,
             language_flags);
       } else {
+        child_is_deref_of_parent = true;
+
         const char *parent_name =
             valobj ? valobj->GetName().GetCString() : nullptr;
         if (parent_name) {
