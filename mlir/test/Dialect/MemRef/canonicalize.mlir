@@ -263,12 +263,12 @@ func.func @dim_of_memref_reshape_i32(%arg0: memref<*xf32>, %arg1: memref<?xi32>)
 
 // CHECK-LABEL: func @alloc_const_fold
 func.func @alloc_const_fold() -> memref<?xf32> {
-  // CHECK-NEXT: %0 = memref.alloc() : memref<4xf32>
+  // CHECK-NEXT: memref.alloc() : memref<4xf32>
   %c4 = arith.constant 4 : index
   %a = memref.alloc(%c4) : memref<?xf32>
 
-  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
-  // CHECK-NEXT: return %1 : memref<?xf32>
+  // CHECK-NEXT: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
+  // CHECK-NEXT: return %{{.*}} : memref<?xf32>
   return %a : memref<?xf32>
 }
 
@@ -276,12 +276,12 @@ func.func @alloc_const_fold() -> memref<?xf32> {
 
 // CHECK-LABEL: func @alloc_alignment_const_fold
 func.func @alloc_alignment_const_fold() -> memref<?xf32> {
-  // CHECK-NEXT: %0 = memref.alloc() {alignment = 4096 : i64} : memref<4xf32>
+  // CHECK-NEXT: memref.alloc() {alignment = 4096 : i64} : memref<4xf32>
   %c4 = arith.constant 4 : index
   %a = memref.alloc(%c4) {alignment = 4096 : i64} : memref<?xf32>
 
-  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
-  // CHECK-NEXT: return %1 : memref<?xf32>
+  // CHECK-NEXT: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
+  // CHECK-NEXT: return %{{.*}} : memref<?xf32>
   return %a : memref<?xf32>
 }
 
@@ -825,7 +825,7 @@ func.func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
 //      CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][0, 0] [1, %[[ARG1]]] [1, 1]
 // CHECK-SAME:       memref<8x?xf32> to memref<?xf32, strided<[1], offset: ?>>
 
-// ----
+// -----
 
 // CHECK-LABEL: func @memref_realloc_dead
 // CHECK-SAME: %[[SRC:[0-9a-z]+]]: memref<2xf32>
