@@ -522,6 +522,9 @@ DLL storage class:
     assembler and linker know it is externally referenced and must refrain from
     deleting the symbol.
 
+A symbol with ``internal`` or ``private`` linkage cannot have a DLL storage
+class.
+
 .. _tls_model:
 
 Thread Local Storage Models
