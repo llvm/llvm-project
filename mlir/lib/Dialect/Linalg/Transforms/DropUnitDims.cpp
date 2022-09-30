@@ -245,7 +245,7 @@ struct UnitExtentReplacementInfo {
 static llvm::Optional<UnitExtentReplacementInfo>
 replaceUnitExtents(GenericOp genericOp, OpOperand *opOperand,
                    MLIRContext *context) {
-  AffineMap indexingMap = genericOp.getTiedIndexingMap(opOperand);
+  AffineMap indexingMap = genericOp.getMatchingIndexingMap(opOperand);
   ArrayRef<int64_t> shape = genericOp.getShape(opOperand);
   ArrayRef<AffineExpr> exprs = indexingMap.getResults();
   SmallVector<AffineExpr> reassociations;
@@ -390,7 +390,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
         // type, indexing map, and create a set of mappings representing an
         // identity matrix.
         newInputOutputTypes.push_back(opOperand->get().getType());
-        newIndexingMaps.push_back(genericOp.getTiedIndexingMap(opOperand));
+        newIndexingMaps.push_back(genericOp.getMatchingIndexingMap(opOperand));
         int64_t origRank = genericOp.getRank(opOperand);
         auto maps = llvm::to_vector<8>(llvm::map_range(
             llvm::seq<int64_t>(0, origRank), [&](int64_t dim) -> Attribute {

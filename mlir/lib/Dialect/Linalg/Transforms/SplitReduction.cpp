@@ -117,7 +117,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   SmallVector<AffineMap> newMaps;
   // Calculate the new shapes and indexing maps of the input operands.
   for (OpOperand *operand : op.getInputOperands()) {
-    AffineMap map = op.getTiedIndexingMap(operand);
+    AffineMap map = op.getMatchingIndexingMap(operand);
     SmallVector<int64_t> newShape;
     SmallVector<AffineExpr> exprs;
     SmallVector<ReassociationIndices> reassociation;
@@ -171,7 +171,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   // Calculate the new output map and shape, we insert the new dimension based
   // on the index returned by `controlSplitReductionFn`.
   SmallVector<int64_t> newOutputShape;
-  AffineMap oldOutputMap = op.getTiedIndexingMap(op.getOutputOperand(0));
+  AffineMap oldOutputMap = op.getMatchingIndexingMap(op.getOutputOperand(0));
   ArrayRef<int64_t> oldShape = op.getShape(op.getOutputOperand(0));
   SmallVector<AffineExpr> outputExpr;
   for (unsigned idx :
@@ -273,7 +273,7 @@ static AffineMap scaleReductionDim(LinalgOp op, OpOperand &opOperand,
                                    int64_t reductionRatio) {
   auto reductionDim = getAffineDimExpr(reductionDimPos, op.getContext());
   auto reductionDimP1 = getAffineDimExpr(reductionDimPos + 1, op.getContext());
-  AffineMap map = op.getTiedIndexingMap(&opOperand);
+  AffineMap map = op.getMatchingIndexingMap(&opOperand);
   AffineMap idMap =
       AffineMap::getMultiDimIdentityMap(map.getNumDims(), op.getContext());
   AffineMap shiftedIdMap = idMap.shiftDims(1, /*offset=*/reductionDimPos + 1);
@@ -286,7 +286,7 @@ static AffineMap scaleReductionDim(LinalgOp op, OpOperand &opOperand,
 static AffineMap insertParallelDim(LinalgOp op, OpOperand &opOperand,
                                    unsigned reductionDimPos, int64_t size) {
   auto reductionDim = getAffineDimExpr(reductionDimPos, op.getContext());
-  AffineMap map = op.getTiedIndexingMap(&opOperand);
+  AffineMap map = op.getMatchingIndexingMap(&opOperand);
   AffineMap idMap =
       AffineMap::getMultiDimIdentityMap(map.getNumDims(), op.getContext());
   AffineMap shiftedIdMap = idMap.shiftDims(1, /*offset=*/reductionDimPos + 1);

@@ -59,7 +59,7 @@ static AffineMap getIndexingMapOfProducerOperandsInCoordinatesOfFusedOp(
 
   LinalgOp producer = cast<LinalgOp>(producerOpOperand->getOwner());
   // argMap is a map from producer loop -> producer arg tensor index.
-  AffineMap argMap = producer.getTiedIndexingMap(producerOpOperand);
+  AffineMap argMap = producer.getMatchingIndexingMap(producerOpOperand);
 
   // Compose argMap with invProducerResultIndexMap to get a map from
   // producer result tensor index -> producer arg tensor index.
@@ -95,14 +95,14 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
 
   // Get the consumer index map. The number of results of the consumer index
   // map must match the number of loops of the producer.
-  AffineMap consumerIndexMap = consumer.getTiedIndexingMap(fusedOperand);
+  AffineMap consumerIndexMap = consumer.getMatchingIndexingMap(fusedOperand);
   if (consumerIndexMap.getNumResults() != producer.getNumLoops())
     return false;
 
   // Finally the index_map for the result must be invertible. For now just
   // verify it is a permutation.
   AffineMap producerResultIndexMap =
-      producer.getTiedIndexingMap(producer.getOutputOperand(0));
+      producer.getMatchingIndexingMap(producer.getOutputOperand(0));
   if (!producerResultIndexMap.isPermutation())
     return false;
 
@@ -288,17 +288,17 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   assert(it != consumerInputs.end() && "expected to find the consumer operand");
   for (OpOperand *opOperand : llvm::make_range(consumerInputs.begin(), it)) {
     fusedInputOperands.push_back(opOperand->get());
-    fusedIndexMaps.push_back(consumer.getTiedIndexingMap(opOperand));
+    fusedIndexMaps.push_back(consumer.getMatchingIndexingMap(opOperand));
   }
   // 4. Splice in producer's input operands/maps.
   AffineMap producerResultIndexMap =
-      producer.getTiedIndexingMapForResult(producerResult);
+      producer.getIndexingMapMatchingResult(producerResult);
   for (OpOperand *opOperand : producer.getInputOperands()) {
     fusedInputOperands.push_back(opOperand->get());
     // Compute indexing maps for the producer args in the fused operation.
     AffineMap map = getIndexingMapOfProducerOperandsInCoordinatesOfFusedOp(
         opOperand, producerResultIndexMap,
-        consumer.getTiedIndexingMap(fusedOperand));
+        consumer.getMatchingIndexingMap(fusedOperand));
     fusedIndexMaps.push_back(map);
   }
   // 5. Remaining consumer's input operands/maps (drop past index
@@ -306,7 +306,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   for (OpOperand *opOperand :
        llvm::make_range(std::next(it), consumerInputs.end())) {
     fusedInputOperands.push_back(opOperand->get());
-    fusedIndexMaps.push_back(consumer.getTiedIndexingMap(opOperand));
+    fusedIndexMaps.push_back(consumer.getMatchingIndexingMap(opOperand));
   }
 
   // 6. Collect all of the producer outputs.
@@ -314,7 +314,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
     fusedOutputOperands.push_back(opOperand->get());
     AffineMap map = getIndexingMapOfProducerOperandsInCoordinatesOfFusedOp(
         opOperand, producerResultIndexMap,
-        consumer.getTiedIndexingMap(fusedOperand));
+        consumer.getMatchingIndexingMap(fusedOperand));
     fusedIndexMaps.push_back(map);
     fusedResultTypes.push_back(opOperand->get().getType());
   }
@@ -322,7 +322,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   // 7. All of consumer's output operands (skip operands: added by the builder).
   for (OpOperand *opOperand : consumer.getOutputOperands()) {
     fusedOutputOperands.push_back(opOperand->get());
-    fusedIndexMaps.push_back(consumer.getTiedIndexingMap(opOperand));
+    fusedIndexMaps.push_back(consumer.getMatchingIndexingMap(opOperand));
     fusedResultTypes.push_back(opOperand->get().getType());
   }
 
@@ -344,7 +344,8 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
 
   // Construct an AffineMap from consumer loops to producer loops.
   // consumer loop -> tensor index
-  AffineMap consumerResultIndexMap = consumer.getTiedIndexingMap(fusedOperand);
+  AffineMap consumerResultIndexMap =
+      consumer.getMatchingIndexingMap(fusedOperand);
   // tensor index -> producer loop
   AffineMap invProducerResultIndexMap =
       inversePermutation(producerResultIndexMap);
@@ -466,7 +467,7 @@ static bool isFusableWithReshapeByDimExpansion(GenericOp genericOp,
                             .getValue()
                             .isProjectedPermutation();
                       }) &&
-         genericOp.getTiedIndexingMap(fusableOpOperand).getNumResults() > 0 &&
+         genericOp.getMatchingIndexingMap(fusableOpOperand).getNumResults() > 0 &&
          llvm::all_of(genericOp.getIteratorTypesArray(), [](StringRef it) {
            return it == getParallelIteratorTypeName();
          });
@@ -517,7 +518,7 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
                                      PatternRewriter &rewriter) {
   if (reassociationMaps.empty())
     return failure();
-  AffineMap fusedIndexMap = linalgOp.getTiedIndexingMap(fusableOpOperand);
+  AffineMap fusedIndexMap = linalgOp.getMatchingIndexingMap(fusableOpOperand);
 
   SmallVector<int64_t, 4> originalLoopRange = linalgOp.getStaticLoopRanges();
   originalLoopExtent.assign(originalLoopRange.begin(), originalLoopRange.end());
@@ -727,7 +728,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
       continue;
     }
     if (genericOp.isInputTensor(opOperand)) {
-      AffineMap indexingMap = genericOp.getTiedIndexingMap(opOperand);
+      AffineMap indexingMap = genericOp.getMatchingIndexingMap(opOperand);
       auto opOperandType = opOperand->get().getType().cast<RankedTensorType>();
       RankedTensorType expandedOperandType =
           getExpandedType(opOperandType, indexingMap, expansionInfo);
@@ -755,7 +756,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
   Location loc = genericOp.getLoc();
   SmallVector<Value> outputs;
   for (OpOperand *opOperand : genericOp.getOutputOperands()) {
-    AffineMap indexingMap = genericOp.getTiedIndexingMap(opOperand);
+    AffineMap indexingMap = genericOp.getMatchingIndexingMap(opOperand);
     auto opOperandType = opOperand->get().getType().cast<RankedTensorType>();
     RankedTensorType expandedOutputType =
         getExpandedType(opOperandType, indexingMap, expansionInfo);
@@ -802,7 +803,7 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
     if (resultTypes[resultNumber] != opResult.getType()) {
       SmallVector<ReassociationIndices> reassociation =
           getReassociationForExpansion(
-              genericOp.getTiedIndexingMap(
+              genericOp.getMatchingIndexingMap(
                   genericOp.getOutputOperand(resultNumber)),
               expansionInfo);
       resultVals.push_back(rewriter.create<tensor::CollapseShapeOp>(
@@ -1063,7 +1064,7 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
   }
 
   llvm::SmallDenseSet<unsigned, 4> processedIterationDims;
-  AffineMap indexingMap = genericOp.getTiedIndexingMap(fusableOperand);
+  AffineMap indexingMap = genericOp.getMatchingIndexingMap(fusableOperand);
   auto iteratorTypes = genericOp.getIteratorTypes().getValue();
   SmallVector<ReassociationIndices> iterationSpaceReassociation;
   for (ReassociationIndicesRef foldedRangeDims : reassociation) {
@@ -1312,7 +1313,7 @@ static Value getCollapsedOpOperand(Location loc, GenericOp genericOp,
                                    OpOperand *opOperand,
                                    const CollapsingInfo &collapsingInfo,
                                    OpBuilder &builder) {
-  AffineMap indexingMap = genericOp.getTiedIndexingMap(opOperand);
+  AffineMap indexingMap = genericOp.getMatchingIndexingMap(opOperand);
   SmallVector<ReassociationIndices> operandReassociation =
       getOperandReassociation(indexingMap, collapsingInfo);
 
@@ -1470,7 +1471,7 @@ static FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     auto collapsedOpResultType = collapsedOpResult.getType().cast<ShapedType>();
     if (collapsedOpResultType.getRank() != originalResultType.getRank()) {
       AffineMap indexingMap =
-          genericOp.getTiedIndexingMapForResult(originalResult.value());
+          genericOp.getIndexingMapMatchingResult(originalResult.value());
       SmallVector<ReassociationIndices> reassociation =
           getOperandReassociation(indexingMap, collapsingInfo);
       Value result = rewriter.create<tensor::ExpandShapeOp>(
@@ -1594,12 +1595,14 @@ public:
         if (inputOperand == opOperand)
           continue;
         Value inputValue = inputOperand->get();
-        fusedIndexMaps.push_back(genericOp.getTiedIndexingMap(inputOperand));
+        fusedIndexMaps.push_back(
+            genericOp.getMatchingIndexingMap(inputOperand));
         fusedOperands.push_back(inputValue);
         fusedLocs.push_back(inputValue.getLoc());
       }
       for (OpOperand *outputOperand : genericOp.getOutputOperands())
-        fusedIndexMaps.push_back(genericOp.getTiedIndexingMap(outputOperand));
+        fusedIndexMaps.push_back(
+            genericOp.getMatchingIndexingMap(outputOperand));
 
       // Check if the operation shapes to loops map is computable.
       if (!inversePermutation(concatAffineMaps(fusedIndexMaps))) {

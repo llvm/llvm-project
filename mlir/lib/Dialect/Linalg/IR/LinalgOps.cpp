@@ -945,7 +945,7 @@ private:
 
       // Check if this operand is a duplicate.
       AffineMap indexingMap =
-          genericOp.getTiedIndexingMap(inputOpOperand.value());
+          genericOp.getMatchingIndexingMap(inputOpOperand.value());
       auto it = dedupedInputs.find(
           std::make_pair(inputOpOperand.value()->get(), indexingMap));
       if (it != dedupedInputs.end()) {
@@ -984,7 +984,7 @@ private:
         origToNewPos[outputOpOperand.index()] = newOutputOperands.size();
         newOutputOperands.push_back(outputOpOperand.value()->get());
         newIndexingMaps.push_back(
-            genericOp.getTiedIndexingMap(outputOpOperand.value()));
+            genericOp.getMatchingIndexingMap(outputOpOperand.value()));
       }
     } else {
       // Output argument can be dropped if the result has
@@ -997,7 +997,7 @@ private:
            llvm::enumerate(genericOp.getOutputOperands())) {
         Value result = genericOp.getResult(outputOpOperand.index());
         AffineMap indexingMap =
-            genericOp.getTiedIndexingMap(outputOpOperand.value());
+            genericOp.getMatchingIndexingMap(outputOpOperand.value());
         auto key =
             std::make_tuple(outputOpOperand.value()->get(), indexingMap,
                             yieldOp->getOperand(outputOpOperand.index()));
@@ -1033,7 +1033,7 @@ private:
         dedupedOutpts[key] = newOutputOperands.size();
         newOutputOperands.push_back(outputOpOperand.value()->get());
         newIndexingMaps.push_back(
-            genericOp.getTiedIndexingMap(outputOpOperand.value()));
+            genericOp.getMatchingIndexingMap(outputOpOperand.value()));
       }
     }
 
@@ -1957,7 +1957,7 @@ static void populateMap(LinalgOp linalgOp, ArrayRef<OpOperand *> operands,
       continue;
     Value src = opOperand->get();
     auto sourceType = src.getType().cast<RankedTensorType>();
-    auto sourceMap = linalgOp.getTiedIndexingMap(opOperand);
+    auto sourceMap = linalgOp.getMatchingIndexingMap(opOperand);
 
     // Get the `sourceShape` of the `sourceType`. If the operand is a result of
     // `tensor.cast` operation and source of the cast operation has a static
@@ -2005,7 +2005,7 @@ static void createNewOperandWithStaticSizes(
     return;
   }
   ArrayRef<int64_t> sourceShape = sourceType.getShape();
-  AffineMap sourceMap = linalgOp.getTiedIndexingMap(opOperand);
+  AffineMap sourceMap = linalgOp.getMatchingIndexingMap(opOperand);
   SmallVector<int64_t> newShape;
   // If operand is updated with new shape, `newOperandNeeded` will be
   // true.

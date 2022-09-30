@@ -81,7 +81,7 @@ struct BubbleUpExtractSliceOpPattern
     }
 
     OpOperand *outOperand = linalgOp.getOutputOperand(0);
-    AffineMap indexingMap = linalgOp.getTiedIndexingMap(outOperand);
+    AffineMap indexingMap = linalgOp.getMatchingIndexingMap(outOperand);
     if (!indexingMap.isProjectedPermutation()) {
       return rewriter.notifyMatchFailure(
           sliceOp, "expected a projected permutation for output");

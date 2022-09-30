@@ -377,7 +377,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the block argument for an `opOperand`.
       }],
       /*retTy=*/"BlockArgument",
-      /*methodName=*/"getTiedBlockArgument",
+      /*methodName=*/"getMatchingBlockArgument",
       /*args=*/(ins "OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -390,7 +390,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the operand for a `blockArgument`.
       }],
       /*retTy=*/"OpOperand *",
-      /*methodName=*/"getTiedOpOperand",
+      /*methodName=*/"getMatchingOpOperand",
       /*args=*/(ins "BlockArgument":$blockArgument),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -404,7 +404,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the input or output indexing map for `opOperand`.
       }],
       /*retTy=*/"AffineMap",
-      /*methodName=*/"getTiedIndexingMap",
+      /*methodName=*/"getMatchingIndexingMap",
       /*args=*/(ins "OpOperand*":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -419,7 +419,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the indexing map for a `result`.
       }],
       /*retTy=*/"AffineMap",
-      /*methodName=*/"getTiedIndexingMapForResult",
+      /*methodName=*/"getIndexingMapMatchingResult",
       /*args=*/(ins "OpResult":$result),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -442,7 +442,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         `opOperand`.
       }],
       /*retTy=*/"OpOperand *",
-      /*methodName=*/"getTiedYieldValue",
+      /*methodName=*/"getMatchingYieldValue",
       /*args=*/(ins "OpOperand*":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
