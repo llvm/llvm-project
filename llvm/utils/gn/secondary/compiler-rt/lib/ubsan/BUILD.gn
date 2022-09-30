@@ -1,14 +1,27 @@
+import("//compiler-rt/gen_version_script.gni")
 import("//compiler-rt/target.gni")
 
 group("ubsan") {
-  if (current_os == "mac") {
-    deps = [ ":ubsan_shared_library" ]
-  } else {
-    deps = [
-      ":ubsan_standalone",
-      ":ubsan_standalone_cxx",
-    ]
+  deps = [
+    ":ubsan_shared",
+    ":ubsan_static",
+  ]
+  if (current_os != "mac") {
+    deps += [ ":ubsan_static_cxx" ]
   }
+}
+
+gen_version_script("version_script") {
+  extra = "ubsan.syms.extra"
+  output = "$target_gen_dir/ubsan.vers"
+  libs = [
+    ":ubsan_static",
+    ":ubsan_static_cxx",
+  ]
+  lib_names = [
+    "ubsan_standalone",
+    "ubsan_standalone_cxx",
+  ]
 }
 
 source_set("sources") {
@@ -69,11 +82,6 @@ source_set("standalone_sources") {
     "ubsan_init_standalone.cpp",
     "ubsan_signals_standalone.cpp",
   ]
-  deps = [
-    ":sources",
-    "//compiler-rt/lib/interception:sources",
-    "//compiler-rt/lib/sanitizer_common:sources",
-  ]
 }
 
 source_set("cxx_sources") {
@@ -90,18 +98,52 @@ source_set("cxx_sources") {
   ]
 }
 
-if (current_os == "mac") {
-  shared_library("ubsan_shared_library") {
+static_library("ubsan_static") {
+  output_dir = crt_current_out_dir
+  if (current_os == "mac") {
+    output_name = "clang_rt.ubsan_osx"
+  } else {
+    output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
+  }
+  complete_static_lib = true
+  configs -= [
+    "//llvm/utils/gn/build:llvm_code",
+    "//llvm/utils/gn/build:thin_archive",
+  ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  deps = [
+    ":sources",
+    ":standalone_sources",
+  ]
+  if (current_os == "mac") {
+    deps += [ ":cxx_sources" ]
+  }
+}
+
+if (current_os != "mac") {
+  static_library("ubsan_static_cxx") {
     output_dir = crt_current_out_dir
-    output_name = "clang_rt.ubsan_osx_dynamic"
-    deps = [
-      ":cxx_sources",
-      ":sources",
-      ":standalone_sources",
-      "//compiler-rt/lib/interception:sources",
-      "//compiler-rt/lib/sanitizer_common:sources",
+    output_name = "clang_rt.ubsan_standalone_cxx$crt_current_target_suffix"
+    complete_static_lib = true
+    configs -= [
+      "//llvm/utils/gn/build:llvm_code",
+      "//llvm/utils/gn/build:thin_archive",
     ]
-    # The -U flags below correspond to the add_weak_symbols() calls in CMake.
+    configs += [ "//llvm/utils/gn/build:crt_code" ]
+    deps = [ ":cxx_sources" ]
+  }
+}
+
+shared_library("ubsan_shared") {
+  output_dir = crt_current_out_dir
+  if (current_os == "mac") {
+    output_name = "clang_rt.ubsan_osx_dynamic"
+  } else {
+    output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
+  }
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  if (current_os == "mac") {
     ldflags = [
       "-lc++",
       "-lc++abi",
@@ -125,33 +167,17 @@ if (current_os == "mac") {
       "-Wl,-install_name,@rpath/libclang_rt.ubsan_osx_dynamic.dylib",
     ]
     # FIXME: -Wl,-rpath
+    # FIXME: codesign (??)
   }
-} else {
-  static_library("ubsan_standalone") {
-    output_dir = crt_current_out_dir
-    output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
-    complete_static_lib = true
-    configs -= [
-      "//llvm/utils/gn/build:llvm_code",
-      "//llvm/utils/gn/build:thin_archive",
-    ]
-    deps = [
-      ":sources",
-      ":standalone_sources",
-    ]
-    configs += [ "//llvm/utils/gn/build:crt_code" ]
-    sources = [ "ubsan_init_standalone_preinit.cpp" ]
-  }
-
-  static_library("ubsan_standalone_cxx") {
-    output_dir = crt_current_out_dir
-    output_name = "clang_rt.ubsan_standalone_cxx$crt_current_target_suffix"
-    complete_static_lib = true
-    configs -= [
-      "//llvm/utils/gn/build:llvm_code",
-      "//llvm/utils/gn/build:thin_archive",
-    ]
-    deps = [ ":cxx_sources" ]
-    configs += [ "//llvm/utils/gn/build:crt_code" ]
+  deps = [
+    ":cxx_sources",
+    ":sources",
+    ":standalone_sources",
+    ":version_script",
+  ]
+  if (current_os != "mac") {
+    inputs = [ "$target_gen_dir/ubsan.vers" ]
+    ldflags =
+        [ "-Wl,--version-script," + rebase_path(inputs[0], root_build_dir) ]
   }
 }
