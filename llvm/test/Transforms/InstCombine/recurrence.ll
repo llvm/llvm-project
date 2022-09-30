@@ -4,9 +4,9 @@
 define i64 @test_or(i64 %a) {
 ; CHECK-LABEL: @test_or(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[A:%.*]], 15
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[A:%.*]], 15
 ; CHECK-NEXT:    tail call void @use(i64 [[TMP0]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -84,9 +84,9 @@ loop:                                             ; preds = %loop, %entry
 define i64 @test_and(i64 %a) {
 ; CHECK-LABEL: @test_and(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[A:%.*]], 15
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[A:%.*]], 15
 ; CHECK-NEXT:    tail call void @use(i64 [[TMP0]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
