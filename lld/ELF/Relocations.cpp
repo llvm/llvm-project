@@ -301,6 +301,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
           size, &sec)
       .overwrite(sym);
 
+  sym.verdefIndex = old.verdefIndex;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
