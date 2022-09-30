@@ -253,7 +253,7 @@ static void
 updateDestinationOperandsForTiledOp(OpBuilder &builder,
                                     ValueRange tiledOpDestinationValues,
                                     ValueRange bbArgsList) {
-  for (auto destValue : llvm::enumerate(tiledOpDestinationValues)) {
+  for (const auto &destValue : llvm::enumerate(tiledOpDestinationValues)) {
     auto sliceOp = destValue.value().getDefiningOp<tensor::ExtractSliceOp>();
     if (!sliceOp)
       continue;
