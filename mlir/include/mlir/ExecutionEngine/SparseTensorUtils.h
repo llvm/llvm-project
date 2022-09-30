@@ -65,7 +65,7 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
 #define DECL_SPARSEVALUES(VNAME, V)                                            \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparseValues##VNAME(              \
       StridedMemRefType<V, 1> *out, void *tensor);
-FOREVERY_V(DECL_SPARSEVALUES)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_SPARSEVALUES)
 #undef DECL_SPARSEVALUES
 
 /// Tensor-storage method to obtain direct access to the pointers array
@@ -73,7 +73,7 @@ FOREVERY_V(DECL_SPARSEVALUES)
 #define DECL_SPARSEPOINTERS(PNAME, P)                                          \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparsePointers##PNAME(            \
       StridedMemRefType<P, 1> *out, void *tensor, index_type d);
-FOREVERY_O(DECL_SPARSEPOINTERS)
+MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSEPOINTERS)
 #undef DECL_SPARSEPOINTERS
 
 /// Tensor-storage method to obtain direct access to the indices array
@@ -81,7 +81,7 @@ FOREVERY_O(DECL_SPARSEPOINTERS)
 #define DECL_SPARSEINDICES(INAME, I)                                           \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparseIndices##INAME(             \
       StridedMemRefType<I, 1> *out, void *tensor, index_type d);
-FOREVERY_O(DECL_SPARSEINDICES)
+MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSEINDICES)
 #undef DECL_SPARSEINDICES
 
 /// Coordinate-scheme method for adding a new element.
@@ -90,7 +90,7 @@ FOREVERY_O(DECL_SPARSEINDICES)
       void *coo, StridedMemRefType<V, 0> *vref,                                \
       StridedMemRefType<index_type, 1> *iref,                                  \
       StridedMemRefType<index_type, 1> *pref);
-FOREVERY_V(DECL_ADDELT)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_ADDELT)
 #undef DECL_ADDELT
 
 /// Coordinate-scheme method for getting the next element while iterating.
@@ -98,7 +98,7 @@ FOREVERY_V(DECL_ADDELT)
   MLIR_CRUNNERUTILS_EXPORT bool _mlir_ciface_getNext##VNAME(                   \
       void *coo, StridedMemRefType<index_type, 1> *iref,                       \
       StridedMemRefType<V, 0> *vref);
-FOREVERY_V(DECL_GETNEXT)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETNEXT)
 #undef DECL_GETNEXT
 
 /// Tensor-storage method to insert elements in lexicographical index order.
@@ -106,7 +106,7 @@ FOREVERY_V(DECL_GETNEXT)
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_lexInsert##VNAME(                 \
       void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
       StridedMemRefType<V, 0> *vref);
-FOREVERY_V(DECL_LEXINSERT)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_LEXINSERT)
 #undef DECL_LEXINSERT
 
 /// Tensor-storage method to insert using expansion.
@@ -115,7 +115,7 @@ FOREVERY_V(DECL_LEXINSERT)
       void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
       StridedMemRefType<V, 1> *vref, StridedMemRefType<bool, 1> *fref,         \
       StridedMemRefType<index_type, 1> *aref, index_type count);
-FOREVERY_V(DECL_EXPINSERT)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 #undef DECL_EXPINSERT
 
 //===----------------------------------------------------------------------===//
@@ -138,7 +138,7 @@ MLIR_CRUNNERUTILS_EXPORT void endInsert(void *tensor);
 #define DECL_OUTSPARSETENSOR(VNAME, V)                                         \
   MLIR_CRUNNERUTILS_EXPORT void outSparseTensor##VNAME(void *coo, void *dest,  \
                                                        bool sort);
-FOREVERY_V(DECL_OUTSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_OUTSPARSETENSOR)
 #undef DECL_OUTSPARSETENSOR
 
 /// Releases the memory for the tensor-storage object.
@@ -147,7 +147,7 @@ MLIR_CRUNNERUTILS_EXPORT void delSparseTensor(void *tensor);
 /// Releases the memory for the coordinate-scheme object.
 #define DECL_DELCOO(VNAME, V)                                                  \
   MLIR_CRUNNERUTILS_EXPORT void delSparseTensorCOO##VNAME(void *coo);
-FOREVERY_V(DECL_DELCOO)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_DELCOO)
 #undef DECL_DELCOO
 
 /// Helper function to read a sparse tensor filename from the environment,
@@ -183,7 +183,7 @@ MLIR_CRUNNERUTILS_EXPORT void readSparseTensorShape(char *filename,
   MLIR_CRUNNERUTILS_EXPORT void *convertToMLIRSparseTensor##VNAME(             \
       uint64_t rank, uint64_t nse, uint64_t *shape, V *values,                 \
       uint64_t *indices, uint64_t *perm, uint8_t *sparse);
-FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
 #undef DECL_CONVERTTOMLIRSPARSETENSOR
 
 /// Converts a sparse tensor to COO-flavored format expressed using
@@ -202,7 +202,7 @@ FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
   MLIR_CRUNNERUTILS_EXPORT void convertFromMLIRSparseTensor##VNAME(            \
       void *tensor, uint64_t *pRank, uint64_t *pNse, uint64_t **pShape,        \
       V **pValues, uint64_t **pIndices);
-FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
 #undef DECL_CONVERTFROMMLIRSPARSETENSOR
 
 } // extern "C"

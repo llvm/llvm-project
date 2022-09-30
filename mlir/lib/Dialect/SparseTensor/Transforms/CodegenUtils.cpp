@@ -79,9 +79,9 @@ Type mlir::sparse_tensor::getIndexOverheadType(
 }
 
 // TODO: Adjust the naming convention for the constructors of
-// `OverheadType` so we can use the `FOREVERY_O` x-macro here instead
-// of `FOREVERY_FIXED_O`; to further reduce the possibility of typo bugs
-// or things getting out of sync.
+// `OverheadType` so we can use the `MLIR_SPARSETENSOR_FOREVERY_O` x-macro
+// here instead of `MLIR_SPARSETENSOR_FOREVERY_FIXED_O`; to further reduce
+// the possibility of typo bugs or things getting out of sync.
 StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(OverheadType ot) {
   switch (ot) {
   case OverheadType::kIndex:
@@ -89,7 +89,7 @@ StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(OverheadType ot) {
 #define CASE(ONAME, O)                                                         \
   case OverheadType::kU##ONAME:                                                \
     return #ONAME;
-    FOREVERY_FIXED_O(CASE)
+    MLIR_SPARSETENSOR_FOREVERY_FIXED_O(CASE)
 #undef CASE
   }
   llvm_unreachable("Unknown OverheadType");
@@ -131,7 +131,7 @@ StringRef mlir::sparse_tensor::primaryTypeFunctionSuffix(PrimaryType pt) {
 #define CASE(VNAME, V)                                                         \
   case PrimaryType::k##VNAME:                                                  \
     return #VNAME;
-    FOREVERY_V(CASE)
+    MLIR_SPARSETENSOR_FOREVERY_V(CASE)
 #undef CASE
   }
   llvm_unreachable("Unknown PrimaryType");

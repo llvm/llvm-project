@@ -67,7 +67,7 @@ enum class MLIR_SPARSETENSOR_EXPORT OverheadType : uint32_t {
 // fixed-width.  It excludes `index_type` because that type is often
 // handled specially (e.g., by translating it into the architecture-dependent
 // equivalent fixed-width overhead type).
-#define FOREVERY_FIXED_O(DO)                                                   \
+#define MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DO)                                 \
   DO(64, uint64_t)                                                             \
   DO(32, uint32_t)                                                             \
   DO(16, uint16_t)                                                             \
@@ -75,8 +75,8 @@ enum class MLIR_SPARSETENSOR_EXPORT OverheadType : uint32_t {
 
 // This x-macro calls its argument on every overhead type, including
 // `index_type`.
-#define FOREVERY_O(DO)                                                         \
-  FOREVERY_FIXED_O(DO)                                                         \
+#define MLIR_SPARSETENSOR_FOREVERY_O(DO)                                       \
+  MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DO)                                       \
   DO(0, index_type)
 
 // These are not just shorthands but indicate the particular
@@ -100,7 +100,7 @@ enum class MLIR_SPARSETENSOR_EXPORT PrimaryType : uint32_t {
 };
 
 // This x-macro includes all `V` types.
-#define FOREVERY_V(DO)                                                         \
+#define MLIR_SPARSETENSOR_FOREVERY_V(DO)                                       \
   DO(F64, double)                                                              \
   DO(F32, float)                                                               \
   DO(F16, f16)                                                                 \
