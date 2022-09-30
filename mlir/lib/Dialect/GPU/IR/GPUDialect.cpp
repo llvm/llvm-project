@@ -225,14 +225,14 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
              << "' is undefined";
 
     // Check that `launch_func` refers to a well-formed kernel function.
-    Operation *kernelFunc = module.lookupSymbol(launchOp.kernelAttr());
+    Operation *kernelFunc = module.lookupSymbol(launchOp.getKernelAttr());
     if (!kernelFunc)
       return launchOp.emitOpError("kernel function '")
-             << launchOp.kernel() << "' is undefined";
+             << launchOp.getKernel() << "' is undefined";
     auto kernelConvertedFunction = dyn_cast<FunctionOpInterface>(kernelFunc);
     if (!kernelConvertedFunction) {
       InFlightDiagnostic diag = launchOp.emitOpError()
-                                << "referenced kernel '" << launchOp.kernel()
+                                << "referenced kernel '" << launchOp.getKernel()
                                 << "' is not a function";
       diag.attachNote(kernelFunc->getLoc()) << "see the kernel definition here";
       return diag;
@@ -310,17 +310,17 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
 //===----------------------------------------------------------------------===//
 
 LogicalResult gpu::AllReduceOp::verifyRegions() {
-  if (body().empty() != op().has_value())
+  if (getBody().empty() != getOp().has_value())
     return emitError("expected either an op attribute or a non-empty body");
-  if (!body().empty()) {
-    if (body().getNumArguments() != 2)
+  if (!getBody().empty()) {
+    if (getBody().getNumArguments() != 2)
       return emitError("expected two region arguments");
-    for (auto argument : body().getArguments()) {
+    for (auto argument : getBody().getArguments()) {
       if (argument.getType() != getType())
         return emitError("incorrect region argument type");
     }
     unsigned yieldCount = 0;
-    for (Block &block : body()) {
+    for (Block &block : getBody()) {
       if (auto yield = dyn_cast<gpu::YieldOp>(block.getTerminator())) {
         if (yield.getNumOperands() != 1)
           return emitError("expected one gpu.yield operand");
@@ -332,7 +332,7 @@ LogicalResult gpu::AllReduceOp::verifyRegions() {
     if (yieldCount == 0)
       return emitError("expected gpu.yield op in region");
   } else {
-    gpu::AllReduceOperation opName = *op();
+    gpu::AllReduceOperation opName = *getOp();
     if ((opName == gpu::AllReduceOperation::AND ||
          opName == gpu::AllReduceOperation::OR ||
          opName == gpu::AllReduceOperation::XOR) &&
@@ -391,16 +391,16 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
 
 void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Value gridSizeX, Value gridSizeY, Value gridSizeZ,
-                     Value blockSizeX, Value blockSizeY, Value blockSizeZ,
-                     Value dynamicSharedMemorySize, Type asyncTokenType,
-                     ValueRange asyncDependencies) {
+                     Value getBlockSizeX, Value getBlockSizeY,
+                     Value getBlockSizeZ, Value dynamicSharedMemorySize,
+                     Type asyncTokenType, ValueRange asyncDependencies) {
   result.addOperands(asyncDependencies);
   if (asyncTokenType)
     result.types.push_back(builder.getType<AsyncTokenType>());
 
   // Add grid and block sizes as op operands, followed by the data operands.
-  result.addOperands(
-      {gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ});
+  result.addOperands({gridSizeX, gridSizeY, gridSizeZ, getBlockSizeX,
+                      getBlockSizeY, getBlockSizeZ});
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
 
@@ -420,36 +420,36 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
 }
 
 KernelDim3 LaunchOp::getBlockIds() {
-  assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().getArguments();
+  assert(!getBody().empty() && "LaunchOp body must not be empty.");
+  auto args = getBody().getArguments();
   return KernelDim3{args[0], args[1], args[2]};
 }
 
 KernelDim3 LaunchOp::getThreadIds() {
-  assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().getArguments();
+  assert(!getBody().empty() && "LaunchOp body must not be empty.");
+  auto args = getBody().getArguments();
   return KernelDim3{args[3], args[4], args[5]};
 }
 
 KernelDim3 LaunchOp::getGridSize() {
-  assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().getArguments();
+  assert(!getBody().empty() && "LaunchOp body must not be empty.");
+  auto args = getBody().getArguments();
   return KernelDim3{args[6], args[7], args[8]};
 }
 
 KernelDim3 LaunchOp::getBlockSize() {
-  assert(!body().empty() && "LaunchOp body must not be empty.");
-  auto args = body().getArguments();
+  assert(!getBody().empty() && "LaunchOp body must not be empty.");
+  auto args = getBody().getArguments();
   return KernelDim3{args[9], args[10], args[11]};
 }
 
 KernelDim3 LaunchOp::getGridSizeOperandValues() {
-  auto operands = getOperands().drop_front(asyncDependencies().size());
+  auto operands = getOperands().drop_front(getAsyncDependencies().size());
   return KernelDim3{operands[0], operands[1], operands[2]};
 }
 
 KernelDim3 LaunchOp::getBlockSizeOperandValues() {
-  auto operands = getOperands().drop_front(asyncDependencies().size());
+  auto operands = getOperands().drop_front(getAsyncDependencies().size());
   return KernelDim3{operands[3], operands[4], operands[5]};
 }
 
@@ -457,16 +457,17 @@ LogicalResult LaunchOp::verifyRegions() {
   // Kernel launch takes kNumConfigOperands leading operands for grid/block
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
   // for block/thread identifiers and grid/block sizes.
-  if (!body().empty()) {
-    if (body().getNumArguments() !=
+  if (!getBody().empty()) {
+    if (getBody().getNumArguments() !=
         LaunchOp::kNumConfigOperands + getNumOperands() -
-            (dynamicSharedMemorySize() ? 1 : 0) - asyncDependencies().size())
+            (getDynamicSharedMemorySize() ? 1 : 0) -
+            getAsyncDependencies().size())
       return emitOpError("unexpected number of region arguments");
   }
 
   // Block terminators without successors are expected to exit the kernel region
   // and must be `gpu.terminator`.
-  for (Block &block : body()) {
+  for (Block &block : getBody()) {
     if (block.empty())
       continue;
     if (block.back().getNumSuccessors() != 0)
@@ -481,7 +482,7 @@ LogicalResult LaunchOp::verifyRegions() {
     }
   }
 
-  if (getNumResults() == 0 && asyncToken())
+  if (getNumResults() == 0 && getAsyncToken())
     return emitOpError("needs to be named when async keyword is specified");
 
   return success();
@@ -500,10 +501,10 @@ static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
 }
 
 void LaunchOp::print(OpAsmPrinter &p) {
-  if (asyncToken()) {
+  if (getAsyncToken()) {
     p << " async";
-    if (!asyncDependencies().empty())
-      p << " [" << asyncDependencies() << ']';
+    if (!getAsyncDependencies().empty())
+      p << " [" << getAsyncDependencies() << ']';
   }
   // Print the launch configuration.
   p << ' ' << getBlocksKeyword();
@@ -512,12 +513,12 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p << ' ' << getThreadsKeyword();
   printSizeAssignment(p, getBlockSize(), getBlockSizeOperandValues(),
                       getThreadIds());
-  if (dynamicSharedMemorySize())
+  if (getDynamicSharedMemorySize())
     p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
-      << dynamicSharedMemorySize();
+      << getDynamicSharedMemorySize();
 
   p << ' ';
-  p.printRegion(body(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
                               LaunchOp::getOperandSegmentSizeAttr()});
 }
@@ -657,19 +658,19 @@ struct FoldLaunchArguments : public OpRewritePattern<LaunchOp> {
       if (!simplified) {
         // Create a zero value the first time.
         OpBuilder::InsertionGuard guard(rewriter);
-        rewriter.setInsertionPointToStart(&op.body().front());
+        rewriter.setInsertionPointToStart(&op.getBody().front());
         zero =
             rewriter.create<arith::ConstantIndexOp>(op.getLoc(), /*value=*/0);
       }
       id.replaceAllUsesWith(zero);
       simplified = true;
     };
-    constPropIdUses(op.getBlockIds().x, op.gridSizeX());
-    constPropIdUses(op.getBlockIds().y, op.gridSizeY());
-    constPropIdUses(op.getBlockIds().z, op.gridSizeZ());
-    constPropIdUses(op.getThreadIds().x, op.blockSizeX());
-    constPropIdUses(op.getThreadIds().y, op.blockSizeY());
-    constPropIdUses(op.getThreadIds().z, op.blockSizeZ());
+    constPropIdUses(op.getBlockIds().x, op.getGridSizeX());
+    constPropIdUses(op.getBlockIds().y, op.getGridSizeY());
+    constPropIdUses(op.getBlockIds().z, op.getGridSizeZ());
+    constPropIdUses(op.getThreadIds().x, op.getBlockSizeX());
+    constPropIdUses(op.getThreadIds().y, op.getBlockSizeY());
+    constPropIdUses(op.getThreadIds().z, op.getBlockSizeZ());
 
     return success(simplified);
   }
@@ -686,7 +687,7 @@ void LaunchOp::getCanonicalizationPatterns(RewritePatternSet &rewrites,
 
 void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          GPUFuncOp kernelFunc, KernelDim3 gridSize,
-                         KernelDim3 blockSize, Value dynamicSharedMemorySize,
+                         KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Type asyncTokenType,
                          ValueRange asyncDependencies) {
   result.addOperands(asyncDependencies);
@@ -694,8 +695,8 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
     result.types.push_back(builder.getType<AsyncTokenType>());
 
   // Add grid and block sizes as op operands, followed by the data operands.
-  result.addOperands({gridSize.x, gridSize.y, gridSize.z, blockSize.x,
-                      blockSize.y, blockSize.z});
+  result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
+                      getBlockSize.y, getBlockSize.z});
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
   result.addOperands(kernelOperands);
@@ -713,24 +714,28 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
 }
 
 StringAttr LaunchFuncOp::getKernelModuleName() {
-  return kernel().getRootReference();
+  return getKernel().getRootReference();
 }
 
-StringAttr LaunchFuncOp::getKernelName() { return kernel().getLeafReference(); }
+StringAttr LaunchFuncOp::getKernelName() {
+  return getKernel().getLeafReference();
+}
 
 unsigned LaunchFuncOp::getNumKernelOperands() {
-  return kernelOperands().size();
+  return getKernelOperands().size();
 }
 
-Value LaunchFuncOp::getKernelOperand(unsigned i) { return kernelOperands()[i]; }
+Value LaunchFuncOp::getKernelOperand(unsigned i) {
+  return getKernelOperands()[i];
+}
 
 KernelDim3 LaunchFuncOp::getGridSizeOperandValues() {
-  auto operands = getOperands().drop_front(asyncDependencies().size());
+  auto operands = getOperands().drop_front(getAsyncDependencies().size());
   return KernelDim3{operands[0], operands[1], operands[2]};
 }
 
 KernelDim3 LaunchFuncOp::getBlockSizeOperandValues() {
-  auto operands = getOperands().drop_front(asyncDependencies().size());
+  auto operands = getOperands().drop_front(getAsyncDependencies().size());
   return KernelDim3{operands[3], operands[4], operands[5]};
 }
 
@@ -1091,8 +1096,8 @@ void GPUModuleOp::print(OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult MemcpyOp::verify() {
-  auto srcType = src().getType();
-  auto dstType = dst().getType();
+  auto srcType = getSrc().getType();
+  auto dstType = getDst().getType();
 
   if (getElementTypeOrSelf(srcType) != getElementTypeOrSelf(dstType))
     return emitOpError("arguments have incompatible element type");
@@ -1112,7 +1117,7 @@ struct EraseTrivialCopyOp : public OpRewritePattern<MemcpyOp> {
 
   LogicalResult matchAndRewrite(MemcpyOp op,
                                 PatternRewriter &rewriter) const override {
-    Value dest = op.dst();
+    Value dest = op.getDst();
     Operation *destDefOp = dest.getDefiningOp();
     // `dest` must be defined by an op having Allocate memory effect in order to
     // perform the folding.
@@ -1129,11 +1134,11 @@ struct EraseTrivialCopyOp : public OpRewritePattern<MemcpyOp> {
     // We can perform the folding if and only if op has a single async
     // dependency and produces an async token as result, or if it does not have
     // any async dependency and does not produce any async token result.
-    if (op.asyncDependencies().size() > 1 ||
-        ((op.asyncDependencies().empty() && op.asyncToken()) ||
-         (!op.asyncDependencies().empty() && !op.asyncToken())))
+    if (op.getAsyncDependencies().size() > 1 ||
+        ((op.getAsyncDependencies().empty() && op.getAsyncToken()) ||
+         (!op.getAsyncDependencies().empty() && !op.getAsyncToken())))
       return failure();
-    rewriter.replaceOp(op, op.asyncDependencies());
+    rewriter.replaceOp(op, op.getAsyncDependencies());
     return success();
   }
 };
@@ -1161,8 +1166,8 @@ static bool isLastMemrefDimUnitStride(MemRefType type) {
 }
 
 LogicalResult SubgroupMmaLoadMatrixOp::verify() {
-  auto srcType = srcMemref().getType();
-  auto resType = res().getType();
+  auto srcType = getSrcMemref().getType();
+  auto resType = getRes().getType();
   auto resMatrixType = resType.cast<gpu::MMAMatrixType>();
   auto operand = resMatrixType.getOperand();
   auto srcMemrefType = srcType.cast<MemRefType>();
@@ -1190,8 +1195,8 @@ LogicalResult SubgroupMmaLoadMatrixOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult SubgroupMmaStoreMatrixOp::verify() {
-  auto srcType = src().getType();
-  auto dstType = dstMemref().getType();
+  auto srcType = getSrc().getType();
+  auto dstType = getDstMemref().getType();
   auto srcMatrixType = srcType.cast<gpu::MMAMatrixType>();
   auto dstMemrefType = dstType.cast<MemRefType>();
   auto dstMemSpace = dstMemrefType.getMemorySpaceAsInt();
@@ -1219,9 +1224,9 @@ LogicalResult SubgroupMmaStoreMatrixOp::verify() {
 LogicalResult SubgroupMmaComputeOp::verify() {
   enum OperandMap { A, B, C };
   SmallVector<MMAMatrixType, 3> opTypes;
-  opTypes.push_back(opA().getType().cast<MMAMatrixType>());
-  opTypes.push_back(opB().getType().cast<MMAMatrixType>());
-  opTypes.push_back(opC().getType().cast<MMAMatrixType>());
+  opTypes.push_back(getOpA().getType().cast<MMAMatrixType>());
+  opTypes.push_back(getOpB().getType().cast<MMAMatrixType>());
+  opTypes.push_back(getOpC().getType().cast<MMAMatrixType>());
 
   if (!opTypes[A].getOperand().equals("AOp") ||
       !opTypes[B].getOperand().equals("BOp") ||
@@ -1284,7 +1289,7 @@ public:
       auto waitOp = value.getDefiningOp<WaitOp>();
       return waitOp && waitOp->getNumOperands() == 0;
     };
-    if (llvm::none_of(op.asyncDependencies(), predicate))
+    if (llvm::none_of(op.getAsyncDependencies(), predicate))
       return failure();
     SmallVector<Value> validOperands;
     for (Value operand : op->getOperands()) {
@@ -1312,17 +1317,18 @@ public:
                                 PatternRewriter &rewriter) const final {
     // Erase gpu.wait ops that neither have any async dependencies nor return
     // any async token.
-    if (op.asyncDependencies().empty() && !op.asyncToken()) {
+    if (op.getAsyncDependencies().empty() && !op.getAsyncToken()) {
       rewriter.eraseOp(op);
       return success();
     }
     // Replace uses of %t1 = gpu.wait async [%t0] ops with %t0 and erase the op.
-    if (llvm::hasSingleElement(op.asyncDependencies()) && op.asyncToken()) {
-      rewriter.replaceOp(op, op.asyncDependencies());
+    if (llvm::hasSingleElement(op.getAsyncDependencies()) &&
+        op.getAsyncToken()) {
+      rewriter.replaceOp(op, op.getAsyncDependencies());
       return success();
     }
     // Erase %t = gpu.wait async ... ops, where %t has no uses.
-    if (op.asyncToken() && op.asyncToken().use_empty()) {
+    if (op.getAsyncToken() && op.getAsyncToken().use_empty()) {
       rewriter.eraseOp(op);
       return success();
     }
@@ -1342,9 +1348,9 @@ void WaitOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllocOp::verify() {
-  auto memRefType = memref().getType().cast<MemRefType>();
+  auto memRefType = getMemref().getType().cast<MemRefType>();
 
-  if (static_cast<int64_t>(dynamicSizes().size()) !=
+  if (static_cast<int64_t>(getDynamicSizes().size()) !=
       memRefType.getNumDynamicDims())
     return emitOpError("dimension operand count does not equal memref "
                        "dynamic dimension count");
@@ -1352,7 +1358,7 @@ LogicalResult AllocOp::verify() {
   unsigned numSymbols = 0;
   if (!memRefType.getLayout().isIdentity())
     numSymbols = memRefType.getLayout().getAffineMap().getNumSymbols();
-  if (symbolOperands().size() != numSymbols) {
+  if (getSymbolOperands().size() != numSymbols) {
     return emitOpError(
         "symbol operand count does not equal memref symbol count");
   }
@@ -1381,7 +1387,7 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
     if (!alloc)
       return failure();
 
-    Value substituteOp = *(alloc.dynamicSizes().begin() +
+    Value substituteOp = *(alloc.getDynamicSizes().begin() +
                            memrefType.getDynamicDimIndex(index.value()));
     rewriter.replaceOp(dimOp, substituteOp);
     return success();

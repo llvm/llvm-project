@@ -87,7 +87,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
 
-    auto valueTy = adaptor.value().getType();
+    auto valueTy = adaptor.getValue().getType();
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
     auto predTy = IntegerType::get(rewriter.getContext(), 1);
     auto resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
@@ -97,24 +97,24 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value minusOne = rewriter.create<LLVM::ConstantOp>(loc, int32Type, -1);
     Value thirtyTwo = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 32);
     Value numLeadInactiveLane = rewriter.create<LLVM::SubOp>(
-        loc, int32Type, thirtyTwo, adaptor.width());
+        loc, int32Type, thirtyTwo, adaptor.getWidth());
     // Bit mask of active lanes: `(-1) >> (32 - activeWidth)`.
     Value activeMask = rewriter.create<LLVM::LShrOp>(loc, int32Type, minusOne,
                                                      numLeadInactiveLane);
     Value maskAndClamp;
-    if (op.mode() == gpu::ShuffleMode::UP) {
+    if (op.getMode() == gpu::ShuffleMode::UP) {
       // Clamp lane: `32 - activeWidth`
       maskAndClamp = numLeadInactiveLane;
     } else {
       // Clamp lane: `activeWidth - 1`
       maskAndClamp =
-          rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.width(), one);
+          rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.getWidth(), one);
     }
 
     auto returnValueAndIsValidAttr = rewriter.getUnitAttr();
     Value shfl = rewriter.create<NVVM::ShflOp>(
-        loc, resultTy, activeMask, adaptor.value(), adaptor.offset(),
-        maskAndClamp, convertShflKind(op.mode()), returnValueAndIsValidAttr);
+        loc, resultTy, activeMask, adaptor.getValue(), adaptor.getOffset(),
+        maskAndClamp, convertShflKind(op.getMode()), returnValueAndIsValidAttr);
     Value shflValue = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 0);
     Value isActiveSrcLane = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 1);
 
