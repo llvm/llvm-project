@@ -4,7 +4,8 @@
 ; Check that we log the currently in development features correctly with both the default
 ; case and with a learned policy.
 ;
-; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=development \
+; RUN: llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-advisor=development \
 ; RUN:   -regalloc-training-log=%t1 -tfutils-text-log \
 ; RUN:   -regalloc-enable-development-features < %S/Inputs/input.ll
 ; RUN: sed -i 's/ \+/ /g' %t1
@@ -16,7 +17,8 @@
 ; RUN: rm -rf %t && mkdir %t
 ; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t_savedmodel
 ; RUN: %python %S/../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
-; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=development \
+; RUN: llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-advisor=development \
 ; RUN:   -regalloc-training-log=%t2 -tfutils-text-log -regalloc-model=%t \
 ; RUN:   -regalloc-enable-development-features < %S/Inputs/input.ll
 ; RUN: sed -i 's/ \+/ /g' %t2
@@ -29,7 +31,6 @@
 ; CHECK-LABEL: key: \"instructions\"
 ; Check the first five opcodes in the first eviction problem
 ; CHECK-NEXT: value: 19
-; CHECK-SAME: value: 19
 ; CHECK-SAME: value: 3031
 ; CHECK-SAME: value: 1245
 ; CHECK-SAME: value: 1264
@@ -48,7 +49,7 @@
 ; Ensure that we can still go through the mapping matrices for the rest of the
 ; eviction problems to make sure we haven't hit the end of the matrix above.
 ; There are a total of 23 eviction problems with this test.
-; CHECK-COUNT-22: int64_list
+; CHECK-COUNT-15: int64_list
 ; CHECK: key: \"is_free\"
 ; Make sure that we're exporting the mbb_frequencies. Don't actually check
 ; values due to all values being floating point/liable to change very easily.
