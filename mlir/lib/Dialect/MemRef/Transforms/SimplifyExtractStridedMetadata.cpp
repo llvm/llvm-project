@@ -721,7 +721,7 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
     if (!viewLikeOp)
       return rewriter.notifyMatchFailure(extractOp, "not a ViewLike source");
     rewriter.updateRootInPlace(extractOp, [&]() {
-      extractOp.sourceMutable().assign(viewLikeOp.getViewSource());
+      extractOp.getSourceMutable().assign(viewLikeOp.getViewSource());
     });
     return success();
   }

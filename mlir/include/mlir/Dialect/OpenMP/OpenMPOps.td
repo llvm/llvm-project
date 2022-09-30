@@ -28,9 +28,6 @@ def OpenMP_Dialect : Dialect {
   let cppNamespace = "::mlir::omp";
   let dependentDialects = ["::mlir::LLVM::LLVMDialect"];
   let useDefaultAttributePrinterParser = 1;
-
-  // TODO: Flip to _Prefixed.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 // OmpCommon requires definition of OpenACC_Dialect.

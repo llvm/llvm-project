@@ -820,9 +820,9 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
       firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
-    enterDataOp.asyncAttr(firOpBuilder.getUnitAttr());
+    enterDataOp.setAsyncAttr(firOpBuilder.getUnitAttr());
   if (addWaitAttr)
-    enterDataOp.waitAttr(firOpBuilder.getUnitAttr());
+    enterDataOp.setWaitAttr(firOpBuilder.getUnitAttr());
 }
 
 static void
@@ -896,11 +896,11 @@ genACCExitDataOp(Fortran::lower::AbstractConverter &converter,
       firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
-    exitDataOp.asyncAttr(firOpBuilder.getUnitAttr());
+    exitDataOp.setAsyncAttr(firOpBuilder.getUnitAttr());
   if (addWaitAttr)
-    exitDataOp.waitAttr(firOpBuilder.getUnitAttr());
+    exitDataOp.setWaitAttr(firOpBuilder.getUnitAttr());
   if (addFinalizeAttr)
-    exitDataOp.finalizeAttr(firOpBuilder.getUnitAttr());
+    exitDataOp.setFinalizeAttr(firOpBuilder.getUnitAttr());
 }
 
 template <typename Op>
@@ -1010,11 +1010,11 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
       firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
-    updateOp.asyncAttr(firOpBuilder.getUnitAttr());
+    updateOp.setAsyncAttr(firOpBuilder.getUnitAttr());
   if (addWaitAttr)
-    updateOp.waitAttr(firOpBuilder.getUnitAttr());
+    updateOp.setWaitAttr(firOpBuilder.getUnitAttr());
   if (addIfPresentAttr)
-    updateOp.ifPresentAttr(firOpBuilder.getUnitAttr());
+    updateOp.setIfPresentAttr(firOpBuilder.getUnitAttr());
 }
 
 static void
@@ -1116,7 +1116,7 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
       firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
-    waitOp.asyncAttr(firOpBuilder.getUnitAttr());
+    waitOp.setAsyncAttr(firOpBuilder.getUnitAttr());
 }
 
 void Fortran::lower::genOpenACCConstruct(
