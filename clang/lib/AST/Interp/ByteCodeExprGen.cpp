@@ -861,6 +861,11 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
 
       FoundDecl = true;
     }
+  } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
+    PrimType T = *classify(ECD->getType());
+
+    return this->emitConst(T, getIntWidth(ECD->getType()), ECD->getInitVal(),
+                           E);
   }
 
   // References are implemented using pointers, so when we get here,
