@@ -46,7 +46,7 @@ void HugifyRuntimeLibrary::adjustCommandLineOptions(
     errs()
         << "BOLT-ERROR: -hot-text should be applied to binaries with "
            "pre-compiled manual hugify support, while -hugify will add hugify "
-           "support automatcally. These two options cannot both be present.\n";
+           "support automatically. These two options cannot both be present.\n";
     exit(1);
   }
   // After the check, we set HotText to be true because automated hugify support

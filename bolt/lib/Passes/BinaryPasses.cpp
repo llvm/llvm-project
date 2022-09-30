@@ -894,7 +894,7 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
 
       // Annotate it, so "isCall" returns true for this jcc
       MIB->setConditionalTailCall(*CondBranch);
-      // Add info abount the conditional tail call frequency, otherwise this
+      // Add info about the conditional tail call frequency, otherwise this
       // info will be lost when we delete the associated BranchInfo entry
       auto &CTCAnnotation =
           MIB->getOrCreateAnnotationAs<uint64_t>(*CondBranch, "CTCTakenCount");
