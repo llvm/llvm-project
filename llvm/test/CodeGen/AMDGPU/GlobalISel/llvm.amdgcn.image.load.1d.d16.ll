@@ -2,8 +2,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GFX8-UNPACKED %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx810 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX8-PACKED %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS %s
 
 define amdgpu_ps half @load_1d_f16_x(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-UNPACKED-LABEL: load_1d_f16_x:
@@ -546,45 +546,21 @@ define amdgpu_ps <3 x half> @load_1d_v3f16_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x7 unorm d16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX10-LABEL: load_1d_v3f16_xyz:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s0, s2
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    s_mov_b32 s2, s4
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    s_mov_b32 s4, s6
-; GFX10-NEXT:    s_mov_b32 s5, s7
-; GFX10-NEXT:    s_mov_b32 s6, s8
-; GFX10-NEXT:    s_mov_b32 s7, s9
-; GFX10-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm d16
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: load_1d_v3f16_xyz:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mov_b32 s0, s2
-; GFX11-NEXT:    s_mov_b32 s1, s3
-; GFX11-NEXT:    s_mov_b32 s2, s4
-; GFX11-NEXT:    s_mov_b32 s3, s5
-; GFX11-NEXT:    s_mov_b32 s4, s6
-; GFX11-NEXT:    s_mov_b32 s5, s7
-; GFX11-NEXT:    s_mov_b32 s6, s8
-; GFX11-NEXT:    s_mov_b32 s7, s9
-; GFX11-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm d16
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX10PLUS-LABEL: load_1d_v3f16_xyz:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_mov_b32 s0, s2
+; GFX10PLUS-NEXT:    s_mov_b32 s1, s3
+; GFX10PLUS-NEXT:    s_mov_b32 s2, s4
+; GFX10PLUS-NEXT:    s_mov_b32 s3, s5
+; GFX10PLUS-NEXT:    s_mov_b32 s4, s6
+; GFX10PLUS-NEXT:    s_mov_b32 s5, s7
+; GFX10PLUS-NEXT:    s_mov_b32 s6, s8
+; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
+; GFX10PLUS-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm d16
+; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0)
+; GFX10PLUS-NEXT:    ; return to shader part epilog
   %v = call <3 x half> @llvm.amdgcn.image.load.1d.v3f16.i32(i32 7, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <3 x half> %v
 }

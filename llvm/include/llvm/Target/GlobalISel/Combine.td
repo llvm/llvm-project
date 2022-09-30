@@ -932,6 +932,18 @@ def add_sub_reg: GICombineRule <
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root},
                                                       ${matchinfo}); }])>;
 
+def buildvector_identity_fold : GICombineRule<
+  (defs root:$build_vector, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_BUILD_VECTOR_TRUNC, G_BUILD_VECTOR):$build_vector,
+         [{ return Helper.matchBuildVectorIdentityFold(*${build_vector}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${build_vector}, ${matchinfo}); }])>;
+
+def trunc_buildvector_fold : GICombineRule<
+  (defs root:$op, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$op,
+      [{ return Helper.matchTruncBuildVectorFold(*${op}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${matchinfo}); }])>;
+
 def select_to_minmax: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_SELECT):$root,
@@ -955,7 +967,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_right_to_zero, p2i_to_i2p,
                                         i2p_to_p2i, anyext_trunc_fold,
                                         fneg_fneg_fold, right_identity_one,
-                                        add_sub_reg]>;
+                                        add_sub_reg, buildvector_identity_fold,
+                                        trunc_buildvector_fold]>;
 
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,
