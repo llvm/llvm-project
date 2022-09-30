@@ -383,7 +383,7 @@ func.func @sparse_compression(%tensor: tensor<8x8xf64, #CSR>,
                               %filled: memref<?xi1>,
                               %added: memref<?xindex>,
                               %count: index,
-			      %i: index) {
+                              %i: index) {
   sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
     : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64, #CSR>
   return
