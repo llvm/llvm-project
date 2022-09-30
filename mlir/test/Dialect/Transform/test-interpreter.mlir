@@ -550,6 +550,7 @@ transform.with_pdl_patterns {
 
 func.func @foo() {
   "op" () { target_me } : () -> ()
+  // expected-note @below {{when applied to this op}}
   "op" () : () -> ()
   return
 }
@@ -566,6 +567,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1
+    // expected-error @below {{failed to apply}}
     transform.test_mixed_sucess_and_silenceable %0
   }
 }
