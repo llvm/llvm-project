@@ -190,14 +190,8 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
 }
 
 static SmallVector<bool> getReductionMask(LinalgOp linalgOp) {
-  unsigned idx = 0;
-  SmallVector<bool> reductionMask(linalgOp.iterator_types().size(), false);
-  for (auto attr : linalgOp.iterator_types()) {
-    if (isReductionIterator(attr))
-      reductionMask[idx] = true;
-    ++idx;
-  }
-  return reductionMask;
+  return llvm::to_vector(
+      llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
 }
 
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
@@ -540,7 +534,7 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
 // TODO: probably need some extra checks for reduction followed by consumer
 // ops that may not commute (e.g. linear reduction + non-linear instructions).
 static LogicalResult reductionPreconditions(LinalgOp op) {
-  if (llvm::none_of(op.iterator_types(), isReductionIterator)) {
+  if (llvm::none_of(op.getIteratorTypesArray(), isReductionIterator)) {
     LDBG("reduction precondition failed: no reduction iterator");
     return failure();
   }

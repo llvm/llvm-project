@@ -45,11 +45,11 @@ bool isElementwise(LinalgOp op);
 /// `[0, permutation.size())`.
 bool isPermutation(ArrayRef<int64_t> permutation);
 
-/// Check if `attr` has "parallel" iterator type semantics.
-bool isParallelIterator(Attribute attr);
+/// Check if iterator type has "parallel" semantics.
+bool isParallelIterator(StringRef iteratorType);
 
-/// Check if `attr` has "reduction" iterator type semantics.
-bool isReductionIterator(Attribute attr);
+/// Check if iterator type  has "reduction" semantics.
+bool isReductionIterator(StringRef iteratorType);
 
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
@@ -488,7 +488,7 @@ struct RegionMatcher {
 template <typename LoopTy>
 struct GenerateLoopNest {
   static void doit(OpBuilder &b, Location loc, ArrayRef<Range> loopRanges,
-                   LinalgOp linalgOp, ArrayRef<Attribute> iteratorTypes,
+                   LinalgOp linalgOp, ArrayRef<StringRef> iteratorTypes,
                    function_ref<scf::ValueVector(OpBuilder &, Location,
                                                  ValueRange, ValueRange)>
                        bodyBuilderFn,

@@ -1055,17 +1055,12 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
   }
 
   // Compute all the loops with the reduction iterator types.
-  SmallVector<int64_t> reductionDims;
-  for (const auto &iteratorType :
-       llvm::enumerate(genericOp.getIteratorTypes())) {
-    if (isReductionIterator(iteratorType.value())) {
-      reductionDims.push_back(iteratorType.index());
-    }
-  }
+  SmallVector<unsigned> reductionDims;
+  genericOp.getReductionDims(reductionDims);
 
   llvm::SmallDenseSet<unsigned, 4> processedIterationDims;
   AffineMap indexingMap = genericOp.getMatchingIndexingMap(fusableOperand);
-  auto iteratorTypes = genericOp.getIteratorTypes().getValue();
+  auto iteratorTypes = genericOp.getIteratorTypesArray();
   SmallVector<ReassociationIndices> iterationSpaceReassociation;
   for (ReassociationIndicesRef foldedRangeDims : reassociation) {
     assert(!foldedRangeDims.empty() && "unexpected empty reassociation");
@@ -1085,7 +1080,7 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
       continue;
 
     // Check that all folded iterator types are all parallel or all reductions.
-    Attribute startIteratorType = iteratorTypes[foldedIterationSpaceDims[0]];
+    StringRef startIteratorType = iteratorTypes[foldedIterationSpaceDims[0]];
     if (!isParallelIterator(startIteratorType) &&
         !isReductionIterator(startIteratorType))
       continue;

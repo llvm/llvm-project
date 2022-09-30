@@ -215,10 +215,10 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   newMaps.push_back(AffineMap::get(oldOutputMap.getNumDims() + 1, 0, outputExpr,
                                    op.getContext()));
   SmallVector<StringRef> newIteratorTypes;
-  for (auto &it : llvm::enumerate(op.iterator_types())) {
+  for (auto &it : llvm::enumerate(op.getIteratorTypesArray())) {
     if (insertSplitDimension == it.index() && !control.innerParallel)
       newIteratorTypes.push_back(getParallelIteratorTypeName());
-    newIteratorTypes.push_back(it.value().cast<StringAttr>().getValue());
+    newIteratorTypes.push_back(it.value());
     if (insertSplitDimension == it.index() && control.innerParallel)
       newIteratorTypes.push_back(getParallelIteratorTypeName());
   }
@@ -413,8 +413,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
 
   // Step 4. Create the new op matching the original op with an extra parallel
   // dimension.
-  SmallVector<StringRef> iteratorTypes =
-      llvm::to_vector<4>(op.getIteratorTypes().getAsValueRange<StringAttr>());
+  auto iteratorTypes = op.getIteratorTypesArray();
   iteratorTypes.insert(iteratorTypes.begin() + reductionDimPos,
                        getParallelIteratorTypeName());
   GenericOp genericOp =
