@@ -10749,7 +10749,9 @@ bool llvm::isMinSignedConstant(SDValue V) {
 
 bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
                              unsigned OperandNo) {
-  if (auto *Const = dyn_cast<ConstantSDNode>(V)) {
+  // NOTE: The cases should match with IR's ConstantExpr::getBinOpIdentity().
+  // TODO: Target-specific opcodes could be added.
+  if (auto *Const = isConstOrConstSplat(V)) {
     switch (Opcode) {
     case ISD::ADD:
     case ISD::OR:
@@ -10774,7 +10776,7 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
     case ISD::SDIV:
       return OperandNo == 1 && Const->isOne();
     }
-  } else if (auto *ConstFP = dyn_cast<ConstantFPSDNode>(V)) {
+  } else if (auto *ConstFP = isConstOrConstSplatFP(V)) {
     switch (Opcode) {
     case ISD::FADD:
       return ConstFP->isZero() &&
