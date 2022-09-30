@@ -74,7 +74,7 @@ struct CoroMachinery {
   Value asyncToken; // token representing completion of the async region
   llvm::SmallVector<Value, 4> returnValues; // returned async values
 
-  Value coroHandle; // coroutine handle (!async.coro.handle value)
+  Value coroHandle; // coroutine handle (!async.coro.getHandle value)
   Block *entry;     // coroutine entry block
   Block *setError;  // switch completion token and all values to error state
   Block *cleanup;   // coroutine cleanup block
@@ -110,7 +110,7 @@ struct CoroMachinery {
 ///     ^entry(<function-arguments>):
 ///       %token = <async token> : !async.token    // create async runtime token
 ///       %value = <async value> : !async.value<T> // create async value
-///       %id = async.coro.id                      // create a coroutine id
+///       %id = async.coro.getId                      // create a coroutine id
 ///       %hdl = async.coro.begin %id              // create a coroutine handle
 ///       cf.br ^preexisting_entry_block
 ///
@@ -142,18 +142,20 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // ------------------------------------------------------------------------ //
   // Allocate async token/values that we will return from a ramp function.
   // ------------------------------------------------------------------------ //
-  auto retToken = builder.create<RuntimeCreateOp>(TokenType::get(ctx)).result();
+  auto retToken =
+      builder.create<RuntimeCreateOp>(TokenType::get(ctx)).getResult();
 
   llvm::SmallVector<Value, 4> retValues;
   for (auto resType : func.getCallableResults().drop_front())
-    retValues.emplace_back(builder.create<RuntimeCreateOp>(resType).result());
+    retValues.emplace_back(
+        builder.create<RuntimeCreateOp>(resType).getResult());
 
   // ------------------------------------------------------------------------ //
   // Initialize coroutine: get coroutine id and coroutine handle.
   // ------------------------------------------------------------------------ //
   auto coroIdOp = builder.create<CoroIdOp>(CoroIdType::get(ctx));
   auto coroHdlOp =
-      builder.create<CoroBeginOp>(CoroHandleType::get(ctx), coroIdOp.id());
+      builder.create<CoroBeginOp>(CoroHandleType::get(ctx), coroIdOp.getId());
   builder.create<cf::BranchOp>(originalEntryBlock);
 
   Block *cleanupBlock = func.addBlock();
@@ -163,7 +165,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   // Coroutine cleanup block: deallocate coroutine frame, free the memory.
   // ------------------------------------------------------------------------ //
   builder.setInsertionPointToStart(cleanupBlock);
-  builder.create<CoroFreeOp>(coroIdOp.id(), coroHdlOp.handle());
+  builder.create<CoroFreeOp>(coroIdOp.getId(), coroHdlOp.getHandle());
 
   // Branch into the suspend block.
   builder.create<cf::BranchOp>(suspendBlock);
@@ -175,7 +177,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   builder.setInsertionPointToStart(suspendBlock);
 
   // Mark the end of a coroutine: async.coro.end
-  builder.create<CoroEndOp>(coroHdlOp.handle());
+  builder.create<CoroEndOp>(coroHdlOp.getHandle());
 
   // Return created `async.token` and `async.values` from the suspend block.
   // This will be the return value of a coroutine ramp function.
@@ -206,7 +208,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
   machinery.func = func;
   machinery.asyncToken = retToken;
   machinery.returnValues = retValues;
-  machinery.coroHandle = coroHdlOp.handle();
+  machinery.coroHandle = coroHdlOp.getHandle();
   machinery.entry = entryBlock;
   machinery.setError = nullptr; // created lazily only if needed
   machinery.cleanup = cleanupBlock;
@@ -250,14 +252,14 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
   // Make sure that all constants will be inside the outlined async function to
   // reduce the number of function arguments.
-  cloneConstantsIntoTheRegion(execute.bodyRegion());
+  cloneConstantsIntoTheRegion(execute.getBodyRegion());
 
   // Collect all outlined function inputs.
-  SetVector<mlir::Value> functionInputs(execute.dependencies().begin(),
-                                        execute.dependencies().end());
-  functionInputs.insert(execute.bodyOperands().begin(),
-                        execute.bodyOperands().end());
-  getUsedValuesDefinedAbove(execute.bodyRegion(), functionInputs);
+  SetVector<mlir::Value> functionInputs(execute.getDependencies().begin(),
+                                        execute.getDependencies().end());
+  functionInputs.insert(execute.getBodyOperands().begin(),
+                        execute.getBodyOperands().end());
+  getUsedValuesDefinedAbove(execute.getBodyRegion(), functionInputs);
 
   // Collect types for the outlined function inputs and outputs.
   auto typesRange = llvm::map_range(
@@ -279,8 +281,8 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
   // Prepare for coroutine conversion by creating the body of the function.
   {
-    size_t numDependencies = execute.dependencies().size();
-    size_t numOperands = execute.bodyOperands().size();
+    size_t numDependencies = execute.getDependencies().size();
+    size_t numOperands = execute.getBodyOperands().size();
 
     // Await on all dependencies before starting to execute the body region.
     for (size_t i = 0; i < numDependencies; ++i)
@@ -290,18 +292,18 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
     SmallVector<Value, 4> unwrappedOperands(numOperands);
     for (size_t i = 0; i < numOperands; ++i) {
       Value operand = func.getArgument(numDependencies + i);
-      unwrappedOperands[i] = builder.create<AwaitOp>(loc, operand).result();
+      unwrappedOperands[i] = builder.create<AwaitOp>(loc, operand).getResult();
     }
 
     // Map from function inputs defined above the execute op to the function
     // arguments.
     BlockAndValueMapping valueMapping;
     valueMapping.map(functionInputs, func.getArguments());
-    valueMapping.map(execute.bodyRegion().getArguments(), unwrappedOperands);
+    valueMapping.map(execute.getBodyRegion().getArguments(), unwrappedOperands);
 
     // Clone all operations from the execute operation body into the outlined
     // function body.
-    for (Operation &op : execute.bodyRegion().getOps())
+    for (Operation &op : execute.getBodyRegion().getOps())
       builder.clone(op, valueMapping);
   }
 
@@ -324,7 +326,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
     builder.create<RuntimeResumeOp>(coro.coroHandle);
 
     // Add async.coro.suspend as a suspended block terminator.
-    builder.create<CoroSuspendOp>(coroSaveOp.state(), coro.suspend,
+    builder.create<CoroSuspendOp>(coroSaveOp.getState(), coro.suspend,
                                   branch.getDest(), coro.cleanup);
 
     branch.erase();
@@ -402,7 +404,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // We can only await on one the `AwaitableType` (for `await` it can be
     // a `token` or a `value`, for `await_all` it must be a `group`).
-    if (!op.operand().getType().template isa<AwaitableType>())
+    if (!op.getOperand().getType().template isa<AwaitableType>())
       return rewriter.notifyMatchFailure(op, "unsupported awaitable type");
 
     // Check if await operation is inside the outlined coroutine function.
@@ -411,7 +413,7 @@ public:
     const bool isInCoroutine = outlined != outlinedFunctions.end();
 
     Location loc = op->getLoc();
-    Value operand = adaptor.operand();
+    Value operand = adaptor.getOperand();
 
     Type i1 = rewriter.getI1Type();
 
@@ -451,7 +453,7 @@ public:
 
       // Add async.coro.suspend as a suspended block terminator.
       builder.setInsertionPointToEnd(suspended);
-      builder.create<CoroSuspendOp>(coroSaveOp.state(), coro.suspend, resume,
+      builder.create<CoroSuspendOp>(coroSaveOp.getState(), coro.suspend, resume,
                                     coro.cleanup);
 
       // Split the resume block into error checking and continuation.
@@ -653,7 +655,7 @@ static void rewriteCallsiteForCoroutine(func::CallOp oldCall,
   unwrappedResults.reserve(newCall->getResults().size() - 1);
   for (Value result : newCall.getResults().drop_front())
     unwrappedResults.push_back(
-        callBuilder.create<AwaitOp>(loc, result).result());
+        callBuilder.create<AwaitOp>(loc, result).getResult());
   // Careful, when result of a call is piped into another call this could lead
   // to a dangling pointer.
   oldCall.replaceAllUsesWith(unwrappedResults);
