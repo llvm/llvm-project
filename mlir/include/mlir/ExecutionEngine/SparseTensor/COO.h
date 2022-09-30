@@ -53,7 +53,7 @@ template <typename V>
 struct ElementLT final {
   ElementLT(uint64_t rank) : rank(rank) {}
 
-  /// Compare two elements a la `operator<`.
+  /// Compares two elements a la `operator<`.
   ///
   /// Precondition: the elements must both be valid for `rank`.
   bool operator()(const Element<V> &e1, const Element<V> &e2) const {
@@ -112,13 +112,13 @@ public:
     return new SparseTensorCOO<V>(permsz, capacity);
   }
 
-  /// Get the rank of the tensor.
+  /// Gets the rank of the tensor.
   uint64_t getRank() const { return dimSizes.size(); }
 
-  /// Get the dimension-sizes array.
+  /// Gets the dimension-sizes array.
   const std::vector<uint64_t> &getDimSizes() const { return dimSizes; }
 
-  /// Get the elements array.
+  /// Gets the elements array.
   const std::vector<Element<V>> &getElements() const { return elements; }
 
   /// Returns the `operator<` closure object for the COO's element type.
@@ -173,14 +173,14 @@ public:
     isSorted = true;
   }
 
-  /// Switch into iterator mode.  If already in iterator mode, then
+  /// Switches into iterator mode.  If already in iterator mode, then
   /// resets the position to the first element.
   void startIterator() {
     iteratorLocked = true;
     iteratorPos = 0;
   }
 
-  /// Get the next element.  If there are no remaining elements, then
+  /// Gets the next element.  If there are no remaining elements, then
   /// returns nullptr and switches out of iterator mode.
   ///
   /// Asserts: is in iterator mode.

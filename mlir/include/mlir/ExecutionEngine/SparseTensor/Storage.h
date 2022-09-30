@@ -83,70 +83,70 @@ public:
 
   virtual ~SparseTensorStorageBase() = default;
 
-  /// Get the rank of the tensor.
+  /// Gets the rank of the tensor.
   uint64_t getRank() const { return dimSizes.size(); }
 
-  /// Get the dimension-sizes array, in storage-order.
+  /// Gets the dimension-sizes array, in storage-order.
   const std::vector<uint64_t> &getDimSizes() const { return dimSizes; }
 
-  /// Safely lookup the size of the given (storage-order) dimension.
+  /// Safely looks up the size of the given (storage-order) dimension.
   uint64_t getDimSize(uint64_t d) const {
     ASSERT_VALID_DIM(d);
     return dimSizes[d];
   }
 
-  /// Get the "reverse" permutation, which maps this object's
+  /// Gets the "reverse" permutation, which maps this object's
   /// storage-order to the tensor's semantic-order.
   const std::vector<uint64_t> &getRev() const { return rev; }
 
-  /// Get the dimension-types array, in storage-order.
+  /// Gets the dimension-types array, in storage-order.
   const std::vector<DimLevelType> &getDimTypes() const { return dimTypes; }
 
-  /// Safely lookup the level-type of the given (storage-order) dimension.
+  /// Safely looks up the level-type of the given (storage-order) dimension.
   DimLevelType getDimType(uint64_t d) const {
     ASSERT_VALID_DIM(d);
     return dimTypes[d];
   }
 
-  /// Safely check if the (storage-order) dimension uses dense storage.
+  /// Safely checks if the (storage-order) dimension uses dense storage.
   bool isDenseDim(uint64_t d) const { return isDenseDLT(getDimType(d)); }
 
-  /// Safely check if the (storage-order) dimension uses compressed storage.
+  /// Safely checks if the (storage-order) dimension uses compressed storage.
   bool isCompressedDim(uint64_t d) const {
     return isCompressedDLT(getDimType(d));
   }
 
-  /// Safely check if the (storage-order) dimension uses singleton storage.
+  /// Safely checks if the (storage-order) dimension uses singleton storage.
   bool isSingletonDim(uint64_t d) const {
     return isSingletonDLT(getDimType(d));
   }
 
-  /// Safely check if the (storage-order) dimension is ordered.
+  /// Safely checks if the (storage-order) dimension is ordered.
   bool isOrderedDim(uint64_t d) const { return isOrderedDLT(getDimType(d)); }
 
-  /// Safely check if the (storage-order) dimension is unique.
+  /// Safely checks if the (storage-order) dimension is unique.
   bool isUniqueDim(uint64_t d) const { return isUniqueDLT(getDimType(d)); }
 
-  /// Allocate a new enumerator.
+  /// Allocates a new enumerator.
 #define DECL_NEWENUMERATOR(VNAME, V)                                           \
   virtual void newEnumerator(SparseTensorEnumeratorBase<V> **, uint64_t,       \
                              const uint64_t *) const;
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_NEWENUMERATOR)
 #undef DECL_NEWENUMERATOR
 
-  /// Pointers-overhead storage.
+  /// Gets pointers-overhead storage.
 #define DECL_GETPOINTERS(PNAME, P)                                             \
   virtual void getPointers(std::vector<P> **, uint64_t);
   MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETPOINTERS)
 #undef DECL_GETPOINTERS
 
-  /// Indices-overhead storage.
+  /// Gets indices-overhead storage.
 #define DECL_GETINDICES(INAME, I)                                              \
   virtual void getIndices(std::vector<I> **, uint64_t);
   MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETINDICES)
 #undef DECL_GETINDICES
 
-  /// Primary storage.
+  /// Gets primary storage.
 #define DECL_GETVALUES(VNAME, V) virtual void getValues(std::vector<V> **);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETVALUES)
 #undef DECL_GETVALUES
@@ -305,7 +305,7 @@ public:
       endPath(0);
   }
 
-  /// Allocate a new enumerator for this classes `<P,I,V>` types and
+  /// Allocates a new enumerator for this classes `<P,I,V>` types and
   /// erase the `<P,I>` parts from the type.  Callers must make sure to
   /// delete the enumerator when they're done with it.
   void newEnumerator(SparseTensorEnumeratorBase<V> **out, uint64_t rank,
@@ -439,7 +439,7 @@ private:
     finalizeSegment(d, full);
   }
 
-  /// Finalize the sparse pointer structure at this dimension.
+  /// Finalizes the sparse pointer structure at this dimension.
   void finalizeSegment(uint64_t d, uint64_t full = 0, uint64_t count = 1) {
     if (count == 0)
       return; // Short-circuit, since it'll be a nop.
@@ -661,7 +661,7 @@ private:
 /// those parameters.
 class SparseTensorNNZ final {
 public:
-  /// Allocate the statistics structure for the desired sizes and
+  /// Allocates the statistics structure for the desired sizes and
   /// sparsity (in the target tensor's storage-order).  This constructor
   /// does not actually populate the statistics, however; for that see
   /// `initialize`.
@@ -677,7 +677,7 @@ public:
   /// Returns the rank of the target tensor.
   uint64_t getRank() const { return dimSizes.size(); }
 
-  /// Enumerate the source tensor to fill in the statistics.  The
+  /// Enumerates the source tensor to fill in the statistics.  The
   /// enumerator should already incorporate the permutation (from
   /// semantic-order to the target storage-order).
   template <typename V>
