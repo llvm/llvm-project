@@ -883,6 +883,7 @@ template<size_t N, class T>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__memory/uses_allocator.h>
+#include <__memory/uses_allocator_construction.h>
 #include <version>
 
 // standard-mandated includes
