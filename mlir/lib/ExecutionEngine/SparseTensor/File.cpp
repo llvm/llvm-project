@@ -107,6 +107,9 @@ bool SparseTensorFile::canReadAs(PrimaryType valTy) const {
     // So we allow implicitly converting the stored values to both
     // integer and floating primary-types.
     return isRealPrimaryType(valTy);
+  default:
+    MLIR_SPARSETENSOR_FATAL("Unknown ValueKind: %d\n",
+                            static_cast<uint8_t>(valueKind_));
   }
 }
 
