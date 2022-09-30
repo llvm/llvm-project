@@ -44,7 +44,7 @@ namespace sparse_tensor {
 /// as well as providing the buffers and methods for parsing those headers.
 class SparseTensorFile final {
 public:
-  enum class ValueKind {
+  enum class ValueKind : uint8_t {
     // The value before calling `readHeader`.
     kInvalid = 0,
     // Values that can be set by `readMMEHeader`.
