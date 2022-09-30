@@ -205,7 +205,7 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
-  let Types = ["struct sigaction", "__sighandler_t"];
+  let Types = ["sigset_t", "struct sigaction", "union sigval", "siginfo_t"];
 }
 
 def ThreadsAPI : PublicAPI<"threads.h"> {
