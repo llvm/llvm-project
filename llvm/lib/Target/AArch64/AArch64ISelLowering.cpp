@@ -18109,7 +18109,9 @@ static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
   return SDValue();
 }
 
-// Perform TBI simplification if supported by the target and try to break up nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit load instructions can be selected.
+// Perform TBI simplification if supported by the target and try to break up
+// nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit
+// load instructions can be selected.
 static SDValue performLOADCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   SelectionDAG &DAG,
