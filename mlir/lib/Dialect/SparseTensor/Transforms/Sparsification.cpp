@@ -195,7 +195,7 @@ static bool findAffine(Merger &merger, unsigned tensor, AffineExpr a,
 static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
   bool annotated = false;
   for (OpOperand *t : op.getInputAndOutputOperands()) {
-    auto map = op.getTiedIndexingMap(t);
+    auto map = op.getMatchingIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     if (enc)
       annotated = true;
@@ -296,7 +296,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     if (t == skip)
       continue;
     // Get map and encoding.
-    auto map = op.getTiedIndexingMap(t);
+    auto map = op.getMatchingIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     assert(map.getNumDims() == n);
     // Skip dense tensor constraints when not requested.
@@ -542,7 +542,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     unsigned tensor = t->getOperandNumber();
     auto shape = op.getShape(t);
-    auto map = op.getTiedIndexingMap(t);
+    auto map = op.getMatchingIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     // Scan all dimensions of current tensor.
     args.clear();
@@ -721,7 +721,7 @@ static Value genAffine(CodeGen &codegen, OpBuilder &builder, AffineExpr a,
 
 /// Generates index for load/store on sparse tensor.
 static Value genIndex(CodeGen &codegen, linalg::GenericOp op, OpOperand *t) {
-  auto map = op.getTiedIndexingMap(t);
+  auto map = op.getMatchingIndexingMap(t);
   auto enc = getSparseTensorEncoding(t->get().getType());
   AffineExpr a = map.getResult(toOrigDim(enc, map.getNumResults() - 1));
   assert(a.getKind() == AffineExprKind::DimId);
@@ -734,7 +734,7 @@ static Value genSubscript(CodeGen &codegen, OpBuilder &builder,
                           linalg::GenericOp op, OpOperand *t,
                           SmallVector<Value, 4> &args) {
   unsigned tensor = t->getOperandNumber();
-  auto map = op.getTiedIndexingMap(t);
+  auto map = op.getMatchingIndexingMap(t);
   auto enc = getSparseTensorEncoding(t->get().getType());
   unsigned rank = map.getNumResults();
   if (enc) {
@@ -1079,7 +1079,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     // Inspect tensor indices.
     bool atLevel = ldx == -1u;
     OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
-    auto map = op.getTiedIndexingMap(t);
+    auto map = op.getMatchingIndexingMap(t);
     auto enc = getSparseTensorEncoding(t->get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr a = map.getResult(toOrigDim(enc, d));
@@ -1275,7 +1275,7 @@ static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
                              unsigned idx) {
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     if (!getSparseTensorEncoding(t->get().getType())) {
-      auto map = op.getTiedIndexingMap(t);
+      auto map = op.getMatchingIndexingMap(t);
       for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
         AffineExpr a = map.getResult(d);
         // Report non-unit stride if innermost index appears at an outer
@@ -1920,7 +1920,8 @@ private:
       auto srcTp = tval.getType().cast<RankedTensorType>();
       auto dstEnc = SparseTensorEncodingAttr::get(
           op->getContext(), srcEnc.getDimLevelType(),
-          permute(getContext(), op.getTiedIndexingMap(t), topSort), // new order
+          permute(getContext(), op.getMatchingIndexingMap(t),
+                  topSort), // new order
           srcEnc.getPointerBitWidth(), srcEnc.getIndexBitWidth());
       auto dstTp = RankedTensorType::get(srcTp.getShape(),
                                          srcTp.getElementType(), dstEnc);

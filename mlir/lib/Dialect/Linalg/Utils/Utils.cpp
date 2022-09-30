@@ -180,7 +180,7 @@ bool isElementwise(LinalgOp op) {
 
   // TODO: relax the restrictions on indexing map.
   for (OpOperand *opOperand : op.getOutputOperands()) {
-    if (!op.getTiedIndexingMap(opOperand).isPermutation())
+    if (!op.getMatchingIndexingMap(opOperand).isPermutation())
       return false;
   }
   return hasOnlyScalarElementwiseOp(op->getRegion(0));
@@ -967,7 +967,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
     Value shapedOp = valuesToTile[opOperand->getOperandNumber()];
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for operand " << shapedOp);
-    AffineMap map = linalgOp.getTiedIndexingMap(opOperand);
+    AffineMap map = linalgOp.getMatchingIndexingMap(opOperand);
     // Use `opOperand` as is if it is not tiled and not an output tensor. Having
     // an extract/insert slice pair for all output tensors simplifies follow up
     // transformations such as padding and bufferization since the

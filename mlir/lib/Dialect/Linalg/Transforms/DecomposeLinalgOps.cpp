@@ -180,7 +180,7 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
       OpResult result = genericOp.getResult(*resultNumber).cast<OpResult>();
       newResultTypes.push_back(result.getType());
       peeledGenericOpIndexingMaps.push_back(
-          genericOp.getTiedIndexingMapForResult(result));
+          genericOp.getIndexingMapMatchingResult(result));
       continue;
     }
 
@@ -227,15 +227,16 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
   /// as those used for the new results of the peeledGenericOp.
   auto indexingMaps = llvm::to_vector(
       llvm::map_range(genericOp.getInputOperands(), [&](OpOperand *operand) {
-        return genericOp.getTiedIndexingMap(operand);
+        return genericOp.getMatchingIndexingMap(operand);
       }));
   for (auto resultNum :
        llvm::seq<unsigned>(origNumResults, peeledGenericOpNumResults)) {
     OpResult result = peeledGenericOp.getResult(resultNum).cast<OpResult>();
-    indexingMaps.push_back(peeledGenericOp.getTiedIndexingMapForResult(result));
+    indexingMaps.push_back(
+        peeledGenericOp.getIndexingMapMatchingResult(result));
   }
   for (OpOperand *outOperand : genericOp.getOutputOperands())
-    indexingMaps.push_back(genericOp.getTiedIndexingMap(outOperand));
+    indexingMaps.push_back(genericOp.getMatchingIndexingMap(outOperand));
 
   auto indexingMapAttr = rewriter.getAffineMapArrayAttr(indexingMaps);
   return rewriter.create<GenericOp>(
@@ -263,7 +264,7 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
   }
 
   if (llvm::any_of(genericOp.getOutputOperands(), [&](OpOperand *outOperand) {
-        return !genericOp.getTiedIndexingMap(outOperand).isPermutation();
+        return !genericOp.getMatchingIndexingMap(outOperand).isPermutation();
       })) {
     return rewriter.notifyMatchFailure(
         genericOp, "unhandled decomposition of generic op with out operand not "

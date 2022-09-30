@@ -80,7 +80,7 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
             opOperand->get().getDefiningOp()))
       continue;
 
-    AffineMap map = op.getTiedIndexingMap(opOperand);
+    AffineMap map = op.getMatchingIndexingMap(opOperand);
     LLVM_DEBUG(llvm::dbgs() << "getShapeDefiningLoopRange I/O idx: "
                             << opOperand->getOperandNumber() << "\n");
     LLVM_DEBUG(llvm::dbgs()
@@ -442,7 +442,7 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   OpOperand *opOperand =
       producerOp.getOutputOperand(producerOpResult.getResultNumber());
   LinalgOp fusedProducer =
-      fuse(b, producerOp, producerOp.getTiedIndexingMap(opOperand),
+      fuse(b, producerOp, producerOp.getMatchingIndexingMap(opOperand),
            consumerOpOperand);
 
   // Replace use.

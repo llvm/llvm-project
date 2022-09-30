@@ -144,14 +144,14 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
       continue;
     }
     auto indexing = makeCanonicalAffineApplies(
-        b, loc, linalgOp.getTiedIndexingMap(inputOperand), allIvsPlusDims);
+        b, loc, linalgOp.getMatchingIndexingMap(inputOperand), allIvsPlusDims);
     indexedValues.push_back(
         b.create<LoadOpTy>(loc, inputOperand->get(), indexing));
   }
   // 1.b. Emit load from output views.
   for (OpOperand *outputOperand : linalgOp.getOutputOperands()) {
     SmallVector<Value> indexing = makeCanonicalAffineApplies(
-        b, loc, linalgOp.getTiedIndexingMap(outputOperand), allIvsPlusDims);
+        b, loc, linalgOp.getMatchingIndexingMap(outputOperand), allIvsPlusDims);
     indexedValues.push_back(
         b.create<LoadOpTy>(loc, outputOperand->get(), indexing));
   }
@@ -163,7 +163,8 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   SmallVector<Value> outputBuffers;
   for (OpOperand *outputOperand : linalgOp.getOutputBufferOperands()) {
     indexing.push_back(makeCanonicalAffineApplies(
-        b, loc, linalgOp.getTiedIndexingMap(outputOperand), allIvsPlusDims));
+        b, loc, linalgOp.getMatchingIndexingMap(outputOperand),
+        allIvsPlusDims));
     outputBuffers.push_back(outputOperand->get());
   }
   inlineRegionAndEmitStore<LoadOpTy, StoreOpTy>(b, loc, linalgOp, indexedValues,
