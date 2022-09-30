@@ -286,7 +286,7 @@ class VSCodeTestCaseBase(TestBase):
                stopCommands=None, exitCommands=None, terminateCommands=None,
                sourcePath=None, debuggerRoot=None, sourceInitFile=False, launchCommands=None,
                sourceMap=None, disconnectAutomatically=True, runInTerminal=False,
-               expectFailure=False, postRunCommands=None):
+               expectFailure=False, postRunCommands=None, runToBinaryEntry=False):
         '''Sending launch request to vscode
         '''
 
@@ -323,7 +323,8 @@ class VSCodeTestCaseBase(TestBase):
             sourceMap=sourceMap,
             runInTerminal=runInTerminal,
             expectFailure=expectFailure,
-            postRunCommands=postRunCommands)
+            postRunCommands=postRunCommands,
+            runToBinaryEntry=runToBinaryEntry)
 
         if expectFailure:
             return response
@@ -346,7 +347,7 @@ class VSCodeTestCaseBase(TestBase):
                          terminateCommands=None, sourcePath=None,
                          debuggerRoot=None, sourceInitFile=False, runInTerminal=False,
                          disconnectAutomatically=True, postRunCommands=None,
-                         lldbVSCodeEnv=None):
+                         lldbVSCodeEnv=None, runToBinaryEntry=False):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and launch the process.
         '''
@@ -359,4 +360,5 @@ class VSCodeTestCaseBase(TestBase):
                     terminateCommands, sourcePath, debuggerRoot, sourceInitFile,
                     runInTerminal=runInTerminal,
                     disconnectAutomatically=disconnectAutomatically,
-                    postRunCommands=postRunCommands)
+                    postRunCommands=postRunCommands,
+                    runToBinaryEntry=runToBinaryEntry)

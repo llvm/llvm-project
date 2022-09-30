@@ -80,6 +80,29 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    def test_runToBinaryEntry(self):
+        '''
+            Tests the runToBinaryEntry option can successfully launch a simple
+            program and hit a breakpoint and does not interupt the launch.
+        '''
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program, runToBinaryEntry=True)
+        self.set_function_breakpoints(['main'])
+        stopped_events = self.continue_to_next_stop()
+        console_output = self.get_console()
+        self.assertIn("Process stopped successfully at the binary's entry point", console_output)
+
+        for stopped_event in stopped_events:
+            if 'body' in stopped_event:
+                body = stopped_event['body']
+                if 'reason' in body:
+                    reason = body['reason']
+                    self.assertTrue(
+                        reason == 'breakpoint',
+                        'verify successfully stop at "main" breakpoint')
+
+    @skipIfWindows
+    @skipIfRemote
     def test_cwd(self):
         '''
             Tests the default launch of a simple program with a current working
