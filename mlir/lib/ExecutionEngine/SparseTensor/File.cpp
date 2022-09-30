@@ -114,10 +114,9 @@ bool SparseTensorFile::canReadAs(PrimaryType valTy) const {
 }
 
 /// Helper to convert C-style strings (i.e., '\0' terminated) to lower case.
-static inline char *toLower(char *token) {
+static inline void toLower(char *token) {
   for (char *c = token; *c; ++c)
     *c = tolower(*c);
-  return token;
 }
 
 /// Idiomatic name for checking string equality.

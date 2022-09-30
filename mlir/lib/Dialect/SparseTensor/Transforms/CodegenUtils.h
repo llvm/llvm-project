@@ -18,7 +18,6 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/Enums.h"
-#include "mlir/ExecutionEngine/SparseTensorUtils.h"
 #include "mlir/IR/Builders.h"
 
 namespace mlir {

@@ -2091,7 +2091,6 @@ cc_library(
         ":TensorDialect",
         ":Transforms",
         ":VectorDialect",
-        ":_mlir_c_runner_utils",
         ":mlir_sparse_tensor_utils",
         "//llvm:Support",
     ],
