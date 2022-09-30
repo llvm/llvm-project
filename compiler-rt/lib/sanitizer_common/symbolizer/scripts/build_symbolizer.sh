@@ -35,18 +35,6 @@ TARGE_DIR=$(readlink -f $1)
 COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
 LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
 LLVM_SRC=$(readlink -f $LLVM_SRC)
-if [[ ! -d "${LLVM_SRC}/../llvm" ]] ; then
-  LLVM_SRC=$(readlink -f ${COMPILER_RT_SRC}/../../../llvm)
-fi
-LIBCXX_SRC=$(readlink -f ${COMPILER_RT_SRC}/../libcxx)
-LIBCXXABI_SRC=$(readlink -f ${COMPILER_RT_SRC}/../libcxxabi)
-
-if [[ ! -d "${LLVM_SRC}/../llvm" ||
-      ! -d "${LIBCXX_SRC}" ||
-      ! -d "${LIBCXXABI_SRC}" ]]; then
-  echo "Missing or incomplete LLVM_SRC"
-  exit 1
-fi
 
 if [[ "$ZLIB_SRC" == ""  ||
       ! -x "${ZLIB_SRC}/configure" ||
