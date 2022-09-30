@@ -4,9 +4,13 @@ endif()
 
 add_entrypoint_object(
   call_once
-  ALIAS
+  SRCS
+    call_once.cpp
+  HDRS
+    call_once.h
   DEPENDS
-    .${LIBC_TARGET_OS}.call_once
+    libc.include.threads
+    libc.src.__support.threads.callonce
 )
 
 add_entrypoint_object(

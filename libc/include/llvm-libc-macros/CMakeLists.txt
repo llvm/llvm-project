@@ -39,6 +39,14 @@ add_header(
 )
 
 add_header(
+  time_macros
+  HDR
+    time-macros.h
+  DEPENDS
+    .linux.time_macros
+)
+
+add_header(
   unistd_macros
   HDR
     unistd-macros.h

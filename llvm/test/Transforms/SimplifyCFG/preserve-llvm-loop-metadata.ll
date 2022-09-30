@@ -46,10 +46,10 @@ while.end:                                        ; preds = %while.cond
   ret void
 }
 
-; The test case is constructed based on the following C++ code,
-; as a simplified test case to show why `llvm.loop.unroll.enable`
-; could be dropped.
+; Test that empty loop latch `while.cond.loopexit` will not be folded into its successor if its
+; predecessor blocks are also loop latches.
 ;
+; The test case is constructed based on the following C++ code.
 ; While the C++ code itself might have the inner-loop unrolled (e.g., with -O3),
 ; the loss of inner-loop unroll metadata is a bug.
 ; Under some optimization pipelines (e.g., FullLoopUnroll pass is skipped in ThinLTO prelink stage),
@@ -111,4 +111,7 @@ while.end:                                        ; preds = %while.cond
 !5 = !{!"llvm.loop.unroll.enable"}
 ; CHECK: !0 = distinct !{!0, !1}
 ; CHECK: !1 = !{!"llvm.loop.distribute.enable", i1 true}
-; CHECK-NOT: !{!"llvm.loop.unroll.enable"}
+; CHECK: !2 = distinct !{!2, !3}
+; CHECK: !3 = !{!"llvm.loop.mustprogress"}
+; CHECK: !4 = distinct !{!4, !3, !5}
+; CHECK: !5 = !{!"llvm.loop.unroll.enable"}

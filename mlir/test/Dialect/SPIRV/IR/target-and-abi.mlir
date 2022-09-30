@@ -34,7 +34,7 @@ func.func @spv_entry_point() attributes {
 // -----
 
 func.func @spv_entry_point() attributes {
-  // expected-error @+2 {{failed to parse SPV_EntryPointABIAttr parameter 'local_size' which is to be a `DenseIntElementsAttr`}}
+  // expected-error @+2 {{failed to parse SPIRV_EntryPointABIAttr parameter 'local_size' which is to be a `DenseIntElementsAttr`}}
   // expected-error @+1 {{invalid kind of attribute specified}}
   spirv.entry_point_abi = #spirv.entry_point_abi<local_size = 64>
 } { return }
@@ -231,8 +231,8 @@ func.func @vce_wrong_extension_type() attributes {
 // -----
 
 func.func @vce_wrong_extension() attributes {
-  // expected-error @+1 {{unknown extension: SPV_Something}}
-  vce = #spirv.vce<v1.0, [Shader], [SPV_Something]>
+  // expected-error @+1 {{unknown extension: SPIRV_Something}}
+  vce = #spirv.vce<v1.0, [Shader], [SPIRV_Something]>
 } { return }
 
 // -----

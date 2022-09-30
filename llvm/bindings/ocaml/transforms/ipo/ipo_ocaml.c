@@ -68,12 +68,6 @@ value llvm_add_global_optimizer(LLVMPassManagerRef PM) {
 }
 
 /* [`Module] Llvm.PassManager.t -> unit */
-value llvm_add_prune_eh(LLVMPassManagerRef PM) {
-  LLVMAddPruneEHPass(PM);
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
 value llvm_add_ipsccp(LLVMPassManagerRef PM) {
   LLVMAddIPSCCPPass(PM);
   return Val_unit;

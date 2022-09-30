@@ -302,11 +302,11 @@ public:
         },
         "Returns the shape of the ranked shaped type as a list of integers.");
     c.def_static(
-        "_get_dynamic_size", []() { return mlirShapedTypeGetDynamicSize(); },
+        "get_dynamic_size", []() { return mlirShapedTypeGetDynamicSize(); },
         "Returns the value used to indicate dynamic dimensions in shaped "
         "types.");
     c.def_static(
-        "_get_dynamic_stride_or_offset",
+        "get_dynamic_stride_or_offset",
         []() { return mlirShapedTypeGetDynamicStrideOrOffset(); },
         "Returns the value used to indicate dynamic strides or offsets in "
         "shaped types.");

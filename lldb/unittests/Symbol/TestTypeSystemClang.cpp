@@ -726,21 +726,22 @@ TEST_F(TestTypeSystemClang, TestGetTypeClassDeclType) {
 
 TEST_F(TestTypeSystemClang, TestGetTypeClassTypeOf) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
-  QualType t = ctxt.getTypeOfType(makeConstInt(ctxt));
+  QualType t = ctxt.getTypeOfType(makeConstInt(ctxt), TypeOfKind::Qualified);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 
 TEST_F(TestTypeSystemClang, TestGetTypeClassTypeOfExpr) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
   auto *nullptr_expr = new (ctxt) CXXNullPtrLiteralExpr(ctxt.NullPtrTy, SourceLocation());
-  QualType t = ctxt.getTypeOfExprType(nullptr_expr);
+  QualType t = ctxt.getTypeOfExprType(nullptr_expr, TypeOfKind::Qualified);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 
 TEST_F(TestTypeSystemClang, TestGetTypeClassNested) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
-  QualType t_base = ctxt.getTypeOfType(makeConstInt(ctxt));
-  QualType t = ctxt.getTypeOfType(t_base);
+  QualType t_base =
+      ctxt.getTypeOfType(makeConstInt(ctxt), TypeOfKind::Qualified);
+  QualType t = ctxt.getTypeOfType(t_base, TypeOfKind::Qualified);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 

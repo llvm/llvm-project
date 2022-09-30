@@ -289,6 +289,8 @@ public:
   static const TST TST_typename = clang::TST_typename;
   static const TST TST_typeofType = clang::TST_typeofType;
   static const TST TST_typeofExpr = clang::TST_typeofExpr;
+  static const TST TST_typeof_unqualType = clang::TST_typeof_unqualType;
+  static const TST TST_typeof_unqualExpr = clang::TST_typeof_unqualExpr;
   static const TST TST_decltype = clang::TST_decltype;
   static const TST TST_decltype_auto = clang::TST_decltype_auto;
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
@@ -324,6 +326,11 @@ public:
     PQ_TypeQualifier         = 4,
     PQ_FunctionSpecifier     = 8
     // FIXME: Attributes should be included here.
+  };
+
+  enum FriendSpecified : bool {
+    No,
+    Yes,
   };
 
 private:
@@ -404,10 +411,11 @@ private:
 
   static bool isTypeRep(TST T) {
     return T == TST_atomic || T == TST_typename || T == TST_typeofType ||
-           isTransformTypeTrait(T);
+           T == TST_typeof_unqualType || isTransformTypeTrait(T);
   }
   static bool isExprRep(TST T) {
-    return (T == TST_typeofExpr || T == TST_decltype || T == TST_bitint);
+    return T == TST_typeofExpr || T == TST_typeof_unqualExpr ||
+           T == TST_decltype || T == TST_bitint;
   }
   static bool isTemplateIdRep(TST T) {
     return (T == TST_auto || T == TST_decltype_auto);
@@ -757,7 +765,10 @@ public:
   bool SetConstexprSpec(ConstexprSpecKind ConstexprKind, SourceLocation Loc,
                         const char *&PrevSpec, unsigned &DiagID);
 
-  bool isFriendSpecified() const { return Friend_specified; }
+  FriendSpecified isFriendSpecified() const {
+    return static_cast<FriendSpecified>(Friend_specified);
+  }
+
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
 
   bool isModulePrivateSpecified() const { return ModulePrivateLoc.isValid(); }
@@ -1801,6 +1812,13 @@ enum class DeclaratorContext {
   Association          // C11 _Generic selection expression association.
 };
 
+// Describes whether the current context is a context where an implicit
+// typename is allowed (C++2a [temp.res]p5]).
+enum class ImplicitTypenameContext {
+  No,
+  Yes,
+};
+
 /// Information about one declarator, including the parsed type
 /// information and the identifier.
 ///
@@ -2747,6 +2765,10 @@ struct LambdaIntroducer {
 
   LambdaIntroducer()
     : Default(LCD_None) {}
+
+  bool hasLambdaCapture() const {
+    return Captures.size() > 0 || Default != LCD_None;
+  }
 
   /// Append a capture in a lambda introducer.
   void addCapture(LambdaCaptureKind Kind,

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -24,6 +24,7 @@ namespace mlir {
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
 #define GEN_PASS_DEF_SPARSETENSORCONVERSIONPASS
 #define GEN_PASS_DEF_SPARSETENSORCODEGEN
+#define GEN_PASS_DEF_SPARSEBUFFERREWRITE
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -127,7 +128,7 @@ struct SparseTensorConversionPass
     target.addLegalOp<complex::ConstantOp, complex::NotEqualOp, linalg::FillOp,
                       linalg::YieldOp, tensor::ExtractOp>();
     target.addLegalDialect<
-        arith::ArithmeticDialect, bufferization::BufferizationDialect,
+        arith::ArithDialect, bufferization::BufferizationDialect,
         LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
     // Translate strategy flags to strategy options.
     SparseTensorConversionOptions options(
@@ -156,8 +157,10 @@ struct SparseTensorCodegenPass
     RewritePatternSet patterns(ctx);
     SparseTensorTypeToBufferConverter converter;
     ConversionTarget target(*ctx);
-    // Everything in the sparse dialect must go!
+    // Most ops in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
+    target.addLegalOp<SortOp>();
+    target.addLegalOp<PushBackOp>();
     // All dynamic rules below accept new function, call, return, and various
     // tensor and bufferization operations as legal output of the rewriting
     // provided that all sparse tensor types have been fully rewritten.
@@ -181,7 +184,7 @@ struct SparseTensorCodegenPass
     // The following operations and dialects may be introduced by the
     // codegen rules, and are therefore marked as legal.
     target.addLegalOp<linalg::FillOp>();
-    target.addLegalDialect<arith::ArithmeticDialect,
+    target.addLegalDialect<arith::ArithDialect,
                            bufferization::BufferizationDialect,
                            memref::MemRefDialect, scf::SCFDialect>();
     target.addLegalOp<UnrealizedConversionCastOp>();
@@ -194,6 +197,20 @@ struct SparseTensorCodegenPass
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
+  }
+};
+
+struct SparseBufferRewritePass
+    : public impl::SparseBufferRewriteBase<SparseBufferRewritePass> {
+
+  SparseBufferRewritePass() = default;
+  SparseBufferRewritePass(const SparseBufferRewritePass &pass) = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateSparseBufferRewriting(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -239,4 +256,8 @@ std::unique_ptr<Pass> mlir::createSparseTensorConversionPass(
 
 std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {
   return std::make_unique<SparseTensorCodegenPass>();
+}
+
+std::unique_ptr<Pass> mlir::createSparseBufferRewritePass() {
+  return std::make_unique<SparseBufferRewritePass>();
 }

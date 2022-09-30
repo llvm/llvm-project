@@ -338,7 +338,7 @@ define i4 @strlen(i8* %s) {
 declare i8* @__stpncpy_chk(i8* noundef, i8* noundef, i32 noundef, i32 noundef)
 define signext i32 @emit_stpncpy() {
 ; CHECK-LABEL: @emit_stpncpy(
-; CHECK-NEXT:    [[STPNCPY:%.*]] = call i8* @stpncpy(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @b, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @a, i32 0, i32 0), i32 2)
+; CHECK-NEXT:    [[STPNCPY:%.*]] = call i8* @stpncpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], [5 x i8]* @b, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @a, i32 0, i32 0), i32 2)
 ; CHECK-NEXT:    ret i32 0
 ;
   %call = call i8* @__stpncpy_chk(i8* noundef getelementptr inbounds ([5 x i8], [5 x i8]* @b, i32 0, i32 0),

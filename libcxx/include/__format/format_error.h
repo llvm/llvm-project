@@ -11,11 +11,8 @@
 #define _LIBCPP___FORMAT_FORMAT_ERROR_H
 
 #include <__config>
-#include <stdexcept>
-
-#ifdef _LIBCPP_NO_EXCEPTIONS
 #include <cstdlib>
-#endif
+#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

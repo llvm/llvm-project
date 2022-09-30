@@ -631,8 +631,8 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
       INST(Load, Load),
       INST(Store, Store),
       INST(Fence, Fence),
-      // FIXME: atomiccmpxchg
-      // FIXME: atomicrmw
+      // AtomicCmpXchg is handled specially.
+      // AtomicRMW is handled specially.
       // Getelementptr is handled specially.
       INST(Trunc, Trunc),
       INST(ZExt, ZExt),
@@ -761,6 +761,39 @@ static AtomicOrdering getLLVMAtomicOrdering(llvm::AtomicOrdering ordering) {
   llvm_unreachable("incorrect atomic ordering");
 }
 
+static AtomicBinOp getLLVMAtomicBinOp(llvm::AtomicRMWInst::BinOp binOp) {
+  switch (binOp) {
+  case llvm::AtomicRMWInst::Xchg:
+    return LLVM::AtomicBinOp::xchg;
+  case llvm::AtomicRMWInst::Add:
+    return LLVM::AtomicBinOp::add;
+  case llvm::AtomicRMWInst::Sub:
+    return LLVM::AtomicBinOp::sub;
+  case llvm::AtomicRMWInst::And:
+    return LLVM::AtomicBinOp::_and;
+  case llvm::AtomicRMWInst::Nand:
+    return LLVM::AtomicBinOp::nand;
+  case llvm::AtomicRMWInst::Or:
+    return LLVM::AtomicBinOp::_or;
+  case llvm::AtomicRMWInst::Xor:
+    return LLVM::AtomicBinOp::_xor;
+  case llvm::AtomicRMWInst::Max:
+    return LLVM::AtomicBinOp::max;
+  case llvm::AtomicRMWInst::Min:
+    return LLVM::AtomicBinOp::min;
+  case llvm::AtomicRMWInst::UMax:
+    return LLVM::AtomicBinOp::umax;
+  case llvm::AtomicRMWInst::UMin:
+    return LLVM::AtomicBinOp::umin;
+  case llvm::AtomicRMWInst::FAdd:
+    return LLVM::AtomicBinOp::fadd;
+  case llvm::AtomicRMWInst::FSub:
+    return LLVM::AtomicBinOp::fsub;
+  default:
+    llvm_unreachable("unsupported atomic binary operation");
+  }
+}
+
 // `br` branches to `target`. Return the branch arguments to `br`, in the
 // same order of the PHIs in `target`.
 LogicalResult
@@ -874,8 +907,20 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Value rhs = processValue(inst->getOperand(1));
     if (!lhs || !rhs)
       return failure();
+
+    if (lhs.getType() != rhs.getType())
+      return failure();
+
+    Type boolType = b.getI1Type();
+    Type resType = boolType;
+    if (LLVM::isCompatibleVectorType(lhs.getType())) {
+      unsigned numElements =
+          LLVM::getVectorNumElements(lhs.getType()).getFixedValue();
+      resType = VectorType::get({numElements}, boolType);
+    }
+
     instMap[inst] = b.create<FCmpOp>(
-        loc, b.getI1Type(),
+        loc, resType,
         getFCmpPredicate(cast<llvm::FCmpInst>(inst)->getPredicate()), lhs, rhs);
     return success();
   }
@@ -1060,6 +1105,45 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     }
     b.create<FenceOp>(loc, getLLVMAtomicOrdering(fence->getOrdering()),
                       syncscope);
+    return success();
+  }
+  case llvm::Instruction::AtomicRMW: {
+    auto *atomicInst = cast<llvm::AtomicRMWInst>(inst);
+    Value ptr = processValue(atomicInst->getPointerOperand());
+    Value val = processValue(atomicInst->getValOperand());
+    if (!ptr || !val)
+      return failure();
+
+    LLVM::AtomicBinOp binOp = getLLVMAtomicBinOp(atomicInst->getOperation());
+    LLVM::AtomicOrdering ordering =
+        getLLVMAtomicOrdering(atomicInst->getOrdering());
+
+    Type type = processType(inst->getType());
+    if (!type)
+      return failure();
+
+    instMap[inst] = b.create<AtomicRMWOp>(loc, type, binOp, ptr, val, ordering);
+    return success();
+  }
+  case llvm::Instruction::AtomicCmpXchg: {
+    auto *cmpXchgInst = cast<llvm::AtomicCmpXchgInst>(inst);
+    Value ptr = processValue(cmpXchgInst->getPointerOperand());
+    Value cmpVal = processValue(cmpXchgInst->getCompareOperand());
+    Value newVal = processValue(cmpXchgInst->getNewValOperand());
+    if (!ptr || !cmpVal || !newVal)
+      return failure();
+
+    LLVM::AtomicOrdering ordering =
+        getLLVMAtomicOrdering(cmpXchgInst->getSuccessOrdering());
+    LLVM::AtomicOrdering failOrdering =
+        getLLVMAtomicOrdering(cmpXchgInst->getFailureOrdering());
+
+    Type type = processType(inst->getType());
+    if (!type)
+      return failure();
+
+    instMap[inst] = b.create<AtomicCmpXchgOp>(loc, type, ptr, cmpVal, newVal,
+                                              ordering, failOrdering);
     return success();
   }
   case llvm::Instruction::GetElementPtr: {

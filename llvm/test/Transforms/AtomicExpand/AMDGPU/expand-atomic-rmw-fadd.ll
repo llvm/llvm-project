@@ -900,6 +900,23 @@ define half @test_atomicrmw_fadd_f16_global(half addrspace(1)* %ptr, half %value
   ret half %res
 }
 
+define half @test_atomicrmw_fadd_f16_global_align4(half addrspace(1)* %ptr, half %value) {
+; CI-LABEL: @test_atomicrmw_fadd_f16_global_align4(
+; CI-NEXT:    [[RES:%.*]] = atomicrmw fadd half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 4
+; CI-NEXT:    ret half [[RES]]
+;
+; GFX9-LABEL: @test_atomicrmw_fadd_f16_global_align4(
+; GFX9-NEXT:    [[RES:%.*]] = atomicrmw fadd half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 4
+; GFX9-NEXT:    ret half [[RES]]
+;
+; GFX908-LABEL: @test_atomicrmw_fadd_f16_global_align4(
+; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 4
+; GFX908-NEXT:    ret half [[RES]]
+;
+  %res = atomicrmw fadd half addrspace(1)* %ptr, half %value seq_cst, align 4
+  ret half %res
+}
+
 define half @test_atomicrmw_fadd_f16_local(half addrspace(3)* %ptr, half %value) {
 ; CI-LABEL: @test_atomicrmw_fadd_f16_local(
 ; CI-NEXT:    [[RES:%.*]] = atomicrmw fadd half addrspace(3)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 2

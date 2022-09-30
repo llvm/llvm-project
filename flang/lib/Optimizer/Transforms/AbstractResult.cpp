@@ -218,7 +218,7 @@ public:
     self.runOnSpecificOperation(op, shouldBoxResult, patterns, target);
 
     // Convert the calls and, if needed,  the ReturnOp in the function body.
-    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithmeticDialect,
+    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
                            mlir::func::FuncDialect>();
     target.addIllegalOp<fir::SaveResultOp>();
     target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp call) {

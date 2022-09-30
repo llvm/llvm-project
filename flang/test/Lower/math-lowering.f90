@@ -43,7 +43,7 @@ function test_complex4(c)
 end function
 
 ! ALL-LABEL: @_QPtest_complex4
-! ALL: {{%[A-Za-z0-9._]+}} = fir.call @hypotf({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f32, f32) -> f32
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cabsf({{%[A-Za-z0-9._]+}}) : (!fir.complex<4>) -> f32
 
 function test_complex8(c)
   complex(8) :: c, test_complex8
@@ -51,7 +51,7 @@ function test_complex8(c)
 end function
 
 ! ALL-LABEL: @_QPtest_complex8
-! ALL: {{%[A-Za-z0-9._]+}} = fir.call @hypot({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (f64, f64) -> f64
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cabs({{%[A-Za-z0-9._]+}}) : (!fir.complex<8>) -> f64
 
 //--- aint.f90
 ! RUN: bbc -emit-fir %t/aint.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %t/aint.f90

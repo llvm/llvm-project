@@ -22,6 +22,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
+    # sched.h entrypoints
+    libc.src.sched.sched_getaffinity
+    libc.src.sched.sched_setaffinity
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero
@@ -321,6 +325,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setpshared
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
+    libc.src.pthread.pthread_once
     libc.src.pthread.pthread_setspecific
 
     # stdio.h entrypoints
@@ -394,6 +399,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime_r
     libc.src.time.mktime
     libc.src.time.nanosleep
+    libc.src.time.clock_gettime
   )
 endif()
 

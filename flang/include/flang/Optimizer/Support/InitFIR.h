@@ -27,7 +27,7 @@ namespace fir::support {
 #define FLANG_NONCODEGEN_DIALECT_LIST                                          \
   mlir::AffineDialect, FIROpsDialect, mlir::acc::OpenACCDialect,               \
       mlir::omp::OpenMPDialect, mlir::scf::SCFDialect,                         \
-      mlir::arith::ArithmeticDialect, mlir::cf::ControlFlowDialect,            \
+      mlir::arith::ArithDialect, mlir::cf::ControlFlowDialect,                 \
       mlir::func::FuncDialect, mlir::vector::VectorDialect,                    \
       mlir::math::MathDialect
 

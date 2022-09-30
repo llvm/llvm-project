@@ -26,7 +26,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRAffineUtils
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRIR
   MLIRMemRefDialect
   MLIRPass

@@ -38,7 +38,11 @@ public:
 
   Symbol *insert(StringRef name);
 
-  Symbol *addSymbol(const Symbol &newSym);
+  template <typename T> Symbol *addSymbol(const T &newSym) {
+    Symbol *sym = insert(newSym.getName());
+    sym->resolve(newSym);
+    return sym;
+  }
   Symbol *addAndCheckDuplicate(const Defined &newSym);
 
   void scanVersionScript();

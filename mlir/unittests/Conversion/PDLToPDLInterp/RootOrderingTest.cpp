@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Conversion/PDLToPDLInterp/RootOrdering.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
 #include "gtest/gtest.h"
@@ -30,7 +30,7 @@ namespace {
 class RootOrderingTest : public ::testing::Test {
 protected:
   RootOrderingTest() {
-    context.loadDialect<ArithmeticDialect>();
+    context.loadDialect<ArithDialect>();
     createValues();
   }
 

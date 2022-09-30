@@ -5551,27 +5551,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fasynchronous-unwind-tables and -fnon-call-exceptions interact in more
   // complicated ways.
   auto SanitizeArgs = TC.getSanitizerArgs(Args);
-  auto UnwindTables = TC.getDefaultUnwindTableLevel(Args);
 
-  const bool HasSyncUnwindTables = Args.hasFlag(
-      options::OPT_funwind_tables, options::OPT_fno_unwind_tables, false);
-  if (Args.hasFlag(options::OPT_fasynchronous_unwind_tables,
-                   options::OPT_fno_asynchronous_unwind_tables,
-                   SanitizeArgs.needsUnwindTables()) &&
-      !Freestanding)
-    UnwindTables = ToolChain::UnwindTableLevel::Asynchronous;
-  else if (HasSyncUnwindTables)
-    UnwindTables = ToolChain::UnwindTableLevel::Synchronous;
-  else if (Args.hasFlag(options::OPT_fno_unwind_tables,
-                   options::OPT_fno_asynchronous_unwind_tables,
-                   options::OPT_funwind_tables, false) || Freestanding)
-    UnwindTables = ToolChain::UnwindTableLevel::None;
+  bool IsAsyncUnwindTablesDefault =
+      TC.getDefaultUnwindTableLevel(Args) == ToolChain::UnwindTableLevel::Asynchronous;
+  bool IsSyncUnwindTablesDefault =
+      TC.getDefaultUnwindTableLevel(Args) == ToolChain::UnwindTableLevel::Synchronous;
 
-
-  if (UnwindTables == ToolChain::UnwindTableLevel::Synchronous)
-    CmdArgs.push_back("-funwind-tables=1");
-  else if (UnwindTables == ToolChain::UnwindTableLevel::Asynchronous)
+  bool AsyncUnwindTables = Args.hasFlag(
+      options::OPT_fasynchronous_unwind_tables,
+      options::OPT_fno_asynchronous_unwind_tables,
+      (IsAsyncUnwindTablesDefault || SanitizeArgs.needsUnwindTables()) &&
+          !Freestanding);
+  bool UnwindTables =
+      Args.hasFlag(options::OPT_funwind_tables, options::OPT_fno_unwind_tables,
+                   IsSyncUnwindTablesDefault && !Freestanding);
+  if (AsyncUnwindTables)
     CmdArgs.push_back("-funwind-tables=2");
+  else if (UnwindTables)
+     CmdArgs.push_back("-funwind-tables=1");
 
   // Prepare `-aux-target-cpu` and `-aux-target-feature` unless
   // `--gpu-use-aux-triple-only` is specified.
@@ -5970,11 +5967,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     Args.AddLastArg(CmdArgs, options::OPT_ftrigraphs,
                     options::OPT_fno_trigraphs);
-
-    // HIP headers has minimum C++ standard requirements. Therefore set the
-    // default language standard.
-    if (IsHIP)
-      CmdArgs.push_back(IsWindowsMSVC ? "-std=c++14" : "-std=c++11");
   }
 
   // GCC's behavior for -Wwrite-strings is a bit strange:
@@ -7475,7 +7467,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-faddrsig");
 
   if ((Triple.isOSBinFormatELF() || Triple.isOSBinFormatMachO()) &&
-      (EH || UnwindTables != ToolChain::UnwindTableLevel::None ||
+      (EH || UnwindTables || AsyncUnwindTables ||
        DebugInfoKind != codegenoptions::NoDebugInfo))
     CmdArgs.push_back("-D__GCC_HAVE_DWARF2_CFI_ASM=1");
 

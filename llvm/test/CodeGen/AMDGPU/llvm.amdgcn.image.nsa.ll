@@ -1,15 +1,20 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX1010-NSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX1030-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -amdgpu-nsa-threshold=32 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -amdgpu-nsa-threshold=2 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T2 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX1010-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX1030-NSA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX11-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-nsa-threshold=32 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-nsa-threshold=2 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T2 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX11-NSA %s
 
+; Default NSA threshold is 3 addresses
 ; GCN-LABEL: {{^}}sample_2d:
-;
-; TODO: use NSA here
-; GCN: v_mov_b32_e32 v2, v0
-;
-; GCN: image_sample v[0:3], v[1:2],
+; NONSA: v_mov_b32_e32 v2, v0
+; NONSA: image_sample v[0:3], v[1:2],
+; NSA-T2: image_sample v[0:3], [v1, v0],
+; NSA-T3: v_mov_b32_e32 v2, v0
+; NSA-T3: image_sample v[0:3], v[1:2],
 define amdgpu_ps <4 x float> @sample_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %t, float %s) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

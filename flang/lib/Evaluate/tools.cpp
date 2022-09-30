@@ -1403,6 +1403,8 @@ bool IsAutomatic(const Symbol &original) {
 bool IsSaved(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
   const Scope &scope{symbol.owner()};
+  const common::LanguageFeatureControl &features{
+      scope.context().languageFeatures()};
   auto scopeKind{scope.kind()};
   if (symbol.has<AssocEntityDetails>()) {
     return false; // ASSOCIATE(non-variable)
@@ -1422,8 +1424,18 @@ bool IsSaved(const Symbol &original) {
     // BLOCK DATA entities must all be in COMMON,
     // which was checked above.
     return true;
-  } else if (scope.context().languageFeatures().IsEnabled(
-                 common::LanguageFeature::DefaultSave) &&
+  } else if (scopeKind == Scope::Kind::MainProgram &&
+      (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
+          (features.IsEnabled(
+               common::LanguageFeature::SaveBigMainProgramVariables) &&
+              symbol.size() > 32))) {
+    // With SaveBigMainProgramVariables, keeping all unsaved main program
+    // variables of 32 bytes or less on the stack allows keeping numerical and
+    // logical scalars, small scalar characters or derived, small arrays, and
+    // scalar descriptors on the stack. This leaves more room for lower level
+    // optimizers to do register promotion or get easy aliasing information.
+    return true;
+  } else if (features.IsEnabled(common::LanguageFeature::DefaultSave) &&
       (scopeKind == Scope::Kind::MainProgram ||
           (scope.kind() == Scope::Kind::Subprogram &&
               !(scope.symbol() &&

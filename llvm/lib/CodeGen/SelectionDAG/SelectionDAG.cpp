@@ -296,11 +296,23 @@ bool ISD::isBuildVectorOfConstantFPSDNodes(const SDNode *N) {
 
 bool ISD::isVectorShrinkable(const SDNode *N, unsigned NewEltSize,
                              bool Signed) {
-  if (N->getOpcode() != ISD::BUILD_VECTOR)
-    return false;
+  assert(N->getValueType(0).isVector() && "Expected a vector!");
 
   unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
   if (EltSize <= NewEltSize)
+    return false;
+
+  if (N->getOpcode() == ISD::ZERO_EXTEND) {
+    return (N->getOperand(0).getValueType().getScalarSizeInBits() <=
+            NewEltSize) &&
+           !Signed;
+  }
+  if (N->getOpcode() == ISD::SIGN_EXTEND) {
+    return (N->getOperand(0).getValueType().getScalarSizeInBits() <=
+            NewEltSize) &&
+           Signed;
+  }
+  if (N->getOpcode() != ISD::BUILD_VECTOR)
     return false;
 
   for (const SDValue &Op : N->op_values()) {

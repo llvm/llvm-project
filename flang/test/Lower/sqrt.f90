@@ -36,7 +36,7 @@ end subroutine
 ! CHECK: math.sqrt %{{.*}} : f64
 
 ! CHECK-LABEL: func private @fir.sqrt.z4.z4
-! CHECK: fir.call {{.*}}fc_sqrt
+! CHECK: fir.call @csqrtf
 
 ! CHECK-LABEL: @fir.sqrt.z8.z8
-! CHECK: fir.call {{.*}}fz_sqrt
+! CHECK: fir.call @csqrt

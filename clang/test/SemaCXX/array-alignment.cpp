@@ -33,4 +33,5 @@ void test(char *p) {
   auto p3 = new AlignedStruct[1];
   auto p4 = (AlignedPackedStruct(*)[1])p; // expected-error {{size of array element}}
   auto p5 = new AlignedPackedStruct[1]; // expected-error {{size of array element}}
+  auto p6 = new AlignedPackedStruct;
 }

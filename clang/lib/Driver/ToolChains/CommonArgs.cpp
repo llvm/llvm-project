@@ -91,16 +91,16 @@ static bool needFortranMain(const Driver &D, const ArgList &Args) {
 
 static void renderRpassOptions(const ArgList &Args, ArgStringList &CmdArgs) {
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
-    CmdArgs.push_back(Args.MakeArgString(Twine("--plugin-opt=-pass-remarks=") +
+    CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=-pass-remarks=") +
                                          A->getValue()));
 
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--plugin-opt=-pass-remarks-missed=") + A->getValue()));
+        Twine("-plugin-opt=-pass-remarks-missed=") + A->getValue()));
 
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--plugin-opt=-pass-remarks-analysis=") + A->getValue()));
+        Twine("-plugin-opt=-pass-remarks-analysis=") + A->getValue()));
 }
 
 static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
@@ -121,28 +121,28 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   assert(!F.empty() && "Cannot determine remarks output name.");
   // Append "opt.ld.<format>" to the end of the file name.
   CmdArgs.push_back(
-      Args.MakeArgString(Twine("--plugin-opt=opt-remarks-filename=") + F +
+      Args.MakeArgString(Twine("-plugin-opt=opt-remarks-filename=") + F +
                          Twine(".opt.ld.") + Format));
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_foptimization_record_passes_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--plugin-opt=opt-remarks-passes=") + A->getValue()));
+        Twine("-plugin-opt=opt-remarks-passes=") + A->getValue()));
 
   CmdArgs.push_back(Args.MakeArgString(
-      Twine("--plugin-opt=opt-remarks-format=") + Format.data()));
+      Twine("-plugin-opt=opt-remarks-format=") + Format.data()));
 }
 
 static void renderRemarksHotnessOptions(const ArgList &Args,
                                         ArgStringList &CmdArgs) {
   if (Args.hasFlag(options::OPT_fdiagnostics_show_hotness,
                    options::OPT_fno_diagnostics_show_hotness, false))
-    CmdArgs.push_back("--plugin-opt=opt-remarks-with-hotness");
+    CmdArgs.push_back("-plugin-opt=opt-remarks-with-hotness");
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ))
     CmdArgs.push_back(Args.MakeArgString(
-        Twine("--plugin-opt=opt-remarks-hotness-threshold=") + A->getValue()));
+        Twine("-plugin-opt=opt-remarks-hotness-threshold=") + A->getValue()));
 }
 
 void tools::addPathIfExists(const Driver &D, const Twine &Path,
@@ -669,11 +669,24 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                          Path));
   }
 
+  // This controls whether or not we perform JustMyCode instrumentation.
+  if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
+    if (ToolChain.getEffectiveTriple().isOSBinFormatELF())
+      CmdArgs.push_back("-plugin-opt=-enable-jmc-instrument");
+    else
+      D.Diag(clang::diag::warn_drv_fjmc_for_elf_only);
+  }
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty())
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-plugin-opt=stats-file=") + StatsFile));
+
+  // Setup crash diagnostics dir.
+  if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("-plugin-opt=-crash-diagnostics-dir=") + A->getValue()));
 
   addX86AlignBranchArgs(D, Args, CmdArgs, /*IsLTO=*/true);
 
@@ -1914,7 +1927,7 @@ bool tools::GetSDLFromOffloadArchive(
     Compilation &C, const Driver &D, const Tool &T, const JobAction &JA,
     const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args, SmallVector<std::string, 8> LibraryPaths,
-    StringRef Lib, StringRef Arch, StringRef TargetID, bool isBitCodeSDL,
+    StringRef Lib, StringRef Arch, StringRef Target, bool isBitCodeSDL,
     bool postClangLink) {
 
   // We don't support bitcode archive bundles for nvptx
@@ -1948,7 +1961,7 @@ bool tools::GetSDLFromOffloadArchive(
 
     StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
     std::string OutputLib = D.GetTemporaryPath(
-        Twine(Prefix + Lib + "-" + Arch + "-" + TargetID).str(), "a");
+        Twine(Prefix + Lib + "-" + Arch + "-" + Target).str(), "a");
 
     C.addTempFile(C.getArgs().MakeArgString(OutputLib));
 
@@ -1958,9 +1971,9 @@ bool tools::GetSDLFromOffloadArchive(
     DeviceTriple += '-';
     std::string NormalizedTriple = T.getToolChain().getTriple().normalize();
     DeviceTriple += NormalizedTriple;
-    if (!TargetID.empty()) {
+    if (!Target.empty()) {
       DeviceTriple += '-';
-      DeviceTriple += TargetID;
+      DeviceTriple += Target;
     }
 
     std::string UnbundleArg("-unbundle");

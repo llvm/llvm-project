@@ -315,7 +315,7 @@ cc_test(
     ]),
     deps = [
         "//llvm:gtest_main",
-        "//mlir:ArithmeticDialect",
+        "//mlir:ArithDialect",
         "//mlir:PDLToPDLInterp",
     ],
 )

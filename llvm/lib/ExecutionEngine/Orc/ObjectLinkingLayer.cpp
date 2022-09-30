@@ -218,6 +218,8 @@ public:
           Flags |= JITSymbolFlags::Callable;
         if (Sym->getScope() == Scope::Default)
           Flags |= JITSymbolFlags::Exported;
+        if (Sym->getLinkage() == Linkage::Weak)
+          Flags |= JITSymbolFlags::Weak;
 
         InternedResult[InternedName] =
             JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);

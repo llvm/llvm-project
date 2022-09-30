@@ -1875,8 +1875,23 @@ struct DSEState {
           // We are searching for the definition of the store's destination.
           // So, if that is the same definition as the load, then this is a
           // noop. Otherwise, fail.
-          if (LoadAccess != Current)
+          if (LoadAccess != Current) {
+            // This is a potentially clobbering store, but it writes the same
+            // value, so we can safely ignore it if alignment is as expected.
+            if (auto *CurrentDef = cast<MemoryDef>(Current))
+              if (auto *CurrentStoreI =
+                      dyn_cast_or_null<StoreInst>(CurrentDef->getMemoryInst()))
+                // Check alignment to ensure load or store does not access at an
+                // offset.
+                if (CurrentStoreI->getValueOperand() == LoadI) {
+                  TypeSize StoreSize = DL.getTypeStoreSize(LoadI->getType());
+                  if (!StoreSize.isScalable() &&
+                      std::min(CurrentStoreI->getAlign(), LoadI->getAlign()) >=
+                          StoreSize)
+                    continue;
+                }
             return false;
+          }
         }
         return true;
       }

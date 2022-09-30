@@ -17,7 +17,7 @@ def RemoveShapeConstraints : Pass<"remove-shape-constraints", "func::FuncOp"> {
 }
 
 def ShapeToShapeLowering : Pass<"shape-to-shape-lowering", "func::FuncOp"> {
-  let summary = "Legalize Shape dialect to be convertible to Arithmetic";
+  let summary = "Legalize Shape dialect to be convertible to Arith";
   let constructor = "mlir::createShapeToShapeLowering()";
 }
 

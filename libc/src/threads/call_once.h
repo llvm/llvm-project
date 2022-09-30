@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_THREADS_CALL_ONCE_H
 #define LLVM_LIBC_SRC_THREADS_CALL_ONCE_H
 
-#include "include/threads.h"
+#include <threads.h>
 
 namespace __llvm_libc {
 

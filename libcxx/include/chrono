@@ -694,6 +694,8 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #include <version>
 
 // standard-mandated includes
+
+// [time.syn]
 #include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && _LIBCPP_STD_VER > 17

@@ -14,16 +14,18 @@ def PThreadStartT : NamedType<"__pthread_start_t">;
 def PThreadTSSDtorT : NamedType<"__pthread_tss_dtor_t">;
 def PThreadKeyT : NamedType<"pthread_key_t">;
 def PThreadKeyTPtr : PtrType<PThreadKeyT>;
+def PThreadOnceT : NamedType<"pthread_once_t">;
+def PThreadOnceTPtr : PtrType<PThreadOnceT>;
+def PThreadOnceCallback : NamedType<"__pthread_once_func_t">;
 
 def InoT : NamedType<"ino_t">;
 def UidT : NamedType<"uid_t">;
 def GidT : NamedType<"gid_t">;
 def DevT : NamedType<"dev_t">;
+def ClockIdT : NamedType<"clockid_t">;
 def BlkSizeT : NamedType<"blksize_t">;
 def BlkCntT : NamedType<"blkcnt_t">;
 def NLinkT : NamedType<"nlink_t">;
-def TimeSpec : NamedType<"struct timespec">;
-def PidT : NamedType<"pid_t">;
 
 def StatType : NamedType<"struct stat">;
 def StatTypePtr : PtrType<StatType>;
@@ -605,7 +607,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysStat = HeaderSpec<
     "sys/stat.h",
     [], // Macros
-    [ModeTType, DevT, InoT, UidT, GidT, TimeSpec, BlkSizeT, BlkCntT, OffTType, NLinkT, StatType], // Types
+    [ModeTType, DevT, InoT, UidT, GidT, StructTimeSpec, BlkSizeT, BlkCntT, OffTType, NLinkT, StatType], // Types
     [], // Enumerations
     [
         FunctionSpec<
@@ -675,6 +677,8 @@ def POSIX : StandardSpec<"POSIX"> {
         PThreadKeyT,
         PThreadMutexAttrTType,
         PThreadMutexTType,
+        PThreadOnceCallback,
+        PThreadOnceT,
         PThreadStartT,
         PThreadTSSDtorT,
         PThreadTType,
@@ -861,6 +865,11 @@ def POSIX : StandardSpec<"POSIX"> {
           RetValSpec<VoidPtr>,
           [ArgSpec<PThreadKeyT>, ArgSpec<ConstVoidPtr>]
       >,
+      FunctionSpec<
+          "pthread_once",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadOnceTPtr>, ArgSpec<PThreadOnceCallback>]
+      >,
     ]
   >;
 
@@ -925,7 +934,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec Time = HeaderSpec<
       "time.h",
       [], // Macros
-      [StructTimeSpec], // Types
+      [ClockIdT, StructTimeSpec], // Types
       [], // Enumerations
       [
           FunctionSpec<
@@ -935,6 +944,11 @@ def POSIX : StandardSpec<"POSIX"> {
 	      	      ArgSpec<StructTimeSpecPtr>,
 	      	      ArgSpec<StructTimeSpecPtr>,
 	            ]
+          >,
+          FunctionSpec<
+              "clock_gettime",
+              RetValSpec<IntType>,
+              [ArgSpec<ClockIdT>,ArgSpec<StructTimeSpecPtr>]
           >,
       ]
   >;

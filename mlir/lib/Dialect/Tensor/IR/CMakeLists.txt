@@ -19,8 +19,8 @@ add_mlir_dialect_library(MLIRTensorDialect
   Core
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
-  MLIRArithmeticUtils
+  MLIRArithDialect
+  MLIRArithUtils
   MLIRCastInterfaces
   MLIRComplexDialect
   MLIRDialectUtils

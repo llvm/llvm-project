@@ -90,5 +90,54 @@ define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval)
   ret <4 x i8> %sel
 }
 
+define <4 x i32> @PR42100(<4 x i32> noundef %x, <4 x i32> noundef %min) {
+; CHECK-LABEL: @PR42100(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[X:%.*]], [[MIN:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[X]], <4 x i32> [[MIN]])
+; CHECK-NEXT:    [[MIN_ADDR_1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[MIN]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[SEL3:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[X]], <4 x i32> [[MIN_ADDR_1]]
+; CHECK-NEXT:    [[MIN_ADDR_1_1:%.*]] = shufflevector <4 x i32> [[MIN_ADDR_1]], <4 x i32> [[SEL3]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[SEL4:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[X]], <4 x i32> [[MIN_ADDR_1_1]]
+; CHECK-NEXT:    [[MIN_ADDR_1_2:%.*]] = shufflevector <4 x i32> [[MIN_ADDR_1_1]], <4 x i32> [[SEL4]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[SEL5:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[X]], <4 x i32> [[MIN_ADDR_1_2]]
+; CHECK-NEXT:    [[MIN_ADDR_1_3:%.*]] = shufflevector <4 x i32> [[MIN_ADDR_1_2]], <4 x i32> [[SEL5]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[MIN_ADDR_1_3]]
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %min.addr.0 = phi <4 x i32> [ %min, %entry ], [ %min.addr.1, %for.inc ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %cmp = icmp ne i32 %i.0, 4
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  br label %for.end
+
+for.body:
+  %vecext = extractelement <4 x i32> %x, i32 %i.0
+  %vecext1 = extractelement <4 x i32> %min.addr.0, i32 %i.0
+  %cmp2 = icmp slt i32 %vecext, %vecext1
+  br i1 %cmp2, label %if.then, label %if.end
+
+if.then:
+  %vecext3 = extractelement <4 x i32> %x, i32 %i.0
+  %vecins = insertelement <4 x i32> %min.addr.0, i32 %vecext3, i32 %i.0
+  br label %if.end
+
+if.end:
+  %min.addr.1 = phi <4 x i32> [ %vecins, %if.then ], [ %min.addr.0, %for.body ]
+  br label %for.inc
+
+for.inc:
+  %inc = add nsw i32 %i.0, 1
+  br label %for.cond
+
+for.end:
+  ret <4 x i32> %min.addr.0
+}
+
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1

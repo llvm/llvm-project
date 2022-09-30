@@ -13,7 +13,7 @@ struct mypair {
  int y;
 };
 
-mypair my_make_pair(int64_t x, int y)  {
+mypair my_make_pair(int64_t &x, int y) {
  mypair p;
  p.x = x;
  p.y = y;

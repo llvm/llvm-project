@@ -1184,8 +1184,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (MsanUseAfterDtor)
     CmdArgs.push_back("-fsanitize-memory-use-after-dtor");
 
-  if (MsanParamRetval)
-    CmdArgs.push_back("-fsanitize-memory-param-retval");
+  if (!MsanParamRetval)
+    CmdArgs.push_back("-fno-sanitize-memory-param-retval");
 
   // FIXME: Pass these parameters as function attributes, not as -llvm flags.
   if (!TsanMemoryAccess) {

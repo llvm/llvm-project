@@ -19,10 +19,7 @@
 namespace mlir {
 namespace tosa {
 
-#define GEN_PASS_DECL_TOSALAYERWISECONSTANTFOLD
-#define GEN_PASS_DECL_TOSAINFERSHAPES
-#define GEN_PASS_DECL_TOSAMAKEBROADCASTABLE
-#define GEN_PASS_DECL_TOSAOPTIONALDECOMPOSITIONS
+#define GEN_PASS_DECL
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
 
 // Expose Rewrite Functions that decompose TOSA Ops into further TOSA Ops.

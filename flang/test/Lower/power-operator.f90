@@ -116,3 +116,18 @@ subroutine pow_c8_i8(x, y, z)
   z = x ** y
   ! CHECK: call @__fz_powk_1
 end subroutine
+
+! CHECK-LABEL: pow_c4_c4
+subroutine pow_c4_c4(x, y, z)
+  complex :: x, y, z
+  z = x ** y
+  ! CHECK: call @cpowf
+end subroutine
+
+! CHECK-LABEL: pow_c8_c8
+subroutine pow_c8_c8(x, y, z)
+  complex(8) :: x, y, z
+  z = x ** y
+  ! CHECK: call @cpow
+end subroutine
+
