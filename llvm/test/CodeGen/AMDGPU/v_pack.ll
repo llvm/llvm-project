@@ -33,8 +33,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16(half addrspace(1)* %in0, half addrsp
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_add_f16_e32 v0, 2.0, v1
 ; GISEL-NEXT:    v_add_f16_e32 v1, 2.0, v2
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    ; use v0
 ; GISEL-NEXT:    ;;#ASMEND
@@ -83,8 +82,7 @@ define amdgpu_kernel void @v_pack_b32_v2f16_sub(half addrspace(1)* %in0, half ad
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_subrev_f16_e32 v0, 2.0, v1
 ; GISEL-NEXT:    v_add_f16_e32 v1, 2.0, v2
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    ; use v0
 ; GISEL-NEXT:    ;;#ASMEND
@@ -230,8 +228,7 @@ define amdgpu_kernel void @v_pack_b32.fneg(half addrspace(1)* %in0, half addrspa
 ; GISEL-NEXT:    v_add_f16_e32 v1, 2.0, v2
 ; GISEL-NEXT:    v_sub_f16_e32 v0, 0x8000, v0
 ; GISEL-NEXT:    v_sub_f16_e32 v1, 0x8000, v1
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    ; use v0
 ; GISEL-NEXT:    ;;#ASMEND
