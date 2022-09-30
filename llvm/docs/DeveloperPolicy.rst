@@ -266,7 +266,7 @@ Below are some guidelines about the format of the message itself:
   migrated to git.
 
   In the rare situation where there are multiple authors, please use the `git
-  tag 'Co-author-by:' to list the additional authors
+  tag 'Co-authored-by:' to list the additional authors
   <https://github.blog/2018-01-29-commit-together-with-co-authors/>`_.
 
 * The title should be concise. Because all commits are emailed to the list with
