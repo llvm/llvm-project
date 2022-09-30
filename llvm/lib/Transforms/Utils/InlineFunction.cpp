@@ -27,7 +27,6 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -75,10 +74,7 @@
 #include <utility>
 #include <vector>
 
-#define DEBUG_TYPE "inline-function"
-
 using namespace llvm;
-using namespace llvm::memprof;
 using ProfileCount = Function::ProfileCount;
 
 static cl::opt<bool>
@@ -784,174 +780,6 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   // invoke instruction. Eliminate these entries (which might even delete the
   // PHI node) now.
   UnwindDest->removePredecessor(InvokeBB);
-}
-
-static bool haveCommonPrefix(MDNode *MIBStackContext,
-                             MDNode *CallsiteStackContext) {
-  assert(MIBStackContext->getNumOperands() > 0 &&
-         CallsiteStackContext->getNumOperands() > 0);
-  // Because of the context trimming performed during matching, the callsite
-  // context could have more stack ids than the MIB. We match up to the end of
-  // the shortest stack context.
-  for (auto MIBStackIter = MIBStackContext->op_begin(),
-            CallsiteStackIter = CallsiteStackContext->op_begin();
-       MIBStackIter != MIBStackContext->op_end() &&
-       CallsiteStackIter != CallsiteStackContext->op_end();
-       MIBStackIter++, CallsiteStackIter++) {
-    auto *Val1 = mdconst::dyn_extract<ConstantInt>(*MIBStackIter);
-    auto *Val2 = mdconst::dyn_extract<ConstantInt>(*CallsiteStackIter);
-    assert(Val1 && Val2);
-    if (Val1->getZExtValue() != Val2->getZExtValue())
-      return false;
-  }
-  return true;
-}
-
-static void removeMemProfMetadata(CallBase *Call) {
-  Call->setMetadata(LLVMContext::MD_memprof, nullptr);
-}
-
-static void removeCallsiteMetadata(CallBase *Call) {
-  Call->setMetadata(LLVMContext::MD_callsite, nullptr);
-}
-
-static void updateMemprofMetadata(CallBase *CI,
-                                  const std::vector<Metadata *> &MIBList) {
-  assert(!MIBList.empty());
-  // Remove existing memprof, which will either be replaced or may not be needed
-  // if we are able to use a single allocation type function attribute.
-  removeMemProfMetadata(CI);
-  CallStackTrie CallStack;
-  for (Metadata *MIB : MIBList)
-    CallStack.addCallStack(cast<MDNode>(MIB));
-  bool MemprofMDAttached = CallStack.buildAndAttachMIBMetadata(CI);
-  assert(MemprofMDAttached == CI->hasMetadata(LLVMContext::MD_memprof));
-  if (!MemprofMDAttached)
-    // If we used a function attribute remove the callsite metadata as well.
-    removeCallsiteMetadata(CI);
-}
-
-// Update the metadata on the inlined copy ClonedCall of a call OrigCall in the
-// inlined callee body, based on the callsite metadata InlinedCallsiteMD from
-// the call that was inlined.
-static void
-propagateMemProfHelper(const CallBase *OrigCall, CallBase *ClonedCall,
-                       MDNode *InlinedCallsiteMD,
-                       std::map<const CallBase *, std::vector<Metadata *>>
-                           &OrigCallToNewMemProfMDMap) {
-  MDNode *OrigCallsiteMD = ClonedCall->getMetadata(LLVMContext::MD_callsite);
-  MDNode *ClonedCallsiteMD = nullptr;
-  // Check if the call originally had callsite metadata, and update it for the
-  // new call in the inlined body.
-  if (OrigCallsiteMD) {
-    // The cloned call's context is now the concatenation of the original call's
-    // callsite metadata and the callsite metadata on the call where it was
-    // inlined.
-    ClonedCallsiteMD = MDNode::concatenate(OrigCallsiteMD, InlinedCallsiteMD);
-    ClonedCall->setMetadata(LLVMContext::MD_callsite, ClonedCallsiteMD);
-  }
-
-  // Update any memprof metadata on the cloned call.
-  MDNode *OrigMemProfMD = ClonedCall->getMetadata(LLVMContext::MD_memprof);
-  if (!OrigMemProfMD)
-    return;
-  // We currently expect that allocations with memprof metadata also have
-  // callsite metadata for the allocation's part of the context.
-  assert(OrigCallsiteMD);
-
-  // New call's MIB list.
-  std::vector<Metadata *> NewMIBList;
-  // Updated MIB list for the original call in the out-of-line callee.
-  std::vector<Metadata *> UpdatedOrigMIBList;
-
-  // For each MIB metadata, check if its call stack context starts with the
-  // new clone's callsite metadata. If so, that MIB goes onto the cloned call in
-  // the inlined body. If not, it stays on the out-of-line original call.
-  for (auto &MIBOp : OrigMemProfMD->operands()) {
-    MDNode *MIB = dyn_cast<MDNode>(MIBOp);
-    // Stack is first operand of MIB.
-    MDNode *StackMD = getMIBStackNode(MIB);
-    assert(StackMD);
-    // See if the new cloned callsite context matches this profiled context.
-    if (haveCommonPrefix(StackMD, ClonedCallsiteMD))
-      // Add it to the cloned call's MIB list.
-      NewMIBList.push_back(MIB);
-    else
-      // Keep it on the original call.
-      UpdatedOrigMIBList.push_back(MIB);
-  }
-  if (NewMIBList.empty()) {
-    removeMemProfMetadata(ClonedCall);
-    removeCallsiteMetadata(ClonedCall);
-    return;
-  }
-  if (NewMIBList.size() < OrigMemProfMD->getNumOperands()) {
-    assert(!UpdatedOrigMIBList.empty());
-    OrigCallToNewMemProfMDMap[OrigCall] = UpdatedOrigMIBList;
-    updateMemprofMetadata(ClonedCall, NewMIBList);
-  } else
-    OrigCallToNewMemProfMDMap[OrigCall] = {};
-}
-
-// Update memprof related metadata (!memprof and !callsite) based on the
-// inlining of Callee into the callsite at CB. The updates include merging the
-// inlined callee's callsite metadata with that of the inlined call,
-// and moving the subset of any memprof contexts to the inlined callee
-// allocations if they match the new inlined call stack.
-// FIXME: Replace memprof metadata with function attribute if all MIB end up
-// having the same behavior. Do other context trimming/merging optimizations
-// too.
-static void
-propagateMemProfMetadata(Function *Callee, CallBase &CB,
-                         bool ContainsMemProfMetadata,
-                         const ValueMap<const Value *, WeakTrackingVH> &VMap) {
-  MDNode *CallsiteMD = CB.getMetadata(LLVMContext::MD_callsite);
-  // Only need to update if the inlined callsite had callsite metadata, or if
-  // there was any memprof metadata inlined.
-  if (!CallsiteMD && !ContainsMemProfMetadata)
-    return;
-
-  // Propagate metadata onto the cloned calls in the inlined callee.
-  // Can't update the original call using the VMap since it holds a const
-  // pointer, those will be updated in the subsequent loop.
-  std::map<const CallBase *, std::vector<Metadata *>> OrigCallToNewMemProfMDMap;
-  for (const auto &Entry : VMap) {
-    // See if this is a call that has been inlined and remapped, and not
-    // simplified away in the process.
-    auto *OrigCall = dyn_cast_or_null<CallBase>(Entry.first);
-    auto *ClonedCall = dyn_cast_or_null<CallBase>(Entry.second);
-    if (!OrigCall || !ClonedCall)
-      continue;
-    // If the inlined callsite did not have any callsite metadata, then it isn't
-    // involved in any profiled call contexts, and we can remove any memprof
-    // metadata on the cloned call.
-    if (!CallsiteMD) {
-      removeMemProfMetadata(ClonedCall);
-      removeCallsiteMetadata(ClonedCall);
-      continue;
-    }
-    propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD,
-                           OrigCallToNewMemProfMDMap);
-  }
-
-  // Update memprof MD on calls within the original callee function to remove
-  // MIB with stacks that matched the inlined context (those moved to a new
-  // memprof MD on the inlined version of the call).
-  for (BasicBlock &BB : *Callee) {
-    for (Instruction &I : BB) {
-      CallBase *Call = dyn_cast<CallBase>(&I);
-      if (!Call || !OrigCallToNewMemProfMDMap.count(Call))
-        continue;
-      std::vector<Metadata *> &UpdatedMemProfMD =
-          OrigCallToNewMemProfMDMap[Call];
-      if (!UpdatedMemProfMD.empty())
-        updateMemprofMetadata(Call, UpdatedMemProfMD);
-      else {
-        removeMemProfMetadata(Call);
-        removeCallsiteMetadata(Call);
-      }
-    }
-  }
 }
 
 /// When inlining a call site that has !llvm.mem.parallel_loop_access,
@@ -2262,9 +2090,6 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.
     AddReturnAttributes(CB, VMap);
-
-    propagateMemProfMetadata(CalledFunc, CB,
-                             InlinedFunctionInfo.ContainsMemProfMetadata, VMap);
 
     // Propagate metadata on the callsite if necessary.
     PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());
