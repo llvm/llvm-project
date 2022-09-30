@@ -194,7 +194,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getNumIterators(getParallelIteratorTypeName(),
-                               $_op.iterator_types());
+                                $_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -206,7 +206,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return findPositionsOfType($_op.iterator_types(),
+        return findPositionsOfType($_op.getIteratorTypesArray(),
                                    getParallelIteratorTypeName(), res);
       }]
     >,
@@ -220,7 +220,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getNumIterators(getReductionIteratorTypeName(),
-                               $_op.iterator_types());
+                               $_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -232,7 +232,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return findPositionsOfType($_op.iterator_types(),
+        return findPositionsOfType($_op.getIteratorTypesArray(),
                                    getReductionIteratorTypeName(), res);
       }]
     >,
@@ -246,7 +246,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getNumIterators(getWindowIteratorTypeName(),
-                               $_op.iterator_types());
+                               $_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -258,7 +258,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return findPositionsOfType($_op.iterator_types(),
+        return findPositionsOfType($_op.getIteratorTypesArray(),
                                    getWindowIteratorTypeName(), res);
       }]
     >,
@@ -271,7 +271,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return getNumIterators($_op.iterator_types());
+        return getNumIterators($_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -284,7 +284,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto iters = $_op.iterator_types();
+        auto iters = $_op.getIteratorTypesArray();
         return iters.size() == 1 &&
                getNumIterators(getReductionIteratorTypeName(), iters) == 1;
       }]>,
@@ -759,7 +759,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     ArrayAttr getIteratorTypes() { return iterator_types(); }
 
     SmallVector<StringRef> getIteratorTypeNames() {
-      return llvm::to_vector(getIteratorTypes().getAsValueRange<StringAttr>());
+      return getIteratorTypesArray();
     }
 
     //========================================================================//

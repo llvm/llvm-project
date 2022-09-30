@@ -214,7 +214,7 @@ static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
 /// as we use adj matrix for the graph.
 /// The sorted result will put the first Reduction iterator to the
 /// latest possible index.
-static bool topSortOptimal(unsigned n, ArrayRef<Attribute> iteratorTypes,
+static bool topSortOptimal(unsigned n, ArrayRef<StringRef> iteratorTypes,
                            std::vector<unsigned> &topSort,
                            std::vector<unsigned> &inDegree,
                            std::vector<std::vector<bool>> &adjM) {
@@ -289,7 +289,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   unsigned n = op.getNumLoops();
   std::vector<std::vector<bool>> adjM(n, std::vector<bool>(n, false));
   std::vector<unsigned> inDegree(n, 0); // in-degree of each node.
-  auto iteratorTypes = op.iterator_types().getValue();
+  auto iteratorTypes = op.getIteratorTypesArray();
   // Iterate over the indexing maps of every tensor in the tensor expression.
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     // Skip tensor during cycle resolution.
@@ -361,7 +361,7 @@ static bool isAdmissibleTensorExp(Merger &merger, linalg::GenericOp op,
   // An all-dense annotated "sparse" output tensor becomes a linearized random
   // access 1-dim memref. Also admissible since insertions cannot occur.
   bool allDense = true;
-  auto iteratorTypes = op.iterator_types().getValue();
+  auto iteratorTypes = op.getIteratorTypesArray();
   unsigned numLoops = iteratorTypes.size();
   for (unsigned i = 0; i < numLoops; i++)
     if (merger.isDimLevelType(tensor, i, DimLvlType::kCompressed) ||
@@ -1299,7 +1299,7 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   unsigned fb = indices.find_first();
   unsigned tensor = merger.tensor(fb);
   assert(idx == merger.index(fb));
-  auto iteratorTypes = op.iterator_types().getValue();
+  auto iteratorTypes = op.getIteratorTypesArray();
   bool isReduction = linalg::isReductionIterator(iteratorTypes[idx]);
   bool isSparse = merger.isDimLevelType(fb, DimLvlType::kCompressed) ||
                   merger.isDimLevelType(fb, DimLvlType::kSingleton);
