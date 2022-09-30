@@ -149,6 +149,10 @@ Changes in existing checks
   copy assignment operators with nonstandard return types. The check is restricted to
   c++11-or-later.
 
+- Change the default behavior of :doc:`readability-avoid-const-params-in-decls
+  <clang-tidy/checks/readability-avoid-const-params-in-decls>` to not
+  warn about `const` value parameters of declarations inside macros.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
