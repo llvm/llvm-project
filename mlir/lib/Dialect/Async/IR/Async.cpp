@@ -38,7 +38,7 @@ LogicalResult YieldOp::verify() {
   // parent `async.execute` operation.
   auto executeOp = (*this)->getParentOfType<ExecuteOp>();
   auto types =
-      llvm::map_range(executeOp.bodyResults(), [](const OpResult &result) {
+      llvm::map_range(executeOp.getBodyResults(), [](const OpResult &result) {
         return result.getType().cast<ValueType>().getValueType();
       });
 
@@ -62,7 +62,7 @@ constexpr char kOperandSegmentSizesAttr[] = "operand_segment_sizes";
 
 OperandRange ExecuteOp::getSuccessorEntryOperands(Optional<unsigned> index) {
   assert(index && *index == 0 && "invalid region index");
-  return bodyOperands();
+  return getBodyOperands();
 }
 
 bool ExecuteOp::areTypesCompatible(Type lhs, Type rhs) {
@@ -80,13 +80,13 @@ void ExecuteOp::getSuccessorRegions(Optional<unsigned> index,
   // The `body` region branch back to the parent operation.
   if (index) {
     assert(*index == 0 && "invalid region index");
-    regions.push_back(RegionSuccessor(bodyResults()));
+    regions.push_back(RegionSuccessor(getBodyResults()));
     return;
   }
 
   // Otherwise the successor is the body region.
   regions.push_back(
-      RegionSuccessor(&bodyRegion(), bodyRegion().getArguments()));
+      RegionSuccessor(&getBodyRegion(), getBodyRegion().getArguments()));
 }
 
 void ExecuteOp::build(OpBuilder &builder, OperationState &result,
@@ -136,17 +136,18 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
 
 void ExecuteOp::print(OpAsmPrinter &p) {
   // [%tokens,...]
-  if (!dependencies().empty())
-    p << " [" << dependencies() << "]";
+  if (!getDependencies().empty())
+    p << " [" << getDependencies() << "]";
 
   // (%value as %unwrapped: !async.value<!arg.type>, ...)
-  if (!bodyOperands().empty()) {
+  if (!getBodyOperands().empty()) {
     p << " (";
-    Block *entry = bodyRegion().empty() ? nullptr : &bodyRegion().front();
-    llvm::interleaveComma(bodyOperands(), p, [&, n = 0](Value operand) mutable {
-      Value argument = entry ? entry->getArgument(n++) : Value();
-      p << operand << " as " << argument << ": " << operand.getType();
-    });
+    Block *entry = getBodyRegion().empty() ? nullptr : &getBodyRegion().front();
+    llvm::interleaveComma(
+        getBodyOperands(), p, [&, n = 0](Value operand) mutable {
+          Value argument = entry ? entry->getArgument(n++) : Value();
+          p << operand << " as " << argument << ": " << operand.getType();
+        });
     p << ")";
   }
 
@@ -155,7 +156,7 @@ void ExecuteOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
                                      {kOperandSegmentSizesAttr});
   p << ' ';
-  p.printRegion(bodyRegion(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getBodyRegion(), /*printEntryBlockArgs=*/false);
 }
 
 ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -228,12 +229,12 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
 
 LogicalResult ExecuteOp::verifyRegions() {
   // Unwrap async.execute value operands types.
-  auto unwrappedTypes = llvm::map_range(bodyOperands(), [](Value operand) {
+  auto unwrappedTypes = llvm::map_range(getBodyOperands(), [](Value operand) {
     return operand.getType().cast<ValueType>().getValueType();
   });
 
   // Verify that unwrapped argument types matches the body region arguments.
-  if (bodyRegion().getArgumentTypes() != unwrappedTypes)
+  if (getBodyRegion().getArgumentTypes() != unwrappedTypes)
     return emitOpError("async body region argument types do not match the "
                        "execute operation arguments types");
 
@@ -302,7 +303,7 @@ static void printAwaitResultType(OpAsmPrinter &p, Operation *op,
 }
 
 LogicalResult AwaitOp::verify() {
-  Type argType = operand().getType();
+  Type argType = getOperand().getType();
 
   // Awaiting on a token does not have any results.
   if (argType.isa<TokenType>() && !getResultTypes().empty())

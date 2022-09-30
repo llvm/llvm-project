@@ -70,7 +70,7 @@ namespace {
 /// Async Runtime API function types.
 ///
 /// Because we can't create API function signature for type parametrized
-/// async.value type, we use opaque pointers (!llvm.ptr<i8>) instead. After
+/// async.getValue type, we use opaque pointers (!llvm.ptr<i8>) instead. After
 /// lowering all async data types become opaque pointers at runtime.
 struct AsyncAPI {
   // All async types are lowered to opaque i8* LLVM pointers at runtime.
@@ -383,7 +383,7 @@ public:
         loc, allocFuncOp, ValueRange{coroAlign, coroSize});
 
     // Begin a coroutine: @llvm.coro.begin.
-    auto coroId = CoroBeginOpAdaptor(adaptor.getOperands()).id();
+    auto coroId = CoroBeginOpAdaptor(adaptor.getOperands()).getId();
     rewriter.replaceOpWithNewOp<LLVM::CoroBeginOp>(
         op, i8Ptr, ValueRange({coroId, coroAlloc.getResult()}));
 
@@ -439,7 +439,7 @@ public:
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(false));
 
     // Mark the end of a coroutine: @llvm.coro.end.
-    auto coroHdl = adaptor.handle();
+    auto coroHdl = adaptor.getHandle();
     rewriter.create<LLVM::CoroEndOp>(op->getLoc(), rewriter.getI1Type(),
                                      ValueRange({coroHdl, constFalse}));
     rewriter.eraseOp(op);
@@ -516,7 +516,7 @@ public:
         loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
 
     // Suspend a coroutine: @llvm.coro.suspend
-    auto coroState = adaptor.state();
+    auto coroState = adaptor.getState();
     auto coroSuspend = rewriter.create<LLVM::CoroSuspendOp>(
         loc, i8, ValueRange({coroState, constFalse}));
 
@@ -526,11 +526,11 @@ public:
     // or suspend block of the coroutine (see @llvm.coro.suspend return code
     // documentation).
     llvm::SmallVector<int32_t, 2> caseValues = {0, 1};
-    llvm::SmallVector<Block *, 2> caseDest = {op.resumeDest(),
-                                              op.cleanupDest()};
+    llvm::SmallVector<Block *, 2> caseDest = {op.getResumeDest(),
+                                              op.getCleanupDest()};
     rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
         op, rewriter.create<LLVM::SExtOp>(loc, i32, coroSuspend.getResult()),
-        /*defaultDestination=*/op.suspendDest(),
+        /*defaultDestination=*/op.getSuspendDest(),
         /*defaultOperands=*/ValueRange(),
         /*caseValues=*/caseValues,
         /*caseDestinations=*/caseDest,
@@ -634,7 +634,7 @@ public:
   matchAndRewrite(RuntimeSetAvailableOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kEmplaceToken; })
             .Case<ValueType>([](Type) { return kEmplaceValue; });
 
@@ -660,7 +660,7 @@ public:
   matchAndRewrite(RuntimeSetErrorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kSetTokenError; })
             .Case<ValueType>([](Type) { return kSetValueError; });
 
@@ -685,7 +685,7 @@ public:
   matchAndRewrite(RuntimeIsErrorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kIsTokenError; })
             .Case<GroupType>([](Type) { return kIsGroupError; })
             .Case<ValueType>([](Type) { return kIsValueError; });
@@ -710,7 +710,7 @@ public:
   matchAndRewrite(RuntimeAwaitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kAwaitToken; })
             .Case<ValueType>([](Type) { return kAwaitValue; })
             .Case<GroupType>([](Type) { return kAwaitGroup; });
@@ -738,13 +738,13 @@ public:
   matchAndRewrite(RuntimeAwaitAndResumeOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     StringRef apiFuncName =
-        TypeSwitch<Type, StringRef>(op.operand().getType())
+        TypeSwitch<Type, StringRef>(op.getOperand().getType())
             .Case<TokenType>([](Type) { return kAwaitTokenAndExecute; })
             .Case<ValueType>([](Type) { return kAwaitValueAndExecute; })
             .Case<GroupType>([](Type) { return kAwaitAllAndExecute; });
 
-    Value operand = adaptor.operand();
-    Value handle = adaptor.handle();
+    Value operand = adaptor.getOperand();
+    Value handle = adaptor.getHandle();
 
     // A pointer to coroutine resume intrinsic wrapper.
     addResumeFunction(op->getParentOfType<ModuleOp>());
@@ -781,7 +781,7 @@ public:
         op->getLoc(), LLVM::LLVMPointerType::get(resumeFnTy), kResume);
 
     // Call async runtime API to execute a coroutine in the managed thread.
-    auto coroHdl = adaptor.handle();
+    auto coroHdl = adaptor.getHandle();
     rewriter.replaceOpWithNewOp<func::CallOp>(
         op, TypeRange(), kExecute, ValueRange({coroHdl, resumePtr.getRes()}));
 
@@ -806,12 +806,12 @@ public:
 
     // Get a pointer to the async value storage from the runtime.
     auto i8Ptr = AsyncAPI::opaquePointerType(rewriter.getContext());
-    auto storage = adaptor.storage();
+    auto storage = adaptor.getStorage();
     auto storagePtr = rewriter.create<func::CallOp>(loc, kGetValueStorage,
                                                     TypeRange(i8Ptr), storage);
 
     // Cast from i8* to the LLVM pointer type.
-    auto valueType = op.value().getType();
+    auto valueType = op.getValue().getType();
     auto llvmValueType = getTypeConverter()->convertType(valueType);
     if (!llvmValueType)
       return rewriter.notifyMatchFailure(
@@ -822,7 +822,7 @@ public:
         storagePtr.getResult(0));
 
     // Store the yielded value into the async value storage.
-    auto value = adaptor.value();
+    auto value = adaptor.getValue();
     rewriter.create<LLVM::StoreOp>(loc, value, castedStoragePtr.getResult());
 
     // Erase the original runtime store operation.
@@ -849,12 +849,12 @@ public:
 
     // Get a pointer to the async value storage from the runtime.
     auto i8Ptr = AsyncAPI::opaquePointerType(rewriter.getContext());
-    auto storage = adaptor.storage();
+    auto storage = adaptor.getStorage();
     auto storagePtr = rewriter.create<func::CallOp>(loc, kGetValueStorage,
                                                     TypeRange(i8Ptr), storage);
 
     // Cast from i8* to the LLVM pointer type.
-    auto valueType = op.result().getType();
+    auto valueType = op.getResult().getType();
     auto llvmValueType = getTypeConverter()->convertType(valueType);
     if (!llvmValueType)
       return rewriter.notifyMatchFailure(
@@ -886,7 +886,7 @@ public:
   matchAndRewrite(RuntimeAddToGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Currently we can only add tokens to the group.
-    if (!op.operand().getType().isa<TokenType>())
+    if (!op.getOperand().getType().isa<TokenType>())
       return rewriter.notifyMatchFailure(op, "only token type is supported");
 
     // Replace with a runtime API function call.
@@ -941,9 +941,9 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto count = rewriter.create<arith::ConstantOp>(
         op->getLoc(), rewriter.getI64Type(),
-        rewriter.getI64IntegerAttr(op.count()));
+        rewriter.getI64IntegerAttr(op.getCount()));
 
-    auto operand = adaptor.operand();
+    auto operand = adaptor.getOperand();
     rewriter.replaceOpWithNewOp<func::CallOp>(op, TypeRange(), apiFunctionName,
                                               ValueRange({operand, count}));
 
