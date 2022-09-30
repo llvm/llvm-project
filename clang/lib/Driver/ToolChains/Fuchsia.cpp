@@ -65,12 +65,6 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-z");
     CmdArgs.push_back("rel");
     CmdArgs.push_back("--pack-dyn-relocs=relr");
-  } else {
-    // The following are already the default in lld
-    CmdArgs.push_back("-z");
-    CmdArgs.push_back("combreloc");
-    CmdArgs.push_back("-z");
-    CmdArgs.push_back("text");
   }
 
   if (!D.SysRoot.empty())

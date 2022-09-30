@@ -1,35 +1,27 @@
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LLD,CHECK-X86_64 %s
-// RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
-// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LLD,CHECK-X86_64 %s
-// RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
-// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
-// RUN:     --sysroot=%S/platform -fuse-ld=gold 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LD,CHECK-X86_64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LLD,CHECK-AARCH64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // RUN: %clang -### %s --target=riscv64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LLD,CHECK-RISCV64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // RUN: %clang -### %s --target=x86_64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LLD,CHECK-X86_64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
 // RUN: %clang -### %s --target=aarch64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LLD,CHECK-AARCH64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-AARCH64 %s
 // RUN: %clang -### %s --target=riscv64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 \
-// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LLD,CHECK-RISCV64 %s
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // CHECK: "-cc1"
 // CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
 // CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
@@ -44,8 +36,7 @@
 // CHECK: "-stack-protector" "2"
 // CHECK-AARCH64: "-target-feature" "+outline-atomics"
 // CHECK-NOT: "-fcommon"
-// CHECK-LLD: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
-// CHECK-LD: {{.*}}ld.gold{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "combreloc" "-z" "text"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"
