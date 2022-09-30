@@ -240,7 +240,7 @@ def SparseTensor_InsertOp : SparseTensor_Op<"insert",
 def SparseTensor_PushBackOp : SparseTensor_Op<"push_back", []>,
     Arguments<(ins StridedMemRefRankOf<[Index], [1]>:$bufferSizes,
                StridedMemRefRankOf<[AnyType], [1]>:$inBuffer,
-               AnyType:$value, IndexAttr:$idx)>,
+               AnyType:$value, IndexAttr:$idx, UnitAttr:$inbounds)>,
     Results<(outs StridedMemRefRankOf<[AnyType], [1]>:$outBuffer)>  {
   string summary = "Pushes a value to the back of a given buffer";
   string description = [{
@@ -249,6 +249,11 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back", []>,
     capacity of the buffer is recorded in the memref type of `inBuffer `. If the
     current buffer is full, then `inBuffer.realloc` is called before pushing the
     data to the buffer. This is similar to std::vector push_back.
+
+    The `inbounds` attribute tells the compiler that the insertion won't go
+    beyond the current storage buffer. This allows the compiler to not generate
+    the code for capacity check and reallocation. The typical usage will be for
+    "dynamic" sparse tensors for which a capacity can be set beforehand.
 
     The operation returns an SSA value for the memref. Referencing the memref
     through the old SSA value after this operation is undefined behavior.
@@ -259,9 +264,14 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back", []>,
     %r = sparse_tensor.push_back %bufferSizes, %buffer, %val {idx = 0 : index}
       : memref<?xindex>, memref<?xf64>, f64 -> memref<?xf64>
     ```
+
+    ```mlir
+    %r = sparse_tensor.push_back inbounds %bufferSizes, %buffer, %val
+      {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64 -> memref<?xf64>
+    ```
   }];
-  let assemblyFormat = "$bufferSizes `,` $inBuffer `,` $value"
-                       " attr-dict `:` type($bufferSizes) `,`"
+  let assemblyFormat = "(`inbounds` $inbounds^)? $bufferSizes `,` $inBuffer"
+                       " `,` $value attr-dict `:` type($bufferSizes) `,`"
                        " type($inBuffer) `,` type($value) `to`"
                        " type($outBuffer)";
 }
