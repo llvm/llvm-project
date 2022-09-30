@@ -4,12 +4,16 @@
 define i32 @crash_reordering_undefs() {
 ; CHECK-LABEL: @crash_reordering_undefs(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR0:%.*]] = or i64 undef, undef
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i64 undef, [[OR0]]
+; CHECK-NEXT:    [[ADD0:%.*]] = select i1 [[CMP0]], i32 65536, i32 65537
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 undef, undef
 ; CHECK-NEXT:    [[ADD2:%.*]] = select i1 [[CMP1]], i32 65536, i32 65537
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 undef, undef
 ; CHECK-NEXT:    [[ADD4:%.*]] = select i1 [[CMP2]], i32 65536, i32 65537
-; CHECK-NEXT:    [[ADD0:%.*]] = select i1 undef, i32 65536, i32 65537
-; CHECK-NEXT:    [[ADD9:%.*]] = select i1 undef, i32 65536, i32 65537
+; CHECK-NEXT:    [[OR1:%.*]] = or i64 undef, undef
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i64 undef, [[OR1]]
+; CHECK-NEXT:    [[ADD9:%.*]] = select i1 [[CMP3]], i32 65536, i32 65537
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> undef)
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP0]], undef
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[ADD0]], [[ADD2]]
