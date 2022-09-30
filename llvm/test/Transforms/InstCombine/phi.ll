@@ -550,13 +550,16 @@ bb2:        ; preds = %bb1, %entry
 ; Atomic and non-atomic loads should not be combined.
 define i32 @PR51435(i32* %ptr, i32* %atomic_ptr, i1 %c) {
 ; CHECK-LABEL: @PR51435(
-; CHECK:       entry:
-; CHECK-NEXT:    [[NON_ATOMIC:%.*]] = load i32, i32* %ptr, align 4
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[ATOMIC:%.*]] = load atomic i32, i32* %atomic_ptr acquire, align 4
+; CHECK-NEXT:    [[Y:%.*]] = load atomic i32, i32* [[ATOMIC_PTR:%.*]] acquire, align 4
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[NON_ATOMIC]], %entry ], [ [[ATOMIC]], %if ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[Y]], [[IF]] ]
 ; CHECK-NEXT:    ret i32 [[COND]]
+;
 entry:
   %x = load i32, i32* %ptr, align 4
   br i1 %c, label %if, label %end
@@ -1268,4 +1271,47 @@ g.exit:
 for.end:
   store double %p, double* undef
   ret void
+}
+
+define i1 @pr57488_icmp_of_phi(i64* %ptr.base, i64 %len) {
+; CHECK-LABEL: @pr57488_icmp_of_phi(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i64, i64* [[PTR_BASE:%.*]], i64 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_ZERO:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_ZERO]], label [[EXIT:%.*]], label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i8 [ [[ACCUM_NEXT:%.*]], [[LOOP]] ], [ 1, [[START:%.*]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi i64* [ [[PTR_NEXT:%.*]], [[LOOP]] ], [ [[PTR_BASE]], [[START]] ]
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i64, i64* [[PTR]], i64 1
+; CHECK-NEXT:    [[ACCUM_BOOL:%.*]] = icmp ne i8 [[ACCUM]], 0
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, i64* [[PTR]], align 8
+; CHECK-NEXT:    [[VAL_ZERO:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ACCUM_BOOL]], [[VAL_ZERO]]
+; CHECK-NEXT:    [[ACCUM_NEXT]] = zext i1 [[AND]] to i8
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64* [[PTR_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[EXIT]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ true, [[START]] ], [ [[AND]], [[LOOP]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+start:
+  %end = getelementptr inbounds i64, i64* %ptr.base, i64 %len
+  %len.zero = icmp eq i64 %len, 0
+  br i1 %len.zero, label %exit, label %loop
+
+loop:
+  %accum = phi i8 [ %accum.next, %loop ], [ 1, %start ]
+  %ptr = phi i64* [ %ptr.next, %loop ], [ %ptr.base, %start ]
+  %ptr.next = getelementptr inbounds i64, i64* %ptr, i64 1
+  %accum.bool = icmp ne i8 %accum, 0
+  %val = load i64, i64* %ptr, align 8
+  %val.zero = icmp eq i64 %val, 0
+  %and = and i1 %accum.bool, %val.zero
+  %accum.next = zext i1 %and to i8
+  %exit.cond = icmp eq i64* %ptr.next, %end
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  %res = phi i1 [ true, %start ], [ %and, %loop ]
+  ret i1 %res
 }
