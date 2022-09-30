@@ -377,35 +377,9 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
-// `box` `<` type (',' affine-map)? `>`
-mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
-  mlir::Type ofTy;
-  if (parser.parseLess() || parser.parseType(ofTy))
-    return {};
-
-  mlir::AffineMapAttr map;
-  if (!parser.parseOptionalComma()) {
-    if (parser.parseAttribute(map)) {
-      parser.emitError(parser.getCurrentLocation(), "expected affine map");
-      return {};
-    }
-  }
-  if (parser.parseGreater())
-    return {};
-  return get(ofTy, map);
-}
-
-void fir::BoxType::print(mlir::AsmPrinter &printer) const {
-  printer << "<" << getEleTy();
-  if (auto map = getLayoutMap()) {
-    printer << ", " << map;
-  }
-  printer << '>';
-}
-
 mlir::LogicalResult
 fir::BoxType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                     mlir::Type eleTy, mlir::AffineMapAttr map) {
+                     mlir::Type eleTy) {
   // TODO
   return mlir::success();
 }
