@@ -6,14 +6,14 @@ group("lib") {
   if (current_os == "linux") {
     deps += [ "//compiler-rt/lib/msan" ]
   }
-  if (current_os == "android" || current_os == "linux" || current_os == "mac") {
-    deps += [ "//compiler-rt/lib/ubsan" ]
-  }
-  if (current_os == "android" || current_os == "linux") {
+  if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/lib/ubsan_minimal" ]
   }
   if (current_os != "win" && current_os != "baremetal") {
-    deps += [ "//compiler-rt/lib/asan" ]
+    deps += [
+      "//compiler-rt/lib/asan",
+      "//compiler-rt/lib/ubsan",
+    ]
     if (current_cpu == "x64" || current_cpu == "arm64") {
       deps += [ "//compiler-rt/lib/tsan/rtl" ]
     }
