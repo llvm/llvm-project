@@ -21,6 +21,7 @@
 #define LLVM_CLANG_C_DEPENDENCIES_H
 
 #include "clang-c/BuildSystem.h"
+#include "clang-c/CXDiagnostic.h"
 #include "clang-c/CXErrorCode.h"
 #include "clang-c/CXString.h"
 #include "clang-c/Platform.h"
@@ -249,7 +250,7 @@ typedef size_t CXModuleLookupOutputCallback(void *Context,
                                             char *Output, size_t MaxLen);
 
 /**
- * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v4.
+ * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v5.
  */
 CINDEX_LINKAGE CXFileDependencies *
 clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
@@ -257,6 +258,18 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
     const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
     CXModuleDiscoveredCallback *MDC, void *MLOContext,
     CXModuleLookupOutputCallback *MLO, unsigned Options, CXString *error);
+
+/**
+ * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v5.
+ * Returns diagnostics in an unstructured CXString instead of CXDiagnosticSet.
+ */
+CINDEX_LINKAGE CXErrorCode
+clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
+    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
+    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
+    CXModuleDiscoveredCallback *MDC, void *MLOContext,
+    CXModuleLookupOutputCallback *MLO, unsigned Options,
+    CXFileDependenciesList **Out, CXString *error);
 
 /**
  * Calculates the list of file dependencies for a particular compiler
@@ -288,18 +301,19 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
  * \param [out] Out A non-NULL pointer to store the resulting dependencies. The
  *                  output must be freed by calling
  *                  \c clang_experimental_FileDependenciesList_dispose.
- * \param [out] error the error string to pass back to client (if any).
+ * \param [out] OutDiags The diagnostics emitted during scanning. These must be
+ *                       always freed by calling \c clang_disposeDiagnosticSet.
  *
  * \returns \c CXError_Success on success; otherwise a non-zero \c CXErrorCode
  * indicating the kind of error.
  */
 CINDEX_LINKAGE CXErrorCode
-clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
+clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
     CXModuleDiscoveredCallback *MDC, void *MLOContext,
     CXModuleLookupOutputCallback *MLO, unsigned Options,
-    CXFileDependenciesList **Out, CXString *error);
+    CXFileDependenciesList **Out, CXDiagnosticSet *OutDiags);
 
 /**
  * @}
