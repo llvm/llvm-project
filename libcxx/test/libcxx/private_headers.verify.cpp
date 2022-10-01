@@ -685,6 +685,7 @@ END-SCRIPT
 #include <__type_traits/remove_reference.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/remove_reference.h'}}
 #include <__type_traits/remove_volatile.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/remove_volatile.h'}}
 #include <__type_traits/result_of.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/result_of.h'}}
+#include <__type_traits/strip_signature.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/strip_signature.h'}}
 #include <__type_traits/type_identity.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/type_identity.h'}}
 #include <__type_traits/type_list.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/type_list.h'}}
 #include <__type_traits/underlying_type.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/underlying_type.h'}}
