@@ -203,7 +203,7 @@ static bool shouldDefineSym(SymbolAssignment *cmd) {
 
   // If a symbol was in PROVIDE(), we need to define it only
   // when it is a referenced undefined symbol.
-  Symbol *b = symtab->find(cmd->name);
+  Symbol *b = symtab.find(cmd->name);
   if (b && !b->isDefined() && !b->isCommon())
     return true;
   return false;
@@ -236,7 +236,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   Defined newSym(nullptr, cmd->name, STB_GLOBAL, visibility, value.type,
                  symValue, 0, sec);
 
-  Symbol *sym = symtab->insert(cmd->name);
+  Symbol *sym = symtab.insert(cmd->name);
   sym->mergeProperties(newSym);
   newSym.overwrite(*sym);
   sym->isUsedInRegularObj = true;
@@ -254,7 +254,7 @@ static void declareSymbol(SymbolAssignment *cmd) {
                  nullptr);
 
   // We can't calculate final value right now.
-  Symbol *sym = symtab->insert(cmd->name);
+  Symbol *sym = symtab.insert(cmd->name);
   sym->mergeProperties(newSym);
   newSym.overwrite(*sym);
 
@@ -1386,7 +1386,7 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
     return 0;
   }
 
-  if (Symbol *sym = symtab->find(name)) {
+  if (Symbol *sym = symtab.find(name)) {
     if (auto *ds = dyn_cast<Defined>(sym)) {
       ExprValue v{ds->section, false, ds->value, loc};
       // Retain the original st_type, so that the alias will get the same

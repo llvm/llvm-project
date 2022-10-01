@@ -194,7 +194,7 @@ void elf::writePrefixedInstruction(uint8_t *loc, uint64_t insn) {
 
 static bool addOptional(StringRef name, uint64_t value,
                         std::vector<Defined *> &defined) {
-  Symbol *sym = symtab->find(name);
+  Symbol *sym = symtab.find(name);
   if (!sym || sym->isDefined())
     return false;
   sym->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL, STV_HIDDEN,

@@ -1449,7 +1449,7 @@ Expr ScriptParser::readPrimary() {
   if (tok == "DEFINED") {
     StringRef name = unquote(readParenLiteral());
     return [=] {
-      Symbol *b = symtab->find(name);
+      Symbol *b = symtab.find(name);
       return (b && b->isDefined()) ? 1 : 0;
     };
   }

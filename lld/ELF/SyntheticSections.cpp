@@ -1458,10 +1458,10 @@ DynamicSection<ELFT>::computeContents() {
       addInt(DT_FINI_ARRAYSZ, Out::finiArray->size);
     }
 
-    if (Symbol *b = symtab->find(config->init))
+    if (Symbol *b = symtab.find(config->init))
       if (b->isDefined())
         addInt(DT_INIT, b->getVA());
-    if (Symbol *b = symtab->find(config->fini))
+    if (Symbol *b = symtab.find(config->fini))
       if (b->isDefined())
         addInt(DT_FINI, b->getVA());
   }
