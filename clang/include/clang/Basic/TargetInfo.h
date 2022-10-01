@@ -49,6 +49,7 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
+class ParsedTargetAttr;
 
 namespace Builtin { struct Info; }
 
@@ -1280,6 +1281,8 @@ public:
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
   }
+
+  virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
   /// brief Determine whether this TargetInfo supports tune in target attribute.
   virtual bool supportsTargetAttributeTune() const {

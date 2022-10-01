@@ -13255,7 +13255,7 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
 ParsedTargetAttr
 ASTContext::filterFunctionTargetAttrs(const TargetAttr *TD) const {
   assert(TD != nullptr);
-  ParsedTargetAttr ParsedAttr = TD->parse();
+  ParsedTargetAttr ParsedAttr = Target->parseTargetAttr(TD->getFeaturesStr());
 
   llvm::erase_if(ParsedAttr.Features, [&](const std::string &Feat) {
     return !Target->isValidFeatureName(StringRef{Feat}.substr(1));
@@ -13289,9 +13289,8 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
         Target->getTargetOpts().FeaturesAsWritten.begin(),
         Target->getTargetOpts().FeaturesAsWritten.end());
 
-    if (ParsedAttr.Architecture != "" &&
-        Target->isValidCPUName(ParsedAttr.Architecture))
-      TargetCPU = ParsedAttr.Architecture;
+    if (ParsedAttr.CPU != "" && Target->isValidCPUName(ParsedAttr.CPU))
+      TargetCPU = ParsedAttr.CPU;
 
     // Now populate the feature map, first with the TargetCPU which is either
     // the default or a new one from the target attribute string. Then we'll use

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/TargetInfo.h"
+#include "clang/AST/Attr.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
@@ -505,6 +506,50 @@ bool TargetInfo::initFeatureMap(
       setFeatureEnabled(Features, Name.substr(1), Name[0] == '+');
   }
   return true;
+}
+
+ParsedTargetAttr TargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+
+  // Grab the various features and prepend a "+" to turn on the feature to
+  // the backend and add them to our existing set of features.
+  for (auto &Feature : AttrFeatures) {
+    // Go ahead and trim whitespace rather than either erroring or
+    // accepting it weirdly.
+    Feature = Feature.trim();
+
+    // TODO: Support the fpmath option. It will require checking
+    // overall feature validity for the function with the rest of the
+    // attributes on the function.
+    if (Feature.startswith("fpmath="))
+      continue;
+
+    if (Feature.startswith("branch-protection=")) {
+      Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    // While we're here iterating check for a different target cpu.
+    if (Feature.startswith("arch=")) {
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = "arch=";
+      else
+        Ret.CPU = Feature.split("=").second.trim();
+    } else if (Feature.startswith("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Feature.split("=").second.trim();
+    } else if (Feature.startswith("no-"))
+      Ret.Features.push_back("-" + Feature.split("-").second.str());
+    else
+      Ret.Features.push_back("+" + Feature.str());
+  }
+  return Ret;
 }
 
 TargetInfo::CallingConvKind

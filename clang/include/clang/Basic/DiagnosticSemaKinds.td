@@ -3050,7 +3050,7 @@ def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
 
 def warn_unsupported_target_attribute
-    : Warning<"%select{unsupported|duplicate|unknown}0%select{| architecture|"
+    : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
               " tune CPU}1 '%2' in the '%select{target|target_clones}3' "
               "attribute string; '%select{target|target_clones}3' "
               "attribute ignored">,
