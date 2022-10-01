@@ -524,8 +524,8 @@ define i32 @ntest5(i32 %x) {
 define i32 @ntest6(i32 %x) {
 ; CHECK-LABEL: ntest6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-6
-; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    lsl w8, w0, #1
+; CHECK-NEXT:    sub w0, w8, w0, lsl #3
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest6:
@@ -623,8 +623,8 @@ define i32 @ntest11(i32 %x) {
 define i32 @ntest12(i32 %x) {
 ; CHECK-LABEL: ntest12:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-12
-; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    lsl w8, w0, #2
+; CHECK-NEXT:    sub w0, w8, w0, lsl #4
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest12:
@@ -656,8 +656,8 @@ define i32 @ntest13(i32 %x) {
 define i32 @ntest14(i32 %x) {
 ; CHECK-LABEL: ntest14:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-14
-; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    lsl w8, w0, #1
+; CHECK-NEXT:    sub w0, w8, w0, lsl #4
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest14:
