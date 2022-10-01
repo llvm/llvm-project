@@ -964,6 +964,8 @@ FormatToken *UnwrappedLineParser::parseBlock(
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
 
+  Line->Level = InitialLevel;
+
   if (FormatTok->is(tok::kw_noexcept)) {
     // A noexcept in a requires expression.
     nextToken();
@@ -978,8 +980,6 @@ FormatToken *UnwrappedLineParser::parseBlock(
 
   if (MunchSemi && FormatTok->is(tok::semi))
     nextToken();
-
-  Line->Level = InitialLevel;
 
   if (PPStartHash == PPEndHash) {
     Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
