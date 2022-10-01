@@ -3,8 +3,10 @@
 ;
 ; Check that we log correctly, both with a learned policy, and the default policy
 ;
-; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-priority-advisor=development \
-; RUN:   -regalloc-priority-training-log=%t1 -tfutils-text-log < %S/Inputs/input.ll
+; RUN: llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-priority-advisor=development \
+; RUN:   -regalloc-priority-training-log=%t1 -tfutils-text-log \
+; RUN:   < %S/Inputs/input.ll
 ; RUN: sed -i 's/ \+/ /g' %t1
 ; RUN: sed -i 's/\\n key:/\n key:/g' %t1
 ; RUN: sed -i 's/\\n feature/\n feature/g' %t1
@@ -15,8 +17,10 @@
 ; RUN: rm -rf %t && mkdir %t
 ; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-priority-test-model.py %t_savedmodel
 ; RUN: %python %S/../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
-; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-priority-advisor=development \
-; RUN:   -regalloc-priority-training-log=%t2 -tfutils-text-log -regalloc-priority-model=%t < %S/Inputs/input.ll
+; RUN: llc -o /dev/null -mtriple=x86_64-linux-unknown -regalloc=greedy \
+; RUN:   -regalloc-enable-priority-advisor=development \
+; RUN:   -regalloc-priority-training-log=%t2 -tfutils-text-log \
+; RUN:   -regalloc-priority-model=%t < %S/Inputs/input.ll
 ; RUN: sed -i 's/ \+/ /g' %t2
 ; RUN: sed -i 's/\\n key:/\n key:/g' %t2
 ; RUN: sed -i 's/\\n feature/\n feature/g' %t2
