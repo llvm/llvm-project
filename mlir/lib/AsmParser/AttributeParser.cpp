@@ -1066,12 +1066,12 @@ ShapedType Parser::parseElementsLiteralType(Type type) {
       return nullptr;
   }
 
-  if (!type.isa<RankedTensorType, VectorType>()) {
-    emitError("elements literal must be a ranked tensor or vector type");
+  auto sType = type.dyn_cast<ShapedType>();
+  if (!sType) {
+    emitError("elements literal must be a shaped type");
     return nullptr;
   }
 
-  auto sType = type.cast<ShapedType>();
   if (!sType.hasStaticShape())
     return (emitError("elements literal type must have static shape"), nullptr);
 
