@@ -49,7 +49,7 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
-class ParsedTargetAttr;
+struct ParsedTargetAttr;
 
 namespace Builtin { struct Info; }
 
