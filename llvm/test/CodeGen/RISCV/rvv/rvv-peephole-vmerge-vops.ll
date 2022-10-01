@@ -843,3 +843,40 @@ define <vscale x 2 x i32> @vpselect_trunc(<vscale x 2 x i32> %passthru, <vscale 
   %b = call <vscale x 2 x i32> @llvm.vp.select.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
   ret <vscale x 2 x i32> %b
 }
+
+; Folding this would create a loop in the DAG becuase the chain from the VLE is
+; used by the vssubu.
+define void @test_dag_loop() {
+; CHECK-LABEL: test_dag_loop:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, mu
+; CHECK-NEXT:    vle16.v v8, (zero)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vsetivli zero, 0, e8, m4, tu, mu
+; CHECK-NEXT:    vmv4r.v v20, v16
+; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vmseq.vv v0, v20, v16
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vsetivli zero, 1, e16, m8, tu, mu
+; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
+; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, mu
+; CHECK-NEXT:    vse16.v v16, (zero)
+; CHECK-NEXT:    ret
+entry:
+  %0 = call <vscale x 32 x i16> @llvm.riscv.vle.nxv32i16.i64(<vscale x 32 x i16> undef, <vscale x 32 x i16>* null, i64 1)
+  %1 = tail call <vscale x 32 x i8> @llvm.riscv.vssubu.mask.nxv32i8.i8.i64(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i8 0, <vscale x 32 x i1> zeroinitializer, i64 0, i64 0)
+  %2 = tail call <vscale x 32 x i1> @llvm.riscv.vmseq.nxv32i8.nxv32i8.i64(<vscale x 32 x i8> %1, <vscale x 32 x i8> zeroinitializer, i64 0)
+  %3 = tail call <vscale x 32 x i16> @llvm.riscv.vmerge.nxv32i16.nxv32i16.i64(<vscale x 32 x i16> zeroinitializer, <vscale x 32 x i16> zeroinitializer, <vscale x 32 x i16> %0, <vscale x 32 x i1> %2, i64 1)
+  call void @llvm.riscv.vse.nxv32i16.i64(<vscale x 32 x i16> %3, <vscale x 32 x i16>* null, i64 0)
+  ret void
+}
+
+declare <vscale x 32 x i16> @llvm.riscv.vle.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>* nocapture, i64)
+declare <vscale x 32 x i8> @llvm.riscv.vssubu.mask.nxv32i8.i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i8, <vscale x 32 x i1>, i64, i64 immarg)
+declare <vscale x 32 x i1> @llvm.riscv.vmseq.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i64)
+declare <vscale x 32 x i16> @llvm.riscv.vmerge.nxv32i16.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i1>, i64)
+declare void @llvm.riscv.vse.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>* nocapture, i64)
