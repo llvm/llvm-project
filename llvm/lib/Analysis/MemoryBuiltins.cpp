@@ -316,12 +316,6 @@ static bool isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
 }
 
 /// Tests if a value is a call or invoke to a library function that
-/// allocates memory via new.
-bool llvm::isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, OpNewLike, TLI).hasValue();
-}
-
-/// Tests if a value is a call or invoke to a library function that
 /// allocates uninitialized memory with alignment (such as aligned_alloc).
 static bool isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, AlignedAllocLike, TLI).has_value();
