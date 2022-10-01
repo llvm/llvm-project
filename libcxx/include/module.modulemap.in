@@ -1482,6 +1482,7 @@ module std [system] {
     module remove_reference                    { private header "__type_traits/remove_reference.h" }
     module remove_volatile                     { private header "__type_traits/remove_volatile.h" }
     module result_of                           { private header "__type_traits/result_of.h" }
+    module strip_signature                     { private header "__type_traits/strip_signature.h" }
     module type_identity                       { private header "__type_traits/type_identity.h" }
     module type_list                           { private header "__type_traits/type_list.h" }
     module underlying_type                     { private header "__type_traits/underlying_type.h" }
