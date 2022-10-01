@@ -37,6 +37,7 @@
 #define MLIR_SPARSETENSOR_FATAL(...)                                           \
   do {                                                                         \
     fprintf(stderr, "SparseTensorUtils: " __VA_ARGS__);                        \
+    fprintf(stderr, "SparseTensorUtils: at %s:%d\n", __FILE__, __LINE__);      \
     exit(1);                                                                   \
   } while (0)
 
