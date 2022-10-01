@@ -2686,7 +2686,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   // First, check that section's VAs fit in available address space for target.
   for (OutputSection *os : outputSections)
     if ((os->addr + os->size < os->addr) ||
-        (!ELFT::Is64Bits && os->addr + os->size > UINT32_MAX))
+        (!ELFT::Is64Bits && os->addr + os->size > uint64_t(UINT32_MAX) + 1))
       errorOrWarn("section " + os->name + " at 0x" + utohexstr(os->addr) +
                   " of size 0x" + utohexstr(os->size) +
                   " exceeds available address space");
