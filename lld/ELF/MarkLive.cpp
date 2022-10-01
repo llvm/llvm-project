@@ -328,7 +328,7 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
 // to from __start_/__stop_ symbols because there will only be one set of
 // symbols for the whole program.
 template <class ELFT> void MarkLive<ELFT>::moveToMain() {
-  for (ELFFileBase *file : ctx->objectFiles)
+  for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *s : file->getSymbols())
       if (auto *d = dyn_cast<Defined>(s))
         if ((d->type == STT_GNU_IFUNC || d->type == STT_TLS) && d->section &&

@@ -206,7 +206,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
   }
 
   MemoryBufferRef mbref = (*mbOrErr)->getMemBufferRef();
-  ctx->memoryBuffers.push_back(std::move(*mbOrErr)); // take MB ownership
+  ctx.memoryBuffers.push_back(std::move(*mbOrErr)); // take MB ownership
 
   if (tar)
     tar->append(relativeToRoot(path), mbref.getBuffer());
@@ -235,12 +235,12 @@ static bool isCompatible(InputFile *file) {
   }
 
   InputFile *existing = nullptr;
-  if (!ctx->objectFiles.empty())
-    existing = ctx->objectFiles[0];
-  else if (!ctx->sharedFiles.empty())
-    existing = ctx->sharedFiles[0];
-  else if (!ctx->bitcodeFiles.empty())
-    existing = ctx->bitcodeFiles[0];
+  if (!ctx.objectFiles.empty())
+    existing = ctx.objectFiles[0];
+  else if (!ctx.sharedFiles.empty())
+    existing = ctx.sharedFiles[0];
+  else if (!ctx.bitcodeFiles.empty())
+    existing = ctx.bitcodeFiles[0];
   std::string with;
   if (existing)
     with = " with " + toString(existing);
@@ -254,7 +254,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
   // Binary file
   if (auto *f = dyn_cast<BinaryFile>(file)) {
-    ctx->binaryFiles.push_back(f);
+    ctx.binaryFiles.push_back(f);
     f->parse();
     return;
   }
@@ -262,7 +262,7 @@ template <class ELFT> static void doParseFile(InputFile *file) {
   // Lazy object file
   if (file->lazy) {
     if (auto *f = dyn_cast<BitcodeFile>(file)) {
-      ctx->lazyBitcodeFiles.push_back(f);
+      ctx.lazyBitcodeFiles.push_back(f);
       f->parseLazy();
     } else {
       cast<ObjFile<ELFT>>(file)->parseLazy();
@@ -281,13 +281,13 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 
   // LLVM bitcode file
   if (auto *f = dyn_cast<BitcodeFile>(file)) {
-    ctx->bitcodeFiles.push_back(f);
+    ctx.bitcodeFiles.push_back(f);
     f->parse();
     return;
   }
 
   // Regular object file
-  ctx->objectFiles.push_back(cast<ELFFileBase>(file));
+  ctx.objectFiles.push_back(cast<ELFFileBase>(file));
   cast<ObjFile<ELFT>>(file)->parse();
 }
 
@@ -769,7 +769,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     case SHT_NULL:
       break;
     case SHT_LLVM_SYMPART:
-      ctx->hasSympart.store(true, std::memory_order_relaxed);
+      ctx.hasSympart.store(true, std::memory_order_relaxed);
       [[fallthrough]];
     default:
       this->sections[i] =
@@ -1179,7 +1179,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
       }
       if (sym.file == this) {
         std::lock_guard<std::mutex> lock(mu);
-        ctx->nonPrevailingSyms.emplace_back(&sym, secIdx);
+        ctx.nonPrevailingSyms.emplace_back(&sym, secIdx);
       }
       continue;
     }
@@ -1192,7 +1192,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     if (binding == STB_WEAK)
       continue;
     std::lock_guard<std::mutex> lock(mu);
-    ctx->duplicates.push_back({&sym, this, sec, eSym.st_value});
+    ctx.duplicates.push_back({&sym, this, sec, eSym.st_value});
   }
 }
 
@@ -1422,7 +1422,7 @@ template <class ELFT> void SharedFile::parse() {
   if (!wasInserted)
     return;
 
-  ctx->sharedFiles.push_back(this);
+  ctx.sharedFiles.push_back(this);
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
