@@ -290,13 +290,13 @@ class LinkerScript final {
 
   void assignOffsets(OutputSection *sec);
 
-  // Ctx captures the local AddressState and makes it accessible
+  // This captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
   // thread the current state through to a lambda function created by the
   // script parser.
   // This should remain a plain pointer as its lifetime is smaller than
   // LinkerScript.
-  AddressState *ctx = nullptr;
+  AddressState *state = nullptr;
 
   OutputSection *aether;
 
