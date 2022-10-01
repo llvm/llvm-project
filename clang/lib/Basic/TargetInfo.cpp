@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/TargetInfo.h"
-#include "clang/AST/Attr.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
