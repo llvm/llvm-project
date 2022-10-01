@@ -50,8 +50,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 _Tp
 max(initializer_list<_Tp> __t, _Compare __comp)
 {
-    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-    return *_VSTD::__max_element<_Comp_ref>(__t.begin(), __t.end(), __comp);
+    return *_VSTD::__max_element<__comp_ref_type<_Compare> >(__t.begin(), __t.end(), __comp);
 }
 
 template<class _Tp>
