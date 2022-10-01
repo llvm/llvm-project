@@ -452,7 +452,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
         ISD::VP_SQRT,        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,
         ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
-        ISD::VP_FROUNDEVEN};
+        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -3936,6 +3936,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPOp(Op, DAG, RISCVISD::FMINNUM_VL, /*HasMergeOp*/ true);
   case ISD::VP_FMAXNUM:
     return lowerVPOp(Op, DAG, RISCVISD::FMAXNUM_VL, /*HasMergeOp*/ true);
+  case ISD::VP_FCOPYSIGN:
+    return lowerVPOp(Op, DAG, RISCVISD::FCOPYSIGN_VL, /*HasMergeOp*/ true);
   case ISD::VP_SIGN_EXTEND:
   case ISD::VP_ZERO_EXTEND:
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
