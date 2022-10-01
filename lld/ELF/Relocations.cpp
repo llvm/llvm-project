@@ -444,7 +444,6 @@ public:
 private:
   InputSectionBase *sec;
   OffsetGetter getter;
-  const Configuration *const config = elf::config.get();
   const TargetInfo &target = *elf::target;
 
   // End of relocations, used by Mips/PPC64.

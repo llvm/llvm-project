@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/GlobPattern.h"
@@ -101,7 +102,7 @@ struct VersionDefinition {
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
-struct Configuration {
+struct Config {
   uint8_t osabi = 0;
   uint32_t andFeatures = 0;
   llvm::CachePruningPolicy thinLTOCachePolicy;
@@ -368,9 +369,12 @@ struct Configuration {
 
   unsigned threadCount;
 };
+struct ConfigWrapper {
+  Config c;
+  Config *operator->() { return &c; }
+};
 
-// The only instance of Configuration struct.
-extern std::unique_ptr<Configuration> config;
+LLVM_LIBRARY_VISIBILITY extern ConfigWrapper config;
 
 struct DuplicateSymbol {
   const Symbol *sym;
