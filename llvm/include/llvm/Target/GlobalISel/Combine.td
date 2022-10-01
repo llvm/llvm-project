@@ -231,7 +231,7 @@ def undef_to_negative_one: GICombineRule<
 
 def binop_left_undef_to_zero: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_SHL):$root,
+  (match (wip_match_opcode G_SHL, G_UDIV, G_UREM):$root,
          [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
 
