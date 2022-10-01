@@ -802,12 +802,6 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
         Expr *NewIDC = canonicalizeImmediatelyDeclaredConstraint(
                 *this, TC->getImmediatelyDeclaredConstraint(),
                 ParamAsArgument);
-        TemplateArgumentListInfo CanonArgsAsWritten;
-        if (auto *Args = TC->getTemplateArgsAsWritten())
-          for (const auto &ArgLoc : Args->arguments())
-            CanonArgsAsWritten.addArgument(
-                TemplateArgumentLoc(ArgLoc.getArgument(),
-                                    TemplateArgumentLocInfo()));
         NewTTP->setTypeConstraint(
             NestedNameSpecifierLoc(),
             DeclarationNameInfo(TC->getNamedConcept()->getDeclName(),
@@ -5169,7 +5163,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     if (T->isRecordType())
       T.addConst();
     Expr *E = new (*this) DeclRefExpr(
-        *this, NTTP, /*enclosing*/ false, T,
+        *this, NTTP, /*RefersToEnclosingVariableOrCapture*/ false, T,
         Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
 
     if (NTTP->isParameterPack())
@@ -5590,30 +5584,31 @@ QualType ASTContext::getObjCInterfaceType(const ObjCInterfaceDecl *Decl,
 /// multiple declarations that refer to "typeof(x)" all contain different
 /// DeclRefExpr's. This doesn't effect the type checker, since it operates
 /// on canonical type's (which are always unique).
-QualType ASTContext::getTypeOfExprType(Expr *tofExpr) const {
+QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
   TypeOfExprType *toe;
   if (tofExpr->isTypeDependent()) {
     llvm::FoldingSetNodeID ID;
-    DependentTypeOfExprType::Profile(ID, *this, tofExpr);
+    DependentTypeOfExprType::Profile(ID, *this, tofExpr,
+                                     Kind == TypeOfKind::Unqualified);
 
     void *InsertPos = nullptr;
-    DependentTypeOfExprType *Canon
-      = DependentTypeOfExprTypes.FindNodeOrInsertPos(ID, InsertPos);
+    DependentTypeOfExprType *Canon =
+        DependentTypeOfExprTypes.FindNodeOrInsertPos(ID, InsertPos);
     if (Canon) {
       // We already have a "canonical" version of an identical, dependent
       // typeof(expr) type. Use that as our canonical type.
-      toe = new (*this, TypeAlignment) TypeOfExprType(tofExpr,
-                                          QualType((TypeOfExprType*)Canon, 0));
+      toe = new (*this, TypeAlignment)
+          TypeOfExprType(tofExpr, Kind, QualType((TypeOfExprType *)Canon, 0));
     } else {
       // Build a new, canonical typeof(expr) type.
-      Canon
-        = new (*this, TypeAlignment) DependentTypeOfExprType(*this, tofExpr);
+      Canon = new (*this, TypeAlignment)
+          DependentTypeOfExprType(*this, tofExpr, Kind);
       DependentTypeOfExprTypes.InsertNode(Canon, InsertPos);
       toe = Canon;
     }
   } else {
     QualType Canonical = getCanonicalType(tofExpr->getType());
-    toe = new (*this, TypeAlignment) TypeOfExprType(tofExpr, Canonical);
+    toe = new (*this, TypeAlignment) TypeOfExprType(tofExpr, Kind, Canonical);
   }
   Types.push_back(toe);
   return QualType(toe, 0);
@@ -5624,9 +5619,10 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr) const {
 /// memory savings. Since typeof(t) is fairly uncommon, space shouldn't be
 /// an issue. This doesn't affect the type checker, since it operates
 /// on canonical types (which are always unique).
-QualType ASTContext::getTypeOfType(QualType tofType) const {
+QualType ASTContext::getTypeOfType(QualType tofType, TypeOfKind Kind) const {
   QualType Canonical = getCanonicalType(tofType);
-  auto *tot = new (*this, TypeAlignment) TypeOfType(tofType, Canonical);
+  auto *tot =
+      new (*this, TypeAlignment) TypeOfType(tofType, Canonical, Kind);
   Types.push_back(tot);
   return QualType(tot, 0);
 }
@@ -12945,7 +12941,15 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     return Ctx.getTypedefType(CD, Ctx.getQualifiedType(Underlying));
   }
   case Type::TypeOf:
-    return Ctx.getTypeOfType(Ctx.getQualifiedType(Underlying));
+    // The common sugar between two typeof expressions, where one is
+    // potentially a typeof_unqual and the other is not, we unify to the
+    // qualified type as that retains the most information along with the type.
+    // We only return a typeof_unqual type when both types are unqual types.
+    return Ctx.getTypeOfType(Ctx.getQualifiedType(Underlying),
+                             cast<TypeOfType>(X)->isUnqual() &&
+                                     cast<TypeOfType>(Y)->isUnqual()
+                                 ? TypeOfKind::Unqualified
+                                 : TypeOfKind::Qualified);
   case Type::TypeOfExpr:
     return QualType();
 

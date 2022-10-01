@@ -375,8 +375,8 @@
 //
 
 // LDGARANGE: {{".*ld.*"}} {{.*}}
-// LDGARANGE-NOT: "-generate-arange-section"
-// LLDGARANGE: {{".*lld.*"}} {{.*}} "-generate-arange-section"
+// LDGARANGE-NOT: "-plugin-opt=-generate-arange-section"
+// LLDGARANGE: {{".*lld.*"}} {{.*}} "-plugin-opt=-generate-arange-section"
 // SNLDTLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-thin-debug-options=-generate-arange-section"
 // SNLDFLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-debug-options=-generate-arange-section"
 

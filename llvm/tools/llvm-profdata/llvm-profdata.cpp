@@ -39,6 +39,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cmath>
 #include <queue>
 
 using namespace llvm;

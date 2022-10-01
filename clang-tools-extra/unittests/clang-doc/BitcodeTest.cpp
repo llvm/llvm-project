@@ -78,13 +78,14 @@ TEST(BitcodeTest, emitRecordInfoBitcode) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
   I.IsTypeDef = true;
   I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
                        AccessSpecifier::AS_public, true);
   I.Bases.back().ChildFunctions.emplace_back();
-  I.Bases.back().Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  I.Bases.back().Members.emplace_back(TypeInfo("int"), "X",
+                                      AccessSpecifier::AS_private);
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
@@ -119,8 +120,8 @@ TEST(BitcodeTest, emitFunctionInfoBitcode) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "P");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "P");
 
   I.Access = AccessSpecifier::AS_none;
 
@@ -139,8 +140,8 @@ TEST(BitcodeTest, emitMethodInfoBitcode) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "P");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -174,9 +175,9 @@ TEST(BitcodeTest, emitEnumInfoBitcode) {
 TEST(SerializeTest, emitInfoWithCommentBitcode) {
   FunctionInfo F;
   F.Name = "F";
-  F.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  F.ReturnType = TypeInfo("void");
   F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
-  F.Params.emplace_back("int", "I");
+  F.Params.emplace_back(TypeInfo("int"), "I");
 
   CommentInfo Top;
   Top.Kind = "FullComment";

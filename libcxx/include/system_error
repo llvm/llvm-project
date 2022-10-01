@@ -156,6 +156,8 @@ template <> struct hash<std::error_condition>;
 #include <version>
 
 // standard-mandated includes
+
+// [system.error.syn]
 #include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

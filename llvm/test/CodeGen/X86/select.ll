@@ -759,22 +759,21 @@ define i64 @test10(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    xorl %edx, %edx
 ; ATHLON-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl $-1, %ecx
-; ATHLON-NEXT:    movl $1, %eax
-; ATHLON-NEXT:    cmovel %ecx, %eax
-; ATHLON-NEXT:    cmovel %ecx, %edx
+; ATHLON-NEXT:    sete %dl
+; ATHLON-NEXT:    negl %edx
+; ATHLON-NEXT:    movl %edx, %eax
+; ATHLON-NEXT:    orl $1, %eax
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test10:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:    movl $-1, %eax
-; MCU-NEXT:    movl $-1, %edx
-; MCU-NEXT:    je .LBB11_2
-; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl %edx, %ecx
 ; MCU-NEXT:    xorl %edx, %edx
-; MCU-NEXT:    movl $1, %eax
-; MCU-NEXT:  .LBB11_2:
+; MCU-NEXT:    orl %ecx, %eax
+; MCU-NEXT:    sete %dl
+; MCU-NEXT:    negl %edx
+; MCU-NEXT:    movl %edx, %eax
+; MCU-NEXT:    orl $1, %eax
 ; MCU-NEXT:    retl
   %cmp = icmp eq i64 %x, 0
   %cond = select i1 %cmp, i64 -1, i64 1
@@ -932,22 +931,21 @@ define i64 @eqzero_all_ones_or_const(i64 %x) {
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    xorl %edx, %edx
 ; ATHLON-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl $-1, %ecx
-; ATHLON-NEXT:    movl $42, %eax
-; ATHLON-NEXT:    cmovel %ecx, %eax
-; ATHLON-NEXT:    cmovel %ecx, %edx
+; ATHLON-NEXT:    sete %dl
+; ATHLON-NEXT:    negl %edx
+; ATHLON-NEXT:    movl %edx, %eax
+; ATHLON-NEXT:    orl $42, %eax
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: eqzero_all_ones_or_const:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:    movl $-1, %eax
-; MCU-NEXT:    movl $-1, %edx
-; MCU-NEXT:    je .LBB16_2
-; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl %edx, %ecx
 ; MCU-NEXT:    xorl %edx, %edx
-; MCU-NEXT:    movl $42, %eax
-; MCU-NEXT:  .LBB16_2:
+; MCU-NEXT:    orl %ecx, %eax
+; MCU-NEXT:    sete %dl
+; MCU-NEXT:    negl %edx
+; MCU-NEXT:    movl %edx, %eax
+; MCU-NEXT:    orl $42, %eax
 ; MCU-NEXT:    retl
   %z = icmp eq i64 %x, 0
   %r = select i1 %z, i64 -1, i64 42

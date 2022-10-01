@@ -37,9 +37,17 @@ class Context;
 class Record;
 
 /// The program contains and links the bytecode for all functions.
-class Program {
+class Program final {
 public:
   Program(Context &Ctx) : Ctx(Ctx) {}
+
+  ~Program() {
+    // Records might actually allocate memory themselves, but they
+    // are allocated using a BumpPtrAllocator. Call their desctructors
+    // here manually so they are properly freeing their resources.
+    for (auto RecordPair : Records)
+      RecordPair.second->~Record();
+  }
 
   /// Marshals a native pointer to an ID for embedding in bytecode.
   unsigned getOrCreateNativePointer(const void *Ptr);
@@ -69,7 +77,7 @@ public:
   llvm::Optional<unsigned> getOrCreateDummy(const ParmVarDecl *PD);
 
   /// Creates a global and returns its index.
-  llvm::Optional<unsigned> createGlobal(const ValueDecl *VD);
+  llvm::Optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *E);
 
   /// Creates a global from a lifetime-extended temporary.
   llvm::Optional<unsigned> createGlobal(const Expr *E);
@@ -92,11 +100,6 @@ public:
   /// Returns a function.
   Function *getFunction(const FunctionDecl *F);
 
-  /// Returns a pointer to a function if it exists and can be compiled.
-  /// If a function couldn't be compiled, an error is returned.
-  /// If a function was not yet defined, a null pointer is returned.
-  llvm::Expected<Function *> getOrCreateFunction(const FunctionDecl *F);
-
   /// Returns a record or creates one if it does not exist.
   Record *getOrCreateRecord(const RecordDecl *RD);
 
@@ -111,7 +114,8 @@ public:
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
                                bool IsConst = false, bool IsTemporary = false,
-                               bool IsMutable = false);
+                               bool IsMutable = false,
+                               const Expr *Init = nullptr);
 
   /// Context to manage declaration lifetimes.
   class DeclScope {
@@ -134,7 +138,8 @@ private:
   friend class DeclScope;
 
   llvm::Optional<unsigned> createGlobal(const DeclTy &D, QualType Ty,
-                                        bool IsStatic, bool IsExtern);
+                                        bool IsStatic, bool IsExtern,
+                                        const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;

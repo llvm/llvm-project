@@ -51,7 +51,7 @@ struct DeclStatus {
 class PdbAstBuilder {
 public:
   // Constructors and Destructors
-  PdbAstBuilder(ObjectFile &obj, PdbIndex &index, TypeSystemClang &clang);
+  PdbAstBuilder(TypeSystemClang &clang);
 
   lldb_private::CompilerDeclContext GetTranslationUnitDecl();
 
@@ -83,7 +83,7 @@ public:
   clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
 
   TypeSystemClang &clang() { return m_clang; }
-  ClangASTImporter &importer() { return m_importer; }
+  ClangASTImporter &GetClangASTImporter() { return m_importer; }
 
   void Dump(Stream &stream);
 
@@ -126,19 +126,16 @@ private:
   void ParseDeclsForSimpleContext(clang::DeclContext &context);
   void ParseBlockChildren(PdbCompilandSymId block_id);
 
-  void BuildParentMap();
   std::pair<clang::DeclContext *, std::string>
   CreateDeclInfoForType(const llvm::codeview::TagRecord &record, TypeIndex ti);
   std::pair<clang::DeclContext *, std::string>
   CreateDeclInfoForUndecoratedName(llvm::StringRef uname);
   clang::QualType CreateSimpleType(TypeIndex ti);
 
-  PdbIndex &m_index;
   TypeSystemClang &m_clang;
 
   ClangASTImporter m_importer;
 
-  llvm::DenseMap<TypeIndex, TypeIndex> m_parent_types;
   llvm::DenseMap<clang::Decl *, DeclStatus> m_decl_to_status;
   llvm::DenseMap<lldb::user_id_t, clang::Decl *> m_uid_to_decl;
   llvm::DenseMap<lldb::user_id_t, clang::QualType> m_uid_to_type;

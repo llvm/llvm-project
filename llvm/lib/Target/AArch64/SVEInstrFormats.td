@@ -8054,6 +8054,7 @@ class sve2_char_match<bit sz, bit opc, string asm,
   let Inst{3-0}   = Pd;
 
   let Defs = [NZCV];
+  let ElementSize = pprty.ElementSize;
   let isPTestLike = 1;
 }
 

@@ -14,33 +14,33 @@ define void @foo(i64* nocapture writeonly %da) {
 ; CHECK-128-NEXT:  entry:
 ; CHECK-128-NEXT:    store i64 0, i64* [[DA:%.*]], align 8
 ; CHECK-128-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[DA]], i64 1
-; CHECK-128-NEXT:    store i64 1, i64* [[ARRAYIDX1]], align 8
+; CHECK-128-NEXT:    store i64 0, i64* [[ARRAYIDX1]], align 8
 ; CHECK-128-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[DA]], i64 2
-; CHECK-128-NEXT:    store i64 2, i64* [[ARRAYIDX2]], align 8
+; CHECK-128-NEXT:    store i64 0, i64* [[ARRAYIDX2]], align 8
 ; CHECK-128-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[DA]], i64 3
-; CHECK-128-NEXT:    store i64 3, i64* [[ARRAYIDX3]], align 8
+; CHECK-128-NEXT:    store i64 0, i64* [[ARRAYIDX3]], align 8
 ; CHECK-128-NEXT:    ret void
 ;
 ; CHECK-256-LABEL: @foo(
 ; CHECK-256-NEXT:  entry:
 ; CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast i64* [[DA:%.*]] to <4 x i64>*
-; CHECK-256-NEXT:    store <4 x i64> <i64 0, i64 1, i64 2, i64 3>, <4 x i64>* [[TMP0]], align 8
+; CHECK-256-NEXT:    store <4 x i64> zeroinitializer, <4 x i64>* [[TMP0]], align 8
 ; CHECK-256-NEXT:    ret void
 ;
 ; CHECK-512-LABEL: @foo(
 ; CHECK-512-NEXT:  entry:
 ; CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast i64* [[DA:%.*]] to <4 x i64>*
-; CHECK-512-NEXT:    store <4 x i64> <i64 0, i64 1, i64 2, i64 3>, <4 x i64>* [[TMP0]], align 8
+; CHECK-512-NEXT:    store <4 x i64> zeroinitializer, <4 x i64>* [[TMP0]], align 8
 ; CHECK-512-NEXT:    ret void
 ;
 entry:
   store i64 0, i64* %da, align 8
   %arrayidx1 = getelementptr inbounds i64, i64* %da, i64 1
-  store i64 1, i64* %arrayidx1, align 8
+  store i64 0, i64* %arrayidx1, align 8
   %arrayidx2 = getelementptr inbounds i64, i64* %da, i64 2
-  store i64 2, i64* %arrayidx2, align 8
+  store i64 0, i64* %arrayidx2, align 8
   %arrayidx3 = getelementptr inbounds i64, i64* %da, i64 3
-  store i64 3, i64* %arrayidx3, align 8
+  store i64 0, i64* %arrayidx3, align 8
   ret void
 }
 
@@ -49,14 +49,14 @@ define void @foo8(i8* nocapture writeonly %da) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i8 0, i8* [[DA:%.*]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[DA]], i8 1
-; CHECK-NEXT:    store i8 1, i8* [[ARRAYIDX1]], align 8
+; CHECK-NEXT:    store i8 0, i8* [[ARRAYIDX1]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, i8* [[DA]], i8 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
   store i8 0, i8* %da, align 8
   %arrayidx1 = getelementptr inbounds i8, i8* %da, i8 1
-  store i8 1, i8* %arrayidx1, align 8
+  store i8 0, i8* %arrayidx1, align 8
   %arrayidx2 = getelementptr inbounds i8, i8* %da, i8 2
   ret void
 }

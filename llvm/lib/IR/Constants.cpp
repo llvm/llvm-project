@@ -1682,6 +1682,11 @@ Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
 const APInt &Constant::getUniqueInteger() const {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return CI->getValue();
+  // Scalable vectors can use a ConstantExpr to build a splat.
+  if (isa<ConstantExpr>(this))
+    return cast<ConstantInt>(this->getSplatValue())->getValue();
+  // For non-ConstantExpr we use getAggregateElement as a fast path to avoid
+  // calling getSplatValue in release builds.
   assert(this->getSplatValue() && "Doesn't contain a unique integer!");
   const Constant *C = this->getAggregateElement(0U);
   assert(C && isa<ConstantInt>(C) && "Not a vector of numbers!");

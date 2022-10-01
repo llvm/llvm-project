@@ -33,6 +33,7 @@ using namespace llvm;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   : AMDGPUMachineFunction(MF),
+    Mode(MF.getFunction()),
     BufferPSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     ImagePSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     GWSResourcePSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),

@@ -17,8 +17,9 @@
 
 // -----
 
-def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
-  [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
+def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
+                              [NoSideEffect,
+                               AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Broadcast the Value of the invocation identified by the local id LocalId
     to the result of all invocations in the group.
@@ -69,20 +70,20 @@ def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Groups]>
+    Capability<[SPIRV_C_Groups]>
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_Type:$value,
-    SPV_ScalarOrVectorOf<SPV_Integer>:$localid
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_Type:$value,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$localid
   );
 
   let results = (outs
-    SPV_Type:$result
+    SPIRV_Type:$result
   );
 
   let assemblyFormat = [{
@@ -92,7 +93,7 @@ def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
 
 // -----
 
-def SPV_KHRSubgroupBallotOp : SPV_KhrVendorOp<"SubgroupBallot", []> {
+def SPIRV_KHRSubgroupBallotOp : SPIRV_KhrVendorOp<"SubgroupBallot", []> {
   let summary = "See extension SPV_KHR_shader_ballot";
 
   let description = [{
@@ -125,18 +126,18 @@ def SPV_KHRSubgroupBallotOp : SPV_KhrVendorOp<"SubgroupBallot", []> {
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_KHR_shader_ballot]>,
-    Capability<[SPV_C_SubgroupBallotKHR]>
+    Capability<[SPIRV_C_SubgroupBallotKHR]>
   ];
 
   let arguments = (ins
-    SPV_Bool:$predicate
+    SPIRV_Bool:$predicate
   );
 
   let results = (outs
-    SPV_Int32Vec4:$result
+    SPIRV_Int32Vec4:$result
   );
 
   let hasVerifier = 0;
@@ -146,7 +147,7 @@ def SPV_KHRSubgroupBallotOp : SPV_KhrVendorOp<"SubgroupBallot", []> {
 
 // -----
 
-def SPV_INTELSubgroupBlockReadOp : SPV_IntelVendorOp<"SubgroupBlockRead", []> {
+def SPIRV_INTELSubgroupBlockReadOp : SPIRV_IntelVendorOp<"SubgroupBlockRead", []> {
   let summary = "See extension SPV_INTEL_subgroups";
 
   let description = [{
@@ -180,24 +181,24 @@ def SPV_INTELSubgroupBlockReadOp : SPV_IntelVendorOp<"SubgroupBlockRead", []> {
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_INTEL_subgroups]>,
-    Capability<[SPV_C_SubgroupBufferBlockIOINTEL]>
+    Capability<[SPIRV_C_SubgroupBufferBlockIOINTEL]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$ptr
+    SPIRV_AnyPtr:$ptr
   );
 
   let results = (outs
-    SPV_Type:$value
+    SPIRV_Type:$value
   );
 }
 
 // -----
 
-def SPV_INTELSubgroupBlockWriteOp : SPV_IntelVendorOp<"SubgroupBlockWrite", []> {
+def SPIRV_INTELSubgroupBlockWriteOp : SPIRV_IntelVendorOp<"SubgroupBlockWrite", []> {
   let summary = "See extension SPV_INTEL_subgroups";
 
   let description = [{
@@ -230,15 +231,15 @@ def SPV_INTELSubgroupBlockWriteOp : SPV_IntelVendorOp<"SubgroupBlockWrite", []> 
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_INTEL_subgroups]>,
-    Capability<[SPV_C_SubgroupBufferBlockIOINTEL]>
+    Capability<[SPIRV_C_SubgroupBufferBlockIOINTEL]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$ptr,
-    SPV_Type:$value
+    SPIRV_AnyPtr:$ptr,
+    SPIRV_Type:$value
   );
 
   let results = (outs);

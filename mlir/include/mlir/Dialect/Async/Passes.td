@@ -34,7 +34,7 @@ def AsyncParallelFor : Pass<"async-parallel-for", "ModuleOp"> {
   ];
 
   let dependentDialects = [
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "async::AsyncDialect",
     "scf::SCFDialect"
   ];

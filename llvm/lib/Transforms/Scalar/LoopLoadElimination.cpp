@@ -109,8 +109,8 @@ struct StoreToLoadForwardingCandidate {
     // Currently we only support accesses with unit stride.  FIXME: we should be
     // able to handle non unit stirde as well as long as the stride is equal to
     // the dependence distance.
-    if (getPtrStride(PSE, LoadType, LoadPtr, L) != 1 ||
-        getPtrStride(PSE, LoadType, StorePtr, L) != 1)
+    if (getPtrStride(PSE, LoadType, LoadPtr, L).value_or(0) != 1 ||
+        getPtrStride(PSE, LoadType, StorePtr, L).value_or(0) != 1)
       return false;
 
     unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));

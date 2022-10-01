@@ -2646,6 +2646,25 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   default:
     break;
+  case PPC::TW:
+  case PPC::TWI:
+  case PPC::TD:
+  case PPC::TDI: {
+    if (MI->getNumOperands() < 5)
+      break; 
+    const MachineOperand &LangMO = MI->getOperand(3);
+    const MachineOperand &ReasonMO = MI->getOperand(4);
+    if (!LangMO.isImm() || !ReasonMO.isImm())
+      break;
+    MCSymbol *TempSym = OutContext.createNamedTempSymbol();
+    OutStreamer->emitLabel(TempSym);
+    OutStreamer->emitXCOFFExceptDirective(CurrentFnSym, TempSym,
+                 LangMO.getImm(), ReasonMO.getImm(),
+                 Subtarget->isPPC64() ? MI->getMF()->getInstructionCount() * 8 :
+                 MI->getMF()->getInstructionCount() * 4,
+		 MMI->hasDebugInfo());
+    break;
+  }
   case PPC::GETtlsADDR64AIX:
   case PPC::GETtlsADDR32AIX: {
     // The reference to .__tls_get_addr is unknown to the assembler

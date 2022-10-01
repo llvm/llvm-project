@@ -408,8 +408,8 @@ define i32 @test13(i32 %x) {
 define i32 @test14(i32 %x) {
 ; CHECK-LABEL: test14:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #14
-; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    lsl w8, w0, #4
+; CHECK-NEXT:    sub w0, w8, w0, lsl #1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test14:

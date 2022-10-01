@@ -15,7 +15,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -438,8 +438,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
       resultTypes.push_back(newInputOutputTypes[i + genericOp.getNumInputs()]);
     GenericOp replacementOp = rewriter.create<GenericOp>(
         loc, resultTypes, newInputs, newOutputs, newIndexingMaps,
-        llvm::to_vector<4>(genericOp.getIteratorTypes()
-                               .template getAsValueRange<StringAttr>()));
+        genericOp.getIteratorTypesArray());
     rewriter.inlineRegionBefore(genericOp.getRegion(),
                                 replacementOp.getRegion(),
                                 replacementOp.getRegion().begin());

@@ -17,28 +17,28 @@ include "mlir/Dialect/SPIRV/IR/SPIRVOps.td"
 // spirv.Bitcast
 //===----------------------------------------------------------------------===//
 
-def ConvertChainedBitcast : Pat<(SPV_BitcastOp (SPV_BitcastOp $operand)),
-                                (SPV_BitcastOp $operand)>;
+def ConvertChainedBitcast : Pat<(SPIRV_BitcastOp (SPIRV_BitcastOp $operand)),
+                                (SPIRV_BitcastOp $operand)>;
 
 //===----------------------------------------------------------------------===//
 // spirv.LogicalNot
 //===----------------------------------------------------------------------===//
 
 def ConvertLogicalNotOfIEqual : Pat<
-    (SPV_LogicalNotOp (SPV_IEqualOp $lhs, $rhs)),
-    (SPV_INotEqualOp $lhs, $rhs)>;
+    (SPIRV_LogicalNotOp (SPIRV_IEqualOp $lhs, $rhs)),
+    (SPIRV_INotEqualOp $lhs, $rhs)>;
 
 def ConvertLogicalNotOfINotEqual : Pat<
-    (SPV_LogicalNotOp (SPV_INotEqualOp $lhs, $rhs)),
-    (SPV_IEqualOp $lhs, $rhs)>;
+    (SPIRV_LogicalNotOp (SPIRV_INotEqualOp $lhs, $rhs)),
+    (SPIRV_IEqualOp $lhs, $rhs)>;
 
 def ConvertLogicalNotOfLogicalEqual : Pat<
-    (SPV_LogicalNotOp (SPV_LogicalEqualOp $lhs, $rhs)),
-    (SPV_LogicalNotEqualOp $lhs, $rhs)>;
+    (SPIRV_LogicalNotOp (SPIRV_LogicalEqualOp $lhs, $rhs)),
+    (SPIRV_LogicalNotEqualOp $lhs, $rhs)>;
 
 def ConvertLogicalNotOfLogicalNotEqual : Pat<
-    (SPV_LogicalNotOp (SPV_LogicalNotEqualOp $lhs, $rhs)),
-    (SPV_LogicalEqualOp $lhs, $rhs)>;
+    (SPIRV_LogicalNotOp (SPIRV_LogicalNotEqualOp $lhs, $rhs)),
+    (SPIRV_LogicalEqualOp $lhs, $rhs)>;
 
 //===----------------------------------------------------------------------===//
 // spirv.Select -> spirv.GL.*Clamp
@@ -47,18 +47,18 @@ def ConvertLogicalNotOfLogicalNotEqual : Pat<
 def ValuesAreEqual : Constraint<CPred<"$0 == $1">>;
 
 foreach CmpClampPair = [
-    [SPV_FOrdLessThanOp, SPV_GLFClampOp],
-    [SPV_FOrdLessThanEqualOp, SPV_GLFClampOp],
-    [SPV_SLessThanOp, SPV_GLSClampOp],
-    [SPV_SLessThanEqualOp, SPV_GLSClampOp],
-    [SPV_ULessThanOp, SPV_GLUClampOp],
-    [SPV_ULessThanEqualOp, SPV_GLUClampOp]] in {
+    [SPIRV_FOrdLessThanOp, SPIRV_GLFClampOp],
+    [SPIRV_FOrdLessThanEqualOp, SPIRV_GLFClampOp],
+    [SPIRV_SLessThanOp, SPIRV_GLSClampOp],
+    [SPIRV_SLessThanEqualOp, SPIRV_GLSClampOp],
+    [SPIRV_ULessThanOp, SPIRV_GLUClampOp],
+    [SPIRV_ULessThanEqualOp, SPIRV_GLUClampOp]] in {
 
 // Detect: $min < $input, $input < $max
 def ConvertComparisonIntoClamp1_#CmpClampPair[0] : Pat<
-    (SPV_SelectOp
+    (SPIRV_SelectOp
         (CmpClampPair[0]
-            (SPV_SelectOp:$middle0
+            (SPIRV_SelectOp:$middle0
                 (CmpClampPair[0] $min, $input),
                 $input,
                 $min
@@ -72,10 +72,10 @@ def ConvertComparisonIntoClamp1_#CmpClampPair[0] : Pat<
 
 // Detect: $input < $min, $max < $input
 def ConvertComparisonIntoClamp2_#CmpClampPair[0] : Pat<
-    (SPV_SelectOp
+    (SPIRV_SelectOp
         (CmpClampPair[0] $max, $input),
         $max,
-        (SPV_SelectOp
+        (SPIRV_SelectOp
             (CmpClampPair[0] $input, $min),
             $min,
             $input

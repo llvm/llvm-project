@@ -745,6 +745,9 @@ private:
           &CachedResults,
       Action::OffloadKind TargetDeviceOffloadKind) const;
 
+  /// Return the typical executable name for the specified driver \p Mode.
+  static const char *getExecutableForDriverMode(DriverMode Mode);
+
 public:
   ///  Add string to OffloadArchs set for each '--offload-arch=' arg
   ///

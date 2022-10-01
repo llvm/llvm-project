@@ -265,6 +265,10 @@ Below are some guidelines about the format of the message itself:
   information including the method we used for attribution before the project
   migrated to git.
 
+  In the rare situation where there are multiple authors, please use the `git
+  tag 'Co-author-by:' to list the additional authors
+  <https://github.blog/2018-01-29-commit-together-with-co-authors/>`_.
+
 * The title should be concise. Because all commits are emailed to the list with
   the first line as the subject, long titles are frowned upon.  Short titles
   also look better in `git log`.

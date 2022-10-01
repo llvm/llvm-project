@@ -14,24 +14,24 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS
 #define MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS
 
-class SPV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
-      list<Trait> traits = []> : SPV_Op<mnemonic, traits> {
+class SPIRV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
+      list<Trait> traits = []> : SPIRV_Op<mnemonic, traits> {
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_GroupOperationAttr:$group_operation,
-    SPV_ScalarOrVectorOf<type>:$value,
-    Optional<SPV_Integer>:$cluster_size
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_ScalarOrVectorOf<type>:$value,
+    Optional<SPIRV_Integer>:$cluster_size
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOf<type>:$result
+    SPIRV_ScalarOrVectorOf<type>:$result
   );
 }
 
 // -----
 
-def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
+def SPIRV_GroupNonUniformBallotOp : SPIRV_Op<"GroupNonUniformBallot", []> {
   let summary = [{
     Result is a bitfield value combining the Predicate value from all
     invocations in the group that execute the same dynamic instance of this
@@ -69,19 +69,19 @@ def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformBallot]>
+    Capability<[SPIRV_C_GroupNonUniformBallot]>
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_Bool:$predicate
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_Bool:$predicate
   );
 
   let results = (outs
-    SPV_IOrUIVec4:$result
+    SPIRV_IOrUIVec4:$result
   );
 
   let assemblyFormat = [{
@@ -91,7 +91,7 @@ def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
 
 // -----
 
-def SPV_GroupNonUniformBroadcastOp : SPV_Op<"GroupNonUniformBroadcast",
+def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
   [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Result is the Value of the invocation identified by the id Id to all
@@ -139,20 +139,20 @@ def SPV_GroupNonUniformBroadcastOp : SPV_Op<"GroupNonUniformBroadcast",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformBallot]>
+    Capability<[SPIRV_C_GroupNonUniformBallot]>
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_Type:$value,
-    SPV_Integer:$id
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_Type:$value,
+    SPIRV_Integer:$id
   );
 
   let results = (outs
-    SPV_Type:$result
+    SPIRV_Type:$result
   );
 
   let assemblyFormat = [{
@@ -162,7 +162,7 @@ def SPV_GroupNonUniformBroadcastOp : SPV_Op<"GroupNonUniformBroadcast",
 
 // -----
 
-def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
+def SPIRV_GroupNonUniformElectOp : SPIRV_Op<"GroupNonUniformElect", []> {
   let summary = [{
     Result is true only in the active invocation with the lowest id in the
     group, otherwise result is false.
@@ -189,18 +189,18 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniform]>
+    Capability<[SPIRV_C_GroupNonUniform]>
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope
+    SPIRV_ScopeAttr:$execution_scope
   );
 
   let results = (outs
-    SPV_Bool:$result
+    SPIRV_Bool:$result
   );
 
   let assemblyFormat = "$execution_scope attr-dict `:` type($result)";
@@ -208,7 +208,7 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
 
 // -----
 
-def SPV_GroupNonUniformFAddOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformFAdd", SPV_Float, []> {
+def SPIRV_GroupNonUniformFAddOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformFAdd", SPIRV_Float, []> {
   let summary = [{
     A floating point add group operation of all Value operands contributed
     by active invocations in the group.
@@ -256,16 +256,16 @@ def SPV_GroupNonUniformFAddOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformFMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformFMax", SPV_Float, []> {
+def SPIRV_GroupNonUniformFMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformFMax", SPIRV_Float, []> {
   let summary = [{
     A floating point maximum group operation of all Value operands
     contributed by active invocations in by group.
@@ -316,16 +316,16 @@ def SPV_GroupNonUniformFMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformFMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformFMin", SPV_Float, []> {
+def SPIRV_GroupNonUniformFMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformFMin", SPIRV_Float, []> {
   let summary = [{
     A floating point minimum group operation of all Value operands
     contributed by active invocations in the group.
@@ -376,16 +376,16 @@ def SPV_GroupNonUniformFMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformFMulOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformFMul", SPV_Float, []> {
+def SPIRV_GroupNonUniformFMulOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformFMul", SPIRV_Float, []> {
   let summary = [{
     A floating point multiply group operation of all Value operands
     contributed by active invocations in the group.
@@ -433,16 +433,16 @@ def SPV_GroupNonUniformFMulOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformIAddOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformIAdd", SPV_Integer, []> {
+def SPIRV_GroupNonUniformIAddOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformIAdd", SPIRV_Integer, []> {
   let summary = [{
     An integer add group operation of all Value operands contributed by
     active invocations in the group.
@@ -488,16 +488,16 @@ def SPV_GroupNonUniformIAddOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformIMulOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformIMul", SPV_Integer, []> {
+def SPIRV_GroupNonUniformIMulOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformIMul", SPIRV_Integer, []> {
   let summary = [{
     An integer multiply group operation of all Value operands contributed by
     active invocations in the group.
@@ -543,17 +543,17 @@ def SPV_GroupNonUniformIMulOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformSMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformSMax",
-                                    SPV_Integer,
+def SPIRV_GroupNonUniformSMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformSMax",
+                                    SPIRV_Integer,
                                     [SignedOp]> {
   let summary = [{
     A signed integer maximum group operation of all Value operands
@@ -600,17 +600,17 @@ def SPV_GroupNonUniformSMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformSMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformSMin",
-                                    SPV_Integer,
+def SPIRV_GroupNonUniformSMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformSMin",
+                                    SPIRV_Integer,
                                     [SignedOp]> {
   let summary = [{
     A signed integer minimum group operation of all Value operands
@@ -657,16 +657,16 @@ def SPV_GroupNonUniformSMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformShuffleOp : SPV_Op<"GroupNonUniformShuffle",
+def SPIRV_GroupNonUniformShuffleOp : SPIRV_Op<"GroupNonUniformShuffle",
     [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Result is the Value of the invocation identified by the id Id.
@@ -695,20 +695,20 @@ def SPV_GroupNonUniformShuffleOp : SPV_Op<"GroupNonUniformShuffle",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformShuffle]>
+    Capability<[SPIRV_C_GroupNonUniformShuffle]>
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_ScalarOrVector:$value,
-    SPV_Integer:$id
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_ScalarOrVector:$value,
+    SPIRV_Integer:$id
   );
 
   let results = (outs
-    SPV_ScalarOrVector:$result
+    SPIRV_ScalarOrVector:$result
   );
 
   let assemblyFormat = [{
@@ -718,7 +718,7 @@ def SPV_GroupNonUniformShuffleOp : SPV_Op<"GroupNonUniformShuffle",
 
 // -----
 
-def SPV_GroupNonUniformShuffleDownOp : SPV_Op<"GroupNonUniformShuffleDown",
+def SPIRV_GroupNonUniformShuffleDownOp : SPIRV_Op<"GroupNonUniformShuffleDown",
     [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Result is the Value of the invocation identified by the current
@@ -750,20 +750,20 @@ def SPV_GroupNonUniformShuffleDownOp : SPV_Op<"GroupNonUniformShuffleDown",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformShuffleRelative]>
+    Capability<[SPIRV_C_GroupNonUniformShuffleRelative]>
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_ScalarOrVector:$value,
-    SPV_Integer:$delta
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_ScalarOrVector:$value,
+    SPIRV_Integer:$delta
   );
 
   let results = (outs
-    SPV_Type:$result
+    SPIRV_Type:$result
   );
 
   let assemblyFormat = [{
@@ -773,7 +773,7 @@ def SPV_GroupNonUniformShuffleDownOp : SPV_Op<"GroupNonUniformShuffleDown",
 
 // -----
 
-def SPV_GroupNonUniformShuffleUpOp : SPV_Op<"GroupNonUniformShuffleUp",
+def SPIRV_GroupNonUniformShuffleUpOp : SPIRV_Op<"GroupNonUniformShuffleUp",
     [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Result is the Value of the invocation identified by the current
@@ -804,20 +804,20 @@ def SPV_GroupNonUniformShuffleUpOp : SPV_Op<"GroupNonUniformShuffleUp",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformShuffleRelative]>
+    Capability<[SPIRV_C_GroupNonUniformShuffleRelative]>
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_ScalarOrVector:$value,
-    SPV_Integer:$delta
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_ScalarOrVector:$value,
+    SPIRV_Integer:$delta
   );
 
   let results = (outs
-    SPV_Type:$result
+    SPIRV_Type:$result
   );
 
   let assemblyFormat = [{
@@ -827,7 +827,7 @@ def SPV_GroupNonUniformShuffleUpOp : SPV_Op<"GroupNonUniformShuffleUp",
 
 // -----
 
-def SPV_GroupNonUniformShuffleXorOp : SPV_Op<"GroupNonUniformShuffleXor",
+def SPIRV_GroupNonUniformShuffleXorOp : SPIRV_Op<"GroupNonUniformShuffleXor",
     [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Result is the Value of the invocation identified by the current
@@ -858,20 +858,20 @@ def SPV_GroupNonUniformShuffleXorOp : SPV_Op<"GroupNonUniformShuffleXor",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformShuffle]>
+    Capability<[SPIRV_C_GroupNonUniformShuffle]>
   ];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_ScalarOrVector:$value,
-    SPV_Integer:$mask
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_ScalarOrVector:$value,
+    SPIRV_Integer:$mask
   );
 
   let results = (outs
-    SPV_Type:$result
+    SPIRV_Type:$result
   );
 
   let assemblyFormat = [{
@@ -881,8 +881,8 @@ def SPV_GroupNonUniformShuffleXorOp : SPV_Op<"GroupNonUniformShuffleXor",
 
 // -----
 
-def SPV_GroupNonUniformUMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformUMax",
-                                    SPV_Integer,
+def SPIRV_GroupNonUniformUMaxOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformUMax",
+                                    SPIRV_Integer,
                                     [UnsignedOp]> {
   let summary = [{
     An unsigned integer maximum group operation of all Value operands
@@ -930,17 +930,17 @@ def SPV_GroupNonUniformUMaxOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 
 // -----
 
-def SPV_GroupNonUniformUMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniformUMin",
-                                    SPV_Integer,
+def SPIRV_GroupNonUniformUMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformUMin",
+                                    SPIRV_Integer,
                                     [UnsignedOp]> {
   let summary = [{
     An unsigned integer minimum group operation of all Value operands
@@ -988,10 +988,10 @@ def SPV_GroupNonUniformUMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
+    Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformClustered, SPIRV_C_GroupNonUniformPartitionedNV]>
   ];
 }
 

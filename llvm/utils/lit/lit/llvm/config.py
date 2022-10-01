@@ -544,6 +544,8 @@ class LLVMConfig(object):
                         extra_args=['--driver-mode=cpp']+additional_flags),
               ToolSubst('%clang_cl', command=self.config.clang,
                         extra_args=['--driver-mode=cl']+additional_flags),
+              ToolSubst('%clang_dxc', command=self.config.clang,
+                        extra_args=['--driver-mode=dxc']+additional_flags),
               ToolSubst('%clangxx', command=self.config.clang,
                         extra_args=['--driver-mode=g++']+additional_flags),
               ]

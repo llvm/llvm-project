@@ -15,7 +15,7 @@
 
 // -----
 
-def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
+def SPIRV_NVCooperativeMatrixLengthOp : SPIRV_NvVendorOp<"CooperativeMatrixLength",
   [NoSideEffect]> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
@@ -42,10 +42,10 @@ def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
   let assemblyFormat = "attr-dict `:` $cooperative_matrix_type";
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_NV_cooperative_matrix]>,
-    Capability<[SPV_C_CooperativeMatrixNV]>
+    Capability<[SPIRV_C_CooperativeMatrixNV]>
   ];
 
   let arguments = (ins
@@ -53,14 +53,14 @@ def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
   );
 
   let results = (outs
-    SPV_Int32:$result
+    SPIRV_Int32:$result
   );
   let hasVerifier = 0;
 }
 
 // -----
 
-def SPV_NVCooperativeMatrixLoadOp : SPV_NvVendorOp<"CooperativeMatrixLoad", []> {
+def SPIRV_NVCooperativeMatrixLoadOp : SPIRV_NvVendorOp<"CooperativeMatrixLoad", []> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
   let description = [{
@@ -116,27 +116,27 @@ def SPV_NVCooperativeMatrixLoadOp : SPV_NvVendorOp<"CooperativeMatrixLoad", []> 
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_NV_cooperative_matrix]>,
-    Capability<[SPV_C_CooperativeMatrixNV]>
+    Capability<[SPIRV_C_CooperativeMatrixNV]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer,
-    SPV_Integer:$stride,
-    SPV_Bool:$columnmajor,
-    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_Integer:$stride,
+    SPIRV_Bool:$columnmajor,
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access
   );
 
   let results = (outs
-    SPV_AnyCooperativeMatrix:$result
+    SPIRV_AnyCooperativeMatrix:$result
   );
 }
 
 // -----
 
-def SPV_NVCooperativeMatrixMulAddOp : SPV_NvVendorOp<"CooperativeMatrixMulAdd",
+def SPIRV_NVCooperativeMatrixMulAddOp : SPIRV_NvVendorOp<"CooperativeMatrixMulAdd",
   [NoSideEffect, AllTypesMatch<["c", "result"]>]> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
@@ -191,26 +191,26 @@ def SPV_NVCooperativeMatrixMulAddOp : SPV_NvVendorOp<"CooperativeMatrixMulAdd",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_NV_cooperative_matrix]>,
-    Capability<[SPV_C_CooperativeMatrixNV]>
+    Capability<[SPIRV_C_CooperativeMatrixNV]>
   ];
 
   let arguments = (ins
-    SPV_AnyCooperativeMatrix:$a,
-    SPV_AnyCooperativeMatrix:$b,
-    SPV_AnyCooperativeMatrix:$c
+    SPIRV_AnyCooperativeMatrix:$a,
+    SPIRV_AnyCooperativeMatrix:$b,
+    SPIRV_AnyCooperativeMatrix:$c
   );
 
   let results = (outs
-    SPV_AnyCooperativeMatrix:$result
+    SPIRV_AnyCooperativeMatrix:$result
   );
 }
 
 // -----
 
-def SPV_NVCooperativeMatrixStoreOp : SPV_NvVendorOp<"CooperativeMatrixStore", []> {
+def SPIRV_NVCooperativeMatrixStoreOp : SPIRV_NvVendorOp<"CooperativeMatrixStore", []> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
   let description = [{
@@ -252,18 +252,18 @@ def SPV_NVCooperativeMatrixStoreOp : SPV_NvVendorOp<"CooperativeMatrixStore", []
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_NV_cooperative_matrix]>,
-    Capability<[SPV_C_CooperativeMatrixNV]>
+    Capability<[SPIRV_C_CooperativeMatrixNV]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer,
-    SPV_AnyCooperativeMatrix:$object,
-    SPV_Integer:$stride,
-    SPV_Bool:$columnmajor,
-    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_AnyCooperativeMatrix:$object,
+    SPIRV_Integer:$stride,
+    SPIRV_Bool:$columnmajor,
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access
   );
 
   let results = (outs);

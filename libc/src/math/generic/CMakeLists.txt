@@ -138,6 +138,7 @@ add_entrypoint_object(
     ../tanf.h
   DEPENDS
     .range_reduction
+    .sincosf_utils
     libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.fenv_impl

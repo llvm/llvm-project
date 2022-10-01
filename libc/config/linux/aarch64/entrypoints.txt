@@ -22,6 +22,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
+    # sched.h entrypoints
+    libc.src.sched.sched_getaffinity
+    libc.src.sched.sched_setaffinity
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero
@@ -57,6 +61,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # string.h entrypoints that depend on malloc
     libc.src.string.strdup
     libc.src.string.strndup
+    libc.src.string.strerror
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -98,8 +103,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
 
     # sys/mman.h entrypoints
+    libc.src.sys.mman.madvise
     libc.src.sys.mman.mmap
+    libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
+    libc.src.sys.mman.posix_madvise
+
+    # sys/resource.h entrypoints
+    libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
 
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
@@ -108,8 +120,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.chmod
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
+    libc.src.sys.stat.fstat
+    libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
+    libc.src.sys.stat.stat
 
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
@@ -124,6 +139,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fchdir
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
+    libc.src.unistd.geteuid
+    libc.src.unistd.getpid
+    libc.src.unistd.getppid
+    libc.src.unistd.getuid
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
@@ -294,6 +313,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setpshared
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
+    libc.src.pthread.pthread_once
     libc.src.pthread.pthread_setspecific
 
     # stdio.h entrypoints
@@ -307,6 +327,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ferror_unlocked
     libc.src.stdio.fflush
     libc.src.stdio.fopen
+    libc.src.stdio.fputs
     libc.src.stdio.fopencookie
     libc.src.stdio.fread
     libc.src.stdio.fread_unlocked
@@ -316,6 +337,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fwrite_unlocked
     libc.src.stdio.fprintf
     libc.src.stdio.printf
+    libc.src.stdio.puts
     libc.src.stdio.stderr
     libc.src.stdio.stdout
 
@@ -354,6 +376,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime_r
     libc.src.time.mktime
     libc.src.time.nanosleep
+    libc.src.time.clock_gettime
   )
 endif()
 

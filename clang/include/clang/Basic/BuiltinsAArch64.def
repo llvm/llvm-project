@@ -17,6 +17,10 @@
 #   define LANGBUILTIN(ID, TYPE, ATTRS, BUILTIN_LANG) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
+#  define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
 #if defined(BUILTIN) && !defined(TARGET_HEADER_BUILTIN)
 #  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
@@ -45,14 +49,14 @@ BUILTIN(__builtin_arm_sev, "v", "")
 BUILTIN(__builtin_arm_sevl, "v", "")
 
 // CRC32
-BUILTIN(__builtin_arm_crc32b, "UiUiUc", "nc")
-BUILTIN(__builtin_arm_crc32cb, "UiUiUc", "nc")
-BUILTIN(__builtin_arm_crc32h, "UiUiUs", "nc")
-BUILTIN(__builtin_arm_crc32ch, "UiUiUs", "nc")
-BUILTIN(__builtin_arm_crc32w, "UiUiUi", "nc")
-BUILTIN(__builtin_arm_crc32cw, "UiUiUi", "nc")
-BUILTIN(__builtin_arm_crc32d, "UiUiWUi", "nc")
-BUILTIN(__builtin_arm_crc32cd, "UiUiWUi", "nc")
+TARGET_BUILTIN(__builtin_arm_crc32b, "UiUiUc", "nc", "crc")
+TARGET_BUILTIN(__builtin_arm_crc32cb, "UiUiUc", "nc", "crc")
+TARGET_BUILTIN(__builtin_arm_crc32h, "UiUiUs", "nc", "crc")
+TARGET_BUILTIN(__builtin_arm_crc32ch, "UiUiUs", "nc", "crc")
+TARGET_BUILTIN(__builtin_arm_crc32w, "UiUiUi", "nc", "crc")
+TARGET_BUILTIN(__builtin_arm_crc32cw, "UiUiUi", "nc", "crc")
+TARGET_BUILTIN(__builtin_arm_crc32d, "UiUiWUi", "nc", "crc")
+TARGET_BUILTIN(__builtin_arm_crc32cd, "UiUiWUi", "nc", "crc")
 
 // Memory Tagging Extensions (MTE)
 BUILTIN(__builtin_arm_irg, "v*v*Ui", "t")
@@ -103,14 +107,14 @@ BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
 BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
 // Armv8.5-A FP rounding intrinsics
-BUILTIN(__builtin_arm_frint32zf, "ff", "")
-BUILTIN(__builtin_arm_frint32z, "dd", "")
-BUILTIN(__builtin_arm_frint64zf, "ff", "")
-BUILTIN(__builtin_arm_frint64z, "dd", "")
-BUILTIN(__builtin_arm_frint32xf, "ff", "")
-BUILTIN(__builtin_arm_frint32x, "dd", "")
-BUILTIN(__builtin_arm_frint64xf, "ff", "")
-BUILTIN(__builtin_arm_frint64x, "dd", "")
+BUILTIN(__builtin_arm_rint32zf, "ff", "")
+BUILTIN(__builtin_arm_rint32z, "dd", "")
+BUILTIN(__builtin_arm_rint64zf, "ff", "")
+BUILTIN(__builtin_arm_rint64z, "dd", "")
+BUILTIN(__builtin_arm_rint32xf, "ff", "")
+BUILTIN(__builtin_arm_rint32x, "dd", "")
+BUILTIN(__builtin_arm_rint64xf, "ff", "")
+BUILTIN(__builtin_arm_rint64x, "dd", "")
 
 // Armv8.5-A Random number generation intrinsics
 BUILTIN(__builtin_arm_rndr,   "iWUi*", "n")

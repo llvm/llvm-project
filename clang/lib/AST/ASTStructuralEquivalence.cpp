@@ -974,8 +974,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   case Type::TypeOf:
     if (!IsStructurallyEquivalent(Context,
-                                  cast<TypeOfType>(T1)->getUnderlyingType(),
-                                  cast<TypeOfType>(T2)->getUnderlyingType()))
+                                  cast<TypeOfType>(T1)->getUnmodifiedType(),
+                                  cast<TypeOfType>(T2)->getUnmodifiedType()))
       return false;
     break;
 

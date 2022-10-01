@@ -201,6 +201,7 @@ void AArch64Subtarget::initializeProperties() {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseN2:
+  case NeoverseV2:
     PrefFunctionLogAlignment = 4;
     PrefLoopLogAlignment = 5;
     MaxBytesForLoopAlignment = 16;

@@ -1020,10 +1020,12 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CTPOP:
   case ISD::FABS: case ISD::VP_FABS:
   case ISD::FCEIL:
+  case ISD::VP_FCEIL:
   case ISD::FCOS:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FFLOOR:
+  case ISD::VP_FFLOOR:
   case ISD::FLOG:
   case ISD::FLOG10:
   case ISD::FLOG2:
@@ -1041,7 +1043,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_FP_TO_UINT:
   case ISD::FRINT:
   case ISD::FROUND:
+  case ISD::VP_FROUND:
   case ISD::FROUNDEVEN:
+  case ISD::VP_FROUNDEVEN:
   case ISD::FSIN:
   case ISD::FSQRT: case ISD::VP_SQRT:
   case ISD::FTRUNC:
@@ -1071,8 +1075,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FADD: case ISD::VP_FADD:
   case ISD::FSUB: case ISD::VP_FSUB:
   case ISD::FMUL: case ISD::VP_FMUL:
-  case ISD::FMINNUM:
-  case ISD::FMAXNUM:
+  case ISD::FMINNUM: case ISD::VP_FMINNUM:
+  case ISD::FMAXNUM: case ISD::VP_FMAXNUM:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::SDIV: case ISD::VP_SDIV:
@@ -3924,8 +3928,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SHL: case ISD::VP_SHL:
   case ISD::SRA: case ISD::VP_ASHR:
   case ISD::SRL: case ISD::VP_LSHR:
-  case ISD::FMINNUM:
-  case ISD::FMAXNUM:
+  case ISD::FMINNUM: case ISD::VP_FMINNUM:
+  case ISD::FMAXNUM: case ISD::VP_FMAXNUM:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::SMIN:
@@ -4084,6 +4088,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FNEG: case ISD::VP_FNEG:
   case ISD::VP_FABS:
   case ISD::VP_SQRT:
+  case ISD::VP_FCEIL:
+  case ISD::VP_FFLOOR:
+  case ISD::VP_FROUND:
+  case ISD::VP_FROUNDEVEN:
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:

@@ -2,5 +2,5 @@
 
 include "ConstraintChecking.inc"
 
-// CHECK: [[FILE]]:[[@LINE+1]]:1: error: Illegal format for @earlyclobber constraint in 'Foo'
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: Illegal format for @earlyclobber constraint in 'Foo'
 def Foo : TestInstructionWithConstraints<"@earlyclobber ">;

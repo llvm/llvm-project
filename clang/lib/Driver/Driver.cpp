@@ -646,36 +646,38 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
   // If target is MIPS adjust the target triple
   // accordingly to provided ABI name.
-  A = Args.getLastArg(options::OPT_mabi_EQ);
-  if (A && Target.isMIPS()) {
-    StringRef ABIName = A->getValue();
-    if (ABIName == "32") {
-      Target = Target.get32BitArchVariant();
-      if (Target.getEnvironment() == llvm::Triple::GNUABI64 ||
-          Target.getEnvironment() == llvm::Triple::GNUABIN32)
-        Target.setEnvironment(llvm::Triple::GNU);
-    } else if (ABIName == "n32") {
-      Target = Target.get64BitArchVariant();
-      if (Target.getEnvironment() == llvm::Triple::GNU ||
-          Target.getEnvironment() == llvm::Triple::GNUABI64)
-        Target.setEnvironment(llvm::Triple::GNUABIN32);
-    } else if (ABIName == "64") {
-      Target = Target.get64BitArchVariant();
-      if (Target.getEnvironment() == llvm::Triple::GNU ||
-          Target.getEnvironment() == llvm::Triple::GNUABIN32)
-        Target.setEnvironment(llvm::Triple::GNUABI64);
+  if (Target.isMIPS()) {
+    if ((A = Args.getLastArg(options::OPT_mabi_EQ))) {
+      StringRef ABIName = A->getValue();
+      if (ABIName == "32") {
+        Target = Target.get32BitArchVariant();
+        if (Target.getEnvironment() == llvm::Triple::GNUABI64 ||
+            Target.getEnvironment() == llvm::Triple::GNUABIN32)
+          Target.setEnvironment(llvm::Triple::GNU);
+      } else if (ABIName == "n32") {
+        Target = Target.get64BitArchVariant();
+        if (Target.getEnvironment() == llvm::Triple::GNU ||
+            Target.getEnvironment() == llvm::Triple::GNUABI64)
+          Target.setEnvironment(llvm::Triple::GNUABIN32);
+      } else if (ABIName == "64") {
+        Target = Target.get64BitArchVariant();
+        if (Target.getEnvironment() == llvm::Triple::GNU ||
+            Target.getEnvironment() == llvm::Triple::GNUABIN32)
+          Target.setEnvironment(llvm::Triple::GNUABI64);
+      }
     }
   }
 
   // If target is RISC-V adjust the target triple according to
   // provided architecture name
-  A = Args.getLastArg(options::OPT_march_EQ);
-  if (A && Target.isRISCV()) {
-    StringRef ArchName = A->getValue();
-    if (ArchName.startswith_insensitive("rv32"))
-      Target.setArch(llvm::Triple::riscv32);
-    else if (ArchName.startswith_insensitive("rv64"))
-      Target.setArch(llvm::Triple::riscv64);
+  if (Target.isRISCV()) {
+    if ((A = Args.getLastArg(options::OPT_march_EQ))) {
+      StringRef ArchName = A->getValue();
+      if (ArchName.startswith_insensitive("rv32"))
+        Target.setArch(llvm::Triple::riscv32);
+      else if (ArchName.startswith_insensitive("rv64"))
+        Target.setArch(llvm::Triple::riscv64);
+    }
   }
 
   return Target;
@@ -1148,7 +1150,9 @@ static void appendOneArg(InputArgList &Args, const Arg *Opt,
 bool Driver::readConfigFile(StringRef FileName) {
   // Try reading the given file.
   SmallVector<const char *, 32> NewCfgArgs;
-  if (!llvm::cl::readConfigFile(FileName, Saver, NewCfgArgs, getVFS())) {
+  llvm::cl::ExpansionContext ExpCtx(Alloc, llvm::cl::tokenizeConfigFile);
+  ExpCtx.setVFS(&getVFS());
+  if (!ExpCtx.readConfigFile(FileName, NewCfgArgs)) {
     Diag(diag::err_drv_cannot_read_config_file) << FileName;
     return true;
   }
@@ -1271,79 +1275,74 @@ bool Driver::loadConfigFiles() {
 bool Driver::loadDefaultConfigFiles(ArrayRef<StringRef> CfgFileSearchDirs) {
   if (CLOptions && CLOptions->hasArg(options::OPT_no_default_config))
     return false;
-  if (ClangNameParts.TargetPrefix.empty())
-    return false;
 
-  // If config file is not specified explicitly, try to deduce configuration
-  // from executable name. For instance, an executable 'armv7l-clang' will
-  // search for config file 'armv7l-clang.cfg'.
-  std::string CfgFileName =
-        ClangNameParts.TargetPrefix + '-' + ClangNameParts.ModeSuffix;
+  std::string RealMode = getExecutableForDriverMode(Mode);
+  std::string Triple;
 
-  // Determine architecture part of the file name, if it is present.
-  StringRef CfgFileArch = CfgFileName;
-  size_t ArchPrefixLen = CfgFileArch.find('-');
-  if (ArchPrefixLen == StringRef::npos)
-    ArchPrefixLen = CfgFileArch.size();
-  llvm::Triple CfgTriple;
-  CfgFileArch = CfgFileArch.take_front(ArchPrefixLen);
-  CfgTriple = llvm::Triple(llvm::Triple::normalize(CfgFileArch));
-  if (CfgTriple.getArch() == llvm::Triple::ArchType::UnknownArch)
-    ArchPrefixLen = 0;
-
-  if (!StringRef(CfgFileName).endswith(".cfg"))
-    CfgFileName += ".cfg";
-
-  // If config file starts with architecture name and command line options
-  // redefine architecture (with options like -m32 -LE etc), try finding new
-  // config file with that architecture.
-  SmallString<128> FixedConfigFile;
-  size_t FixedArchPrefixLen = 0;
-  if (ArchPrefixLen) {
-    // Get architecture name from config file name like 'i386.cfg' or
-    // 'armv7l-clang.cfg'.
-    // Check if command line options changes effective triple.
-    llvm::Triple EffectiveTriple =
-        computeTargetTriple(*this, CfgTriple.getTriple(), *CLOptions);
-    if (CfgTriple.getArch() != EffectiveTriple.getArch()) {
-      FixedConfigFile = EffectiveTriple.getArchName();
-      FixedArchPrefixLen = FixedConfigFile.size();
-      // Append the rest of original file name so that file name transforms
-      // like: i386-clang.cfg -> x86_64-clang.cfg.
-      if (ArchPrefixLen < CfgFileName.size())
-        FixedConfigFile += CfgFileName.substr(ArchPrefixLen);
-    }
+  // If name prefix is present, no --target= override was passed via CLOptions
+  // and the name prefix is not a valid triple, force it for backwards
+  // compatibility.
+  if (!ClangNameParts.TargetPrefix.empty() &&
+      computeTargetTriple(*this, "/invalid/", *CLOptions).str() ==
+          "/invalid/") {
+    llvm::Triple PrefixTriple{ClangNameParts.TargetPrefix};
+    if (PrefixTriple.getArch() == llvm::Triple::UnknownArch ||
+        PrefixTriple.isOSUnknown())
+      Triple = PrefixTriple.str();
   }
 
-  // Try to find config file. First try file with corrected architecture.
+  // Otherwise, use the real triple as used by the driver.
+  if (Triple.empty()) {
+    llvm::Triple RealTriple =
+        computeTargetTriple(*this, TargetTriple, *CLOptions);
+    Triple = RealTriple.str();
+    assert(!Triple.empty());
+  }
+
+  // Search for config files in the following order:
+  // 1. <triple>-<mode>.cfg using real driver mode
+  //    (e.g. i386-pc-linux-gnu-clang++.cfg).
+  // 2. <triple>-<mode>.cfg using executable suffix
+  //    (e.g. i386-pc-linux-gnu-clang-g++.cfg for *clang-g++).
+  // 3. <triple>.cfg + <mode>.cfg using real driver mode
+  //    (e.g. i386-pc-linux-gnu.cfg + clang++.cfg).
+  // 4. <triple>.cfg + <mode>.cfg using executable suffix
+  //    (e.g. i386-pc-linux-gnu.cfg + clang-g++.cfg for *clang-g++).
+
+  // Try loading <triple>-<mode>.cfg, and return if we find a match.
   llvm::SmallString<128> CfgFilePath;
-  if (!FixedConfigFile.empty()) {
-    if (searchForFile(CfgFilePath, CfgFileSearchDirs, FixedConfigFile,
-                      getVFS()))
-      return readConfigFile(CfgFilePath);
-    // If 'x86_64-clang.cfg' was not found, try 'x86_64.cfg'.
-    FixedConfigFile.resize(FixedArchPrefixLen);
-    FixedConfigFile.append(".cfg");
-    if (searchForFile(CfgFilePath, CfgFileSearchDirs, FixedConfigFile,
-                      getVFS()))
-      return readConfigFile(CfgFilePath);
-  }
-
-  // Then try original file name.
+  std::string CfgFileName = Triple + '-' + RealMode + ".cfg";
   if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()))
     return readConfigFile(CfgFilePath);
 
-  // Finally try removing driver mode part: 'x86_64-clang.cfg' -> 'x86_64.cfg'.
-  if (!ClangNameParts.ModeSuffix.empty() &&
-      !ClangNameParts.TargetPrefix.empty()) {
-    CfgFileName.assign(ClangNameParts.TargetPrefix);
-    CfgFileName.append(".cfg");
+  bool TryModeSuffix = !ClangNameParts.ModeSuffix.empty() &&
+                       ClangNameParts.ModeSuffix != RealMode;
+  if (TryModeSuffix) {
+    CfgFileName = Triple + '-' + ClangNameParts.ModeSuffix + ".cfg";
     if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()))
       return readConfigFile(CfgFilePath);
   }
 
+  // Try loading <mode>.cfg, and return if loading failed.  If a matching file
+  // was not found, still proceed on to try <triple>.cfg.
+  CfgFileName = RealMode + ".cfg";
+  if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS())) {
+    if (readConfigFile(CfgFilePath))
+      return true;
+  } else if (TryModeSuffix) {
+    CfgFileName = ClangNameParts.ModeSuffix + ".cfg";
+    if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()) &&
+        readConfigFile(CfgFilePath))
+      return true;
+  }
+
+  // Try loading <triple>.cfg and return if we find a match.
+  CfgFileName = Triple + ".cfg";
+  if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()))
+    return readConfigFile(CfgFilePath);
+
   // If we were unable to find a config file deduced from executable name,
-  // do not report an error.
+  // that is not an error.
   return false;
 }
 
@@ -6680,6 +6679,25 @@ Driver::getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const {
     ExcludedFlagsBitmask |= options::CLDXCOption;
 
   return std::make_pair(IncludedFlagsBitmask, ExcludedFlagsBitmask);
+}
+
+const char *Driver::getExecutableForDriverMode(DriverMode Mode) {
+  switch (Mode) {
+  case GCCMode:
+    return "clang";
+  case GXXMode:
+    return "clang++";
+  case CPPMode:
+    return "clang-cpp";
+  case CLMode:
+    return "clang-cl";
+  case FlangMode:
+    return "flang";
+  case DXCMode:
+    return "clang-dxc";
+  }
+
+  llvm_unreachable("Unhandled Mode");
 }
 
 bool clang::driver::isOptimizationLevelFast(const ArgList &Args) {

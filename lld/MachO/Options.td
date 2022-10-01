@@ -1246,11 +1246,11 @@ def force_symbols_coalesce_list : Flag<["-"], "force_symbols_coalesce_list">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
-def force_symbols_not_weak_list : Flag<["-"], "force_symbols_not_weak_list">,
+def force_symbols_not_weak_list : Separate<["-"], "force_symbols_not_weak_list">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
-def force_symbols_weak_list : Flag<["-"], "force_symbols_weak_list">,
+def force_symbols_weak_list : Separate<["-"], "force_symbols_weak_list">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;

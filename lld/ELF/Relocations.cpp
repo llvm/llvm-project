@@ -297,17 +297,15 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &ss) {
 static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
                                uint64_t size) {
   Symbol old = sym;
+  Defined(sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
+          size, &sec)
+      .overwrite(sym);
 
-  sym.replace(Defined{sym.file, StringRef(), sym.binding, sym.stOther,
-                      sym.type, value, size, &sec});
-
-  sym.auxIdx = old.auxIdx;
-  sym.verdefIndex = old.verdefIndex;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  if (old.hasFlag(NEEDS_GOT))
-    sym.setFlags(NEEDS_GOT);
+  sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
+                  std::memory_order_relaxed);
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
@@ -1541,11 +1539,10 @@ template <class ELFT> void elf::scanRelocations() {
   // directly processed by InputSection::relocateNonAlloc.
 
   // Deterministic parallellism needs sorting relocations which is unsuitable
-  // for -z nocombreloc and does not currently work with
-  // AndroidPackedRelocationSection. MIPS and PPC64 use global states which are
-  // not suitable for parallelism.
-  bool serial = !config->zCombreloc || config->androidPackDynRelocs ||
-                config->emachine == EM_MIPS || config->emachine == EM_PPC64;
+  // for -z nocombreloc. MIPS and PPC64 use global states which are not suitable
+  // for parallelism.
+  bool serial = !config->zCombreloc || config->emachine == EM_MIPS ||
+                config->emachine == EM_PPC64;
   parallel::TaskGroup tg;
   for (ELFFileBase *f : ctx->objectFiles) {
     auto fn = [f]() {
@@ -1751,7 +1748,7 @@ void elf::postScanRelocations() {
           {R_ADDEND, target->symbolicRel, in.got->getTlsIndexOff(), 1, &dummy});
   }
 
-  assert(symAux.empty());
+  assert(symAux.size() == 1);
   for (Symbol *sym : symtab->getSymbols())
     fn(*sym);
 

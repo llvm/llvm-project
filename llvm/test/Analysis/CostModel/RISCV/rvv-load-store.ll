@@ -297,17 +297,17 @@ define void @store_of_constant(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> undef, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i32> zeroinitializer, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i64> zeroinitializer, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <4 x i64> <i64 1, i64 1, i64 1, i64 1>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 4096, i32 4096, i32 4096, i32 4096>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 1, i32 1, i32 2, i32 1>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 2, i32 1, i32 1, i32 1>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 0, i32 1, i32 2, i32 3>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 -1, i32 -2, i32 -3, i32 -4>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 2, i32 4, i32 6, i32 8>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 -1, i32 0, i32 2, i32 1>, ptr %p, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i32> <i32 256, i32 4096, i32 57, i32 1>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <4 x i64> <i64 1, i64 1, i64 1, i64 1>, ptr %p, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i32> <i32 4096, i32 4096, i32 4096, i32 4096>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 1, i32 1, i32 2, i32 1>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 2, i32 1, i32 1, i32 1>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 0, i32 1, i32 2, i32 3>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 -1, i32 -2, i32 -3, i32 -4>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 2, i32 4, i32 6, i32 8>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 -1, i32 0, i32 2, i32 1>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i32> <i32 256, i32 4096, i32 57, i32 1>, ptr %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 

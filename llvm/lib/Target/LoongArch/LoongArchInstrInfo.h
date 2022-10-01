@@ -41,6 +41,11 @@ public:
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
+  // Materializes the given integer Val into DstReg.
+  void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+              const DebugLoc &DL, Register DstReg, uint64_t Val,
+              MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
+
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
@@ -60,6 +65,9 @@ public:
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+
+protected:
+  const LoongArchSubtarget &STI;
 };
 
 } // end namespace llvm

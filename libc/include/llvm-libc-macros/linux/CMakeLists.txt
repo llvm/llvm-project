@@ -17,6 +17,12 @@ add_header(
 )
 
 add_header(
+  time_macros
+  HDR
+    time-macros.h
+)
+
+add_header(
   sys_resource_macros
   HDR
     sys-resource-macros.h

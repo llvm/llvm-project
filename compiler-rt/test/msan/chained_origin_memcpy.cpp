@@ -1,17 +1,16 @@
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -DOFFSET=0 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -DOFFSET=0 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z1 --check-prefix=CHECK-%short-stack < %t.out
 
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -DOFFSET=10 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -DOFFSET=10 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z2 --check-prefix=CHECK-%short-stack < %t.out
 
-
-// RUN: %clangxx_msan -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DOFFSET=0 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DOFFSET=0 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z1 --check-prefix=CHECK-%short-stack < %t.out
 
-// RUN: %clangxx_msan -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DOFFSET=10 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DOFFSET=10 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z2 --check-prefix=CHECK-%short-stack < %t.out
 

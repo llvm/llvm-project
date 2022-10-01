@@ -37,11 +37,11 @@
 //
 // CHECK-SPARSE-LABEL: func @kernel(
 // CHECK-SPARSE: %[[A:.*]], %[[B:.*]], %[[C:.*]], %{{.*}} = sparse_tensor.expand
-// CHECK-SPARSE: scf.for {{.*}} {
+// CHECK-SPARSE: %[[COUNT:.*]] = scf.for {{.*}} {
 // CHECK-SPARSE:   scf.for {{.*}} {
 // CHECK-SPARSE:   }
 // CHECK-SPARSE: }
-// CHECK-SPARSE: sparse_tensor.compress %{{.*}}, %{{.*}}, %[[A]], %[[B]], %[[C]]
+// CHECK-SPARSE: sparse_tensor.compress %[[A]], %[[B]], %[[C]], %[[COUNT]] into
 // CHECK-SPARSE: %[[RET:.*]] = sparse_tensor.load %{{.*}} hasInserts
 // CHECK-SPARSE: return %[[RET]]
 //
@@ -86,11 +86,11 @@ func.func @kernel(%arga: tensor<?x?xf64, #DCSC>) -> tensor<?xf64, #SV> {
 // CHECK-SPARSE-DAG: %[[C8:.*]] = arith.constant 8 : index
 // CHECK-SPARSE: scf.for %{{.*}} = %[[C0]] to %[[C8]] step %[[C1]] {
 // CHECK-SPARSE:   %[[A:.*]], %[[B:.*]], %[[C:.*]], %{{.*}} = sparse_tensor.expand
-// CHECK-SPARSE:   scf.for {{.*}} {
+// CHECK-SPARSE:   %[[COUNT:.*]] = scf.for {{.*}} {
 // CHECK-SPARSE:     scf.for {{.*}} {
 // CHECK-SPARSE:     }
 // CHECK-SPARSE:   }
-// CHECK-SPARSE:   sparse_tensor.compress %{{.*}}, %{{.*}}, %[[A]], %[[B]], %[[C]]
+// CHECK-SPARSE:   sparse_tensor.compress %[[A]], %[[B]], %[[C]], %[[COUNT]] into
 // CHECK-SPARSE: }
 // CHECK-SPARSE: %[[RET:.*]] = sparse_tensor.load %{{.*}} hasInserts
 // CHECK-SPARSE: return %[[RET]]
@@ -134,11 +134,11 @@ func.func @matmul1(%A: tensor<8x2xf64, #CSR>,
 // CHECK-SPARSE-DAG: %[[C4:.*]] = arith.constant 4 : index
 // CHECK-SPARSE: scf.for %{{.*}} = %[[C0]] to %[[C4]] step %[[C1]] {
 // CHECK-SPARSE:   %[[A:.*]], %[[B:.*]], %[[C:.*]], %{{.*}} = sparse_tensor.expand
-// CHECK-SPARSE:   scf.for {{.*}} {
+// CHECK-SPARSE:   %[[COUNT:.*]] = scf.for {{.*}} {
 // CHECK-SPARSE:     scf.for {{.*}} {
 // CHECK-SPARSE:     }
 // CHECK-SPARSE:   }
-// CHECK-SPARSE:   sparse_tensor.compress %{{.*}}, %{{.*}}, %[[A]], %[[B]], %[[C]]
+// CHECK-SPARSE:   sparse_tensor.compress %[[A]], %[[B]], %[[C]], %[[COUNT]]
 // CHECK-SPARSE: }
 // CHECK-SPARSE: %[[RET:.*]] = sparse_tensor.load %{{.*}} hasInserts
 // CHECK-SPARSE: return %[[RET]]

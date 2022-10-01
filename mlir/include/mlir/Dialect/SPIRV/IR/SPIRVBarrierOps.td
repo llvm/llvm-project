@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
+def SPIRV_ControlBarrierOp : SPIRV_Op<"ControlBarrier", []> {
   let summary = [{
     Wait for other invocations of this module to reach the current point of
     execution.
@@ -70,9 +70,9 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
   }];
 
   let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_ScopeAttr:$memory_scope,
-    SPV_MemorySemanticsAttr:$memory_semantics
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$memory_semantics
   );
 
   let results = (outs);
@@ -84,7 +84,7 @@ def SPV_ControlBarrierOp : SPV_Op<"ControlBarrier", []> {
 
 // -----
 
-def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
+def SPIRV_MemoryBarrierOp : SPIRV_Op<"MemoryBarrier", []> {
   let summary = "Control the order that memory accesses are observed.";
 
   let description = [{
@@ -121,8 +121,8 @@ def SPV_MemoryBarrierOp : SPV_Op<"MemoryBarrier", []> {
   }];
 
   let arguments = (ins
-    SPV_ScopeAttr:$memory_scope,
-    SPV_MemorySemanticsAttr:$memory_semantics
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$memory_semantics
   );
 
   let results = (outs);

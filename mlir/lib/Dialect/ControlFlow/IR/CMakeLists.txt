@@ -8,7 +8,7 @@ add_mlir_dialect_library(MLIRControlFlowDialect
   MLIRControlFlowOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRControlFlowInterfaces
   MLIRIR
   MLIRSideEffectInterfaces

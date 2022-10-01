@@ -13,14 +13,14 @@
 
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -203,7 +203,7 @@ struct LowerGpuOpsToNVVMOpsPass
     populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
-    arith::populateArithmeticToLLVMConversionPatterns(converter, llvmPatterns);
+    arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
     populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
     populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);

@@ -1,4 +1,4 @@
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -O3 %s -o %t && \
 // RUN:     MSAN_OPTIONS=store_context_size=1 not %run %t 2>&1 | FileCheck %s
 
 // Test that stack trace for the intermediate store is not empty.

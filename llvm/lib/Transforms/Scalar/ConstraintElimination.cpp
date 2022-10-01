@@ -31,6 +31,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Scalar.h"
 
+#include <cmath>
 #include <string>
 
 using namespace llvm;

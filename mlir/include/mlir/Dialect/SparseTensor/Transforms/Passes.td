@@ -54,7 +54,7 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   let constructor = "mlir::createSparsificationPass()";
   let dependentDialects = [
     "AffineDialect",
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
@@ -134,7 +134,7 @@ def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   }];
   let constructor = "mlir::createSparseTensorConversionPass()";
   let dependentDialects = [
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "LLVM::LLVMDialect",
     "linalg::LinalgDialect",
@@ -169,7 +169,7 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
   }];
   let constructor = "mlir::createSparseTensorCodegenPass()";
   let dependentDialects = [
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "linalg::LinalgDialect",
     "memref::MemRefDialect",
@@ -178,4 +178,19 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
   ];
 }
 
+def SparseBufferRewrite : Pass<"sparse-buffer-rewrite", "ModuleOp"> {
+  let summary = "Rewrite sparse primitives on buffers to actual code";
+  let description = [{
+    A pass that rewrites sparse primitives on buffers to the MLIR implementation
+    of the primitives. For example, sparse_tensor.sort operator is implemented
+    in this pass.
+  }];
+  let constructor = "mlir::createSparseBufferRewritePass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES

@@ -173,9 +173,9 @@ but often it's easier to find an existing ``Makefile`` that does something
 similar to what you want to do.
 
 Another thing this enables is having different variants for the same test
-case. By default, we run every test for all 3 debug info formats, so once with
-DWARF from the object files, once with gmodules and finally with a dSYM on
-macOS or split DWARF (DWO) on Linux. But there are many more things we can test
+case. By default, we run every test for two debug info formats, once with
+DWARF from the object files and another with a dSYM on macOS or split
+DWARF (DWO) on Linux. But there are many more things we can test
 that are orthogonal to the test itself. On GreenDragon we have a matrix bot
 that runs the test suite under different configurations, with older host
 compilers and different DWARF versions.

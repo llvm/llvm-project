@@ -464,6 +464,8 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
         remaining reduction after splitting).
       - insert_split_dimension: the dimension in the temporary tensor into 
         which the new parallel dimension is inserted.
+      - inner_parallel: specifies whether the parallel dimension is before or
+        after the reduction dimension in the splitting op.
       - use_scaling_algorithm: whether to use a scaling based formulation that 
         does not create an ExpandShapeOp (default: do not use scaling)
       - use_alloc: whether to use an alloc op to allocate the temporary 
@@ -587,6 +589,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
   let arguments = (ins PDL_Operation:$target,
                    DefaultValuedAttr<I64Attr, "{}">:$split_factor,
                    DefaultValuedAttr<I64Attr, "{}">:$insert_split_dimension,
+                   UnitAttr:$inner_parallel,
                    UnitAttr:$use_scaling_algorithm,
                    UnitAttr:$use_alloc);
   let results = (outs PDL_Operation:$init_or_alloc_op,
@@ -783,8 +786,8 @@ def MapNestedForeachThreadToGpuThreads :
       The operation alters the block size of the given gpu_launch using 
       blockDim argument.
 
-      Return modes:
-      =============
+      #### Return modes:
+      
       This operation ignores non-gpu_launch ops and drops them in the return.
 
       If any scf.foreach_thread with tensors is found, the transform definitely 
@@ -798,8 +801,7 @@ def MapNestedForeachThreadToGpuThreads :
       producing a new SSA value to satisfy chaining and linearity of the IR 
       properties.
 
-      Example:
-      ========
+      #### Example:
 
       ```
       gpu.launch blocks(%bx, %by, %bz) in (%x = %0, %y = %1, %z = %2)

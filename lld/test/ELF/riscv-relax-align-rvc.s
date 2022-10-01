@@ -50,6 +50,12 @@
 # CHECK-NEXT:           c.addi  a0, 8
 # CHECK-EMPTY:
 
+# CHECK:      <.text2>:
+# CHECK-NEXT:           addi    a0, a1, 1
+# CHECK-NEXT:           c.addi  a0, 1
+# CHECK-NEXT:           c.nop
+# CHECK-NEXT:           c.addi  a0, 2
+
 .global _start
 _start:
   c.addi a0, 1
@@ -73,3 +79,10 @@ d:
   c.addi a0, 8
 .size d, . - d
 .size _start, . - _start
+
+.section .text2,"ax"
+.balign 16
+  addi a0, a1, 1
+  c.addi a0, 1
+.balign 8
+  c.addi a0, 2

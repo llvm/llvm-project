@@ -56,13 +56,14 @@ TEST(LlvmLibcTanfTest, InFloatRange) {
 }
 
 TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
-  constexpr int N = 48;
+  constexpr int N = 54;
   constexpr uint32_t INPUTS[N] = {
       0x3a7a'8d2fU, // x = 0x1.f51a5ep-11f
       0x3f06'0a92U, // x = pi/6
       0x3f3a'dc51U, // x = 0x1.75b8a2p-1f
       0x3f49'0fdbU, // x = pi/4
       0x3f86'0a92U, // x = pi/3
+      0x3f8a'1f62U, // x = 0x1.143ec4p+0f
       0x3fa7'832aU, // x = 0x1.4f0654p+0f
       0x3fc9'0fdbU, // x = pi/2
       0x4017'1973U, // x = 0x1.2e32e6p+1f
@@ -75,14 +76,18 @@ TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
       0x474d'246fU, // x = 0x1.9a48dep+15f
       0x4afd'ece4U, // x = 0x1.fbd9c8p+22f
       0x4c23'32e9U, // x = 0x1.4665d2p+25f
+      0x4d56'd355U, // x = 0x1.ada6aap+27f
+      0x5043'1032U, // x = 0x1.862064p+33f
       0x50a3'e87fU, // x = 0x1.47d0fep+34f
       0x5239'47f6U, // x = 0x1.728fecp+37f
       0x531d'744cU, // x = 0x1.3ae898p+39f
       0x53b1'46a6U, // x = 0x1.628d4cp+40f
       0x5532'5019U, // x = 0x1.64a032p+43f
       0x55ca'fb2aU, // x = 0x1.95f654p+44f
+      0x57d7'b0edU, // x = 0x1.af61dap+48f
       0x588e'f060U, // x = 0x1.1de0cp+50f
       0x5922'aa80U, // x = 0x1.4555p+51f
+      0x5980'445eU, // x = 0x1.0088bcp+52f
       0x5aa4'542cU, // x = 0x1.48a858p+54f
       0x5c07'bcd0U, // x = 0x1.0f79ap+57f
       0x5ebc'fddeU, // x = 0x1.79fbbcp+62f
@@ -91,6 +96,7 @@ TEST(LlvmLibcTanfTest, SpecificBitPatterns) {
       0x6115'cb11U, // x = 0x1.2b9622p+67f
       0x61a4'0b40U, // x = 0x1.48168p+68f
       0x6386'134eU, // x = 0x1.0c269cp+72f
+      0x63fc'86feU, // x = 0x1.f90dfcp+72f
       0x6589'8498U, // x = 0x1.13093p+76f
       0x65ee'8695U, // x = 0x1.dd0d2ap+76f
       0x6600'0001U, // x = 0x1.000002p+77f

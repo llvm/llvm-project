@@ -14,7 +14,6 @@
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
 #include "Frame.h"
-#include "Pointer.h"
 #include "Program.h"
 #include "State.h"
 #include <cstdint>
@@ -24,6 +23,7 @@ namespace clang {
 namespace interp {
 class Function;
 class InterpState;
+class Pointer;
 
 /// Frame storing local variables.
 class InterpFrame final : public Frame {

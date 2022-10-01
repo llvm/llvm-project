@@ -350,11 +350,13 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
         if (!NSym.Name)
           return make_error<JITLinkError>("Anonymous common symbol at index " +
                                           Twine(KV.first));
-        NSym.GraphSymbol = &G->addCommonSymbol(
-            *NSym.Name, NSym.S, getCommonSection(), orc::ExecutorAddr(),
-            orc::ExecutorAddrDiff(NSym.Value),
-            1ull << MachO::GET_COMM_ALIGN(NSym.Desc),
-            NSym.Desc & MachO::N_NO_DEAD_STRIP);
+        NSym.GraphSymbol = &G->addDefinedSymbol(
+            G->createZeroFillBlock(getCommonSection(),
+                                   orc::ExecutorAddrDiff(NSym.Value),
+                                   orc::ExecutorAddr(),
+                                   1ull << MachO::GET_COMM_ALIGN(NSym.Desc), 0),
+            0, *NSym.Name, orc::ExecutorAddrDiff(NSym.Value), Linkage::Strong,
+            NSym.S, false, NSym.Desc & MachO::N_NO_DEAD_STRIP);
       } else {
         if (!NSym.Name)
           return make_error<JITLinkError>("Anonymous external symbol at "

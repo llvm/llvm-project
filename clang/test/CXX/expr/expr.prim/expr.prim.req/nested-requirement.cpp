@@ -45,3 +45,9 @@ namespace std_example {
     };
   static_assert(C2<int>); // expected-note{{because 'int' does not satisfy 'C2'}} expected-error{{static assertion failed}}
 }
+
+template<typename T>
+concept K = requires (T::Type X) {
+  X.next();
+};
+

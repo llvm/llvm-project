@@ -1057,6 +1057,30 @@ def: Pat<(v8i8 (splat_vector I32:$Rs)), (S6_vsplatrbp I32:$Rs)>,
 def: Pat<(v8i8 (splat_vector I32:$Rs)),
          (Combinew (S2_vsplatrb I32:$Rs), (S2_vsplatrb I32:$Rs))>;
 
+let AddedComplexity = 10 in {
+  def: Pat<(sext_inreg (HexagonEXTRACTU I32:$Rs,  8, u5_0ImmPred:$U5),  i8),
+           (S4_extract  I32:$Rs,  8, imm:$U5)>;
+  def: Pat<(sext_inreg (HexagonEXTRACTU I32:$Rs, 16, u5_0ImmPred:$U5), i16),
+           (S4_extract  I32:$Rs, 16, imm:$U5)>;
+  def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs,  8, u6_0ImmPred:$U6),  i8),
+           (S4_extractp I64:$Rs,  8, imm:$U6)>;
+  def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs, 16, u6_0ImmPred:$U6), i16),
+           (S4_extractp I64:$Rs, 16, imm:$U6)>;
+  def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs, 32, u6_0ImmPred:$U6), i32),
+           (S4_extractp I64:$Rs, 32, imm:$U6)>;
+}
+
+def: Pat<(sext_inreg (HexagonEXTRACTU I32:$Rs,  8, I32:$Off),  i8),
+         (S4_extract_rp  I32:$Rs, (Combinew (ToI32 8), I32:$Off))>;
+def: Pat<(sext_inreg (HexagonEXTRACTU I32:$Rs, 16, I32:$Off), i16),
+         (S4_extract_rp  I32:$Rs, (Combinew (ToI32 16), I32:$Off))>;
+def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs,  8, I32:$Off),  i8),
+         (S4_extractp_rp I64:$Rs, (Combinew (ToI32 8), I32:$Off))>;
+def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs, 16, I32:$Off), i16),
+         (S4_extractp_rp I64:$Rs, (Combinew (ToI32 16), I32:$Off))>;
+def: Pat<(sext_inreg (HexagonEXTRACTU I64:$Rs, 32, I32:$Off), i32),
+         (S4_extractp_rp I64:$Rs, (Combinew (ToI32 32), I32:$Off))>;
+
 
 // --(8) Shift/permute ---------------------------------------------------
 //

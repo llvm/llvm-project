@@ -152,7 +152,8 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
 
   SmallString<16> PathTo;
   llvm::sys::path::native("path/to", PathTo);
-  I.Members.emplace_back("int", "X/Y", "X", AccessSpecifier::AS_private);
+  I.Members.emplace_back(TypeInfo("int", "X/Y"), "X",
+                         AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, PathTo);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
@@ -276,8 +277,9 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
 
   SmallString<16> PathTo;
   llvm::sys::path::native("path/to", PathTo);
-  I.ReturnType = TypeInfo(EmptySID, "float", InfoType::IT_default, PathTo);
-  I.Params.emplace_back("int", PathTo, "P");
+  I.ReturnType =
+      TypeInfo(Reference(EmptySID, "float", InfoType::IT_default, PathTo));
+  I.Params.emplace_back(TypeInfo("int", PathTo), "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -370,9 +372,9 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
   FunctionInfo I;
   I.Name = "f";
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "I");
-  I.Params.emplace_back("int", "J");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "I");
+  I.Params.emplace_back(TypeInfo("int"), "J");
   I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;

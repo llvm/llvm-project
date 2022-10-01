@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -575,6 +575,26 @@ public:
     return success();
   }
 };
+
+/// Rewrite memref.extract_aligned_pointer_as_index of a ViewLikeOp to the
+/// source of the ViewLikeOp.
+class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
+    : public OpRewritePattern<memref::ExtractAlignedPointerAsIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractAlignedPointerAsIndexOp extractOp,
+                  PatternRewriter &rewriter) const override {
+    auto viewLikeOp =
+        extractOp.getSource().getDefiningOp<ViewLikeOpInterface>();
+    if (!viewLikeOp)
+      return rewriter.notifyMatchFailure(extractOp, "not a ViewLike source");
+    rewriter.updateRootInPlace(extractOp, [&]() {
+      extractOp.sourceMutable().assign(viewLikeOp.getViewSource());
+    });
+    return success();
+  }
+};
 } // namespace
 
 void memref::populateSimplifyExtractStridedMetadataOpPatterns(
@@ -582,7 +602,8 @@ void memref::populateSimplifyExtractStridedMetadataOpPatterns(
   patterns.add<ExtractStridedMetadataOpSubviewFolder,
                ExtractStridedMetadataOpExpandShapeFolder, ForwardStaticMetadata,
                ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
-               ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>>(
+               ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
+               RewriteExtractAlignedPointerAsIndexOfViewLikeOp>(
       patterns.getContext());
 }
 

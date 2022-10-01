@@ -249,6 +249,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       case ISD::STORE:
       case ISD::BUILD_VECTOR:
       case ISD::BITCAST:
+      case ISD::UNDEF:
       case ISD::EXTRACT_VECTOR_ELT:
       case ISD::INSERT_VECTOR_ELT:
       case ISD::EXTRACT_SUBVECTOR:
@@ -516,6 +517,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         case ISD::STORE:
         case ISD::BUILD_VECTOR:
         case ISD::BITCAST:
+        case ISD::UNDEF:
         case ISD::EXTRACT_VECTOR_ELT:
         case ISD::INSERT_VECTOR_ELT:
         case ISD::INSERT_SUBVECTOR:
@@ -2369,7 +2371,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     return DAG.getEntryNode();
   }
 
-  Info->allocateModuleLDSGlobal(Fn);
+  Info->allocateKnownAddressLDSGlobal(Fn);
 
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -6522,7 +6524,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // contiguous set of the remaining addresses.
   // This could help where there are more addresses than supported.
   bool UseNSA = ST->hasFeature(AMDGPU::FeatureNSAEncoding) &&
-                VAddrs.size() >= 3 &&
+                VAddrs.size() >= (unsigned)ST->getNSAThreshold(MF) &&
                 VAddrs.size() <= (unsigned)ST->getNSAMaxSize();
   SDValue VAddr;
   if (!UseNSA)

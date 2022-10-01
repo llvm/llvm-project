@@ -62,8 +62,8 @@ void populateSimplifyExtractStridedMetadataOpPatterns(
 
 /// Transformation to do multi-buffering/array expansion to remove dependencies
 /// on the temporary allocation between consecutive loop iterations.
-/// It return success if the allocation was multi-buffered and returns failure()
-/// otherwise.
+/// It returns the new allocation if the original allocation was multi-buffered
+/// and returns failure() otherwise.
 /// Example:
 /// ```
 /// %0 = memref.alloc() : memref<4x128xf32>
@@ -85,17 +85,14 @@ void populateSimplifyExtractStridedMetadataOpPatterns(
 ///   "some_use"(%sv) : (memref<4x128xf32, strided<...>) -> ()
 /// }
 /// ```
-LogicalResult multiBuffer(memref::AllocOp allocOp, unsigned multiplier);
+FailureOr<memref::AllocOp> multiBuffer(memref::AllocOp allocOp,
+                                       unsigned multiplier);
 
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
 
-#define GEN_PASS_DECL_EXPANDOPS
-#define GEN_PASS_DECL_FOLDMEMREFALIASOPS
-#define GEN_PASS_DECL_NORMALIZEMEMREFS
-#define GEN_PASS_DECL_RESOLVERANKEDSHAPETYPERESULTDIMS
-#define GEN_PASS_DECL_RESOLVESHAPEDTYPERESULTDIMS
+#define GEN_PASS_DECL
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 
 /// Creates an instance of the ExpandOps pass that legalizes memref dialect ops

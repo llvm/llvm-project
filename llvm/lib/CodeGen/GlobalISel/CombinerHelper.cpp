@@ -31,6 +31,7 @@
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cmath>
 #include <tuple>
 
 #define DEBUG_TYPE "gi-combiner"

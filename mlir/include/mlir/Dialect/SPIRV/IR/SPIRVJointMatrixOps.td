@@ -15,7 +15,7 @@
 
 // -----
 
-def SPV_INTELJointMatrixWorkItemLengthOp : SPV_IntelVendorOp<"JointMatrixWorkItemLength",
+def SPIRV_INTELJointMatrixWorkItemLengthOp : SPIRV_IntelVendorOp<"JointMatrixWorkItemLength",
   [NoSideEffect]> {
   let summary = "See extension SPV_INTEL_joint_matrix";
 
@@ -42,10 +42,10 @@ def SPV_INTELJointMatrixWorkItemLengthOp : SPV_IntelVendorOp<"JointMatrixWorkIte
   let assemblyFormat = "attr-dict `:` $joint_matrix_type";
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_INTEL_joint_matrix]>,
-    Capability<[SPV_C_JointMatrixINTEL]>
+    Capability<[SPIRV_C_JointMatrixINTEL]>
   ];
 
   let arguments = (ins
@@ -53,14 +53,14 @@ def SPV_INTELJointMatrixWorkItemLengthOp : SPV_IntelVendorOp<"JointMatrixWorkIte
   );
 
   let results = (outs
-    SPV_Int32:$result
+    SPIRV_Int32:$result
   );
   let hasVerifier = 0;
 }
 
 // -----
 
-def SPV_INTELJointMatrixLoadOp : SPV_IntelVendorOp<"JointMatrixLoad", []> {
+def SPIRV_INTELJointMatrixLoadOp : SPIRV_IntelVendorOp<"JointMatrixLoad", []> {
   let summary = "See extension SPV_INTEL_joint_matrix";
 
   let description = [{
@@ -97,29 +97,29 @@ def SPV_INTELJointMatrixLoadOp : SPV_IntelVendorOp<"JointMatrixLoad", []> {
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_INTEL_joint_matrix]>,
-    Capability<[SPV_C_JointMatrixINTEL]>
+    Capability<[SPIRV_C_JointMatrixINTEL]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer,
-    SPV_Integer:$stride,
-    SPV_MatrixLayoutAttr:$layout,
-    SPV_ScopeAttr:$scope,
-    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_Integer:$stride,
+    SPIRV_MatrixLayoutAttr:$layout,
+    SPIRV_ScopeAttr:$scope,
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment
   );
 
   let results = (outs
-    SPV_AnyJointMatrix:$result
+    SPIRV_AnyJointMatrix:$result
   );
 }
 
 // -----
 
-def SPV_INTELJointMatrixMadOp : SPV_IntelVendorOp<"JointMatrixMad",
+def SPIRV_INTELJointMatrixMadOp : SPIRV_IntelVendorOp<"JointMatrixMad",
   [NoSideEffect, AllTypesMatch<["c", "result"]>]> {
   let summary = "See extension SPV_INTEL_joint_matrix";
 
@@ -162,27 +162,27 @@ def SPV_INTELJointMatrixMadOp : SPV_IntelVendorOp<"JointMatrixMad",
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_INTEL_joint_matrix]>,
-    Capability<[SPV_C_JointMatrixINTEL]>
+    Capability<[SPIRV_C_JointMatrixINTEL]>
   ];
 
   let arguments = (ins
-    SPV_AnyJointMatrix:$a,
-    SPV_AnyJointMatrix:$b,
-    SPV_AnyJointMatrix:$c,
-    SPV_ScopeAttr:$scope
+    SPIRV_AnyJointMatrix:$a,
+    SPIRV_AnyJointMatrix:$b,
+    SPIRV_AnyJointMatrix:$c,
+    SPIRV_ScopeAttr:$scope
   );
 
   let results = (outs
-    SPV_AnyJointMatrix:$result
+    SPIRV_AnyJointMatrix:$result
   );
 }
 
 // -----
 
-def SPV_INTELJointMatrixStoreOp : SPV_IntelVendorOp<"JointMatrixStore", []> {
+def SPIRV_INTELJointMatrixStoreOp : SPIRV_IntelVendorOp<"JointMatrixStore", []> {
   let summary = "See extension SPV_INTEL_joint_matrix";
 
   let description = [{
@@ -224,19 +224,19 @@ def SPV_INTELJointMatrixStoreOp : SPV_IntelVendorOp<"JointMatrixStore", []> {
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_6>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[SPV_INTEL_joint_matrix]>,
-    Capability<[SPV_C_JointMatrixINTEL]>
+    Capability<[SPIRV_C_JointMatrixINTEL]>
   ];
 
   let arguments = (ins
-    SPV_AnyPtr:$pointer,
-    SPV_AnyJointMatrix:$object,
-    SPV_Integer:$stride,
-    SPV_MatrixLayoutAttr:$layout,
-    SPV_ScopeAttr:$scope,
-    OptionalAttr<SPV_MemoryAccessAttr>:$memory_access,
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_AnyJointMatrix:$object,
+    SPIRV_Integer:$stride,
+    SPIRV_MatrixLayoutAttr:$layout,
+    SPIRV_ScopeAttr:$scope,
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<I32Attr>:$alignment
   );
 

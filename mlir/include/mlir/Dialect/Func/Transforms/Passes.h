@@ -26,7 +26,7 @@ class RewritePatternSet;
 
 namespace func {
 
-#define GEN_PASS_DECL_FUNCBUFFERIZE
+#define GEN_PASS_DECL
 #include "mlir/Dialect/Func/Transforms/Passes.h.inc"
 
 /// Creates an instance of func bufferization pass.
