@@ -8,29 +8,29 @@ define void @PR47857(%"struct.std::array"* noalias nocapture writeonly sret(%"st
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq (%rdx), %r9
-; CHECK-NEXT:    movq 8(%rdx), %r8
+; CHECK-NEXT:    movq 8(%rdx), %rcx
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    addq (%rsi), %r9
-; CHECK-NEXT:    adcq 8(%rsi), %r8
-; CHECK-NEXT:    movq 16(%rdx), %rcx
-; CHECK-NEXT:    adcq 16(%rsi), %rcx
+; CHECK-NEXT:    adcq 8(%rsi), %rcx
+; CHECK-NEXT:    movq 16(%rdx), %r8
+; CHECK-NEXT:    adcq 16(%rsi), %r8
 ; CHECK-NEXT:    movq 24(%rdx), %rdx
 ; CHECK-NEXT:    adcq 24(%rsi), %rdx
 ; CHECK-NEXT:    sbbq %rdi, %rdi
 ; CHECK-NEXT:    andl $38, %edi
 ; CHECK-NEXT:    addq %rdi, %r9
-; CHECK-NEXT:    adcq $0, %r8
 ; CHECK-NEXT:    adcq $0, %rcx
+; CHECK-NEXT:    adcq $0, %r8
 ; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    sbbq %rdi, %rdi
 ; CHECK-NEXT:    andl $38, %edi
 ; CHECK-NEXT:    addq %r9, %rdi
-; CHECK-NEXT:    adcq $0, %r8
 ; CHECK-NEXT:    adcq $0, %rcx
+; CHECK-NEXT:    adcq $0, %r8
 ; CHECK-NEXT:    adcq $0, %rdx
 ; CHECK-NEXT:    movq %rdi, (%rax)
-; CHECK-NEXT:    movq %r8, 8(%rax)
-; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %rcx, 8(%rax)
+; CHECK-NEXT:    movq %r8, 16(%rax)
 ; CHECK-NEXT:    movq %rdx, 24(%rax)
 ; CHECK-NEXT:    retq
   %4 = getelementptr inbounds %"struct.std::array", %"struct.std::array"* %1, i64 0, i32 0, i64 0

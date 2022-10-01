@@ -499,14 +499,14 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; CHECK-LIBCALL-NEXT:    pushq %r14
 ; CHECK-LIBCALL-NEXT:    pushq %rbx
 ; CHECK-LIBCALL-NEXT:    subq $32, %rsp
-; CHECK-LIBCALL-NEXT:    movzwl 4(%rdi), %r14d
+; CHECK-LIBCALL-NEXT:    movzwl 4(%rdi), %ebx
 ; CHECK-LIBCALL-NEXT:    movzwl 6(%rdi), %ebp
-; CHECK-LIBCALL-NEXT:    movzwl (%rdi), %ebx
+; CHECK-LIBCALL-NEXT:    movzwl (%rdi), %r14d
 ; CHECK-LIBCALL-NEXT:    movzwl 2(%rdi), %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-LIBCALL-NEXT:    cvtss2sd %xmm0, %xmm0
 ; CHECK-LIBCALL-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-LIBCALL-NEXT:    movl %ebx, %edi
+; CHECK-LIBCALL-NEXT:    movl %r14d, %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-LIBCALL-NEXT:    cvtss2sd %xmm0, %xmm0
 ; CHECK-LIBCALL-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
@@ -516,7 +516,7 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-LIBCALL-NEXT:    cvtss2sd %xmm0, %xmm0
 ; CHECK-LIBCALL-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-LIBCALL-NEXT:    movl %r14d, %edi
+; CHECK-LIBCALL-NEXT:    movl %ebx, %edi
 ; CHECK-LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-LIBCALL-NEXT:    cvtss2sd %xmm0, %xmm1
 ; CHECK-LIBCALL-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
@@ -587,21 +587,21 @@ define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; BWOFF-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; BWOFF-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
-; BWOFF-NEXT:    movw %ax, %r14w
+; BWOFF-NEXT:    movw %ax, %bp
 ; BWOFF-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; BWOFF-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
-; BWOFF-NEXT:    movw %ax, %r15w
+; BWOFF-NEXT:    movw %ax, %r14w
 ; BWOFF-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; BWOFF-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
-; BWOFF-NEXT:    movw %ax, %bp
+; BWOFF-NEXT:    movw %ax, %r15w
 ; BWOFF-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; BWOFF-NEXT:    callq __gnu_f2h_ieee@PLT
 ; BWOFF-NEXT:    movw %ax, (%rbx)
-; BWOFF-NEXT:    movw %bp, 6(%rbx)
-; BWOFF-NEXT:    movw %r15w, 4(%rbx)
-; BWOFF-NEXT:    movw %r14w, 2(%rbx)
+; BWOFF-NEXT:    movw %r15w, 6(%rbx)
+; BWOFF-NEXT:    movw %r14w, 4(%rbx)
+; BWOFF-NEXT:    movw %bp, 2(%rbx)
 ; BWOFF-NEXT:    addq $24, %rsp
 ; BWOFF-NEXT:    popq %rbx
 ; BWOFF-NEXT:    popq %r14
@@ -669,20 +669,20 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; BWOFF-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; BWOFF-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; BWOFF-NEXT:    callq __truncdfhf2@PLT
-; BWOFF-NEXT:    movw %ax, %r14w
+; BWOFF-NEXT:    movw %ax, %bp
 ; BWOFF-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; BWOFF-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; BWOFF-NEXT:    callq __truncdfhf2@PLT
-; BWOFF-NEXT:    movw %ax, %r15w
+; BWOFF-NEXT:    movw %ax, %r14w
 ; BWOFF-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; BWOFF-NEXT:    callq __truncdfhf2@PLT
-; BWOFF-NEXT:    movw %ax, %bp
+; BWOFF-NEXT:    movw %ax, %r15w
 ; BWOFF-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; BWOFF-NEXT:    callq __truncdfhf2@PLT
 ; BWOFF-NEXT:    movw %ax, 4(%rbx)
-; BWOFF-NEXT:    movw %bp, (%rbx)
-; BWOFF-NEXT:    movw %r15w, 6(%rbx)
-; BWOFF-NEXT:    movw %r14w, 2(%rbx)
+; BWOFF-NEXT:    movw %r15w, (%rbx)
+; BWOFF-NEXT:    movw %r14w, 6(%rbx)
+; BWOFF-NEXT:    movw %bp, 2(%rbx)
 ; BWOFF-NEXT:    addq $40, %rsp
 ; BWOFF-NEXT:    popq %rbx
 ; BWOFF-NEXT:    popq %r14
@@ -702,25 +702,25 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; BWON-F16C-NEXT:    vzeroupper
 ; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
-; BWON-F16C-NEXT:    movl %eax, %r14d
+; BWON-F16C-NEXT:    movl %eax, %ebp
 ; BWON-F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; BWON-F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; BWON-F16C-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; BWON-F16C-NEXT:    vzeroupper
 ; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
-; BWON-F16C-NEXT:    movl %eax, %r15d
+; BWON-F16C-NEXT:    movl %eax, %r14d
 ; BWON-F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; BWON-F16C-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; BWON-F16C-NEXT:    vzeroupper
 ; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
-; BWON-F16C-NEXT:    movl %eax, %ebp
+; BWON-F16C-NEXT:    movl %eax, %r15d
 ; BWON-F16C-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
 ; BWON-F16C-NEXT:    movw %ax, 4(%rbx)
-; BWON-F16C-NEXT:    movw %bp, (%rbx)
-; BWON-F16C-NEXT:    movw %r15w, 6(%rbx)
-; BWON-F16C-NEXT:    movw %r14w, 2(%rbx)
+; BWON-F16C-NEXT:    movw %r15w, (%rbx)
+; BWON-F16C-NEXT:    movw %r14w, 6(%rbx)
+; BWON-F16C-NEXT:    movw %bp, 2(%rbx)
 ; BWON-F16C-NEXT:    addq $56, %rsp
 ; BWON-F16C-NEXT:    popq %rbx
 ; BWON-F16C-NEXT:    popq %r14
@@ -1266,19 +1266,19 @@ define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
 ; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
 ; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; BWON-NEXT:    cmovneq %rsi, %rdi
-; BWON-NEXT:    movzwl (%rdi), %r10d
+; BWON-NEXT:    movzwl (%rdi), %esi
 ; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
-; BWON-NEXT:    cmovneq %rdi, %rsi
-; BWON-NEXT:    movzwl (%rsi), %esi
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
+; BWON-NEXT:    cmovneq %rdi, %r10
+; BWON-NEXT:    movzwl (%r10), %edi
+; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
 ; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %r11
-; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; BWON-NEXT:    cmovneq %r11, %rdi
-; BWON-NEXT:    movzwl (%rdi), %edi
+; BWON-NEXT:    cmovneq %r10, %r11
+; BWON-NEXT:    movzwl (%r11), %r10d
 ; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %r11
 ; BWON-NEXT:    leaq {{[0-9]+}}(%rsp), %rbx
 ; BWON-NEXT:    cmovneq %r11, %rbx
-; BWON-NEXT:    movzwl (%rbx), %ebx
+; BWON-NEXT:    movzwl (%rbx), %r11d
 ; BWON-NEXT:    cmovew {{[0-9]+}}(%rsp), %dx
 ; BWON-NEXT:    cmovew {{[0-9]+}}(%rsp), %cx
 ; BWON-NEXT:    cmovew {{[0-9]+}}(%rsp), %r8w
@@ -1287,10 +1287,10 @@ define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
 ; BWON-NEXT:    movw %r8w, 4(%rax)
 ; BWON-NEXT:    movw %cx, 2(%rax)
 ; BWON-NEXT:    movw %dx, (%rax)
-; BWON-NEXT:    movw %bx, 14(%rax)
-; BWON-NEXT:    movw %di, 12(%rax)
-; BWON-NEXT:    movw %si, 10(%rax)
-; BWON-NEXT:    movw %r10w, 8(%rax)
+; BWON-NEXT:    movw %r11w, 14(%rax)
+; BWON-NEXT:    movw %r10w, 12(%rax)
+; BWON-NEXT:    movw %di, 10(%rax)
+; BWON-NEXT:    movw %si, 8(%rax)
 ; BWON-NEXT:    popq %rbx
 ; BWON-NEXT:    .cfi_def_cfa_offset 8
 ; BWON-NEXT:    retq
@@ -1305,19 +1305,19 @@ define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
 ; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
 ; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; BWOFF-NEXT:    cmovneq %rsi, %rdi
-; BWOFF-NEXT:    movw (%rdi), %r10w
+; BWOFF-NEXT:    movw (%rdi), %si
 ; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
-; BWOFF-NEXT:    cmovneq %rdi, %rsi
-; BWOFF-NEXT:    movw (%rsi), %si
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
+; BWOFF-NEXT:    cmovneq %rdi, %r10
+; BWOFF-NEXT:    movw (%r10), %di
+; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %r10
 ; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %r11
-; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; BWOFF-NEXT:    cmovneq %r11, %rdi
-; BWOFF-NEXT:    movw (%rdi), %di
+; BWOFF-NEXT:    cmovneq %r10, %r11
+; BWOFF-NEXT:    movw (%r11), %r10w
 ; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %r11
 ; BWOFF-NEXT:    leaq {{[0-9]+}}(%rsp), %rbx
 ; BWOFF-NEXT:    cmovneq %r11, %rbx
-; BWOFF-NEXT:    movw (%rbx), %bx
+; BWOFF-NEXT:    movw (%rbx), %r11w
 ; BWOFF-NEXT:    cmovew {{[0-9]+}}(%rsp), %dx
 ; BWOFF-NEXT:    cmovew {{[0-9]+}}(%rsp), %cx
 ; BWOFF-NEXT:    cmovew {{[0-9]+}}(%rsp), %r8w
@@ -1326,10 +1326,10 @@ define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
 ; BWOFF-NEXT:    movw %r8w, 4(%rax)
 ; BWOFF-NEXT:    movw %cx, 2(%rax)
 ; BWOFF-NEXT:    movw %dx, (%rax)
-; BWOFF-NEXT:    movw %bx, 14(%rax)
-; BWOFF-NEXT:    movw %di, 12(%rax)
-; BWOFF-NEXT:    movw %si, 10(%rax)
-; BWOFF-NEXT:    movw %r10w, 8(%rax)
+; BWOFF-NEXT:    movw %r11w, 14(%rax)
+; BWOFF-NEXT:    movw %r10w, 12(%rax)
+; BWOFF-NEXT:    movw %di, 10(%rax)
+; BWOFF-NEXT:    movw %si, 8(%rax)
 ; BWOFF-NEXT:    popq %rbx
 ; BWOFF-NEXT:    .cfi_def_cfa_offset 8
 ; BWOFF-NEXT:    retq

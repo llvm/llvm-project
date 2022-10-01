@@ -34,7 +34,7 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
   for (auto *opOperand : linalgOp.getInputAndOutputOperands()) {
     if (llvm::is_contained(droppedOperands, opOperand))
       continue;
-    indexingMaps.push_back(linalgOp.getTiedIndexingMap(opOperand));
+    indexingMaps.push_back(linalgOp.getMatchingIndexingMap(opOperand));
   }
   return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
 }
@@ -297,7 +297,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
       !indexingMaps.back().isProjectedPermutation())
     return MatchConvolutionResult::NotProjectedPermutations;
 
-  auto iteratorTypesRange = linalgOp.getIteratorTypesArray();
+  auto iteratorTypes = linalgOp.getIteratorTypesArray();
 
   llvm::SmallDenseSet<unsigned> outputDims =
       getPreservedDims(indexingMaps.back());
@@ -321,8 +321,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.unConvolvedDims.count(outputDim) &&
         !filterDims.count(outputDim)) {
       // Batch dimension.
-      if (*std::next(iteratorTypesRange.begin(), outputDim) !=
-          getParallelIteratorTypeName())
+      if (iteratorTypes[outputDim] != getParallelIteratorTypeName())
         return MatchConvolutionResult::OutputDimsNotParallel;
       allLoopDims.insert(outputDim);
       continue;
@@ -330,8 +329,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.convolvedDims.count(outputDim) &&
         !filterDims.count(outputDim)) {
       // Output image Loop dimension.
-      if (*std::next(iteratorTypesRange.begin(), outputDim) !=
-          getParallelIteratorTypeName())
+      if (iteratorTypes[outputDim] != getParallelIteratorTypeName())
         return MatchConvolutionResult::OutputDimsNotParallel;
       allLoopDims.insert(outputDim);
       continue;
@@ -340,8 +338,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
         !inputExprWalker.unConvolvedDims.count(outputDim) &&
         filterDims.count(outputDim)) {
       // Output channel dimension.
-      if (*std::next(iteratorTypesRange.begin(), outputDim) !=
-          getParallelIteratorTypeName())
+      if (iteratorTypes[outputDim] != getParallelIteratorTypeName())
         return MatchConvolutionResult::OutputDimsNotParallel;
       allLoopDims.insert(outputDim);
       continue;
@@ -349,8 +346,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.unConvolvedDims.count(outputDim) &&
         filterDims.count(outputDim)) {
       // Depth multiplier.
-      if (*std::next(iteratorTypesRange.begin(), outputDim) !=
-          getParallelIteratorTypeName())
+      if (iteratorTypes[outputDim] != getParallelIteratorTypeName())
         return MatchConvolutionResult::OutputDimsNotParallel;
       allLoopDims.insert(outputDim);
       continue;
@@ -368,8 +364,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.convolvedDims.count(filterDim) &&
         !outputDims.count(filterDim)) {
       // Filter loop dimension.
-      if (*std::next(iteratorTypesRange.begin(), filterDim) !=
-          getReductionIteratorTypeName())
+      if (iteratorTypes[filterDim] != getReductionIteratorTypeName())
         return MatchConvolutionResult::NonOutputDimNotReduction;
       if (allLoopDims.count(filterDim))
         return MatchConvolutionResult::NonConvolutionLoop;
@@ -379,8 +374,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.unConvolvedDims.count(filterDim) &&
         !outputDims.count(filterDim)) {
       // Input channel dimension.
-      if (*std::next(iteratorTypesRange.begin(), filterDim) !=
-          getReductionIteratorTypeName())
+      if (iteratorTypes[filterDim] != getReductionIteratorTypeName())
         return MatchConvolutionResult::NonOutputDimNotReduction;
       if (allLoopDims.count(filterDim))
         return MatchConvolutionResult::NonConvolutionLoop;
@@ -634,8 +628,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   LinalgOp linalgOp = cast<LinalgOp>(op);
 
   // Check all iterator types are known.
-  auto iteratorTypesRange =
-      linalgOp.iterator_types().getAsValueRange<StringAttr>();
+  auto iteratorTypesRange = linalgOp.getIteratorTypesArray();
   for (StringRef iteratorType : iteratorTypesRange) {
     if (!llvm::is_contained(getAllIteratorTypeNames(), iteratorType) ||
         !utils::symbolizeIteratorType(iteratorType).has_value())
@@ -658,7 +651,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
            << linalgOp.getNumInputsAndOutputs() << ")";
 
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-    AffineMap indexingMap = linalgOp.getTiedIndexingMap(opOperand);
+    AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
 
     // Symbols disallowed.
     if (indexingMap.getNumSymbols() != 0)
@@ -696,7 +689,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
     for (int64_t &range : endLoopRangeValues)
       range -= 1;
     for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-      AffineMap indexingMap = linalgOp.getTiedIndexingMap(opOperand);
+      AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
       SmallVector<int64_t, 4> startIndices =
           indexingMap.compose(startLoopRangeValues);
       SmallVector<int64_t, 4> endIndices =

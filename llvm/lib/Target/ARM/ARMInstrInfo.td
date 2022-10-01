@@ -4891,6 +4891,13 @@ def : ARMPat<(ARMcmpZ GPR:$src, so_reg_imm:$rhs),
              (CMPrsi   GPR:$src, so_reg_imm:$rhs)>;
 def : ARMPat<(ARMcmpZ GPR:$src, so_reg_reg:$rhs),
              (CMPrsr   GPR:$src, so_reg_reg:$rhs)>;
+// Following patterns aimed to prevent usage of CMPrsi and CMPrsr for a comparison
+// with zero. Usage of CMPri in these cases helps to replace cmp with S-versions of
+// shift instructions during peephole optimizations pass.
+def : ARMPat<(ARMcmpZ so_reg_imm:$rhs, 0),
+             (CMPri (MOVsi so_reg_imm:$rhs), 0)>;
+def : ARMPat<(ARMcmpZ so_reg_reg:$rhs, 0),
+             (CMPri (MOVsr so_reg_reg:$rhs), 0)>;
 
 // CMN register-integer
 let isCompare = 1, Defs = [CPSR] in {

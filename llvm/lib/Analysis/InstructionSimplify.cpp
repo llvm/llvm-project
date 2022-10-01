@@ -4248,11 +4248,42 @@ static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
     Pred = ICmpInst::getInversePredicate(Pred);
   }
 
-  // (X pred Y) ? X : max/min(X, Y)
+  // A vector select may be shuffling together elements that are equivalent
+  // based on the max/min/select relationship.
   Value *X = CmpLHS, *Y = CmpRHS;
+  bool PeekedThroughSelectShuffle = false;
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(FVal);
+  if (Shuf && Shuf->isSelect()) {
+    if (Shuf->getOperand(0) == Y)
+      FVal = Shuf->getOperand(1);
+    else if (Shuf->getOperand(1) == Y)
+      FVal = Shuf->getOperand(0);
+    else
+      return nullptr;
+    PeekedThroughSelectShuffle = true;
+  }
+
+  // (X pred Y) ? X : max/min(X, Y)
   auto *MMI = dyn_cast<MinMaxIntrinsic>(FVal);
   if (!MMI || TVal != X ||
       !match(FVal, m_c_MaxOrMin(m_Specific(X), m_Specific(Y))))
+    return nullptr;
+
+  // (X >  Y) ? X : max(X, Y) --> max(X, Y)
+  // (X >= Y) ? X : max(X, Y) --> max(X, Y)
+  // (X <  Y) ? X : min(X, Y) --> min(X, Y)
+  // (X <= Y) ? X : min(X, Y) --> min(X, Y)
+  //
+  // The equivalence allows a vector select (shuffle) of max/min and Y. Ex:
+  // (X > Y) ? X : (Z ? max(X, Y) : Y)
+  // If Z is true, this reduces as above, and if Z is false:
+  // (X > Y) ? X : Y --> max(X, Y)
+  ICmpInst::Predicate MMPred = MMI->getPredicate();
+  if (MMPred == CmpInst::getStrictPredicate(Pred))
+    return MMI;
+
+  // Other transforms are not valid with a shuffle.
+  if (PeekedThroughSelectShuffle)
     return nullptr;
 
   // (X == Y) ? X : max/min(X, Y) --> max/min(X, Y)
@@ -4262,14 +4293,6 @@ static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
   // (X != Y) ? X : max/min(X, Y) --> X
   if (Pred == CmpInst::ICMP_NE)
     return X;
-
-  // (X >  Y) ? X : max(X, Y) --> max(X, Y)
-  // (X >= Y) ? X : max(X, Y) --> max(X, Y)
-  // (X <  Y) ? X : min(X, Y) --> min(X, Y)
-  // (X <= Y) ? X : min(X, Y) --> min(X, Y)
-  ICmpInst::Predicate MMPred = MMI->getPredicate();
-  if (MMPred == CmpInst::getStrictPredicate(Pred))
-    return MMI;
 
   // (X <  Y) ? X : max(X, Y) --> X
   // (X <= Y) ? X : max(X, Y) --> X

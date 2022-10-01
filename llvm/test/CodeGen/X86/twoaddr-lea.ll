@@ -63,7 +63,7 @@ entry:
 define void @ham() {
 ; CHECK-LABEL: ham:
 ; CHECK:       ## %bb.0: ## %bb
-; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movq _global@GOTPCREL(%rip), %rdx
 ; CHECK-NEXT:    movq _global2@GOTPCREL(%rip), %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -74,16 +74,16 @@ define void @ham() {
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ## Child Loop BB3_7 Depth 2
 ; CHECK-NEXT:    movl (%rdx), %edi
-; CHECK-NEXT:    leal (%rdi,%rax), %ecx
-; CHECK-NEXT:    movslq %ecx, %rcx
+; CHECK-NEXT:    leal (%rdi,%rax), %r8d
+; CHECK-NEXT:    movslq %r8d, %r8
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB3_7: ## %bb6
 ; CHECK-NEXT:    ## Parent Loop BB3_6 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    movq %rax, (%rsi)
-; CHECK-NEXT:    movq %rcx, (%rsi)
+; CHECK-NEXT:    movq %r8, (%rsi)
 ; CHECK-NEXT:    movl %edi, (%rdx)
-; CHECK-NEXT:    testb %r8b, %r8b
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne LBB3_7
 ; CHECK-NEXT:  ## %bb.8: ## %bb9
 ; CHECK-NEXT:    ## in Loop: Header=BB3_6 Depth=1

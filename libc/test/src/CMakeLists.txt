@@ -51,7 +51,7 @@ add_subdirectory(dirent)
 # The signal API is currently disabled as signal.h is incorrect.
 # since assert uses the signal API, we disable assert also.
 # add_subdirectory(assert)
-# add_subdirectory(signal)
+add_subdirectory(signal)
 add_subdirectory(time)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")

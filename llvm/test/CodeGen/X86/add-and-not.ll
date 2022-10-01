@@ -92,16 +92,16 @@ define i8 @add_and_xor_extra_use(i8 %x, i8 %y) nounwind {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %r14d
-; CHECK-NEXT:    movl %r14d, %eax
+; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %ebp, %eax
 ; CHECK-NEXT:    notb %al
-; CHECK-NEXT:    movzbl %al, %ebp
-; CHECK-NEXT:    movl %ebp, %edi
+; CHECK-NEXT:    movzbl %al, %r14d
+; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    andb %bl, %bpl
-; CHECK-NEXT:    movzbl %bpl, %edi
+; CHECK-NEXT:    andb %bl, %r14b
+; CHECK-NEXT:    movzbl %r14b, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    orb %r14b, %bl
+; CHECK-NEXT:    orb %bpl, %bl
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14

@@ -70,8 +70,6 @@ fields {
  feature {  int64_list {  value: 0  }  }
  feature {  int64_list {  value: 0  }  }
  feature {  int64_list {  value: 0  }  }
- feature {  int64_list {  value: 0  }  }
- feature {  int64_list {  value: 0  }  }
  feature {  int64_list {  value: 0  }  }  }  }
  feature_list {
  key: \"priority\"  value {
@@ -114,7 +112,6 @@ fields {
  feature {  float_list {  value: 2.68435763e+09  }  }
  feature {  float_list {  value: 2.68435584e+09  }  }
  feature {  float_list {  value: 2.14748365e+09  }  }
- feature {  float_list {  value: 3.75810074e+09  }  }
  feature {  float_list {  value: 2.68435814e+09  }  }
  feature {  float_list {  value: 3584  }  }
  feature {  float_list {  value: 2.68435814e+09  }  }
@@ -131,7 +128,6 @@ fields {
  feature {  float_list {  value: 2.6843584e+09  }  }
  feature {  float_list {  value: 3.75809664e+09  }  }
  feature {  float_list {  value: 2.68435482e+09  }  }
- feature {  float_list {  value: 2.68435482e+09  }  }
  feature {  float_list {  value: 2.68435814e+09  }  }
  feature {  float_list {  value: 2.68435482e+09  }  }
  feature {  float_list {  value: 2.68435456e+09  }  }
@@ -146,8 +142,6 @@ fields {
  feature {  float_list {  value: 2.68435456e+09  }  }  }  }
  feature_list {
  key: \"reward\"  value {
- feature {  float_list {  value: 0  }  }
- feature {  float_list {  value: 0  }  }
  feature {  float_list {  value: 0  }  }
  feature {  float_list {  value: 0  }  }
  feature {  float_list {  value: 0  }  }
@@ -283,13 +277,9 @@ fields {
  feature {  int64_list {  value: 0  }  }
  feature {  int64_list {  value: 0  }  }
  feature {  int64_list {  value: 0  }  }
- feature {  int64_list {  value: 0  }  }
- feature {  int64_list {  value: 0  }  }
  feature {  int64_list {  value: 0  }  }  }  }
  feature_list {
  key: \"weight\"  value {
- feature {  float_list {  value: 0  }  }
- feature {  float_list {  value: 0  }  }
  feature {  float_list {  value: 0  }  }
  feature {  float_list {  value: 0  }  }
  feature {  float_list {  value: 0  }  }

@@ -3167,6 +3167,21 @@ void TransferReadOp::getEffects(
                          SideEffects::DefaultResource::get());
 }
 
+/// Returns true if all rank reduced in the given `extractOp` happen in leading
+/// dimensions earlier than last `trailingRank` dimensions.
+static bool areAllRankReducedLeadingDim(tensor::ExtractSliceOp extractOp,
+                                        unsigned trailingRank) {
+  // If no ranks are reduced at all, it's a degenerated case; always true.
+  if (extractOp.getSourceType().getRank() == extractOp.getType().getRank())
+    return true;
+
+  RankedTensorType inferredType = extractOp.inferResultType(
+      extractOp.getSourceType(), extractOp.getMixedOffsets(),
+      extractOp.getMixedSizes(), extractOp.getMixedStrides());
+  return extractOp.getType().getShape().take_back(trailingRank) ==
+         inferredType.getShape().take_back(trailingRank);
+}
+
 namespace {
 /// Fold transfer_reads of a tensor.extract_slice op. E.g.:
 ///
@@ -3221,18 +3236,11 @@ public:
     // ```
     // For this, check the trailing `vectorRank` dims of the extract_slice
     // result tensor match the trailing dims of the inferred result tensor.
+    if (!areAllRankReducedLeadingDim(extractOp, extractOp.getType().getRank()))
+      return failure();
+
     int64_t rankReduced =
         extractOp.getSourceType().getRank() - extractOp.getType().getRank();
-    int64_t vectorRank = xferOp.getVectorType().getRank();
-    RankedTensorType inferredDestTensorType =
-        tensor::ExtractSliceOp::inferResultType(
-            extractOp.getSourceType(), extractOp.getMixedOffsets(),
-            extractOp.getMixedSizes(), extractOp.getMixedStrides());
-    auto actualDestTensorShape = extractOp.getType().getShape();
-    if (rankReduced > 0 &&
-        actualDestTensorShape.take_back(vectorRank) !=
-            inferredDestTensorType.getShape().take_back(vectorRank))
-      return failure();
 
     SmallVector<Value> newIndices;
     // In case this is a rank-reducing ExtractSliceOp, copy rank-reduced

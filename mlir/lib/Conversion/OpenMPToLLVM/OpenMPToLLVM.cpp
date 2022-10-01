@@ -40,9 +40,9 @@ struct RegionOpConversion : public ConvertOpToLLVMPattern<OpType> {
                   ConversionPatternRewriter &rewriter) const override {
     auto newOp = rewriter.create<OpType>(
         curOp.getLoc(), TypeRange(), adaptor.getOperands(), curOp->getAttrs());
-    rewriter.inlineRegionBefore(curOp.region(), newOp.region(),
-                                newOp.region().end());
-    if (failed(rewriter.convertRegionTypes(&newOp.region(),
+    rewriter.inlineRegionBefore(curOp.getRegion(), newOp.getRegion(),
+                                newOp.getRegion().end());
+    if (failed(rewriter.convertRegionTypes(&newOp.getRegion(),
                                            *this->getTypeConverter())))
       return failure();
 
@@ -88,7 +88,7 @@ struct ReductionOpConversion : public ConvertOpToLLVMPattern<omp::ReductionOp> {
   LogicalResult
   matchAndRewrite(omp::ReductionOp curOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (curOp.accumulator().getType().isa<MemRefType>()) {
+    if (curOp.getAccumulator().getType().isa<MemRefType>()) {
       // TODO: Support memref type in variable operands
       return rewriter.notifyMatchFailure(curOp, "memref is not supported yet");
     }

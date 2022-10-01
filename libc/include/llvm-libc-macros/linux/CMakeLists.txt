@@ -33,3 +33,9 @@ add_header(
   HDR
     unistd-macros.h
 )
+
+add_header(
+  signal_macros
+  HDR
+    signal-macros.h
+)

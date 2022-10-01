@@ -56,9 +56,6 @@ def GPU_Dialect : Dialect {
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
-
-  // TODO: Update this to _Prefixed.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 def GPU_AsyncToken : DialectType<

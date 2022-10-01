@@ -59,35 +59,35 @@ SparseTensorStorageBase::SparseTensorStorageBase(
       SparseTensorEnumeratorBase<V> **, uint64_t, const uint64_t *) const {    \
     FATAL_PIV("newEnumerator" #VNAME);                                         \
   }
-FOREVERY_V(IMPL_NEWENUMERATOR)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_NEWENUMERATOR)
 #undef IMPL_NEWENUMERATOR
 
 #define IMPL_GETPOINTERS(PNAME, P)                                             \
   void SparseTensorStorageBase::getPointers(std::vector<P> **, uint64_t) {     \
     FATAL_PIV("getPointers" #PNAME);                                           \
   }
-FOREVERY_FIXED_O(IMPL_GETPOINTERS)
+MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETPOINTERS)
 #undef IMPL_GETPOINTERS
 
 #define IMPL_GETINDICES(INAME, I)                                              \
   void SparseTensorStorageBase::getIndices(std::vector<I> **, uint64_t) {      \
     FATAL_PIV("getIndices" #INAME);                                            \
   }
-FOREVERY_FIXED_O(IMPL_GETINDICES)
+MLIR_SPARSETENSOR_FOREVERY_FIXED_O(IMPL_GETINDICES)
 #undef IMPL_GETINDICES
 
 #define IMPL_GETVALUES(VNAME, V)                                               \
   void SparseTensorStorageBase::getValues(std::vector<V> **) {                 \
     FATAL_PIV("getValues" #VNAME);                                             \
   }
-FOREVERY_V(IMPL_GETVALUES)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETVALUES)
 #undef IMPL_GETVALUES
 
 #define IMPL_LEXINSERT(VNAME, V)                                               \
   void SparseTensorStorageBase::lexInsert(const uint64_t *, V) {               \
     FATAL_PIV("lexInsert" #VNAME);                                             \
   }
-FOREVERY_V(IMPL_LEXINSERT)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_LEXINSERT)
 #undef IMPL_LEXINSERT
 
 #define IMPL_EXPINSERT(VNAME, V)                                               \
@@ -95,7 +95,7 @@ FOREVERY_V(IMPL_LEXINSERT)
                                           uint64_t) {                          \
     FATAL_PIV("expInsert" #VNAME);                                             \
   }
-FOREVERY_V(IMPL_EXPINSERT)
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_EXPINSERT)
 #undef IMPL_EXPINSERT
 
 #undef FATAL_PIV

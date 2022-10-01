@@ -504,6 +504,15 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
     return;
   }
 
+  if (SrcTy.isVector() && PartTy.isVector() &&
+      PartTy.getScalarSizeInBits() == SrcTy.getScalarSizeInBits() &&
+      SrcTy.getNumElements() < PartTy.getNumElements()) {
+    // A coercion like: v2f32 -> v4f32.
+    Register DstReg = DstRegs.front();
+    B.buildPadVectorWithUndefElements(DstReg, SrcReg);
+    return;
+  }
+
   LLT GCDTy = getGCDType(SrcTy, PartTy);
   if (GCDTy == PartTy) {
     // If this already evenly divisible, we can create a simple unmerge.

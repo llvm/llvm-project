@@ -67,7 +67,7 @@ enum class MLIR_SPARSETENSOR_EXPORT OverheadType : uint32_t {
 // fixed-width.  It excludes `index_type` because that type is often
 // handled specially (e.g., by translating it into the architecture-dependent
 // equivalent fixed-width overhead type).
-#define FOREVERY_FIXED_O(DO)                                                   \
+#define MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DO)                                 \
   DO(64, uint64_t)                                                             \
   DO(32, uint32_t)                                                             \
   DO(16, uint16_t)                                                             \
@@ -75,8 +75,8 @@ enum class MLIR_SPARSETENSOR_EXPORT OverheadType : uint32_t {
 
 // This x-macro calls its argument on every overhead type, including
 // `index_type`.
-#define FOREVERY_O(DO)                                                         \
-  FOREVERY_FIXED_O(DO)                                                         \
+#define MLIR_SPARSETENSOR_FOREVERY_O(DO)                                       \
+  MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DO)                                       \
   DO(0, index_type)
 
 // These are not just shorthands but indicate the particular
@@ -100,7 +100,7 @@ enum class MLIR_SPARSETENSOR_EXPORT PrimaryType : uint32_t {
 };
 
 // This x-macro includes all `V` types.
-#define FOREVERY_V(DO)                                                         \
+#define MLIR_SPARSETENSOR_FOREVERY_V(DO)                                       \
   DO(F64, double)                                                              \
   DO(F32, float)                                                               \
   DO(F16, f16)                                                                 \
@@ -156,6 +156,63 @@ enum class MLIR_SPARSETENSOR_EXPORT DimLevelType : uint8_t {
   kSingletonNo = 7,
   kSingletonNuNo = 8,
 };
+
+/// Check if the `DimLevelType` is dense.
+constexpr MLIR_SPARSETENSOR_EXPORT bool isDenseDLT(DimLevelType dlt) {
+  return dlt == DimLevelType::kDense;
+}
+
+/// Check if the `DimLevelType` is compressed (regardless of properties).
+constexpr MLIR_SPARSETENSOR_EXPORT bool isCompressedDLT(DimLevelType dlt) {
+  switch (dlt) {
+  case DimLevelType::kCompressed:
+  case DimLevelType::kCompressedNu:
+  case DimLevelType::kCompressedNo:
+  case DimLevelType::kCompressedNuNo:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Check if the `DimLevelType` is singleton (regardless of properties).
+constexpr MLIR_SPARSETENSOR_EXPORT bool isSingletonDLT(DimLevelType dlt) {
+  switch (dlt) {
+  case DimLevelType::kSingleton:
+  case DimLevelType::kSingletonNu:
+  case DimLevelType::kSingletonNo:
+  case DimLevelType::kSingletonNuNo:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Check if the `DimLevelType` is ordered (regardless of storage format).
+constexpr MLIR_SPARSETENSOR_EXPORT bool isOrderedDLT(DimLevelType dlt) {
+  switch (dlt) {
+  case DimLevelType::kCompressedNo:
+  case DimLevelType::kCompressedNuNo:
+  case DimLevelType::kSingletonNo:
+  case DimLevelType::kSingletonNuNo:
+    return false;
+  default:
+    return true;
+  }
+}
+
+/// Check if the `DimLevelType` is unique (regardless of storage format).
+constexpr MLIR_SPARSETENSOR_EXPORT bool isUniqueDLT(DimLevelType dlt) {
+  switch (dlt) {
+  case DimLevelType::kCompressedNu:
+  case DimLevelType::kCompressedNuNo:
+  case DimLevelType::kSingletonNu:
+  case DimLevelType::kSingletonNuNo:
+    return false;
+  default:
+    return true;
+  }
+}
 
 } // namespace sparse_tensor
 } // namespace mlir

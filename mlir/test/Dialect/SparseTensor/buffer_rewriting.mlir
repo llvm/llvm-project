@@ -26,6 +26,22 @@ func.func @sparse_push_back(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2:
   return %0 : memref<?xf64>
 }
 
+// CHECK-LABEL: func @sparse_push_back_inbound(
+//  CHECK-SAME: %[[A:.*]]: memref<?xindex>,
+//  CHECK-SAME: %[[B:.*]]: memref<?xf64>,
+//  CHECK-SAME: %[[C:.*]]: f64) -> memref<?xf64> {
+//   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+//       CHECK: %[[P:.*]] = memref.load %[[A]]{{\[}}%[[C2]]]
+//       CHECK: memref.store %[[C]], %[[B]]{{\[}}%[[P]]]
+//       CHECK: %[[P2:.*]] = arith.addi %[[P]], %[[C1]]
+//       CHECK: memref.store %[[P2]], %[[A]]{{\[}}%[[C2]]]
+//       CHECK: return %[[B]] : memref<?xf64>
+func.func @sparse_push_back_inbound(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2: f64) -> memref<?xf64> {
+  %0 = sparse_tensor.push_back inbounds %arg0, %arg1, %arg2 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64 to memref<?xf64>
+  return %0 : memref<?xf64>
+}
+
 // CHECK-LABEL:   func.func private @_sparse_less_than_1_i8(
 // CHECK-SAME:                                              %[[I:arg0]]: index,
 // CHECK-SAME:                                              %[[J:.*]]: index,

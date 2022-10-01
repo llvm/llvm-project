@@ -597,6 +597,32 @@ LogicalResult CompressOp::verify() {
   return success();
 }
 
+void ForeachOp::build(
+    OpBuilder &builder, OperationState &result, Value tensor,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  build(builder, result, tensor);
+  if (!bodyBuilder)
+    return;
+
+  auto rtp = tensor.getType().cast<RankedTensorType>();
+  int64_t rank = rtp.getRank();
+
+  SmallVector<Type, 4> blockArgTypes;
+  // Starts with n index.
+  std::fill_n(std::back_inserter(blockArgTypes), rank, builder.getIndexType());
+  // Followed by one value.
+  blockArgTypes.push_back(rtp.getElementType());
+
+  SmallVector<Location, 4> blockArgLocs;
+  std::fill_n(std::back_inserter(blockArgLocs), rank + 1, tensor.getLoc());
+
+  OpBuilder::InsertionGuard guard(builder);
+  auto &region = *result.regions.front();
+  Block *bodyBlock =
+      builder.createBlock(&region, region.end(), blockArgTypes, blockArgLocs);
+  bodyBuilder(builder, result.location, bodyBlock->getArguments());
+}
+
 LogicalResult ForeachOp::verify() {
   auto t = getTensor().getType().cast<RankedTensorType>();
   auto args = getBody()->getArguments();

@@ -452,7 +452,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
         ISD::VP_SQRT,        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,
         ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
-        ISD::VP_FROUNDEVEN};
+        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -3936,6 +3936,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPOp(Op, DAG, RISCVISD::FMINNUM_VL, /*HasMergeOp*/ true);
   case ISD::VP_FMAXNUM:
     return lowerVPOp(Op, DAG, RISCVISD::FMAXNUM_VL, /*HasMergeOp*/ true);
+  case ISD::VP_FCOPYSIGN:
+    return lowerVPOp(Op, DAG, RISCVISD::FCOPYSIGN_VL, /*HasMergeOp*/ true);
   case ISD::VP_SIGN_EXTEND:
   case ISD::VP_ZERO_EXTEND:
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
@@ -4047,7 +4049,6 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
 
 SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
   return getAddr(N, DAG, N->getGlobal()->isDSOLocal());
@@ -4154,7 +4155,6 @@ SDValue RISCVTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
 SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
@@ -7714,17 +7714,10 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG) {
   if (!isOneConstant(ScalarV.getOperand(2)))
     return SDValue();
 
-  // TODO: Deal with value other than neutral element.
-  auto IsRVVNeutralElement = [Opc, &DAG](SDNode *N, SDValue V) {
-    if (Opc == ISD::FADD && N->getFlags().hasNoSignedZeros() &&
-        isNullFPConstant(V))
-      return true;
-    return DAG.getNeutralElement(Opc, SDLoc(V), V.getSimpleValueType(),
-                                 N->getFlags()) == V;
-  };
-
   // Check the scalar of ScalarV is neutral element
-  if (!IsRVVNeutralElement(N, ScalarV.getOperand(1)))
+  // TODO: Deal with value other than neutral element.
+  if (!isNeutralConstant(N->getOpcode(), N->getFlags(), ScalarV.getOperand(1),
+                         0))
     return SDValue();
 
   if (!ScalarV.hasOneUse())
@@ -9020,13 +9013,69 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
     SDValue CC = N->getOperand(2);
+    ISD::CondCode CCVal = cast<CondCodeSDNode>(CC)->get();
     SDValue TrueV = N->getOperand(3);
     SDValue FalseV = N->getOperand(4);
     SDLoc DL(N);
+    EVT VT = N->getValueType(0);
 
     // If the True and False values are the same, we don't need a select_cc.
     if (TrueV == FalseV)
       return TrueV;
+
+    // (select (and (x , 0x1) == 0), y, (z ^ y) ) -> (-(and (x , 0x1)) & z ) ^ y
+    // (select (and (x , 0x1) != 0), (z ^ y) ), y -> (-(and (x , 0x1)) & z ) ^ y
+    // (select (and (x , 0x1) == 0), y, (z | y) ) -> (-(and (x , 0x1)) & z ) | y
+    // (select (and (x , 0x1) != 0), (z | y) ), y -> (-(and (x , 0x1)) & z ) | y
+    if (isNullConstant(RHS) && ISD::isIntEqualitySetCC(CCVal) &&
+        LHS.getOpcode() == ISD::AND && isOneConstant(LHS.getOperand(1))) {
+      unsigned Opcode;
+      SDValue Src1, Src2;
+      // true if FalseV is XOR or OR operator and one of its operands
+      // is equal to Op1
+      // ( a , a op b) || ( b , a op b)
+      auto isOrXorPattern = [&]() {
+        if (CCVal == ISD::SETEQ &&
+            (FalseV.getOpcode() == ISD::XOR || FalseV.getOpcode() == ISD::OR) &&
+            (FalseV.getOperand(0) == TrueV || FalseV.getOperand(1) == TrueV)) {
+          Src1 = FalseV.getOperand(0) == TrueV ?
+            FalseV.getOperand(1) : FalseV.getOperand(0);
+          Src2 = TrueV;
+          Opcode = FalseV.getOpcode();
+          return true;
+        }
+        if (CCVal == ISD::SETNE &&
+            (TrueV.getOpcode() == ISD::XOR || TrueV.getOpcode() == ISD::OR) &&
+            (TrueV.getOperand(0) == FalseV || TrueV.getOperand(1) == FalseV)) {
+          Src1 = TrueV.getOperand(0) == FalseV ?
+            TrueV.getOperand(1) : TrueV.getOperand(0);
+          Src2 = FalseV;
+          Opcode = TrueV.getOpcode();
+          return true;
+        }
+
+        return false;
+      };
+
+      if (isOrXorPattern()) {
+        SDValue Neg;
+        unsigned CmpSz = LHS.getSimpleValueType().getSizeInBits();
+        // We need mask of all zeros or ones with same size of the other
+        // operands.
+        if (CmpSz > VT.getSizeInBits())
+          Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, LHS);
+        else if (CmpSz < VT.getSizeInBits())
+          Neg = DAG.getNode(ISD::AND, DL, VT,
+                            DAG.getNode(ISD::ANY_EXTEND, DL, VT, LHS),
+                            DAG.getConstant(1, DL, VT));
+        else
+          Neg = LHS;
+        SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                                   Neg); // -(and (x, 0x1))
+        SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
+        return DAG.getNode(Opcode, DL, VT, And, Src2);           // And Op y
+      }
+    }
 
     if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),

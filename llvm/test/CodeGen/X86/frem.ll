@@ -3,7 +3,7 @@
 
 ; Basic test coverage for FREM
 
-define void @frem_f16(half %a0, half %a1, half *%p3) nounwind {
+define void @frem_f16(half %a0, half %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -26,11 +26,11 @@ define void @frem_f16(half %a0, half %a1, half *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %frem = frem half %a0, %a1
-  store half %frem, half *%p3
+  store half %frem, ptr%p3
   ret void
 }
 
-define void @frem_f32(float %a0, float %a1, float *%p3) nounwind {
+define void @frem_f32(float %a0, float %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -40,11 +40,11 @@ define void @frem_f32(float %a0, float %a1, float *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem float %a0, %a1
-  store float %frem, float *%p3
+  store float %frem, ptr%p3
   ret void
 }
 
-define void @frem_f64(double %a0, double %a1, double *%p3) nounwind {
+define void @frem_f64(double %a0, double %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -54,11 +54,11 @@ define void @frem_f64(double %a0, double %a1, double *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem double %a0, %a1
-  store double %frem, double *%p3
+  store double %frem, ptr%p3
   ret void
 }
 
-define void @frem_f80(x86_fp80 %a0, x86_fp80 %a1, x86_fp80 *%p3) nounwind {
+define void @frem_f80(x86_fp80 %a0, x86_fp80 %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f80:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -74,11 +74,11 @@ define void @frem_f80(x86_fp80 %a0, x86_fp80 %a1, x86_fp80 *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem x86_fp80 %a0, %a1
-  store x86_fp80 %frem, x86_fp80 *%p3
+  store x86_fp80 %frem, ptr%p3
   ret void
 }
 
-define void @frem_f128(fp128 %a0, fp128 %a1, fp128 *%p3) nounwind {
+define void @frem_f128(fp128 %a0, fp128 %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_f128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -88,11 +88,11 @@ define void @frem_f128(fp128 %a0, fp128 %a1, fp128 *%p3) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem fp128 %a0, %a1
-  store fp128 %frem, fp128 *%p3
+  store fp128 %frem, ptr%p3
   ret void
 }
 
-define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, <16 x float> *%p3) nounwind {
+define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -227,11 +227,11 @@ define void @frem_v16f32(<16 x float> %a0, <16 x float> %a1, <16 x float> *%p3) 
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <16 x float> %a0, %a1
-  store <16 x float> %frem, <16 x float> *%p3
+  store <16 x float> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v8f32(<8 x float> %a0, <8 x float> %a1, <8 x float> *%p3) nounwind {
+define void @frem_v8f32(<8 x float> %a0, <8 x float> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -302,11 +302,11 @@ define void @frem_v8f32(<8 x float> %a0, <8 x float> %a1, <8 x float> *%p3) noun
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <8 x float> %a0, %a1
-  store <8 x float> %frem, <8 x float> *%p3
+  store <8 x float> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v4f32(<4 x float> %a0, <4 x float> %a1, <4 x float> *%p3) nounwind {
+define void @frem_v4f32(<4 x float> %a0, <4 x float> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -344,11 +344,11 @@ define void @frem_v4f32(<4 x float> %a0, <4 x float> %a1, <4 x float> *%p3) noun
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <4 x float> %a0, %a1
-  store <4 x float> %frem, <4 x float> *%p3
+  store <4 x float> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v8f64(<8 x double> %a0, <8 x double> %a1, <8 x double> *%p3) nounwind {
+define void @frem_v8f64(<8 x double> %a0, <8 x double> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -419,11 +419,11 @@ define void @frem_v8f64(<8 x double> %a0, <8 x double> %a1, <8 x double> *%p3) n
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <8 x double> %a0, %a1
-  store <8 x double> %frem, <8 x double> *%p3
+  store <8 x double> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v4f64(<4 x double> %a0, <4 x double> %a1, <4 x double> *%p3) nounwind {
+define void @frem_v4f64(<4 x double> %a0, <4 x double> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -462,11 +462,11 @@ define void @frem_v4f64(<4 x double> %a0, <4 x double> %a1, <4 x double> *%p3) n
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <4 x double> %a0, %a1
-  store <4 x double> %frem, <4 x double> *%p3
+  store <4 x double> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v2f64(<2 x double> %a0, <2 x double> %a1, <2 x double> *%p3) nounwind {
+define void @frem_v2f64(<2 x double> %a0, <2 x double> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -488,11 +488,11 @@ define void @frem_v2f64(<2 x double> %a0, <2 x double> %a1, <2 x double> *%p3) n
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <2 x double> %a0, %a1
-  store <2 x double> %frem, <2 x double> *%p3
+  store <2 x double> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nounwind {
+define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v32f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -506,9 +506,9 @@ define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nou
 ; CHECK-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %esi, %r14d
-; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
+; CHECK-NEXT:    movl %esi, %ebx
+; CHECK-NEXT:    movl %edi, %r14d
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r12
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
@@ -618,19 +618,9 @@ define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nou
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ebp
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r15d
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r13d
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r12d
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %edi
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movzwl %bx, %edi
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movl %r12d, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl %r14w, %edi
@@ -641,6 +631,16 @@ define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nou
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
 ; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; CHECK-NEXT:    movl %r13d, %edi
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl %bx, %edi
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
+; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK-NEXT:    movl %r15d, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 2-byte Folded Reload
@@ -889,36 +889,6 @@ define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nou
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %ebp
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %r14d
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %r12d
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
 ; CHECK-NEXT:    movl %eax, %r13d
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
@@ -939,64 +909,94 @@ define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nou
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movw %ax, 62(%r15)
-; CHECK-NEXT:    movw %bx, 60(%r15)
-; CHECK-NEXT:    movw %r13w, 58(%r15)
-; CHECK-NEXT:    movw %r12w, 56(%r15)
-; CHECK-NEXT:    movw %r14w, 54(%r15)
-; CHECK-NEXT:    movw %bp, 52(%r15)
+; CHECK-NEXT:    movl %eax, %r14d
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
+; CHECK-NEXT:    movl %eax, %ebp
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
+; CHECK-NEXT:    movl %eax, %r15d
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
+; CHECK-NEXT:    movw %ax, 62(%r12)
+; CHECK-NEXT:    movw %r15w, 60(%r12)
+; CHECK-NEXT:    movw %bp, 58(%r12)
+; CHECK-NEXT:    movw %r14w, 56(%r12)
+; CHECK-NEXT:    movw %bx, 54(%r12)
+; CHECK-NEXT:    movw %r13w, 52(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 50(%r15)
+; CHECK-NEXT:    movw %ax, 50(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 48(%r15)
+; CHECK-NEXT:    movw %ax, 48(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 46(%r15)
+; CHECK-NEXT:    movw %ax, 46(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 44(%r15)
+; CHECK-NEXT:    movw %ax, 44(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 42(%r15)
+; CHECK-NEXT:    movw %ax, 42(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 40(%r15)
+; CHECK-NEXT:    movw %ax, 40(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 38(%r15)
+; CHECK-NEXT:    movw %ax, 38(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 36(%r15)
+; CHECK-NEXT:    movw %ax, 36(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 34(%r15)
+; CHECK-NEXT:    movw %ax, 34(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 32(%r15)
+; CHECK-NEXT:    movw %ax, 32(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 30(%r15)
+; CHECK-NEXT:    movw %ax, 30(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 28(%r15)
+; CHECK-NEXT:    movw %ax, 28(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 26(%r15)
+; CHECK-NEXT:    movw %ax, 26(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 24(%r15)
+; CHECK-NEXT:    movw %ax, 24(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 22(%r15)
+; CHECK-NEXT:    movw %ax, 22(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 20(%r15)
+; CHECK-NEXT:    movw %ax, 20(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 18(%r15)
+; CHECK-NEXT:    movw %ax, 18(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 16(%r15)
+; CHECK-NEXT:    movw %ax, 16(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 14(%r15)
+; CHECK-NEXT:    movw %ax, 14(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 12(%r15)
+; CHECK-NEXT:    movw %ax, 12(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 10(%r15)
+; CHECK-NEXT:    movw %ax, 10(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 8(%r15)
+; CHECK-NEXT:    movw %ax, 8(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 6(%r15)
+; CHECK-NEXT:    movw %ax, 6(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 4(%r15)
+; CHECK-NEXT:    movw %ax, 4(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, 2(%r15)
+; CHECK-NEXT:    movw %ax, 2(%r12)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, (%r15)
+; CHECK-NEXT:    movw %ax, (%r12)
 ; CHECK-NEXT:    addq $248, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
@@ -1006,11 +1006,11 @@ define void @frem_v32f16(<32 x half> %a0, <32 x half> %a1, <32 x half> *%p3) nou
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %frem = frem <32 x half> %a0, %a1
-  store <32 x half> %frem, <32 x half> *%p3
+  store <32 x half> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nounwind {
+define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -1024,8 +1024,8 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %esi, %r15d
-; CHECK-NEXT:    movl %edi, %r14d
+; CHECK-NEXT:    movl %esi, %r12d
+; CHECK-NEXT:    movl %edi, %r13d
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1071,13 +1071,23 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r13d
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r12d
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r15d
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ebx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r14d
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movzwl %r14w, %edi
+; CHECK-NEXT:    movzwl %r13w, %edi
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
+; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
+; CHECK-NEXT:    movl %r14d, %edi
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl %r12w, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
@@ -1087,16 +1097,6 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movzwl %r15w, %edi
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movl %r12d, %edi
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 2-byte Folded Reload
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
@@ -1104,7 +1104,7 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
 ; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movl %r13d, %edi
+; CHECK-NEXT:    movl %r15d, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 2-byte Folded Reload
@@ -1174,16 +1174,6 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
 ; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %r13d
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1203,7 +1193,7 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %ebx
+; CHECK-NEXT:    movl %eax, %r13d
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1214,6 +1204,16 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
 ; CHECK-NEXT:    movl %eax, %r14d
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
+; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1235,10 +1235,10 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
 ; CHECK-NEXT:    movw %ax, 30(%rbp)
 ; CHECK-NEXT:    movw %r15w, 28(%rbp)
-; CHECK-NEXT:    movw %r14w, 26(%rbp)
-; CHECK-NEXT:    movw %bx, 24(%rbp)
-; CHECK-NEXT:    movw %r12w, 22(%rbp)
-; CHECK-NEXT:    movw %r13w, 20(%rbp)
+; CHECK-NEXT:    movw %bx, 26(%rbp)
+; CHECK-NEXT:    movw %r14w, 24(%rbp)
+; CHECK-NEXT:    movw %r13w, 22(%rbp)
+; CHECK-NEXT:    movw %r12w, 20(%rbp)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
 ; CHECK-NEXT:    movw %ax, 18(%rbp)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
@@ -1268,11 +1268,11 @@ define void @frem_v16f16(<16 x half> %a0, <16 x half> %a1, <16 x half> *%p3) nou
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %frem = frem <16 x half> %a0, %a1
-  store <16 x half> %frem, <16 x half> *%p3
+  store <16 x half> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwind {
+define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -1285,9 +1285,9 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    movl %r9d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl %edx, %ebx
-; CHECK-NEXT:    movl %esi, %r13d
-; CHECK-NEXT:    movl %edi, %r15d
+; CHECK-NEXT:    movl %edx, %r14d
+; CHECK-NEXT:    movl %esi, %r15d
+; CHECK-NEXT:    movl %edi, %r12d
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
@@ -1300,10 +1300,20 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r14d
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ebx
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ebp
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r12d
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %r13d
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %edi
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl %r12w, %edi
+; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
+; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    callq fmodf@PLT
+; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
+; CHECK-NEXT:    movl %eax, %r12d
+; CHECK-NEXT:    movl %r13d, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl %r15w, %edi
@@ -1313,27 +1323,17 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
 ; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movl %r12d, %edi
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movzwl %r13w, %edi
-; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
-; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq fmodf@PLT
-; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %r12d
 ; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movzwl %bx, %edi
+; CHECK-NEXT:    movzwl %r14w, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %r13d
-; CHECK-NEXT:    movl %r14d, %edi
+; CHECK-NEXT:    movl %eax, %r14d
+; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 2-byte Folded Reload
@@ -1342,7 +1342,7 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %r14d
+; CHECK-NEXT:    movl %eax, %r13d
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1352,7 +1352,7 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %r15d
+; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1372,7 +1372,7 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq fmodf@PLT
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
-; CHECK-NEXT:    movl %eax, %ebx
+; CHECK-NEXT:    movl %eax, %r15d
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    callq __gnu_h2f_ieee@PLT
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1384,14 +1384,14 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    callq __gnu_f2h_ieee@PLT
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    movw %ax, 14(%rcx)
-; CHECK-NEXT:    movw %bx, 12(%rcx)
+; CHECK-NEXT:    movw %r15w, 12(%rcx)
 ; CHECK-NEXT:    movw %bp, 10(%rcx)
-; CHECK-NEXT:    movw %r15w, 8(%rcx)
-; CHECK-NEXT:    movw %r14w, 6(%rcx)
-; CHECK-NEXT:    movw %r13w, 4(%rcx)
-; CHECK-NEXT:    movw %r12w, 2(%rcx)
+; CHECK-NEXT:    movw %bx, 8(%rcx)
+; CHECK-NEXT:    movw %r13w, 6(%rcx)
+; CHECK-NEXT:    movw %r14w, 4(%rcx)
 ; CHECK-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 2-byte Folded Reload
-; CHECK-NEXT:    movw %ax, (%rcx)
+; CHECK-NEXT:    movw %ax, 2(%rcx)
+; CHECK-NEXT:    movw %r12w, (%rcx)
 ; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
@@ -1401,11 +1401,11 @@ define void @frem_v8f16(<8 x half> %a0, <8 x half> %a1, <8 x half> *%p3) nounwin
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %frem = frem <8 x half> %a0, %a1
-  store <8 x half> %frem, <8 x half> *%p3
+  store <8 x half> %frem, ptr%p3
   ret void
 }
 
-define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, <4 x x86_fp80> *%p3) nounwind {
+define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, ptr%p3) nounwind {
 ; CHECK-LABEL: frem_v4f80:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
@@ -1457,6 +1457,6 @@ define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, <4 x x86_fp80> *
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %frem = frem <4 x x86_fp80> %a0, %a1
-  store <4 x x86_fp80> %frem, <4 x x86_fp80> *%p3
+  store <4 x x86_fp80> %frem, ptr%p3
   ret void
 }

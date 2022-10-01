@@ -1237,8 +1237,9 @@ template <class LP> void Writer::run() {
   if (in.initOffsets->isNeeded())
     in.initOffsets->setUp();
 
-  // Do not proceed if there was an undefined symbol.
+  // Do not proceed if there were undefined or duplicate symbols.
   reportPendingUndefinedSymbols();
+  reportPendingDuplicateSymbols();
   if (errorCount())
     return;
 

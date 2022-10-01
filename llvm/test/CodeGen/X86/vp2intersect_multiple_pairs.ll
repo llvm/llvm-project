@@ -66,11 +66,10 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    movq %rsp, %rbp
-; X64-NEXT:    pushq %r14
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    andq $-64, %rsp
 ; X64-NEXT:    subq $64, %rsp
-; X64-NEXT:    movq %rdi, %r14
+; X64-NEXT:    movq %rdi, %rbx
 ; X64-NEXT:    vmovaps 16(%rbp), %zmm8
 ; X64-NEXT:    vp2intersectd %zmm1, %zmm0, %k0
 ; X64-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
@@ -104,16 +103,15 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
 ; X64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; X64-NEXT:    kmovw %k0, %edi
-; X64-NEXT:    kmovw %k1, %ebx
+; X64-NEXT:    kmovw %k1, %r8d
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    addl %ecx, %edx
-; X64-NEXT:    addl %ebx, %eax
+; X64-NEXT:    addl %r8d, %eax
 ; X64-NEXT:    addl %esi, %eax
 ; X64-NEXT:    addl %edx, %eax
-; X64-NEXT:    movw %ax, (%r14)
-; X64-NEXT:    leaq -16(%rbp), %rsp
+; X64-NEXT:    movw %ax, (%rbx)
+; X64-NEXT:    leaq -8(%rbp), %rsp
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    popq %r14
 ; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
 entry:

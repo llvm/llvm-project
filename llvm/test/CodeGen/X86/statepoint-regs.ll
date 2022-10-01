@@ -75,12 +75,12 @@ define void @test3(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %r9d, %r14d
-; CHECK-NEXT:    movl %r8d, %r15d
-; CHECK-NEXT:    movl %ecx, %r12d
-; CHECK-NEXT:    movl %edx, %r13d
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %r9d, %ebx
+; CHECK-NEXT:    movl %r8d, %ebp
+; CHECK-NEXT:    movl %ecx, %r14d
+; CHECK-NEXT:    movl %edx, %r15d
+; CHECK-NEXT:    movl %esi, %r12d
+; CHECK-NEXT:    movl %edi, %r13d
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp3:
 ; CHECK-NEXT:    addq $8, %rsp
@@ -123,12 +123,12 @@ define void @test4(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %r9d, %r14d
-; CHECK-NEXT:    movl %r8d, %r15d
-; CHECK-NEXT:    movl %ecx, %r12d
-; CHECK-NEXT:    movl %edx, %r13d
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %r9d, %ebx
+; CHECK-NEXT:    movl %r8d, %ebp
+; CHECK-NEXT:    movl %ecx, %r14d
+; CHECK-NEXT:    movl %edx, %r15d
+; CHECK-NEXT:    movl %esi, %r12d
+; CHECK-NEXT:    movl %edi, %r13d
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp4:
 ; CHECK-NEXT:    addq $8, %rsp
@@ -234,12 +234,12 @@ define void @test7(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl %edi, %r13d
-; CHECK-NEXT:    movl %esi, %ebx
+; CHECK-NEXT:    movl %edi, %r12d
+; CHECK-NEXT:    movl %esi, %r13d
 ; CHECK-NEXT:    movl %edx, %ebp
-; CHECK-NEXT:    movl %ecx, %r14d
-; CHECK-NEXT:    movl %r8d, %r15d
-; CHECK-NEXT:    movl %r9d, %r12d
+; CHECK-NEXT:    movl %ecx, %ebx
+; CHECK-NEXT:    movl %r8d, %r14d
+; CHECK-NEXT:    movl %r9d, %r15d
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
@@ -330,10 +330,10 @@ define void @test8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movl %r9d, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    movl %r8d, (%rsp) ## 4-byte Spill
-; CHECK-NEXT:    movl %ecx, %r12d
-; CHECK-NEXT:    movl %edx, %r13d
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %ecx, %r14d
+; CHECK-NEXT:    movl %edx, %r15d
+; CHECK-NEXT:    movl %esi, %r12d
+; CHECK-NEXT:    movl %edi, %r13d
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
@@ -366,8 +366,8 @@ define void @test8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r14d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r15d
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebp
 ; CHECK-NEXT:    callq _bar ## 132-byte Folded Reload
 ; CHECK-NEXT:  Ltmp10:
 ; CHECK-NEXT:    addq $136, %rsp
@@ -434,12 +434,12 @@ define void @test9(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %r9d, %r14d
-; CHECK-NEXT:    movl %r8d, %r15d
-; CHECK-NEXT:    movl %ecx, %r12d
-; CHECK-NEXT:    movl %edx, %r13d
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %r9d, %ebx
+; CHECK-NEXT:    movl %r8d, %ebp
+; CHECK-NEXT:    movl %ecx, %r14d
+; CHECK-NEXT:    movl %edx, %r15d
+; CHECK-NEXT:    movl %esi, %r12d
+; CHECK-NEXT:    movl %edi, %r13d
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp11:
 ; CHECK-NEXT:    addq $8, %rsp
@@ -484,12 +484,12 @@ define void @test10(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %r9d, %r15d
-; CHECK-NEXT:    movl %r8d, %r14d
-; CHECK-NEXT:    movl %ecx, %r12d
-; CHECK-NEXT:    movl %edx, %r13d
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %r9d, %ebp
+; CHECK-NEXT:    movl %r8d, %ebx
+; CHECK-NEXT:    movl %ecx, %r14d
+; CHECK-NEXT:    movl %edx, %r15d
+; CHECK-NEXT:    movl %esi, %r12d
+; CHECK-NEXT:    movl %edi, %r13d
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp12:
 ; CHECK-NEXT:    callq _bar

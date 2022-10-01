@@ -69,9 +69,6 @@ def PDL_Dialect : Dialect {
   let extraClassDeclaration = [{
     void registerTypes();
   }];
-
-  // FIXME: Flip to prefixed.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLDIALECT

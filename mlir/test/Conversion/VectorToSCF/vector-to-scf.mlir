@@ -70,7 +70,7 @@ func.func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : inde
       }
     }
   }
-  // CHECK: %[[tensor:[0-9]+]] = memref.alloc
+  // CHECK: %[[tensor:[0-9a-zA-Z_]+]] = memref.alloc
   // CHECK-NOT: {{.*}} memref.dim %[[tensor]], %c0
   // CHECK-NOT: {{.*}} memref.dim %[[tensor]], %c3
   return

@@ -658,6 +658,20 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   switch (DefMI->getOpcode()) {
   default:
     break;
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FCOS:
+  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FMAD:
+    if (SNaN)
+      return true;
+
+    // TODO: Need isKnownNeverInfinity
+    return false;
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE: {
     if (SNaN)

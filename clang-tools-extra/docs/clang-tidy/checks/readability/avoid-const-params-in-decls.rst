@@ -15,3 +15,11 @@ Examples:
 
   void f(const string);   // Bad: const is top level.
   void f(const string&);  // Good: const is not top level.
+
+Options
+-------
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will not give warnings inside macros. Default
+   is `true`.

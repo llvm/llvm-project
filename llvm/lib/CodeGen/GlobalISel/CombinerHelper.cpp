@@ -5800,6 +5800,63 @@ bool CombinerHelper::matchAddSubSameReg(MachineInstr &MI, Register &Src) {
   return CheckFold(LHS, RHS) || CheckFold(RHS, LHS);
 }
 
+bool CombinerHelper::matchBuildVectorIdentityFold(MachineInstr &MI,
+                                                  Register &MatchInfo) {
+  // This combine folds the following patterns:
+  //
+  //  G_BUILD_VECTOR_TRUNC (G_BITCAST(x), G_LSHR(G_BITCAST(x), k))
+  //  G_BUILD_VECTOR(G_TRUNC(G_BITCAST(x)), G_TRUNC(G_LSHR(G_BITCAST(x), k)))
+  //    into
+  //      x
+  //    if
+  //      k == sizeof(VecEltTy)/2
+  //      type(x) == type(dst)
+  //
+  //  G_BUILD_VECTOR(G_TRUNC(G_BITCAST(x)), undef)
+  //    into
+  //      x
+  //    if
+  //      type(x) == type(dst)
+
+  LLT DstVecTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT DstEltTy = DstVecTy.getElementType();
+
+  Register Lo, Hi;
+
+  if (mi_match(
+          MI, MRI,
+          m_GBuildVector(m_GTrunc(m_GBitcast(m_Reg(Lo))), m_GImplicitDef()))) {
+    MatchInfo = Lo;
+    return MRI.getType(MatchInfo) == DstVecTy;
+  }
+
+  Optional<ValueAndVReg> ShiftAmount;
+  const auto LoPattern = m_GBitcast(m_Reg(Lo));
+  const auto HiPattern = m_GLShr(m_GBitcast(m_Reg(Hi)), m_GCst(ShiftAmount));
+  if (mi_match(
+          MI, MRI,
+          m_any_of(m_GBuildVectorTrunc(LoPattern, HiPattern),
+                   m_GBuildVector(m_GTrunc(LoPattern), m_GTrunc(HiPattern))))) {
+    if (Lo == Hi && ShiftAmount->Value == DstEltTy.getSizeInBits()) {
+      MatchInfo = Lo;
+      return MRI.getType(MatchInfo) == DstVecTy;
+    }
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchTruncBuildVectorFold(MachineInstr &MI,
+                                               Register &MatchInfo) {
+  // Replace (G_TRUNC (G_BITCAST (G_BUILD_VECTOR x, y)) with just x
+  // if type(x) == type(G_TRUNC)
+  if (!mi_match(MI.getOperand(1).getReg(), MRI,
+                m_GBitcast(m_GBuildVector(m_Reg(MatchInfo), m_Reg()))))
+    return false;
+
+  return MRI.getType(MatchInfo) == MRI.getType(MI.getOperand(0).getReg());
+}
+
 unsigned CombinerHelper::getFPMinMaxOpcForSelect(
     CmpInst::Predicate Pred, LLT DstTy,
     SelectPatternNaNBehaviour VsNaNRetVal) const {

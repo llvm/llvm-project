@@ -2072,6 +2072,7 @@ cc_library(
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":ComplexDialect",
+        ":DialectUtils",
         ":FuncDialect",
         ":FuncTransforms",
         ":IR",

@@ -93,16 +93,8 @@ define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval)
 define <4 x i32> @PR42100(<4 x i32> noundef %x, <4 x i32> noundef %min) {
 ; CHECK-LABEL: @PR42100(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt <4 x i32> [[X:%.*]], [[MIN:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[X]], <4 x i32> [[MIN]])
-; CHECK-NEXT:    [[MIN_ADDR_1:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[MIN]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[SEL3:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[X]], <4 x i32> [[MIN_ADDR_1]]
-; CHECK-NEXT:    [[MIN_ADDR_1_1:%.*]] = shufflevector <4 x i32> [[MIN_ADDR_1]], <4 x i32> [[SEL3]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[SEL4:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[X]], <4 x i32> [[MIN_ADDR_1_1]]
-; CHECK-NEXT:    [[MIN_ADDR_1_2:%.*]] = shufflevector <4 x i32> [[MIN_ADDR_1_1]], <4 x i32> [[SEL4]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[SEL5:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[X]], <4 x i32> [[MIN_ADDR_1_2]]
-; CHECK-NEXT:    [[MIN_ADDR_1_3:%.*]] = shufflevector <4 x i32> [[MIN_ADDR_1_2]], <4 x i32> [[SEL5]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    ret <4 x i32> [[MIN_ADDR_1_3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[X:%.*]], <4 x i32> [[MIN:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 ;
 entry:
   br label %for.cond

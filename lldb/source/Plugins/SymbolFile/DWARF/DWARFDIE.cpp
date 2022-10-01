@@ -14,6 +14,8 @@
 #include "DWARFDeclContext.h"
 #include "DWARFUnit.h"
 
+#include "llvm/ADT/iterator.h"
+
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 
@@ -24,7 +26,9 @@ namespace {
 /// convenience, the starting die is included in the sequence as the first
 /// item.
 class ElaboratingDIEIterator
-    : public std::iterator<std::input_iterator_tag, DWARFDIE> {
+    : public llvm::iterator_facade_base<
+          ElaboratingDIEIterator, std::input_iterator_tag, DWARFDIE,
+          std::ptrdiff_t, DWARFDIE *, DWARFDIE *> {
 
   // The operating invariant is: top of m_worklist contains the "current" item
   // and the rest of the list are items yet to be visited. An empty worklist
@@ -62,21 +66,12 @@ public:
     Next();
     return *this;
   }
-  ElaboratingDIEIterator operator++(int) {
-    ElaboratingDIEIterator I = *this;
-    Next();
-    return I;
-  }
 
   friend bool operator==(const ElaboratingDIEIterator &a,
                          const ElaboratingDIEIterator &b) {
     if (a.m_worklist.empty() || b.m_worklist.empty())
       return a.m_worklist.empty() == b.m_worklist.empty();
     return a.m_worklist.back() == b.m_worklist.back();
-  }
-  friend bool operator!=(const ElaboratingDIEIterator &a,
-                         const ElaboratingDIEIterator &b) {
-    return !(a == b);
   }
 };
 

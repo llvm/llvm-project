@@ -21,9 +21,9 @@
 ; LSR should prefer complicated address to additonal add instructions.
 
 ; CHECK:      LBB0_2:
-; CHECK-NEXT:   movl (%r{{.+}},
-; CHECK-NEXT:   addl (%r{{.+}},
-; CHECK-NEXT:   movl %e{{.+}}, (%r{{.+}},
+; CHECK-NEXT:   movl (%r{{.+}},{{.*}}), [[REG:%[a-z0-9]+]]
+; CHECK-NEXT:   addl (%r{{.+}},{{.*}}), [[REG]]
+; CHECK-NEXT:   movl [[REG]], (%{{.*}})
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

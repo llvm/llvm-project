@@ -799,6 +799,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v8f32, Custom);
   setOperationAction(ISD::LOAD, MVT::v4f64, Custom);
   setOperationAction(ISD::LOAD, MVT::v4i64, Custom);
+  // 128-bit non-temporal loads can be lowered to LDNP using custom lowering.
+  setOperationAction(ISD::LOAD, MVT::v4i32, Custom);
+  setOperationAction(ISD::LOAD, MVT::v2i64, Custom);
+  setOperationAction(ISD::LOAD, MVT::v8i16, Custom);
+  setOperationAction(ISD::LOAD, MVT::v16i8, Custom);
 
   // Lower READCYCLECOUNTER using an mrs from PMCCNTR_EL0.
   // This requires the Performance Monitors extension.
@@ -2330,6 +2335,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::SSTNT1_INDEX_PRED)
     MAKE_CASE(AArch64ISD::LDP)
     MAKE_CASE(AArch64ISD::LDNP)
+    MAKE_CASE(AArch64ISD::LDNP128)
     MAKE_CASE(AArch64ISD::STP)
     MAKE_CASE(AArch64ISD::STNP)
     MAKE_CASE(AArch64ISD::BITREVERSE_MERGE_PASSTHRU)
@@ -4371,6 +4377,39 @@ SDValue AArch64TargetLowering::LowerSET_ROUNDING(SDValue Op,
   return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
 }
 
+static unsigned selectUmullSmull(SDNode *&N0, SDNode *&N1, SelectionDAG &DAG,
+                                 bool &IsMLA) {
+  bool IsN0SExt = isSignExtended(N0, DAG);
+  bool IsN1SExt = isSignExtended(N1, DAG);
+  if (IsN0SExt && IsN1SExt)
+    return AArch64ISD::SMULL;
+
+  bool IsN0ZExt = isZeroExtended(N0, DAG);
+  bool IsN1ZExt = isZeroExtended(N1, DAG);
+
+  if (IsN0ZExt && IsN1ZExt)
+    return AArch64ISD::UMULL;
+
+  if (!IsN1SExt && !IsN1ZExt)
+    return 0;
+  // Look for (s/zext A + s/zext B) * (s/zext C). We want to turn these
+  // into (s/zext A * s/zext C) + (s/zext B * s/zext C)
+  if (IsN1SExt && isAddSubSExt(N0, DAG)) {
+    IsMLA = true;
+    return AArch64ISD::SMULL;
+  }
+  if (IsN1ZExt && isAddSubZExt(N0, DAG)) {
+    IsMLA = true;
+    return AArch64ISD::UMULL;
+  }
+  if (IsN0ZExt && isAddSubZExt(N1, DAG)) {
+    std::swap(N0, N1);
+    IsMLA = true;
+    return AArch64ISD::UMULL;
+  }
+  return 0;
+}
+
 SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
@@ -4386,41 +4425,16 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
          "unexpected type for custom-lowering ISD::MUL");
   SDNode *N0 = Op.getOperand(0).getNode();
   SDNode *N1 = Op.getOperand(1).getNode();
-  unsigned NewOpc = 0;
   bool isMLA = false;
-  bool isN0SExt = isSignExtended(N0, DAG);
-  bool isN1SExt = isSignExtended(N1, DAG);
-  if (isN0SExt && isN1SExt)
-    NewOpc = AArch64ISD::SMULL;
-  else {
-    bool isN0ZExt = isZeroExtended(N0, DAG);
-    bool isN1ZExt = isZeroExtended(N1, DAG);
-    if (isN0ZExt && isN1ZExt)
-      NewOpc = AArch64ISD::UMULL;
-    else if (isN1SExt || isN1ZExt) {
-      // Look for (s/zext A + s/zext B) * (s/zext C). We want to turn these
-      // into (s/zext A * s/zext C) + (s/zext B * s/zext C)
-      if (isN1SExt && isAddSubSExt(N0, DAG)) {
-        NewOpc = AArch64ISD::SMULL;
-        isMLA = true;
-      } else if (isN1ZExt && isAddSubZExt(N0, DAG)) {
-        NewOpc =  AArch64ISD::UMULL;
-        isMLA = true;
-      } else if (isN0ZExt && isAddSubZExt(N1, DAG)) {
-        std::swap(N0, N1);
-        NewOpc =  AArch64ISD::UMULL;
-        isMLA = true;
-      }
-    }
+  unsigned NewOpc = selectUmullSmull(N0, N1, DAG, isMLA);
 
-    if (!NewOpc) {
-      if (VT == MVT::v2i64)
-        // Fall through to expand this.  It is not legal.
-        return SDValue();
-      else
-        // Other vector multiplications are legal.
-        return Op;
-    }
+  if (!NewOpc) {
+    if (VT == MVT::v2i64)
+      // Fall through to expand this.  It is not legal.
+      return SDValue();
+    else
+      // Other vector multiplications are legal.
+      return Op;
   }
 
   // Legalize to a S/UMULL instruction
@@ -5414,6 +5428,27 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   SDLoc DL(Op);
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
+  // Handle lowering 128-bit non temporal loads for little-endian targets.
+  EVT MemVT = LoadNode->getMemoryVT();
+  if (LoadNode->isNonTemporal() && Subtarget->isLittleEndian() &&
+      MemVT.getSizeInBits() == 128 &&
+      (MemVT.getScalarSizeInBits() == 8u ||
+       MemVT.getScalarSizeInBits() == 16u ||
+       MemVT.getScalarSizeInBits() == 32u ||
+       MemVT.getScalarSizeInBits() == 64u)) {
+
+    SDValue Result = DAG.getMemIntrinsicNode(
+        AArch64ISD::LDNP128, DL,
+        DAG.getVTList({MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
+                       MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
+                       MVT::Other}),
+        {LoadNode->getChain(), LoadNode->getBasePtr()}, LoadNode->getMemoryVT(),
+        LoadNode->getMemOperand());
+
+    SDValue P = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), MemVT,
+                            Result.getValue(0), Result.getValue(1));
+    return DAG.getMergeValues({P, Result.getValue(2) /* Chain */}, DL);
+  }
 
   if (LoadNode->getMemoryVT() == MVT::i64x8) {
     SmallVector<SDValue, 8> Ops;
@@ -5435,9 +5470,9 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
 
   // Custom lowering for extending v4i8 vector loads.
   EVT VT = Op->getValueType(0);
-  assert((VT == MVT::v4i16 || VT == MVT::v4i32) && "Expected v4i16 or v4i32");
 
-  if (LoadNode->getMemoryVT() != MVT::v4i8)
+  if ((VT != MVT::v4i16 && VT != MVT::v4i32) ||
+      LoadNode->getMemoryVT() != MVT::v4i8)
     return SDValue();
 
   unsigned ExtType;
@@ -18074,7 +18109,9 @@ static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
   return SDValue();
 }
 
-// Perform TBI simplification if supported by the target and try to break up nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit load instructions can be selected.
+// Perform TBI simplification if supported by the target and try to break up
+// nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit
+// load instructions can be selected.
 static SDValue performLOADCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   SelectionDAG &DAG,

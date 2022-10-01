@@ -222,6 +222,8 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
           orc::ExecutorAddr(ResultI->second.getAddress()));
       Sym->setLinkage(ResultI->second.getFlags().isWeak() ? Linkage::Weak
                                                           : Linkage::Strong);
+      Sym->setScope(ResultI->second.getFlags().isExported() ? Scope::Default
+                                                            : Scope::Hidden);
     } else
       assert(Sym->isWeaklyReferenced() &&
              "Failed to resolve non-weak reference");
@@ -237,6 +239,16 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
         break;
       case Linkage::Weak:
         dbgs() << " (weak)";
+        break;
+      }
+      switch (Sym->getScope()) {
+      case Scope::Local:
+        llvm_unreachable("External symbol should not have local linkage");
+      case Scope::Hidden:
+        break;
+      case Scope::Default:
+        dbgs() << " (exported)";
+        break;
       }
       dbgs() << "\n";
     }

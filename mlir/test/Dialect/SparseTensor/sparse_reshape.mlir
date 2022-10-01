@@ -26,8 +26,8 @@
 // CHECK-CONV:      } do {
 // CHECK-CONV:        %[[X:.*]] = memref.load %{{.*}}[%[[C0]]] : memref<1xindex>
 // CHECK-CONV:        %[[D:.*]] = arith.divui %[[X]], %[[C10]] : index
-// CHECK-CONV:        memref.store %[[D]], %{{.*}}[%[[C0]]] : memref<2xindex>
 // CHECK-CONV:        %[[R:.*]] = arith.remui %[[X]], %[[C10]] : index
+// CHECK-CONV:        memref.store %[[D]], %{{.*}}[%[[C0]]] : memref<2xindex>
 // CHECK-CONV:        memref.store %[[R]], %{{.*}}[%[[C1]]] : memref<2xindex>
 // CHECK-CONV:        call @addEltF64
 // CHECK-CONV:        scf.yield
@@ -64,8 +64,8 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK-CONV:        scf.condition
 // CHECK-CONV:      } do {
 // CHECK-CONV:        %[[X:.*]] = memref.load %{{.*}}[%[[C0]]] : memref<2xindex>
-// CHECK-CONV:        %[[M:.*]] = arith.muli %[[X]], %[[C10]] : index
 // CHECK-CONV:        %[[Y:.*]] = memref.load %{{.*}}[%[[C1]]] : memref<2xindex>
+// CHECK-CONV:        %[[M:.*]] = arith.muli %[[X]], %[[C10]] : index
 // CHECK-CONV:        %[[A:.*]] = arith.addi %[[M]], %[[Y]] : index
 // CHECK-CONV:        memref.store %[[A]], %{{.*}}[%[[C0]]] : memref<1xindex>
 // CHECK-CONV:        call @addEltF64
@@ -103,14 +103,14 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK-CONV:        call @getNextF64
 // CHECK-CONV:        scf.condition
 // CHECK-CONV:      } do {
-// CHECK-CONV:        %[[M:.*]] = arith.muli %[[D1]], %[[C10]] : index
 // CHECK-CONV:        %[[L:.*]] = memref.load %{{.*}}[%[[C0]]] : memref<1xindex>
+// CHECK-CONV:        %[[M:.*]] = arith.muli %[[D1]], %[[C10]] : index
 // CHECK-CONV:        %[[D2:.*]] = arith.divui %[[M]], %[[D1]] : index
 // CHECK-CONV:        %[[D3:.*]] = arith.divui %[[L]], %[[D2]] : index
-// CHECK-CONV:        memref.store %[[D3]], %{{.*}}[%[[C0]]] : memref<2xindex>
 // CHECK-CONV:        %[[R:.*]] = arith.remui %[[L]], %[[D2]] : index
 // CHECK-CONV:        %[[D4:.*]] = arith.divui %[[D2]], %[[C10]] : index
 // CHECK-CONV:        %[[D5:.*]] = arith.divui %[[R]], %[[D4]] : index
+// CHECK-CONV:        memref.store %[[D3]], %{{.*}}[%[[C0]]] : memref<2xindex>
 // CHECK-CONV:        memref.store %[[D5]], %{{.*}}[%[[C1]]] : memref<2xindex>
 // CHECK-CONV:        call @addEltF64
 // CHECK-CONV:        scf.yield
@@ -147,11 +147,11 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK-CONV:        call @getNextF64
 // CHECK-CONV:        scf.condition
 // CHECK-CONV:      } do {
-// CHECK-CONV:        %[[D1:.*]] = arith.divui %[[M1]], %[[C10]] : index
 // CHECK-CONV:        %[[X:.*]] = memref.load %{{.*}}[%[[C0]]] : memref<2xindex>
+// CHECK-CONV:        %[[Y:.*]] = memref.load %{{.*}}[%[[C1]]] : memref<2xindex>
+// CHECK-CONV:        %[[D1:.*]] = arith.divui %[[M1]], %[[C10]] : index
 // CHECK-CONV:        %[[M2:.*]] = arith.muli %[[X]], %[[D1]] : index
 // CHECK-CONV:        %[[D2:.*]] = arith.divui %[[D1]], %{{.*}} : index
-// CHECK-CONV:        %[[Y:.*]] = memref.load %{{.*}}[%[[C1]]] : memref<2xindex>
 // CHECK-CONV:        %[[M3:.*]] = arith.muli %[[Y]], %[[D2]] : index
 // CHECK-CONV:        %[[A:.*]] = arith.addi %[[M2]], %[[M3]] : index
 // CHECK-CONV:        memref.store %[[A]], %{{.*}}[%[[C0]]] : memref<1xindex>

@@ -237,15 +237,15 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl $buf, %r8d
+; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %edx
-; CHECK-NEXT:    leal -1(%rsi), %ecx
+; CHECK-NEXT:    leal -1(%rsi), %r8d
 ; CHECK-NEXT:    jmp .LBB4_1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB4_3: # %if.false
 ; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
-; CHECK-NEXT:    movl %ecx, %esi
-; CHECK-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %r8d, %esi
+; CHECK-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpw $7, %si
 ; CHECK-NEXT:    jne .LBB4_5
 ; CHECK-NEXT:  .LBB4_1: # %loop.bb1
@@ -256,7 +256,7 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %if.true
 ; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
 ; CHECK-NEXT:    tilezero %tmm0
-; CHECK-NEXT:    tilestored %tmm0, (%r8,%rdx)
+; CHECK-NEXT:    tilestored %tmm0, (%rcx,%rdx)
 ; CHECK-NEXT:    cmpw $7, %si
 ; CHECK-NEXT:    je .LBB4_1
 ; CHECK-NEXT:  .LBB4_5: # %exit
@@ -296,7 +296,7 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $buf, %ecx
 ; CHECK-NEXT:    movl $32, %edx
 ; CHECK-NEXT:    xorl %esi, %esi
@@ -307,8 +307,8 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:    decl %esi
 ; CHECK-NEXT:  .LBB5_4: # %loop.bb2
 ; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
-; CHECK-NEXT:    leal (%rdi,%rsi), %eax
-; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    leal (%rdi,%rsi), %r8d
+; CHECK-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpw $7, %si
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tilezero %tmm0
@@ -316,7 +316,7 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:    jne .LBB5_5
 ; CHECK-NEXT:  .LBB5_1: # %loop.bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %r8b, %r8b
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB5_3
 ; CHECK-NEXT:  # %bb.2: # %if.true
 ; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1

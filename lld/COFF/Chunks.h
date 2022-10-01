@@ -174,6 +174,23 @@ protected:
   NonSectionChunk(Kind k = OtherKind) : Chunk(k) {}
 };
 
+// MinGW specific; information about one individual location in the image
+// that needs to be fixed up at runtime after loading. This represents
+// one individual element in the PseudoRelocTableChunk table.
+class RuntimePseudoReloc {
+public:
+  RuntimePseudoReloc(Defined *sym, SectionChunk *target, uint32_t targetOffset,
+                     int flags)
+      : sym(sym), target(target), targetOffset(targetOffset), flags(flags) {}
+
+  Defined *sym;
+  SectionChunk *target;
+  uint32_t targetOffset;
+  // The Flags field contains the size of the relocation, in bits. No other
+  // flags are currently defined.
+  int flags;
+};
+
 // A chunk corresponding a section of an input file.
 class SectionChunk final : public Chunk {
   // Identical COMDAT Folding feature accesses section internal data.
@@ -647,23 +664,6 @@ public:
 
 private:
   std::vector<RuntimePseudoReloc> relocs;
-};
-
-// MinGW specific; information about one individual location in the image
-// that needs to be fixed up at runtime after loading. This represents
-// one individual element in the PseudoRelocTableChunk table.
-class RuntimePseudoReloc {
-public:
-  RuntimePseudoReloc(Defined *sym, SectionChunk *target, uint32_t targetOffset,
-                     int flags)
-      : sym(sym), target(target), targetOffset(targetOffset), flags(flags) {}
-
-  Defined *sym;
-  SectionChunk *target;
-  uint32_t targetOffset;
-  // The Flags field contains the size of the relocation, in bits. No other
-  // flags are currently defined.
-  int flags;
 };
 
 // MinGW specific. A Chunk that contains one pointer-sized absolute value.

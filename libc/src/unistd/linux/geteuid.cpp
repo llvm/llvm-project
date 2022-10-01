@@ -16,7 +16,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(uid_t, geteuid, ()) {
-  return __llvm_libc::syscall(SYS_geteuid);
+  return __llvm_libc::syscall_impl(SYS_geteuid);
 }
 
 } // namespace __llvm_libc

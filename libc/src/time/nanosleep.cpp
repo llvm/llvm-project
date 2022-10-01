@@ -18,7 +18,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, nanosleep,
                    (const struct timespec *req, struct timespec *rem)) {
-  int ret = __llvm_libc::syscall(SYS_nanosleep, req, rem);
+  int ret = __llvm_libc::syscall_impl(SYS_nanosleep, req, rem);
   if (ret < 0) {
     errno = -ret;
     return -1;

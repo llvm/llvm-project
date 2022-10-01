@@ -10188,19 +10188,87 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
     return false;
 
   switch (Opcode) {
+  case AMDGPU::G_FADD:
+  case AMDGPU::G_FSUB:
+  case AMDGPU::G_FMUL:
+  case AMDGPU::G_FCEIL:
+  case AMDGPU::G_FFLOOR:
+  case AMDGPU::G_FRINT:
+  case AMDGPU::G_FNEARBYINT:
+  case AMDGPU::G_INTRINSIC_FPTRUNC_ROUND:
+  case AMDGPU::G_INTRINSIC_TRUNC:
+  case AMDGPU::G_INTRINSIC_ROUNDEVEN:
+  case AMDGPU::G_FMA:
+  case AMDGPU::G_FMAD:
+  case AMDGPU::G_FSQRT:
+  case AMDGPU::G_FDIV:
+  case AMDGPU::G_FREM:
+  case AMDGPU::G_FPOW:
+  case AMDGPU::G_FPEXT:
+  case AMDGPU::G_FLOG:
+  case AMDGPU::G_FLOG2:
+  case AMDGPU::G_FLOG10:
+  case AMDGPU::G_FPTRUNC:
+  case AMDGPU::G_AMDGPU_RCP_IFLAG:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE0:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE1:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE2:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE3:
+    return true;
+  case AMDGPU::G_FNEG:
+  case AMDGPU::G_FABS:
+  case AMDGPU::G_FCOPYSIGN:
+    return isCanonicalized(MI->getOperand(1).getReg(), MF, MaxDepth - 1);
+  case AMDGPU::G_FMINNUM:
+  case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE: {
     if (Subtarget->supportsMinMaxDenormModes() ||
         denormalsEnabledForType(MRI.getType(Reg), MF))
       return true;
+
+    [[fallthrough]];
+  }
+  case AMDGPU::G_BUILD_VECTOR:
     for (const MachineOperand &MO : llvm::drop_begin(MI->operands()))
       if (!isCanonicalized(MO.getReg(), MF, MaxDepth - 1))
         return false;
     return true;
-  }
+  case AMDGPU::G_INTRINSIC:
+    switch (MI->getIntrinsicID()) {
+    case Intrinsic::amdgcn_fmul_legacy:
+    case Intrinsic::amdgcn_fmad_ftz:
+    case Intrinsic::amdgcn_sqrt:
+    case Intrinsic::amdgcn_fmed3:
+    case Intrinsic::amdgcn_sin:
+    case Intrinsic::amdgcn_cos:
+    case Intrinsic::amdgcn_log_clamp:
+    case Intrinsic::amdgcn_rcp:
+    case Intrinsic::amdgcn_rcp_legacy:
+    case Intrinsic::amdgcn_rsq:
+    case Intrinsic::amdgcn_rsq_clamp:
+    case Intrinsic::amdgcn_rsq_legacy:
+    case Intrinsic::amdgcn_div_scale:
+    case Intrinsic::amdgcn_div_fmas:
+    case Intrinsic::amdgcn_div_fixup:
+    case Intrinsic::amdgcn_fract:
+    case Intrinsic::amdgcn_ldexp:
+    case Intrinsic::amdgcn_cvt_pkrtz:
+    case Intrinsic::amdgcn_cubeid:
+    case Intrinsic::amdgcn_cubema:
+    case Intrinsic::amdgcn_cubesc:
+    case Intrinsic::amdgcn_cubetc:
+    case Intrinsic::amdgcn_frexp_mant:
+    case Intrinsic::amdgcn_fdot2:
+    case Intrinsic::amdgcn_trig_preop:
+      return true;
+    default:
+      break;
+    }
+
+    [[fallthrough]];
   default:
-    return denormalsEnabledForType(MRI.getType(Reg), MF) &&
-           isKnownNeverSNaN(Reg, MRI);
+    return false;
   }
 
   llvm_unreachable("invalid operation");
