@@ -333,13 +333,13 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
 
   llvm::TypeSwitch<Operation *, void>(loadOp)
       .Case<AffineLoadOp, memref::LoadOp>([&](auto op) {
-        rewriter.replaceOpWithNewOp<decltype(op)>(loadOp, subViewOp.source(),
+        rewriter.replaceOpWithNewOp<decltype(op)>(loadOp, subViewOp.getSource(),
                                                   sourceIndices);
       })
       .Case([&](vector::TransferReadOp transferReadOp) {
         rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-            transferReadOp, transferReadOp.getVectorType(), subViewOp.source(),
-            sourceIndices,
+            transferReadOp, transferReadOp.getVectorType(),
+            subViewOp.getSource(), sourceIndices,
             getPermutationMapAttr(rewriter.getContext(), subViewOp,
                                   transferReadOp.getPermutationMap()),
             transferReadOp.getPadding(),
@@ -440,11 +440,11 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
   llvm::TypeSwitch<Operation *, void>(storeOp)
       .Case<AffineStoreOp, memref::StoreOp>([&](auto op) {
         rewriter.replaceOpWithNewOp<decltype(op)>(
-            storeOp, storeOp.getValue(), subViewOp.source(), sourceIndices);
+            storeOp, storeOp.getValue(), subViewOp.getSource(), sourceIndices);
       })
       .Case([&](vector::TransferWriteOp op) {
         rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-            op, op.getValue(), subViewOp.source(), sourceIndices,
+            op, op.getValue(), subViewOp.getSource(), sourceIndices,
             getPermutationMapAttr(rewriter.getContext(), subViewOp,
                                   op.getPermutationMap()),
             op.getInBoundsAttr());
