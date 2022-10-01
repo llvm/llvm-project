@@ -2979,20 +2979,38 @@ static bool isOptimizeCompareCandidate(MachineInstr *MI, bool &IsThumb1) {
   case ARM::t2SBCri:
   case ARM::ANDrr:
   case ARM::ANDri:
+  case ARM::ANDrsr:
+  case ARM::ANDrsi:
   case ARM::t2ANDrr:
   case ARM::t2ANDri:
+  case ARM::t2ANDrs:
   case ARM::ORRrr:
   case ARM::ORRri:
+  case ARM::ORRrsr:
+  case ARM::ORRrsi:
   case ARM::t2ORRrr:
   case ARM::t2ORRri:
+  case ARM::t2ORRrs:
   case ARM::EORrr:
   case ARM::EORri:
+  case ARM::EORrsr:
+  case ARM::EORrsi:
   case ARM::t2EORrr:
   case ARM::t2EORri:
+  case ARM::t2EORrs:
+  case ARM::BICri:
+  case ARM::BICrr:
+  case ARM::BICrsi:
+  case ARM::BICrsr:
+  case ARM::t2BICri:
+  case ARM::t2BICrr:
+  case ARM::t2BICrs:
   case ARM::t2LSRri:
   case ARM::t2LSRrr:
   case ARM::t2LSLri:
   case ARM::t2LSLrr:
+  case ARM::MOVsr:
+  case ARM::MOVsi:
     return true;
   }
 }
@@ -3266,8 +3284,9 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   // Toggle the optional operand to CPSR (if it exists - in Thumb1 we always
   // set CPSR so this is represented as an explicit output)
   if (!IsThumb1) {
-    MI->getOperand(5).setReg(ARM::CPSR);
-    MI->getOperand(5).setIsDef(true);
+    unsigned CPSRRegNum = MI->getNumExplicitOperands() - 1;
+    MI->getOperand(CPSRRegNum).setReg(ARM::CPSR);
+    MI->getOperand(CPSRRegNum).setIsDef(true);
   }
   assert(!isPredicated(*MI) && "Can't use flags from predicated instruction");
   CmpInstr.eraseFromParent();
