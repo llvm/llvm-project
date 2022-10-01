@@ -73,7 +73,7 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
 
-std::unique_ptr<Configuration> elf::config;
+ConfigWrapper elf::config;
 std::unique_ptr<Ctx> elf::ctx;
 std::unique_ptr<LinkerDriver> elf::driver;
 
@@ -112,7 +112,7 @@ bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
                                  "--error-limit=0 to see all errors)";
 
-  config = std::make_unique<Configuration>();
+  config = ConfigWrapper();
   elf::ctx = std::make_unique<Ctx>();
   driver = std::make_unique<LinkerDriver>();
   script = std::make_unique<LinkerScript>();
