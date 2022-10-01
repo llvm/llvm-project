@@ -26,8 +26,8 @@ struct __is_allocator : false_type {};
 
 template<typename _Alloc>
 struct __is_allocator<_Alloc,
-       typename __void_t<typename _Alloc::value_type>::type,
-       typename __void_t<decltype(declval<_Alloc&>().allocate(size_t(0)))>::type
+       __void_t<typename _Alloc::value_type>,
+       __void_t<decltype(declval<_Alloc&>().allocate(size_t(0)))>
      >
    : true_type {};
 

@@ -73,10 +73,7 @@ struct __hash_node_base
 #if defined(_LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB)
   typedef __node_base_pointer __next_pointer;
 #else
-  typedef typename conditional<
-      is_pointer<__node_pointer>::value,
-      __node_base_pointer,
-      __node_pointer>::type   __next_pointer;
+    typedef __conditional_t<is_pointer<__node_pointer>::value, __node_base_pointer, __node_pointer> __next_pointer;
 #endif
 
     __next_pointer    __next_;

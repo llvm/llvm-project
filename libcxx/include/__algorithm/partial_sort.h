@@ -63,8 +63,8 @@ _RandomAccessIterator __partial_sort(_RandomAccessIterator __first, _RandomAcces
 
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
-  using _Comp_ref = typename __comp_ref_type<_Compare>::type;
-  auto __last_iter = std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<_Comp_ref>(__comp));
+  auto __last_iter =
+      std::__partial_sort_impl<_AlgPolicy>(__first, __middle, __last, static_cast<__comp_ref_type<_Compare> >(__comp));
 
   std::__debug_randomize_range<_AlgPolicy>(__middle, __last);
 
