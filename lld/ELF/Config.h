@@ -395,10 +395,6 @@ struct Ctx {
   // Symbols in a non-prevailing COMDAT group which should be changed to an
   // Undefined.
   SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
-  // True if SHT_LLVM_SYMPART is used.
-  std::atomic<bool> hasSympart{false};
-  // True if we need to reserve two .got entries for local-dynamic TLS model.
-  std::atomic<bool> needsTlsLd{false};
   // A tuple of (reference, extractedFile, sym). Used by --why-extract=.
   SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
       whyExtractRecords;
@@ -407,10 +403,15 @@ struct Ctx {
   llvm::DenseMap<const Symbol *,
                  std::pair<const InputFile *, const InputFile *>>
       backwardReferences;
+  // True if SHT_LLVM_SYMPART is used.
+  std::atomic<bool> hasSympart{false};
+  // True if we need to reserve two .got entries for local-dynamic TLS model.
+  std::atomic<bool> needsTlsLd{false};
+
+  void reset();
 };
 
-// The only instance of Ctx struct.
-extern std::unique_ptr<Ctx> ctx;
+LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.
