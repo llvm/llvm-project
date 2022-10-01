@@ -1,4 +1,4 @@
-; RUN: opt < %s -enable-loop-distribute -passes='loop-distribute,loop-mssa(simple-loop-unswitch<nontrivial>),loop-distribute' -o /dev/null -S -debug-pass-manager=verbose 2>&1 | FileCheck %s
+; RUN: opt < %s -enable-loop-distribute -passes='loop-distribute,loop-mssa(simple-loop-unswitch<nontrivial>),loop-distribute' -o /dev/null -S -verify-cfg-preserved -debug-pass-manager=verbose 2>&1 | FileCheck %s
 
 
 ; Running loop-distribute will result in LoopAccessAnalysis being required and
