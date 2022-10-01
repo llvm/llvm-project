@@ -1,4 +1,3 @@
-; XFAIL: *
 ; REQUIRES: have_tf_api
 ; REQUIRES: x86_64-linux
 ;
