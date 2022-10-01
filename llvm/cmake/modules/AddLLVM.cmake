@@ -910,7 +910,9 @@ macro(generate_llvm_objects name)
 
     list(APPEND ALL_FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
 
-    if (LLVM_TOOL_LLVM_DRIVER_BUILD)
+    if (LLVM_TOOL_LLVM_DRIVER_BUILD
+        AND (NOT LLVM_DISTRIBUTION_COMPONENTS OR ${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS)
+       )
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_COMPONENTS ${LLVM_LINK_COMPONENTS})
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_DEPS ${ARG_DEPENDS} ${LLVM_COMMON_DEPENDS})
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_OBJLIBS "${obj_name}")
@@ -1301,7 +1303,10 @@ macro(llvm_add_tool project name)
   if( NOT LLVM_BUILD_TOOLS )
     set(EXCLUDE_FROM_ALL ON)
   endif()
-  if(ARG_GENERATE_DRIVER AND LLVM_TOOL_LLVM_DRIVER_BUILD)
+  if(ARG_GENERATE_DRIVER
+     AND LLVM_TOOL_LLVM_DRIVER_BUILD
+     AND (NOT LLVM_DISTRIBUTION_COMPONENTS OR ${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS)
+    )
     generate_llvm_objects(${name} ${ARGN})
     add_custom_target(${name} DEPENDS llvm-driver)
   else()
@@ -2032,7 +2037,10 @@ endfunction()
 
 function(llvm_install_symlink project name dest)
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
-  if(LLVM_TOOL_LLVM_DRIVER_BUILD AND ${dest} IN_LIST LLVM_DRIVER_TOOLS)
+  if(LLVM_TOOL_LLVM_DRIVER_BUILD
+     AND ${dest} IN_LIST LLVM_DRIVER_TOOLS
+     AND (NOT LLVM_DISTRIBUTION_COMPONENTS OR ${dest} IN_LIST LLVM_DISTRIBUTION_COMPONENTS)
+    )
     return()
   endif()
   cmake_parse_arguments(ARG "ALWAYS_GENERATE" "COMPONENT" "" ${ARGN})
