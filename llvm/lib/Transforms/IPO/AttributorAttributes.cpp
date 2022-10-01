@@ -6380,10 +6380,6 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
          (!IsGlobalizedLocal && IsInLoop(*AI.CB->getParent()))))
       AI.MoveAllocaIntoEntry = false;
 
-    // If the alloca comes from a converted __kmpc_alloc_shared then we move
-    // it to the entry block.
-    if (AI.LibraryFunctionId == LibFunc___kmpc_alloc_shared)
-      AI.MoveAllocaIntoEntry = true;
   }
 
   return Changed;
