@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains utility functions for the driver. Because there
+// This file contains utility functions for the ctx.driver. Because there
 // are so many small functions, we created this separate file to make
 // Driver.cpp less cluttered.
 //

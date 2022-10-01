@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -37,6 +38,7 @@ class ELFFileBase;
 class SharedFile;
 class InputSectionBase;
 class Symbol;
+class BitcodeCompiler;
 
 enum ELFKind : uint8_t {
   ELFNoneKind,
@@ -98,10 +100,35 @@ struct VersionDefinition {
   SmallVector<SymbolVersion, 0> localPatterns;
 };
 
+class LinkerDriver {
+public:
+  void linkerMain(ArrayRef<const char *> args);
+  void addFile(StringRef path, bool withLOption);
+  void addLibrary(StringRef name);
+
+private:
+  void createFiles(llvm::opt::InputArgList &args);
+  void inferMachineType();
+  void link(llvm::opt::InputArgList &args);
+  template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
+
+  // True if we are in --whole-archive and --no-whole-archive.
+  bool inWholeArchive = false;
+
+  // True if we are in --start-lib and --end-lib.
+  bool inLib = false;
+
+  std::unique_ptr<BitcodeCompiler> lto;
+  std::vector<InputFile *> files;
+
+public:
+  SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
+};
+
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
-// Most fields are initialized by the driver.
+// Most fields are initialized by the ctx.driver.
 struct Config {
   uint8_t osabi = 0;
   uint32_t andFeatures = 0;
@@ -384,6 +411,7 @@ struct DuplicateSymbol {
 };
 
 struct Ctx {
+  LinkerDriver driver;
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
   SmallVector<SharedFile *, 0> sharedFiles;
