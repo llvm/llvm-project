@@ -195,6 +195,23 @@ GDBRemoteClientBase::SendPacketAndWaitForResponse(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteClientBase::ReadPacketWithOutputSupport(
+    StringExtractorGDBRemote &response, Timeout<std::micro> timeout,
+    bool sync_on_timeout,
+    llvm::function_ref<void(llvm::StringRef)> output_callback) {
+  auto result = ReadPacket(response, timeout, sync_on_timeout);
+  while (result == PacketResult::Success && response.IsNormalResponse() &&
+         response.PeekChar() == 'O') {
+    response.GetChar();
+    std::string output;
+    if (response.GetHexByteString(output))
+      output_callback(output);
+    result = ReadPacket(response, timeout, sync_on_timeout);
+  }
+  return result;
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteClientBase::SendPacketAndReceiveResponseWithOutputSupport(
     llvm::StringRef payload, StringExtractorGDBRemote &response,
     std::chrono::seconds interrupt_timeout,
