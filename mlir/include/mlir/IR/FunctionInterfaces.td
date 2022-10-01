@@ -169,36 +169,36 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     bool isExternal() { return empty(); }
 
     /// Return the region containing the body of this function.
-    Region &getBody() { return $_op->getRegion(0); }
+    Region &getFunctionBody() { return $_op->getRegion(0); }
 
     /// Delete all blocks from this function.
     void eraseBody() {
-      getBody().dropAllReferences();
-      getBody().getBlocks().clear();
+      getFunctionBody().dropAllReferences();
+      getFunctionBody().getBlocks().clear();
     }
 
     /// Return the list of blocks within the function body.
-    BlockListType &getBlocks() { return getBody().getBlocks(); }
+    BlockListType &getBlocks() { return getFunctionBody().getBlocks(); }
 
-    iterator begin() { return getBody().begin(); }
-    iterator end() { return getBody().end(); }
-    reverse_iterator rbegin() { return getBody().rbegin(); }
-    reverse_iterator rend() { return getBody().rend(); }
+    iterator begin() { return getFunctionBody().begin(); }
+    iterator end() { return getFunctionBody().end(); }
+    reverse_iterator rbegin() { return getFunctionBody().rbegin(); }
+    reverse_iterator rend() { return getFunctionBody().rend(); }
 
     /// Returns true if this function has no blocks within the body.
-    bool empty() { return getBody().empty(); }
+    bool empty() { return getFunctionBody().empty(); }
 
     /// Push a new block to the back of the body region.
-    void push_back(Block *block) { getBody().push_back(block); }
+    void push_back(Block *block) { getFunctionBody().push_back(block); }
 
     /// Push a new block to the front of the body region.
-    void push_front(Block *block) { getBody().push_front(block); }
+    void push_front(Block *block) { getFunctionBody().push_front(block); }
 
     /// Return the last block in the body region.
-    Block &back() { return getBody().back(); }
+    Block &back() { return getFunctionBody().back(); }
 
     /// Return the first block in the body region.
-    Block &front() { return getBody().front(); }
+    Block &front() { return getFunctionBody().front(); }
 
     /// Add an entry block to an empty function, and set up the block arguments
     /// to match the signature of the function. The newly inserted entry block
@@ -280,13 +280,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
 
     /// Returns the entry block function argument at the given index.
     BlockArgument getArgument(unsigned idx) {
-      return getBody().getArgument(idx);
+      return getFunctionBody().getArgument(idx);
     }
 
     /// Support argument iteration.
-    args_iterator args_begin() { return getBody().args_begin(); }
-    args_iterator args_end() { return getBody().args_end(); }
-    BlockArgListType getArguments() { return getBody().getArguments(); }
+    args_iterator args_begin() { return getFunctionBody().args_begin(); }
+    args_iterator args_end() { return getFunctionBody().args_end(); }
+    BlockArgListType getArguments() { return getFunctionBody().getArguments(); }
 
     /// Insert a single argument of type `argType` with attributes `argAttrs` and
     /// location `argLoc` at `argIndex`.

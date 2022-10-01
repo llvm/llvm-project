@@ -106,7 +106,7 @@ struct FunctionNonEntryBlockConversion
   matchAndRewrite(FunctionOpInterface op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
-    Region &region = op.getBody();
+    Region &region = op.getFunctionBody();
     SmallVector<TypeConverter::SignatureConversion, 2> conversions;
 
     for (Block &block : llvm::drop_begin(region, 1)) {
@@ -461,7 +461,7 @@ struct LinalgDetensorize
           opsToDetensor.insert(genericOp);
       });
 
-      for (Block &block : llvm::drop_begin(func.getBody(), 1))
+      for (Block &block : llvm::drop_begin(func.getFunctionBody(), 1))
         for (BlockArgument blockArgument : block.getArguments())
           blockArgsToDetensor.insert(blockArgument);
     }
@@ -500,7 +500,7 @@ struct LinalgDetensorize
       // boundaries, which we conservatively approximate as all function
       // signatures.
       if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-        Region &body = funcOp.getBody();
+        Region &body = funcOp.getFunctionBody();
         return llvm::all_of(llvm::drop_begin(body, 1), [&](Block &block) {
           return !llvm::any_of(
               blockArgsToDetensor, [&](BlockArgument blockArgument) {
