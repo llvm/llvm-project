@@ -1393,3 +1393,61 @@ define i32 @addcarry_uge(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
   %r = add i32 %s, %z
   ret i32 %r
 }
+
+define { i64, i64 } @addcarry_commutative_1(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
+; CHECK-LABEL: addcarry_commutative_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    adcq %rcx, %rax
+; CHECK-NEXT:    addq %rdx, %rdi
+; CHECK-NEXT:    adcq %rcx, %rsi
+; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    retq
+  %z0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %x0, i64 %y0)
+  %k0 = extractvalue { i64, i1 } %z0, 1
+  %k0z = zext i1 %k0 to i64
+
+  %t1s = add i64 %x1, %y1
+  %z1s = add i64 %t1s, %k0z
+
+  ; same as the above, but args swapped
+  %a1s = add i64 %y1, %x1
+  %b1s = add i64 %a1s, %k0z
+
+  %r0 = insertvalue { i64, i64 } poison, i64 %z1s, 0
+  %r1 = insertvalue { i64, i64 } %r0, i64 %b1s, 1
+  ret { i64, i64 } %r1
+}
+
+define { i64, i64 } @addcarry_commutative_2(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
+; CHECK-LABEL: addcarry_commutative_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    adcq %rcx, %rax
+; CHECK-NEXT:    addq %rdx, %rdi
+; CHECK-NEXT:    adcq %rcx, %rsi
+; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    retq
+  %z0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %x0, i64 %y0)
+  %k0 = extractvalue { i64, i1 } %z0, 1
+  %k0z = zext i1 %k0 to i64
+
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %x1, i64 %y1)
+  %t1s = extractvalue { i64, i1 } %t1, 0
+  %z1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %t1s, i64 %k0z)
+  %z1s = extractvalue { i64, i1 } %z1, 0
+
+  ; same as the above, but args swapped
+  %a1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %y1, i64 %x1)
+  %a1s = extractvalue { i64, i1 } %a1, 0
+  %b1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a1s, i64 %k0z)
+  %b1s = extractvalue { i64, i1 } %b1, 0
+
+  %r0 = insertvalue { i64, i64 } poison, i64 %z1s, 0
+  %r1 = insertvalue { i64, i64 } %r0, i64 %b1s, 1
+  ret { i64, i64 } %r1
+}
