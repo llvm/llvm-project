@@ -38,12 +38,8 @@ public:
 
 private:
     typedef typename _Engine::result_type _Engine_result_type;
-    typedef typename conditional
-        <
-            sizeof(_Engine_result_type) <= sizeof(result_type),
-                result_type,
-                _Engine_result_type
-        >::type _Working_result_type;
+    typedef __conditional_t<sizeof(_Engine_result_type) <= sizeof(result_type), result_type, _Engine_result_type>
+        _Working_result_type;
 
     _Engine& __e_;
     size_t __w_;
@@ -237,8 +233,8 @@ uniform_int_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p
 _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
-    typedef typename conditional<sizeof(result_type) <= sizeof(uint32_t), uint32_t,
-                                 __make_unsigned_t<result_type> >::type _UIntType;
+    typedef __conditional_t<sizeof(result_type) <= sizeof(uint32_t), uint32_t, __make_unsigned_t<result_type> >
+        _UIntType;
     const _UIntType _Rp = _UIntType(__p.b()) - _UIntType(__p.a()) + _UIntType(1);
     if (_Rp == 1)
         return __p.a();

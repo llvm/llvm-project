@@ -32,8 +32,7 @@ void __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Co
     typename iterator_traits<_RandomAccessIterator>::difference_type __len) {
   _LIBCPP_ASSERT(__len > 0, "The heap given to pop_heap must be non-empty");
 
-  using _CompRef = typename __comp_ref_type<_Compare>::type;
-  _CompRef __comp_ref = __comp;
+  __comp_ref_type<_Compare> __comp_ref = __comp;
 
   using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
   if (__len > 1) {
