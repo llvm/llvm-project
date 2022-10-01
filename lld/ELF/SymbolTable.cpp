@@ -28,7 +28,7 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-std::unique_ptr<SymbolTable> elf::symtab;
+SymbolTable elf::symtab;
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
