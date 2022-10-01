@@ -1237,7 +1237,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     }
     if (expr == R_TLSLD_HINT)
       return 1;
-    ctx->needsTlsLd.store(true, std::memory_order_relaxed);
+    ctx.needsTlsLd.store(true, std::memory_order_relaxed);
     c.relocations.push_back({expr, type, offset, addend, &sym});
     return 1;
   }
@@ -1544,7 +1544,7 @@ template <class ELFT> void elf::scanRelocations() {
   bool serial = !config->zCombreloc || config->emachine == EM_MIPS ||
                 config->emachine == EM_PPC64;
   parallel::TaskGroup tg;
-  for (ELFFileBase *f : ctx->objectFiles) {
+  for (ELFFileBase *f : ctx.objectFiles) {
     auto fn = [f]() {
       RelocationScanner scanner;
       for (InputSectionBase *s : f->getSections()) {
@@ -1737,8 +1737,7 @@ void elf::postScanRelocations() {
       addTpOffsetGotEntry(sym);
   };
 
-  if (ctx->needsTlsLd.load(std::memory_order_relaxed) &&
-      in.got->addTlsIndex()) {
+  if (ctx.needsTlsLd.load(std::memory_order_relaxed) && in.got->addTlsIndex()) {
     static Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
     if (config->shared)
       mainPart->relaDyn->addReloc(
@@ -1754,7 +1753,7 @@ void elf::postScanRelocations() {
 
   // Local symbols may need the aforementioned non-preemptible ifunc and GOT
   // handling. They don't need regular PLT.
-  for (ELFFileBase *file : ctx->objectFiles)
+  for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
 }

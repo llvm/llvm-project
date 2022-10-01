@@ -211,7 +211,7 @@ BitcodeCompiler::BitcodeCompiler() {
                                        config->ltoPartitions);
 
   // Initialize usedStartStop.
-  if (ctx->bitcodeFiles.empty())
+  if (ctx.bitcodeFiles.empty())
     return;
   for (Symbol *sym : symtab->getSymbols()) {
     if (sym->isPlaceholder())
@@ -293,10 +293,10 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // distributed build system that depends on that behavior.
 static void thinLTOCreateEmptyIndexFiles() {
   DenseSet<StringRef> linkedBitCodeFiles;
-  for (BitcodeFile *f : ctx->bitcodeFiles)
+  for (BitcodeFile *f : ctx.bitcodeFiles)
     linkedBitCodeFiles.insert(f->getName());
 
-  for (BitcodeFile *f : ctx->lazyBitcodeFiles) {
+  for (BitcodeFile *f : ctx.lazyBitcodeFiles) {
     if (!f->lazy)
       continue;
     if (linkedBitCodeFiles.contains(f->getName()))
@@ -332,7 +332,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
                            files[task] = std::move(mb);
                          }));
 
-  if (!ctx->bitcodeFiles.empty())
+  if (!ctx.bitcodeFiles.empty())
     checkError(ltoObj->run(
         [&](size_t task) {
           return std::make_unique<CachedFileStream>(
