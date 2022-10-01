@@ -365,17 +365,13 @@ static_assert(sizeof(ParamIdx) == sizeof(ParamIdx::SerialType),
 /// Contains information gathered from parsing the contents of TargetAttr.
 struct ParsedTargetAttr {
   std::vector<std::string> Features;
-  StringRef Architecture;
+  StringRef CPU;
   StringRef Tune;
   StringRef BranchProtection;
-  bool DuplicateArchitecture = false;
-  bool DuplicateTune = false;
+  StringRef Duplicate;
   bool operator ==(const ParsedTargetAttr &Other) const {
-    return DuplicateArchitecture == Other.DuplicateArchitecture &&
-           DuplicateTune == Other.DuplicateTune &&
-           Architecture == Other.Architecture &&
-           Tune == Other.Tune &&
-           BranchProtection == Other.BranchProtection &&
+    return Duplicate == Other.Duplicate && CPU == Other.CPU &&
+           Tune == Other.Tune && BranchProtection == Other.BranchProtection &&
            Features == Other.Features;
   }
 };

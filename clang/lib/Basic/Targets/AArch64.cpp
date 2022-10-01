@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "clang/AST/Attr.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
@@ -697,6 +698,108 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   setDataLayout();
 
   return true;
+}
+
+bool AArch64TargetInfo::initFeatureMap(
+    llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
+    const std::vector<std::string> &FeaturesVec) const {
+  // Parse the CPU and add any implied features.
+  llvm::AArch64::ArchKind Arch = llvm::AArch64::parseCPUArch(CPU);
+  if (Arch != llvm::AArch64::ArchKind::INVALID) {
+    uint64_t Exts = llvm::AArch64::getDefaultExtensions(CPU, Arch);
+    std::vector<StringRef> CPUFeats;
+    llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
+    for (auto F : CPUFeats) {
+      assert((F[0] == '+' || F[0] == '-') && "Expected +/- in target feature!");
+      setFeatureEnabled(Features, F.drop_front(), F[0] == '+');
+    }
+  }
+
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+}
+
+// Parse AArch64 Target attributes, which are a comma separated list of:
+//  "arch=<arch>" - parsed to features as per -march=..
+//  "cpu=<cpu>" - parsed to features as per -mcpu=.., with CPU set to <cpu>
+//  "tune=<cpu>" - TuneCPU set to <cpu>
+//  "feature", "no-feature" - Add (or remove) feature.
+//  "+feature", "+nofeature" - Add (or remove) feature.
+ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+  bool FoundArch = false;
+
+  auto SplitAndAddFeatures = [](StringRef FeatString,
+                                std::vector<std::string> &Features) {
+    SmallVector<StringRef, 8> SplitFeatures;
+    FeatString.split(SplitFeatures, StringRef("+"), -1, false);
+    for (StringRef Feature : SplitFeatures) {
+      StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
+      if (!FeatureName.empty())
+        Features.push_back(FeatureName.str());
+      else
+        // Pushing the original feature string to give a sema error later on
+        // when they get checked.
+        Features.push_back(Feature.str());
+    }
+  };
+
+  for (auto &Feature : AttrFeatures) {
+    Feature = Feature.trim();
+    if (Feature.startswith("fpmath="))
+      continue;
+
+    if (Feature.startswith("branch-protection=")) {
+      Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    if (Feature.startswith("arch=")) {
+      if (FoundArch)
+        Ret.Duplicate = "arch=";
+      FoundArch = true;
+      std::pair<StringRef, StringRef> Split =
+          Feature.split("=").second.trim().split("+");
+      llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
+
+      // Parse the architecture version, adding the required features to
+      // Ret.Features.
+      std::vector<StringRef> FeatureStrs;
+      if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
+          !llvm::AArch64::getArchFeatures(ArchKind, FeatureStrs))
+        continue;
+      for (auto R : FeatureStrs)
+        Ret.Features.push_back(R.str());
+      // Add any extra features, after the +
+      SplitAndAddFeatures(Split.second, Ret.Features);
+    } else if (Feature.startswith("cpu=")) {
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = "cpu=";
+      else {
+        // Split the cpu string into "cpu=", "cortex-a710" and any remaining
+        // "+feat" features.
+        std::pair<StringRef, StringRef> Split =
+            Feature.split("=").second.trim().split("+");
+        Ret.CPU = Split.first;
+        SplitAndAddFeatures(Split.second, Ret.Features);
+      }
+    } else if (Feature.startswith("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Feature.split("=").second.trim();
+    } else if (Feature.startswith("no-"))
+      Ret.Features.push_back("-" + Feature.split("-").second.str());
+    else if (Feature.startswith("+")) {
+      SplitAndAddFeatures(Feature, Ret.Features);
+    }
+    else
+      Ret.Features.push_back("+" + Feature.str());
+  }
+  return Ret;
 }
 
 bool AArch64TargetInfo::hasBFloat16Type() const {
