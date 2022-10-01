@@ -362,20 +362,6 @@ public:
 static_assert(sizeof(ParamIdx) == sizeof(ParamIdx::SerialType),
               "ParamIdx does not fit its serialization type");
 
-/// Contains information gathered from parsing the contents of TargetAttr.
-struct ParsedTargetAttr {
-  std::vector<std::string> Features;
-  StringRef CPU;
-  StringRef Tune;
-  StringRef BranchProtection;
-  StringRef Duplicate;
-  bool operator ==(const ParsedTargetAttr &Other) const {
-    return Duplicate == Other.Duplicate && CPU == Other.CPU &&
-           Tune == Other.Tune && BranchProtection == Other.BranchProtection &&
-           Features == Other.Features;
-  }
-};
-
 #include "clang/AST/Attrs.inc"
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,

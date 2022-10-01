@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "clang/AST/Attr.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
