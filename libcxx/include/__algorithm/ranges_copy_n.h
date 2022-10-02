@@ -11,7 +11,6 @@
 
 #include <__algorithm/copy.h>
 #include <__algorithm/in_out_result.h>
-#include <__algorithm/iterator_operations.h>
 #include <__algorithm/ranges_copy.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -52,7 +51,7 @@ struct __fn {
   template <random_access_iterator _InIter, class _DiffType, random_access_iterator _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr static
   copy_n_result<_InIter, _OutIter> __go(_InIter __first, _DiffType __n, _OutIter __result) {
-    auto __ret = std::__copy<_RangeAlgPolicy>(__first, __first + __n, __result);
+    auto __ret = std::__copy(__first, __first + __n, __result);
     return {__ret.first, __ret.second};
   }
 

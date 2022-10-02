@@ -251,7 +251,6 @@ module std [system] {
       module copy                            { private header "__algorithm/copy.h" }
       module copy_backward                   { private header "__algorithm/copy_backward.h" }
       module copy_if                         { private header "__algorithm/copy_if.h" }
-      module copy_move_common                { private header "__algorithm/copy_move_common.h" }
       module copy_n                          { private header "__algorithm/copy_n.h" }
       module count                           { private header "__algorithm/count.h" }
       module count_if                        { private header "__algorithm/count_if.h" }
