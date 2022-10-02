@@ -34,59 +34,83 @@ entry:
   ret <8 x bfloat> %3
 }
 
-;define dso_local %struct.float16x4x2_t @test_vzip_bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
-;entry:
-;  %vzip.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-;  %vzip1.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-;  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x bfloat> %vzip.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x bfloat> %vzip1.i, 0, 1
-;  ret %struct.float16x4x2_t %.fca.0.1.insert
-;}
+define dso_local %struct.float16x4x2_t @test_vzip_bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
+; CHECK-LABEL: test_vzip_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vzip.16 d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vzip.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  %vzip1.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
+  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x bfloat> %vzip.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x bfloat> %vzip1.i, 0, 1
+  ret %struct.float16x4x2_t %.fca.0.1.insert
+}
 
-;define dso_local %struct.float16x8x2_t @test_vzipq_bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
-;entry:
-;  %vzip.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-;  %vzip1.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-;  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x bfloat> %vzip.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x bfloat> %vzip1.i, 0, 1
-;  ret %struct.float16x8x2_t %.fca.0.1.insert
-;}
+define dso_local %struct.float16x8x2_t @test_vzipq_bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
+; CHECK-LABEL: test_vzipq_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vzip.16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vzip.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  %vzip1.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x bfloat> %vzip.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x bfloat> %vzip1.i, 0, 1
+  ret %struct.float16x8x2_t %.fca.0.1.insert
+}
 
-;define dso_local %struct.float16x4x2_t @test_vuzp_bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
-;entry:
-;  %vuzp.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-;  %vuzp1.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-;  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x bfloat> %vuzp.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x bfloat> %vuzp1.i, 0, 1
-;  ret %struct.float16x4x2_t %.fca.0.1.insert
-;}
+define dso_local %struct.float16x4x2_t @test_vuzp_bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
+; CHECK-LABEL: test_vuzp_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vuzp.16 d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vuzp.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %vuzp1.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x bfloat> %vuzp.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x bfloat> %vuzp1.i, 0, 1
+  ret %struct.float16x4x2_t %.fca.0.1.insert
+}
 
-;define dso_local %struct.float16x8x2_t @test_vuzpq_bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
-;entry:
-;  %vuzp.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-;  %vuzp1.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-;  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x bfloat> %vuzp.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x bfloat> %vuzp1.i, 0, 1
-;  ret %struct.float16x8x2_t %.fca.0.1.insert
-;}
+define dso_local %struct.float16x8x2_t @test_vuzpq_bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
+; CHECK-LABEL: test_vuzpq_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vuzp.16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vuzp.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %vuzp1.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x bfloat> %vuzp.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x bfloat> %vuzp1.i, 0, 1
+  ret %struct.float16x8x2_t %.fca.0.1.insert
+}
 
-;define dso_local %struct.float16x4x2_t @test_vtrn_bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
-;entry:
-;  %vtrn.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-;  %vtrn1.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-;  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x bfloat> %vtrn.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x bfloat> %vtrn1.i, 0, 1
-;  ret %struct.float16x4x2_t %.fca.0.1.insert
-;}
+define dso_local %struct.float16x4x2_t @test_vtrn_bf16(<4 x bfloat> %a, <4 x bfloat> %b) {
+; CHECK-LABEL: test_vtrn_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vtrn.16 d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vtrn.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  %vtrn1.i = shufflevector <4 x bfloat> %a, <4 x bfloat> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  %.fca.0.0.insert = insertvalue %struct.float16x4x2_t undef, <4 x bfloat> %vtrn.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x4x2_t %.fca.0.0.insert, <4 x bfloat> %vtrn1.i, 0, 1
+  ret %struct.float16x4x2_t %.fca.0.1.insert
+}
 
-;define dso_local %struct.float16x8x2_t @test_vtrnq_bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
-;entry:
-;  %vtrn.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-;  %vtrn1.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-;  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x bfloat> %vtrn.i, 0, 0
-;  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x bfloat> %vtrn1.i, 0, 1
-;  ret %struct.float16x8x2_t %.fca.0.1.insert
-;}
+define dso_local %struct.float16x8x2_t @test_vtrnq_bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
+; CHECK-LABEL: test_vtrnq_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vtrn.16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %vtrn.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+  %vtrn1.i = shufflevector <8 x bfloat> %a, <8 x bfloat> %b, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+  %.fca.0.0.insert = insertvalue %struct.float16x8x2_t undef, <8 x bfloat> %vtrn.i, 0, 0
+  %.fca.0.1.insert = insertvalue %struct.float16x8x2_t %.fca.0.0.insert, <8 x bfloat> %vtrn1.i, 0, 1
+  ret %struct.float16x8x2_t %.fca.0.1.insert
+}
 
 define dso_local <4 x bfloat> @test_vmov_n_bf16(float %a.coerce) {
 ; CHECK-NOFP16-LABEL: test_vmov_n_bf16:
