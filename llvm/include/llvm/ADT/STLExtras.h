@@ -796,9 +796,9 @@ template <typename... Iters>
 class zip_longest_iterator
     : public iterator_facade_base<
           zip_longest_iterator<Iters...>,
-          typename std::common_type<
+          std::common_type_t<
               std::forward_iterator_tag,
-              typename std::iterator_traits<Iters>::iterator_category...>::type,
+              typename std::iterator_traits<Iters>::iterator_category...>,
           typename ZipLongestTupleType<Iters...>::type,
           typename std::iterator_traits<
               std::tuple_element_t<0, std::tuple<Iters...>>>::difference_type,

@@ -54,8 +54,7 @@ min_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
   static_assert(__is_callable<_Compare, decltype(*__first), decltype(*__first)>::value,
               "The comparator has to be callable");
 
-  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-  return std::__min_element<_Comp_ref>(std::move(__first), std::move(__last), __comp);
+  return std::__min_element<__comp_ref_type<_Compare> >(std::move(__first), std::move(__last), __comp);
 }
 
 template <class _ForwardIterator>

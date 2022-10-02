@@ -48,7 +48,7 @@ __rotate_right(_BidirectionalIterator __first, _BidirectionalIterator __last)
 
     _BidirectionalIterator __lm1 = _Ops::prev(__last);
     value_type __tmp = _Ops::__iter_move(__lm1);
-    _BidirectionalIterator __fp1 = std::__move_backward<_AlgPolicy>(__first, __lm1, std::move(__last));
+    _BidirectionalIterator __fp1 = std::__move_backward<_AlgPolicy>(__first, __lm1, std::move(__last)).second;
     *__first = _VSTD::move(__tmp);
     return __fp1;
 }
