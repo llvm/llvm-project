@@ -71,8 +71,8 @@ bool COFFLinkGraphBuilder::isComdatSection(
 
 Section &COFFLinkGraphBuilder::getCommonSection() {
   if (!CommonSection)
-    CommonSection =
-        &G->createSection(CommonSectionName, MemProt::Read | MemProt::Write);
+    CommonSection = &G->createSection(CommonSectionName,
+                                      orc::MemProt::Read | orc::MemProt::Write);
   return *CommonSection;
 }
 
@@ -142,13 +142,13 @@ Error COFFLinkGraphBuilder::graphifySections() {
     });
 
     // Get the section's memory protection flags.
-    MemProt Prot = MemProt::Read;
+    orc::MemProt Prot = orc::MemProt::Read;
     if ((*Sec)->Characteristics & COFF::IMAGE_SCN_MEM_EXECUTE)
-      Prot |= MemProt::Exec;
+      Prot |= orc::MemProt::Exec;
     if ((*Sec)->Characteristics & COFF::IMAGE_SCN_MEM_READ)
-      Prot |= MemProt::Read;
+      Prot |= orc::MemProt::Read;
     if ((*Sec)->Characteristics & COFF::IMAGE_SCN_MEM_WRITE)
-      Prot |= MemProt::Write;
+      Prot |= orc::MemProt::Write;
 
     // Look for existing sections first.
     auto *GraphSec = G->findSectionByName(SectionName);

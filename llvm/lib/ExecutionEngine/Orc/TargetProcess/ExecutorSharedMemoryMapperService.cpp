@@ -137,11 +137,11 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 #if defined(LLVM_ON_UNIX)
 
     int NativeProt = 0;
-    if (Segment.Prot & tpctypes::WPF_Read)
+    if ((Segment.AG.getMemProt() & MemProt::Read) == MemProt::Read)
       NativeProt |= PROT_READ;
-    if (Segment.Prot & tpctypes::WPF_Write)
+    if ((Segment.AG.getMemProt() & MemProt::Write) == MemProt::Write)
       NativeProt |= PROT_WRITE;
-    if (Segment.Prot & tpctypes::WPF_Exec)
+    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       NativeProt |= PROT_EXEC;
 
     if (mprotect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt))
@@ -158,7 +158,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 
 #endif
 
-    if (Segment.Prot & tpctypes::WPF_Exec)
+    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Segment.Addr.toPtr<void *>(),
                                               Segment.Size);
   }

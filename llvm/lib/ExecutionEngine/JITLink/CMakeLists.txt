@@ -8,7 +8,6 @@ add_llvm_component_library(LLVMJITLink
   JITLink.cpp
   JITLinkGeneric.cpp
   JITLinkMemoryManager.cpp
-  MemoryFlags.cpp
 
   # Formats:
 

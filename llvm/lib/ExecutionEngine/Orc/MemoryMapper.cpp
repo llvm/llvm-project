@@ -64,6 +64,7 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
   ExecutorAddr MinAddr(~0ULL);
   ExecutorAddr MaxAddr(0);
 
+  // FIXME: Release finalize lifetime segments.
   for (auto &Segment : AI.Segments) {
     auto Base = AI.MappingBase + Segment.Offset;
     auto Size = Segment.ContentSize + Segment.ZeroFillSize;
@@ -77,11 +78,12 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     std::memset((Base + Segment.ContentSize).toPtr<void *>(), 0,
                 Segment.ZeroFillSize);
 
-    if (auto EC = sys::Memory::protectMappedMemory({Base.toPtr<void *>(), Size},
-                                                   Segment.Prot)) {
+    if (auto EC = sys::Memory::protectMappedMemory(
+            {Base.toPtr<void *>(), Size},
+            toSysMemoryProtectionFlags(Segment.AG.getMemProt()))) {
       return OnInitialized(errorCodeToError(EC));
     }
-    if (Segment.Prot & sys::Memory::MF_EXEC)
+    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Base.toPtr<void *>(), Size);
   }
 
@@ -320,8 +322,7 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     std::memset(Base + Segment.ContentSize, 0, Segment.ZeroFillSize);
 
     tpctypes::SharedMemorySegFinalizeRequest SegReq;
-    SegReq.Prot = tpctypes::toWireProtectionFlags(
-        static_cast<sys::Memory::ProtectionFlags>(Segment.Prot));
+    SegReq.AG = Segment.AG;
     SegReq.Addr = AI.MappingBase + Segment.Offset;
     SegReq.Size = Segment.ContentSize + Segment.ZeroFillSize;
 
