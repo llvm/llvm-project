@@ -1,4 +1,4 @@
-; RUN: opt -S -objc-arc < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc < %s | FileCheck %s
 ; rdar://10210274
 
 %0 = type opaque

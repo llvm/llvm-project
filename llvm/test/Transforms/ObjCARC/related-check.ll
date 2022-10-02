@@ -1,7 +1,7 @@
 ; Make sure this succeeds without hitting an assertion and the output is deterministic
 ; RUN: mkdir -p %t
-; RUN: opt -objc-arc %s -S -o %t/out1.ll
-; RUN: opt -objc-arc %s -S -o %t/out2.ll
+; RUN: opt -passes=objc-arc %s -S -o %t/out1.ll
+; RUN: opt -passes=objc-arc %s -S -o %t/out2.ll
 ; RUN: diff -u %t/out1.ll %t/out2.ll
 
 %0 = type opaque
