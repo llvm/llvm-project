@@ -1,4 +1,4 @@
-; RUN: opt -S -objc-arc-contract < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc-contract < %s | FileCheck %s
 
 ; CHECK-LABEL: define void @foo() {
 ; CHECK:      %call = tail call i32* @qux()
