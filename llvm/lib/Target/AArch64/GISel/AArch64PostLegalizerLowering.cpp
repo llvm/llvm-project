@@ -1043,7 +1043,7 @@ public:
 bool AArch64PostLegalizerLoweringInfo::combine(GISelChangeObserver &Observer,
                                                MachineInstr &MI,
                                                MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B);
+  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false);
   AArch64GenPostLegalizerLoweringHelper Generated(GeneratedRuleCfg);
   return Generated.tryCombineAll(Observer, MI, B, Helper);
 }
