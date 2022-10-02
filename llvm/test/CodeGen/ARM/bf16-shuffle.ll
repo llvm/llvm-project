@@ -233,6 +233,167 @@ entry:
   ret <8 x bfloat> %vext
 }
 
+define dso_local <4 x bfloat> @test_vext_aligned_bf16(<8 x bfloat> %a) {
+; CHECK-LABEL: test_vext_aligned_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    bx lr
+entry:
+  %vext = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  ret <4 x bfloat> %vext
+}
+
+define dso_local <4 x bfloat> @test_vext_unaligned_bf16(<8 x bfloat> %a) {
+; CHECK-LABEL: test_vext_unaligned_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vext.16 d0, d0, d1, #3
+; CHECK-NEXT:    bx lr
+entry:
+  %vext = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+  ret <4 x bfloat> %vext
+}
+
+define arm_aapcs_vfpcc <8 x bfloat> @shuffle3step0_bf16(<32 x bfloat> %src) {
+; CHECK-NOFP16-LABEL: shuffle3step0_bf16:
+; CHECK-NOFP16:       @ %bb.0: @ %entry
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d0[3]
+; CHECK-NOFP16-NEXT:    vrev32.16 d16, d3
+; CHECK-NOFP16-NEXT:    vext.16 d17, d4, d5, #2
+; CHECK-NOFP16-NEXT:    vext.16 d16, d16, d3, #1
+; CHECK-NOFP16-NEXT:    vext.16 d16, d17, d16, #2
+; CHECK-NOFP16-NEXT:    vext.16 d16, d16, d17, #1
+; CHECK-NOFP16-NEXT:    vext.16 d17, d16, d16, #1
+; CHECK-NOFP16-NEXT:    vmov.16 d16[0], r1
+; CHECK-NOFP16-NEXT:    vmov.16 d16[1], r0
+; CHECK-NOFP16-NEXT:    vmov r0, s3
+; CHECK-NOFP16-NEXT:    vmov.16 d16[2], r0
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d2[1]
+; CHECK-NOFP16-NEXT:    vmov.16 d16[3], r0
+; CHECK-NOFP16-NEXT:    vorr q0, q8, q8
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: shuffle3step0_bf16:
+; CHECK-FP16:       @ %bb.0: @ %entry
+; CHECK-FP16-NEXT:    vmov r1, s0
+; CHECK-FP16-NEXT:    vext.16 d17, d4, d5, #2
+; CHECK-FP16-NEXT:    vmovx.f16 s8, s1
+; CHECK-FP16-NEXT:    vrev32.16 d16, d3
+; CHECK-FP16-NEXT:    vmov r0, s8
+; CHECK-FP16-NEXT:    vext.16 d16, d16, d3, #1
+; CHECK-FP16-NEXT:    vext.16 d16, d17, d16, #2
+; CHECK-FP16-NEXT:    vext.16 d16, d16, d17, #1
+; CHECK-FP16-NEXT:    vext.16 d17, d16, d16, #1
+; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
+; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
+; CHECK-FP16-NEXT:    vmov r0, s3
+; CHECK-FP16-NEXT:    vmovx.f16 s0, s4
+; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
+; CHECK-FP16-NEXT:    vorr q0, q8, q8
+; CHECK-FP16-NEXT:    bx lr
+entry:
+  %s1 = shufflevector <32 x bfloat> %src, <32 x bfloat> undef, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
+  ret <8 x bfloat> %s1
+}
+
+define arm_aapcs_vfpcc <8 x bfloat> @shuffle3step1_bf16(<32 x bfloat> %src) {
+; CHECK-NOFP16-LABEL: shuffle3step1_bf16:
+; CHECK-NOFP16:       @ %bb.0: @ %entry
+; CHECK-NOFP16-NEXT:    vorr q3, q0, q0
+; CHECK-NOFP16-NEXT:    vmov.u16 r1, d6[1]
+; CHECK-NOFP16-NEXT:    vmov r0, s14
+; CHECK-NOFP16-NEXT:    vmov.16 d0[0], r1
+; CHECK-NOFP16-NEXT:    vmov.16 d0[1], r0
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d7[3]
+; CHECK-NOFP16-NEXT:    vmov.16 d0[2], r0
+; CHECK-NOFP16-NEXT:    vmov r0, s5
+; CHECK-NOFP16-NEXT:    vdup.16 q1, d3[1]
+; CHECK-NOFP16-NEXT:    vmov r1, s4
+; CHECK-NOFP16-NEXT:    vmov.16 d0[3], r0
+; CHECK-NOFP16-NEXT:    vmov r0, s8
+; CHECK-NOFP16-NEXT:    vmov.16 d1[0], r1
+; CHECK-NOFP16-NEXT:    vmov.16 d1[1], r0
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d4[3]
+; CHECK-NOFP16-NEXT:    vmov.16 d1[2], r0
+; CHECK-NOFP16-NEXT:    vmov r0, s11
+; CHECK-NOFP16-NEXT:    vmov.16 d1[3], r0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: shuffle3step1_bf16:
+; CHECK-FP16:       @ %bb.0: @ %entry
+; CHECK-FP16-NEXT:    vorr q3, q0, q0
+; CHECK-FP16-NEXT:    vmovx.f16 s0, s12
+; CHECK-FP16-NEXT:    vmovx.f16 s12, s15
+; CHECK-FP16-NEXT:    vmov r1, s0
+; CHECK-FP16-NEXT:    vmov r0, s14
+; CHECK-FP16-NEXT:    vmov.16 d0[0], r1
+; CHECK-FP16-NEXT:    vmov.16 d0[1], r0
+; CHECK-FP16-NEXT:    vmov r0, s12
+; CHECK-FP16-NEXT:    vmov.16 d0[2], r0
+; CHECK-FP16-NEXT:    vmov r0, s5
+; CHECK-FP16-NEXT:    vdup.16 q1, d3[1]
+; CHECK-FP16-NEXT:    vmov r1, s4
+; CHECK-FP16-NEXT:    vmovx.f16 s4, s9
+; CHECK-FP16-NEXT:    vmov.16 d0[3], r0
+; CHECK-FP16-NEXT:    vmov r0, s8
+; CHECK-FP16-NEXT:    vmov.16 d1[0], r1
+; CHECK-FP16-NEXT:    vmov.16 d1[1], r0
+; CHECK-FP16-NEXT:    vmov r0, s4
+; CHECK-FP16-NEXT:    vmov.16 d1[2], r0
+; CHECK-FP16-NEXT:    vmov r0, s11
+; CHECK-FP16-NEXT:    vmov.16 d1[3], r0
+; CHECK-FP16-NEXT:    bx lr
+entry:
+  %s1 = shufflevector <32 x bfloat> %src, <32 x bfloat> undef, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 16, i32 19, i32 22>
+  ret <8 x bfloat> %s1
+}
+
+define arm_aapcs_vfpcc <8 x bfloat> @shuffle3step2_bf16(<32 x bfloat> %src) {
+; CHECK-NOFP16-LABEL: shuffle3step2_bf16:
+; CHECK-NOFP16:       @ %bb.0: @ %entry
+; CHECK-NOFP16-NEXT:    vext.16 d16, d0, d1, #2
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d4[1]
+; CHECK-NOFP16-NEXT:    vext.16 d17, d16, d2, #3
+; CHECK-NOFP16-NEXT:    vext.16 d16, d2, d16, #1
+; CHECK-NOFP16-NEXT:    vdup.16 q1, d3[2]
+; CHECK-NOFP16-NEXT:    vext.16 d16, d16, d17, #2
+; CHECK-NOFP16-NEXT:    vmov r1, s4
+; CHECK-NOFP16-NEXT:    vext.16 d0, d16, d16, #1
+; CHECK-NOFP16-NEXT:    vmov.16 d1[0], r1
+; CHECK-NOFP16-NEXT:    vmov.16 d1[1], r0
+; CHECK-NOFP16-NEXT:    vmov r0, s10
+; CHECK-NOFP16-NEXT:    vmov.16 d1[2], r0
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d5[3]
+; CHECK-NOFP16-NEXT:    vmov.16 d1[3], r0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: shuffle3step2_bf16:
+; CHECK-FP16:       @ %bb.0: @ %entry
+; CHECK-FP16-NEXT:    vext.16 d16, d0, d1, #2
+; CHECK-FP16-NEXT:    vmovx.f16 s12, s8
+; CHECK-FP16-NEXT:    vmov r0, s12
+; CHECK-FP16-NEXT:    vext.16 d17, d16, d2, #3
+; CHECK-FP16-NEXT:    vext.16 d16, d2, d16, #1
+; CHECK-FP16-NEXT:    vdup.16 q1, d3[2]
+; CHECK-FP16-NEXT:    vext.16 d16, d16, d17, #2
+; CHECK-FP16-NEXT:    vmov r1, s4
+; CHECK-FP16-NEXT:    vmovx.f16 s4, s11
+; CHECK-FP16-NEXT:    vext.16 d0, d16, d16, #1
+; CHECK-FP16-NEXT:    vmov.16 d1[0], r1
+; CHECK-FP16-NEXT:    vmov.16 d1[1], r0
+; CHECK-FP16-NEXT:    vmov r0, s10
+; CHECK-FP16-NEXT:    vmov.16 d1[2], r0
+; CHECK-FP16-NEXT:    vmov r0, s4
+; CHECK-FP16-NEXT:    vmov.16 d1[3], r0
+; CHECK-FP16-NEXT:    bx lr
+entry:
+  %s1 = shufflevector <32 x bfloat> %src, <32 x bfloat> undef, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
+  ret <8 x bfloat> %s1
+}
+
+
 define dso_local <4 x bfloat> @test_vrev64_bf16(<4 x bfloat> %a) {
 ; CHECK-LABEL: test_vrev64_bf16:
 ; CHECK:       @ %bb.0: @ %entry
