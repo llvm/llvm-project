@@ -18,6 +18,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/Compiler.h"
 #include <tuple>
 
 namespace lld {
@@ -64,7 +65,7 @@ struct SymbolAux {
   uint32_t tlsGdIdx = -1;
 };
 
-extern SmallVector<SymbolAux, 0> symAux;
+LLVM_LIBRARY_VISIBILITY extern SmallVector<SymbolAux, 0> symAux;
 
 // The base class for real symbol classes.
 class Symbol {

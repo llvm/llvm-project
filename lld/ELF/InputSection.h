@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/Compiler.h"
 
 namespace lld {
 namespace elf {
@@ -30,7 +31,7 @@ class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
 
-extern std::vector<Partition> partitions;
+LLVM_LIBRARY_VISIBILITY extern std::vector<Partition> partitions;
 
 // Returned by InputSectionBase::relsOrRelas. At least one member is empty.
 template <class ELFT> struct RelsOrRelas {

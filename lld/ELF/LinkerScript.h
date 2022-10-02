@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -362,7 +363,7 @@ public:
   SmallVector<const InputSectionBase *, 0> orphanSections;
 };
 
-extern std::unique_ptr<LinkerScript> script;
+LLVM_LIBRARY_VISIBILITY extern std::unique_ptr<LinkerScript> script;
 
 } // end namespace lld::elf
 
