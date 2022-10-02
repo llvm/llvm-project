@@ -210,8 +210,10 @@ void ACInstrumentation::instrumentCallsForMemoryLoadOperation(
   Value *FileNameValuePointer;
   int LineNumber;
   if(BaseInstruction->getDebugLoc()) {
-    FileNameValuePointer = createStringRefGlobalString(
-        BaseInstruction->getDebugLoc()->getDirectory(), BaseInstruction);
+    std::string FileLocation = BaseInstruction->getDebugLoc()->getDirectory().str() +
+                               "/" +
+                               BaseInstruction->getDebugLoc()->getFilename().str();
+    FileNameValuePointer = createStringRefGlobalString(FileLocation, BaseInstruction);
     LineNumber = BaseInstruction->getDebugLoc().getLine();
   }
   else {
@@ -260,8 +262,10 @@ void ACInstrumentation::instrumentCallsForCastOperation(
   Value *FileNameValuePointer;
   int LineNumber;
   if(BaseInstruction->getDebugLoc()) {
-    FileNameValuePointer = createStringRefGlobalString(
-        BaseInstruction->getDebugLoc()->getDirectory(), BaseInstruction);
+    std::string FileLocation = BaseInstruction->getDebugLoc()->getDirectory().str() +
+                               "/" +
+                               BaseInstruction->getDebugLoc()->getFilename().str();
+    FileNameValuePointer = createStringRefGlobalString(FileLocation, BaseInstruction);
     LineNumber = BaseInstruction->getDebugLoc().getLine();
   }
   else {
@@ -301,6 +305,10 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
   case 45:
     assert(static_cast<FPTruncInst*>(BaseInstruction)->getDestTy()->isFloatTy());
     OpType = Operation::TruncToFloat;
+    break;
+  case 46:
+    assert(static_cast<FPExtInst*>(BaseInstruction)->getDestTy()->isDoubleTy());
+    OpType = Operation::ExtToDouble;
     break;
   case 56:
     if(static_cast<CallInst*>(BaseInstruction)->getCalledFunction() &&
@@ -402,8 +410,10 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
   Value *FileNameValuePointer;
   int LineNumber;
   if(BaseInstruction->getDebugLoc()) {
-    FileNameValuePointer = createStringRefGlobalString(
-        BaseInstruction->getDebugLoc()->getDirectory(), BaseInstruction);
+    std::string FileLocation = BaseInstruction->getDebugLoc()->getDirectory().str() +
+                               "/" +
+                               BaseInstruction->getDebugLoc()->getFilename().str();
+    FileNameValuePointer = createStringRefGlobalString(FileLocation, BaseInstruction);
     LineNumber = BaseInstruction->getDebugLoc().getLine();
   }
   else {
@@ -540,8 +550,10 @@ void ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
   Value *FileNameValuePointer;
   int LineNumber;
   if(BaseInstruction->getDebugLoc()) {
-    FileNameValuePointer = createStringRefGlobalString(
-        BaseInstruction->getDebugLoc()->getDirectory(), BaseInstruction);
+    std::string FileLocation = BaseInstruction->getDebugLoc()->getDirectory().str() +
+                               "/" +
+                               BaseInstruction->getDebugLoc()->getFilename().str();
+    FileNameValuePointer = createStringRefGlobalString(FileLocation, BaseInstruction);
     LineNumber = BaseInstruction->getDebugLoc().getLine();
   }
   else {
@@ -713,8 +725,10 @@ void ACInstrumentation::instrumentCallsForNonACIntrinsicFunction(
   Value *FileNameValuePointer;
   int LineNumber;
   if(BaseInstruction->getDebugLoc()) {
-    FileNameValuePointer = createStringRefGlobalString(
-        BaseInstruction->getDebugLoc()->getDirectory(), BaseInstruction);
+    std::string FileLocation = BaseInstruction->getDebugLoc()->getDirectory().str() +
+                               "/" +
+                               BaseInstruction->getDebugLoc()->getFilename().str();
+    FileNameValuePointer = createStringRefGlobalString(FileLocation, BaseInstruction);
     LineNumber = BaseInstruction->getDebugLoc().getLine();
   }
   else {
@@ -726,6 +740,65 @@ void ACInstrumentation::instrumentCallsForNonACIntrinsicFunction(
   Args.push_back(EmptyValuePointer);
   Args.push_back(EmptyValuePointer);
   Args.push_back(InstructionBuilder.getInt32(NodeKind::Register));
+  Args.push_back(FileNameValuePointer);
+  Args.push_back(InstructionBuilder.getInt32(LineNumber));
+  ArrayRef<Value *> ArgsRef(Args);
+
+  CGCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, ArgsRef);
+  *NumInstrumentedInstructions+=1;
+
+  assert(CGCallInstruction && "Invalid call instruction!");
+  return;
+}
+
+// Instruments a call to create a node corresponding to nodes that do not have
+// an Atomic condition. This is useful in case there are instructions that use
+// these NonAC floating-point instructions.
+void ACInstrumentation::instrumentCallsForNonACFloatPointInstruction(
+    Instruction *BaseInstruction, long *NumInstrumentedInstructions) {
+  assert((CGCreateNode!=nullptr) && "Function not initialized!");
+
+  BasicBlock::iterator NextInst(BaseInstruction);
+  NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+  std::vector<Value *> Args;
+
+  CallInst *CGCallInstruction = nullptr;
+
+  Constant *EmptyValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
+                                                      "",
+                                                      true);
+
+  Value *EmptyValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
+                                                EmptyValue->getType(),
+                                                true,
+                                                GlobalValue::InternalLinkage,
+                                                EmptyValue);
+
+  Value *FileNameValuePointer;
+  int LineNumber;
+  if(BaseInstruction->getDebugLoc()) {
+    std::string FileLocation = BaseInstruction->getDebugLoc()->getDirectory().str() +
+                               "/" +
+                               BaseInstruction->getDebugLoc()->getFilename().str();
+    FileNameValuePointer = createStringRefGlobalString(FileLocation, BaseInstruction);
+    LineNumber = BaseInstruction->getDebugLoc().getLine();
+  }
+  else {
+    FileNameValuePointer = EmptyValuePointer;
+    LineNumber = -1;
+  }
+
+  Value *LeftOpInstructionValuePointer;
+  if(!isa<Constant>(BaseInstruction->getOperand(0)) && !isa<Argument>(BaseInstruction->getOperand(0)))
+    LeftOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(BaseInstruction->getOperand(0)));
+  else
+    LeftOpInstructionValuePointer = EmptyValuePointer;
+
+  Args.push_back(createInstructionGlobalString(BaseInstruction));
+  Args.push_back(LeftOpInstructionValuePointer);
+  Args.push_back(EmptyValuePointer);
+  Args.push_back(InstructionBuilder.getInt32(NodeKind::UnaryInstruction));
   Args.push_back(FileNameValuePointer);
   Args.push_back(InstructionBuilder.getInt32(LineNumber));
   ArrayRef<Value *> ArgsRef(Args);
@@ -832,86 +905,90 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
       instrumentCallsForBinaryOperation(CurrentInstruction,
                                         NumInstrumentedInstructions);
     }
+    else if(isNonACFloatPointInstruction(CurrentInstruction)) {
+      instrumentCallsForNonACFloatPointInstruction(CurrentInstruction,
+                                                   NumInstrumentedInstructions);
+    }
 
     // Instrument Amplification Factor Calculating Function
-//    if(CurrentInstruction->getOpcode() == Instruction::Call) {
-//
-//      string FunctionName = "";
-//      if(static_cast<CallInst*>(CurrentInstruction)->getCalledFunction() &&
-//          static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->hasName())
-//        FunctionName = static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->getName().str();
-//      transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
-//      if(FunctionName.find("markforresult") != std::string::npos) {
-//        if(!isa<Constant>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get())) {
-//          instrumentCallsForAFAnalysis(
-//              static_cast<Instruction *>(
-//                  static_cast<CallInst *>(CurrentInstruction)
-//                      ->data_operands_begin()
-//                      ->get()),
-//              CurrentInstruction, NumInstrumentedInstructions);
-//        } else {
-//          errs() << "Value to be analyzed has been optimized into a constant\n";
+    if(CurrentInstruction->getOpcode() == Instruction::Call) {
+
+      string FunctionName = "";
+      if(static_cast<CallInst*>(CurrentInstruction)->getCalledFunction() &&
+          static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->hasName())
+        FunctionName = static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->getName().str();
+      transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
+      if(FunctionName.find("markforresult") != std::string::npos) {
+        if(!isa<Constant>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get()) &&
+            static_cast<CallInst*>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get())->getOpcode() !=
+                Instruction::Load) {
+          instrumentCallsForAFAnalysis(
+              static_cast<Instruction *>(
+                  static_cast<CallInst *>(CurrentInstruction)
+                      ->data_operands_begin()
+                      ->get()),
+              CurrentInstruction, NumInstrumentedInstructions);
+        } else {
+          errs() << "Value to be analyzed has been optimized into a constant\n";
+        }
+      }
+    }
+
+    // Instrument Amplification Factor Calculating Function in case there is a
+    // print function or a return call
+//    if(CurrentInstruction->getOpcode() == Instruction::Ret ||
+//        CurrentInstruction->getOpcode() == Instruction::Call) {
+//      if(CurrentInstruction->getOpcode() == Instruction::Call) {
+//        string FunctionName = "";
+//        if(static_cast<CallInst*>(CurrentInstruction)->getCalledFunction() &&
+//            static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->hasName())
+//          FunctionName = static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->getName().str();
+//        transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
+//        if(FunctionName.find("print") != std::string::npos){
+//          for (Function::op_iterator CurrResultOp = static_cast<CallInst*>(CurrentInstruction)->data_operands_begin();
+//               CurrResultOp != static_cast<CallInst*>(CurrentInstruction)->data_operands_end();
+//               ++CurrResultOp) {
+////            errs() << "Operand: " << *CurrResultOp << "\n";
+//            Instruction* ResultInstruction;
+//            if(isa<Instruction>(CurrResultOp->get())) {
+//              ResultInstruction =
+//                  static_cast<Instruction *>(CurrResultOp->get());
+//              if(ResultInstruction->getType()->isFloatingPointTy()) {
+//                if (isUnaryOperation(ResultInstruction) ||
+//    isBinaryOperation(ResultInstruction) ||
+//    isNonACFloatPointInstruction(ResultInstruction) ||
+//    ResultInstruction->getOpcode() == Instruction::PHI) {
+//                  if(ResultInstruction->getOpcode() == Instruction::FPExt ||
+//                      ResultInstruction->getOpcode() == Instruction::FPTrunc)
+//                    ResultInstruction = static_cast<Instruction*>((ResultInstruction)->getOperand(0));
+//                  instrumentCallsForAFAnalysis(ResultInstruction,
+//                                               CurrentInstruction,
+//                                               NumInstrumentedInstructions);
+//                }
+//              }
+//            }
+//          }
+//        }
+//      }
+//      else {
+//        Instruction* ResultInstruction;
+//        if(isa_and_nonnull<Instruction>(static_cast<ReturnInst*>(CurrentInstruction)->getReturnValue())) {
+//          ResultInstruction =
+//              static_cast<Instruction *>(static_cast<ReturnInst*>(CurrentInstruction)->getReturnValue());
+//          if(ResultInstruction->getType()->isFloatingPointTy()) {
+//            if (isUnaryOperation(ResultInstruction) ||
+//                isBinaryOperation(ResultInstruction) ||
+//                isNonACFloatPointInstruction(ResultInstruction) ||
+//                ResultInstruction->getOpcode() == Instruction::PHI) {
+//              instrumentCallsForAFAnalysis(ResultInstruction,
+//                                           CurrentInstruction,
+//                                           NumInstrumentedInstructions);
+//            }
+//          }
 //        }
 //      }
 //    }
 
-    // Instrument Amplification Factor Calculating Function in case there is a
-    // print function or a return call
-    if(CurrentInstruction->getOpcode() == Instruction::Ret ||
-        CurrentInstruction->getOpcode() == Instruction::Call) {
-      if(CurrentInstruction->getOpcode() == Instruction::Call) {
-        string FunctionName = "";
-        if(static_cast<CallInst*>(CurrentInstruction)->getCalledFunction() &&
-            static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->hasName())
-          FunctionName = static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->getName().str();
-        transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
-        if(FunctionName.find("print") != std::string::npos){
-          for (Function::op_iterator CurrResultOp = static_cast<CallInst*>(CurrentInstruction)->data_operands_begin();
-               CurrResultOp != static_cast<CallInst*>(CurrentInstruction)->data_operands_end();
-               ++CurrResultOp) {
-//            errs() << "Operand: " << *CurrResultOp << "\n";
-            Instruction* ResultInstruction;
-            if(isa<Instruction>(CurrResultOp->get())) {
-              ResultInstruction =
-                  static_cast<Instruction *>(CurrResultOp->get());
-              if(ResultInstruction->getType()->isFloatingPointTy()) {
-//                while(!isUnaryOperation(ResultInstruction) &&
-//                       !isBinaryOperation(ResultInstruction) &&
-//                       ResultInstruction->getOpcode() != Instruction::PHI) {
-//                  if (isa<Instruction>(ResultInstruction->getOperand(0)))
-//                    ResultInstruction =
-//                        (Instruction *)ResultInstruction->getOperand(0);
-//                  else
-//                    exit(1);
-//                }
-                if (isUnaryOperation(ResultInstruction) ||
-    isBinaryOperation(ResultInstruction)) {
-                  instrumentCallsForAFAnalysis(ResultInstruction,
-                                               CurrentInstruction,
-                                               NumInstrumentedInstructions);
-                }
-              }
-            }
-          }
-        }
-      }
-      else {
-        Instruction* ResultInstruction;
-        if(static_cast<ReturnInst*>(CurrentInstruction)->getReturnValue() &&
-            isa<Instruction>(static_cast<ReturnInst*>(CurrentInstruction)->getReturnValue())) {
-          ResultInstruction =
-              static_cast<Instruction *>(static_cast<ReturnInst*>(CurrentInstruction)->getReturnValue());
-          if(ResultInstruction->getType()->isFloatingPointTy()) {
-            if (isUnaryOperation(ResultInstruction) ||
-                isBinaryOperation(ResultInstruction)) {
-              instrumentCallsForAFAnalysis(ResultInstruction,
-                                           CurrentInstruction,
-                                           NumInstrumentedInstructions);
-            }
-          }
-        }
-      }
-    }
   }
 
   return;
@@ -1002,6 +1079,7 @@ bool ACInstrumentation::isIntegerToFloatCastOperation(const Instruction *Inst) {
 bool ACInstrumentation::isUnaryOperation(const Instruction *Inst) {
   return Inst->getOpcode() == Instruction::FNeg ||
          Inst->getOpcode() == Instruction::FPTrunc ||
+         Inst->getOpcode() == Instruction::FPExt ||
          (Inst->getOpcode() == Instruction::Call &&
           (static_cast<const CallInst*>(Inst)->getCalledFunction() &&
            isFunctionOfInterest(
@@ -1030,25 +1108,30 @@ bool ACInstrumentation::isNonACInstrinsicFunction(const Instruction *Inst) {
   assert(Inst->getOpcode() == Instruction::Call);
   if(static_cast<const CallInst*>(Inst)->getCalledFunction() &&
       static_cast<const CallInst*>(Inst)->getCalledFunction()->hasName())
+    // Change this return to true when you have some function name that you check.
     return false;
 
   return false;
 }
 
+bool ACInstrumentation::isNonACFloatPointInstruction(const Instruction *Inst) {
+  return false;
+}
 
 bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
   if (isUnaryOperation(Inst)) {
     switch (Inst->getOpcode()) {
     case 12:
       return Inst->getOperand(0)->getType()->isFloatTy();
-    case 45:
-      return static_cast<const FPTruncInst*>(Inst)->getSrcTy()->isFloatTy();
+    case 46:
+      return static_cast<const FPExtInst*>(Inst)->getSrcTy()->isFloatTy();
     case 56:
       // Assuming that operand 0 for this call instruction contains the operand
       // used to calculate the AC.
       return static_cast<const CallInst*>(Inst)->getArgOperand(0)->getType()->isFloatTy();
     default:
-      errs() << "Not an FP32 operation.\n";
+//      errs() << "Not an FP32 operation.\n";
+      break;
     }
   } else if(isBinaryOperation(Inst)) {
     return Inst->getOperand(0)->getType()->isFloatTy() &&
@@ -1072,7 +1155,8 @@ bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
       // used to calculate the AC.
       return static_cast<const CallInst*>(Inst)->getArgOperand(0)->getType()->isDoubleTy();
     default:
-      errs() << "Not an FP64 operation.\n";
+//      errs() << "Not an FP64 operation.\n";
+      break;
     }
   } else if(isBinaryOperation(Inst)) {
     return Inst->getOperand(0)->getType()->isDoubleTy() &&
@@ -1207,7 +1291,8 @@ bool ACInstrumentation::isInstructionOfInterest(Instruction *Inst) {
   case 31:
   case 32:
   case 33:
-//  case 45:
+  case 45:
+  case 46:
   case 55:
   case 56:
     return true;

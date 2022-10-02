@@ -84,6 +84,10 @@ void fAFfp64markForResult(double res) {
 
 #pragma clang optimize on
 
+int min(int a, int b) {
+  return (a > b)? b : a;
+}
+
 int fAFisMemoryOpInstruction(char *InstructionString) {
   if(strstr(InstructionString, "load")!=NULL ||
       strstr(InstructionString, "alloca")!=NULL)
@@ -209,9 +213,14 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
 
   char *ResolvedInstruction=InstructionToAnalyse;
   if(fCGisPHIInstruction(ResolvedInstruction)) {
-    // Resolve to a Non-Phi Instruction
+    // Resolve to a Non-Phi Value
     ResolvedInstruction = fCGperformPHIResolution(ResolvedInstruction);
-    assert(fCGisRegister(ResolvedInstruction));
+    if(!fCGisRegister(ResolvedInstruction)) {
+#if FAF_DEBUG
+      printf("\nDone Analysing fp32 Instruction: %s\n", InstructionToAnalyse);
+#endif
+      return ;
+    }
   }
 
   // Search for node corresponding to Instruction String in the InstructionNode
@@ -746,6 +755,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
 
 
 void fAFfp64Analysis(char *InstructionToAnalyse) {
+  printf("Here now\n");
   assert(fCGisRegister(InstructionToAnalyse));
 #if FAF_DEBUG
   printf("\nPerforming fp64 Amplification Factor Calculation\n");
@@ -754,9 +764,14 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
 
   char *ResolvedInstruction=InstructionToAnalyse;
   if(fCGisPHIInstruction(ResolvedInstruction)) {
-    // Resolve to a Non-Phi Instruction
+    // Resolve to a Non-Phi Value
     ResolvedInstruction = fCGperformPHIResolution(ResolvedInstruction);
-    assert(fCGisRegister(ResolvedInstruction));
+    if(!fCGisRegister(ResolvedInstruction)) {
+#if FAF_DEBUG
+      printf("\nDone Analysing fp64 Instruction: %s\n", InstructionToAnalyse);
+#endif
+      return ;
+    }
   }
 
   // Search for node corresponding to Instruction String in the InstructionNode
@@ -1309,84 +1324,34 @@ void fAFPrintTopAmplificationPaths() {
   qsort(AnalysisResult->DoubleAFItemPointer, AnalysisResult->DoubleAFRecords, sizeof(DoubleAFItem*), fAFDoubleAFComparator);
 
   // Printing Results
-  // TODO: Think of a better format to display the top amplification paths.
-  long unsigned int RecordsStored = 0;
-
-  printf("\t\"FP32\": [\n");
-  int I = 0;
-  while ((uint64_t)I < AnalysisResult->FloatAFRecords) {
-    if (printf("\t\t{\n"
-               "\t\t\t\"Result Instruction\": \"%s\",\n"
-               "\t\t\t\"Result Node ID\":%d,\n"
-               "\t\t\t\"AF WRT Node\": \"%s\",\n"
-               "\t\t\t\"WRT Node ID\":%d,\n"
-               "\t\t\t\"AF\": %0.7f,\n"
-               "\t\t\t\"Amplified Relative Error\": %0.7f,\n"
-               "\t\t\t\"AF String\": \"%s\",\n",
-               AnalysisResult->FloatAFItemPointer[I]->ResultInstructionString,
-               AnalysisResult->FloatAFItemPointer[I]->ResultNodeID,
-               AnalysisResult->FloatAFItemPointer[I]->WRTInstructionString,
-               AnalysisResult->FloatAFItemPointer[I]->WRTNodeID,
-               AnalysisResult->FloatAFItemPointer[I]->AF,
-               AnalysisResult->FloatAFItemPointer[I]->AmplifiedRelativeError,
-               AnalysisResult->FloatAFItemPointer[I]->AFString) > 0){
-      printf("\t\t\t\"AF Path\": [%d",
-             AnalysisResult->FloatAFItemPointer[I]->AFPathPointer[0]->NodeId);
-      for (int J = 1; (uint64_t)J < AnalysisResult->FloatAFItemPointer[I]->AFPathLength; ++J) {
-        printf(", %d",
-               AnalysisResult->FloatAFItemPointer[I]->AFPathPointer[J]->NodeId);
-      }
-      printf("]\n");
-      RecordsStored++;
-
-      if (RecordsStored != AnalysisResult->FloatAFRecords)
-        printf("\t\t},\n");
-      else
-        printf("\t\t}\n");
+  printf("The top Amplification Paths for fp32:\n");
+  for (int I = 0; I < min(5, AnalysisResult->FloatAFRecords); ++I) {
+    printf("AF: %f of Node:%d WRT Node:%d through path: [%d",
+           AnalysisResult->FloatAFItemPointer[I]->AF,
+           AnalysisResult->FloatAFItemPointer[I]->ResultNodeID,
+           AnalysisResult->FloatAFItemPointer[I]->WRTNodeID,
+           AnalysisResult->FloatAFItemPointer[I]->AFPathPointer[0]->NodeId);
+    for (int J = 1; (uint64_t)J < AnalysisResult->FloatAFItemPointer[I]->AFPathLength; ++J) {
+      printf(", %d",
+             AnalysisResult->FloatAFItemPointer[I]->AFPathPointer[J]->NodeId);
     }
-    I++;
+    printf("]\n");
   }
-  printf("\t],\n");
-
-  RecordsStored = 0;
-
-  printf("\t\"FP64\": [\n");
-  I = 0;
-  while ((uint64_t)I < AnalysisResult->DoubleAFRecords) {
-    if (printf("\t\t{\n"
-               "\t\t\t\"Result Instruction\": \"%s\",\n"
-               "\t\t\t\"Result Node ID\":%d,\n"
-               "\t\t\t\"AF WRT Node\": \"%s\",\n"
-               "\t\t\t\"WRT Node ID\":%d,\n"
-               "\t\t\t\"AF\": %0.15lf,\n"
-               "\t\t\t\"Amplified Relative Error\": %0.15lf,\n"
-               "\t\t\t\"AF String\": \"%s\",\n",
-               AnalysisResult->DoubleAFItemPointer[I]->ResultInstructionString,
-               AnalysisResult->DoubleAFItemPointer[I]->ResultNodeID,
-               AnalysisResult->DoubleAFItemPointer[I]->WRTInstructionString,
-               AnalysisResult->DoubleAFItemPointer[I]->WRTNodeID,
-               AnalysisResult->DoubleAFItemPointer[I]->AF,
-               AnalysisResult->DoubleAFItemPointer[I]->AmplifiedRelativeError,
-               AnalysisResult->DoubleAFItemPointer[I]->AFString) > 0) {
-      printf("\t\t\t\"AF Path\": [%d",
-             AnalysisResult->DoubleAFItemPointer[I]->AFPathPointer[0]->NodeId);
-      for (int J = 1; (uint64_t)J < AnalysisResult->DoubleAFItemPointer[I]->AFPathLength; ++J) {
-        printf(", %d",
-               AnalysisResult->DoubleAFItemPointer[I]->AFPathPointer[J]->NodeId);
-      }
-      printf("]\n");
-      RecordsStored++;
-
-      if (RecordsStored != AnalysisResult->DoubleAFRecords)
-        printf("\t\t},\n");
-      else
-        printf("\t\t}\n");
+  printf("\n");
+  printf("The top Amplification Paths for fp64:\n");
+  for (int I = 0; I < min(5, AnalysisResult->DoubleAFRecords); ++I) {
+    printf("AF: %f of Node:%d WRT Node:%d through path: [%d",
+           AnalysisResult->DoubleAFItemPointer[I]->AF,
+           AnalysisResult->DoubleAFItemPointer[I]->ResultNodeID,
+           AnalysisResult->DoubleAFItemPointer[I]->WRTNodeID,
+           AnalysisResult->DoubleAFItemPointer[I]->AFPathPointer[0]->NodeId);
+    for (int J = 1; (uint64_t)J < AnalysisResult->DoubleAFItemPointer[I]->AFPathLength; ++J) {
+      printf(", %d",
+             AnalysisResult->DoubleAFItemPointer[I]->AFPathPointer[J]->NodeId);
     }
-    I++;
+    printf("]\n");
   }
-  printf("\t]\n");
-
-  printf("}\n");
+  printf("\n");
 }
 
 void fAFStoreAFs() {

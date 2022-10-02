@@ -7,7 +7,6 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ValueMap.h"
-#include "llvm/Transforms/ErrorAnalysis/ComputationGraph.h"
 
 using namespace llvm;
 
@@ -60,6 +59,8 @@ public:
                                         long int *NumInstrumentedInstructions);
   void instrumentCallsForNonACIntrinsicFunction(Instruction *BaseInstruction,
                                            long int *NumInstrumentedInstructions);
+  void instrumentCallsForNonACFloatPointInstruction(Instruction *BaseInstruction,
+                                                    long int *NumInstrumentedInstructions);
   void instrumentCallsForAFAnalysis(Instruction *BaseInstruction,
                                     Instruction *LocationToInstrument,
                                     long int *NumInstrumentedInstructions);
@@ -77,6 +78,7 @@ public:
   static bool isBinaryOperation(const Instruction *Inst);
   static bool isOtherOperation(const Instruction *Inst);
   static bool isNonACInstrinsicFunction(const Instruction *Inst);
+  static bool isNonACFloatPointInstruction(const Instruction *Inst);
 
   // Categorized by Data Type
 //  static bool isFPOperation(const Instruction *Inst);

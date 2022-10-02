@@ -35,6 +35,7 @@ enum Operation {
   Log,
   Sqrt,
   TruncToFloat,
+  ExtToDouble,
   Neg
 };
 
@@ -113,6 +114,7 @@ float fp32OpError[] = {
     1e-6,
     1e-6, // Does not have a known error
     1e-6, // Truncing is not a GNU library function. Giving it 1 ULP error
+    1e-6, // Extendin is not a GNU library function. Giving it 1 ULP error
     1e-6,
 };
 
@@ -134,6 +136,7 @@ double fp64OpError[] = {
     1e-16,
     1e-16, // Does not have a known error
     1e-16, // Truncing is not a GNU library function. Giving it 1 ULP error
+    1e-16, // Extendin is not a GNU library function. Giving it 1 ULP error
     1e-16,
 };
 
@@ -457,8 +460,8 @@ char *fACFloatDumpAtomicConditionString(const char *Op1, float Op1Val, const cha
     strcat(ACstring, ")");
     break;
   case 16:
-    break;
   case 17:
+  case 18:
     break;
   default:
     printf("No such operation %d\n", OP);
@@ -777,8 +780,8 @@ char *fACDoubleDumpAtomicConditionString(const char *Op1, double Op1Val, const c
     strcat(ACstring, ")");
     break;
   case 16:
-    break;
   case 17:
+  case 18:
     break;
   default:
     printf("No such operation %d\n", OP);
@@ -1081,6 +1084,10 @@ void fACfp32UnaryDriver(const char *XName, float X, enum Operation OP) {
     break;
   case 17:
     AC = 1.0;
+    //    printf("AC of ext(x, fp64) | x=%f is %f.\n", X, AC);
+    break;
+  case 18:
+    AC = 1.0;
 //    printf("AC of -x | x=%f is %f.\n", X, AC);
     break;
   default:
@@ -1207,7 +1214,7 @@ void fACfp64UnaryDriver(const char *XName, double X, enum Operation OP) {
     AC = 1.0;
 //    printf("AC of trunc(x, fp32) | x=%f is %f.\n", X, AC);
     break;
-  case 17:
+  case 18:
     AC = 1.0;
 //    printf("AC of -x | x=%f is %f.\n", X, AC);
     break;

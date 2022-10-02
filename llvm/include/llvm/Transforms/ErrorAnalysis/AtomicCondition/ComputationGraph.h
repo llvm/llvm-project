@@ -358,6 +358,9 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
     printf("\t\tResolved Value:%s\n", ResolvedValue);
 #endif
 
+    if(!fCGisRegister(ResolvedValue))
+      return ResolvedValue;
+
     // Finding Instruction record in Phi Nodes List
 #if FAF_DEBUG>=2
     printf("\t\tSearching for record of PHI Instruction in PHI Nodes List\n");
