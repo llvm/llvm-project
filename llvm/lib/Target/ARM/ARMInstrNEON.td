@@ -6982,6 +6982,10 @@ let Predicates = [HasNEON] in {
             (VREV64q16 QPR:$Vm)>;
   def : Pat<(v4f16 (ARMvrev64 (v4f16 DPR:$Vm))),
             (VREV64d16 DPR:$Vm)>;
+  def : Pat<(v8bf16 (ARMvrev64 (v8bf16 QPR:$Vm))),
+            (VREV64q16 QPR:$Vm)>;
+  def : Pat<(v4bf16 (ARMvrev64 (v4bf16 DPR:$Vm))),
+            (VREV64d16 DPR:$Vm)>;
 }
 
 //   VREV32   : Vector Reverse elements within 32-bit words
@@ -7007,6 +7011,10 @@ let Predicates = [HasNEON] in {
   def : Pat<(v8f16 (ARMvrev32 (v8f16 QPR:$Vm))),
             (VREV32q16 QPR:$Vm)>;
   def : Pat<(v4f16 (ARMvrev32 (v4f16 DPR:$Vm))),
+            (VREV32d16 DPR:$Vm)>;
+  def : Pat<(v8bf16 (ARMvrev32 (v8bf16 QPR:$Vm))),
+            (VREV32q16 QPR:$Vm)>;
+  def : Pat<(v4bf16 (ARMvrev32 (v4bf16 DPR:$Vm))),
             (VREV32d16 DPR:$Vm)>;
 }
 

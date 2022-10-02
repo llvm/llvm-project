@@ -233,17 +233,45 @@ entry:
   ret <8 x bfloat> %vext
 }
 
-;define dso_local <4 x bfloat> @test_vrev64_bf16(<4 x bfloat> %a) {
-;entry:
-;  %shuffle.i = shufflevector <4 x bfloat> %a, <4 x bfloat> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-;  ret <4 x bfloat> %shuffle.i
-;}
+define dso_local <4 x bfloat> @test_vrev64_bf16(<4 x bfloat> %a) {
+; CHECK-LABEL: test_vrev64_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrev64.16 d0, d0
+; CHECK-NEXT:    bx lr
+entry:
+  %shuffle.i = shufflevector <4 x bfloat> %a, <4 x bfloat> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x bfloat> %shuffle.i
+}
 
-;define dso_local <8 x bfloat> @test_vrev64q_bf16(<8 x bfloat> %a) {
-;entry:
-;  %shuffle.i = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
-;  ret <8 x bfloat> %shuffle.i
-;}
+define dso_local <8 x bfloat> @test_vrev64q_bf16(<8 x bfloat> %a) {
+; CHECK-LABEL: test_vrev64q_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrev64.16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %shuffle.i = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  ret <8 x bfloat> %shuffle.i
+}
+
+define dso_local <4 x bfloat> @test_vrev32_bf16(<4 x bfloat> %a) {
+; CHECK-LABEL: test_vrev32_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrev32.16 d0, d0
+; CHECK-NEXT:    bx lr
+entry:
+  %shuffle.i = shufflevector <4 x bfloat> %a, <4 x bfloat> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x bfloat> %shuffle.i
+}
+
+define dso_local <8 x bfloat> @test_vrev32q_bf16(<8 x bfloat> %a) {
+; CHECK-LABEL: test_vrev32q_bf16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vrev32.16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %shuffle.i = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  ret <8 x bfloat> %shuffle.i
+}
 
 define <4 x bfloat> @test_vld_dup1_4xbfloat(bfloat* %b) {
 ; CHECK-LABEL: test_vld_dup1_4xbfloat:
