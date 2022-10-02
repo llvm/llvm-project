@@ -670,7 +670,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
   }
 }
 
-static void
+static bool
 tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                           SmallVectorImpl<Instruction *> &ToRemove) {
   auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
@@ -684,6 +684,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
     return CSToUse.isConditionImplied(R.Coefficients);
   };
 
+  bool Changed = false;
   if (II->getIntrinsicID() == Intrinsic::ssub_with_overflow) {
     // If A s>= B && B s>= 0, ssub.with.overflow(a, b) should not overflow and
     // can be simplified to a regular sub.
@@ -692,7 +693,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
     if (!DoesConditionHold(CmpInst::ICMP_SGE, A, B, Info) ||
         !DoesConditionHold(CmpInst::ICMP_SGE, B,
                            ConstantInt::get(A->getType(), 0), Info))
-      return;
+      return false;
 
     IRBuilder<> Builder(II->getParent(), II->getIterator());
     Value *Sub = nullptr;
@@ -701,21 +702,27 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
         if (!Sub)
           Sub = Builder.CreateSub(A, B);
         U->replaceAllUsesWith(Sub);
-      } else if (match(U, m_ExtractValue<1>(m_Value())))
+        Changed = true;
+      } else if (match(U, m_ExtractValue<1>(m_Value()))) {
         U->replaceAllUsesWith(Builder.getFalse());
-      else
+        Changed = true;
+      } else
         continue;
 
       if (U->use_empty()) {
         auto *I = cast<Instruction>(U);
         ToRemove.push_back(I);
         I->setOperand(0, PoisonValue::get(II->getType()));
+        Changed = true;
       }
     }
 
-    if (II->use_empty())
+    if (II->use_empty()) {
       II->eraseFromParent();
+      Changed = true;
+    }
   }
+  return Changed;
 }
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT) {
@@ -786,7 +793,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (CB.IsBlock) {
       for (Instruction &I : make_early_inc_range(*CB.BB)) {
         if (auto *II = dyn_cast<WithOverflowInst>(&I)) {
-          tryToSimplifyOverflowMath(II, Info, ToRemove);
+          Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
           continue;
         }
         auto *Cmp = dyn_cast<ICmpInst>(&I);
