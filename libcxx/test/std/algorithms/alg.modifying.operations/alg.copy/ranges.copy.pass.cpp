@@ -108,6 +108,7 @@ constexpr void test_in_iterators() {
   test_sentinels<bidirectional_iterator<int*>, Out>();
   test_sentinels<random_access_iterator<int*>, Out>();
   test_sentinels<contiguous_iterator<int*>, Out>();
+  test_sentinels<int*, Out>();
 }
 
 template <class Out>
@@ -125,6 +126,7 @@ constexpr bool test() {
   test_in_iterators<bidirectional_iterator<int*>>();
   test_in_iterators<random_access_iterator<int*>>();
   test_in_iterators<contiguous_iterator<int*>>();
+  test_in_iterators<int*>();
 
   test_proxy_in_iterators<ProxyIterator<cpp20_input_iterator<int*>>>();
   test_proxy_in_iterators<ProxyIterator<forward_iterator<int*>>>();
