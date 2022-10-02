@@ -329,7 +329,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
       __kmpc_barrier(loc, threadId);
       if (tid == 0) {
         Cnt = 0;
-        fence::team(__ATOMIC_SEQ_CST);
+        fence::team(atomic::seq_cst);
       }
       __kmpc_barrier(loc, threadId);
     }
@@ -346,7 +346,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     unsigned int rank = utils::popc(active & lane_mask_lt);
     uint64_t warp_res = 0;
     if (rank == 0) {
-      warp_res = atomic::add(&Cnt, change, __ATOMIC_SEQ_CST);
+      warp_res = atomic::add(&Cnt, change, atomic::seq_cst);
     }
     warp_res = utils::shuffle(active, warp_res, leader);
     return warp_res + rank;
