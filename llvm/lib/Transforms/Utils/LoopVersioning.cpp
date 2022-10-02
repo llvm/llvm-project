@@ -348,17 +348,11 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto &AA = AM.getResult<AAManager>(F);
-  auto &AC = AM.getResult<AssumptionAnalysis>(F);
 
-  auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+  LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
   auto GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-    LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,      SE,
-                                      TLI, TTI, nullptr, nullptr, nullptr};
-    return LAM.getResult<LoopAccessAnalysis>(L, AR);
+    return LAIs.getInfo(L);
   };
 
   if (runImpl(&LI, GetLAA, &DT, &SE))

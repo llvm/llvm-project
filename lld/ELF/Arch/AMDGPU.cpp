@@ -48,10 +48,10 @@ static uint32_t getEFlags(InputFile *file) {
 }
 
 uint32_t AMDGPU::calcEFlagsV3() const {
-  uint32_t ret = getEFlags(ctx->objectFiles[0]);
+  uint32_t ret = getEFlags(ctx.objectFiles[0]);
 
   // Verify that all input files have the same e_flags.
-  for (InputFile *f : makeArrayRef(ctx->objectFiles).slice(1)) {
+  for (InputFile *f : makeArrayRef(ctx.objectFiles).slice(1)) {
     if (ret == getEFlags(f))
       continue;
     error("incompatible e_flags: " + toString(f));
@@ -61,15 +61,15 @@ uint32_t AMDGPU::calcEFlagsV3() const {
 }
 
 uint32_t AMDGPU::calcEFlagsV4() const {
-  uint32_t retMach = getEFlags(ctx->objectFiles[0]) & EF_AMDGPU_MACH;
+  uint32_t retMach = getEFlags(ctx.objectFiles[0]) & EF_AMDGPU_MACH;
   uint32_t retXnack =
-      getEFlags(ctx->objectFiles[0]) & EF_AMDGPU_FEATURE_XNACK_V4;
+      getEFlags(ctx.objectFiles[0]) & EF_AMDGPU_FEATURE_XNACK_V4;
   uint32_t retSramEcc =
-      getEFlags(ctx->objectFiles[0]) & EF_AMDGPU_FEATURE_SRAMECC_V4;
+      getEFlags(ctx.objectFiles[0]) & EF_AMDGPU_FEATURE_SRAMECC_V4;
 
   // Verify that all input files have compatible e_flags (same mach, all
   // features in the same category are either ANY, ANY and ON, or ANY and OFF).
-  for (InputFile *f : makeArrayRef(ctx->objectFiles).slice(1)) {
+  for (InputFile *f : makeArrayRef(ctx.objectFiles).slice(1)) {
     if (retMach != (getEFlags(f) & EF_AMDGPU_MACH)) {
       error("incompatible mach: " + toString(f));
       return 0;
@@ -106,10 +106,10 @@ uint32_t AMDGPU::calcEFlagsV4() const {
 }
 
 uint32_t AMDGPU::calcEFlags() const {
-  if (ctx->objectFiles.empty())
+  if (ctx.objectFiles.empty())
     return 0;
 
-  uint8_t abiVersion = cast<ObjFile<ELF64LE>>(ctx->objectFiles[0])
+  uint8_t abiVersion = cast<ObjFile<ELF64LE>>(ctx.objectFiles[0])
                            ->getObj()
                            .getHeader()
                            .e_ident[EI_ABIVERSION];

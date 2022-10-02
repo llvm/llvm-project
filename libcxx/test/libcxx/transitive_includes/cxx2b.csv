@@ -761,7 +761,6 @@ valarray cmath
 valarray concepts
 valarray cstddef
 valarray cstdlib
-valarray cstring
 valarray initializer_list
 valarray limits
 valarray new

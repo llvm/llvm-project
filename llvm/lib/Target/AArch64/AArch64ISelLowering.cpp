@@ -14833,8 +14833,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   // More aggressively, some multiplications N0 * C can be lowered to
   // shift+add+shift if the constant C = A * B where A = 2^N + 1 and B = 2^M,
   // e.g. 6=3*2=(2+1)*2.
-  // TODO: consider lowering more cases, e.g. C = -6, -14 or even 45
-  // which equals to (1+2)*16-(1+2).
+  // TODO: lower more cases, e.g. C = 45 which equals to (1+2)*16-(1+2).
 
   // TrailingZeroes is used to test if the mul can be lowered to
   // shift+add+shift.
@@ -14891,6 +14890,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   } else {
     // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
     // (mul x, -(2^N + 1)) => - (add (shl x, N), x)
+    // (mul x, -(2^(N-M) - 1) * 2^M) => (sub (shl x, M), (shl x, N))
+    APInt SCVPlus1 = -ShiftedConstValue + 1;
     APInt CVNegPlus1 = -ConstValue + 1;
     APInt CVNegMinus1 = -ConstValue - 1;
     if (CVNegPlus1.isPowerOf2()) {
@@ -14899,6 +14900,9 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     } else if (CVNegMinus1.isPowerOf2()) {
       ShiftAmt = CVNegMinus1.logBase2();
       return Negate(Add(Shl(N0, ShiftAmt), N0));
+    } else if (SCVPlus1.isPowerOf2()) {
+      ShiftAmt = SCVPlus1.logBase2() + TrailingZeroes;
+      return Sub(Shl(N0, TrailingZeroes), Shl(N0, ShiftAmt));
     }
   }
 

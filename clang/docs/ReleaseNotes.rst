@@ -277,6 +277,10 @@ New Compiler Flags
 
 Deprecated Compiler Flags
 -------------------------
+- ``-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang``
+  has been deprecated. The flag will be removed in Clang 18.
+  ``-ftrivial-auto-var-init=zero`` is now available unconditionally, to be
+  compatible with GCC.
 
 Modified Compiler Flags
 -----------------------
@@ -450,6 +454,14 @@ DWARF Support in Clang
 
 Arm and AArch64 Support in Clang
 --------------------------------
+
+- The target(..) function attributes for AArch64 now accept:
+
+  * ``"arch=<arch>"`` strings, that specify the architecture for a function as per the ``-march`` option.
+  * ``"cpu=<cpu>"`` strings, that specify the cpu for a function as per the ``-mcpu`` option.
+  * ``"tune=<cpu>"`` strings, that specify the tune cpu for a function as per ``-mtune``.
+  * ``"+<feature>"``, ``"+no<feature>"`` enables/disables the specific feature, for compatibility with GCC target attributes.
+  * ``"<feature>"``, ``"no-<feature>"`` enabled/disables the specific feature, for backward compatibility with previous releases.
 - ``-march`` values for targeting armv2, armv2A, armv3 and armv3M have been removed.
   Their presence gave the impression that Clang can correctly generate code for
   them, which it cannot.

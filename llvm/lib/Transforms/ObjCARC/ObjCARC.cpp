@@ -35,7 +35,6 @@ void llvm::initializeObjCARCOpts(PassRegistry &Registry) {
   initializeObjCARCExpandPass(Registry);
   initializeObjCARCContractLegacyPassPass(Registry);
   initializeObjCARCOptLegacyPassPass(Registry);
-  initializePAEvalPass(Registry);
 }
 
 void LLVMInitializeObjCARCOpts(LLVMPassRegistryRef R) {

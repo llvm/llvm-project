@@ -50,6 +50,20 @@ class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
 
+/// Contains information gathered from parsing the contents of TargetAttr.
+struct ParsedTargetAttr {
+  std::vector<std::string> Features;
+  StringRef CPU;
+  StringRef Tune;
+  StringRef BranchProtection;
+  StringRef Duplicate;
+  bool operator ==(const ParsedTargetAttr &Other) const {
+    return Duplicate == Other.Duplicate && CPU == Other.CPU &&
+           Tune == Other.Tune && BranchProtection == Other.BranchProtection &&
+           Features == Other.Features;
+  }
+};
+
 namespace Builtin { struct Info; }
 
 enum class FloatModeKind {
@@ -1276,6 +1290,8 @@ public:
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
   }
+
+  virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
   /// brief Determine whether this TargetInfo supports tune in target attribute.
   virtual bool supportsTargetAttributeTune() const {
