@@ -19,8 +19,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/JITLink/MemoryFlags.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -667,7 +667,7 @@ class Section {
   friend class LinkGraph;
 
 private:
-  Section(StringRef Name, MemProt Prot, SectionOrdinal SecOrdinal)
+  Section(StringRef Name, orc::MemProt Prot, SectionOrdinal SecOrdinal)
       : Name(Name), Prot(Prot), SecOrdinal(SecOrdinal) {}
 
   using SymbolSet = DenseSet<Symbol *>;
@@ -692,16 +692,16 @@ public:
   StringRef getName() const { return Name; }
 
   /// Returns the protection flags for this section.
-  MemProt getMemProt() const { return Prot; }
+  orc::MemProt getMemProt() const { return Prot; }
 
   /// Set the protection flags for this section.
-  void setMemProt(MemProt Prot) { this->Prot = Prot; }
+  void setMemProt(orc::MemProt Prot) { this->Prot = Prot; }
 
   /// Get the deallocation policy for this section.
-  MemDeallocPolicy getMemDeallocPolicy() const { return MDP; }
+  orc::MemDeallocPolicy getMemDeallocPolicy() const { return MDP; }
 
   /// Set the deallocation policy for this section.
-  void setMemDeallocPolicy(MemDeallocPolicy MDP) { this->MDP = MDP; }
+  void setMemDeallocPolicy(orc::MemDeallocPolicy MDP) { this->MDP = MDP; }
 
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
@@ -765,8 +765,8 @@ private:
   }
 
   StringRef Name;
-  MemProt Prot;
-  MemDeallocPolicy MDP = MemDeallocPolicy::Standard;
+  orc::MemProt Prot;
+  orc::MemDeallocPolicy MDP = orc::MemDeallocPolicy::Standard;
   SectionOrdinal SecOrdinal = 0;
   BlockSet Blocks;
   SymbolSet Symbols;
@@ -1003,7 +1003,7 @@ public:
   }
 
   /// Create a section with the given name, protection flags, and alignment.
-  Section &createSection(StringRef Name, MemProt Prot) {
+  Section &createSection(StringRef Name, orc::MemProt Prot) {
     assert(llvm::none_of(Sections,
                          [&](std::unique_ptr<Section> &Sec) {
                            return Sec->getName() == Name;

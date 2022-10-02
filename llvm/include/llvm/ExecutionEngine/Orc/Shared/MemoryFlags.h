@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_JITLINK_MEMORYFLAGS_H
-#define LLVM_EXECUTIONENGINE_JITLINK_MEMORYFLAGS_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_MEMORYFLAGS_H
+#define LLVM_EXECUTIONENGINE_ORC_SHARED_MEMORYFLAGS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -21,7 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
-namespace jitlink {
+namespace orc {
 
 /// Describes Read/Write/Exec permissions for memory.
 enum class MemProt {
@@ -33,7 +33,11 @@ enum class MemProt {
 };
 
 /// Print a MemProt as an RWX triple.
-raw_ostream &operator<<(raw_ostream &OS, MemProt MP);
+inline raw_ostream &operator<<(raw_ostream &OS, MemProt MP) {
+  return OS << (((MP & MemProt::Read) != MemProt::None) ? 'R' : '-')
+            << (((MP & MemProt::Write) != MemProt::None) ? 'W' : '-')
+            << (((MP & MemProt::Exec) != MemProt::None) ? 'X' : '-');
+}
 
 /// Convert a MemProt value to a corresponding sys::Memory::ProtectionFlags
 /// value.
@@ -79,7 +83,9 @@ enum class MemDeallocPolicy {
 };
 
 /// Print a MemDeallocPolicy.
-raw_ostream &operator<<(raw_ostream &OS, MemDeallocPolicy MDP);
+inline raw_ostream &operator<<(raw_ostream &OS, MemDeallocPolicy MDP) {
+  return OS << (MDP == MemDeallocPolicy::Standard ? "standard" : "finalize");
+}
 
 /// A pair of memory protections and allocation policies.
 ///
@@ -179,44 +185,42 @@ private:
 };
 
 /// Print an AllocGroup.
-raw_ostream &operator<<(raw_ostream &OS, AllocGroup AG);
+inline raw_ostream &operator<<(raw_ostream &OS, AllocGroup AG) {
+  return OS << '(' << AG.getMemProt() << ", " << AG.getMemDeallocPolicy()
+            << ')';
+}
 
-} // end namespace jitlink
+} // end namespace orc
 
-template <> struct DenseMapInfo<jitlink::MemProt> {
-  static inline jitlink::MemProt getEmptyKey() {
-    return jitlink::MemProt(~uint8_t(0));
+template <> struct DenseMapInfo<orc::MemProt> {
+  static inline orc::MemProt getEmptyKey() { return orc::MemProt(~uint8_t(0)); }
+  static inline orc::MemProt getTombstoneKey() {
+    return orc::MemProt(~uint8_t(0) - 1);
   }
-  static inline jitlink::MemProt getTombstoneKey() {
-    return jitlink::MemProt(~uint8_t(0) - 1);
-  }
-  static unsigned getHashValue(const jitlink::MemProt &Val) {
-    using UT = std::underlying_type_t<jitlink::MemProt>;
+  static unsigned getHashValue(const orc::MemProt &Val) {
+    using UT = std::underlying_type_t<orc::MemProt>;
     return DenseMapInfo<UT>::getHashValue(static_cast<UT>(Val));
   }
-  static bool isEqual(const jitlink::MemProt &LHS,
-                      const jitlink::MemProt &RHS) {
+  static bool isEqual(const orc::MemProt &LHS, const orc::MemProt &RHS) {
     return LHS == RHS;
   }
 };
 
-template <> struct DenseMapInfo<jitlink::AllocGroup> {
-  static inline jitlink::AllocGroup getEmptyKey() {
-    return jitlink::AllocGroup(~uint8_t(0));
+template <> struct DenseMapInfo<orc::AllocGroup> {
+  static inline orc::AllocGroup getEmptyKey() {
+    return orc::AllocGroup(~uint8_t(0));
   }
-  static inline jitlink::AllocGroup getTombstoneKey() {
-    return jitlink::AllocGroup(~uint8_t(0) - 1);
+  static inline orc::AllocGroup getTombstoneKey() {
+    return orc::AllocGroup(~uint8_t(0) - 1);
   }
-  static unsigned getHashValue(const jitlink::AllocGroup &Val) {
-    return DenseMapInfo<jitlink::AllocGroup::underlying_type>::getHashValue(
-        Val.Id);
+  static unsigned getHashValue(const orc::AllocGroup &Val) {
+    return DenseMapInfo<orc::AllocGroup::underlying_type>::getHashValue(Val.Id);
   }
-  static bool isEqual(const jitlink::AllocGroup &LHS,
-                      const jitlink::AllocGroup &RHS) {
+  static bool isEqual(const orc::AllocGroup &LHS, const orc::AllocGroup &RHS) {
     return LHS == RHS;
   }
 };
 
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_MEMORYFLAGS_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_MEMORYFLAGS_H
