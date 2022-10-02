@@ -109,7 +109,7 @@ struct ThreadStateTy {
   }
 };
 
-extern ThreadStateTy *ThreadStates[mapping::MaxThreadsPerTeam];
+extern ThreadStateTy **ThreadStates;
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
