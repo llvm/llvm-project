@@ -4931,7 +4931,6 @@ _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
-#  include <cstring>
 #  include <functional>
 #endif
 
