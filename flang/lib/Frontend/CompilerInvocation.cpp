@@ -826,14 +826,6 @@ void CompilerInvocation::setSemanticsOpts(
       .set_warnOnNonstandardUsage(getEnableConformanceChecks())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix());
-
-  llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86 &&
-      targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
-    semanticsContext->targetCharacteristics().DisableType(
-        Fortran::common::TypeCategory::Real, /*kind=*/10);
-  }
 }
 
 /// Set \p loweringOptions controlling lowering behavior based
