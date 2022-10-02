@@ -83,7 +83,8 @@ func.func @foo(%p : !fir.class<!fir.type<_QTpoint{x:f32,y:f32}>>)
 
 ### Unlimited polymorphic entities `CLASS(*)`
 
-The unlimited polymorphic entity is represented as a class type with `*`.
+The unlimited polymorphic entity is represented as a class type with `none` as
+element type.
 
 **Fortran**
 ```fortran
@@ -95,7 +96,7 @@ end subroutine
 
 **FIR**
 ```c
-func.func @bar(%x : !fir.class<*>)
+func.func @bar(%x : !fir.class<none>)
 ```
 
 ### Assumed-type `TYPE(*)`

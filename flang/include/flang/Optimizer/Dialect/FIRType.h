@@ -304,7 +304,7 @@ mlir::Type fromRealTypeID(mlir::MLIRContext *context, llvm::Type::TypeID typeID,
                           fir::KindTy kind);
 
 inline bool BaseBoxType::classof(mlir::Type type) {
-  return type.isa<fir::BoxType>();
+  return type.isa<fir::BoxType, fir::ClassType>();
 }
 
 } // namespace fir

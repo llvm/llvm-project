@@ -138,6 +138,26 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
   }];
 }
 
+def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
+  let summary = "Class type";
+
+  let description = [{
+    Class type is used to model the Fortran CLASS instrinsic type. A class type
+    is equivalent to a fir.box type with a dynamic type.
+  }];
+
+  let parameters = (ins "mlir::Type":$eleTy);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy), [{
+      return $_get(eleTy.getContext(), eleTy);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = "`<` $eleTy `>`";
+}
+
 def fir_ComplexType : FIR_Type<"Complex", "complex"> {
   let summary = "Complex type";
 
