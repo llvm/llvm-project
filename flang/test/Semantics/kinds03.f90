@@ -60,6 +60,9 @@
  !DEF: /MainProgram1/a8 ObjectEntity TYPE(rpdt(k=8_4))
  type(rpdt(8)) :: a8
  !REF: /MainProgram1/rpdt
+ !DEF: /MainProgram1/a10 ObjectEntity TYPE(rpdt(k=10_4))
+ type(rpdt(10)) :: a10
+ !REF: /MainProgram1/rpdt
  !DEF: /MainProgram1/a16 ObjectEntity TYPE(rpdt(k=16_4))
  type(rpdt(16)) :: a16
  !REF: /MainProgram1/zpdt
@@ -71,6 +74,9 @@
  !REF: /MainProgram1/zpdt
  !DEF: /MainProgram1/z8 ObjectEntity TYPE(zpdt(k=8_4))
  type(zpdt(8)) :: z8
+ !REF: /MainProgram1/zpdt
+ !DEF: /MainProgram1/z10 ObjectEntity TYPE(zpdt(k=10_4))
+ type(zpdt(10)) :: z10
  !REF: /MainProgram1/zpdt
  !DEF: /MainProgram1/z16 ObjectEntity TYPE(zpdt(k=16_4))
  type(zpdt(16)) :: z16
