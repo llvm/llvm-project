@@ -1249,10 +1249,7 @@ define i1 @isNotKnownNeverNegativeInfinity_sitofp(i17 %x) {
 
 define i1 @isKnownNeverInfinity_fpext(float %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_fpext(
-; CHECK-NEXT:    [[A:%.*]] = fadd ninf float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = fpext float [[A]] to double
-; CHECK-NEXT:    [[R:%.*]] = fcmp une double [[E]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = fadd ninf float %x, 1.0
   %e = fpext float %a to double
@@ -1262,10 +1259,7 @@ define i1 @isKnownNeverInfinity_fpext(float %x) {
 
 define i1 @isKnownNeverInfinity_fpext_sitofp(i16 %x) {
 ; CHECK-LABEL: @isKnownNeverInfinity_fpext_sitofp(
-; CHECK-NEXT:    [[F:%.*]] = sitofp i16 [[X:%.*]] to half
-; CHECK-NEXT:    [[E:%.*]] = fpext half [[F]] to double
-; CHECK-NEXT:    [[R:%.*]] = fcmp oeq double [[E]], 0xFFF0000000000000
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %f = sitofp i16 %x to half
   %e = fpext half %f to double
