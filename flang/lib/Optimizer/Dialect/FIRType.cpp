@@ -925,6 +925,15 @@ mlir::Type fir::fromRealTypeID(mlir::MLIRContext *context,
 }
 
 //===----------------------------------------------------------------------===//
+// BaseBoxType
+//===----------------------------------------------------------------------===//
+
+mlir::Type BaseBoxType::getEleTy() const {
+  return llvm::TypeSwitch<fir::BaseBoxType, mlir::Type>(*this)
+      .Case<fir::BoxType>([](auto type) { return type.getEleTy(); });
+}
+
+//===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
 
