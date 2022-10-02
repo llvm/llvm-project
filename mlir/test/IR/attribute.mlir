@@ -608,11 +608,6 @@ func.func @fn() { return }
 
 // -----
 
-// expected-error @+1 {{referencing to a 'func::FuncOp' symbol}}
-"test.symbol_ref_attr"() {symbol = @foo} : () -> ()
-
-// -----
-
 //===----------------------------------------------------------------------===//
 // Test IntElementsAttr
 //===----------------------------------------------------------------------===//
