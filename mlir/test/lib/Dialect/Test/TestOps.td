@@ -379,16 +379,6 @@ def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Test Attribute Constraints
-//===----------------------------------------------------------------------===//
-
-def SymbolRefOp : TEST_Op<"symbol_ref_attr"> {
-  let arguments = (ins
-    ConfinedAttr<FlatSymbolRefAttr, [ReferToOp<"func::FuncOp">]>:$symbol
-  );
-}
-
-//===----------------------------------------------------------------------===//
 // Test Regions
 //===----------------------------------------------------------------------===//
 
