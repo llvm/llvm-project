@@ -113,12 +113,14 @@ protected:
   GISelChangeObserver &Observer;
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
+  bool IsPreLegalize;
   const LegalizerInfo *LI;
   const RegisterBankInfo *RBI;
   const TargetRegisterInfo *TRI;
 
 public:
   CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
+                 bool IsPreLegalize,
                  GISelKnownBits *KB = nullptr,
                  MachineDominatorTree *MDT = nullptr,
                  const LegalizerInfo *LI = nullptr);
