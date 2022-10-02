@@ -71,7 +71,7 @@ public:
   ///
   ///  `Loc` must not be null.
   template <typename T>
-  typename std::enable_if<std::is_base_of<StorageLocation, T>::value, T &>::type
+  std::enable_if_t<std::is_base_of<StorageLocation, T>::value, T &>
   takeOwnership(std::unique_ptr<T> Loc) {
     assert(Loc != nullptr);
     Locs.push_back(std::move(Loc));
@@ -84,7 +84,7 @@ public:
   ///
   ///  `Val` must not be null.
   template <typename T>
-  typename std::enable_if<std::is_base_of<Value, T>::value, T &>::type
+  std::enable_if_t<std::is_base_of<Value, T>::value, T &>
   takeOwnership(std::unique_ptr<T> Val) {
     assert(Val != nullptr);
     Vals.push_back(std::move(Val));
