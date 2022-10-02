@@ -163,7 +163,7 @@ struct is_complex<std::complex<T>> final : public std::true_type {};
 /// Reads an element of a non-complex type for the current indices in
 /// coordinate scheme.
 template <typename V>
-inline typename std::enable_if<!is_complex<V>::value, V>::type
+inline std::enable_if_t<!is_complex<V>::value, V>
 readCOOValue(char **linePtr, bool is_pattern) {
   // The external formats always store these numerical values with the type
   // double, but we cast these values to the sparse tensor object type.
@@ -174,8 +174,8 @@ readCOOValue(char **linePtr, bool is_pattern) {
 /// Reads an element of a complex type for the current indices in
 /// coordinate scheme.
 template <typename V>
-inline typename std::enable_if<is_complex<V>::value, V>::type
-readCOOValue(char **linePtr, bool is_pattern) {
+inline std::enable_if_t<is_complex<V>::value, V> readCOOValue(char **linePtr,
+                                                              bool is_pattern) {
   // Read two values to make a complex. The external formats always store
   // numerical values with the type double, but we cast these values to the
   // sparse tensor object type. For a pattern tensor, we arbitrarily pick the
