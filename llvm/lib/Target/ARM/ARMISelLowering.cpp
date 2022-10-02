@@ -8371,15 +8371,13 @@ static SDValue GeneratePerfectShuffle(unsigned PFEntry, SDValue LHS,
   default: llvm_unreachable("Unknown shuffle opcode!");
   case OP_VREV:
     // VREV divides the vector in half and swaps within the half.
-    if (VT.getVectorElementType() == MVT::i32 ||
-        VT.getVectorElementType() == MVT::f32)
+    if (VT.getScalarSizeInBits() == 32)
       return DAG.getNode(ARMISD::VREV64, dl, VT, OpLHS);
     // vrev <4 x i16> -> VREV32
-    if (VT.getVectorElementType() == MVT::i16 ||
-        VT.getVectorElementType() == MVT::f16)
+    if (VT.getScalarSizeInBits() == 16)
       return DAG.getNode(ARMISD::VREV32, dl, VT, OpLHS);
     // vrev <4 x i8> -> VREV16
-    assert(VT.getVectorElementType() == MVT::i8);
+    assert(VT.getScalarSizeInBits() == 8);
     return DAG.getNode(ARMISD::VREV16, dl, VT, OpLHS);
   case OP_VDUP0:
   case OP_VDUP1:

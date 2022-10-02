@@ -7044,19 +7044,15 @@ class AlignedVEXTq<ValueType DestTy, ValueType SrcTy, SDNodeXForm LaneCVT>
         Requires<[HasNEON]>;
 
 def : AlignedVEXTq<v8i8, v16i8, DSubReg_i8_reg>;
-
 def : AlignedVEXTq<v4i16, v8i16, DSubReg_i16_reg>;
-
 def : AlignedVEXTq<v2i32, v4i32, DSubReg_i32_reg>;
-
 def : AlignedVEXTq<v1i64, v2i64, DSubReg_f64_reg>;
-
 def : AlignedVEXTq<v2f32, v4f32, DSubReg_i32_reg>;
+def : AlignedVEXTq<v4f16, v8f16, DSubReg_i16_reg>;
+def : AlignedVEXTq<v4bf16, v8bf16, DSubReg_i16_reg>;
 
-def : AlignedVEXTq<v4f16, v8f16, DSubReg_i16_reg>; // v8f16 -> v4f16
 
 //   VEXT     : Vector Extract
-
 
 // All of these have a two-operand InstAlias.
 let TwoOperandAliasConstraint = "$Vn = $Vd" in {
