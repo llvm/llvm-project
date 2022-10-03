@@ -109,6 +109,7 @@ void registerTestPDLLPasses();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUtilsPass();
+void registerTestShapeMappingPass();
 void registerTestSliceAnalysisPass();
 void registerTestTensorTransforms();
 void registerTestTilingInterface();
@@ -208,6 +209,7 @@ void registerTestPasses() {
   mlir::test::registerTestPDLLPasses();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUtilsPass();
+  mlir::test::registerTestShapeMappingPass();
   mlir::test::registerTestSliceAnalysisPass();
   mlir::test::registerTestTensorTransforms();
   mlir::test::registerTestTilingInterface();

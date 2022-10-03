@@ -1,6 +1,7 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRShapeTestPasses
   TestShapeFunctions.cpp
+  TestShapeMappingAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
@@ -11,6 +12,7 @@ add_mlir_library(MLIRShapeTestPasses
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRPass
+  MLIRShapeOpsTransforms
   MLIRShapeDialect
   MLIRSupport
   )

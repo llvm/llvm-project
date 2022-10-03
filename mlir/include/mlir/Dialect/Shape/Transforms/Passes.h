@@ -18,6 +18,7 @@
 
 namespace mlir {
 class ConversionTarget;
+class ModuleOp;
 class TypeConverter;
 namespace func {
 class FuncOp;
@@ -52,6 +53,10 @@ std::unique_ptr<OperationPass<func::FuncOp>> createRemoveShapeConstraintsPass();
 // bufferization happens, as they are intended to be bufferized at the std
 // level.
 std::unique_ptr<OperationPass<func::FuncOp>> createShapeBufferizePass();
+
+/// Outline the shape computation part by adding shape.func and populate
+/// conrresponding mapping infomation into ShapeMappingAnalysis.
+std::unique_ptr<OperationPass<ModuleOp>> createOutlineShapeComputationPass();
 
 //===----------------------------------------------------------------------===//
 // Registration
