@@ -206,7 +206,6 @@ public:
   StorageUniquer typeUniquer;
 
   /// Cached Type Instances.
-  Float8E5M2Type f8E5M2Ty;
   BFloat16Type bf16Ty;
   Float16Type f16Ty;
   Float32Type f32Ty;
@@ -277,7 +276,6 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
 
   //// Types.
   /// Floating-point Types.
-  impl->f8E5M2Ty = TypeUniquer::get<Float8E5M2Type>(this);
   impl->bf16Ty = TypeUniquer::get<BFloat16Type>(this);
   impl->f16Ty = TypeUniquer::get<Float16Type>(this);
   impl->f32Ty = TypeUniquer::get<Float32Type>(this);
@@ -842,9 +840,6 @@ AbstractType *AbstractType::lookupMutable(TypeID typeID, MLIRContext *context) {
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
-Float8E5M2Type Float8E5M2Type::get(MLIRContext *context) {
-  return context->getImpl().f8E5M2Ty;
-}
 BFloat16Type BFloat16Type::get(MLIRContext *context) {
   return context->getImpl().bf16Ty;
 }
