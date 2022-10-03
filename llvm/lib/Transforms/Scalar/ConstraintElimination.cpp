@@ -53,15 +53,14 @@ class ConstraintInfo;
 struct StackEntry {
   unsigned NumIn;
   unsigned NumOut;
-  bool IsNot;
   bool IsSigned = false;
   /// Variables that can be removed from the system once the stack entry gets
   /// removed.
   SmallVector<Value *, 2> ValuesToRelease;
 
-  StackEntry(unsigned NumIn, unsigned NumOut, bool IsNot, bool IsSigned,
+  StackEntry(unsigned NumIn, unsigned NumOut, bool IsSigned,
              SmallVector<Value *, 2> ValuesToRelease)
-      : NumIn(NumIn), NumOut(NumOut), IsNot(IsNot), IsSigned(IsSigned),
+      : NumIn(NumIn), NumOut(NumOut), IsSigned(IsSigned),
         ValuesToRelease(ValuesToRelease) {}
 };
 
@@ -133,9 +132,8 @@ public:
 
   bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B) const;
 
-  void addFact(CmpInst::Predicate Pred, Value *A, Value *B, bool IsNegated,
-               unsigned NumIn, unsigned NumOut,
-               SmallVectorImpl<StackEntry> &DFSInStack);
+  void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
+               unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
 
   /// Turn a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
   /// constraints, using indices from the corresponding constraint system.
@@ -155,7 +153,7 @@ public:
   /// Try to add information from \p A \p Pred \p B to the unsigned/signed
   /// system if \p Pred is signed/unsigned.
   void transferToOtherSystem(CmpInst::Predicate Pred, Value *A, Value *B,
-                             bool IsNegated, unsigned NumIn, unsigned NumOut,
+                             unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack);
 };
 
@@ -441,7 +439,7 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
 }
 
 void ConstraintInfo::transferToOtherSystem(
-    CmpInst::Predicate Pred, Value *A, Value *B, bool IsNegated, unsigned NumIn,
+    CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
     unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
   // Check if we can combine facts from the signed and unsigned systems to
   // derive additional facts.
@@ -456,23 +454,23 @@ void ConstraintInfo::transferToOtherSystem(
   case CmpInst::ICMP_ULT:
     //  If B is a signed positive constant, A >=s 0 and A <s B.
     if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
-      addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0),
-              IsNegated, NumIn, NumOut, DFSInStack);
-      addFact(CmpInst::ICMP_SLT, A, B, IsNegated, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0), NumIn,
+              NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_SLT, A, B, NumIn, NumOut, DFSInStack);
     }
     break;
   case CmpInst::ICMP_SLT:
     if (doesHold(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0)))
-      addFact(CmpInst::ICMP_ULT, A, B, IsNegated, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_ULT, A, B, NumIn, NumOut, DFSInStack);
     break;
   case CmpInst::ICMP_SGT:
     if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), -1)))
-      addFact(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0),
-              IsNegated, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0), NumIn,
+              NumOut, DFSInStack);
     break;
   case CmpInst::ICMP_SGE:
     if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
-      addFact(CmpInst::ICMP_UGE, A, B, IsNegated, NumIn, NumOut, DFSInStack);
+      addFact(CmpInst::ICMP_UGE, A, B, NumIn, NumOut, DFSInStack);
     }
     break;
   }
@@ -622,7 +620,7 @@ void State::addInfoFor(BasicBlock &BB) {
 }
 
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
-                             bool IsNegated, unsigned NumIn, unsigned NumOut,
+                             unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
   // If the constraint has a pre-condition, skip the constraint if it does not
   // hold.
@@ -655,8 +653,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
       dumpWithNames(R.Coefficients, getValue2Index(R.IsSigned));
     });
 
-    DFSInStack.emplace_back(NumIn, NumOut, IsNegated, R.IsSigned,
-                            ValuesToRelease);
+    DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned, ValuesToRelease);
 
     if (R.IsEq) {
       // Also add the inverted constraint for equality constraints.
@@ -664,7 +661,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
         Coeff *= -1;
       CSToUse.addVariableRowFill(R.Coefficients);
 
-      DFSInStack.emplace_back(NumIn, NumOut, IsNegated, R.IsSigned,
+      DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned,
                               SmallVector<Value *, 2>());
     }
   }
@@ -876,9 +873,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     if (match(CB.Condition, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
       // Otherwise, add the condition to the system and stack, if we can
       // transform it into a constraint.
-      Info.addFact(Pred, A, B, CB.Not, CB.NumIn, CB.NumOut, DFSInStack);
-      Info.transferToOtherSystem(Pred, A, B, CB.Not, CB.NumIn, CB.NumOut,
-                                 DFSInStack);
+      Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+      Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
     }
   }
 
