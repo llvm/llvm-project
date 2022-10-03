@@ -659,10 +659,10 @@ void DelayLoadContents::create(COFFLinkerContext &ctx, Defined *h) {
         auto *c = make<HintNameChunk>(extName, 0);
         names.push_back(make<LookupChunk>(c));
         hintNames.push_back(c);
-        // Add a syntentic symbol for this load thunk, using the "__imp_load"
+        // Add a syntentic symbol for this load thunk, using the "__imp___load"
         // prefix, in case this thunk needs to be added to the list of valid
         // call targets for Control Flow Guard.
-        StringRef symName = saver().save("__imp_load_" + extName);
+        StringRef symName = saver().save("__imp___load_" + extName);
         s->loadThunkSym =
             cast<DefinedSynthetic>(ctx.symtab.addSynthetic(symName, t));
       }
