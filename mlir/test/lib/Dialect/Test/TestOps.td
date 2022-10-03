@@ -193,14 +193,6 @@ def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
-def FloatAttrOp : TEST_Op<"float_attrs"> {
-  // TODO: Clean up the OpBase float type and attribute selectors so they
-  // can express all of the types.
-  let arguments = (ins
-    AnyAttr:$float_attr
-  );
-}
-
 def I32Case5:  I32EnumAttrCase<"case5", 5>;
 def I32Case10: I32EnumAttrCase<"case10", 10>;
 
