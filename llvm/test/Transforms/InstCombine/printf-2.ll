@@ -12,7 +12,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @charstr = constant [2 x i8] c"a\00"
 @empty = constant [1 x i8] c"\00"
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 ; Check simplification of printf with void return type.
 
@@ -32,29 +32,25 @@ define void @test_simplify1() {
 ; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 104)
 ; CHECK-NEXT:    ret void
 ;
-  %fmt = getelementptr [2 x i8], [2 x i8]* @h, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt)
+  call i32 (ptr, ...) @printf(ptr @h)
   ret void
 }
 
 define void @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str, i32 0, i32 0))
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @str)
 ; CHECK-NEXT:    ret void
 ;
-  %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt)
+  call i32 (ptr, ...) @printf(ptr @hello_world)
   ret void
 }
 
 define void @test_simplify6() {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0))
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @hello_world)
 ; CHECK-NEXT:    ret void
 ;
-  %fmt = getelementptr [4 x i8], [4 x i8]* @percent_s, i32 0, i32 0
-  %str = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str)
+  call i32 (ptr, ...) @printf(ptr @percent_s, ptr @hello_world)
   ret void
 }
 
@@ -63,9 +59,7 @@ define void @test_simplify7() {
 ; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 97)
 ; CHECK-NEXT:    ret void
 ;
-  %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
-  %str = getelementptr [2 x i8], [2 x i8]* @charstr, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str)
+  call i32 (ptr, ...) @printf(ptr @format_str, ptr @charstr)
   ret void
 }
 
@@ -75,9 +69,7 @@ define void @test_simplify8() {
 ; CHECK-LABEL: @test_simplify8(
 ; CHECK-NEXT:    ret void
 ;
-  %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
-  %str = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str)
+  call i32 (ptr, ...) @printf(ptr @format_str, ptr @empty)
   ret void
 }
 
@@ -85,12 +77,10 @@ define void @test_simplify8() {
 
 define void @test_simplify9() {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str.1, i32 0, i32 0))
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @str.1)
 ; CHECK-NEXT:    ret void
 ;
-  %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
-  %str = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str)
+  call i32 (ptr, ...) @printf(ptr @format_str, ptr @hello_world)
   ret void
 }
 
@@ -101,16 +91,12 @@ define void @test_simplify9() {
 define void @test_simplify10() {
 ; CHECK-LABEL: @test_simplify10(
 ; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 97)
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @str.2, i32 0, i32 0))
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @str.2)
 ; CHECK-NEXT:    ret void
 ;
-  %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
-  %str1 = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str1, i32 42, double 0x40091EB860000000)
-  %str2 = getelementptr [2 x i8], [2 x i8]* @charstr, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str2, i32 42, double 0x40091EB860000000)
-  %str3 = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str3, i32 42, double 0x40091EB860000000)
+  call i32 (ptr, ...) @printf(ptr @format_str, ptr @empty, i32 42, double 0x40091EB860000000)
+  call i32 (ptr, ...) @printf(ptr @format_str, ptr @charstr, i32 42, double 0x40091EB860000000)
+  call i32 (ptr, ...) @printf(ptr @format_str, ptr @hello_world, i32 42, double 0x40091EB860000000)
   ret void
 }
 ;.
