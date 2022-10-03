@@ -157,6 +157,7 @@ class SOP1_1 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   let has_sdst = 0;
 }
 
+
 class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0),
   (Op $src0),

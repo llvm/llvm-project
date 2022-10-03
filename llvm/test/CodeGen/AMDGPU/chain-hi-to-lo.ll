@@ -474,6 +474,7 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:6
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5] offset:4
+; GFX900-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:8
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
@@ -483,8 +484,7 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX900-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:8
 ; GFX900-NEXT:    s_waitcnt vmcnt(1)
-; GFX900-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX900-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
+; GFX900-NEXT:    v_perm_b32 v0, v0, v3, s4
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX900-NEXT:    s_endpgm
@@ -544,9 +544,8 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10_DEFAULT-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX10_DEFAULT-NEXT:    v_perm_b32 v0, v0, v3, 0x5040100
 ; GFX10_DEFAULT-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:8
-; GFX10_DEFAULT-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_DEFAULT-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX10_DEFAULT-NEXT:    s_endpgm
@@ -687,16 +686,27 @@ bb:
 
 ; The volatile operations aren't put on the same chain
 define <2 x i16> @chain_hi_to_lo_group_other_dep_multi_chain(i16 addrspace(3)* %ptr) {
-; GCN-LABEL: chain_hi_to_lo_group_other_dep_multi_chain:
-; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    ds_read_u16 v1, v0 offset:2
-; GCN-NEXT:    ds_read_u16_d16_hi v0, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0xffff
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
-; GCN-NEXT:    v_bfi_b32 v0, v2, v1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: chain_hi_to_lo_group_other_dep_multi_chain:
+; GFX900:       ; %bb.0: ; %bb
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    ds_read_u16 v1, v0 offset:2
+; GFX900-NEXT:    ds_read_u16_d16_hi v0, v0
+; GFX900-NEXT:    s_mov_b32 s4, 0xffff
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
+; GFX900-NEXT:    v_bfi_b32 v0, s4, v1, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLATSCR-LABEL: chain_hi_to_lo_group_other_dep_multi_chain:
+; FLATSCR:       ; %bb.0: ; %bb
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    ds_read_u16 v1, v0 offset:2
+; FLATSCR-NEXT:    ds_read_u16_d16_hi v0, v0
+; FLATSCR-NEXT:    s_mov_b32 s0, 0xffff
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
+; FLATSCR-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
+; FLATSCR-NEXT:    v_bfi_b32 v0, s0, v1, v0
+; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: chain_hi_to_lo_group_other_dep_multi_chain:
 ; GFX10:       ; %bb.0: ; %bb
@@ -801,17 +811,29 @@ bb:
 }
 
 define <2 x i16> @chain_hi_to_lo_global_other_dep(i16 addrspace(1)* %ptr) {
-; GCN-LABEL: chain_hi_to_lo_global_other_dep:
-; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    global_load_ushort v2, v[0:1], off offset:2 glc
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    global_load_short_d16_hi v0, v[0:1], off glc
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, 0xffff
-; GCN-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
-; GCN-NEXT:    v_bfi_b32 v0, v1, v2, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: chain_hi_to_lo_global_other_dep:
+; GFX900:       ; %bb.0: ; %bb
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    global_load_ushort v2, v[0:1], off offset:2 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    global_load_short_d16_hi v0, v[0:1], off glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xffff
+; GFX900-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
+; GFX900-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLATSCR-LABEL: chain_hi_to_lo_global_other_dep:
+; FLATSCR:       ; %bb.0: ; %bb
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    global_load_ushort v2, v[0:1], off offset:2 glc
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    global_load_short_d16_hi v0, v[0:1], off glc
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_mov_b32 s0, 0xffff
+; FLATSCR-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
+; FLATSCR-NEXT:    v_bfi_b32 v0, s0, v2, v0
+; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: chain_hi_to_lo_global_other_dep:
 ; GFX10:       ; %bb.0: ; %bb
@@ -849,18 +871,31 @@ bb:
 }
 
 define <2 x i16> @chain_hi_to_lo_flat_other_dep(i16 addrspace(0)* %ptr) {
-; GCN-LABEL: chain_hi_to_lo_flat_other_dep:
-; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_load_ushort v2, v[0:1] offset:2 glc
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    flat_load_short_d16_hi v0, v[0:1] glc
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, 0xffff
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
-; GCN-NEXT:    v_bfi_b32 v0, v1, v2, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: chain_hi_to_lo_flat_other_dep:
+; GFX900:       ; %bb.0: ; %bb
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    flat_load_ushort v2, v[0:1] offset:2 glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    flat_load_short_d16_hi v0, v[0:1] glc
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-NEXT:    s_mov_b32 s4, 0xffff
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
+; GFX900-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLATSCR-LABEL: chain_hi_to_lo_flat_other_dep:
+; FLATSCR:       ; %bb.0: ; %bb
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    flat_load_ushort v2, v[0:1] offset:2 glc
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    flat_load_short_d16_hi v0, v[0:1] glc
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_mov_b32 s0, 0xffff
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
+; FLATSCR-NEXT:    v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
+; FLATSCR-NEXT:    v_bfi_b32 v0, s0, v2, v0
+; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: chain_hi_to_lo_flat_other_dep:
 ; GFX10:       ; %bb.0: ; %bb
@@ -900,17 +935,29 @@ bb:
 }
 
 define <2 x i16> @chain_hi_to_lo_group_may_alias_store(i16 addrspace(3)* %ptr, i16 addrspace(3)* %may.alias) {
-; GCN-LABEL: chain_hi_to_lo_group_may_alias_store:
-; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v3, 0x7b
-; GCN-NEXT:    ds_read_u16 v2, v0
-; GCN-NEXT:    ds_write_b16 v1, v3
-; GCN-NEXT:    ds_read_u16 v0, v0 offset:2
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GCN-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX900-LABEL: chain_hi_to_lo_group_may_alias_store:
+; GFX900:       ; %bb.0: ; %bb
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_mov_b32_e32 v3, 0x7b
+; GFX900-NEXT:    ds_read_u16 v2, v0
+; GFX900-NEXT:    ds_write_b16 v1, v3
+; GFX900-NEXT:    ds_read_u16 v0, v0 offset:2
+; GFX900-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX900-NEXT:    v_perm_b32 v0, v2, v0, s4
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; FLATSCR-LABEL: chain_hi_to_lo_group_may_alias_store:
+; FLATSCR:       ; %bb.0: ; %bb
+; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FLATSCR-NEXT:    v_mov_b32_e32 v3, 0x7b
+; FLATSCR-NEXT:    ds_read_u16 v2, v0
+; FLATSCR-NEXT:    ds_write_b16 v1, v3
+; FLATSCR-NEXT:    ds_read_u16 v0, v0 offset:2
+; FLATSCR-NEXT:    s_mov_b32 s0, 0x5040100
+; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
+; FLATSCR-NEXT:    v_perm_b32 v0, v2, v0, s0
+; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: chain_hi_to_lo_group_may_alias_store:
 ; GFX10:       ; %bb.0: ; %bb
@@ -921,8 +968,7 @@ define <2 x i16> @chain_hi_to_lo_group_may_alias_store(i16 addrspace(3)* %ptr, i
 ; GFX10-NEXT:    ds_write_b16 v1, v2
 ; GFX10-NEXT:    ds_read_u16 v0, v0 offset:2
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; GFX10-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: chain_hi_to_lo_group_may_alias_store:
@@ -934,9 +980,7 @@ define <2 x i16> @chain_hi_to_lo_group_may_alias_store(i16 addrspace(3)* %ptr, i
 ; GFX11-NEXT:    ds_store_b16 v1, v2
 ; GFX11-NEXT:    ds_load_u16 v0, v0 offset:2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; GFX11-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds i16, i16 addrspace(3)* %ptr, i64 1

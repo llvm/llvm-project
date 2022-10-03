@@ -86,9 +86,8 @@ define <2 x i16> @trunc_srl_v2i64_16_to_v2i16(<2 x i64> %x) {
 ; GCN-LABEL: trunc_srl_v2i64_16_to_v2i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GCN-NEXT:    v_mov_b32_e32 v1, 0xffff0000
-; GCN-NEXT:    v_and_or_b32 v0, v2, v1, v0
+; GCN-NEXT:    s_mov_b32 s4, 0x7060302
+; GCN-NEXT:    v_perm_b32 v0, v2, v0, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = lshr <2 x i64> %x, <i64 16, i64 16>
   %trunc = trunc <2 x i64> %shift to <2 x i16>
