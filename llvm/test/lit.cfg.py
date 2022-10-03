@@ -216,19 +216,23 @@ def enable_ptxas(ptxas_executable):
             (11, 0), (11, 1), (11, 2), (11, 3), (11, 4), (11, 5), (11, 6),
         ]
 
+        def version_int(ver):
+            return ver[0] * 100 + ver[1]
+
         # ignore ptxas if its version is below the minimum supported
         # version
         min_version = ptxas_known_versions[0]
-        if version[0] < min_version[0] or version[1] < min_version[1]:
+        if version_int(version) < version_int(min_version):
             print(
                 'Warning: ptxas version {}.{} is not supported'.format(
                     version[0], version[1]))
             return
 
-        for known_major, known_minor in ptxas_known_versions:
-            if known_major <= version[0] and known_minor <= version[1]:
+        for known_version in ptxas_known_versions:
+            if version_int(known_version) <= version_int(version):
+                major, minor = known_version
                 config.available_features.add(
-                    'ptxas-{}.{}'.format(known_major, known_minor))
+                    'ptxas-{}.{}'.format(major, minor))
 
     config.available_features.add('ptxas')
     tools.extend([ToolSubst('%ptxas', ptxas_executable),
