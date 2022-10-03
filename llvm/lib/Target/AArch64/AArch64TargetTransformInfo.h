@@ -308,22 +308,32 @@ public:
     return false;
   }
 
-  bool isLegalNTStore(Type *DataType, Align Alignment) {
+  bool isLegalNTStoreLoad(Type *DataType, Align Alignment) {
     // NOTE: The logic below is mostly geared towards LV, which calls it with
     //       vectors with 2 elements. We might want to improve that, if other
     //       users show up.
-    // Nontemporal vector stores can be directly lowered to STNP, if the vector
-    // can be halved so that each half fits into a register. That's the case if
-    // the element type fits into a register and the number of elements is a
-    // power of 2 > 1.
-    if (auto *DataTypeVTy = dyn_cast<VectorType>(DataType)) {
-      unsigned NumElements =
-          cast<FixedVectorType>(DataTypeVTy)->getNumElements();
-      unsigned EltSize = DataTypeVTy->getElementType()->getScalarSizeInBits();
+    // Nontemporal vector loads/stores can be directly lowered to LDNP/STNP, if
+    // the vector can be halved so that each half fits into a register. That's
+    // the case if the element type fits into a register and the number of
+    // elements is a power of 2 > 1.
+    if (auto *DataTypeTy = dyn_cast<FixedVectorType>(DataType)) {
+      unsigned NumElements = DataTypeTy->getNumElements();
+      unsigned EltSize = DataTypeTy->getElementType()->getScalarSizeInBits();
       return NumElements > 1 && isPowerOf2_64(NumElements) && EltSize >= 8 &&
              EltSize <= 128 && isPowerOf2_64(EltSize);
     }
     return BaseT::isLegalNTStore(DataType, Alignment);
+  }
+
+  bool isLegalNTStore(Type *DataType, Align Alignment) {
+    return isLegalNTStoreLoad(DataType, Alignment);
+  }
+
+  bool isLegalNTLoad(Type *DataType, Align Alignment) {
+    // Only supports little-endian targets.
+    if (ST->isLittleEndian())
+      return isLegalNTStoreLoad(DataType, Alignment);
+    return BaseT::isLegalNTLoad(DataType, Alignment);
   }
 
   bool enableOrderedReductions() const { return true; }
