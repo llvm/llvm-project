@@ -107,14 +107,14 @@ BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
 BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
 // Armv8.5-A FP rounding intrinsics
-BUILTIN(__builtin_arm_frint32zf, "ff", "")
-BUILTIN(__builtin_arm_frint32z, "dd", "")
-BUILTIN(__builtin_arm_frint64zf, "ff", "")
-BUILTIN(__builtin_arm_frint64z, "dd", "")
-BUILTIN(__builtin_arm_frint32xf, "ff", "")
-BUILTIN(__builtin_arm_frint32x, "dd", "")
-BUILTIN(__builtin_arm_frint64xf, "ff", "")
-BUILTIN(__builtin_arm_frint64x, "dd", "")
+BUILTIN(__builtin_arm_rint32zf, "ff", "")
+BUILTIN(__builtin_arm_rint32z, "dd", "")
+BUILTIN(__builtin_arm_rint64zf, "ff", "")
+BUILTIN(__builtin_arm_rint64z, "dd", "")
+BUILTIN(__builtin_arm_rint32xf, "ff", "")
+BUILTIN(__builtin_arm_rint32x, "dd", "")
+BUILTIN(__builtin_arm_rint64xf, "ff", "")
+BUILTIN(__builtin_arm_rint64x, "dd", "")
 
 // Armv8.5-A Random number generation intrinsics
 BUILTIN(__builtin_arm_rndr,   "iWUi*", "n")

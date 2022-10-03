@@ -361,3 +361,20 @@ add_libc_unittest(
   DEPENDS
     libc.src.unistd.geteuid
 )
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_libc_unittest(
+    syscall_test
+    SUITE
+      libc_unistd_unittests
+    SRCS
+      syscall_test.cpp
+    DEPENDS
+      libc.src.unistd.__llvm_libc_syscall
+      libc.include.errno
+      libc.include.unistd
+      libc.include.fcntl
+      libc.include.sys_syscall
+      libc.test.errno_setter_matcher
+  )
+endif()

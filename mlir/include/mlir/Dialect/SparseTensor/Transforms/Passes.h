@@ -54,9 +54,7 @@ enum class SparseVectorizationStrategy {
   kAnyStorageInnerLoop
 };
 
-#define GEN_PASS_DECL_SPARSIFICATIONPASS
-#define GEN_PASS_DECL_SPARSETENSORCONVERSIONPASS
-#define GEN_PASS_DECL_SPARSETENSORCODEGEN
+#define GEN_PASS_DECL
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 
 /// Options for the Sparsification pass.
@@ -167,6 +165,9 @@ void populateSparseTensorRewriting(RewritePatternSet &patterns, bool enableRT);
 
 std::unique_ptr<Pass> createDenseBufferizationPass(
     const bufferization::OneShotBufferizationOptions &options);
+
+void populateSparseBufferRewriting(RewritePatternSet &patterns);
+std::unique_ptr<Pass> createSparseBufferRewritePass();
 
 //===----------------------------------------------------------------------===//
 // Registration.

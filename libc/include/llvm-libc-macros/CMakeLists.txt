@@ -15,6 +15,14 @@ add_header(
 )
 
 add_header(
+  signal_macros
+  HDR
+    signal-macros.h
+  DEPENDS
+    .linux.signal_macros
+)
+
+add_header(
   sys_stat_macros
   HDR
     sys-stat-macros.h
@@ -36,6 +44,14 @@ add_header(
     sys-resource-macros.h
   DEPENDS
     .linux.sys_resource_macros
+)
+
+add_header(
+  time_macros
+  HDR
+    time-macros.h
+  DEPENDS
+    .linux.time_macros
 )
 
 add_header(

@@ -46,6 +46,8 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/MatrixUtils.h"
 
+#include <cmath>
+
 using namespace llvm;
 using namespace PatternMatch;
 

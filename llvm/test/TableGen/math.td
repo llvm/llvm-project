@@ -1,4 +1,6 @@
 // RUN: llvm-tblgen %s | FileCheck %s
+// RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
+// RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
 // XFAIL: vg_leak
 
 // CHECK: def shifts
@@ -46,6 +48,36 @@ def v1025   : Int<!add(int1024.Value, 1)>;
 // CHECK: def v12
 // CHECK: Value = 12
 def v12   : Int<!mul(4, 3)>;
+
+// CHECK: def v13
+// CHECK: Value = 5
+def v13   : Int<!div(10, 2)>;
+
+// CHECK: def v14
+// CHECK: Value = 5
+def v14 : Int<!div(11, 2)>;
+
+// CHECK: def v15
+// CHECK: Value = 1
+def v15 : Int<!div(1, 1)>;
+
+// CHECK: def v16
+// CHECK: Value = 0
+def v16 : Int<!div(0, 10)>;
+
+// CHECK: def v17
+// CHECK: Value = -2
+def v17 : Int<!div(-8, 4)>;
+
+#ifdef ERROR1
+// ERROR1: error: Illegal operation: division by zero
+def v18 : Int<!div(4, 0)>;
+#endif
+
+#ifdef ERROR2
+// ERROR2: error: Illegal operation: INT64_MIN / -1
+def v19 : Int<!div(-9223372036854775808, -1)>;
+#endif
 
 // CHECK: def v1a
 // CHECK: Value = 1

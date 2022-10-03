@@ -51,8 +51,6 @@ void DWARFUnit::ExtractUnitDIENoDwoIfNeeded() {
     return; // Already parsed
 
   ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
-  LLDB_SCOPED_TIMERF("%8.8x: DWARFUnit::ExtractUnitDIENoDwoIfNeeded()",
-                     GetOffset());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.

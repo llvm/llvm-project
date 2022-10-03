@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -427,9 +427,8 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
   auto [loopRanges, loopIndexToRangeIndex] = makeTiledLoopRanges(
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
 
-  SmallVector<Attribute, 4> iteratorTypes;
-  for (const auto &attr :
-       enumerate(op.iterator_types().cast<ArrayAttr>().getValue())) {
+  SmallVector<StringRef, 4> iteratorTypes;
+  for (const auto &attr : enumerate(op.getIteratorTypesArray())) {
     if (loopIndexToRangeIndex.count(attr.index()))
       iteratorTypes.push_back(attr.value());
   }

@@ -833,9 +833,30 @@ public:
 /// !op (X, Y) - Combine two inits.
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum BinaryOp : uint8_t { ADD, SUB, MUL, AND, OR, XOR, SHL, SRA, SRL, LISTCONCAT,
-                            LISTSPLAT, STRCONCAT, INTERLEAVE, CONCAT, EQ,
-                            NE, LE, LT, GE, GT, SETDAGOP };
+  enum BinaryOp : uint8_t {
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    AND,
+    OR,
+    XOR,
+    SHL,
+    SRA,
+    SRL,
+    LISTCONCAT,
+    LISTSPLAT,
+    STRCONCAT,
+    INTERLEAVE,
+    CONCAT,
+    EQ,
+    NE,
+    LE,
+    LT,
+    GE,
+    GT,
+    SETDAGOP
+  };
 
 private:
   Init *LHS, *RHS;
@@ -1478,6 +1499,9 @@ private:
   Init *Value;
   bool IsUsed = false;
 
+  /// Reference locations to this record value.
+  SmallVector<SMRange> ReferenceLocs;
+
 public:
   RecordVal(Init *N, RecTy *T, FieldKind K);
   RecordVal(Init *N, SMLoc Loc, RecTy *T, FieldKind K);
@@ -1524,6 +1548,12 @@ public:
   /// Set the value and source location of the field.
   bool setValue(Init *V, SMLoc NewLoc);
 
+  /// Add a reference to this record value.
+  void addReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+
+  /// Return the references of this record value.
+  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
+
   /// Whether this value is used. Useful for reporting warnings, for example
   /// when a template argument is unused.
   void setUsed(bool Used) { IsUsed = Used; }
@@ -1556,9 +1586,11 @@ public:
 private:
   Init *Name;
   // Location where record was instantiated, followed by the location of
-  // multiclass prototypes used.
+  // multiclass prototypes used, and finally by the locations of references to
+  // this record.
   SmallVector<SMLoc, 4> Locs;
   SmallVector<SMLoc, 0> ForwardDeclarationLocs;
+  SmallVector<SMRange, 0> ReferenceLocs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1627,6 +1659,12 @@ public:
   ArrayRef<SMLoc> getForwardDeclarationLocs() const {
     return ForwardDeclarationLocs;
   }
+
+  /// Add a reference to this record value.
+  void appendReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+
+  /// Return the references of this record value.
+  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
 
   // Update a class location when encountering a (re-)definition.
   void updateClassLoc(SMLoc Loc);

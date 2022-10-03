@@ -1431,7 +1431,7 @@ public:
     return false;
   }
 
-  /// Store \p Target absolute adddress to \p RegName
+  /// Store \p Target absolute address to \p RegName
   virtual InstructionListType materializeAddress(const MCSymbol *Target,
                                                  MCContext *Ctx,
                                                  MCPhysReg RegName,

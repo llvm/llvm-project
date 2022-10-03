@@ -282,7 +282,7 @@ an external system, and should aim to reflect its design as closely as possible.
 
 ### Splitting floating point vs integer operations
 
-The MLIR "Arithmetic" dialect splits many integer and floating point operations
+The MLIR "Arith" dialect splits many integer and floating point operations
 into different categories, for example `arith.addf` vs `arith.addi` and
 `arith.cmpf` vs `arith.cmpi`
 ([following the design of LLVM](http://llvm.org/docs/LangRef.html#binary-operations)).

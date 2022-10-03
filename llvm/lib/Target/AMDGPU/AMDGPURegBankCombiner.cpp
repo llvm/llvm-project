@@ -447,9 +447,9 @@ public:
 };
 
 bool AMDGPURegBankCombinerInfo::combine(GISelChangeObserver &Observer,
-                                        MachineInstr &MI,
-                                        MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB, MDT);
+                                              MachineInstr &MI,
+                                              MachineIRBuilder &B) const {
+  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false, KB, MDT);
   AMDGPURegBankCombinerHelper RegBankHelper(B, Helper);
   AMDGPUGenRegBankCombinerHelper Generated(GeneratedRuleCfg, Helper,
                                            RegBankHelper);

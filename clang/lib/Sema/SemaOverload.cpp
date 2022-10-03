@@ -5739,7 +5739,8 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     return ExprError();
 
   case ImplicitConversionSequence::EllipsisConversion:
-    llvm_unreachable("ellipsis conversion in converted constant expression");
+  case ImplicitConversionSequence::StaticObjectArgumentConversion:
+    llvm_unreachable("bad conversion in converted constant expression");
   }
 
   // Check that we would only use permitted conversions.
@@ -5923,6 +5924,7 @@ TryContextuallyConvertToObjCPointer(Sema &S, Expr *From) {
   case ImplicitConversionSequence::BadConversion:
   case ImplicitConversionSequence::AmbiguousConversion:
   case ImplicitConversionSequence::EllipsisConversion:
+  case ImplicitConversionSequence::StaticObjectArgumentConversion:
     break;
 
   case ImplicitConversionSequence::UserDefinedConversion:
@@ -7009,17 +7011,27 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
 
   Candidate.Viable = true;
 
-  if (Method->isStatic() || ObjectType.isNull())
-    // The implicit object argument is ignored.
+  unsigned FirstConvIdx = PO == OverloadCandidateParamOrder::Reversed ? 1 : 0;
+  if (ObjectType.isNull())
     Candidate.IgnoreObjectArgument = true;
-  else {
-    unsigned ConvIdx = PO == OverloadCandidateParamOrder::Reversed ? 1 : 0;
+  else if (Method->isStatic()) {
+    // [over.best.ics.general]p8
+    // When the parameter is the implicit object parameter of a static member
+    // function, the implicit conversion sequence is a standard conversion
+    // sequence that is neither better nor worse than any other standard
+    // conversion sequence.
+    //
+    // This is a rule that was introduced in C++23 to support static lambdas. We
+    // apply it retroactively because we want to support static lambdas as an
+    // extension and it doesn't hurt previous code.
+    Candidate.Conversions[FirstConvIdx].setStaticObjectArgument();
+  } else {
     // Determine the implicit conversion sequence for the object
     // parameter.
-    Candidate.Conversions[ConvIdx] = TryObjectArgumentInitialization(
+    Candidate.Conversions[FirstConvIdx] = TryObjectArgumentInitialization(
         *this, CandidateSet.getLocation(), ObjectType, ObjectClassification,
         Method, ActingContext);
-    if (Candidate.Conversions[ConvIdx].isBad()) {
+    if (Candidate.Conversions[FirstConvIdx].isBad()) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_bad_conversion;
       return;
@@ -9783,7 +9795,7 @@ bool clang::isBetterOverloadCandidate(
     }
   }
 
-  // C++ [over.match.best]p1:
+  // C++ [over.match.best]p1: (Changed in C++2b)
   //
   //   -- if F is a static member function, ICS1(F) is defined such
   //      that ICS1(F) is neither better nor worse than ICS1(G) for
@@ -14905,15 +14917,18 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
 
   bool IsError = false;
 
-  // Initialize the implicit object parameter.
-  ExprResult ObjRes =
-    PerformObjectArgumentInitialization(Object.get(), /*Qualifier=*/nullptr,
-                                        Best->FoundDecl, Method);
-  if (ObjRes.isInvalid())
-    IsError = true;
-  else
-    Object = ObjRes;
-  MethodArgs.push_back(Object.get());
+  // Initialize the implicit object parameter if needed.
+  // Since C++2b, this could also be a call to a static call operator
+  // which we emit as a regular CallExpr.
+  if (Method->isInstance()) {
+    ExprResult ObjRes = PerformObjectArgumentInitialization(
+        Object.get(), /*Qualifier=*/nullptr, Best->FoundDecl, Method);
+    if (ObjRes.isInvalid())
+      IsError = true;
+    else
+      Object = ObjRes;
+    MethodArgs.push_back(Object.get());
+  }
 
   IsError |= PrepareArgumentsForCallToObjectOfClassType(
       *this, MethodArgs, Method, Args, LParenLoc);
@@ -14939,9 +14954,14 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   ExprValueKind VK = Expr::getValueKindForType(ResultTy);
   ResultTy = ResultTy.getNonLValueExprType(Context);
 
-  CXXOperatorCallExpr *TheCall = CXXOperatorCallExpr::Create(
-      Context, OO_Call, NewFn.get(), MethodArgs, ResultTy, VK, RParenLoc,
-      CurFPFeatureOverrides());
+  CallExpr *TheCall;
+  if (Method->isInstance())
+    TheCall = CXXOperatorCallExpr::Create(Context, OO_Call, NewFn.get(),
+                                          MethodArgs, ResultTy, VK, RParenLoc,
+                                          CurFPFeatureOverrides());
+  else
+    TheCall = CallExpr::Create(Context, NewFn.get(), MethodArgs, ResultTy, VK,
+                               RParenLoc, CurFPFeatureOverrides());
 
   if (CheckCallReturnType(Method->getReturnType(), LParenLoc, TheCall, Method))
     return true;

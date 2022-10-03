@@ -16,7 +16,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(pid_t, getppid, ()) {
-  return __llvm_libc::syscall(SYS_getppid);
+  return __llvm_libc::syscall_impl(SYS_getppid);
 }
 
 } // namespace __llvm_libc

@@ -95,7 +95,7 @@ multiple stages by relying on
   mlir::RewritePatternSet patterns(&getContext());
   mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
   mlir::cf::populateSCFToControlFlowConversionPatterns(patterns, &getContext());
-  mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
+  mlir::arith::populateArithToLLVMConversionPatterns(typeConverter,
                                                           patterns);
   mlir::populateFuncToLLVMConversionPatterns(typeConverter, patterns);
   mlir::cf::populateControlFlowToLLVMConversionPatterns(patterns, &getContext());

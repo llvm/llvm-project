@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -855,7 +855,7 @@ Type Merger::inferType(unsigned e, Value src) {
 
 /// Ensures that sparse compiler can generate code for expression.
 static bool isAdmissableBranchExp(Operation *op, Block *block, Value v) {
-  // Arguments are always admissable.
+  // Arguments are always admissible.
   if (auto arg = v.dyn_cast<BlockArgument>())
     return true;
   // Accept index anywhere.
@@ -866,7 +866,7 @@ static bool isAdmissableBranchExp(Operation *op, Block *block, Value v) {
   if (def->getBlock() != block)
     return def->getBlock() != op->getBlock(); // invariant?
   // Operation defined within branch. Anything is accepted,
-  // as long as all subexpressions are admissable.
+  // as long as all subexpressions are admissible.
   for (unsigned i = 0, n = def->getNumOperands(); i < n; i++)
     if (!isAdmissableBranchExp(op, block, def->getOperand(i)))
       return false;

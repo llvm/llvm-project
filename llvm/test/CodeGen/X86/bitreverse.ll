@@ -1112,7 +1112,6 @@ define i528 @large_promotion(i528 %A) nounwind {
 ;
 ; X64-LABEL: large_promotion:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    pushq %r15
 ; X64-NEXT:    pushq %r14
 ; X64-NEXT:    pushq %r13
@@ -1121,189 +1120,188 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %r12
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
+; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    bswapq %rdi
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    shrq $4, %rbx
-; X64-NEXT:    movabsq $1085102592571150095, %r13 # imm = 0xF0F0F0F0F0F0F0F
-; X64-NEXT:    andq %r13, %rbx
-; X64-NEXT:    andq %r13, %rdi
+; X64-NEXT:    movq %rdi, %r10
+; X64-NEXT:    shrq $4, %r10
+; X64-NEXT:    movabsq $1085102592571150095, %r11 # imm = 0xF0F0F0F0F0F0F0F
+; X64-NEXT:    andq %r11, %r10
+; X64-NEXT:    andq %r11, %rdi
 ; X64-NEXT:    shlq $4, %rdi
-; X64-NEXT:    orq %rbx, %rdi
-; X64-NEXT:    movabsq $3689348814741910323, %r11 # imm = 0x3333333333333333
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    andq %r11, %rbx
+; X64-NEXT:    orq %r10, %rdi
+; X64-NEXT:    movabsq $3689348814741910323, %r10 # imm = 0x3333333333333333
+; X64-NEXT:    movq %rdi, %r14
+; X64-NEXT:    andq %r10, %r14
 ; X64-NEXT:    shrq $2, %rdi
-; X64-NEXT:    andq %r11, %rdi
-; X64-NEXT:    leaq (%rdi,%rbx,4), %rdi
-; X64-NEXT:    movabsq $6148820866244280320, %r10 # imm = 0x5555000000000000
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    andq %r10, %rbx
-; X64-NEXT:    shrq %rdi
 ; X64-NEXT:    andq %r10, %rdi
-; X64-NEXT:    leaq (%rdi,%rbx,2), %r10
-; X64-NEXT:    bswapq %rbp
-; X64-NEXT:    movq %rbp, %rdi
-; X64-NEXT:    shrq $4, %rdi
-; X64-NEXT:    andq %r13, %rdi
-; X64-NEXT:    andq %r13, %rbp
-; X64-NEXT:    shlq $4, %rbp
-; X64-NEXT:    orq %rdi, %rbp
-; X64-NEXT:    movq %rbp, %rdi
-; X64-NEXT:    andq %r11, %rdi
-; X64-NEXT:    shrq $2, %rbp
-; X64-NEXT:    andq %r11, %rbp
-; X64-NEXT:    leaq (%rbp,%rdi,4), %rdi
-; X64-NEXT:    movabsq $6148914691236517205, %rbp # imm = 0x5555555555555555
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    andq %rbp, %rbx
+; X64-NEXT:    leaq (%rdi,%r14,4), %rdi
+; X64-NEXT:    movabsq $6148820866244280320, %r14 # imm = 0x5555000000000000
+; X64-NEXT:    movq %rdi, %r13
+; X64-NEXT:    andq %r14, %r13
 ; X64-NEXT:    shrq %rdi
-; X64-NEXT:    andq %rbp, %rdi
-; X64-NEXT:    leaq (%rdi,%rbx,2), %r14
-; X64-NEXT:    shrdq $48, %r14, %r10
+; X64-NEXT:    andq %r14, %rdi
+; X64-NEXT:    leaq (%rdi,%r13,2), %rdi
+; X64-NEXT:    bswapq %rbx
+; X64-NEXT:    movq %rbx, %r14
+; X64-NEXT:    shrq $4, %r14
+; X64-NEXT:    andq %r11, %r14
+; X64-NEXT:    andq %r11, %rbx
+; X64-NEXT:    shlq $4, %rbx
+; X64-NEXT:    orq %r14, %rbx
+; X64-NEXT:    movq %rbx, %r14
+; X64-NEXT:    andq %r10, %r14
+; X64-NEXT:    shrq $2, %rbx
+; X64-NEXT:    andq %r10, %rbx
+; X64-NEXT:    leaq (%rbx,%r14,4), %rbx
+; X64-NEXT:    movabsq $6148914691236517205, %r14 # imm = 0x5555555555555555
+; X64-NEXT:    movq %rbx, %r13
+; X64-NEXT:    andq %r14, %r13
+; X64-NEXT:    shrq %rbx
+; X64-NEXT:    andq %r14, %rbx
+; X64-NEXT:    leaq (%rbx,%r13,2), %rbx
+; X64-NEXT:    shrdq $48, %rbx, %rdi
 ; X64-NEXT:    bswapq %r15
-; X64-NEXT:    movq %r15, %rdi
-; X64-NEXT:    shrq $4, %rdi
-; X64-NEXT:    andq %r13, %rdi
-; X64-NEXT:    andq %r13, %r15
-; X64-NEXT:    shlq $4, %r15
-; X64-NEXT:    orq %rdi, %r15
-; X64-NEXT:    movq %r15, %rdi
-; X64-NEXT:    andq %r11, %rdi
-; X64-NEXT:    shrq $2, %r15
+; X64-NEXT:    movq %r15, %r13
+; X64-NEXT:    shrq $4, %r13
+; X64-NEXT:    andq %r11, %r13
 ; X64-NEXT:    andq %r11, %r15
-; X64-NEXT:    leaq (%r15,%rdi,4), %rdi
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    andq %rbp, %rbx
-; X64-NEXT:    shrq %rdi
-; X64-NEXT:    andq %rbp, %rdi
-; X64-NEXT:    leaq (%rdi,%rbx,2), %r15
-; X64-NEXT:    shrdq $48, %r15, %r14
+; X64-NEXT:    shlq $4, %r15
+; X64-NEXT:    orq %r13, %r15
+; X64-NEXT:    movq %r15, %r13
+; X64-NEXT:    andq %r10, %r13
+; X64-NEXT:    shrq $2, %r15
+; X64-NEXT:    andq %r10, %r15
+; X64-NEXT:    leaq (%r15,%r13,4), %r15
+; X64-NEXT:    movq %r15, %r13
+; X64-NEXT:    andq %r14, %r13
+; X64-NEXT:    shrq %r15
+; X64-NEXT:    andq %r14, %r15
+; X64-NEXT:    leaq (%r15,%r13,2), %r15
+; X64-NEXT:    shrdq $48, %r15, %rbx
 ; X64-NEXT:    bswapq %r12
-; X64-NEXT:    movq %r12, %rdi
-; X64-NEXT:    shrq $4, %rdi
-; X64-NEXT:    andq %r13, %rdi
-; X64-NEXT:    andq %r13, %r12
-; X64-NEXT:    shlq $4, %r12
-; X64-NEXT:    orq %rdi, %r12
-; X64-NEXT:    movq %r12, %rdi
-; X64-NEXT:    andq %r11, %rdi
-; X64-NEXT:    shrq $2, %r12
+; X64-NEXT:    movq %r12, %r13
+; X64-NEXT:    shrq $4, %r13
+; X64-NEXT:    andq %r11, %r13
 ; X64-NEXT:    andq %r11, %r12
-; X64-NEXT:    leaq (%r12,%rdi,4), %rdi
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    andq %rbp, %rbx
-; X64-NEXT:    shrq %rdi
-; X64-NEXT:    andq %rbp, %rdi
-; X64-NEXT:    leaq (%rdi,%rbx,2), %r12
+; X64-NEXT:    shlq $4, %r12
+; X64-NEXT:    orq %r13, %r12
+; X64-NEXT:    movq %r12, %r13
+; X64-NEXT:    andq %r10, %r13
+; X64-NEXT:    shrq $2, %r12
+; X64-NEXT:    andq %r10, %r12
+; X64-NEXT:    leaq (%r12,%r13,4), %r12
+; X64-NEXT:    movq %r12, %r13
+; X64-NEXT:    andq %r14, %r13
+; X64-NEXT:    shrq %r12
+; X64-NEXT:    andq %r14, %r12
+; X64-NEXT:    leaq (%r12,%r13,2), %r12
 ; X64-NEXT:    shrdq $48, %r12, %r15
 ; X64-NEXT:    bswapq %r9
-; X64-NEXT:    movq %r9, %rdi
-; X64-NEXT:    shrq $4, %rdi
-; X64-NEXT:    andq %r13, %rdi
-; X64-NEXT:    andq %r13, %r9
-; X64-NEXT:    shlq $4, %r9
-; X64-NEXT:    orq %rdi, %r9
-; X64-NEXT:    movq %r9, %rdi
-; X64-NEXT:    andq %r11, %rdi
-; X64-NEXT:    shrq $2, %r9
+; X64-NEXT:    movq %r9, %r13
+; X64-NEXT:    shrq $4, %r13
+; X64-NEXT:    andq %r11, %r13
 ; X64-NEXT:    andq %r11, %r9
-; X64-NEXT:    leaq (%r9,%rdi,4), %rdi
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    andq %rbp, %rbx
-; X64-NEXT:    shrq %rdi
-; X64-NEXT:    andq %rbp, %rdi
-; X64-NEXT:    leaq (%rdi,%rbx,2), %r9
+; X64-NEXT:    shlq $4, %r9
+; X64-NEXT:    orq %r13, %r9
+; X64-NEXT:    movq %r9, %r13
+; X64-NEXT:    andq %r10, %r13
+; X64-NEXT:    shrq $2, %r9
+; X64-NEXT:    andq %r10, %r9
+; X64-NEXT:    leaq (%r9,%r13,4), %r9
+; X64-NEXT:    movq %r9, %r13
+; X64-NEXT:    andq %r14, %r13
+; X64-NEXT:    shrq %r9
+; X64-NEXT:    andq %r14, %r9
+; X64-NEXT:    leaq (%r9,%r13,2), %r9
 ; X64-NEXT:    shrdq $48, %r9, %r12
 ; X64-NEXT:    bswapq %r8
-; X64-NEXT:    movq %r8, %rdi
-; X64-NEXT:    shrq $4, %rdi
-; X64-NEXT:    andq %r13, %rdi
-; X64-NEXT:    andq %r13, %r8
-; X64-NEXT:    shlq $4, %r8
-; X64-NEXT:    orq %rdi, %r8
-; X64-NEXT:    movq %r8, %rdi
-; X64-NEXT:    andq %r11, %rdi
-; X64-NEXT:    shrq $2, %r8
+; X64-NEXT:    movq %r8, %r13
+; X64-NEXT:    shrq $4, %r13
+; X64-NEXT:    andq %r11, %r13
 ; X64-NEXT:    andq %r11, %r8
-; X64-NEXT:    leaq (%r8,%rdi,4), %rdi
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    andq %rbp, %rbx
-; X64-NEXT:    shrq %rdi
-; X64-NEXT:    andq %rbp, %rdi
-; X64-NEXT:    leaq (%rdi,%rbx,2), %rdi
-; X64-NEXT:    shrdq $48, %rdi, %r9
+; X64-NEXT:    shlq $4, %r8
+; X64-NEXT:    orq %r13, %r8
+; X64-NEXT:    movq %r8, %r13
+; X64-NEXT:    andq %r10, %r13
+; X64-NEXT:    shrq $2, %r8
+; X64-NEXT:    andq %r10, %r8
+; X64-NEXT:    leaq (%r8,%r13,4), %r8
+; X64-NEXT:    movq %r8, %r13
+; X64-NEXT:    andq %r14, %r13
+; X64-NEXT:    shrq %r8
+; X64-NEXT:    andq %r14, %r8
+; X64-NEXT:    leaq (%r8,%r13,2), %r8
+; X64-NEXT:    shrdq $48, %r8, %r9
 ; X64-NEXT:    bswapq %rcx
-; X64-NEXT:    movq %rcx, %rbx
-; X64-NEXT:    shrq $4, %rbx
-; X64-NEXT:    andq %r13, %rbx
-; X64-NEXT:    andq %r13, %rcx
-; X64-NEXT:    shlq $4, %rcx
-; X64-NEXT:    orq %rbx, %rcx
-; X64-NEXT:    movq %rcx, %rbx
-; X64-NEXT:    andq %r11, %rbx
-; X64-NEXT:    shrq $2, %rcx
+; X64-NEXT:    movq %rcx, %r13
+; X64-NEXT:    shrq $4, %r13
+; X64-NEXT:    andq %r11, %r13
 ; X64-NEXT:    andq %r11, %rcx
-; X64-NEXT:    leaq (%rcx,%rbx,4), %rcx
-; X64-NEXT:    movq %rcx, %rbx
-; X64-NEXT:    andq %rbp, %rbx
+; X64-NEXT:    shlq $4, %rcx
+; X64-NEXT:    orq %r13, %rcx
+; X64-NEXT:    movq %rcx, %r13
+; X64-NEXT:    andq %r10, %r13
+; X64-NEXT:    shrq $2, %rcx
+; X64-NEXT:    andq %r10, %rcx
+; X64-NEXT:    leaq (%rcx,%r13,4), %rcx
+; X64-NEXT:    movq %rcx, %r13
+; X64-NEXT:    andq %r14, %r13
 ; X64-NEXT:    shrq %rcx
-; X64-NEXT:    andq %rbp, %rcx
-; X64-NEXT:    leaq (%rcx,%rbx,2), %rcx
-; X64-NEXT:    shrdq $48, %rcx, %rdi
+; X64-NEXT:    andq %r14, %rcx
+; X64-NEXT:    leaq (%rcx,%r13,2), %rcx
+; X64-NEXT:    shrdq $48, %rcx, %r8
 ; X64-NEXT:    bswapq %rdx
-; X64-NEXT:    movq %rdx, %rbx
-; X64-NEXT:    shrq $4, %rbx
-; X64-NEXT:    andq %r13, %rbx
-; X64-NEXT:    andq %r13, %rdx
-; X64-NEXT:    shlq $4, %rdx
-; X64-NEXT:    orq %rbx, %rdx
-; X64-NEXT:    movq %rdx, %rbx
-; X64-NEXT:    andq %r11, %rbx
-; X64-NEXT:    shrq $2, %rdx
+; X64-NEXT:    movq %rdx, %r13
+; X64-NEXT:    shrq $4, %r13
+; X64-NEXT:    andq %r11, %r13
 ; X64-NEXT:    andq %r11, %rdx
-; X64-NEXT:    leaq (%rdx,%rbx,4), %rdx
-; X64-NEXT:    movq %rdx, %rbx
-; X64-NEXT:    andq %rbp, %rbx
+; X64-NEXT:    shlq $4, %rdx
+; X64-NEXT:    orq %r13, %rdx
+; X64-NEXT:    movq %rdx, %r13
+; X64-NEXT:    andq %r10, %r13
+; X64-NEXT:    shrq $2, %rdx
+; X64-NEXT:    andq %r10, %rdx
+; X64-NEXT:    leaq (%rdx,%r13,4), %rdx
+; X64-NEXT:    movq %rdx, %r13
+; X64-NEXT:    andq %r14, %r13
 ; X64-NEXT:    shrq %rdx
-; X64-NEXT:    andq %rbp, %rdx
-; X64-NEXT:    leaq (%rdx,%rbx,2), %rdx
+; X64-NEXT:    andq %r14, %rdx
+; X64-NEXT:    leaq (%rdx,%r13,2), %rdx
 ; X64-NEXT:    shrdq $48, %rdx, %rcx
 ; X64-NEXT:    bswapq %rsi
-; X64-NEXT:    movq %rsi, %rbx
-; X64-NEXT:    shrq $4, %rbx
-; X64-NEXT:    andq %r13, %rbx
-; X64-NEXT:    andq %r13, %rsi
-; X64-NEXT:    shlq $4, %rsi
-; X64-NEXT:    orq %rbx, %rsi
-; X64-NEXT:    movq %rsi, %rbx
-; X64-NEXT:    andq %r11, %rbx
-; X64-NEXT:    shrq $2, %rsi
+; X64-NEXT:    movq %rsi, %r13
+; X64-NEXT:    shrq $4, %r13
+; X64-NEXT:    andq %r11, %r13
 ; X64-NEXT:    andq %r11, %rsi
-; X64-NEXT:    leaq (%rsi,%rbx,4), %rsi
-; X64-NEXT:    movq %rsi, %rbx
-; X64-NEXT:    andq %rbp, %rbx
+; X64-NEXT:    shlq $4, %rsi
+; X64-NEXT:    orq %r13, %rsi
+; X64-NEXT:    movq %rsi, %r11
+; X64-NEXT:    andq %r10, %r11
+; X64-NEXT:    shrq $2, %rsi
+; X64-NEXT:    andq %r10, %rsi
+; X64-NEXT:    leaq (%rsi,%r11,4), %rsi
+; X64-NEXT:    movq %rsi, %r10
+; X64-NEXT:    andq %r14, %r10
 ; X64-NEXT:    shrq %rsi
-; X64-NEXT:    andq %rbp, %rsi
-; X64-NEXT:    leaq (%rsi,%rbx,2), %rsi
+; X64-NEXT:    andq %r14, %rsi
+; X64-NEXT:    leaq (%rsi,%r10,2), %rsi
 ; X64-NEXT:    shrdq $48, %rsi, %rdx
 ; X64-NEXT:    shrq $48, %rsi
 ; X64-NEXT:    movq %rdx, 56(%rax)
 ; X64-NEXT:    movq %rcx, 48(%rax)
-; X64-NEXT:    movq %rdi, 40(%rax)
+; X64-NEXT:    movq %r8, 40(%rax)
 ; X64-NEXT:    movq %r9, 32(%rax)
 ; X64-NEXT:    movq %r12, 24(%rax)
 ; X64-NEXT:    movq %r15, 16(%rax)
-; X64-NEXT:    movq %r14, 8(%rax)
-; X64-NEXT:    movq %r10, (%rax)
+; X64-NEXT:    movq %rbx, 8(%rax)
+; X64-NEXT:    movq %rdi, (%rax)
 ; X64-NEXT:    movw %si, 64(%rax)
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r12
 ; X64-NEXT:    popq %r13
 ; X64-NEXT:    popq %r14
 ; X64-NEXT:    popq %r15
-; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
 ;
 ; X86XOP-LABEL: large_promotion:
@@ -1415,7 +1413,6 @@ define i528 @large_promotion(i528 %A) nounwind {
 ;
 ; GFNI-LABEL: large_promotion:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    pushq %rbp
 ; GFNI-NEXT:    pushq %r15
 ; GFNI-NEXT:    pushq %r14
 ; GFNI-NEXT:    pushq %r13
@@ -1424,189 +1421,188 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; GFNI-NEXT:    movq %rdi, %rax
 ; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %r12
 ; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
+; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; GFNI-NEXT:    bswapq %rdi
-; GFNI-NEXT:    movq %rdi, %rbx
-; GFNI-NEXT:    shrq $4, %rbx
-; GFNI-NEXT:    movabsq $1085102592571150095, %r13 # imm = 0xF0F0F0F0F0F0F0F
-; GFNI-NEXT:    andq %r13, %rbx
-; GFNI-NEXT:    andq %r13, %rdi
+; GFNI-NEXT:    movq %rdi, %r10
+; GFNI-NEXT:    shrq $4, %r10
+; GFNI-NEXT:    movabsq $1085102592571150095, %r11 # imm = 0xF0F0F0F0F0F0F0F
+; GFNI-NEXT:    andq %r11, %r10
+; GFNI-NEXT:    andq %r11, %rdi
 ; GFNI-NEXT:    shlq $4, %rdi
-; GFNI-NEXT:    orq %rbx, %rdi
-; GFNI-NEXT:    movabsq $3689348814741910323, %r11 # imm = 0x3333333333333333
-; GFNI-NEXT:    movq %rdi, %rbx
-; GFNI-NEXT:    andq %r11, %rbx
+; GFNI-NEXT:    orq %r10, %rdi
+; GFNI-NEXT:    movabsq $3689348814741910323, %r10 # imm = 0x3333333333333333
+; GFNI-NEXT:    movq %rdi, %r14
+; GFNI-NEXT:    andq %r10, %r14
 ; GFNI-NEXT:    shrq $2, %rdi
-; GFNI-NEXT:    andq %r11, %rdi
-; GFNI-NEXT:    leaq (%rdi,%rbx,4), %rdi
-; GFNI-NEXT:    movabsq $6148820866244280320, %r10 # imm = 0x5555000000000000
-; GFNI-NEXT:    movq %rdi, %rbx
-; GFNI-NEXT:    andq %r10, %rbx
-; GFNI-NEXT:    shrq %rdi
 ; GFNI-NEXT:    andq %r10, %rdi
-; GFNI-NEXT:    leaq (%rdi,%rbx,2), %r10
-; GFNI-NEXT:    bswapq %rbp
-; GFNI-NEXT:    movq %rbp, %rdi
-; GFNI-NEXT:    shrq $4, %rdi
-; GFNI-NEXT:    andq %r13, %rdi
-; GFNI-NEXT:    andq %r13, %rbp
-; GFNI-NEXT:    shlq $4, %rbp
-; GFNI-NEXT:    orq %rdi, %rbp
-; GFNI-NEXT:    movq %rbp, %rdi
-; GFNI-NEXT:    andq %r11, %rdi
-; GFNI-NEXT:    shrq $2, %rbp
-; GFNI-NEXT:    andq %r11, %rbp
-; GFNI-NEXT:    leaq (%rbp,%rdi,4), %rdi
-; GFNI-NEXT:    movabsq $6148914691236517205, %rbp # imm = 0x5555555555555555
-; GFNI-NEXT:    movq %rdi, %rbx
-; GFNI-NEXT:    andq %rbp, %rbx
+; GFNI-NEXT:    leaq (%rdi,%r14,4), %rdi
+; GFNI-NEXT:    movabsq $6148820866244280320, %r14 # imm = 0x5555000000000000
+; GFNI-NEXT:    movq %rdi, %r13
+; GFNI-NEXT:    andq %r14, %r13
 ; GFNI-NEXT:    shrq %rdi
-; GFNI-NEXT:    andq %rbp, %rdi
-; GFNI-NEXT:    leaq (%rdi,%rbx,2), %r14
-; GFNI-NEXT:    shrdq $48, %r14, %r10
+; GFNI-NEXT:    andq %r14, %rdi
+; GFNI-NEXT:    leaq (%rdi,%r13,2), %rdi
+; GFNI-NEXT:    bswapq %rbx
+; GFNI-NEXT:    movq %rbx, %r14
+; GFNI-NEXT:    shrq $4, %r14
+; GFNI-NEXT:    andq %r11, %r14
+; GFNI-NEXT:    andq %r11, %rbx
+; GFNI-NEXT:    shlq $4, %rbx
+; GFNI-NEXT:    orq %r14, %rbx
+; GFNI-NEXT:    movq %rbx, %r14
+; GFNI-NEXT:    andq %r10, %r14
+; GFNI-NEXT:    shrq $2, %rbx
+; GFNI-NEXT:    andq %r10, %rbx
+; GFNI-NEXT:    leaq (%rbx,%r14,4), %rbx
+; GFNI-NEXT:    movabsq $6148914691236517205, %r14 # imm = 0x5555555555555555
+; GFNI-NEXT:    movq %rbx, %r13
+; GFNI-NEXT:    andq %r14, %r13
+; GFNI-NEXT:    shrq %rbx
+; GFNI-NEXT:    andq %r14, %rbx
+; GFNI-NEXT:    leaq (%rbx,%r13,2), %rbx
+; GFNI-NEXT:    shrdq $48, %rbx, %rdi
 ; GFNI-NEXT:    bswapq %r15
-; GFNI-NEXT:    movq %r15, %rdi
-; GFNI-NEXT:    shrq $4, %rdi
-; GFNI-NEXT:    andq %r13, %rdi
-; GFNI-NEXT:    andq %r13, %r15
-; GFNI-NEXT:    shlq $4, %r15
-; GFNI-NEXT:    orq %rdi, %r15
-; GFNI-NEXT:    movq %r15, %rdi
-; GFNI-NEXT:    andq %r11, %rdi
-; GFNI-NEXT:    shrq $2, %r15
+; GFNI-NEXT:    movq %r15, %r13
+; GFNI-NEXT:    shrq $4, %r13
+; GFNI-NEXT:    andq %r11, %r13
 ; GFNI-NEXT:    andq %r11, %r15
-; GFNI-NEXT:    leaq (%r15,%rdi,4), %rdi
-; GFNI-NEXT:    movq %rdi, %rbx
-; GFNI-NEXT:    andq %rbp, %rbx
-; GFNI-NEXT:    shrq %rdi
-; GFNI-NEXT:    andq %rbp, %rdi
-; GFNI-NEXT:    leaq (%rdi,%rbx,2), %r15
-; GFNI-NEXT:    shrdq $48, %r15, %r14
+; GFNI-NEXT:    shlq $4, %r15
+; GFNI-NEXT:    orq %r13, %r15
+; GFNI-NEXT:    movq %r15, %r13
+; GFNI-NEXT:    andq %r10, %r13
+; GFNI-NEXT:    shrq $2, %r15
+; GFNI-NEXT:    andq %r10, %r15
+; GFNI-NEXT:    leaq (%r15,%r13,4), %r15
+; GFNI-NEXT:    movq %r15, %r13
+; GFNI-NEXT:    andq %r14, %r13
+; GFNI-NEXT:    shrq %r15
+; GFNI-NEXT:    andq %r14, %r15
+; GFNI-NEXT:    leaq (%r15,%r13,2), %r15
+; GFNI-NEXT:    shrdq $48, %r15, %rbx
 ; GFNI-NEXT:    bswapq %r12
-; GFNI-NEXT:    movq %r12, %rdi
-; GFNI-NEXT:    shrq $4, %rdi
-; GFNI-NEXT:    andq %r13, %rdi
-; GFNI-NEXT:    andq %r13, %r12
-; GFNI-NEXT:    shlq $4, %r12
-; GFNI-NEXT:    orq %rdi, %r12
-; GFNI-NEXT:    movq %r12, %rdi
-; GFNI-NEXT:    andq %r11, %rdi
-; GFNI-NEXT:    shrq $2, %r12
+; GFNI-NEXT:    movq %r12, %r13
+; GFNI-NEXT:    shrq $4, %r13
+; GFNI-NEXT:    andq %r11, %r13
 ; GFNI-NEXT:    andq %r11, %r12
-; GFNI-NEXT:    leaq (%r12,%rdi,4), %rdi
-; GFNI-NEXT:    movq %rdi, %rbx
-; GFNI-NEXT:    andq %rbp, %rbx
-; GFNI-NEXT:    shrq %rdi
-; GFNI-NEXT:    andq %rbp, %rdi
-; GFNI-NEXT:    leaq (%rdi,%rbx,2), %r12
+; GFNI-NEXT:    shlq $4, %r12
+; GFNI-NEXT:    orq %r13, %r12
+; GFNI-NEXT:    movq %r12, %r13
+; GFNI-NEXT:    andq %r10, %r13
+; GFNI-NEXT:    shrq $2, %r12
+; GFNI-NEXT:    andq %r10, %r12
+; GFNI-NEXT:    leaq (%r12,%r13,4), %r12
+; GFNI-NEXT:    movq %r12, %r13
+; GFNI-NEXT:    andq %r14, %r13
+; GFNI-NEXT:    shrq %r12
+; GFNI-NEXT:    andq %r14, %r12
+; GFNI-NEXT:    leaq (%r12,%r13,2), %r12
 ; GFNI-NEXT:    shrdq $48, %r12, %r15
 ; GFNI-NEXT:    bswapq %r9
-; GFNI-NEXT:    movq %r9, %rdi
-; GFNI-NEXT:    shrq $4, %rdi
-; GFNI-NEXT:    andq %r13, %rdi
-; GFNI-NEXT:    andq %r13, %r9
-; GFNI-NEXT:    shlq $4, %r9
-; GFNI-NEXT:    orq %rdi, %r9
-; GFNI-NEXT:    movq %r9, %rdi
-; GFNI-NEXT:    andq %r11, %rdi
-; GFNI-NEXT:    shrq $2, %r9
+; GFNI-NEXT:    movq %r9, %r13
+; GFNI-NEXT:    shrq $4, %r13
+; GFNI-NEXT:    andq %r11, %r13
 ; GFNI-NEXT:    andq %r11, %r9
-; GFNI-NEXT:    leaq (%r9,%rdi,4), %rdi
-; GFNI-NEXT:    movq %rdi, %rbx
-; GFNI-NEXT:    andq %rbp, %rbx
-; GFNI-NEXT:    shrq %rdi
-; GFNI-NEXT:    andq %rbp, %rdi
-; GFNI-NEXT:    leaq (%rdi,%rbx,2), %r9
+; GFNI-NEXT:    shlq $4, %r9
+; GFNI-NEXT:    orq %r13, %r9
+; GFNI-NEXT:    movq %r9, %r13
+; GFNI-NEXT:    andq %r10, %r13
+; GFNI-NEXT:    shrq $2, %r9
+; GFNI-NEXT:    andq %r10, %r9
+; GFNI-NEXT:    leaq (%r9,%r13,4), %r9
+; GFNI-NEXT:    movq %r9, %r13
+; GFNI-NEXT:    andq %r14, %r13
+; GFNI-NEXT:    shrq %r9
+; GFNI-NEXT:    andq %r14, %r9
+; GFNI-NEXT:    leaq (%r9,%r13,2), %r9
 ; GFNI-NEXT:    shrdq $48, %r9, %r12
 ; GFNI-NEXT:    bswapq %r8
-; GFNI-NEXT:    movq %r8, %rdi
-; GFNI-NEXT:    shrq $4, %rdi
-; GFNI-NEXT:    andq %r13, %rdi
-; GFNI-NEXT:    andq %r13, %r8
-; GFNI-NEXT:    shlq $4, %r8
-; GFNI-NEXT:    orq %rdi, %r8
-; GFNI-NEXT:    movq %r8, %rdi
-; GFNI-NEXT:    andq %r11, %rdi
-; GFNI-NEXT:    shrq $2, %r8
+; GFNI-NEXT:    movq %r8, %r13
+; GFNI-NEXT:    shrq $4, %r13
+; GFNI-NEXT:    andq %r11, %r13
 ; GFNI-NEXT:    andq %r11, %r8
-; GFNI-NEXT:    leaq (%r8,%rdi,4), %rdi
-; GFNI-NEXT:    movq %rdi, %rbx
-; GFNI-NEXT:    andq %rbp, %rbx
-; GFNI-NEXT:    shrq %rdi
-; GFNI-NEXT:    andq %rbp, %rdi
-; GFNI-NEXT:    leaq (%rdi,%rbx,2), %rdi
-; GFNI-NEXT:    shrdq $48, %rdi, %r9
+; GFNI-NEXT:    shlq $4, %r8
+; GFNI-NEXT:    orq %r13, %r8
+; GFNI-NEXT:    movq %r8, %r13
+; GFNI-NEXT:    andq %r10, %r13
+; GFNI-NEXT:    shrq $2, %r8
+; GFNI-NEXT:    andq %r10, %r8
+; GFNI-NEXT:    leaq (%r8,%r13,4), %r8
+; GFNI-NEXT:    movq %r8, %r13
+; GFNI-NEXT:    andq %r14, %r13
+; GFNI-NEXT:    shrq %r8
+; GFNI-NEXT:    andq %r14, %r8
+; GFNI-NEXT:    leaq (%r8,%r13,2), %r8
+; GFNI-NEXT:    shrdq $48, %r8, %r9
 ; GFNI-NEXT:    bswapq %rcx
-; GFNI-NEXT:    movq %rcx, %rbx
-; GFNI-NEXT:    shrq $4, %rbx
-; GFNI-NEXT:    andq %r13, %rbx
-; GFNI-NEXT:    andq %r13, %rcx
-; GFNI-NEXT:    shlq $4, %rcx
-; GFNI-NEXT:    orq %rbx, %rcx
-; GFNI-NEXT:    movq %rcx, %rbx
-; GFNI-NEXT:    andq %r11, %rbx
-; GFNI-NEXT:    shrq $2, %rcx
+; GFNI-NEXT:    movq %rcx, %r13
+; GFNI-NEXT:    shrq $4, %r13
+; GFNI-NEXT:    andq %r11, %r13
 ; GFNI-NEXT:    andq %r11, %rcx
-; GFNI-NEXT:    leaq (%rcx,%rbx,4), %rcx
-; GFNI-NEXT:    movq %rcx, %rbx
-; GFNI-NEXT:    andq %rbp, %rbx
+; GFNI-NEXT:    shlq $4, %rcx
+; GFNI-NEXT:    orq %r13, %rcx
+; GFNI-NEXT:    movq %rcx, %r13
+; GFNI-NEXT:    andq %r10, %r13
+; GFNI-NEXT:    shrq $2, %rcx
+; GFNI-NEXT:    andq %r10, %rcx
+; GFNI-NEXT:    leaq (%rcx,%r13,4), %rcx
+; GFNI-NEXT:    movq %rcx, %r13
+; GFNI-NEXT:    andq %r14, %r13
 ; GFNI-NEXT:    shrq %rcx
-; GFNI-NEXT:    andq %rbp, %rcx
-; GFNI-NEXT:    leaq (%rcx,%rbx,2), %rcx
-; GFNI-NEXT:    shrdq $48, %rcx, %rdi
+; GFNI-NEXT:    andq %r14, %rcx
+; GFNI-NEXT:    leaq (%rcx,%r13,2), %rcx
+; GFNI-NEXT:    shrdq $48, %rcx, %r8
 ; GFNI-NEXT:    bswapq %rdx
-; GFNI-NEXT:    movq %rdx, %rbx
-; GFNI-NEXT:    shrq $4, %rbx
-; GFNI-NEXT:    andq %r13, %rbx
-; GFNI-NEXT:    andq %r13, %rdx
-; GFNI-NEXT:    shlq $4, %rdx
-; GFNI-NEXT:    orq %rbx, %rdx
-; GFNI-NEXT:    movq %rdx, %rbx
-; GFNI-NEXT:    andq %r11, %rbx
-; GFNI-NEXT:    shrq $2, %rdx
+; GFNI-NEXT:    movq %rdx, %r13
+; GFNI-NEXT:    shrq $4, %r13
+; GFNI-NEXT:    andq %r11, %r13
 ; GFNI-NEXT:    andq %r11, %rdx
-; GFNI-NEXT:    leaq (%rdx,%rbx,4), %rdx
-; GFNI-NEXT:    movq %rdx, %rbx
-; GFNI-NEXT:    andq %rbp, %rbx
+; GFNI-NEXT:    shlq $4, %rdx
+; GFNI-NEXT:    orq %r13, %rdx
+; GFNI-NEXT:    movq %rdx, %r13
+; GFNI-NEXT:    andq %r10, %r13
+; GFNI-NEXT:    shrq $2, %rdx
+; GFNI-NEXT:    andq %r10, %rdx
+; GFNI-NEXT:    leaq (%rdx,%r13,4), %rdx
+; GFNI-NEXT:    movq %rdx, %r13
+; GFNI-NEXT:    andq %r14, %r13
 ; GFNI-NEXT:    shrq %rdx
-; GFNI-NEXT:    andq %rbp, %rdx
-; GFNI-NEXT:    leaq (%rdx,%rbx,2), %rdx
+; GFNI-NEXT:    andq %r14, %rdx
+; GFNI-NEXT:    leaq (%rdx,%r13,2), %rdx
 ; GFNI-NEXT:    shrdq $48, %rdx, %rcx
 ; GFNI-NEXT:    bswapq %rsi
-; GFNI-NEXT:    movq %rsi, %rbx
-; GFNI-NEXT:    shrq $4, %rbx
-; GFNI-NEXT:    andq %r13, %rbx
-; GFNI-NEXT:    andq %r13, %rsi
-; GFNI-NEXT:    shlq $4, %rsi
-; GFNI-NEXT:    orq %rbx, %rsi
-; GFNI-NEXT:    movq %rsi, %rbx
-; GFNI-NEXT:    andq %r11, %rbx
-; GFNI-NEXT:    shrq $2, %rsi
+; GFNI-NEXT:    movq %rsi, %r13
+; GFNI-NEXT:    shrq $4, %r13
+; GFNI-NEXT:    andq %r11, %r13
 ; GFNI-NEXT:    andq %r11, %rsi
-; GFNI-NEXT:    leaq (%rsi,%rbx,4), %rsi
-; GFNI-NEXT:    movq %rsi, %rbx
-; GFNI-NEXT:    andq %rbp, %rbx
+; GFNI-NEXT:    shlq $4, %rsi
+; GFNI-NEXT:    orq %r13, %rsi
+; GFNI-NEXT:    movq %rsi, %r11
+; GFNI-NEXT:    andq %r10, %r11
+; GFNI-NEXT:    shrq $2, %rsi
+; GFNI-NEXT:    andq %r10, %rsi
+; GFNI-NEXT:    leaq (%rsi,%r11,4), %rsi
+; GFNI-NEXT:    movq %rsi, %r10
+; GFNI-NEXT:    andq %r14, %r10
 ; GFNI-NEXT:    shrq %rsi
-; GFNI-NEXT:    andq %rbp, %rsi
-; GFNI-NEXT:    leaq (%rsi,%rbx,2), %rsi
+; GFNI-NEXT:    andq %r14, %rsi
+; GFNI-NEXT:    leaq (%rsi,%r10,2), %rsi
 ; GFNI-NEXT:    shrdq $48, %rsi, %rdx
 ; GFNI-NEXT:    shrq $48, %rsi
 ; GFNI-NEXT:    movq %rdx, 56(%rax)
 ; GFNI-NEXT:    movq %rcx, 48(%rax)
-; GFNI-NEXT:    movq %rdi, 40(%rax)
+; GFNI-NEXT:    movq %r8, 40(%rax)
 ; GFNI-NEXT:    movq %r9, 32(%rax)
 ; GFNI-NEXT:    movq %r12, 24(%rax)
 ; GFNI-NEXT:    movq %r15, 16(%rax)
-; GFNI-NEXT:    movq %r14, 8(%rax)
-; GFNI-NEXT:    movq %r10, (%rax)
+; GFNI-NEXT:    movq %rbx, 8(%rax)
+; GFNI-NEXT:    movq %rdi, (%rax)
 ; GFNI-NEXT:    movw %si, 64(%rax)
 ; GFNI-NEXT:    popq %rbx
 ; GFNI-NEXT:    popq %r12
 ; GFNI-NEXT:    popq %r13
 ; GFNI-NEXT:    popq %r14
 ; GFNI-NEXT:    popq %r15
-; GFNI-NEXT:    popq %rbp
 ; GFNI-NEXT:    retq
   %Z = call i528 @llvm.bitreverse.i528(i528 %A)
   ret i528 %Z

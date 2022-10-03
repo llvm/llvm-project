@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x renderscript -D__RENDERSCRIPT__ %s
-// RUN: %clang_cc1 -fsyntax-only -verify -x c %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify -x c %s
+// REQUIRES: x86-registered-target
 
 #ifndef __RENDERSCRIPT__
 // expected-warning@+2 {{'kernel' attribute ignored}}

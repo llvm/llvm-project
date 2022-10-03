@@ -58,7 +58,7 @@ program p
   ! CHECK-DAG: %[[VAL_0:.*]] = arith.constant 4 : index
   ! CHECK-DAG: %[[VAL_1:.*]] = arith.constant 3 : index
   ! CHECK-DAG: %[[VAL_2:.*]] = arith.constant -1 : i32
-  ! CHECK: %[[VAL_5:.*]] = fir.address_of(@_QFEc1) : !fir.ref<!fir.array<3x!fir.char<1,4>>>
+  ! CHECK: %[[VAL_5:.*]] = fir.alloca !fir.array<3x!fir.char<1,4>> {bindc_name = "c1", uniq_name = "_QFEc1"}
   ! CHECK: %[[VAL_6:.*]] = fir.address_of(@_QFEc2) : !fir.ref<!fir.array<3x!fir.char<1,4>>>
   ! CHECK: %[[VAL_7:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,
   ! CHECK: %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>

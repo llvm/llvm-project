@@ -1527,13 +1527,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     BuildVector
       // FIXME: Should probably widen s1 vectors straight to s32
       .minScalarOrElt(0, S16)
-      // Widen source elements and produce a G_BUILD_VECTOR_TRUNC
-      .minScalar(1, S32);
+      .minScalar(1, S16);
 
     getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC)
       .legalFor({V2S16, S32})
       .lower();
-    BuildVector.minScalarOrElt(0, S32);
   } else {
     BuildVector.customFor({V2S16, S16});
     BuildVector.minScalarOrElt(0, S32);
@@ -4863,6 +4861,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B, GISelChangeObserver &Observer,
     const AMDGPU::ImageDimIntrinsicInfo *Intr) const {
 
+  const MachineFunction &MF = *MI.getMF();
   const unsigned NumDefs = MI.getNumExplicitDefs();
   const unsigned ArgOffset = NumDefs + 1;
   bool IsTFE = NumDefs == 2;
@@ -4966,7 +4965,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
                                 IsG16);
 
       // See also below in the non-a16 branch
-      const bool UseNSA = ST.hasNSAEncoding() && PackedRegs.size() >= 3 &&
+      const bool UseNSA = ST.hasNSAEncoding() &&
+                          PackedRegs.size() >= ST.getNSAThreshold(MF) &&
                           PackedRegs.size() <= ST.getNSAMaxSize();
 
       if (!UseNSA && PackedRegs.size() > 1) {
@@ -5008,7 +5008,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     // TODO: we can actually allow partial NSA where the final register is a
     // contiguous set of the remaining addresses.
     // This could help where there are more addresses than supported.
-    const bool UseNSA = ST.hasNSAEncoding() && CorrectedNumVAddrs >= 3 &&
+    const bool UseNSA = ST.hasNSAEncoding() &&
+                        CorrectedNumVAddrs >= ST.getNSAThreshold(MF) &&
                         CorrectedNumVAddrs <= ST.getNSAMaxSize();
 
     if (!UseNSA && Intr->NumVAddrs > 1)

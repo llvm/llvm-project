@@ -112,7 +112,7 @@ LogicalResult AsyncRuntimeRefCountingOptPass::optimizeReferenceCounting(
     for (RuntimeAddRefOp addRef : info.addRefs) {
       for (RuntimeDropRefOp dropRef : info.dropRefs) {
         // `drop_ref` operation after the `add_ref` with matching count.
-        if (dropRef.count() != addRef.count() ||
+        if (dropRef.getCount() != addRef.getCount() ||
             dropRef->isBeforeInBlock(addRef.getOperation()))
           continue;
 

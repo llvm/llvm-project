@@ -19,6 +19,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>

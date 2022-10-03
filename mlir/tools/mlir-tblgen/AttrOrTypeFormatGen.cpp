@@ -290,6 +290,12 @@ void DefFormat::genParser(MethodBody &os) {
   os.indent();
   os << "::mlir::Builder odsBuilder(odsParser.getContext());\n";
 
+  // Store the initial location of the parser.
+  ctx.addSubst("_loc", "odsLoc");
+  os << tgfmt("::llvm::SMLoc $_loc = $_parser.getCurrentLocation();\n"
+              "(void) $_loc;\n",
+              &ctx);
+
   // Declare variables to store all of the parameters. Allocated parameters
   // such as `ArrayRef` and `StringRef` must provide a `storageType`. Store
   // FailureOr<T> to defer type construction for parameters that are parsed in
@@ -298,13 +304,9 @@ void DefFormat::genParser(MethodBody &os) {
   for (const AttrOrTypeParameter &param : params) {
     os << formatv("::mlir::FailureOr<{0}> _result_{1};\n",
                   param.getCppStorageType(), param.getName());
+    if (auto *selfTypeParam = dyn_cast<AttributeSelfTypeParameter>(&param))
+      genAttrSelfTypeParser(os, ctx, *selfTypeParam);
   }
-
-  // Store the initial location of the parser.
-  ctx.addSubst("_loc", "odsLoc");
-  os << tgfmt("::llvm::SMLoc $_loc = $_parser.getCurrentLocation();\n"
-              "(void) $_loc;\n",
-              &ctx);
 
   // Generate call to each parameter parser.
   for (FormatElement *el : elements)
@@ -313,8 +315,6 @@ void DefFormat::genParser(MethodBody &os) {
   // Emit an assert for each mandatory parameter. Triggering an assert means
   // the generated parser is incorrect (i.e. there is a bug in this code).
   for (const AttrOrTypeParameter &param : params) {
-    if (auto *selfTypeParam = dyn_cast<AttributeSelfTypeParameter>(&param))
-      genAttrSelfTypeParser(os, ctx, *selfTypeParam);
     if (param.isOptional())
       continue;
     os << formatv("assert(::mlir::succeeded(_result_{0}));\n", param.getName());
@@ -1033,7 +1033,7 @@ DefFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
     seenParams.set(idx);
 
     // Otherwise, to be referenced, a variable must have been bound.
-  } else if (!seenParams.test(idx)) {
+  } else if (!seenParams.test(idx) && !isa<AttributeSelfTypeParameter>(*it)) {
     return emitError(loc, "parameter '" + name +
                               "' must be bound before it is referenced");
   }

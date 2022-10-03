@@ -3394,7 +3394,7 @@ static void handleCodeSegAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 // handled later in the process, once we know how many exist.
 bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
-  enum SecondParam { None, Architecture, Tune };
+  enum SecondParam { None, CPU, Tune };
   enum ThirdParam { Target, TargetClones };
   if (AttrStr.contains("fpmath="))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
@@ -3406,24 +3406,22 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << "tune=" << Target;
 
-  ParsedTargetAttr ParsedAttrs = TargetAttr::parse(AttrStr);
+  ParsedTargetAttr ParsedAttrs =
+      Context.getTargetInfo().parseTargetAttr(AttrStr);
 
-  if (!ParsedAttrs.Architecture.empty() &&
-      !Context.getTargetInfo().isValidCPUName(ParsedAttrs.Architecture))
+  if (!ParsedAttrs.CPU.empty() &&
+      !Context.getTargetInfo().isValidCPUName(ParsedAttrs.CPU))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Unknown << Architecture << ParsedAttrs.Architecture << Target;
+           << Unknown << CPU << ParsedAttrs.CPU << Target;
 
   if (!ParsedAttrs.Tune.empty() &&
       !Context.getTargetInfo().isValidCPUName(ParsedAttrs.Tune))
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unknown << Tune << ParsedAttrs.Tune << Target;
 
-  if (ParsedAttrs.DuplicateArchitecture)
+  if (ParsedAttrs.Duplicate != "")
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Duplicate << None << "arch=" << Target;
-  if (ParsedAttrs.DuplicateTune)
-    return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-           << Duplicate << None << "tune=" << Target;
+           << Duplicate << None << ParsedAttrs.Duplicate << Target;
 
   for (const auto &Feature : ParsedAttrs.Features) {
     auto CurFeature = StringRef(Feature).drop_front(); // remove + or -.
@@ -3437,8 +3435,7 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
   if (ParsedAttrs.BranchProtection.empty())
     return false;
   if (!Context.getTargetInfo().validateBranchProtection(
-          ParsedAttrs.BranchProtection, ParsedAttrs.Architecture, BPI,
-          DiagMsg)) {
+          ParsedAttrs.BranchProtection, ParsedAttrs.CPU, BPI, DiagMsg)) {
     if (DiagMsg.empty())
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "branch-protection" << Target;
@@ -3467,7 +3464,7 @@ bool Sema::checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
                                        bool &HasDefault, bool &HasCommas,
                                        SmallVectorImpl<StringRef> &Strings) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
-  enum SecondParam { None, Architecture, Tune };
+  enum SecondParam { None, CPU, Tune };
   enum ThirdParam { Target, TargetClones };
   HasCommas = HasCommas || Str.contains(',');
   // Warn on empty at the beginning of a string.
@@ -3492,8 +3489,8 @@ bool Sema::checkTargetClonesAttrString(SourceLocation LiteralLoc, StringRef Str,
       if (!Context.getTargetInfo().isValidCPUName(
               Cur.drop_front(sizeof("arch=") - 1)))
         return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-               << Unsupported << Architecture
-               << Cur.drop_front(sizeof("arch=") - 1) << TargetClones;
+               << Unsupported << CPU << Cur.drop_front(sizeof("arch=") - 1)
+               << TargetClones;
     } else if (Cur == "default") {
       DefaultIsDupe = HasDefault;
       HasDefault = true;

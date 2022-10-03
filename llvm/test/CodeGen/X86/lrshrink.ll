@@ -16,28 +16,28 @@ define i64 @test(i1 %a, i64 %r1, i64 %r2, i64 %s1, i64 %s2, i64 %t1, i64 %t2) {
 ; CHECK-NEXT:    .cfi_offset %rbx, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
 ; CHECK-NEXT:    .cfi_offset %r15, -16
-; CHECK-NEXT:    movq %rcx, %r14
-; CHECK-NEXT:    movl $4, %r15d
+; CHECK-NEXT:    movq %rcx, %rbx
+; CHECK-NEXT:    movl $4, %r14d
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %then
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r9
-; CHECK-NEXT:    movl $10, %r15d
+; CHECK-NEXT:    movl $10, %r14d
 ; CHECK-NEXT:    movq %rdx, %rsi
-; CHECK-NEXT:    movq %r8, %r14
+; CHECK-NEXT:    movq %r8, %rbx
 ; CHECK-NEXT:  .LBB0_2: # %else
-; CHECK-NEXT:    addq %r9, %r14
-; CHECK-NEXT:    addq %rsi, %r15
-; CHECK-NEXT:    callq _Z3foov@PLT
-; CHECK-NEXT:    movl %eax, %ebx
-; CHECK-NEXT:    addq %r15, %rbx
+; CHECK-NEXT:    addq %r9, %rbx
+; CHECK-NEXT:    addq %rsi, %r14
 ; CHECK-NEXT:    callq _Z3foov@PLT
 ; CHECK-NEXT:    movl %eax, %r15d
-; CHECK-NEXT:    addq %rbx, %r15
+; CHECK-NEXT:    addq %r14, %r15
+; CHECK-NEXT:    callq _Z3foov@PLT
+; CHECK-NEXT:    movl %eax, %r14d
+; CHECK-NEXT:    addq %r15, %r14
 ; CHECK-NEXT:    callq _Z3foov@PLT
 ; CHECK-NEXT:    movl %eax, %eax
-; CHECK-NEXT:    addq %r15, %rax
 ; CHECK-NEXT:    addq %r14, %rax
+; CHECK-NEXT:    addq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %r14

@@ -3629,10 +3629,19 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
   // Unsigned integers are always nonnegative.
   case Instruction::UIToFP:
     return true;
-  case Instruction::FMul:
   case Instruction::FDiv:
-    // X * X is always non-negative or a NaN.
     // X / X is always exactly 1.0 or a NaN.
+    if (I->getOperand(0) == I->getOperand(1) &&
+        (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()))
+      return true;
+
+    // Set SignBitOnly for RHS, because X / -0.0 is -Inf (or NaN).
+    return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
+                                           Depth + 1) &&
+           cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI,
+                                           /*SignBitOnly*/ true, Depth + 1);
+  case Instruction::FMul:
+    // X * X is always non-negative or a NaN.
     if (I->getOperand(0) == I->getOperand(1) &&
         (!SignBitOnly || cast<FPMathOperator>(I)->hasNoNaNs()))
       return true;
@@ -3791,6 +3800,10 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
       // integer, the result of the cast must be finite.
       Type *FPTy = Inst->getType()->getScalarType();
       return ilogb(APFloat::getLargest(FPTy->getFltSemantics())) >= IntSize;
+    }
+    case Instruction::FPExt: {
+      // Peek through to source op. If it is not infinity, this is not infinity.
+      return isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1);
     }
     default:
       break;

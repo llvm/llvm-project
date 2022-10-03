@@ -450,7 +450,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
         ISD::VP_SELECT,      ISD::VP_SINT_TO_FP,  ISD::VP_UINT_TO_FP,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
-        ISD::VP_SQRT};
+        ISD::VP_SQRT,        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,
+        ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
+        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -658,8 +660,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, VT, Legal);
 
-      setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND},
-                         VT, Custom);
+      setOperationAction(
+          {ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND, ISD::FROUNDEVEN},
+          VT, Custom);
 
       setOperationAction(FloatingPointVecReduceOps, VT, Custom);
 
@@ -902,7 +905,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
 
-        setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND},
+        setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
+                            ISD::FROUNDEVEN},
                            VT, Custom);
 
         setCondCodeAction(VFPCCToExpand, VT, Expand);
@@ -1945,19 +1949,27 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
 
 static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   switch (Opc) {
-  case ISD::FROUNDEVEN: return RISCVFPRndMode::RNE;
+  case ISD::FROUNDEVEN:
+  case ISD::VP_FROUNDEVEN:
+    return RISCVFPRndMode::RNE;
   case ISD::FTRUNC:     return RISCVFPRndMode::RTZ;
-  case ISD::FFLOOR:     return RISCVFPRndMode::RDN;
-  case ISD::FCEIL:      return RISCVFPRndMode::RUP;
-  case ISD::FROUND:     return RISCVFPRndMode::RMM;
+  case ISD::FFLOOR:
+  case ISD::VP_FFLOOR:
+    return RISCVFPRndMode::RDN;
+  case ISD::FCEIL:
+  case ISD::VP_FCEIL:
+    return RISCVFPRndMode::RUP;
+  case ISD::FROUND:
+  case ISD::VP_FROUND:
+    return RISCVFPRndMode::RMM;
   }
 
   return RISCVFPRndMode::Invalid;
 }
 
-// Expand vector FTRUNC, FCEIL, FFLOOR, and FROUND by converting to the integer
-// domain/ and back. Taking care to avoid converting values that are nan or
-// already correct.
+// Expand vector FTRUNC, FCEIL, FFLOOR, FROUND, VP_FCEIL, VP_FFLOOR, VP_FROUND
+// and VP_FROUNDEVEN by converting to the integer domain and back. Taking care
+// to avoid converting values that are nan or already correct.
 static SDValue
 lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
@@ -1974,14 +1986,24 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
     Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
   }
 
-  auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Mask, VL;
+  bool IsVP = Op->getOpcode() == ISD::VP_FCEIL ||
+              Op->getOpcode() == ISD::VP_FFLOOR ||
+              Op->getOpcode() == ISD::VP_FROUND ||
+              Op->getOpcode() == ISD::VP_FROUNDEVEN;
+
+  if (IsVP) {
+    Mask = Op.getOperand(1);
+    VL = Op.getOperand(2);
+  } else {
+    std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  }
 
   // Freeze the source since we are increasing the number of uses.
   Src = DAG.getFreeze(Src);
 
   // We do the conversion on the absolute value and fix the sign at the end.
-  SDValue Abs =
-      DAG.getNode(RISCVISD::FABS_VL, DL, ContainerVT, Src, TrueMask, VL);
+  SDValue Abs = DAG.getNode(RISCVISD::FABS_VL, DL, ContainerVT, Src, Mask, VL);
 
   // Determine the largest integer that can be represented exactly. This and
   // values larger than it don't have any fractional bits so don't need to
@@ -1998,9 +2020,10 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
 
   // If abs(Src) was larger than MaxVal or nan, keep it.
   MVT SetccVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
-  SDValue Mask = DAG.getNode(RISCVISD::SETCC_VL, DL, SetccVT,
-                             {Abs, MaxValSplat, DAG.getCondCode(ISD::SETOLT),
-                              DAG.getUNDEF(SetccVT), TrueMask, VL});
+  Mask =
+      DAG.getNode(RISCVISD::SETCC_VL, DL, SetccVT,
+                  {Abs, MaxValSplat, DAG.getCondCode(ISD::SETOLT),
+                   DAG.getUNDEF(SetccVT), Mask, VL});
 
   // Truncate to integer and convert back to FP.
   MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();
@@ -2011,17 +2034,23 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   default:
     llvm_unreachable("Unexpected opcode");
   case ISD::FCEIL:
+  case ISD::VP_FCEIL:
   case ISD::FFLOOR:
-  case ISD::FROUND: {
+  case ISD::VP_FFLOOR:
+  case ISD::FROUND:
+  case ISD::FROUNDEVEN:
+  case ISD::VP_FROUND:
+  case ISD::VP_FROUNDEVEN: {
     RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Op.getOpcode());
     assert(FRM != RISCVFPRndMode::Invalid);
-    Truncated = DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, IntVT, Src, Mask,
+    Truncated = DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, IntVT, Src,
+                            Mask,
                             DAG.getTargetConstant(FRM, DL, XLenVT), VL);
     break;
   }
   case ISD::FTRUNC:
-    Truncated =
-        DAG.getNode(RISCVISD::VFCVT_RTZ_X_F_VL, DL, IntVT, Src, Mask, VL);
+    Truncated = DAG.getNode(RISCVISD::VFCVT_RTZ_X_F_VL, DL, IntVT, Src,
+                            Mask, VL);
     break;
   }
 
@@ -2044,6 +2073,24 @@ struct VIDSequence {
   int64_t Addend;
 };
 
+static Optional<uint64_t> getExactInteger(const APFloat &APF,
+                                          uint32_t BitWidth) {
+  APSInt ValInt(BitWidth, !APF.isNegative());
+  // We use an arbitrary rounding mode here. If a floating-point is an exact
+  // integer (e.g., 1.0), the rounding mode does not affect the output value. If
+  // the rounding mode changes the output value, then it is not an exact
+  // integer.
+  RoundingMode ArbitraryRM = RoundingMode::TowardZero;
+  bool IsExact;
+  // If it is out of signed integer range, it will return an invalid operation.
+  // If it is not an exact integer, IsExact is false.
+  if ((APF.convertToInteger(ValInt, ArbitraryRM, &IsExact) ==
+       APFloatBase::opInvalidOp) ||
+      !IsExact)
+    return None;
+  return ValInt.extractBitsAsZExtValue(BitWidth, 0);
+}
+
 // Try to match an arithmetic-sequence BUILD_VECTOR [X,X+S,X+2*S,...,X+(N-1)*S]
 // to the (non-zero) step S and start value X. This can be then lowered as the
 // RVV sequence (VID * S) + X, for example.
@@ -2057,8 +2104,7 @@ struct VIDSequence {
 static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
   unsigned NumElts = Op.getNumOperands();
   assert(Op.getOpcode() == ISD::BUILD_VECTOR && "Unexpected BUILD_VECTOR");
-  if (!Op.getValueType().isInteger())
-    return None;
+  bool IsInteger = Op.getValueType().isInteger();
 
   Optional<unsigned> SeqStepDenom;
   Optional<int64_t> SeqStepNum, SeqAddend;
@@ -2069,12 +2115,25 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
     // when interpolating across them.
     if (Op.getOperand(Idx).isUndef())
       continue;
-    // The BUILD_VECTOR must be all constants.
-    if (!isa<ConstantSDNode>(Op.getOperand(Idx)))
-      return None;
 
-    uint64_t Val = Op.getConstantOperandVal(Idx) &
-                   maskTrailingOnes<uint64_t>(EltSizeInBits);
+    uint64_t Val;
+    if (IsInteger) {
+      // The BUILD_VECTOR must be all constants.
+      if (!isa<ConstantSDNode>(Op.getOperand(Idx)))
+        return None;
+      Val = Op.getConstantOperandVal(Idx) &
+            maskTrailingOnes<uint64_t>(EltSizeInBits);
+    } else {
+      // The BUILD_VECTOR must be all constants.
+      if (!isa<ConstantFPSDNode>(Op.getOperand(Idx)))
+        return None;
+      if (auto ExactInteger = getExactInteger(
+              cast<ConstantFPSDNode>(Op.getOperand(Idx))->getValueAPF(),
+              EltSizeInBits))
+        Val = *ExactInteger;
+      else
+        return None;
+    }
 
     if (PrevElt) {
       // Calculate the step since the last non-undef element, and ensure
@@ -2123,8 +2182,15 @@ static Optional<VIDSequence> isSimpleVIDSequence(SDValue Op) {
   for (unsigned Idx = 0; Idx < NumElts; Idx++) {
     if (Op.getOperand(Idx).isUndef())
       continue;
-    uint64_t Val = Op.getConstantOperandVal(Idx) &
-                   maskTrailingOnes<uint64_t>(EltSizeInBits);
+    uint64_t Val;
+    if (IsInteger) {
+      Val = Op.getConstantOperandVal(Idx) &
+            maskTrailingOnes<uint64_t>(EltSizeInBits);
+    } else {
+      Val = *getExactInteger(
+          cast<ConstantFPSDNode>(Op.getOperand(Idx))->getValueAPF(),
+          EltSizeInBits);
+    }
     uint64_t ExpectedVal =
         (int64_t)(Idx * (uint64_t)*SeqStepNum) / *SeqStepDenom;
     int64_t Addend = SignExtend64(Val - ExpectedVal, EltSizeInBits);
@@ -2332,27 +2398,36 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
          (StepOpcode == ISD::SHL && isUInt<5>(SplatStepVal))) &&
         isPowerOf2_32(StepDenominator) &&
         (SplatStepVal >= 0 || StepDenominator == 1) && isInt<5>(Addend)) {
-      SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
+      MVT VIDVT =
+          VT.isFloatingPoint() ? VT.changeVectorElementTypeToInteger() : VT;
+      MVT VIDContainerVT =
+          getContainerForFixedLengthVector(DAG, VIDVT, Subtarget);
+      SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, VIDContainerVT, Mask, VL);
       // Convert right out of the scalable type so we can use standard ISD
       // nodes for the rest of the computation. If we used scalable types with
       // these, we'd lose the fixed-length vector info and generate worse
       // vsetvli code.
-      VID = convertFromScalableVector(VT, VID, DAG, Subtarget);
+      VID = convertFromScalableVector(VIDVT, VID, DAG, Subtarget);
       if ((StepOpcode == ISD::MUL && SplatStepVal != 1) ||
           (StepOpcode == ISD::SHL && SplatStepVal != 0)) {
         SDValue SplatStep = DAG.getSplatBuildVector(
-            VT, DL, DAG.getConstant(SplatStepVal, DL, XLenVT));
-        VID = DAG.getNode(StepOpcode, DL, VT, VID, SplatStep);
+            VIDVT, DL, DAG.getConstant(SplatStepVal, DL, XLenVT));
+        VID = DAG.getNode(StepOpcode, DL, VIDVT, VID, SplatStep);
       }
       if (StepDenominator != 1) {
         SDValue SplatStep = DAG.getSplatBuildVector(
-            VT, DL, DAG.getConstant(Log2_64(StepDenominator), DL, XLenVT));
-        VID = DAG.getNode(ISD::SRL, DL, VT, VID, SplatStep);
+            VIDVT, DL, DAG.getConstant(Log2_64(StepDenominator), DL, XLenVT));
+        VID = DAG.getNode(ISD::SRL, DL, VIDVT, VID, SplatStep);
       }
       if (Addend != 0 || Negate) {
         SDValue SplatAddend = DAG.getSplatBuildVector(
-            VT, DL, DAG.getConstant(Addend, DL, XLenVT));
-        VID = DAG.getNode(Negate ? ISD::SUB : ISD::ADD, DL, VT, SplatAddend, VID);
+            VIDVT, DL, DAG.getConstant(Addend, DL, XLenVT));
+        VID = DAG.getNode(Negate ? ISD::SUB : ISD::ADD, DL, VIDVT, SplatAddend,
+                          VID);
+      }
+      if (VT.isFloatingPoint()) {
+        // TODO: Use vfwcvt to reduce register pressure.
+        VID = DAG.getNode(ISD::SINT_TO_FP, DL, VT, VID);
       }
       return VID;
     }
@@ -3567,6 +3642,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FCEIL:
   case ISD::FFLOOR:
   case ISD::FROUND:
+  case ISD::FROUNDEVEN:
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
@@ -3856,6 +3932,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPOp(Op, DAG, RISCVISD::FSQRT_VL);
   case ISD::VP_FMA:
     return lowerVPOp(Op, DAG, RISCVISD::VFMADD_VL);
+  case ISD::VP_FMINNUM:
+    return lowerVPOp(Op, DAG, RISCVISD::FMINNUM_VL, /*HasMergeOp*/ true);
+  case ISD::VP_FMAXNUM:
+    return lowerVPOp(Op, DAG, RISCVISD::FMAXNUM_VL, /*HasMergeOp*/ true);
+  case ISD::VP_FCOPYSIGN:
+    return lowerVPOp(Op, DAG, RISCVISD::FCOPYSIGN_VL, /*HasMergeOp*/ true);
   case ISD::VP_SIGN_EXTEND:
   case ISD::VP_ZERO_EXTEND:
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
@@ -3885,6 +3967,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPStridedLoad(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     return lowerVPStridedStore(Op, DAG);
+  case ISD::VP_FCEIL:
+  case ISD::VP_FFLOOR:
+  case ISD::VP_FROUND:
+  case ISD::VP_FROUNDEVEN:
+    return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   }
 }
 
@@ -3962,7 +4049,6 @@ SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
 
 SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
   return getAddr(N, DAG, N->getGlobal()->isDSOLocal());
@@ -4069,7 +4155,6 @@ SDValue RISCVTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
 
 SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  SDLoc DL(Op);
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
@@ -7629,17 +7714,10 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG) {
   if (!isOneConstant(ScalarV.getOperand(2)))
     return SDValue();
 
-  // TODO: Deal with value other than neutral element.
-  auto IsRVVNeutralElement = [Opc, &DAG](SDNode *N, SDValue V) {
-    if (Opc == ISD::FADD && N->getFlags().hasNoSignedZeros() &&
-        isNullFPConstant(V))
-      return true;
-    return DAG.getNeutralElement(Opc, SDLoc(V), V.getSimpleValueType(),
-                                 N->getFlags()) == V;
-  };
-
   // Check the scalar of ScalarV is neutral element
-  if (!IsRVVNeutralElement(N, ScalarV.getOperand(1)))
+  // TODO: Deal with value other than neutral element.
+  if (!isNeutralConstant(N->getOpcode(), N->getFlags(), ScalarV.getOperand(1),
+                         0))
     return SDValue();
 
   if (!ScalarV.hasOneUse())
@@ -8935,13 +9013,69 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
     SDValue CC = N->getOperand(2);
+    ISD::CondCode CCVal = cast<CondCodeSDNode>(CC)->get();
     SDValue TrueV = N->getOperand(3);
     SDValue FalseV = N->getOperand(4);
     SDLoc DL(N);
+    EVT VT = N->getValueType(0);
 
     // If the True and False values are the same, we don't need a select_cc.
     if (TrueV == FalseV)
       return TrueV;
+
+    // (select (and (x , 0x1) == 0), y, (z ^ y) ) -> (-(and (x , 0x1)) & z ) ^ y
+    // (select (and (x , 0x1) != 0), (z ^ y) ), y -> (-(and (x , 0x1)) & z ) ^ y
+    // (select (and (x , 0x1) == 0), y, (z | y) ) -> (-(and (x , 0x1)) & z ) | y
+    // (select (and (x , 0x1) != 0), (z | y) ), y -> (-(and (x , 0x1)) & z ) | y
+    if (isNullConstant(RHS) && ISD::isIntEqualitySetCC(CCVal) &&
+        LHS.getOpcode() == ISD::AND && isOneConstant(LHS.getOperand(1))) {
+      unsigned Opcode;
+      SDValue Src1, Src2;
+      // true if FalseV is XOR or OR operator and one of its operands
+      // is equal to Op1
+      // ( a , a op b) || ( b , a op b)
+      auto isOrXorPattern = [&]() {
+        if (CCVal == ISD::SETEQ &&
+            (FalseV.getOpcode() == ISD::XOR || FalseV.getOpcode() == ISD::OR) &&
+            (FalseV.getOperand(0) == TrueV || FalseV.getOperand(1) == TrueV)) {
+          Src1 = FalseV.getOperand(0) == TrueV ?
+            FalseV.getOperand(1) : FalseV.getOperand(0);
+          Src2 = TrueV;
+          Opcode = FalseV.getOpcode();
+          return true;
+        }
+        if (CCVal == ISD::SETNE &&
+            (TrueV.getOpcode() == ISD::XOR || TrueV.getOpcode() == ISD::OR) &&
+            (TrueV.getOperand(0) == FalseV || TrueV.getOperand(1) == FalseV)) {
+          Src1 = TrueV.getOperand(0) == FalseV ?
+            TrueV.getOperand(1) : TrueV.getOperand(0);
+          Src2 = FalseV;
+          Opcode = TrueV.getOpcode();
+          return true;
+        }
+
+        return false;
+      };
+
+      if (isOrXorPattern()) {
+        SDValue Neg;
+        unsigned CmpSz = LHS.getSimpleValueType().getSizeInBits();
+        // We need mask of all zeros or ones with same size of the other
+        // operands.
+        if (CmpSz > VT.getSizeInBits())
+          Neg = DAG.getNode(ISD::TRUNCATE, DL, VT, LHS);
+        else if (CmpSz < VT.getSizeInBits())
+          Neg = DAG.getNode(ISD::AND, DL, VT,
+                            DAG.getNode(ISD::ANY_EXTEND, DL, VT, LHS),
+                            DAG.getConstant(1, DL, VT));
+        else
+          Neg = LHS;
+        SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                                   Neg); // -(and (x, 0x1))
+        SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
+        return DAG.getNode(Opcode, DL, VT, And, Src2);           // And Op y
+      }
+    }
 
     if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),

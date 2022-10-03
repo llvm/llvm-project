@@ -4,7 +4,6 @@
 // RUN: lld-link -lldmingw -dll -out:%t.dll %t.o -noentry -exclude-symbols:sym2,unknownsym -exclude-symbols:unknownsym,sym3
 // RUN: llvm-readobj --coff-exports %t.dll | FileCheck --implicit-check-not=Name: %s
 
-// CHECK: Name:
 // CHECK: Name: sym1
 
 .global _sym1

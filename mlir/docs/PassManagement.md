@@ -863,11 +863,11 @@ void registerMyPasses() {
 
 The second is to provide a way to configure the pass options. These classes are
 named in the form of `MyPassOptions`, where `MyPass` is the name of the pass
-definition in tablegen. The configurable parameters reflect the options
-declared in the tablegen file. Differently from the registration hooks, these
-classes can be enabled on a per-pass basis by defining the
-`GEN_PASS_DECL_PASSNAME` macro, where `PASSNAME` is the uppercase version of
-the name specified in tablegen.
+definition in tablegen. The configurable parameters reflect the options declared
+in the tablegen file. These declarations can be enabled for the whole group of
+passes by defining the `GEN_PASS_DECL` macro, or on a per-pass basis by defining
+`GEN_PASS_DECL_PASSNAME` where `PASSNAME` is the uppercase version of the name
+specified in tablegen.
 
 ```c++
 // .h.inc
@@ -924,10 +924,9 @@ struct MyPass : foo::impl::MyPassBase<MyPass> {
 };
 ```
 
-Similarly to the previous cases, the definitions can be enabled on a per-pass
-basis by defining the appropriate preprocessor `GEN_PASS_DEF_PASSNAME` macro,
-with `PASSNAME` equal to the uppercase version of the name of the pass
-definition in tablegen.
+These definitions can be enabled on a per-pass basis by defining the appropriate
+preprocessor `GEN_PASS_DEF_PASSNAME` macro, with `PASSNAME` equal to the
+uppercase version of the name of the pass definition in tablegen.
 If the `constructor` field has not been specified in tablegen, then the default
 constructors are also defined and expect the name of the actual pass class to
 be equal to the name defined in tablegen.

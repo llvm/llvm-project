@@ -328,6 +328,22 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::round, MVT::nxv2f64, 9},
     {Intrinsic::round, MVT::nxv4f64, 9},
     {Intrinsic::round, MVT::nxv8f64, 9},
+    {Intrinsic::roundeven, MVT::v2f32, 9},
+    {Intrinsic::roundeven, MVT::v4f32, 9},
+    {Intrinsic::roundeven, MVT::v8f32, 9},
+    {Intrinsic::roundeven, MVT::v16f32, 9},
+    {Intrinsic::roundeven, MVT::nxv2f32, 9},
+    {Intrinsic::roundeven, MVT::nxv4f32, 9},
+    {Intrinsic::roundeven, MVT::nxv8f32, 9},
+    {Intrinsic::roundeven, MVT::nxv16f32, 9},
+    {Intrinsic::roundeven, MVT::v2f64, 9},
+    {Intrinsic::roundeven, MVT::v4f64, 9},
+    {Intrinsic::roundeven, MVT::v8f64, 9},
+    {Intrinsic::roundeven, MVT::v16f64, 9},
+    {Intrinsic::roundeven, MVT::nxv1f64, 9},
+    {Intrinsic::roundeven, MVT::nxv2f64, 9},
+    {Intrinsic::roundeven, MVT::nxv4f64, 9},
+    {Intrinsic::roundeven, MVT::nxv8f64, 9},
     {Intrinsic::fabs, MVT::v2f32, 1},
     {Intrinsic::fabs, MVT::v4f32, 1},
     {Intrinsic::fabs, MVT::v8f32, 1},
@@ -656,16 +672,27 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
          getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 }
 
-InstructionCost RISCVTTIImpl::getVectorImmCost(VectorType *VecTy,
-                                               TTI::OperandValueInfo OpInfo,
-                                               TTI::TargetCostKind CostKind) {
+InstructionCost RISCVTTIImpl::getStoreImmCost(Type *Ty,
+                                              TTI::OperandValueInfo OpInfo,
+                                              TTI::TargetCostKind CostKind) {
   assert(OpInfo.isConstant() && "non constant operand?");
-  APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
-  // Add a cost of address load + the cost of the vector load.
-  return RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
-                                    getST()->getFeatureBits()) +
-    getMemoryOpCost(Instruction::Load, VecTy, DL.getABITypeAlign(VecTy),
-                    /*AddressSpace=*/0, CostKind);
+  if (!isa<VectorType>(Ty))
+    // FIXME: We need to account for immediate materialization here, but doing
+    // a decent job requires more knowledge about the immediate than we
+    // currently have here.
+    return 0;
+
+  if (OpInfo.isUniform())
+    // vmv.x.i, vmv.v.x, or vfmv.v.f
+    // We ignore the cost of the scalar constant materialization to be consistent
+    // with how we treat scalar constants themselves just above.
+    return 1;
+
+  // Add a cost of address generation + the cost of the vector load. The
+  // address is expected to be a PC relative offset to a constant pool entry
+  // using auipc/addi.
+  return 2 + getMemoryOpCost(Instruction::Load, Ty, DL.getABITypeAlign(Ty),
+                             /*AddressSpace=*/0, CostKind);
 }
 
 
@@ -676,8 +703,8 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               TTI::OperandValueInfo OpInfo,
                                               const Instruction *I) {
   InstructionCost Cost = 0;
-  if (Opcode == Instruction::Store && isa<VectorType>(Src) && OpInfo.isConstant())
-    Cost += getVectorImmCost(cast<VectorType>(Src), OpInfo, CostKind);
+  if (Opcode == Instruction::Store && OpInfo.isConstant())
+    Cost += getStoreImmCost(Src, OpInfo, CostKind);
   return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                        CostKind, OpInfo, I);
 }

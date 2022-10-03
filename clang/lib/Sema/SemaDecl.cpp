@@ -324,12 +324,12 @@ static ParsedType buildNamedType(Sema &S, const CXXScopeSpec *SS, QualType T,
 /// opaque pointer (actually a QualType) corresponding to that
 /// type. Otherwise, returns NULL.
 ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
-                             Scope *S, CXXScopeSpec *SS,
-                             bool isClassName, bool HasTrailingDot,
-                             ParsedType ObjectTypePtr,
+                             Scope *S, CXXScopeSpec *SS, bool isClassName,
+                             bool HasTrailingDot, ParsedType ObjectTypePtr,
                              bool IsCtorOrDtorName,
                              bool WantNontrivialTypeSourceInfo,
                              bool IsClassTemplateDeductionContext,
+                             ImplicitTypenameContext AllowImplicitTypename,
                              IdentifierInfo **CorrectedII) {
   // FIXME: Consider allowing this outside C++1z mode as an extension.
   bool AllowDeducedTemplate = IsClassTemplateDeductionContext &&
@@ -356,17 +356,33 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
         //
         // We therefore do not perform any name lookup if the result would
         // refer to a member of an unknown specialization.
-        if (!isClassName && !IsCtorOrDtorName)
+        // In C++2a, in several contexts a 'typename' is not required. Also
+        // allow this as an extension.
+        if (AllowImplicitTypename == ImplicitTypenameContext::No &&
+            !isClassName && !IsCtorOrDtorName)
           return nullptr;
+        bool IsImplicitTypename = !isClassName && !IsCtorOrDtorName;
+        if (IsImplicitTypename) {
+          SourceLocation QualifiedLoc = SS->getRange().getBegin();
+          if (getLangOpts().CPlusPlus20)
+            Diag(QualifiedLoc, diag::warn_cxx17_compat_implicit_typename);
+          else
+            Diag(QualifiedLoc, diag::ext_implicit_typename)
+                << SS->getScopeRep() << II.getName()
+                << FixItHint::CreateInsertion(QualifiedLoc, "typename ");
+        }
 
         // We know from the grammar that this name refers to a type,
         // so build a dependent node to describe the type.
         if (WantNontrivialTypeSourceInfo)
-          return ActOnTypenameType(S, SourceLocation(), *SS, II, NameLoc).get();
+          return ActOnTypenameType(S, SourceLocation(), *SS, II, NameLoc,
+                                   (ImplicitTypenameContext)IsImplicitTypename)
+              .get();
 
         NestedNameSpecifierLoc QualifierLoc = SS->getWithLocInContext(Context);
-        QualType T = CheckTypenameType(ETK_None, SourceLocation(), QualifierLoc,
-                                       II, NameLoc);
+        QualType T =
+            CheckTypenameType(IsImplicitTypename ? ETK_Typename : ETK_None,
+                              SourceLocation(), QualifierLoc, II, NameLoc);
         return ParsedType::make(T);
       }
 
@@ -5923,6 +5939,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   switch (DS.getTypeSpecType()) {
   case DeclSpec::TST_typename:
   case DeclSpec::TST_typeofType:
+  case DeclSpec::TST_typeof_unqualType:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
   case DeclSpec::TST_atomic: {
@@ -5948,6 +5965,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   }
 
   case DeclSpec::TST_decltype:
+  case DeclSpec::TST_typeof_unqualExpr:
   case DeclSpec::TST_typeofExpr: {
     Expr *E = DS.getRepAsExpr();
     ExprResult Result = S.RebuildExprInCurrentInstantiation(E);
@@ -10699,14 +10717,14 @@ bool Sema::shouldLinkDependentDeclWithPrevious(Decl *D, Decl *PrevDecl) {
 static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
   const auto *TA = FD->getAttr<TargetAttr>();
   assert(TA && "MultiVersion Candidate requires a target attribute");
-  ParsedTargetAttr ParseInfo = TA->parse();
+  ParsedTargetAttr ParseInfo =
+      S.getASTContext().getTargetInfo().parseTargetAttr(TA->getFeaturesStr());
   const TargetInfo &TargetInfo = S.Context.getTargetInfo();
   enum ErrType { Feature = 0, Architecture = 1 };
 
-  if (!ParseInfo.Architecture.empty() &&
-      !TargetInfo.validateCpuIs(ParseInfo.Architecture)) {
+  if (!ParseInfo.CPU.empty() && !TargetInfo.validateCpuIs(ParseInfo.CPU)) {
     S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
-        << Architecture << ParseInfo.Architecture;
+        << Architecture << ParseInfo.CPU;
     return true;
   }
 
@@ -10979,7 +10997,9 @@ static bool CheckTargetCausesMultiVersioning(
     Sema &S, FunctionDecl *OldFD, FunctionDecl *NewFD, const TargetAttr *NewTA,
     bool &Redeclaration, NamedDecl *&OldDecl, LookupResult &Previous) {
   const auto *OldTA = OldFD->getAttr<TargetAttr>();
-  ParsedTargetAttr NewParsed = NewTA->parse();
+  ParsedTargetAttr NewParsed =
+      S.getASTContext().getTargetInfo().parseTargetAttr(
+          NewTA->getFeaturesStr());
   // Sort order doesn't matter, it just needs to be consistent.
   llvm::sort(NewParsed.Features);
 
@@ -11016,7 +11036,10 @@ static bool CheckTargetCausesMultiVersioning(
     return true;
   }
 
-  ParsedTargetAttr OldParsed = OldTA->parse(std::less<std::string>());
+  ParsedTargetAttr OldParsed =
+      S.getASTContext().getTargetInfo().parseTargetAttr(
+          OldTA->getFeaturesStr());
+  llvm::sort(OldParsed.Features);
 
   if (OldParsed == NewParsed) {
     S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
@@ -11079,7 +11102,8 @@ static bool CheckMultiVersionAdditionalDecl(
 
   ParsedTargetAttr NewParsed;
   if (NewTA) {
-    NewParsed = NewTA->parse();
+    NewParsed = S.getASTContext().getTargetInfo().parseTargetAttr(
+        NewTA->getFeaturesStr());
     llvm::sort(NewParsed.Features);
   }
 
@@ -11113,7 +11137,10 @@ static bool CheckMultiVersionAdditionalDecl(
         return false;
       }
 
-      ParsedTargetAttr CurParsed = CurTA->parse(std::less<std::string>());
+      ParsedTargetAttr CurParsed =
+          S.getASTContext().getTargetInfo().parseTargetAttr(
+              CurTA->getFeaturesStr());
+      llvm::sort(CurParsed.Features);
       if (CurParsed == NewParsed) {
         S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
         S.Diag(CurFD->getLocation(), diag::note_previous_declaration);

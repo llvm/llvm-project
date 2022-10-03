@@ -8,8 +8,8 @@
 
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 
 using namespace mlir;
@@ -132,16 +132,6 @@ getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                    builder, loc, src, dstStaticShape, reassocation)
              : getCollapsedOutputShapeFromInputShape(
                    builder, loc, src, dstStaticShape, reassocation);
-}
-
-/// Helper function to convert a vector of `OpFoldResult`s into a vector of
-/// `Value`s.
-static SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
-                                      ArrayRef<OpFoldResult> valueOrAttrVec) {
-  return llvm::to_vector<4>(
-      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
-        return getValueOrCreateConstantIndexOp(b, loc, value);
-      }));
 }
 
 template <typename OpTy>

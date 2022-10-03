@@ -7,7 +7,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
-
+import os
 
 def make_buffer_verify_dict(start_idx, count, offset=0):
     verify_dict = {}
@@ -38,6 +38,14 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                                  ' "%s")') % (
                                     key, actual_value,
                                     verify_value))
+        if 'contains' in verify_dict:
+            verify = verify_dict['contains']
+            for key in verify:
+                contains_array = verify[key]
+                actual_value = actual[key]
+                self.assertTrue(isinstance(contains_array, list))
+                for verify_value in contains_array:
+                    self.assertIn(verify_value, actual_value)
         if 'missing' in verify_dict:
             missing = verify_dict['missing']
             for key in missing:
@@ -508,3 +516,46 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                         self.assertTrue(value.startswith('0x'))
                         self.assertTrue('a.out`main + ' in value)
                         self.assertTrue('at main.cpp:' in value)
+
+    @no_debug_info_test
+    @skipUnlessDarwin
+    def test_darwin_dwarf_missing_obj(self):
+        '''
+            Test that if we build a binary with DWARF in .o files and we remove
+            the .o file for main.cpp, that we get a variable named "<error>"
+            whose value matches the appriopriate error. Errors when getting
+            variables are returned in the LLDB API when the user should be
+            notified of issues that can easily be solved by rebuilding or
+            changing compiler options and are designed to give better feedback
+            to the user.
+        '''
+        self.build(debug_info="dwarf")
+        program = self.getBuildArtifact("a.out")
+        main_obj = self.getBuildArtifact("main.o")
+        self.assertTrue(os.path.exists(main_obj))
+        # Delete the main.o file that contains the debug info so we force an
+        # error when we run to main and try to get variables
+        os.unlink(main_obj)
+
+        self.create_debug_adaptor()
+        self.assertTrue(os.path.exists(program), 'executable must exist')
+        self.launch(program)
+
+        functions = ['main']
+        breakpoint_ids = self.set_function_breakpoints(functions)
+        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        locals = self.vscode.get_local_variables()
+
+        verify_locals = {
+            '<error>': {
+                'equals': {'type': 'const char *'},
+                'contains': { 'value': [
+                    'debug map object file ',
+                    'main.o" containing debug info does not exist, debug info will not be loaded']
+                }
+            },
+        }
+        varref_dict = {}
+        self.verify_variables(verify_locals, locals, varref_dict)

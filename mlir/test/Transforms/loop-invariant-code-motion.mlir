@@ -13,7 +13,7 @@ func.func @nested_loops_both_having_invariant_code() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST0:.*]] = arith.constant 7.000000e+00 : f32
   // CHECK-NEXT: %[[CST1:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: %[[ADD0:.*]] = arith.addf %[[CST0]], %[[CST1]] : f32
@@ -38,10 +38,10 @@ func.func @nested_loops_code_invariant_to_both() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %cst = arith.constant 7.000000e+00 : f32
-  // CHECK-NEXT: %cst_0 = arith.constant 8.000000e+00 : f32
-  // CHECK-NEXT: %1 = arith.addf %cst, %cst_0 : f32
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: arith.constant 7.000000e+00 : f32
+  // CHECK-NEXT: arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: arith.addf
 
   return
 }
@@ -58,13 +58,13 @@ func.func @single_loop_nothing_invariant() {
     affine.store %v2, %m1[%arg0] : memref<10xf32>
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %1 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: affine.for %arg0 = 0 to 10 {
-  // CHECK-NEXT: %2 = affine.load %0[%arg0] : memref<10xf32>
-  // CHECK-NEXT: %3 = affine.load %1[%arg0] : memref<10xf32>
-  // CHECK-NEXT: %4 = arith.addf %2, %3 : f32
-  // CHECK-NEXT: affine.store %4, %0[%arg0] : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: affine.for 
+  // CHECK-NEXT: affine.load
+  // CHECK-NEXT: affine.load
+  // CHECK-NEXT: arith.addf
+  // CHECK-NEXT: affine.store
 
   return
 }
@@ -84,13 +84,13 @@ func.func @invariant_code_inside_affine_if() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %cst = arith.constant 8.000000e+00 : f32
-  // CHECK-NEXT: affine.for %arg0 = 0 to 10 {
-  // CHECK-NEXT: %1 = affine.apply #map(%arg0)
-  // CHECK-NEXT: affine.if #set(%arg0, %1) {
-  // CHECK-NEXT: %2 = arith.addf %cst, %cst : f32
-  // CHECK-NEXT: affine.store %2, %0[%arg0] : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT: affine.apply
+  // CHECK-NEXT: affine.if
+  // CHECK-NEXT: arith.addf
+  // CHECK-NEXT: affine.store
   // CHECK-NEXT: }
 
 
@@ -110,7 +110,7 @@ func.func @invariant_affine_if() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
   // CHECK-NEXT: }
@@ -234,10 +234,10 @@ func.func @invariant_loop_dialect() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %cst = arith.constant 7.000000e+00 : f32
-  // CHECK-NEXT: %cst_0 = arith.constant 8.000000e+00 : f32
-  // CHECK-NEXT: %1 = arith.addf %cst, %cst_0 : f32
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: arith.constant 7.000000e+00 : f32
+  // CHECK-NEXT: arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: arith.addf
 
   return
 }
@@ -255,7 +255,7 @@ func.func @variant_loop_dialect() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: scf.for
   // CHECK-NEXT: scf.for
   // CHECK-NEXT: arith.addi
@@ -277,14 +277,14 @@ func.func @parallel_loop_with_invariant() {
   }
 
   // CHECK-LABEL: func @parallel_loop_with_invariant
-  // CHECK: %c0 = arith.constant 0 : index
-  // CHECK-NEXT: %c10 = arith.constant 10 : index
-  // CHECK-NEXT: %c1 = arith.constant 1 : index
-  // CHECK-NEXT: %c7_i32 = arith.constant 7 : i32
-  // CHECK-NEXT: %c8_i32 = arith.constant 8 : i32
-  // CHECK-NEXT: arith.addi %c7_i32, %c8_i32 : i32
-  // CHECK-NEXT: scf.parallel (%arg0, %arg1) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1)
-  // CHECK-NEXT:   arith.addi %arg0, %arg1 : index
+  // CHECK: arith.constant 0 : index
+  // CHECK-NEXT: arith.constant 10 : index
+  // CHECK-NEXT: arith.constant 1 : index
+  // CHECK-NEXT: arith.constant 7 : i32
+  // CHECK-NEXT: arith.constant 8 : i32
+  // CHECK-NEXT: arith.addi
+  // CHECK-NEXT: scf.parallel (%[[A:.*]],{{.*}}) =
+  // CHECK-NEXT:   arith.addi %[[A]]
   // CHECK-NEXT:   yield
   // CHECK-NEXT: }
   // CHECK-NEXT: return

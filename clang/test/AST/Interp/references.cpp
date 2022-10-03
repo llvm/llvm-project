@@ -75,7 +75,6 @@ static_assert(testGetValue() == 30, "");
 constexpr const int &MCE = 1; // expected-error{{must be initialized by a constant expression}}
 
 
-#if 0
 struct S {
   int i, j;
 };
@@ -89,5 +88,4 @@ constexpr int RefToMemberExpr() {
   return j;
 }
 // FIXME: Should be accepted.
-static_assert(RefToMemberExpr() == 11, "");
-#endif
+static_assert(RefToMemberExpr() == 11, ""); // expected-error {{not an integral constant expression}}

@@ -26,19 +26,19 @@ define void @foo() {
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl $0, b(%rip)
-; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %r8d
-; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %edi
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %edi
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %r8d
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl a(%rip)
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    movl c(%rip), %eax
 ; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    idivl %r8d
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    andl %r8d, %eax
+; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    movl %eax, (%rax)
 ; CHECK-NEXT:    retq
 entry:

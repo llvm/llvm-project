@@ -135,7 +135,7 @@ public:
   matchAndRewrite(memref::AllocOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::AllocaOp>(op, convertMemRef(op.getType()),
-                                               op.memref());
+                                               op.getMemref());
     return success();
   }
 };
@@ -161,9 +161,9 @@ public:
         return false;
       return true;
     });
-    target.addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
-                           mlir::arith::ArithmeticDialect,
-                           mlir::func::FuncDialect>();
+    target
+        .addLegalDialect<FIROpsDialect, mlir::scf::SCFDialect,
+                         mlir::arith::ArithDialect, mlir::func::FuncDialect>();
 
     if (mlir::failed(mlir::applyPartialConversion(function, target,
                                                   std::move(patterns)))) {

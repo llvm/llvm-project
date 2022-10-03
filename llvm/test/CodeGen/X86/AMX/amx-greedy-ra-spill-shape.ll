@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-int8 -mattr=+avx512f -verify-machineinstrs -stop-before virtregrewriter | FileCheck %s
 
 define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row_from, i32 %c_row_to, i32 %c_row_tile, i32 %c_col_from, i32 %c_col_to, i32 %c_col_tile) {
+  ; Check LEA64_32r register is split to COPY10
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
@@ -56,6 +57,7 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   MOV64mr %stack.4, 1, $noreg, 0, $noreg, [[MOVSX64rr32_1]] :: (store (s64) into %stack.4)
   ; CHECK-NEXT:   [[MOVSX64rr32_2:%[0-9]+]]:gr64_nosp = MOVSX64rr32 %84.sub_32bit
   ; CHECK-NEXT:   [[MOVSX64rm32_:%[0-9]+]]:gr64_nosp = MOVSX64rm32 %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.2, align 8)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY]]
   ; CHECK-NEXT:   [[MOVSX64rr32_3:%[0-9]+]]:gr64_nosp = MOVSX64rr32 %88.sub_32bit
   ; CHECK-NEXT:   [[MOVSX64rm32_1:%[0-9]+]]:gr64 = MOVSX64rm32 %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1, align 16)
   ; CHECK-NEXT:   [[MOVSX64rr32_4:%[0-9]+]]:gr64 = MOVSX64rr32 [[MOV32rm1]]
@@ -63,13 +65,13 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   [[MOVSX64rr32_6:%[0-9]+]]:gr64 = MOVSX64rr32 [[MOV32rm]]
   ; CHECK-NEXT:   MOV64mr %stack.8, 1, $noreg, 0, $noreg, [[MOVSX64rr32_6]] :: (store (s64) into %stack.8)
   ; CHECK-NEXT:   MOV64mr %stack.6, 1, $noreg, 0, $noreg, [[MOVSX64rr32_4]] :: (store (s64) into %stack.6)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64_nosp = COPY [[MOVSX64rr32_4]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64_nosp = COPY [[MOVSX64rr32_4]]
   ; CHECK-NEXT:   [[IMUL64rr:%[0-9]+]]:gr64_nosp = IMUL64rr [[IMUL64rr]], [[MOVSX64rr32_2]], implicit-def dead $eflags
   ; CHECK-NEXT:   [[ADD64rr:%[0-9]+]]:gr64_nosp = ADD64rr [[ADD64rr]], [[MOVSX64rm32_]], implicit-def dead $eflags
-  ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r [[COPY]], 4, [[ADD64rr]], 0, $noreg
+  ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r [[COPY2]], 4, [[ADD64rr]], 0, $noreg
   ; CHECK-NEXT:   MOV64mr %stack.9, 1, $noreg, 0, $noreg, [[LEA64r]] :: (store (s64) into %stack.9)
   ; CHECK-NEXT:   MOV64mr %stack.7, 1, $noreg, 0, $noreg, [[MOVSX64rr32_5]] :: (store (s64) into %stack.7)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[MOVSX64rr32_5]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[MOVSX64rr32_5]]
   ; CHECK-NEXT:   [[IMUL64rr:%[0-9]+]]:gr64 = IMUL64rr [[IMUL64rr]], [[MOVSX64rr32_2]], implicit-def dead $eflags
   ; CHECK-NEXT:   [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[SHL64ri]], 2, implicit-def dead $eflags
   ; CHECK-NEXT:   MOV64mr %stack.10, 1, $noreg, 0, $noreg, [[SHL64ri]] :: (store (s64) into %stack.10)
@@ -77,28 +79,29 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   MOV64mr %stack.5, 1, $noreg, 0, $noreg, [[MOVSX64rm32_]] :: (store (s64) into %stack.5)
   ; CHECK-NEXT:   [[LEA64_32r2:%[0-9]+]]:gr32 = LEA64_32r %61, 4, [[MOVSX64rm32_]], 0, $noreg
   ; CHECK-NEXT:   MOV32mr %stack.11, 1, $noreg, 0, $noreg, [[LEA64_32r2]] :: (store (s32) into %stack.11)
-  ; CHECK-NEXT:   MOV64mr %stack.13, 1, $noreg, 0, $noreg, [[LEA64r1]] :: (store (s64) into %stack.13)
+  ; CHECK-NEXT:   MOV64mr %stack.12, 1, $noreg, 0, $noreg, [[LEA64r1]] :: (store (s64) into %stack.12)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.for.cond14.preheader:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32rm3:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.2, align 8)
   ; CHECK-NEXT:   CMP32rm [[MOV32rm3]], %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s32) from %fixed-stack.1, align 16)
+  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.4, 1, $noreg, 0, $noreg :: (load (s64) from %stack.4)
   ; CHECK-NEXT:   JCC_1 %bb.5, 13, implicit killed $eflags
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.for.body17.lr.ph:
   ; CHECK-NEXT:   successors: %bb.6(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.6, 1, $noreg, 0, $noreg :: (load (s64) from %stack.6)
+  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.6, 1, $noreg, 0, $noreg :: (load (s64) from %stack.6)
   ; CHECK-NEXT:   [[IMUL64rr:%[0-9]+]]:gr64 = nsw IMUL64rr [[IMUL64rr]], [[MOVSX64rr32_]], implicit-def dead $eflags
   ; CHECK-NEXT:   [[ADD64rm:%[0-9]+]]:gr64 = ADD64rm [[ADD64rm]], %stack.3, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s64) from %stack.3)
   ; CHECK-NEXT:   [[ADD64rm1:%[0-9]+]]:gr64 = ADD64rm [[ADD64rm1]], %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s64) from %stack.1)
-  ; CHECK-NEXT:   MOV64mr %stack.12, 1, $noreg, 0, $noreg, [[ADD64rm1]] :: (store (s64) into %stack.12)
+  ; CHECK-NEXT:   MOV64mr %stack.13, 1, $noreg, 0, $noreg, [[ADD64rm1]] :: (store (s64) into %stack.13)
   ; CHECK-NEXT:   [[MOV32rm4:%[0-9]+]]:gr32 = MOV32rm %stack.11, 1, $noreg, 0, $noreg :: (load (s32) from %stack.11)
   ; CHECK-NEXT:   undef %68.sub_32bit:gr64_nosp = COPY [[MOV32rm4]]
-  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.9, 1, $noreg, 0, $noreg :: (load (s64) from %stack.9)
-  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.5, 1, $noreg, 0, $noreg :: (load (s64) from %stack.5)
+  ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.9, 1, $noreg, 0, $noreg :: (load (s64) from %stack.9)
+  ; CHECK-NEXT:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm %stack.5, 1, $noreg, 0, $noreg :: (load (s64) from %stack.5)
   ; CHECK-NEXT:   JMP_1 %bb.6
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.for.cond.cleanup:
@@ -107,10 +110,10 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT: bb.5.for.cond.cleanup16:
   ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.4(0x04000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm %stack.6, 1, $noreg, 0, $noreg :: (load (s64) from %stack.6)
+  ; CHECK-NEXT:   [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm %stack.6, 1, $noreg, 0, $noreg :: (load (s64) from %stack.6)
   ; CHECK-NEXT:   [[ADD64rm1:%[0-9]+]]:gr64 = ADD64rm [[ADD64rm1]], %stack.7, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s64) from %stack.7)
-  ; CHECK-NEXT:   [[MOV64rm2:%[0-9]+]]:gr64 = MOV64rm %stack.10, 1, $noreg, 0, $noreg :: (load (s64) from %stack.10)
-  ; CHECK-NEXT:   ADD64mr %stack.9, 1, $noreg, 0, $noreg, [[MOV64rm2]], implicit-def dead $eflags :: (store (s64) into %stack.9)
+  ; CHECK-NEXT:   [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm %stack.10, 1, $noreg, 0, $noreg :: (load (s64) from %stack.10)
+  ; CHECK-NEXT:   ADD64mr %stack.9, 1, $noreg, 0, $noreg, [[MOV64rm3]], implicit-def dead $eflags :: (store (s64) into %stack.9)
   ; CHECK-NEXT:   MOV64mr %stack.6, 1, $noreg, 0, $noreg, [[ADD64rm1]] :: (store (s64) into %stack.6)
   ; CHECK-NEXT:   CMP64rm [[ADD64rm1]], %stack.8, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s64) from %stack.8)
   ; CHECK-NEXT:   JCC_1 %bb.2, 12, implicit killed $eflags
@@ -120,39 +123,39 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   successors: %bb.6(0x7c000000), %bb.5(0x04000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PTILEZEROV:%[0-9]+]]:tile = PTILEZEROV [[MOV32rm2]].sub_16bit, %88.sub_16bit
-  ; CHECK-NEXT:   [[MOV64rm3:%[0-9]+]]:gr64 = MOV64rm %stack.12, 1, $noreg, 0, $noreg :: (load (s64) from %stack.12)
-  ; CHECK-NEXT:   [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[MOV32rm2]].sub_16bit, [[SUB32rr]].sub_16bit, [[MOV64rm3]], 1, [[MOVSX64rr32_]], 0, $noreg
+  ; CHECK-NEXT:   [[MOV64rm4:%[0-9]+]]:gr64 = MOV64rm %stack.13, 1, $noreg, 0, $noreg :: (load (s64) from %stack.13)
+  ; CHECK-NEXT:   [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[MOV32rm2]].sub_16bit, [[SUB32rr]].sub_16bit, [[MOV64rm4]], 1, [[MOVSX64rr32_]], 0, $noreg
   ; CHECK-NEXT:   [[MOVSX64rr32_7:%[0-9]+]]:gr64_nosp = MOVSX64rr32 [[MOVSX64rr32_7]].sub_32bit
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY %88
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[MOVSX64rr32_]]
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY [[MOVSX64rr32_2]]
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY [[MOVSX64rr32_3]]
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY [[MOVSX64rm32_1]]
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gr32 = COPY [[MOV32rm2]]
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gr32 = COPY [[SUB32rr]]
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr64 = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[LEA64r2:%[0-9]+]]:gr64 = LEA64r [[COPY9]], 1, [[MOVSX64rr32_7]], 0, $noreg
-  ; CHECK-NEXT:   [[MOV64rm4:%[0-9]+]]:gr64_nosp = MOV64rm %stack.4, 1, $noreg, 0, $noreg :: (load (s64) from %stack.4)
-  ; Check LEA64_32r register is split to COPY10
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gr32 = COPY [[LEA64_32r]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[SUB32rr]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr32 = COPY [[MOV32rm2]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY [[MOVSX64rm32_1]]
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY [[MOVSX64rr32_3]]
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gr64 = COPY [[MOVSX64rr32_2]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gr64 = COPY [[MOVSX64rr32_]]
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr64 = COPY %88
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gr64 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[LEA64r2:%[0-9]+]]:gr64 = LEA64r [[COPY10]], 1, [[MOVSX64rr32_7]], 0, $noreg
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:gr32 = COPY [[LEA64_32r]]
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:gr64_nosp = COPY [[MOV64rm]]
   ; CHECK-NEXT:   [[MOV32rm5:%[0-9]+]]:gr32 = MOV32rm %stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2)
-  ; CHECK-NEXT:   [[PTILELOADDV1:%[0-9]+]]:tile = PTILELOADDV [[MOV32rm5]].sub_16bit, [[COPY10]].sub_16bit, [[LEA64r2]], 1, [[MOV64rm4]], 0, $noreg
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:gr32 = COPY [[COPY10]]
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:gr64 = COPY [[COPY9]]
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:gr32 = COPY [[COPY8]]
-  ; CHECK-NEXT:   [[MOV64rm5:%[0-9]+]]:gr64 = MOV64rm %stack.13, 1, $noreg, 0, $noreg :: (load (s64) from %stack.13)
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:gr32 = COPY [[COPY7]]
-  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:gr64 = COPY [[COPY6]]
-  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:gr64_nosp = COPY [[COPY5]]
-  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:gr64_nosp = COPY [[COPY4]]
-  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:gr64_nosp = COPY [[COPY3]]
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:gr64_nosp = COPY [[COPY2]]
-  ; CHECK-NEXT:   [[PTDPBSSDV:%[0-9]+]]:tile = PTDPBSSDV [[COPY13]].sub_16bit, [[COPY11]].sub_16bit, [[COPY12]].sub_16bit, [[PTDPBSSDV]], [[PTILELOADDV]], [[PTILELOADDV1]]
-  ; CHECK-NEXT:   PTILESTOREDV [[COPY13]].sub_16bit, [[COPY18]].sub_16bit, [[MOV64rm]], 1, [[COPY16]], 0, $noreg, [[PTDPBSSDV]]
-  ; CHECK-NEXT:   [[ADD64rr1:%[0-9]+]]:gr64 = ADD64rr [[ADD64rr1]], [[COPY15]], implicit-def dead $eflags
-  ; CHECK-NEXT:   [[ADD64rr2:%[0-9]+]]:gr64 = ADD64rr [[ADD64rr2]], [[MOV64rm5]], implicit-def dead $eflags
-  ; CHECK-NEXT:   [[MOVSX64rr32_7]].sub_32bit:gr64_nosp = ADD32rr [[MOVSX64rr32_7]].sub_32bit, [[COPY11]], implicit-def dead $eflags
-  ; CHECK-NEXT:   CMP64rr [[ADD64rr1]], [[COPY14]], implicit-def $eflags
+  ; CHECK-NEXT:   [[PTILELOADDV1:%[0-9]+]]:tile = PTILELOADDV [[MOV32rm5]].sub_16bit, [[COPY11]].sub_16bit, [[LEA64r2]], 1, [[COPY12]], 0, $noreg
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:gr64 = COPY [[COPY12]]
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:gr32 = COPY [[COPY11]]
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:gr64 = COPY [[COPY10]]
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:gr64_nosp = COPY [[COPY9]]
+  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:gr64_nosp = COPY [[COPY8]]
+  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:gr64_nosp = COPY [[COPY7]]
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:gr64_nosp = COPY [[COPY6]]
+  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:gr64 = COPY [[COPY5]]
+  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:gr32 = COPY [[COPY4]]
+  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:gr32 = COPY [[COPY3]]
+  ; CHECK-NEXT:   [[MOV64rm4:%[0-9]+]]:gr64 = MOV64rm %stack.12, 1, $noreg, 0, $noreg :: (load (s64) from %stack.12)
+  ; CHECK-NEXT:   [[PTDPBSSDV:%[0-9]+]]:tile = PTDPBSSDV [[COPY20]].sub_16bit, [[COPY14]].sub_16bit, [[COPY21]].sub_16bit, [[PTDPBSSDV]], [[PTILELOADDV]], [[PTILELOADDV1]]
+  ; CHECK-NEXT:   PTILESTOREDV [[COPY20]].sub_16bit, [[COPY15]].sub_16bit, [[MOV64rm1]], 1, [[COPY17]], 0, $noreg, [[PTDPBSSDV]]
+  ; CHECK-NEXT:   [[ADD64rr1:%[0-9]+]]:gr64 = ADD64rr [[ADD64rr1]], [[COPY18]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[ADD64rr2:%[0-9]+]]:gr64 = ADD64rr [[ADD64rr2]], [[MOV64rm4]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[MOVSX64rr32_7]].sub_32bit:gr64_nosp = ADD32rr [[MOVSX64rr32_7]].sub_32bit, [[COPY14]], implicit-def dead $eflags
+  ; CHECK-NEXT:   CMP64rr [[ADD64rr1]], [[COPY19]], implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.6, 12, implicit killed $eflags
   ; CHECK-NEXT:   JMP_1 %bb.5
 entry:

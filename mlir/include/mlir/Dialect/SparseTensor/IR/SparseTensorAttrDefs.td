@@ -49,21 +49,25 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       In the future, we may introduce many more dimension level types and
       properties, and separate specifying the two completely rather than
       using this suffix mechanism.
-    - Dimension ordering on the indices of this tensor type. Unlike dense
-      storage, most sparse storage schemes do not provide fast random access.
+    - An optional dimension ordering on the indices of this tensor type. Unlike
+      dense storage, most sparse storage schemes do not provide fast random access.
       This affine map specifies the order of dimensions that should be supported
       by the sparse storage scheme. For example, for a 2-d tensor, "(i,j) -> (i,j)"
       requests row-wise storage and "(i,j) -> (j,i)" requests column-wise storage.
+      By default, an identify mapping is used, which implies that the original
+      indices directly correspond to stored indices (viz. "(i,j,...) -> (i,j,...)").
     - The required bit width for "pointer" storage (integral offsets into
       the sparse storage scheme). A narrow width reduces the memory footprint
       of overhead storage, as long as the width suffices to define the total
       required range (viz. the maximum number of stored entries over all indirection
-      dimensions). The choices are `8`, `16`, `32`, `64`, or `0` for a native width.
+      dimensions). The choices are `8`, `16`, `32`, `64`, or, the default, `0` to
+      indicate the native bit width.
     - The required bit width for "index" storage (elements of the coordinates of
       stored entries). A narrow width reduces the memory footprint of overhead
       storage, as long as the width suffices to define the total required range
       (viz. the maximum value of each tensor index over all dimensions). The
-      choices are `8`, `16`, `32`, `64`, or `0` for a native width.
+      choices are `8`, `16`, `32`, `64`, or, the default, `0` to indicate the
+      native bit width.
 
     Examples:
 

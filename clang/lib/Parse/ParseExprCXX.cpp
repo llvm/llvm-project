@@ -1158,48 +1158,63 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
 
 static void tryConsumeLambdaSpecifierToken(Parser &P,
                                            SourceLocation &MutableLoc,
+                                           SourceLocation &StaticLoc,
                                            SourceLocation &ConstexprLoc,
                                            SourceLocation &ConstevalLoc,
                                            SourceLocation &DeclEndLoc) {
   assert(MutableLoc.isInvalid());
+  assert(StaticLoc.isInvalid());
   assert(ConstexprLoc.isInvalid());
+  assert(ConstevalLoc.isInvalid());
   // Consume constexpr-opt mutable-opt in any sequence, and set the DeclEndLoc
   // to the final of those locations. Emit an error if we have multiple
   // copies of those keywords and recover.
 
+  auto ConsumeLocation = [&P, &DeclEndLoc](SourceLocation &SpecifierLoc,
+                                           int DiagIndex) {
+    if (SpecifierLoc.isValid()) {
+      P.Diag(P.getCurToken().getLocation(),
+             diag::err_lambda_decl_specifier_repeated)
+          << DiagIndex
+          << FixItHint::CreateRemoval(P.getCurToken().getLocation());
+    }
+    SpecifierLoc = P.ConsumeToken();
+    DeclEndLoc = SpecifierLoc;
+  };
+
   while (true) {
     switch (P.getCurToken().getKind()) {
-    case tok::kw_mutable: {
-      if (MutableLoc.isValid()) {
-        P.Diag(P.getCurToken().getLocation(),
-               diag::err_lambda_decl_specifier_repeated)
-            << 0 << FixItHint::CreateRemoval(P.getCurToken().getLocation());
-      }
-      MutableLoc = P.ConsumeToken();
-      DeclEndLoc = MutableLoc;
-      break /*switch*/;
-    }
+    case tok::kw_mutable:
+      ConsumeLocation(MutableLoc, 0);
+      break;
+    case tok::kw_static:
+      ConsumeLocation(StaticLoc, 1);
+      break;
     case tok::kw_constexpr:
-      if (ConstexprLoc.isValid()) {
-        P.Diag(P.getCurToken().getLocation(),
-               diag::err_lambda_decl_specifier_repeated)
-            << 1 << FixItHint::CreateRemoval(P.getCurToken().getLocation());
-      }
-      ConstexprLoc = P.ConsumeToken();
-      DeclEndLoc = ConstexprLoc;
-      break /*switch*/;
+      ConsumeLocation(ConstexprLoc, 2);
+      break;
     case tok::kw_consteval:
-      if (ConstevalLoc.isValid()) {
-        P.Diag(P.getCurToken().getLocation(),
-               diag::err_lambda_decl_specifier_repeated)
-            << 2 << FixItHint::CreateRemoval(P.getCurToken().getLocation());
-      }
-      ConstevalLoc = P.ConsumeToken();
-      DeclEndLoc = ConstevalLoc;
-      break /*switch*/;
+      ConsumeLocation(ConstevalLoc, 3);
+      break;
     default:
       return;
     }
+  }
+}
+
+static void addStaticToLambdaDeclSpecifier(Parser &P, SourceLocation StaticLoc,
+                                           DeclSpec &DS) {
+  if (StaticLoc.isValid()) {
+    P.Diag(StaticLoc, !P.getLangOpts().CPlusPlus2b
+                          ? diag::err_static_lambda
+                          : diag::warn_cxx20_compat_static_lambda);
+    const char *PrevSpec = nullptr;
+    unsigned DiagID = 0;
+    DS.SetStorageClassSpec(P.getActions(), DeclSpec::SCS_static, StaticLoc,
+                           PrevSpec, DiagID,
+                           P.getActions().getASTContext().getPrintingPolicy());
+    assert(PrevSpec == nullptr && DiagID == 0 &&
+           "Static cannot have been set previously!");
   }
 }
 
@@ -1230,6 +1245,24 @@ static void addConstevalToLambdaDeclSpecifier(Parser &P,
                         DiagID);
     if (DiagID != 0)
       P.Diag(ConstevalLoc, DiagID) << PrevSpec;
+  }
+}
+
+static void DiagnoseStaticSpecifierRestrictions(Parser &P,
+                                                SourceLocation StaticLoc,
+                                                SourceLocation MutableLoc,
+                                                const LambdaIntroducer &Intro) {
+  if (StaticLoc.isInvalid())
+    return;
+
+  // [expr.prim.lambda.general] p4
+  // The lambda-specifier-seq shall not contain both mutable and static.
+  // If the lambda-specifier-seq contains static, there shall be no
+  // lambda-capture.
+  if (MutableLoc.isValid())
+    P.Diag(StaticLoc, diag::err_static_mutable_lambda);
+  if (Intro.hasLambdaCapture()) {
+    P.Diag(StaticLoc, diag::err_static_lambda_captures);
   }
 }
 
@@ -1332,14 +1365,18 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         // the mutable specifier to be compatible with MSVC.
         MaybeParseAttributes(PAKM_GNU | PAKM_Declspec, Attr);
 
-        // Parse mutable-opt and/or constexpr-opt or consteval-opt, and update
-        // the DeclEndLoc.
+        // Parse lambda specifiers and update the DeclEndLoc.
         SourceLocation MutableLoc;
+        SourceLocation StaticLoc;
         SourceLocation ConstexprLoc;
         SourceLocation ConstevalLoc;
-        tryConsumeLambdaSpecifierToken(*this, MutableLoc, ConstexprLoc,
-                                       ConstevalLoc, DeclEndLoc);
+        tryConsumeLambdaSpecifierToken(*this, MutableLoc, StaticLoc,
+                                       ConstexprLoc, ConstevalLoc, DeclEndLoc);
 
+        DiagnoseStaticSpecifierRestrictions(*this, StaticLoc, MutableLoc,
+                                            Intro);
+
+        addStaticToLambdaDeclSpecifier(*this, StaticLoc, DS);
         addConstexprToLambdaDeclSpecifier(*this, ConstexprLoc, DS);
         addConstevalToLambdaDeclSpecifier(*this, ConstevalLoc, DS);
         // Parse exception-specification[opt].
@@ -1414,8 +1451,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       Actions.RecordParsingTemplateParameterDepth(
           CurTemplateDepthTracker.getOriginalDepth());
 
-      ParseParameterDeclarationClause(D.getContext(), Attr, ParamInfo,
-                                      EllipsisLoc);
+      ParseParameterDeclarationClause(D, Attr, ParamInfo, EllipsisLoc);
       // For a generic lambda, each 'auto' within the parameter declaration
       // clause creates a template type parameter, so increment the depth.
       // If we've parsed any explicit template parameters, then the depth will
@@ -1435,7 +1471,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     if (Tok.is(tok::kw_requires))
       ParseTrailingRequiresClause(D);
   } else if (Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
-                         tok::kw_constexpr, tok::kw_consteval,
+                         tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
                          tok::kw___private, tok::kw___global, tok::kw___local,
                          tok::kw___constant, tok::kw___generic,
                          tok::kw_requires, tok::kw_noexcept) ||
@@ -1522,7 +1558,8 @@ ExprResult Parser::ParseCXXCasts() {
 
   // Parse the common declaration-specifiers piece.
   DeclSpec DS(AttrFactory);
-  ParseSpecifierQualifierList(DS);
+  ParseSpecifierQualifierList(DS, /*AccessSpecifier=*/AS_none,
+                              DeclSpecContext::DSC_type_specifier);
 
   // Parse the abstract-declarator, if present.
   Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
@@ -2320,8 +2357,9 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
 ///   type-specifier-seq: [C++ 8.1]
 ///     type-specifier type-specifier-seq[opt]
 ///
-bool Parser::ParseCXXTypeSpecifierSeq(DeclSpec &DS) {
-  ParseSpecifierQualifierList(DS, AS_none, DeclSpecContext::DSC_type_specifier);
+bool Parser::ParseCXXTypeSpecifierSeq(DeclSpec &DS, DeclaratorContext Context) {
+  ParseSpecifierQualifierList(DS, AS_none,
+                              getDeclSpecContextFromDeclaratorContext(Context));
   DS.Finish(Actions, Actions.getASTContext().getPrintingPolicy());
   return false;
 }
@@ -2737,7 +2775,8 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
 
   // Parse the type-specifier-seq.
   DeclSpec DS(AttrFactory);
-  if (ParseCXXTypeSpecifierSeq(DS)) // FIXME: ObjectType?
+  if (ParseCXXTypeSpecifierSeq(
+          DS, DeclaratorContext::ConversionId)) // FIXME: ObjectType?
     return true;
 
   // Parse the conversion-declarator, which is merely a sequence of

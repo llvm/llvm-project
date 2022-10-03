@@ -13,7 +13,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/AllocLikeConversion.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -2070,6 +2070,25 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<memref::AtomicRMWOp> {
   }
 };
 
+/// Unpack the pointer returned by a memref.extract_aligned_pointer_as_index.
+class ConvertExtractAlignedPointerAsIndex
+    : public ConvertOpToLLVMPattern<memref::ExtractAlignedPointerAsIndexOp> {
+public:
+  using ConvertOpToLLVMPattern<
+      memref::ExtractAlignedPointerAsIndexOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractAlignedPointerAsIndexOp extractOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    MemRefDescriptor desc(adaptor.getSource());
+    rewriter.replaceOpWithNewOp<LLVM::PtrToIntOp>(
+        extractOp, getTypeConverter()->getIndexType(),
+        desc.alignedPtr(rewriter, extractOp->getLoc()));
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
@@ -2080,6 +2099,7 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
       AllocaScopeOpLowering,
       AtomicRMWOpLowering,
       AssumeAlignmentOpLowering,
+      ConvertExtractAlignedPointerAsIndex,
       DimOpLowering,
       GenericAtomicRMWOpLowering,
       GlobalMemrefOpLowering,

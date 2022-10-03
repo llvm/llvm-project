@@ -53,12 +53,9 @@ def GPU_Dialect : Dialect {
     static unsigned getPrivateAddressSpace() { return 5; }
   }];
 
-  let dependentDialects = ["arith::ArithmeticDialect"];
+  let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
-
-  // TODO: Update this to _Prefixed.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 def GPU_AsyncToken : DialectType<

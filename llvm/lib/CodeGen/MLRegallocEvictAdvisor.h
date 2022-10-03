@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_MLREGALLOCEVICTIONADVISOR_H
 
 #include "llvm/Analysis/MLModelRunner.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
 using namespace llvm;
@@ -33,8 +34,19 @@ struct LRStartEndInfo {
 void extractInstructionFeatures(
     llvm::SmallVectorImpl<LRStartEndInfo> &LRPosInfo,
     MLModelRunner *RegallocRunner, function_ref<int(SlotIndex)> GetOpcode,
+    function_ref<float(SlotIndex)> GetMBBFreq,
+    function_ref<MachineBasicBlock *(SlotIndex)> GetMBBReference,
     const int InstructionsIndex, const int InstructionsMappingIndex,
+    const int MBBFreqIndex, const int MBBMappingIndex,
     const SlotIndex LastIndex);
+
+void extractMBBFrequency(const SlotIndex CurrentIndex,
+                         const size_t CurrentInstructionIndex,
+                         std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
+                         function_ref<float(SlotIndex)> GetMBBFreq,
+                         MachineBasicBlock *CurrentMBBReference,
+                         MLModelRunner *RegallocRunner, const int MBBFreqIndex,
+                         const int MBBMappingIndex);
 
 // This is the maximum number of interfererring ranges. That's the number of
 // distinct AllocationOrder values, which comes from MCRegisterClass::RegsSize.
@@ -68,5 +80,14 @@ static const std::vector<int64_t> InstructionsShape{
     1, ModelMaxSupportedInstructionCount};
 static const std::vector<int64_t> InstructionsMappingShape{
     1, NumberOfInterferences, ModelMaxSupportedInstructionCount};
+
+// When extracting mappings between MBBs and individual instructions, we create
+// a vector of MBB frequencies, currently of size 100, which was a value
+// determined through experimentation to encompass the vast majority of eviction
+// problems. The actual mapping is the same shape as the instruction opcodes
+// vector.
+static const int64_t ModelMaxSupportedMBBCount = 100;
+static const std::vector<int64_t> MBBFrequencyShape{1,
+                                                    ModelMaxSupportedMBBCount};
 
 #endif // LLVM_CODEGEN_MLREGALLOCEVICTIONADVISOR_H

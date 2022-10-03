@@ -38,7 +38,7 @@ static SmallVector<int64_t> getTiledSliceDims(OpOperand *consumerOperand,
                                               ArrayRef<int64_t> tiledLoopDims) {
   // Get the consumer operand indexing map.
   LinalgOp consumerOp = consumerOperand->getOwner();
-  AffineMap indexingMap = consumerOp.getTiedIndexingMap(consumerOperand);
+  AffineMap indexingMap = consumerOp.getMatchingIndexingMap(consumerOperand);
 
   // Search the slice dimensions tiled by a tile loop dimension.
   DenseSet<int64_t> tiledSliceDimIndices;
@@ -68,7 +68,7 @@ getTiledProducerLoops(OpResult producerResult,
 
   // Get the indexing map of the `producerOp` output operand that matches
   // ´producerResult´.
-  AffineMap producerIndexingMap = producerOp.getTiedIndexingMap(
+  AffineMap producerIndexingMap = producerOp.getMatchingIndexingMap(
       producerOp.getOutputOperand(producerResult.getResultNumber()));
 
   // Keep only the tiled result slice dimensions of `producerIndexingMap`.
@@ -351,7 +351,7 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
 
   // Check `consumerOpOperand` is not shape-only to avoid fusion if the data is
   // not used by the `consumerOp` computation.
-  BlockArgument bbArg = consumerOp.getTiedBlockArgument(consumerOpOperand);
+  BlockArgument bbArg = consumerOp.getMatchingBlockArgument(consumerOpOperand);
   if (bbArg.getUses().empty())
     return failure();
 
@@ -433,12 +433,9 @@ FailureOr<TileLoopNest> mlir::linalg::tileConsumerAndFuseProducers(
 
   // Search the number of outer parallel loops to separate them from possible
   // inner reduction dimensions.
-  SmallVector<StringAttr> iterTypes =
-      llvm::to_vector<6>(consumerOp.iterator_types().getAsRange<StringAttr>());
+  SmallVector<StringRef> iterTypes = consumerOp.getIteratorTypesArray();
   applyPermutationToVector(iterTypes, tileInterchange);
-  auto *it = find_if(iterTypes, [&](StringAttr iterType) {
-    return !isParallelIterator(iterType);
-  });
+  auto *it = find_if_not(iterTypes, isParallelIterator);
   int64_t split = std::distance(iterTypes.begin(), it);
 
   // Helper to fuse the producers greedily using a queue of fusion candidates.

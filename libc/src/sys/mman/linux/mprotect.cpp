@@ -19,8 +19,8 @@ namespace __llvm_libc {
 // This function is currently linux only. It has to be refactored suitably if
 // mprotect is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(int, mprotect, (void *addr, size_t size, int prot)) {
-  long ret_val = __llvm_libc::syscall(SYS_mprotect,
-                                      reinterpret_cast<long>(addr), size, prot);
+  long ret_val = __llvm_libc::syscall_impl(
+      SYS_mprotect, reinterpret_cast<long>(addr), size, prot);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.

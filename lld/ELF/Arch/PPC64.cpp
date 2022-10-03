@@ -194,7 +194,7 @@ void elf::writePrefixedInstruction(uint8_t *loc, uint64_t insn) {
 
 static bool addOptional(StringRef name, uint64_t value,
                         std::vector<Defined *> &defined) {
-  Symbol *sym = symtab->find(name);
+  Symbol *sym = symtab.find(name);
   if (!sym || sym->isDefined())
     return false;
   sym->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL, STV_HIDDEN,
@@ -614,7 +614,7 @@ int PPC64::getTlsGdRelaxSkip(RelType type) const {
 }
 
 static uint32_t getEFlags(InputFile *file) {
-  if (config->ekind == ELF64BEKind)
+  if (file->ekind == ELF64BEKind)
     return cast<ObjFile<ELF64BE>>(file)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader().e_flags;
 }
@@ -622,7 +622,7 @@ static uint32_t getEFlags(InputFile *file) {
 // This file implements v2 ABI. This function makes sure that all
 // object files have v2 or an unspecified version as an ABI version.
 uint32_t PPC64::calcEFlags() const {
-  for (InputFile *f : ctx->objectFiles) {
+  for (InputFile *f : ctx.objectFiles) {
     uint32_t flag = getEFlags(f);
     if (flag == 1)
       error(toString(f) + ": ABI version 1 is not supported");

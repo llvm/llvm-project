@@ -30,6 +30,7 @@ define void @kernel() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
 ; CHECK-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR0]]
+; CHECK-NEXT:    call void @convert_and_move_alloca() #[[ATTR0]]
 ; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-NEXT:    ret void
@@ -39,6 +40,7 @@ define void @kernel() {
 ; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 false, i1 true)
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR0]]
+; CHECK-DISABLED-NEXT:    call void @convert_and_move_alloca() #[[ATTR0]]
 ; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp()
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
 ; CHECK-DISABLED-NEXT:    ret void
@@ -47,6 +49,7 @@ entry:
   %0 = call i32 @__kmpc_target_init(%struct.ident_t* nonnull null, i8 1, i1 true, i1 true)
   call void @foo()
   call void @bar()
+  call void @convert_and_move_alloca()
   call void @unknown_no_openmp()
   call void @__kmpc_target_deinit(%struct.ident_t* nonnull null, i8 1, i1 true)
   ret void
@@ -56,13 +59,13 @@ define internal void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@foo
 ; CHECK-DISABLED-SAME: () #[[ATTR0]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
+; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
@@ -132,7 +135,7 @@ entry:
 define void @unused() {
 ; CHECK-LABEL: define {{[^@]+}}@unused() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
 ; CHECK-NEXT:    call void @use(i8* undef)
 ; CHECK-NEXT:    ret void
 ;
@@ -147,6 +150,75 @@ entry:
   %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !14
   call void @use(i8* %0)
   call void @__kmpc_free_shared(i8* %0, i64 4)
+  ret void
+}
+
+define internal void @convert_and_move_alloca() {
+; CHECK-LABEL: define {{[^@]+}}@convert_and_move_alloca
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    br label [[INITLOOP:%.*]]
+; CHECK:       initloop:
+; CHECK-NEXT:    store i32 0, i32* [[IV_PTR]], align 4
+; CHECK-NEXT:    br label [[LOOPBODY:%.*]]
+; CHECK:       loopbody:
+; CHECK-NEXT:    [[IV:%.*]] = load i32, i32* [[IV_PTR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IV]], 10
+; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
+; CHECK:       loopinc:
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[IV]], 1
+; CHECK-NEXT:    store i32 [[INC]], i32* [[IV_PTR]], align 4
+; CHECK-NEXT:    br label [[LOOPBODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+; CHECK-DISABLED-LABEL: define {{[^@]+}}@convert_and_move_alloca
+; CHECK-DISABLED-SAME: () #[[ATTR1]] {
+; CHECK-DISABLED-NEXT:  entry:
+; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 1
+; CHECK-DISABLED-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
+; CHECK-DISABLED-NEXT:    br label [[INITLOOP:%.*]]
+; CHECK-DISABLED:       initloop:
+; CHECK-DISABLED-NEXT:    store i32 0, i32* [[IV_PTR]], align 4
+; CHECK-DISABLED-NEXT:    br label [[LOOPBODY:%.*]]
+; CHECK-DISABLED:       loopbody:
+; CHECK-DISABLED-NEXT:    [[IV:%.*]] = load i32, i32* [[IV_PTR]], align 4
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IV]], 10
+; CHECK-DISABLED-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
+; CHECK-DISABLED:       loopinc:
+; CHECK-DISABLED-NEXT:    [[INC:%.*]] = add i32 [[IV]], 1
+; CHECK-DISABLED-NEXT:    store i32 [[INC]], i32* [[IV_PTR]], align 4
+; CHECK-DISABLED-NEXT:    br label [[LOOPBODY]]
+; CHECK-DISABLED:       exit:
+; CHECK-DISABLED-NEXT:    ret void
+;
+entry:
+  %iv_ptr = alloca i32, align 4
+  %ub_ptr = alloca i32, align 4
+  store i32 10, i32* %ub_ptr
+  br label %initloop
+
+initloop:
+  store i32 0, i32* %iv_ptr
+  %ub = load i32, i32* %ub_ptr
+  br label %loopbody
+
+loopbody:
+  %0 = call i8* @__kmpc_alloc_shared(i64 4), !dbg !16
+  call void @use(i8* %0)
+  call void @__kmpc_free_shared(i8* %0, i64 4)
+  %iv = load i32, i32* %iv_ptr
+  %1 = icmp eq i32 %iv, %ub
+  br i1 %1, label %exit, label %loopinc
+
+loopinc:
+  %inc = add i32 %iv, 1
+  store i32 %inc, i32* %iv_ptr
+  br label %loopbody
+
+exit:
   ret void
 }
 
@@ -177,6 +249,8 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 !12 = !DILocation(line: 2, column: 2, scope: !8)
 !13 = !DILocation(line: 4, column: 2, scope: !9)
 !14 = !DILocation(line: 6, column: 2, scope: !9)
+!15 = !DILocation(line: 8, column: 2, scope: !9)
+!16 = !DILocation(line: 10, column: 2, scope: !9)
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
 ; CHECK: attributes #[[ATTR1]] = { nosync nounwind }

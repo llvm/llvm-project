@@ -606,30 +606,42 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
-  MachineInstr &MI) const {
-  if (selectImpl(MI, *CoverageInfo))
-    return true;
-
-  const LLT S32 = LLT::scalar(32);
-  const LLT V2S16 = LLT::fixed_vector(2, 16);
-
-  Register Dst = MI.getOperand(0).getReg();
-  if (MRI->getType(Dst) != V2S16)
-    return false;
-
-  const RegisterBank *DstBank = RBI.getRegBank(Dst, *MRI, TRI);
-  if (DstBank->getID() != AMDGPU::SGPRRegBankID)
-    return false;
+bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
+  assert(MI.getOpcode() == AMDGPU::G_BUILD_VECTOR_TRUNC ||
+         MI.getOpcode() == AMDGPU::G_BUILD_VECTOR);
 
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
-  if (MRI->getType(Src0) != S32)
+  LLT SrcTy = MRI->getType(Src0);
+  const unsigned SrcSize = SrcTy.getSizeInBits();
+
+  // BUILD_VECTOR with >=32 bits source is handled by MERGE_VALUE.
+  if (MI.getOpcode() == AMDGPU::G_BUILD_VECTOR && SrcSize >= 32) {
+    return selectG_MERGE_VALUES(MI);
+  }
+
+  // Selection logic below is for V2S16 only.
+  // For G_BUILD_VECTOR_TRUNC, additionally check that the operands are s32.
+  Register Dst = MI.getOperand(0).getReg();
+  if (MRI->getType(Dst) != LLT::fixed_vector(2, 16) ||
+      (MI.getOpcode() == AMDGPU::G_BUILD_VECTOR_TRUNC &&
+       SrcTy != LLT::scalar(32)))
+    return selectImpl(MI, *CoverageInfo);
+
+  const RegisterBank *DstBank = RBI.getRegBank(Dst, *MRI, TRI);
+  if (DstBank->getID() == AMDGPU::AGPRRegBankID)
     return false;
+
+  assert(DstBank->getID() == AMDGPU::SGPRRegBankID ||
+         DstBank->getID() == AMDGPU::VGPRRegBankID);
+  const bool IsVector = DstBank->getID() == AMDGPU::VGPRRegBankID;
 
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock *BB = MI.getParent();
 
+  // First, before trying TableGen patterns, check if both sources are
+  // constants. In those cases, we can trivially compute the final constant
+  // and emit a simple move.
   auto ConstSrc1 = getAnyConstantVRegValWithLookThrough(Src1, *MRI, true, true);
   if (ConstSrc1) {
     auto ConstSrc0 =
@@ -639,22 +651,50 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
       const int64_t K1 = ConstSrc1->Value.getSExtValue();
       uint32_t Lo16 = static_cast<uint32_t>(K0) & 0xffff;
       uint32_t Hi16 = static_cast<uint32_t>(K1) & 0xffff;
+      uint32_t Imm = Lo16 | (Hi16 << 16);
 
-      BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst)
-        .addImm(Lo16 | (Hi16 << 16));
+      // VALU
+      if (IsVector) {
+        BuildMI(*BB, &MI, DL, TII.get(AMDGPU::V_MOV_B32_e32), Dst).addImm(Imm);
+        MI.eraseFromParent();
+        return RBI.constrainGenericRegister(Dst, AMDGPU::VGPR_32RegClass, *MRI);
+      }
+
+      // SALU
+      BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), Dst).addImm(Imm);
       MI.eraseFromParent();
       return RBI.constrainGenericRegister(Dst, AMDGPU::SReg_32RegClass, *MRI);
     }
   }
 
+  // Now try TableGen patterns.
+  if (selectImpl(MI, *CoverageInfo))
+    return true;
+
   // TODO: This should probably be a combine somewhere
-  // (build_vector_trunc $src0, undef -> copy $src0
+  // (build_vector $src0, undef)  -> copy $src0
   MachineInstr *Src1Def = getDefIgnoringCopies(Src1, *MRI);
   if (Src1Def && Src1Def->getOpcode() == AMDGPU::G_IMPLICIT_DEF) {
     MI.setDesc(TII.get(AMDGPU::COPY));
     MI.removeOperand(2);
-    return RBI.constrainGenericRegister(Dst, AMDGPU::SReg_32RegClass, *MRI) &&
-           RBI.constrainGenericRegister(Src0, AMDGPU::SReg_32RegClass, *MRI);
+    const auto &RC =
+        IsVector ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
+    return RBI.constrainGenericRegister(Dst, RC, *MRI) &&
+           RBI.constrainGenericRegister(Src0, RC, *MRI);
+  }
+
+  // TODO: Can be improved?
+  if (IsVector) {
+    Register TmpReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_AND_B32_e32), TmpReg)
+        .addImm(0xFFFF)
+        .addReg(Src0);
+    BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32_e64), Dst)
+        .addReg(Src1)
+        .addImm(16)
+        .addReg(TmpReg);
+    MI.eraseFromParent();
+    return true;
   }
 
   Register ShiftSrc0;
@@ -663,13 +703,13 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
   // With multiple uses of the shift, this will duplicate the shift and
   // increase register pressure.
   //
-  // (build_vector_trunc (lshr_oneuse $src0, 16), (lshr_oneuse $src1, 16)
+  // (build_vector (lshr_oneuse $src0, 16), (lshr_oneuse $src1, 16)
   //  => (S_PACK_HH_B32_B16 $src0, $src1)
-  // (build_vector_trunc (lshr_oneuse SReg_32:$src0, 16), $src1)
+  // (build_vector (lshr_oneuse SReg_32:$src0, 16), $src1)
   //  => (S_PACK_HL_B32_B16 $src0, $src1)
-  // (build_vector_trunc $src0, (lshr_oneuse SReg_32:$src1, 16))
+  // (build_vector $src0, (lshr_oneuse SReg_32:$src1, 16))
   //  => (S_PACK_LH_B32_B16 $src0, $src1)
-  // (build_vector_trunc $src0, $src1)
+  // (build_vector $src0, $src1)
   //  => (S_PACK_LL_B32_B16 $src0, $src1)
 
   bool Shift0 = mi_match(
@@ -687,6 +727,8 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR_TRUNC(
     Opc = AMDGPU::S_PACK_LH_B32_B16;
     MI.getOperand(2).setReg(ShiftSrc1);
   } else if (Shift0) {
+    auto ConstSrc1 =
+        getAnyConstantVRegValWithLookThrough(Src1, *MRI, true, true);
     if (ConstSrc1 && ConstSrc1->Value == 0) {
       // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
       auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
@@ -3369,13 +3411,13 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_EXTRACT:
     return selectG_EXTRACT(I);
   case TargetOpcode::G_MERGE_VALUES:
-  case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_CONCAT_VECTORS:
     return selectG_MERGE_VALUES(I);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectG_UNMERGE_VALUES(I);
+  case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
-    return selectG_BUILD_VECTOR_TRUNC(I);
+    return selectG_BUILD_VECTOR(I);
   case TargetOpcode::G_PTR_ADD:
     if (selectImpl(I, *CoverageInfo))
       return true;

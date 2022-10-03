@@ -413,12 +413,12 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
     else
       PI.runAfterPass<LazyCallGraph::SCC>(*Pass, *C, PassPA);
 
+    PA.intersect(PassPA);
+
     // If the SCC structure has changed, bail immediately and let the outer
     // CGSCC layer handle any iteration to reflect the refined structure.
-    if (UR.UpdatedC && UR.UpdatedC != C) {
-      PA.intersect(std::move(PassPA));
+    if (UR.UpdatedC && UR.UpdatedC != C)
       break;
-    }
 
     // If the CGSCC pass wasn't able to provide a valid updated SCC, the
     // current SCC may simply need to be skipped if invalid.
@@ -470,7 +470,6 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
       }
 
     if (!Devirt) {
-      PA.intersect(std::move(PassPA));
       break;
     }
 
@@ -482,7 +481,6 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
           dbgs() << "Found another devirtualization after hitting the max "
                     "number of repetitions ("
                  << MaxIterations << ") on SCC: " << *C << "\n");
-      PA.intersect(std::move(PassPA));
       break;
     }
 
@@ -496,8 +494,6 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
     // Update the analysis manager with each run and intersect the total set
     // of preserved analyses so we're ready to iterate.
     AM.invalidate(*C, PassPA);
-
-    PA.intersect(std::move(PassPA));
   }
 
   // Note that we don't add any preserved entries here unlike a more normal

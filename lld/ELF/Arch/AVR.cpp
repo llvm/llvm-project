@@ -226,12 +226,12 @@ static uint32_t getEFlags(InputFile *file) {
 }
 
 uint32_t AVR::calcEFlags() const {
-  assert(!ctx->objectFiles.empty());
+  assert(!ctx.objectFiles.empty());
 
-  uint32_t flags = getEFlags(ctx->objectFiles[0]);
+  uint32_t flags = getEFlags(ctx.objectFiles[0]);
   bool hasLinkRelaxFlag = flags & EF_AVR_LINKRELAX_PREPARED;
 
-  for (InputFile *f : makeArrayRef(ctx->objectFiles).slice(1)) {
+  for (InputFile *f : makeArrayRef(ctx.objectFiles).slice(1)) {
     uint32_t objFlags = getEFlags(f);
     if ((objFlags & EF_AVR_ARCH_MASK) != (flags & EF_AVR_ARCH_MASK))
       error(toString(f) +

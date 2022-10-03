@@ -28,7 +28,7 @@ namespace PR12884_original {
       typedef int arg;
     };
     struct C {
-      typedef B::X<typename B::arg> x; // expected-error {{missing 'typename'}}
+      typedef B::X<typename B::arg> x; // precxx17-warning{{missing 'typename' prior to dependent type name B::X; implicit 'typename' is a C++20 extension}}
     };
   };
 

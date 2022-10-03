@@ -218,12 +218,12 @@ define void @test_multi_def(ptr dereferenceable(8) %x1,
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    movq (%rdi), %rdx
-; CHECK-NEXT:    movq (%rsi), %r9
+; CHECK-NEXT:    movq (%rsi), %rsi
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB4_2: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mulxq %r9, %rsi, %rdi
-; CHECK-NEXT:    addq %rsi, (%rax)
+; CHECK-NEXT:    mulxq %rsi, %r9, %rdi
+; CHECK-NEXT:    addq %r9, (%rax)
 ; CHECK-NEXT:    adcq %rdi, 8(%rax)
 ; CHECK-NEXT:  ## %bb.1: ## %for.check
 ; CHECK-NEXT:    ## in Loop: Header=BB4_2 Depth=1

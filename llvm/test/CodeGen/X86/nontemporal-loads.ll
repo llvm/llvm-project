@@ -1781,29 +1781,26 @@ define <16 x i32> @test_masked_v16i32(ptr %addr, <16 x i32> %old, <16 x i32> %ma
 ;
 ; SSE41-LABEL: test_masked_v16i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm7, %xmm9
-; SSE41-NEXT:    movdqa %xmm6, %xmm10
-; SSE41-NEXT:    movdqa %xmm5, %xmm11
 ; SSE41-NEXT:    movdqa %xmm0, %xmm8
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm9
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm10
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm11
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm6
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE41-NEXT:    pcmpeqd %xmm4, %xmm0
 ; SSE41-NEXT:    movntdqa 48(%rdi), %xmm4
-; SSE41-NEXT:    movntdqa 32(%rdi), %xmm7
-; SSE41-NEXT:    movntdqa 16(%rdi), %xmm6
-; SSE41-NEXT:    movntdqa (%rdi), %xmm5
-; SSE41-NEXT:    blendvps %xmm0, %xmm8, %xmm5
-; SSE41-NEXT:    movdqa %xmm11, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm6
-; SSE41-NEXT:    movdqa %xmm10, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm7
-; SSE41-NEXT:    movdqa %xmm9, %xmm0
+; SSE41-NEXT:    movntdqa 32(%rdi), %xmm9
+; SSE41-NEXT:    movntdqa 16(%rdi), %xmm10
+; SSE41-NEXT:    movntdqa (%rdi), %xmm11
+; SSE41-NEXT:    blendvps %xmm0, %xmm8, %xmm11
+; SSE41-NEXT:    movdqa %xmm5, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm10
+; SSE41-NEXT:    movdqa %xmm6, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm9
+; SSE41-NEXT:    movdqa %xmm7, %xmm0
 ; SSE41-NEXT:    blendvps %xmm0, %xmm3, %xmm4
-; SSE41-NEXT:    movaps %xmm5, %xmm0
-; SSE41-NEXT:    movaps %xmm6, %xmm1
-; SSE41-NEXT:    movaps %xmm7, %xmm2
+; SSE41-NEXT:    movaps %xmm11, %xmm0
+; SSE41-NEXT:    movaps %xmm10, %xmm1
+; SSE41-NEXT:    movaps %xmm9, %xmm2
 ; SSE41-NEXT:    movaps %xmm4, %xmm3
 ; SSE41-NEXT:    retq
 ;

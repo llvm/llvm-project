@@ -12,6 +12,7 @@
 #include "../lsp-server-support/Logging.h"
 #include "../lsp-server-support/Protocol.h"
 #include "../lsp-server-support/SourceMgrUtils.h"
+#include "mlir/Support/IndentedOstream.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -93,6 +94,39 @@ getLspDiagnoticFromDiag(const llvm::SMDiagnostic &diag,
   return lspDiag;
 }
 
+/// Get the base definition of the given record value, or nullptr if one
+/// couldn't be found.
+static std::pair<const llvm::Record *, const llvm::RecordVal *>
+getBaseValue(const llvm::Record *record, const llvm::RecordVal *value) {
+  if (value->isTemplateArg())
+    return {nullptr, nullptr};
+
+  // Find a base value for the field in the super classes of the given record.
+  // On success, `record` is updated to the new parent record.
+  StringRef valueName = value->getName();
+  auto findValueInSupers =
+      [&](const llvm::Record *&record) -> llvm::RecordVal * {
+    for (auto [parentRecord, loc] : record->getSuperClasses()) {
+      if (auto *newBase = parentRecord->getValue(valueName)) {
+        record = parentRecord;
+        return newBase;
+      }
+    }
+    return nullptr;
+  };
+
+  // Try to find the lowest definition of the record value.
+  std::pair<const llvm::Record *, const llvm::RecordVal *> baseValue = {};
+  while (const llvm::RecordVal *newBase = findValueInSupers(record))
+    baseValue = {record, newBase};
+
+  // Check that the base isn't the same as the current value (e.g. if the value
+  // wasn't overridden).
+  if (!baseValue.second || baseValue.second->getLoc() == value->getLoc())
+    return {nullptr, nullptr};
+  return baseValue;
+}
+
 //===----------------------------------------------------------------------===//
 // TableGenIndex
 //===----------------------------------------------------------------------===//
@@ -109,7 +143,7 @@ struct TableGenIndexSymbol {
       : definition(value),
         defLoc(lsp::convertTokenLocToRange(value->getLoc())) {}
 
-  /// The main definition of the symbol.
+  // The main definition of the symbol.
   PointerUnion<const llvm::Record *, const llvm::RecordVal *> definition;
 
   /// The source location of the definition.
@@ -117,6 +151,38 @@ struct TableGenIndexSymbol {
 
   /// The source location of the references of the definition.
   SmallVector<SMRange> references;
+};
+/// This class represents a single record symbol.
+struct TableGenRecordSymbol : public TableGenIndexSymbol {
+  TableGenRecordSymbol(const llvm::Record *record)
+      : TableGenIndexSymbol(record) {}
+
+  static bool classof(const TableGenIndexSymbol *symbol) {
+    return symbol->definition.is<const llvm::Record *>();
+  }
+
+  /// Return the value of this symbol.
+  const llvm::Record *getValue() const {
+    return definition.get<const llvm::Record *>();
+  }
+};
+/// This class represents a single record value symbol.
+struct TableGenRecordValSymbol : public TableGenIndexSymbol {
+  TableGenRecordValSymbol(const llvm::Record *record,
+                          const llvm::RecordVal *value)
+      : TableGenIndexSymbol(value), record(record) {}
+
+  static bool classof(const TableGenIndexSymbol *symbol) {
+    return symbol->definition.is<const llvm::RecordVal *>();
+  }
+
+  /// Return the value of this symbol.
+  const llvm::RecordVal *getValue() const {
+    return definition.get<const llvm::RecordVal *>();
+  }
+
+  /// The parent record of this symbol.
+  const llvm::Record *record;
 };
 
 /// This class provides an index for definitions/uses within a TableGen
@@ -144,6 +210,24 @@ private:
                                        const TableGenIndexSymbol *>::LeafSize,
       llvm::IntervalMapHalfOpenInfo<const char *>>;
 
+  /// Get or insert a symbol for the given record.
+  TableGenIndexSymbol *getOrInsertDef(const llvm::Record *record) {
+    auto it = defToSymbol.try_emplace(record, nullptr);
+    if (it.second)
+      it.first->second = std::make_unique<TableGenRecordSymbol>(record);
+    return &*it.first->second;
+  }
+  /// Get or insert a symbol for the given record value.
+  TableGenIndexSymbol *getOrInsertDef(const llvm::Record *record,
+                                      const llvm::RecordVal *value) {
+    auto it = defToSymbol.try_emplace(value, nullptr);
+    if (it.second) {
+      it.first->second =
+          std::make_unique<TableGenRecordValSymbol>(record, value);
+    }
+    return &*it.first->second;
+  }
+
   /// An allocator for the interval map.
   MapT::Allocator allocator;
 
@@ -157,12 +241,6 @@ private:
 } // namespace
 
 void TableGenIndex::initialize(const llvm::RecordKeeper &records) {
-  auto getOrInsertDef = [&](const auto *def) -> TableGenIndexSymbol * {
-    auto it = defToSymbol.try_emplace(def, nullptr);
-    if (it.second)
-      it.first->second = std::make_unique<TableGenIndexSymbol>(def);
-    return &*it.first->second;
-  };
   auto insertRef = [&](TableGenIndexSymbol *sym, SMRange refLoc,
                        bool isDef = false) {
     const char *startLoc = refLoc.Start.getPointer();
@@ -202,16 +280,15 @@ void TableGenIndex::initialize(const llvm::RecordKeeper &records) {
     // Add references to the definition.
     for (SMLoc loc : def.getLoc().drop_front())
       insertRef(sym, lsp::convertTokenLocToRange(loc));
-
-    // Add references to any super classes.
-    for (auto &it : def.getSuperClasses())
-      insertRef(getOrInsertDef(it.first),
-                lsp::convertTokenLocToRange(it.second.Start));
+    for (SMRange loc : def.getReferenceLocs())
+      insertRef(sym, loc);
 
     // Add definitions for any values.
     for (const llvm::RecordVal &value : def.getValues()) {
-      auto *sym = getOrInsertDef(&value);
+      auto *sym = getOrInsertDef(&def, &value);
       insertRef(sym, sym->defLoc, /*isDef=*/true);
+      for (SMRange refLoc : value.getReferenceLocs())
+        insertRef(sym, refLoc);
     }
   }
 }
@@ -273,6 +350,14 @@ public:
 
   Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
                                  const lsp::Position &hoverPos);
+  lsp::Hover buildHoverForRecord(const llvm::Record *record,
+                                 const SMRange &hoverRange);
+  lsp::Hover buildHoverForTemplateArg(const llvm::Record *record,
+                                      const llvm::RecordVal *value,
+                                      const SMRange &hoverRange);
+  lsp::Hover buildHoverForField(const llvm::Record *record,
+                                const llvm::RecordVal *value,
+                                const SMRange &hoverRange);
 
 private:
   /// Initialize the text file from the given file contents.
@@ -386,6 +471,17 @@ void TableGenTextFile::getLocationsOf(const lsp::URIForFile &uri,
   if (!symbol)
     return;
 
+  // If this symbol is a record value and the def position is already the def of
+  // the symbol, check to see if the value has a base definition. This allows
+  // for a "go-to-def" on a "let" to resolve the definition in the base class.
+  auto *valSym = dyn_cast<TableGenRecordValSymbol>(symbol);
+  if (valSym && lsp::contains(valSym->defLoc, posLoc)) {
+    if (auto *val = getBaseValue(valSym->record, valSym->getValue()).second) {
+      locations.push_back(getLocationFromLoc(sourceMgr, val->getLoc(), uri));
+      return;
+    }
+  }
+
   locations.push_back(getLocationFromLoc(sourceMgr, symbol->defLoc, uri));
 }
 
@@ -423,7 +519,116 @@ TableGenTextFile::findHover(const lsp::URIForFile &uri,
   for (const lsp::SourceMgrInclude &include : parsedIncludes)
     if (include.range.contains(hoverPos))
       return include.buildHover();
-  return llvm::None;
+
+  // Find the symbol at the given location.
+  SMRange hoverRange;
+  SMLoc posLoc = hoverPos.getAsSMLoc(sourceMgr);
+  const TableGenIndexSymbol *symbol = index.lookup(posLoc, &hoverRange);
+  if (!symbol)
+    return llvm::None;
+
+  // Build hover for a Record.
+  if (auto *record = dyn_cast<TableGenRecordSymbol>(symbol))
+    return buildHoverForRecord(record->getValue(), hoverRange);
+
+  // Build hover for a RecordVal, which is either a template argument or a
+  // field.
+  auto *recordVal = cast<TableGenRecordValSymbol>(symbol);
+  const llvm::RecordVal *value = recordVal->getValue();
+  if (value->isTemplateArg())
+    return buildHoverForTemplateArg(recordVal->record, value, hoverRange);
+  return buildHoverForField(recordVal->record, value, hoverRange);
+}
+
+lsp::Hover TableGenTextFile::buildHoverForRecord(const llvm::Record *record,
+                                                 const SMRange &hoverRange) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  {
+    llvm::raw_string_ostream hoverOS(hover.contents.value);
+
+    // Format the type of record this is.
+    if (record->isClass()) {
+      hoverOS << "**class** `" << record->getName() << "`";
+    } else if (record->isAnonymous()) {
+      hoverOS << "**anonymous class**";
+    } else {
+      hoverOS << "**def** `" << record->getName() << "`";
+    }
+    hoverOS << "\n***\n";
+
+    // Check if this record has summary/description fields. These are often used
+    // to hold documentation for the record.
+    auto printAndFormatField = [&](StringRef fieldName) {
+      // Check that the record actually has the given field, and that it's a
+      // string.
+      const llvm::RecordVal *value = record->getValue(fieldName);
+      if (!value || !value->getValue())
+        return;
+      auto *stringValue = dyn_cast<llvm::StringInit>(value->getValue());
+      if (!stringValue)
+        return;
+
+      raw_indented_ostream ros(hoverOS);
+      ros.printReindented(stringValue->getValue().rtrim(" \t"));
+      hoverOS << "\n***\n";
+    };
+    printAndFormatField("summary");
+    printAndFormatField("description");
+
+    // Check for documentation in the source file.
+    if (Optional<std::string> doc =
+            lsp::extractSourceDocComment(sourceMgr, record->getLoc().front())) {
+      hoverOS << "\n" << *doc << "\n";
+    }
+  }
+  return hover;
+}
+
+lsp::Hover
+TableGenTextFile::buildHoverForTemplateArg(const llvm::Record *record,
+                                           const llvm::RecordVal *value,
+                                           const SMRange &hoverRange) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  {
+    llvm::raw_string_ostream hoverOS(hover.contents.value);
+    StringRef name = value->getName().rsplit(':').second;
+
+    hoverOS << "**template arg** `" << name << "`\n***\nType: `";
+    value->getType()->print(hoverOS);
+    hoverOS << "`\n";
+  }
+  return hover;
+}
+
+lsp::Hover TableGenTextFile::buildHoverForField(const llvm::Record *record,
+                                                const llvm::RecordVal *value,
+                                                const SMRange &hoverRange) {
+  lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
+  {
+    llvm::raw_string_ostream hoverOS(hover.contents.value);
+    hoverOS << "**field** `" << value->getName() << "`\n***\nType: `";
+    value->getType()->print(hoverOS);
+    hoverOS << "`\n***\n";
+
+    // Check for documentation in the source file.
+    if (Optional<std::string> doc =
+            lsp::extractSourceDocComment(sourceMgr, value->getLoc())) {
+      hoverOS << "\n" << *doc << "\n";
+      hoverOS << "\n***\n";
+    }
+
+    // Check to see if there is a base value that we can use for
+    // documentation.
+    auto [baseRecord, baseValue] = getBaseValue(record, value);
+    if (baseValue) {
+      if (Optional<std::string> doc =
+              lsp::extractSourceDocComment(sourceMgr, baseValue->getLoc())) {
+        hoverOS << "\n *From `" << baseRecord->getName() << "`*:\n\n"
+                << *doc << "\n";
+      }
+    }
+  }
+  return hover;
 }
 
 //===----------------------------------------------------------------------===//

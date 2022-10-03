@@ -24,10 +24,19 @@
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --device-debug \
-// RUN:   --linker-path=/usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=NVPTX_LINK_DEBUG
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --device-debug -O0 \
+// RUN:   --linker-path=/usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=NVPTX-LINK-DEBUG
 
-// NVPTX_LINK_DEBUG: nvlink{{.*}}-m64 -g -o {{.*}}.out -arch sm_70 {{.*}}.o {{.*}}.o
+// NVPTX-LINK-DEBUG: nvlink{{.*}}-m64 -g -o {{.*}}.out -arch sm_70 {{.*}}.o {{.*}}.o
+
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%S/Inputs/dummy-bc.bc,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70 \
+// RUN:   --image=file=%S/Inputs/dummy-bc.bc,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --device-debug -O2 \
+// RUN:   --linker-path=/usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=NVPTX-LINK-DEBUG-LTO
+
+// NVPTX-LINK-DEBUG-LTO: ptxas{{.*}}-m64 -o {{.*}}.cubin -O2 --gpu-name sm_70 -lineinfo {{.*}}.s
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \

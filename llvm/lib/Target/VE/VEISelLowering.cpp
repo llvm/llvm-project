@@ -249,6 +249,7 @@ void VETargetLowering::initSPUActions() {
     setOperationAction(ISD::FCOPYSIGN, VT, Expand);
     setOperationAction(ISD::FCOS, VT, Expand);
     setOperationAction(ISD::FMA, VT, Expand);
+    setOperationAction(ISD::FPOW, VT, Expand);
     setOperationAction(ISD::FSIN, VT, Expand);
     setOperationAction(ISD::FSQRT, VT, Expand);
   }

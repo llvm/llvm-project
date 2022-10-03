@@ -22,6 +22,8 @@ using MemoryView = __llvm_libc::cpp::span<const char>;
 class MemoryMatcher : public __llvm_libc::testing::Matcher<MemoryView> {
   MemoryView expected;
   MemoryView actual;
+  bool mismatch_size = false;
+  size_t mismatch_index = -1;
 
 public:
   MemoryMatcher(MemoryView expectedValue) : expected(expectedValue) {}
@@ -37,5 +39,7 @@ public:
 
 #define EXPECT_MEM_EQ(expected, actual)                                        \
   EXPECT_THAT(actual, __llvm_libc::memory::testing::MemoryMatcher(expected))
+#define ASSERT_MEM_EQ(expected, actual)                                        \
+  ASSERT_THAT(actual, __llvm_libc::memory::testing::MemoryMatcher(expected))
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H

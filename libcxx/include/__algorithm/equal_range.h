@@ -64,9 +64,12 @@ equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
                 "The comparator has to be callable");
   static_assert(is_copy_constructible<_ForwardIterator>::value,
                 "Iterator has to be copy constructible");
-  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
   return std::__equal_range<_ClassicAlgPolicy>(
-      std::move(__first), std::move(__last), __value, static_cast<_Comp_ref>(__comp), std::__identity());
+      std::move(__first),
+      std::move(__last),
+      __value,
+      static_cast<__comp_ref_type<_Compare> >(__comp),
+      std::__identity());
 }
 
 template <class _ForwardIterator, class _Tp>

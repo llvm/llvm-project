@@ -402,9 +402,10 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
 
     // Handle common symbols specially.
     if (Sym.isCommon()) {
-      Symbol &GSym = G->addCommonSymbol(*Name, Scope::Default,
-                                        getCommonSection(), orc::ExecutorAddr(),
-                                        Sym.st_size, Sym.getValue(), false);
+      Symbol &GSym = G->addDefinedSymbol(
+          G->createZeroFillBlock(getCommonSection(), Sym.st_size,
+                                 orc::ExecutorAddr(), Sym.getValue(), 0),
+          0, *Name, Sym.st_size, Linkage::Strong, Scope::Default, false, false);
       setGraphSymbol(SymIndex, GSym);
       continue;
     }
