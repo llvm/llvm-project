@@ -46,7 +46,6 @@ END-SCRIPT
 #include <__algorithm/copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy.h'}}
 #include <__algorithm/copy_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy_backward.h'}}
 #include <__algorithm/copy_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy_if.h'}}
-#include <__algorithm/copy_move_common.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy_move_common.h'}}
 #include <__algorithm/copy_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/copy_n.h'}}
 #include <__algorithm/count.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/count.h'}}
 #include <__algorithm/count_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/count_if.h'}}
@@ -444,7 +443,6 @@ END-SCRIPT
 #include <__memory/uninitialized_algorithms.h> // expected-error@*:* {{use of private header from outside its module: '__memory/uninitialized_algorithms.h'}}
 #include <__memory/unique_ptr.h> // expected-error@*:* {{use of private header from outside its module: '__memory/unique_ptr.h'}}
 #include <__memory/uses_allocator.h> // expected-error@*:* {{use of private header from outside its module: '__memory/uses_allocator.h'}}
-#include <__memory/uses_allocator_construction.h> // expected-error@*:* {{use of private header from outside its module: '__memory/uses_allocator_construction.h'}}
 #include <__memory/voidify.h> // expected-error@*:* {{use of private header from outside its module: '__memory/voidify.h'}}
 #include <__mutex_base> // expected-error@*:* {{use of private header from outside its module: '__mutex_base'}}
 #include <__node_handle> // expected-error@*:* {{use of private header from outside its module: '__node_handle'}}

@@ -251,7 +251,6 @@ module std [system] {
       module copy                            { private header "__algorithm/copy.h" }
       module copy_backward                   { private header "__algorithm/copy_backward.h" }
       module copy_if                         { private header "__algorithm/copy_if.h" }
-      module copy_move_common                { private header "__algorithm/copy_move_common.h" }
       module copy_n                          { private header "__algorithm/copy_n.h" }
       module count                           { private header "__algorithm/count.h" }
       module count_if                        { private header "__algorithm/count_if.h" }
@@ -879,7 +878,6 @@ module std [system] {
       module uninitialized_algorithms        { private header "__memory/uninitialized_algorithms.h" }
       module unique_ptr                      { private header "__memory/unique_ptr.h" }
       module uses_allocator                  { private header "__memory/uses_allocator.h" }
-      module uses_allocator_construction     { private header "__memory/uses_allocator_construction.h" }
       module voidify                         { private header "__memory/voidify.h" }
     }
   }

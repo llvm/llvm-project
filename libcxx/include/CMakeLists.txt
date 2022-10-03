@@ -9,7 +9,6 @@ set(files
   __algorithm/copy.h
   __algorithm/copy_backward.h
   __algorithm/copy_if.h
-  __algorithm/copy_move_common.h
   __algorithm/copy_n.h
   __algorithm/count.h
   __algorithm/count_if.h
@@ -413,7 +412,6 @@ set(files
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
   __memory/uses_allocator.h
-  __memory/uses_allocator_construction.h
   __memory/voidify.h
   __mutex_base
   __node_handle

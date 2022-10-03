@@ -360,7 +360,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   SmallVector<Operation *> initOrAllocTensorOps;
   SmallVector<linalg::FillOp> fillOps;
   fillOps.reserve(op.getNumOutputs());
-  for (auto it : llvm::zip(op.outputs(), neutralElements)) {
+  for (auto it : llvm::zip(op.getOutputs(), neutralElements)) {
     Value rankedTensor = std::get<0>(it);
     auto t = rankedTensor.getType().cast<RankedTensorType>();
     RankedTensorType newT = RankedTensorType::Builder(t).insertDim(
@@ -403,7 +403,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
 
   // Step 3. Handle operands.
   // Compute the new input tensors.
-  auto newInputs = llvm::to_vector<4>(op.inputs());
+  auto newInputs = llvm::to_vector<4>(op.getInputs());
   // Add a single shape-only tensor to carry the dimensions without resorting to
   // more complex inversions.
   newInputs.push_back(b.create<linalg::InitTensorOp>(
@@ -433,7 +433,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // multi-reduction support is available.
   SmallVector<LinalgOp> results;
   for (auto it :
-       llvm::zip(genericOp->getResults(), op.outputs(), combinerOps)) {
+       llvm::zip(genericOp->getResults(), op.getOutputs(), combinerOps)) {
     Value reindexedOutput = std::get<0>(it);
     Value originalOutput = std::get<1>(it);
     auto originalOutputType = originalOutput.getType().cast<RankedTensorType>();

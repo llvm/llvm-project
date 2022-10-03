@@ -20,7 +20,9 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 // FIR Types
 //===----------------------------------------------------------------------===//
 
-class FIR_Type<string name, string typeMnemonic> : TypeDef<fir_Dialect, name> {
+class FIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
+               string baseCppClass = "::mlir::Type">
+    : TypeDef<fir_Dialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
 
@@ -66,7 +68,7 @@ def fir_BoxProcType : FIR_Type<"BoxProc", "boxproc"> {
   let hasCustomAssemblyFormat = 1;
 }
 
-def fir_BoxType : FIR_Type<"Box", "box"> {
+def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
   let summary = "The type of a Fortran descriptor";
 
   let description = [{
@@ -134,6 +136,26 @@ def fir_CharacterType : FIR_Type<"Character", "char"> {
     /// Character LEN is a compile-time constant value.
     bool hasConstantLen() { return !hasDynamicLen(); }
   }];
+}
+
+def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
+  let summary = "Class type";
+
+  let description = [{
+    Class type is used to model the Fortran CLASS instrinsic type. A class type
+    is equivalent to a fir.box type with a dynamic type.
+  }];
+
+  let parameters = (ins "mlir::Type":$eleTy);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy), [{
+      return $_get(eleTy.getContext(), eleTy);
+    }]>
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = "`<` $eleTy `>`";
 }
 
 def fir_ComplexType : FIR_Type<"Complex", "complex"> {

@@ -239,8 +239,9 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     readLinkerScript(mbref);
     return;
   case file_magic::archive: {
+    auto members = getArchiveMembers(mbref);
     if (inWholeArchive) {
-      for (const auto &p : getArchiveMembers(mbref)) {
+      for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
         if (isBitcode(p.first))
           files.push_back(make<BitcodeFile>(p.first, path, p.second, false));
         else
@@ -249,7 +250,6 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       return;
     }
 
-    auto members = getArchiveMembers(mbref);
     archiveFiles.emplace_back(path, members.size());
 
     // Handle archives and --start-lib/--end-lib using the same code path. This
@@ -281,7 +281,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       ++InputFile::nextGroupId;
     return;
   }
-  case file_magic::elf_shared_object:
+  case file_magic::elf_shared_object: {
     if (config->isStatic || config->relocatable) {
       error("attempted static link of dynamic object " + path);
       return;
@@ -292,9 +292,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     // the directory part is ignored. Note that path may be a temporary and
     // cannot be stored into SharedFile::soName.
     path = mbref.getBufferIdentifier();
-    files.push_back(
-        make<SharedFile>(mbref, withLOption ? path::filename(path) : path));
+    auto *f =
+        make<SharedFile>(mbref, withLOption ? path::filename(path) : path);
+    f->init();
+    files.push_back(f);
     return;
+  }
   case file_magic::bitcode:
     files.push_back(make<BitcodeFile>(mbref, "", 0, inLib));
     break;
@@ -2421,7 +2424,7 @@ static uint32_t getAndFeatures() {
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
-  switch (config->ekind) {
+  switch (file->ekind) {
   case ELF32LEKind:
     cast<ObjFile<ELF32LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
     break;
@@ -2440,7 +2443,7 @@ static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
 }
 
 static void postParseObjectFile(ELFFileBase *file) {
-  switch (config->ekind) {
+  switch (file->ekind) {
   case ELF32LEKind:
     cast<ObjFile<ELF32LE>>(file)->postParse();
     break;

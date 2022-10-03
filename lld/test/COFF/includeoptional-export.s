@@ -13,10 +13,8 @@
 // RUN: llvm-readobj --coff-exports %t-1.dll | FileCheck --implicit-check-not=Name: %s --check-prefix=CHECK-DEFAULT
 // RUN: llvm-readobj --coff-exports %t-2.dll | FileCheck --implicit-check-not=Name: %s --check-prefix=CHECK-INCLUDEOPTIONAL
 
-// CHECK-DEFAULT: Name:
 // CHECK-DEFAULT: Name: myfunc
 
-// CHECK-INCLUDEOPTIONAL: Name:
 // CHECK-INCLUDEOPTIONAL: Name: libfunc
 // CHECK-INCLUDEOPTIONAL: Name: myfunc
 // CHECK-INCLUDEOPTIONAL: Name: otherlibfunc

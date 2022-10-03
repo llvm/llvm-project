@@ -43,15 +43,25 @@ module __Fortran_ieee_exceptions
 ! Define specifics with 1 LOGICAL or REAL argument for generic G.
 #define SPECIFICS_L(G) \
   G(1) G(2) G(4) G(8)
+#if __x86_64__
 #define SPECIFICS_R(G) \
   G(2) G(3) G(4) G(8) G(10) G(16)
+#else
+#define SPECIFICS_R(G) \
+  G(2) G(3) G(4) G(8) G(16)
+#endif
 
 ! Set PRIVATE accessibility for specifics with 1 LOGICAL or REAL argument for
 ! generic G.
 #define PRIVATE_L(G) private :: \
   G##_l1, G##_l2, G##_l4, G##_l8
+#if __x86_64__
 #define PRIVATE_R(G) private :: \
   G##_a2, G##_a3, G##_a4, G##_a8, G##_a10, G##_a16
+#else
+#define PRIVATE_R(G) private :: \
+  G##_a2, G##_a3, G##_a4, G##_a8, G##_a16
+#endif
 
   interface ieee_get_flag
     elemental subroutine ieee_get_flag_0(flag, flag_value)

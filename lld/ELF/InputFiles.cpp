@@ -324,7 +324,7 @@ std::string InputFile::getSrcMsg(const Symbol &sym, InputSectionBase &sec,
                                  uint64_t offset) {
   if (kind() != ObjKind)
     return "";
-  switch (config->ekind) {
+  switch (ekind) {
   default:
     llvm_unreachable("Invalid kind");
   case ELF32LEKind:
@@ -446,25 +446,9 @@ Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *s,
   return getDwarf()->getDILineInfo(offset, sectionIndex);
 }
 
-ELFFileBase::ELFFileBase(Kind k, MemoryBufferRef mb) : InputFile(k, mb) {
-  ekind = getELFKind(mb, "");
-
-  switch (ekind) {
-  case ELF32LEKind:
-    init<ELF32LE>(k);
-    break;
-  case ELF32BEKind:
-    init<ELF32BE>(k);
-    break;
-  case ELF64LEKind:
-    init<ELF64LE>(k);
-    break;
-  case ELF64BEKind:
-    init<ELF64BE>(k);
-    break;
-  default:
-    llvm_unreachable("getELFKind");
-  }
+ELFFileBase::ELFFileBase(Kind k, ELFKind ekind, MemoryBufferRef mb)
+    : InputFile(k, mb) {
+  this->ekind = ekind;
 }
 
 template <typename Elf_Shdr>
@@ -473,6 +457,25 @@ static const Elf_Shdr *findSection(ArrayRef<Elf_Shdr> sections, uint32_t type) {
     if (sec.sh_type == type)
       return &sec;
   return nullptr;
+}
+
+void ELFFileBase::init() {
+  switch (ekind) {
+  case ELF32LEKind:
+    init<ELF32LE>(fileKind);
+    break;
+  case ELF32BEKind:
+    init<ELF32BE>(fileKind);
+    break;
+  case ELF64LEKind:
+    init<ELF64LE>(fileKind);
+    break;
+  case ELF64BEKind:
+    init<ELF64BE>(fileKind);
+    break;
+  default:
+    llvm_unreachable("getELFKind");
+  }
 }
 
 template <class ELFT> void ELFFileBase::init(InputFile::Kind k) {
@@ -558,9 +561,9 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           check(this->getObj().getSectionContents(sec));
       StringRef name = check(obj.getSectionName(sec, shstrtab));
       this->sections[i] = &InputSection::discarded;
-      if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
-                                                   ? support::little
-                                                   : support::big)) {
+      if (Error e =
+              attributes.parse(contents, ekind == ELF32LEKind ? support::little
+                                                              : support::big)) {
         InputSection isec(*this, sec, name);
         warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
       } else {
@@ -1230,9 +1233,10 @@ static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
 }
 
 template <class ELFT>
-static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
+static bool isNonCommonDef(ELFKind ekind, MemoryBufferRef mb, StringRef symName,
                            StringRef archiveName) {
-  ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(mb, archiveName);
+  ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(ekind, mb, archiveName);
+  obj->init();
   StringRef stringtable = obj->getStringTable();
 
   for (auto sym : obj->template getGlobalELFSyms<ELFT>()) {
@@ -1248,19 +1252,23 @@ static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
                            StringRef archiveName) {
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
-    return isNonCommonDef<ELF32LE>(mb, symName, archiveName);
+    return isNonCommonDef<ELF32LE>(ELF32LEKind, mb, symName, archiveName);
   case ELF32BEKind:
-    return isNonCommonDef<ELF32BE>(mb, symName, archiveName);
+    return isNonCommonDef<ELF32BE>(ELF32BEKind, mb, symName, archiveName);
   case ELF64LEKind:
-    return isNonCommonDef<ELF64LE>(mb, symName, archiveName);
+    return isNonCommonDef<ELF64LE>(ELF64LEKind, mb, symName, archiveName);
   case ELF64BEKind:
-    return isNonCommonDef<ELF64BE>(mb, symName, archiveName);
+    return isNonCommonDef<ELF64BE>(ELF64BEKind, mb, symName, archiveName);
   default:
     llvm_unreachable("getELFKind");
   }
 }
 
 unsigned SharedFile::vernauxNum;
+
+SharedFile::SharedFile(MemoryBufferRef m, StringRef defaultSoName)
+    : ELFFileBase(SharedKind, getELFKind(m, ""), m), soName(defaultSoName),
+      isNeeded(!config->asNeeded) {}
 
 // Parse the version definitions in the object file if present, and return a
 // vector whose nth element contains a pointer to the Elf_Verdef for version
@@ -1736,20 +1744,21 @@ ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
   ELFFileBase *f;
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
-    f = make<ObjFile<ELF32LE>>(mb, archiveName);
+    f = make<ObjFile<ELF32LE>>(ELF32LEKind, mb, archiveName);
     break;
   case ELF32BEKind:
-    f = make<ObjFile<ELF32BE>>(mb, archiveName);
+    f = make<ObjFile<ELF32BE>>(ELF32BEKind, mb, archiveName);
     break;
   case ELF64LEKind:
-    f = make<ObjFile<ELF64LE>>(mb, archiveName);
+    f = make<ObjFile<ELF64LE>>(ELF64LEKind, mb, archiveName);
     break;
   case ELF64BEKind:
-    f = make<ObjFile<ELF64BE>>(mb, archiveName);
+    f = make<ObjFile<ELF64BE>>(ELF64BEKind, mb, archiveName);
     break;
   default:
     llvm_unreachable("getELFKind");
   }
+  f->init();
   f->lazy = lazy;
   return f;
 }

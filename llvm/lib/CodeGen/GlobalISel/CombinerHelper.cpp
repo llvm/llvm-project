@@ -47,11 +47,12 @@ static cl::opt<bool>
                                 "legal for the GlobalISel combiner"));
 
 CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
-                               MachineIRBuilder &B, GISelKnownBits *KB,
-                               MachineDominatorTree *MDT,
+                               MachineIRBuilder &B, bool IsPreLegalize,
+                               GISelKnownBits *KB, MachineDominatorTree *MDT,
                                const LegalizerInfo *LI)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer), KB(KB),
-      MDT(MDT), LI(LI), RBI(Builder.getMF().getSubtarget().getRegBankInfo()),
+      MDT(MDT), IsPreLegalize(IsPreLegalize), LI(LI),
+      RBI(Builder.getMF().getSubtarget().getRegBankInfo()),
       TRI(Builder.getMF().getSubtarget().getRegisterInfo()) {
   (void)this->KB;
 }
@@ -130,7 +131,7 @@ isBigEndian(const SmallDenseMap<int64_t, int64_t, 8> &MemOffset2Idx,
   return BigEndian;
 }
 
-bool CombinerHelper::isPreLegalize() const { return !LI; }
+bool CombinerHelper::isPreLegalize() const { return IsPreLegalize; }
 
 bool CombinerHelper::isLegal(const LegalityQuery &Query) const {
   assert(LI && "Must have LegalizerInfo to query isLegal!");
@@ -486,6 +487,24 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
   return false;
 }
 
+static unsigned getExtLoadOpcForExtend(unsigned ExtOpc) {
+  unsigned CandidateLoadOpc;
+  switch (ExtOpc) {
+  case TargetOpcode::G_ANYEXT:
+    CandidateLoadOpc = TargetOpcode::G_LOAD;
+    break;
+  case TargetOpcode::G_SEXT:
+    CandidateLoadOpc = TargetOpcode::G_SEXTLOAD;
+    break;
+  case TargetOpcode::G_ZEXT:
+    CandidateLoadOpc = TargetOpcode::G_ZEXTLOAD;
+    break;
+  default:
+    llvm_unreachable("Unexpected extend opc");
+  }
+  return CandidateLoadOpc;
+}
+
 bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
                                                 PreferredTuple &Preferred) {
   // We match the loads and follow the uses to the extend instead of matching
@@ -538,9 +557,10 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
       // Check for legality.
       if (LI) {
         LegalityQuery::MemDesc MMDesc(MMO);
+        unsigned CandidateLoadOpc = getExtLoadOpcForExtend(UseMI.getOpcode());
         LLT UseTy = MRI.getType(UseMI.getOperand(0).getReg());
         LLT SrcTy = MRI.getType(LoadMI->getPointerReg());
-        if (LI->getAction({LoadMI->getOpcode(), {UseTy, SrcTy}, {MMDesc}})
+        if (LI->getAction({CandidateLoadOpc, {UseTy, SrcTy}, {MMDesc}})
                 .Action != LegalizeActions::Legal)
           continue;
       }
@@ -588,12 +608,8 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
   };
 
   Observer.changingInstr(MI);
-  MI.setDesc(
-      Builder.getTII().get(Preferred.ExtendOpcode == TargetOpcode::G_SEXT
-                               ? TargetOpcode::G_SEXTLOAD
-                               : Preferred.ExtendOpcode == TargetOpcode::G_ZEXT
-                                     ? TargetOpcode::G_ZEXTLOAD
-                                     : TargetOpcode::G_LOAD));
+  unsigned LoadOpc = getExtLoadOpcForExtend(Preferred.ExtendOpcode);
+  MI.setDesc(Builder.getTII().get(LoadOpc));
 
   // Rewrite all the uses to fix up the types.
   auto &LoadValue = MI.getOperand(0);

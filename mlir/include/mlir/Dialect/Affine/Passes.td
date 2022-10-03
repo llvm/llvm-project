@@ -344,7 +344,6 @@ def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
 
 def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
   let summary = "Vectorize to a target independent n-D vector abstraction";
-  let constructor = "mlir::createSuperVectorizePass()";
   let dependentDialects = ["vector::VectorDialect"];
   let options = [
     ListOption<"vectorSizes", "virtual-vector-size", "int64_t",

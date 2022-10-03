@@ -27,6 +27,7 @@ add_mlir_dialect_library(MLIRTensorDialect
   MLIRIR
   MLIRInferTypeOpInterface
   MLIRParallelCombiningOpInterface
+  MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport
   MLIRViewLikeInterface
