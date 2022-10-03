@@ -4,7 +4,7 @@
 ;
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-declare i64 @strnlen(i8*, i64)
+declare i64 @strnlen(ptr, i64)
 
 @sx = external global [0 x i8]
 @s3 = constant [4 x i8] c"123\00"
@@ -17,15 +17,15 @@ declare i64 @strnlen(i8*, i64)
 
 define i64 @fold_strnlen_s3_pi_s5_n(i1 %C, i64 %i, i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_s3_pi_s5_n(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* @s3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8* [[PTR]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[SEL]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr [[PTR]], ptr @s5
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr nonnull [[SEL]], i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
-  %ptr = getelementptr inbounds [4 x i8], [4 x i8]* @s3, i64 0, i64 %i
-  %sel = select i1 %C, i8* %ptr, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0)
-  %len = call i64 @strnlen(i8* %sel, i64 %n)
+  %ptr = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 %i
+  %sel = select i1 %C, ptr %ptr, ptr @s5
+  %len = call i64 @strnlen(ptr %sel, i64 %n)
   ret i64 %len
 }
 
@@ -37,15 +37,15 @@ define i64 @fold_strnlen_s3_pi_s5_n(i1 %C, i64 %i, i64 %n) {
 
 define i64 @call_strnlen_s3_pi_xbounds_s5_n(i1 %C, i64 %i, i64 %n) {
 ; CHECK-LABEL: @call_strnlen_s3_pi_xbounds_s5_n(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [4 x i8], [4 x i8]* @s3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8* [[PTR]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[SEL]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [4 x i8], ptr @s3, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr [[PTR]], ptr @s5
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr [[SEL]], i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
-  %ptr = getelementptr [4 x i8], [4 x i8]* @s3, i64 0, i64 %i
-  %sel = select i1 %C, i8* %ptr, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0)
-  %len = call i64 @strnlen(i8* %sel, i64 %n)
+  %ptr = getelementptr [4 x i8], ptr @s3, i64 0, i64 %i
+  %sel = select i1 %C, ptr %ptr, ptr @s5
+  %len = call i64 @strnlen(ptr %sel, i64 %n)
   ret i64 %len
 }
 
@@ -57,15 +57,15 @@ define i64 @call_strnlen_s3_pi_xbounds_s5_n(i1 %C, i64 %i, i64 %n) {
 
 define i64 @call_strnlen_s3_pi_sx_n(i1 %C, i64 %i, i64 %n) {
 ; CHECK-LABEL: @call_strnlen_s3_pi_sx_n(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* @s3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i8* [[PTR]], i8* getelementptr inbounds ([0 x i8], [0 x i8]* @sx, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[SEL]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], ptr [[PTR]], ptr @sx
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr nonnull [[SEL]], i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
-  %ptr = getelementptr inbounds [4 x i8], [4 x i8]* @s3, i64 0, i64 %i
-  %sel = select i1 %C, i8* %ptr, i8* getelementptr ([0 x i8], [0 x i8]* @sx, i64 0, i64 0)
-  %len = call i64 @strnlen(i8* %sel, i64 %n)
+  %ptr = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 %i
+  %sel = select i1 %C, ptr %ptr, ptr @sx
+  %len = call i64 @strnlen(ptr %sel, i64 %n)
   ret i64 %len
 }
 
@@ -74,12 +74,12 @@ define i64 @call_strnlen_s3_pi_sx_n(i1 %C, i64 %i, i64 %n) {
 
 define i64 @fold_strnlen_s3_s5_pi_n(i1 %C, i64 %i, i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_pi_n(
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], i8* getelementptr inbounds ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @s3, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR]], i64 [[I:%.*]])
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr @s5, ptr @s3
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr nonnull [[PTR]], i64 [[I:%.*]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
-  %ptr = select i1 %C, i8* getelementptr ([6 x i8], [6 x i8]* @s5, i64 0, i64 0), i8* getelementptr ([4 x i8], [4 x i8]* @s3, i64 0, i64 0)
-  %len = call i64 @strnlen(i8* %ptr, i64 %i)
+  %ptr = select i1 %C, ptr @s5, ptr @s3
+  %len = call i64 @strnlen(ptr %ptr, i64 %i)
   ret i64 %len
 }

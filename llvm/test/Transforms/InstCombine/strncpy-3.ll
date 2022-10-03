@@ -38,7 +38,7 @@ define void @fill_with_zeros3(ptr %dst) {
 
 define void @fill_with_zeros4(ptr %dst) {
 ; CHECK-LABEL: @fill_with_zeros4(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(128) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(128) @str.2, i64 128, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(128) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(128) @str.2, i64 128, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   tail call ptr @strncpy(ptr %dst, ptr @str3, i64 128)

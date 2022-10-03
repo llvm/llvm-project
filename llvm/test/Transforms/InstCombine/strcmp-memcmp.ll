@@ -8,553 +8,485 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 declare void @use(i32)
 
-define i32 @strcmp_memcmp([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-declare i32 @strcmp(i8* nocapture, i8* nocapture)
+declare i32 @strcmp(ptr nocapture, ptr nocapture)
 
-define i32 @strcmp_memcmp2([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp2(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp2(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string)
+  %call = call i32 @strcmp(ptr @key, ptr nonnull %buf)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp3([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp3(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp3(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   %cmp = icmp ne i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp4([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp4(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp4(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string)
+  %call = call i32 @strcmp(ptr @key, ptr nonnull %buf)
   %cmp = icmp ne i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp5([5 x i8]* dereferenceable (5) %buf) nofree nosync {
+define i32 @strcmp_memcmp5(ptr dereferenceable (5) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp5(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [5 x i8], [5 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [5 x i8], [5 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull align 1 %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull align 1 %buf, ptr @key)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp6([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp6(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp6(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   %cmp = icmp sgt i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp7([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp7(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp7(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[MEMCMP_LOBIT:%.*]] = lshr i32 [[MEMCMP]], 31
 ; CHECK-NEXT:    ret i32 [[MEMCMP_LOBIT]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string)
+  %call = call i32 @strcmp(ptr @key, ptr nonnull %buf)
   %cmp = icmp slt i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp8([4 x i8]* dereferenceable (4) %buf) nofree nosync {
+define i32 @strcmp_memcmp8(ptr dereferenceable (4) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp8(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp9([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp9(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp9(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @abc, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @abc)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
 
-define i32 @strncmp_memcmp([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(2) [[STRING]], i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 2)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(2) [[BUF:%.*]], ptr noundef nonnull dereferenceable(2) @key, i64 2)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 2)
+  %call = call i32 @strncmp(ptr nonnull %buf, ptr @key, i64 2)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-declare i32 @strncmp(i8* nocapture, i8* nocapture, i64)
+declare i32 @strncmp(ptr nocapture, ptr nocapture, i64)
 
-define i32 @strncmp_memcmp2([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp2(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp2(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 11)
+  %call = call i32 @strncmp(ptr nonnull %buf, ptr @key, i64 11)
   %cmp = icmp ne i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp3([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp3(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp3(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 11)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 11)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp4([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp4(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp4(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 5)
+  %call = call i32 @strncmp(ptr nonnull %buf, ptr @key, i64 5)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp5([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp5(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp5(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 5)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 5)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
 
-define i32 @strncmp_memcmp6([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp6(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp6(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 5)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 5)
   %cmp = icmp ne i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp7([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp7(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp7(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 4)
+  %call = call i32 @strncmp(ptr nonnull %buf, ptr @key, i64 4)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp8([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp8(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp8(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(3) [[STRING]], i8* noundef nonnull dereferenceable(3) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 3)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(3) [[BUF:%.*]], ptr noundef nonnull dereferenceable(3) @key, i64 3)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 3)
+  %call = call i32 @strncmp(ptr nonnull %buf, ptr @key, i64 3)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp9([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp9(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp9(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 5)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 5)
   %cmp = icmp sgt i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp10([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp10(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp10(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[MEMCMP_LOBIT:%.*]] = lshr i32 [[MEMCMP]], 31
 ; CHECK-NEXT:    ret i32 [[MEMCMP_LOBIT]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 5)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 5)
   %cmp = icmp slt i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp11([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp11(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp11(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 12)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 12)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp12([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp12(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp12(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(4) [[STRING]], i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 12)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 12)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp13([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp13(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp13(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(2) [[STRING]], i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 2)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(2) [[BUF:%.*]], ptr noundef nonnull dereferenceable(2) @abc, i64 2)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* nonnull %string, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 2)
+  %call = call i32 @strncmp(ptr nonnull %buf, ptr @abc, i64 2)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp14([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp14(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp14(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 4)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(4) [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @abc, i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* nonnull %string, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @abc, i64 0, i64 0), i64 12)
+  %call = call i32 @strncmp(ptr nonnull %buf, ptr @abc, i64 12)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
 ; Negative tests
-define i32 @strcmp_memcmp_bad([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp_bad(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp_bad(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(i8* noundef nonnull [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr noundef nonnull [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 3
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   %cmp = icmp sgt i32 %call, 3
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp_bad2([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp_bad2(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp_bad2(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull [[STRING]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull [[BUF:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL]], 3
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string)
+  %call = call i32 @strcmp(ptr @key, ptr nonnull %buf)
   %cmp = icmp slt i32 %call, 3
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp_bad3([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strcmp_memcmp_bad3(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp_bad3(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(i8* noundef nonnull [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr noundef nonnull [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   ret i32 %call
 }
 
 
-define i32 @strcmp_memcmp_bad4(i8* nocapture readonly %buf) nofree nosync {
+define i32 @strcmp_memcmp_bad4(ptr nocapture readonly %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp_bad4(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @strcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) [[BUF:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @strcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(1) [[BUF:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %call = tail call i32 @strcmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* %buf)
+  %call = tail call i32 @strcmp(ptr @key, ptr %buf)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
 
-define i32 @strcmp_memcmp_bad5([3 x i8]* dereferenceable (3) %buf) nofree nosync {
+define i32 @strcmp_memcmp_bad5(ptr dereferenceable (3) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp_bad5(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [3 x i8], [3 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(i8* noundef nonnull [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr noundef nonnull [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [3 x i8], [3 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp_bad6([4 x i8]* dereferenceable (4) %buf, i8* nocapture readonly %k) nofree nosync {
+define i32 @strcmp_memcmp_bad6(ptr dereferenceable (4) %buf, ptr nocapture readonly %k) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp_bad6(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(i8* noundef nonnull [[STRING]], i8* noundef nonnull dereferenceable(1) [[K:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr noundef nonnull [[BUF:%.*]], ptr noundef nonnull dereferenceable(1) [[K:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* %k)
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr %k)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp_bad7(i8* nocapture readonly %k) nofree nosync {
+define i32 @strcmp_memcmp_bad7(ptr nocapture readonly %k) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp_bad7(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @strcmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) [[K:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @strcmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(1) [[K:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %call = tail call i32 @strcmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* %k)
+  %call = tail call i32 @strcmp(ptr @key, ptr %k)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strcmp_memcmp_bad8([4 x i8]* dereferenceable (4) %buf) nofree nosync {
+define i32 @strcmp_memcmp_bad8(ptr dereferenceable (4) %buf) nofree nosync {
 ; CHECK-LABEL: @strcmp_memcmp_bad8(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(i8* noundef nonnull [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr noundef nonnull [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key)
 ; CHECK-NEXT:    tail call void @use(i32 [[CALL]])
 ; CHECK-NEXT:    ret i32 0
 ;
-  %string = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   tail call void @use(i32 %call)
   ret i32 0
 }
 
-define i32 @strncmp_memcmp_bad([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp_bad(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp_bad(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull [[STRING]], i64 5)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strncmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull [[BUF:%.*]], i64 5)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 3
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 5)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 5)
   %cmp = icmp sgt i32 %call, 3
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
 
-define i32 @strncmp_memcmp_bad1([12 x i8]* dereferenceable (12) %buf) nofree nosync {
+define i32 @strncmp_memcmp_bad1(ptr dereferenceable (12) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp_bad1(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull [[STRING]], i64 5)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strncmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull [[BUF:%.*]], i64 5)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL]], 3
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 5)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 5)
   %cmp = icmp slt i32 %call, 3
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp_bad2([12 x i8]* dereferenceable (12) %buf, i64 %n) nofree nosync {
+define i32 @strncmp_memcmp_bad2(ptr dereferenceable (12) %buf, i64 %n) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp_bad2(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull [[STRING]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strncmp(ptr nonnull @key, ptr nonnull [[BUF:%.*]], i64 [[N:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL]], 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* nonnull %string, i64 %n)
+  %call = call i32 @strncmp(ptr @key, ptr nonnull %buf, i64 %n)
   %cmp = icmp slt i32 %call, 1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp_bad3(i8* nocapture readonly %k) nofree nosync {
+define i32 @strncmp_memcmp_bad3(ptr nocapture readonly %k) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp_bad3(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @strncmp(i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) [[K:%.*]], i64 2)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @strncmp(ptr noundef nonnull dereferenceable(4) @key, ptr noundef nonnull dereferenceable(1) [[K:%.*]], i64 2)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %call = tail call i32 @strncmp(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i8* %k, i64 2)
+  %call = tail call i32 @strncmp(ptr @key, ptr %k, i64 2)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-define i32 @strncmp_memcmp_bad4([4 x i8]* dereferenceable (4) %buf) nofree nosync {
+define i32 @strncmp_memcmp_bad4(ptr dereferenceable (4) %buf) nofree nosync {
 ; CHECK-LABEL: @strncmp_memcmp_bad4(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strncmp(i8* noundef nonnull [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 2)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strncmp(ptr noundef nonnull [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key, i64 2)
 ; CHECK-NEXT:    tail call void @use(i32 [[CALL]])
 ; CHECK-NEXT:    ret i32 0
 ;
-  %string = getelementptr inbounds [4 x i8], [4 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strncmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0), i64 2)
+  %call = call i32 @strncmp(ptr nonnull %buf, ptr @key, i64 2)
   tail call void @use(i32 %call)
   ret i32 0
 }
 
-define i32 @strcmp_memcmp_msan([12 x i8]* dereferenceable (12) %buf) sanitize_memory {
+define i32 @strcmp_memcmp_msan(ptr dereferenceable (12) %buf) sanitize_memory {
 ; CHECK-LABEL: @strcmp_memcmp_msan(
-; CHECK-NEXT:    [[STRING:%.*]] = getelementptr inbounds [12 x i8], [12 x i8]* [[BUF:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(i8* noundef nonnull [[STRING]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr noundef nonnull [[BUF:%.*]], ptr noundef nonnull dereferenceable(4) @key)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
-  %string = getelementptr inbounds [12 x i8], [12 x i8]* %buf, i64 0, i64 0
-  %call = call i32 @strcmp(i8* nonnull %string, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @key, i64 0, i64 0))
+  %call = call i32 @strcmp(ptr nonnull %buf, ptr @key)
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
 
-declare i32 @memcmp(i8* nocapture, i8* nocapture, i64)
+declare i32 @memcmp(ptr nocapture, ptr nocapture, i64)

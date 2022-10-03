@@ -12,35 +12,35 @@
 ; an in-depth discussion of the trade-offs:
 ; https://discourse.llvm.org/t/rfc-safe-optimizations-for-sanitizers
 
-declare i8* @strchr(i8*, i32)
-declare i8* @strrchr(i8*, i32)
-declare i32 @strcmp(i8*, i8*)
-declare i32 @strncmp(i8*, i8*, i64)
-declare i8* @strstr(i8*, i8*)
+declare ptr @strchr(ptr, i32)
+declare ptr @strrchr(ptr, i32)
+declare i32 @strcmp(ptr, ptr)
+declare i32 @strncmp(ptr, ptr, i64)
+declare ptr @strstr(ptr, ptr)
 
-declare i8* @stpcpy(i8*, i8*)
-declare i8* @strcpy(i8*, i8*)
-declare i8* @stpncpy(i8*, i8*, i64)
-declare i8* @strncpy(i8*, i8*, i64)
+declare ptr @stpcpy(ptr, ptr)
+declare ptr @strcpy(ptr, ptr)
+declare ptr @stpncpy(ptr, ptr, i64)
+declare ptr @strncpy(ptr, ptr, i64)
 
-declare i64 @strlen(i8*)
-declare i64 @strnlen(i8*, i64)
+declare i64 @strlen(ptr)
+declare i64 @strnlen(ptr, i64)
 
-declare i8* @strpbrk(i8*, i8*)
+declare ptr @strpbrk(ptr, ptr)
 
-declare i64 @strspn(i8*, i8*)
-declare i64 @strcspn(i8*, i8*)
+declare i64 @strspn(ptr, ptr)
+declare i64 @strcspn(ptr, ptr)
 
-declare i32 @atoi(i8*)
-declare i64 @atol(i8*)
-declare i64 @atoll(i8*)
-declare i64 @strtol(i8*, i8**, i32)
-declare i64 @strtoll(i8*, i8**, i32)
-declare i64 @strtoul(i8*, i8**, i32)
-declare i64 @strtoull(i8*, i8**, i32)
+declare i32 @atoi(ptr)
+declare i64 @atol(ptr)
+declare i64 @atoll(ptr)
+declare i64 @strtol(ptr, ptr, i32)
+declare i64 @strtoll(ptr, ptr, i32)
+declare i64 @strtoul(ptr, ptr, i32)
+declare i64 @strtoull(ptr, ptr, i32)
 
-declare i32 @sprintf(i8*, i8*, ...)
-declare i32 @snprintf(i8*, i64, i8*, ...)
+declare i32 @sprintf(ptr, ptr, ...)
+declare i32 @snprintf(ptr, i64, ptr, ...)
 
 
 @a5 = constant [5 x i8] c"%s\0045";
@@ -48,34 +48,32 @@ declare i32 @snprintf(i8*, i64, i8*, ...)
 
 ; Fold strchr(a5 + 5, '\0') to null.
 
-define i8* @fold_strchr_past_end() {
+define ptr @fold_strchr_past_end() {
 ; CHECK-LABEL: @fold_strchr_past_end(
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0)
+; CHECK-NEXT:    ret ptr getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0)
 ;
-  %p = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %q = call i8* @strchr(i8* %p, i32 0)
-  ret i8* %q
+  %p = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %q = call ptr @strchr(ptr %p, i32 0)
+  ret ptr %q
 }
 
 ; Fold strcmp(a5, a5 + 5) (and vice versa) to null.
 
-define void @fold_strcmp_past_end(i32* %pcmp) {
+define void @fold_strcmp_past_end(ptr %pcmp) {
 ; CHECK-LABEL: @fold_strcmp_past_end(
-; CHECK-NEXT:    store i32 1, i32* [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PC50:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; CHECK-NEXT:    store i32 -1, i32* [[PC50]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[PCMP:%.*]], align 4
+; CHECK-NEXT:    [[PC50:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    store i32 -1, ptr [[PC50]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %c05 = call i32 @strcmp(i8* %p0, i8* %p5)
-  %pc05 = getelementptr i32, i32* %pcmp, i32 0
-  store i32 %c05, i32* %pc05
+  %c05 = call i32 @strcmp(ptr @a5, ptr %p5)
+  store i32 %c05, ptr %pcmp
 
-  %c50 = call i32 @strcmp(i8* %p5, i8* %p0)
-  %pc50 = getelementptr i32, i32* %pcmp, i32 1
-  store i32 %c50, i32* %pc50
+  %c50 = call i32 @strcmp(ptr %p5, ptr @a5)
+  %pc50 = getelementptr i32, ptr %pcmp, i32 1
+  store i32 %c50, ptr %pc50
 
   ret void
 }
@@ -83,23 +81,21 @@ define void @fold_strcmp_past_end(i32* %pcmp) {
 
 ; Likewise, fold strncmp(a5, a5 + 5, 5) (and vice versa) to null.
 
-define void @fold_strncmp_past_end(i32* %pcmp) {
+define void @fold_strncmp_past_end(ptr %pcmp) {
 ; CHECK-LABEL: @fold_strncmp_past_end(
-; CHECK-NEXT:    store i32 1, i32* [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PC50:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; CHECK-NEXT:    store i32 -1, i32* [[PC50]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[PCMP:%.*]], align 4
+; CHECK-NEXT:    [[PC50:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    store i32 -1, ptr [[PC50]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %c05 = call i32 @strncmp(i8* %p0, i8* %p5, i64 5)
-  %pc05 = getelementptr i32, i32* %pcmp, i32 0
-  store i32 %c05, i32* %pc05
+  %c05 = call i32 @strncmp(ptr @a5, ptr %p5, i64 5)
+  store i32 %c05, ptr %pcmp
 
-  %c50 = call i32 @strncmp(i8* %p5, i8* %p0, i64 5)
-  %pc50 = getelementptr i32, i32* %pcmp, i32 1
-  store i32 %c50, i32* %pc50
+  %c50 = call i32 @strncmp(ptr %p5, ptr @a5, i64 5)
+  %pc50 = getelementptr i32, ptr %pcmp, i32 1
+  store i32 %c50, ptr %pc50
 
   ret void
 }
@@ -107,35 +103,33 @@ define void @fold_strncmp_past_end(i32* %pcmp) {
 
 ; Fold strrchr(a5 + 5, '\0') to poison (it's UB).
 
-define i8* @fold_strrchr_past_end(i32 %c) {
+define ptr @fold_strrchr_past_end(i32 %c) {
 ; CHECK-LABEL: @fold_strrchr_past_end(
-; CHECK-NEXT:    ret i8* poison
+; CHECK-NEXT:    ret ptr poison
 ;
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %r = call i8* @strrchr(i8* %p5, i32 0)
-  ret i8* %r
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %r = call ptr @strrchr(ptr %p5, i32 0)
+  ret ptr %r
 }
 
 
 ; Fold strstr(a5 + 5, a5) (and vice versa) to null.
 
-define void @fold_strstr_past_end(i8** %psub) {
+define void @fold_strstr_past_end(ptr %psub) {
 ; CHECK-LABEL: @fold_strstr_past_end(
-; CHECK-NEXT:    store i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0), i8** [[PSUB:%.*]], align 8
-; CHECK-NEXT:    [[PS50:%.*]] = getelementptr i8*, i8** [[PSUB]], i64 1
-; CHECK-NEXT:    store i8* null, i8** [[PS50]], align 8
+; CHECK-NEXT:    store ptr @a5, ptr [[PSUB:%.*]], align 8
+; CHECK-NEXT:    [[PS50:%.*]] = getelementptr ptr, ptr [[PSUB]], i64 1
+; CHECK-NEXT:    store ptr null, ptr [[PS50]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %s05 = call i8* @strstr(i8* %p0, i8* %p5)
-  %ps05 = getelementptr i8*, i8** %psub, i32 0
-  store i8* %s05, i8** %ps05
+  %s05 = call ptr @strstr(ptr @a5, ptr %p5)
+  store ptr %s05, ptr %psub
 
-  %s50 = call i8* @strstr(i8* %p5, i8* %p0)
-  %ps50 = getelementptr i8*, i8** %psub, i32 1
-  store i8* %s50, i8** %ps50
+  %s50 = call ptr @strstr(ptr %p5, ptr @a5)
+  %ps50 = getelementptr ptr, ptr %psub, i32 1
+  store ptr %s50, ptr %ps50
 
   ret void
 }
@@ -147,81 +141,79 @@ define i64 @fold_strlen_past_end() {
 ; CHECK-LABEL: @fold_strlen_past_end(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %r = call i64 @strlen(i8* %p5)
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %r = call i64 @strlen(ptr %p5)
   ret i64 %r
 }
 
 
 ; TODO: Fold stpcpy(dst, a5 + 5) to (*dst = '\0', dst).
 
-define i8* @fold_stpcpy_past_end(i8* %dst) {
+define ptr @fold_stpcpy_past_end(ptr %dst) {
 ; CHECK-LABEL: @fold_stpcpy_past_end(
-; CHECK-NEXT:    ret i8* [[DST:%.*]]
+; CHECK-NEXT:    ret ptr [[DST:%.*]]
 ;
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %r = call i8* @strcpy(i8* %dst, i8* %p5)
-  ret i8* %r
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %r = call ptr @strcpy(ptr %dst, ptr %p5)
+  ret ptr %r
 }
 
 
 ; TODO: Fold strcpy(dst, a5 + 5) to (*dst = '\0', dst).
 
-define i8* @fold_strcpy_past_end(i8* %dst) {
+define ptr @fold_strcpy_past_end(ptr %dst) {
 ; CHECK-LABEL: @fold_strcpy_past_end(
-; CHECK-NEXT:    ret i8* [[DST:%.*]]
+; CHECK-NEXT:    ret ptr [[DST:%.*]]
 ;
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %r = call i8* @strcpy(i8* %dst, i8* %p5)
-  ret i8* %r
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %r = call ptr @strcpy(ptr %dst, ptr %p5)
+  ret ptr %r
 }
 
 
 ; TODO: Fold stpncpy(dst, a5 + 5, 5) to (memset(dst, 0, 5), dst + 5).
 
-define i8* @fold_stpncpy_past_end(i8* %dst) {
+define ptr @fold_stpncpy_past_end(ptr %dst) {
 ; CHECK-LABEL: @fold_stpncpy_past_end(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8 0, i64 5, i1 false)
-; CHECK-NEXT:    ret i8* [[DST]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8 0, i64 5, i1 false)
+; CHECK-NEXT:    ret ptr [[DST]]
 ;
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %r = call i8* @strncpy(i8* %dst, i8* %p5, i64 5)
-  ret i8* %r
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %r = call ptr @strncpy(ptr %dst, ptr %p5, i64 5)
+  ret ptr %r
 }
 
 
 ; TODO: Fold strncpy(dst, a5 + 5, 5) to memset(dst, 0, 5).
 
-define i8* @fold_strncpy_past_end(i8* %dst) {
+define ptr @fold_strncpy_past_end(ptr %dst) {
 ; CHECK-LABEL: @fold_strncpy_past_end(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8 0, i64 5, i1 false)
-; CHECK-NEXT:    ret i8* [[DST]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8 0, i64 5, i1 false)
+; CHECK-NEXT:    ret ptr [[DST]]
 ;
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %r = call i8* @strncpy(i8* %dst, i8* %p5, i64 5)
-  ret i8* %r
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %r = call ptr @strncpy(ptr %dst, ptr %p5, i64 5)
+  ret ptr %r
 }
 
 
 ; Fold strpbrk(a5, a5 + 5) (and vice versa) to null.
 
-define void @fold_strpbrk_past_end(i8** %psub) {
+define void @fold_strpbrk_past_end(ptr %psub) {
 ; CHECK-LABEL: @fold_strpbrk_past_end(
-; CHECK-NEXT:    store i8* null, i8** [[PSUB:%.*]], align 8
-; CHECK-NEXT:    [[PS50:%.*]] = getelementptr i8*, i8** [[PSUB]], i64 1
-; CHECK-NEXT:    store i8* null, i8** [[PS50]], align 8
+; CHECK-NEXT:    store ptr null, ptr [[PSUB:%.*]], align 8
+; CHECK-NEXT:    [[PS50:%.*]] = getelementptr ptr, ptr [[PSUB]], i64 1
+; CHECK-NEXT:    store ptr null, ptr [[PS50]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %s05 = call i8* @strpbrk(i8* %p0, i8* %p5)
-  %ps05 = getelementptr i8*, i8** %psub, i32 0
-  store i8* %s05, i8** %ps05
+  %s05 = call ptr @strpbrk(ptr @a5, ptr %p5)
+  store ptr %s05, ptr %psub
 
-  %s50 = call i8* @strpbrk(i8* %p5, i8* %p0)
-  %ps50 = getelementptr i8*, i8** %psub, i32 1
-  store i8* %s50, i8** %ps50
+  %s50 = call ptr @strpbrk(ptr %p5, ptr @a5)
+  %ps50 = getelementptr ptr, ptr %psub, i32 1
+  store ptr %s50, ptr %ps50
 
   ret void
 }
@@ -229,23 +221,21 @@ define void @fold_strpbrk_past_end(i8** %psub) {
 
 ; Fold strspn(a5, a5 + 5) (and vice versa) to null.
 
-define void @fold_strspn_past_end(i64* %poff) {
+define void @fold_strspn_past_end(ptr %poff) {
 ; CHECK-LABEL: @fold_strspn_past_end(
-; CHECK-NEXT:    store i64 0, i64* [[POFF:%.*]], align 4
-; CHECK-NEXT:    [[PO50:%.*]] = getelementptr i64, i64* [[POFF]], i64 1
-; CHECK-NEXT:    store i64 0, i64* [[PO50]], align 4
+; CHECK-NEXT:    store i64 0, ptr [[POFF:%.*]], align 4
+; CHECK-NEXT:    [[PO50:%.*]] = getelementptr i64, ptr [[POFF]], i64 1
+; CHECK-NEXT:    store i64 0, ptr [[PO50]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %o05 = call i64 @strspn(i8* %p0, i8* %p5)
-  %po05 = getelementptr i64, i64* %poff, i32 0
-  store i64 %o05, i64* %po05
+  %o05 = call i64 @strspn(ptr @a5, ptr %p5)
+  store i64 %o05, ptr %poff
 
-  %o50 = call i64 @strspn(i8* %p5, i8* %p0)
-  %po50 = getelementptr i64, i64* %poff, i32 1
-  store i64 %o50, i64* %po50
+  %o50 = call i64 @strspn(ptr %p5, ptr @a5)
+  %po50 = getelementptr i64, ptr %poff, i32 1
+  store i64 %o50, ptr %po50
 
   ret void
 }
@@ -253,23 +243,21 @@ define void @fold_strspn_past_end(i64* %poff) {
 
 ; Fold strcspn(a5, a5 + 5) (and vice versa) to null.
 
-define void @fold_strcspn_past_end(i64* %poff) {
+define void @fold_strcspn_past_end(ptr %poff) {
 ; CHECK-LABEL: @fold_strcspn_past_end(
-; CHECK-NEXT:    store i64 2, i64* [[POFF:%.*]], align 4
-; CHECK-NEXT:    [[PO50:%.*]] = getelementptr i64, i64* [[POFF]], i64 1
-; CHECK-NEXT:    store i64 0, i64* [[PO50]], align 4
+; CHECK-NEXT:    store i64 2, ptr [[POFF:%.*]], align 4
+; CHECK-NEXT:    [[PO50:%.*]] = getelementptr i64, ptr [[POFF]], i64 1
+; CHECK-NEXT:    store i64 0, ptr [[PO50]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %o05 = call i64 @strcspn(i8* %p0, i8* %p5)
-  %po05 = getelementptr i64, i64* %poff, i32 0
-  store i64 %o05, i64* %po05
+  %o05 = call i64 @strcspn(ptr @a5, ptr %p5)
+  store i64 %o05, ptr %poff
 
-  %o50 = call i64 @strcspn(i8* %p5, i8* %p0)
-  %po50 = getelementptr i64, i64* %poff, i32 1
-  store i64 %o50, i64* %po50
+  %o50 = call i64 @strcspn(ptr %p5, ptr @a5)
+  %po50 = getelementptr i64, ptr %poff, i32 1
+  store i64 %o50, ptr %po50
 
   ret void
 }
@@ -280,11 +268,11 @@ define void @fold_strcspn_past_end(i64* %poff) {
 
 define i32 @fold_atoi_past_end() {
 ; CHECK-LABEL: @fold_atoi_past_end(
-; CHECK-NEXT:    [[I:%.*]] = call i32 @atoi(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0))
+; CHECK-NEXT:    [[I:%.*]] = call i32 @atoi(ptr nocapture getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
 ; CHECK-NEXT:    ret i32 [[I]]
 ;
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %i = call i32 @atoi(i8* %p5)
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %i = call i32 @atoi(ptr %p5)
   ret i32 %i
 }
 
@@ -292,52 +280,51 @@ define i32 @fold_atoi_past_end() {
 ; for atoll and strtrol and similar.
 ; Verify that processing the invalid call doesn't run into trouble.
 
-define void @fold_atol_strtol_past_end(i64* %ps) {
+define void @fold_atol_strtol_past_end(ptr %ps) {
 ; CHECK-LABEL: @fold_atol_strtol_past_end(
-; CHECK-NEXT:    [[I0:%.*]] = call i64 @atol(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0))
-; CHECK-NEXT:    store i64 [[I0]], i64* [[PS:%.*]], align 4
-; CHECK-NEXT:    [[I1:%.*]] = call i64 @atoll(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0))
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i64, i64* [[PS]], i64 1
-; CHECK-NEXT:    store i64 [[I1]], i64* [[P1]], align 4
-; CHECK-NEXT:    [[I2:%.*]] = call i64 @strtol(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i8** null, i32 0)
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i64, i64* [[PS]], i64 2
-; CHECK-NEXT:    store i64 [[I2]], i64* [[P2]], align 4
-; CHECK-NEXT:    [[I3:%.*]] = call i64 @strtoul(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i8** null, i32 8)
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i64, i64* [[PS]], i64 3
-; CHECK-NEXT:    store i64 [[I3]], i64* [[P3]], align 4
-; CHECK-NEXT:    [[I4:%.*]] = call i64 @strtoll(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i8** null, i32 10)
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i64, i64* [[PS]], i64 4
-; CHECK-NEXT:    store i64 [[I4]], i64* [[P4]], align 4
-; CHECK-NEXT:    [[I5:%.*]] = call i64 @strtoul(i8* nocapture getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i8** null, i32 16)
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr i64, i64* [[PS]], i64 5
-; CHECK-NEXT:    store i64 [[I5]], i64* [[P5]], align 4
+; CHECK-NEXT:    [[I0:%.*]] = call i64 @atol(ptr nocapture getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
+; CHECK-NEXT:    store i64 [[I0]], ptr [[PS:%.*]], align 4
+; CHECK-NEXT:    [[I1:%.*]] = call i64 @atoll(ptr nocapture getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i64, ptr [[PS]], i64 1
+; CHECK-NEXT:    store i64 [[I1]], ptr [[P1]], align 4
+; CHECK-NEXT:    [[I2:%.*]] = call i64 @strtol(ptr nocapture getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), ptr null, i32 0)
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i64, ptr [[PS]], i64 2
+; CHECK-NEXT:    store i64 [[I2]], ptr [[P2]], align 4
+; CHECK-NEXT:    [[I3:%.*]] = call i64 @strtoul(ptr nocapture getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), ptr null, i32 8)
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i64, ptr [[PS]], i64 3
+; CHECK-NEXT:    store i64 [[I3]], ptr [[P3]], align 4
+; CHECK-NEXT:    [[I4:%.*]] = call i64 @strtoll(ptr nocapture getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), ptr null, i32 10)
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i64, ptr [[PS]], i64 4
+; CHECK-NEXT:    store i64 [[I4]], ptr [[P4]], align 4
+; CHECK-NEXT:    [[I5:%.*]] = call i64 @strtoul(ptr nocapture getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), ptr null, i32 16)
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr i64, ptr [[PS]], i64 5
+; CHECK-NEXT:    store i64 [[I5]], ptr [[P5]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %pa5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %pa5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %i0 = call i64 @atol(i8* %pa5)
-  %p0 = getelementptr i64, i64* %ps, i32 0
-  store i64 %i0, i64* %p0
+  %i0 = call i64 @atol(ptr %pa5)
+  store i64 %i0, ptr %ps
 
-  %i1 = call i64 @atoll(i8* %pa5)
-  %p1 = getelementptr i64, i64* %ps, i32 1
-  store i64 %i1, i64* %p1
+  %i1 = call i64 @atoll(ptr %pa5)
+  %p1 = getelementptr i64, ptr %ps, i32 1
+  store i64 %i1, ptr %p1
 
-  %i2 = call i64 @strtol(i8* %pa5, i8** null, i32 0)
-  %p2 = getelementptr i64, i64* %ps, i32 2
-  store i64 %i2, i64* %p2
+  %i2 = call i64 @strtol(ptr %pa5, ptr null, i32 0)
+  %p2 = getelementptr i64, ptr %ps, i32 2
+  store i64 %i2, ptr %p2
 
-  %i3 = call i64 @strtoul(i8* %pa5, i8** null, i32 8)
-  %p3 = getelementptr i64, i64* %ps, i32 3
-  store i64 %i3, i64* %p3
+  %i3 = call i64 @strtoul(ptr %pa5, ptr null, i32 8)
+  %p3 = getelementptr i64, ptr %ps, i32 3
+  store i64 %i3, ptr %p3
 
-  %i4 = call i64 @strtoll(i8* %pa5, i8** null, i32 10)
-  %p4 = getelementptr i64, i64* %ps, i32 4
-  store i64 %i4, i64* %p4
+  %i4 = call i64 @strtoll(ptr %pa5, ptr null, i32 10)
+  %p4 = getelementptr i64, ptr %ps, i32 4
+  store i64 %i4, ptr %p4
 
-  %i5 = call i64 @strtoul(i8* %pa5, i8** null, i32 16)
-  %p5 = getelementptr i64, i64* %ps, i32 5
-  store i64 %i5, i64* %p5
+  %i5 = call i64 @strtoul(ptr %pa5, ptr null, i32 16)
+  %p5 = getelementptr i64, ptr %ps, i32 5
+  store i64 %i5, ptr %p5
 
   ret void
 }
@@ -346,23 +333,21 @@ define void @fold_atol_strtol_past_end(i64* %ps) {
 ; Fold sprintf(dst, a5 + 5) to zero, and also
 ; TODO: fold sprintf(dst, "%s", a5 + 5) to zero.
 
-define void @fold_sprintf_past_end(i32* %pcnt, i8* %dst) {
+define void @fold_sprintf_past_end(ptr %pcnt, ptr %dst) {
 ; CHECK-LABEL: @fold_sprintf_past_end(
-; CHECK-NEXT:    store i32 0, i32* [[PCNT:%.*]], align 4
-; CHECK-NEXT:    [[PN05:%.*]] = getelementptr i32, i32* [[PCNT]], i64 1
-; CHECK-NEXT:    store i32 0, i32* [[PN05]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PCNT:%.*]], align 4
+; CHECK-NEXT:    [[PN05:%.*]] = getelementptr i32, ptr [[PCNT]], i64 1
+; CHECK-NEXT:    store i32 0, ptr [[PN05]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %n5_ = call i32 (i8*, i8*, ...) @sprintf(i8* %dst, i8* %p5)
-  %pn5_ = getelementptr i32, i32* %pcnt, i32 0
-  store i32 %n5_, i32* %pn5_
+  %n5_ = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr %p5)
+  store i32 %n5_, ptr %pcnt
 
-  %n05 = call i32 (i8*, i8*, ...) @sprintf(i8* %dst, i8* %p0, i8* %p5)
-  %pn05 = getelementptr i32, i32* %pcnt, i32 1
-  store i32 %n05, i32* %pn05
+  %n05 = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @a5, ptr %p5)
+  %pn05 = getelementptr i32, ptr %pcnt, i32 1
+  store i32 %n05, ptr %pn05
 
   ret void
 }
@@ -371,25 +356,23 @@ define void @fold_sprintf_past_end(i32* %pcnt, i8* %dst) {
 ; Fold snprintf(dst, n, a5 + 5) to zero, and also
 ; TODO: fold snprintf(dst, n, "%s", a5 + 5) to zero.
 
-define void @fold_snprintf_past_end(i32* %pcnt, i8* %dst, i64 %n) {
+define void @fold_snprintf_past_end(ptr %pcnt, ptr %dst, i64 %n) {
 ; CHECK-LABEL: @fold_snprintf_past_end(
-; CHECK-NEXT:    [[N5_:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* [[DST:%.*]], i64 [[N:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0))
-; CHECK-NEXT:    store i32 [[N5_]], i32* [[PCNT:%.*]], align 4
-; CHECK-NEXT:    [[N05:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* [[DST]], i64 [[N]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0))
-; CHECK-NEXT:    [[PN05:%.*]] = getelementptr i32, i32* [[PCNT]], i64 1
-; CHECK-NEXT:    store i32 [[N05]], i32* [[PN05]], align 4
+; CHECK-NEXT:    [[N5_:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[DST:%.*]], i64 [[N:%.*]], ptr getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
+; CHECK-NEXT:    store i32 [[N5_]], ptr [[PCNT:%.*]], align 4
+; CHECK-NEXT:    [[N05:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[DST]], i64 [[N]], ptr nonnull @a5, ptr getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0))
+; CHECK-NEXT:    [[PN05:%.*]] = getelementptr i32, ptr [[PCNT]], i64 1
+; CHECK-NEXT:    store i32 [[N05]], ptr [[PN05]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
+  %p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
 
-  %n5_ = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %dst, i64 %n, i8* %p5)
-  %pn5_ = getelementptr i32, i32* %pcnt, i32 0
-  store i32 %n5_, i32* %pn5_
+  %n5_ = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %dst, i64 %n, ptr %p5)
+  store i32 %n5_, ptr %pcnt
 
-  %n05 = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %dst, i64 %n, i8* %p0, i8* %p5)
-  %pn05 = getelementptr i32, i32* %pcnt, i32 1
-  store i32 %n05, i32* %pn05
+  %n05 = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %dst, i64 %n, ptr @a5, ptr %p5)
+  %pn05 = getelementptr i32, ptr %pcnt, i32 1
+  store i32 %n05, ptr %pn05
 
   ret void
 }
