@@ -246,6 +246,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
     TemplateSpecializationTypes;
   mutable llvm::FoldingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<UsingType> UsingTypes;
+  mutable llvm::FoldingSet<TypedefType> TypedefTypes;
   mutable llvm::FoldingSet<ElaboratedType> ElaboratedTypes{
       GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
