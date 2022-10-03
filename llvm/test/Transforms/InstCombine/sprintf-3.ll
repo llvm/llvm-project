@@ -8,12 +8,12 @@
 
 @percent_s = constant [3 x i8] c"%s\00"
 
-declare i32 @sprintf(i8**, i32*, ...)
+declare i32 @sprintf(ptr, ptr, ...)
 
-define i32 @PR51200(i8** %p, i32* %p2) {
+define i32 @PR51200(ptr %p, ptr %p2) {
 ; CHECK-LABEL: @PR51200(
 ; Don't check anything, just expect the test to compile successfully.
 ;
-  %call = call i32 (i8**, i32*, ...) @sprintf(i8** %p, i32* bitcast ([3 x i8]* @percent_s to i32*), i32* %p2)
+  %call = call i32 (ptr, ptr, ...) @sprintf(ptr %p, ptr @percent_s, ptr %p2)
   ret i32 %call
 }
