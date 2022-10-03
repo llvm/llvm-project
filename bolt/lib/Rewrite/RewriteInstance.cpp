@@ -3594,11 +3594,6 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
 
 void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
   if (BC->HasRelocations) {
-    ErrorOr<BinarySection &> TextSection =
-        BC->getUniqueSectionByName(BC->getMainCodeSectionName());
-    assert(TextSection && ".text section not found in output");
-    assert(TextSection->hasValidSectionID() && ".text section should be valid");
-
     // Map sections for functions with pre-assigned addresses.
     for (BinaryFunction *InjectedFunction : BC->getInjectedBinaryFunctions()) {
       const uint64_t OutputAddress = InjectedFunction->getOutputAddress();
@@ -3638,7 +3633,9 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
       }
 
       // Make sure we allocate enough space for huge pages.
-      if (opts::HotText) {
+      ErrorOr<BinarySection &> TextSection =
+          BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+      if (opts::HotText && TextSection && TextSection->hasValidSectionID()) {
         uint64_t HotTextEnd =
             TextSection->getOutputAddress() + TextSection->getOutputSize();
         HotTextEnd = alignTo(HotTextEnd, BC->PageAlign);
