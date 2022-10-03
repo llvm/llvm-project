@@ -139,6 +139,7 @@ add_comgr_test(file_map c)
 add_comgr_test(lookup_code_object_test c)
 add_comgr_test(symbolize_test c)
 add_comgr_test(mangled_names_test c)
+add_comgr_test(multithread_test cpp)
 
 # Test : Compile HIP tests only if HIP-Clang is installed.
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")

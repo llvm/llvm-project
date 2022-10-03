@@ -36,7 +36,6 @@
 #include "comgr-signal.h"
 #include "llvm/ADT/STLExtras.h"
 #include <csignal>
-#include <mutex>
 
 namespace COMGR {
 namespace signal {
@@ -80,12 +79,10 @@ static const int Signals[] = {SIGHUP,
 static const unsigned NumSigs = std::size(Signals);
 
 static struct sigaction SigActions[NumSigs];
-static std::mutex SigActionsMutex;
 #endif // _MSC_VER
 
 amd_comgr_status_t saveHandlers() {
 #ifndef _MSC_VER
-  std::lock_guard<std::mutex> Lock(SigActionsMutex);
   for (unsigned I = 0; I < NumSigs; ++I) {
     int Status = sigaction(Signals[I], nullptr, &SigActions[I]);
 
@@ -99,7 +96,6 @@ amd_comgr_status_t saveHandlers() {
 
 amd_comgr_status_t restoreHandlers() {
 #ifndef _MSC_VER
-  std::lock_guard<std::mutex> Lock(SigActionsMutex);
   for (unsigned I = 0; I < NumSigs; ++I) {
     int Status = sigaction(Signals[I], &SigActions[I], nullptr);
 
