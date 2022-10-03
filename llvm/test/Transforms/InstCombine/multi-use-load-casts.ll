@@ -4,10 +4,10 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Positive test - all uses are identical casts.
-define void @t0(i1 zeroext %c0, i1 zeroext %c1, i64* nocapture readonly %src) {
+define void @t0(i1 zeroext %c0, i1 zeroext %c1, ptr nocapture readonly %src) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[DATA:%.*]] = load i64, i64* [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[DATA:%.*]] = load i64, ptr [[SRC:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[BB3:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB4:%.*]], label [[BB5:%.*]]
@@ -15,18 +15,18 @@ define void @t0(i1 zeroext %c0, i1 zeroext %c1, i64* nocapture readonly %src) {
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[PTR0:%.*]] = inttoptr i64 [[DATA]] to i32*
-; CHECK-NEXT:    tail call void @sink0(i32* [[PTR0]])
+; CHECK-NEXT:    [[PTR0:%.*]] = inttoptr i64 [[DATA]] to ptr
+; CHECK-NEXT:    tail call void @sink0(ptr [[PTR0]])
 ; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[PTR1:%.*]] = inttoptr i64 [[DATA]] to i32*
-; CHECK-NEXT:    tail call void @sink1(i32* [[PTR1]])
+; CHECK-NEXT:    [[PTR1:%.*]] = inttoptr i64 [[DATA]] to ptr
+; CHECK-NEXT:    tail call void @sink1(ptr [[PTR1]])
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %data = load i64, i64* %src, align 8
+  %data = load i64, ptr %src, align 8
   br i1 %c0, label %bb3, label %bb7
 
 bb3:
@@ -37,13 +37,13 @@ bb4:
   unreachable
 
 bb5:
-  %ptr0 = inttoptr i64 %data to i32*
-  tail call void @sink0(i32* %ptr0)
+  %ptr0 = inttoptr i64 %data to ptr
+  tail call void @sink0(ptr %ptr0)
   br label %bb9
 
 bb7:
-  %ptr1 = inttoptr i64 %data to i32*
-  tail call void @sink1(i32* %ptr1)
+  %ptr1 = inttoptr i64 %data to ptr
+  tail call void @sink1(ptr %ptr1)
   br label %bb9
 
 bb9:
@@ -51,10 +51,10 @@ bb9:
 }
 
 ; Negative test - all uses are casts, but non-identical ones.
-define void @n1(i1 zeroext %c0, i1 zeroext %c1, i64* nocapture readonly %src) {
+define void @n1(i1 zeroext %c0, i1 zeroext %c1, ptr nocapture readonly %src) {
 ; CHECK-LABEL: @n1(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[DATA:%.*]] = load i64, i64* [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[DATA:%.*]] = load i64, ptr [[SRC:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[BB3:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB4:%.*]], label [[BB5:%.*]]
@@ -62,8 +62,8 @@ define void @n1(i1 zeroext %c0, i1 zeroext %c1, i64* nocapture readonly %src) {
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[PTR0:%.*]] = inttoptr i64 [[DATA]] to i32*
-; CHECK-NEXT:    tail call void @sink0(i32* [[PTR0]])
+; CHECK-NEXT:    [[PTR0:%.*]] = inttoptr i64 [[DATA]] to ptr
+; CHECK-NEXT:    tail call void @sink0(ptr [[PTR0]])
 ; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[VEC:%.*]] = bitcast i64 [[DATA]] to <2 x i32>
@@ -73,7 +73,7 @@ define void @n1(i1 zeroext %c0, i1 zeroext %c1, i64* nocapture readonly %src) {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %data = load i64, i64* %src, align 8
+  %data = load i64, ptr %src, align 8
   br i1 %c0, label %bb3, label %bb7
 
 bb3:
@@ -84,8 +84,8 @@ bb4:
   unreachable
 
 bb5:
-  %ptr0 = inttoptr i64 %data to i32*
-  tail call void @sink0(i32* %ptr0)
+  %ptr0 = inttoptr i64 %data to ptr
+  tail call void @sink0(ptr %ptr0)
   br label %bb9
 
 bb7:
@@ -98,10 +98,10 @@ bb9:
 }
 
 ; Negative test - have non-cast users.
-define void @n2(i1 zeroext %c0, i1 zeroext %c1, i64* nocapture readonly %src) {
+define void @n2(i1 zeroext %c0, i1 zeroext %c1, ptr nocapture readonly %src) {
 ; CHECK-LABEL: @n2(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[DATA:%.*]] = load i64, i64* [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[DATA:%.*]] = load i64, ptr [[SRC:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[BB3:%.*]], label [[BB7:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB4:%.*]], label [[BB5:%.*]]
@@ -109,8 +109,8 @@ define void @n2(i1 zeroext %c0, i1 zeroext %c1, i64* nocapture readonly %src) {
 ; CHECK-NEXT:    tail call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[PTR0:%.*]] = inttoptr i64 [[DATA]] to i32*
-; CHECK-NEXT:    tail call void @sink0(i32* [[PTR0]])
+; CHECK-NEXT:    [[PTR0:%.*]] = inttoptr i64 [[DATA]] to ptr
+; CHECK-NEXT:    tail call void @sink0(ptr [[PTR0]])
 ; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    tail call void @sink3(i64 [[DATA]])
@@ -119,7 +119,7 @@ define void @n2(i1 zeroext %c0, i1 zeroext %c1, i64* nocapture readonly %src) {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %data = load i64, i64* %src, align 8
+  %data = load i64, ptr %src, align 8
   br i1 %c0, label %bb3, label %bb7
 
 bb3:
@@ -130,8 +130,8 @@ bb4:
   unreachable
 
 bb5:
-  %ptr0 = inttoptr i64 %data to i32*
-  tail call void @sink0(i32* %ptr0)
+  %ptr0 = inttoptr i64 %data to ptr
+  tail call void @sink0(ptr %ptr0)
   br label %bb9
 
 bb7:
@@ -144,9 +144,9 @@ bb9:
 
 declare void @abort()
 
-declare void @sink0(i32*)
+declare void @sink0(ptr)
 
-declare void @sink1(i32*)
+declare void @sink1(ptr)
 
 declare void @sink2(<2 x i32>)
 

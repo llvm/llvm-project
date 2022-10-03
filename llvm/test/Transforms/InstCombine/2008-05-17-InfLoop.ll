@@ -7,14 +7,14 @@ declare void @BZALLOC(i32)
 
 define void @f(i32) {
 entry:
-	%blockSize100k = alloca i32		; <i32*> [#uses=2]
-	store i32 %0, i32* %blockSize100k
-	%n = alloca i32		; <i32*> [#uses=2]
-	load i32, i32* %blockSize100k		; <i32>:1 [#uses=1]
-	store i32 %1, i32* %n
-	load i32, i32* %n		; <i32>:2 [#uses=1]
+	%blockSize100k = alloca i32		; <ptr> [#uses=2]
+	store i32 %0, ptr %blockSize100k
+	%n = alloca i32		; <ptr> [#uses=2]
+	load i32, ptr %blockSize100k		; <i32>:1 [#uses=1]
+	store i32 %1, ptr %n
+	load i32, ptr %n		; <i32>:2 [#uses=1]
 	add i32 %2, 2		; <i32>:3 [#uses=1]
-	mul i32 %3, ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i32)		; <i32>:4 [#uses=1]
+	mul i32 %3, ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i32)		; <i32>:4 [#uses=1]
 	call void @BZALLOC( i32 %4 )
 	br label %return
 

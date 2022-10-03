@@ -13,7 +13,6 @@ land.lhs.true:                                    ; preds = %entry
   br label %for.cond.i
 
 for.cond.i:                                       ; preds = %land.lhs.true, %entry
-  %0 = getelementptr inbounds %struct.S0.0.1.2.3.4.13.22.31.44.48.53.54.55.56.58.59.60.66.68.70.74.77.106.107.108.109.110.113.117.118.128.129, %struct.S0.0.1.2.3.4.13.22.31.44.48.53.54.55.56.58.59.60.66.68.70.74.77.106.107.108.109.110.113.117.118.128.129* %l_819.i.i, i64 0, i32 0
   br label %for.cond.i6.i.i
 
 for.cond.i6.i.i:                                  ; preds = %for.body.i8.i.i, %for.cond.i
@@ -38,7 +37,7 @@ for.body4.i.i.i.i:                                ; preds = %for.cond1.i.i.i.i
   br label %for.cond1.i.i.i.i
 
 func_39.exit.i.i:                                 ; preds = %for.cond1.i.i.i.i
-  %l_8191.sroa.0.0.copyload.i.i = load i64, i64* %0, align 1
+  %l_8191.sroa.0.0.copyload.i.i = load i64, ptr %l_819.i.i, align 1
   br label %for.cond1.i.i.i
 
 for.cond1.i.i.i:                                  ; preds = %safe_div_func_uint32_t_u_u.exit.i.i.i, %func_39.exit.i.i

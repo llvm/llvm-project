@@ -13,8 +13,8 @@ target triple = "i686-pc-linux-gnu"
 
 define i32 @foo() {
 entry:
-        %x = load i8, i8* bitcast (%opaque_t* @g to i8*)
-        %y = load i32, i32* bitcast (%op_ts* @h to i32*)
+        %x = load i8, ptr @g
+        %y = load i32, ptr @h
 	%z = zext i8 %x to i32
 	%r = add i32 %y, %z
         ret i32 %r

@@ -172,44 +172,44 @@ define i8 @t12_c1_c2_exrause(i8 %x, i8 %z) {
 ; PR49870
 @g0 = external global i8, align 1
 @g1 = external global i8, align 1
-define i32 @constantexpr0(i32 %x, i8* %y) unnamed_addr {
+define i32 @constantexpr0(i32 %x, ptr %y) unnamed_addr {
 ; CHECK-LABEL: @constantexpr0(
-; CHECK-NEXT:    [[I0:%.*]] = add i32 [[X:%.*]], ptrtoint (i8* @g0 to i32)
+; CHECK-NEXT:    [[I0:%.*]] = add i32 [[X:%.*]], ptrtoint (ptr @g0 to i32)
 ; CHECK-NEXT:    [[R:%.*]] = sub i32 0, [[I0]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %i0 = add i32 %x, ptrtoint (i8* @g0 to i32)
+  %i0 = add i32 %x, ptrtoint (ptr @g0 to i32)
   %r = sub i32 0, %i0
   ret i32 %r
 }
-define i32 @constantexpr1(i32 %x, i8* %y) unnamed_addr {
+define i32 @constantexpr1(i32 %x, ptr %y) unnamed_addr {
 ; CHECK-LABEL: @constantexpr1(
 ; CHECK-NEXT:    [[I0:%.*]] = add i32 [[X:%.*]], 42
-; CHECK-NEXT:    [[R:%.*]] = sub i32 ptrtoint (i8* @g1 to i32), [[I0]]
+; CHECK-NEXT:    [[R:%.*]] = sub i32 ptrtoint (ptr @g1 to i32), [[I0]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %i0 = add i32 %x, 42
-  %r = sub i32 ptrtoint (i8* @g1 to i32), %i0
+  %r = sub i32 ptrtoint (ptr @g1 to i32), %i0
   ret i32 %r
 }
-define i32 @constantexpr2(i32 %x, i8* %y) unnamed_addr {
+define i32 @constantexpr2(i32 %x, ptr %y) unnamed_addr {
 ; CHECK-LABEL: @constantexpr2(
-; CHECK-NEXT:    [[I0:%.*]] = add i32 [[X:%.*]], ptrtoint (i8* @g0 to i32)
-; CHECK-NEXT:    [[R:%.*]] = sub i32 ptrtoint (i8* @g1 to i32), [[I0]]
+; CHECK-NEXT:    [[I0:%.*]] = add i32 [[X:%.*]], ptrtoint (ptr @g0 to i32)
+; CHECK-NEXT:    [[R:%.*]] = sub i32 ptrtoint (ptr @g1 to i32), [[I0]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %i0 = add i32 %x, ptrtoint (i8* @g0 to i32)
-  %r = sub i32 ptrtoint (i8* @g1 to i32), %i0
+  %i0 = add i32 %x, ptrtoint (ptr @g0 to i32)
+  %r = sub i32 ptrtoint (ptr @g1 to i32), %i0
   ret i32 %r
 }
 
 define i64 @pr49870(i64 %x) {
 ; CHECK-LABEL: @pr49870(
 ; CHECK-NEXT:    [[I0:%.*]] = xor i64 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = add i64 [[I0]], ptrtoint (i8* @g0 to i64)
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[I0]], ptrtoint (ptr @g0 to i64)
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %i0 = xor i64 %x, -1
-  %r = add i64 %i0, ptrtoint (i8* @g0 to i64)
+  %r = add i64 %i0, ptrtoint (ptr @g0 to i64)
   ret i64 %r
 }

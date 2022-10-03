@@ -22,17 +22,15 @@ define void @call_bad_ato(ptr %ps) {
 ; CHECK-NEXT:    store ptr [[LLR]], ptr [[PS2]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %p = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 0
 
-  %ir = call ptr @atoi(ptr %p)
-  %ps0 = getelementptr ptr, ptr %ps, i32 0
-  store ptr %ir, ptr %ps0
+  %ir = call ptr @atoi(ptr @a)
+  store ptr %ir, ptr %ps
 
-  %lr = call ptr @atol(ptr %p)
+  %lr = call ptr @atol(ptr @a)
   %ps1 = getelementptr ptr, ptr %ps, i32 1
   store ptr %lr, ptr %ps1
 
-  %llr = call ptr @atol(ptr %p)
+  %llr = call ptr @atol(ptr @a)
   %ps2 = getelementptr ptr, ptr %ps, i32 2
   store ptr %llr, ptr %ps2
 
@@ -47,9 +45,8 @@ define ptr @call_bad_strncasecmp() {
 ; CHECK-NEXT:    [[CMP:%.*]] = call ptr @strncasecmp(ptr nonnull @a, ptr getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1))
 ; CHECK-NEXT:    ret ptr [[CMP]]
 ;
-  %p0 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 0
-  %p1 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 1
-  %cmp = call ptr @strncasecmp(ptr %p0, ptr %p1)
+  %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
+  %cmp = call ptr @strncasecmp(ptr @a, ptr %p1)
   ret ptr %cmp
 }
 
@@ -61,9 +58,8 @@ define i1 @call_bad_strcoll() {
 ; CHECK-NEXT:    [[I:%.*]] = call i1 @strcoll(ptr nonnull @a, ptr getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1), ptr nonnull @a)
 ; CHECK-NEXT:    ret i1 [[I]]
 ;
-  %p0 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 0
-  %p1 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 1
-  %i = call i1 @strcoll(ptr %p0, ptr %p1, ptr %p0)
+  %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
+  %i = call i1 @strcoll(ptr @a, ptr %p1, ptr @a)
   ret i1 %i
 }
 
@@ -75,8 +71,7 @@ define ptr @call_bad_strndup() {
 ; CHECK-NEXT:    [[D:%.*]] = call ptr @strndup(ptr nonnull @a)
 ; CHECK-NEXT:    ret ptr [[D]]
 ;
-  %p = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 0
-  %d = call ptr @strndup(ptr %p)
+  %d = call ptr @strndup(ptr @a)
   ret ptr %d
 }
 
@@ -88,9 +83,8 @@ define i1 @call_bad_strtok() {
 ; CHECK-NEXT:    [[RET:%.*]] = call i1 @strtok(ptr nonnull @a, ptr getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1), i1 false)
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
-  %p0 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 0
-  %p1 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 1
-  %ret = call i1 @strtok(ptr %p0, ptr %p1, i1 0)
+  %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
+  %ret = call i1 @strtok(ptr @a, ptr %p1, i1 0)
   ret i1 %ret
 }
 
@@ -103,9 +97,8 @@ define i1 @call_bad_strtok_r() {
 ; CHECK-NEXT:    [[RET:%.*]] = call i1 @strtok_r(ptr nonnull @a, ptr getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1))
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
-  %p0 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 0
-  %p1 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 1
-  %ret = call i1 @strtok_r(ptr %p0, ptr %p1)
+  %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
+  %ret = call i1 @strtok_r(ptr @a, ptr %p1)
   ret i1 %ret
 }
 
@@ -116,7 +109,7 @@ declare i32 @strtoul(ptr, ptr)
 declare i64 @strtoll(ptr, ptr)
 declare i64 @strtoull(ptr, ptr)
 
-define void @call_bad_strto(i32* %psi32, i64* %psi64) {
+define void @call_bad_strto(ptr %psi32, ptr %psi64) {
 ; CHECK-LABEL: @call_bad_strto(
 ; CHECK-NEXT:    [[LR:%.*]] = call i32 @strtol(ptr nonnull @a, ptr null)
 ; CHECK-NEXT:    store i32 [[LR]], ptr [[PSI32:%.*]], align 4
@@ -130,23 +123,20 @@ define void @call_bad_strto(i32* %psi32, i64* %psi64) {
 ; CHECK-NEXT:    store i64 [[ULLR]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %p = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 0
 
-  %lr = call i32 @strtol(ptr %p, ptr null)
-  %ps0 = getelementptr i32, i32* %psi32, i32 0
-  store i32 %lr, i32* %ps0
+  %lr = call i32 @strtol(ptr @a, ptr null)
+  store i32 %lr, ptr %psi32
 
-  %ulr = call i32 @strtoul(ptr %p, ptr null)
-  %ps1 = getelementptr i32, i32* %psi32, i32 1
-  store i32 %ulr, i32* %ps1
+  %ulr = call i32 @strtoul(ptr @a, ptr null)
+  %ps1 = getelementptr i32, ptr %psi32, i32 1
+  store i32 %ulr, ptr %ps1
 
-  %llr = call i64 @strtoll(ptr %p, ptr null)
-  %ps2 = getelementptr i64, i64* %psi64, i32 0
-  store i64 %llr, i64* %ps2
+  %llr = call i64 @strtoll(ptr @a, ptr null)
+  store i64 %llr, ptr %psi64
 
-  %ullr = call i64 @strtoull(ptr %p, ptr null)
-  %ps3 = getelementptr i64, i64* %psi64, i32 3
-  store i64 %ullr, i64* %ps3
+  %ullr = call i64 @strtoull(ptr @a, ptr null)
+  %ps3 = getelementptr i64, ptr %psi64, i32 3
+  store i64 %ullr, ptr %ps3
 
   ret void
 }
@@ -159,8 +149,7 @@ define ptr @call_bad_strxfrm() {
 ; CHECK-NEXT:    [[RET:%.*]] = call ptr @strxfrm(ptr nonnull @a, ptr getelementptr inbounds ([2 x i8], ptr @a, i64 0, i64 1))
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %p0 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 0
-  %p1 = getelementptr [2 x i8], [2 x i8]* @a, i32 0, i32 1
-  %ret = call ptr @strxfrm(ptr %p0, ptr %p1)
+  %p1 = getelementptr [2 x i8], ptr @a, i32 0, i32 1
+  %ret = call ptr @strxfrm(ptr @a, ptr %p1)
   ret ptr %ret
 }

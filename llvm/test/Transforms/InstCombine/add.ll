@@ -455,31 +455,31 @@ define i32 @add_nsw_sext_add(i8 %x) {
 
 ; Negative test - extra use of the sext means increase of instructions.
 
-define i32 @add_nsw_sext_add_extra_use_1(i8 %x, i32* %p) {
+define i32 @add_nsw_sext_add_extra_use_1(i8 %x, ptr %p) {
 ; CHECK-LABEL: @add_nsw_sext_add_extra_use_1(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 42
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[ADD]] to i32
-; CHECK-NEXT:    store i32 [[EXT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[EXT]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[EXT]], 356
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %add = add nsw i8 %x, 42
   %ext = sext i8 %add to i32
-  store i32 %ext, i32* %p
+  store i32 %ext, ptr %p
   %r = add i32 %ext, 356
   ret i32 %r
 }
 
-define <2 x i32> @add_nsw_sext_add_vec_extra_use_2(<2 x i8> %x, <2 x i8>* %p) {
+define <2 x i32> @add_nsw_sext_add_vec_extra_use_2(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @add_nsw_sext_add_vec_extra_use_2(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i8> [[X:%.*]], <i8 42, i8 -5>
-; CHECK-NEXT:    store <2 x i8> [[ADD]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[ADD]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 398, i32 7>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %add = add nsw <2 x i8> %x, <i8 42, i8 -5>
-  store <2 x i8> %add, <2 x i8>* %p
+  store <2 x i8> %add, ptr %p
   %ext = sext <2 x i8> %add to <2 x i32>
   %r = add <2 x i32> %ext, <i32 356, i32 12>
   ret <2 x i32> %r
@@ -499,31 +499,31 @@ define <2 x i32> @add_nuw_zext_add_vec(<2 x i16> %x) {
 
 ; Negative test - extra use of the zext means increase of instructions.
 
-define i64 @add_nuw_zext_add_extra_use_1(i8 %x, i64* %p) {
+define i64 @add_nuw_zext_add_extra_use_1(i8 %x, ptr %p) {
 ; CHECK-LABEL: @add_nuw_zext_add_extra_use_1(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 42
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[ADD]] to i64
-; CHECK-NEXT:    store i64 [[EXT]], i64* [[P:%.*]], align 4
+; CHECK-NEXT:    store i64 [[EXT]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[EXT]], 356
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %add = add nuw i8 %x, 42
   %ext = zext i8 %add to i64
-  store i64 %ext, i64* %p
+  store i64 %ext, ptr %p
   %r = add i64 %ext, 356
   ret i64 %r
 }
 
-define i64 @add_nuw_zext_add_extra_use_2(i8 %x, i8* %p) {
+define i64 @add_nuw_zext_add_extra_use_2(i8 %x, ptr %p) {
 ; CHECK-LABEL: @add_nuw_zext_add_extra_use_2(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 42
-; CHECK-NEXT:    store i8 [[ADD]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[ADD]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[TMP1]], -314
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %add = add nuw i8 %x, 42
-  store i8 %add, i8* %p
+  store i8 %add, ptr %p
   %ext = zext i8 %add to i64
   %r = add i64 %ext, -356
   ret i64 %r
@@ -1206,17 +1206,17 @@ define i32 @and31_add(i1 %x, i1 %y) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use(i1 %x, i1 %y, i32* %p) {
+define i32 @lshr_add_use(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use(
 ; CHECK-NEXT:    [[XZ:%.*]] = zext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    store i32 [[XZ]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[XZ]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XZ]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xz = zext i1 %x to i32
-  store i32 %xz, i32* %p
+  store i32 %xz, ptr %p
   %ys = sext i1 %y to i32
   %sub = add i32 %xz, %ys
   %r = lshr i32 %sub, 31
@@ -1225,18 +1225,18 @@ define i32 @lshr_add_use(i1 %x, i1 %y, i32* %p) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use2(i1 %x, i1 %y, i32* %p) {
+define i32 @lshr_add_use2(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use2(
 ; CHECK-NEXT:    [[XZ:%.*]] = zext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    store i32 [[YS]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XZ]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xz = zext i1 %x to i32
   %ys = sext i1 %y to i32
-  store i32 %ys, i32* %p
+  store i32 %ys, ptr %p
   %sub = add i32 %xz, %ys
   %r = lshr i32 %sub, 31
   ret i32 %r
@@ -1332,17 +1332,17 @@ define i32 @and31_add_sexts(i1 %x, i1 %y) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use_sexts(i1 %x, i1 %y, i32* %p) {
+define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use_sexts(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    store i32 [[XS]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[XS]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
-  store i32 %xs, i32* %p
+  store i32 %xs, ptr %p
   %ys = sext i1 %y to i32
   %sub = add i32 %xs, %ys
   %r = lshr i32 %sub, 31
@@ -1351,18 +1351,18 @@ define i32 @lshr_add_use_sexts(i1 %x, i1 %y, i32* %p) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, i32* %p) {
+define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use2_sexts(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    store i32 [[YS]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
   %ys = sext i1 %y to i32
-  store i32 %ys, i32* %p
+  store i32 %ys, ptr %p
   %sub = add i32 %xs, %ys
   %r = lshr i32 %sub, 31
   ret i32 %r
