@@ -204,13 +204,23 @@ if (LIBCXX_ENABLE_SHARED)
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-      OUTPUT_NAME   "c++"
+      OUTPUT_NAME   "${LIBCXX_SHARED_OUTPUT_NAME}"
       VERSION       "${LIBCXX_LIBRARY_VERSION}"
       SOVERSION     "${LIBCXX_ABI_VERSION}"
       DEFINE_SYMBOL ""
   )
   cxx_add_common_build_flags(cxx_shared)
   cxx_set_common_defines(cxx_shared)
+
+  if(ZOS)
+    add_custom_command(TARGET cxx_shared POST_BUILD
+      COMMAND
+        ${LIBCXX_SOURCE_DIR}/utils/zos_rename_dll_side_deck.sh
+        $<TARGET_LINKER_FILE_NAME:cxx_shared> $<TARGET_FILE_NAME:cxx_shared> "${LIBCXX_DLL_NAME}"
+      COMMENT "Rename dll name inside the side deck file"
+      WORKING_DIRECTORY $<TARGET_FILE_DIR:cxx_shared>
+    )
+  endif()
 
   # Link against libc++abi
   if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
