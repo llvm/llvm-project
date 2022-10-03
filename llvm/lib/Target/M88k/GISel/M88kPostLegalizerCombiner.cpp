@@ -288,7 +288,7 @@ bool M88kPostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                             MachineIRBuilder &B) const {
   const auto *LI =
       MI.getParent()->getParent()->getSubtarget().getLegalizerInfo();
-  CombinerHelper Helper(Observer, B, KB, MDT, LI);
+  CombinerHelper Helper(Observer, B, /*IsPreLegalize=*/false, KB, MDT, LI);
   M88kGenPostLegalizerCombinerHelper Generated(GeneratedRuleCfg);
   return Generated.tryCombineAll(Observer, MI, B, Helper);
 }
