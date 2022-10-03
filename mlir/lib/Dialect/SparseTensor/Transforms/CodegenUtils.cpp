@@ -425,6 +425,61 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
   llvm_unreachable("Non-numeric type");
 }
 
+void mlir::sparse_tensor::genReshapeDstShape(
+    Location loc, PatternRewriter &rewriter, SmallVector<Value, 4> &dstShape,
+    ArrayRef<Value> srcShape, ArrayRef<int64_t> staticDstShape,
+    ArrayRef<ReassociationIndices> reassociation) {
+  // Collapse shape.
+  if (reassociation.size() < srcShape.size()) {
+    unsigned start = 0;
+    for (const auto &map : llvm::enumerate(reassociation)) {
+      auto dstDim = constantIndex(rewriter, loc, 1);
+      for (unsigned i = start; i < start + map.value().size(); i++) {
+        dstDim = rewriter.create<arith::MulIOp>(loc, dstDim, srcShape[i]);
+      }
+      dstShape.push_back(dstDim);
+      start = start + map.value().size();
+    }
+    assert(start == srcShape.size());
+    return;
+  }
+
+  // Expand shape.
+  assert(reassociation.size() == srcShape.size());
+  unsigned start = 0;
+  // Expand the i-th dimension in srcShape.
+  for (unsigned i = 0, size = srcShape.size(); i < size; i++) {
+    auto map = reassociation[i];
+    auto srcDim = srcShape[i];
+    // Iterate through dimensions expanded from the i-th dimension.
+    for (unsigned j = start; j < start + map.size(); j++) {
+      // There can be only one dynamic sized dimension among dimensions expanded
+      // from the i-th dimension in srcShape. For example, if srcDim = 8, then
+      // the expanded shape could be <2x?x2>, but not <2x?x?>.
+      if (staticDstShape[j] == ShapedType::kDynamicSize) {
+        // The expanded dimension has dynamic size. We compute the dimension
+        // by dividing srcDim by the product of the static dimensions.
+        int64_t product = 1;
+        for (unsigned k = start; k < start + map.size(); k++) {
+          if (staticDstShape[k] != ShapedType::kDynamicSize) {
+            product *= staticDstShape[k];
+          }
+        }
+        // Compute the dynamic dimension size.
+        Value productVal = constantIndex(rewriter, loc, product);
+        Value dynamicSize =
+            rewriter.create<arith::DivUIOp>(loc, srcDim, productVal);
+        dstShape.push_back(dynamicSize);
+      } else {
+        // The expanded dimension is statically known.
+        dstShape.push_back(constantIndex(rewriter, loc, staticDstShape[j]));
+      }
+    }
+    start = start + map.size();
+  }
+  assert(start == staticDstShape.size());
+}
+
 void mlir::sparse_tensor::translateIndicesArray(
     OpBuilder &builder, Location loc,
     ArrayRef<ReassociationIndices> reassociation, ValueRange srcIndices,
