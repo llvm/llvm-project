@@ -1697,10 +1697,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
 
       if (isa<ScalableVectorType>(VecTy))
         return NodeMap[V] = DAG.getSplatVector(VT, getCurSDLoc(), Op);
-
-      SmallVector<SDValue, 16> Ops;
-      Ops.assign(cast<FixedVectorType>(VecTy)->getNumElements(), Op);
-      return NodeMap[V] = DAG.getBuildVector(VT, getCurSDLoc(), Ops);
+      return NodeMap[V] = DAG.getSplatBuildVector(VT, getCurSDLoc(), Op);
     }
 
     llvm_unreachable("Unknown vector constant");
