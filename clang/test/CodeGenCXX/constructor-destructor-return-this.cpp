@@ -6,6 +6,8 @@
 //RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-unknown-fuchsia | FileCheck --check-prefix=CHECKFUCHSIA %s
 //RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=aarch64-unknown-fuchsia | FileCheck --check-prefix=CHECKFUCHSIA %s
 //RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=i386-pc-win32 -fno-rtti | FileCheck --check-prefix=CHECKMS %s
+//RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=i686-unknown-linux-gnu -fctor-dtor-return-this | FileCheck --check-prefix=CHECKI686RET %s
+//RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=aarch64-unknown-linux-gnu -fctor-dtor-return-this | FileCheck --check-prefix=CHECKAARCH64RET %s
 // FIXME: these tests crash on the bots when run with -triple=x86_64-pc-win32
 
 // Make sure we attach the 'returned' attribute to the 'this' parameter of
@@ -37,10 +39,15 @@ B::~B() { }
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1BD2Ev(%class.B* {{[^,]*}} %this)
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1BD1Ev(%class.B* {{[^,]*}} %this)
 
-// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
-// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
-// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BD2Ev(%class.B* {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BD1Ev(%class.B* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.B* @_ZN1BD2Ev(%class.B* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.B* @_ZN1BD1Ev(%class.B* {{[^,]*}} returned{{[^,]*}} %this)
+
+// CHECKI686RET-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} %this, i32* noundef %i)
+// CHECKI686RET-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} %this, i32* noundef %i)
+// CHECKI686RET-LABEL: define{{.*}} %class.B* @_ZN1BD2Ev(%class.B* {{[^,]*}} %this)
+// CHECKI686RET-LABEL: define{{.*}} %class.B* @_ZN1BD1Ev(%class.B* {{[^,]*}} %this)
 
 // CHECKIOS5-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} %this, i32* noundef %i)
 // CHECKIOS5-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} %this, i32* noundef %i)
@@ -74,13 +81,23 @@ C::~C() { }
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1CD0Ev(%class.C* {{[^,]*}} %this)
 // CHECKGEN-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(%class.C* noundef %this)
 
-// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CC2EPiPc(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
-// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CC1EPiPc(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
-// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CD2Ev(%class.C* {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CD1Ev(%class.C* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.C* @_ZN1CC2EPiPc(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.C* @_ZN1CC1EPiPc(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.C* @_ZN1CD2Ev(%class.C* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.C* @_ZN1CD1Ev(%class.C* {{[^,]*}} returned{{[^,]*}} %this)
 // CHECKARM-LABEL: define{{.*}} %class.C* @_ZThn8_N1CD1Ev(%class.C* noundef %this)
-// CHECKARM-LABEL: define{{.*}} void @_ZN1CD0Ev(%class.C* {{[^,]*}} %this)
+// CHECKAARCH64RET-LABEL: define{{.*}} %class.C* @_ZThn16_N1CD1Ev(%class.C* noundef %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} void @_ZN1CD0Ev(%class.C* {{[^,]*}} %this)
 // CHECKARM-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(%class.C* noundef %this)
+// CHECKAARCH64RET-LABEL: define{{.*}} void @_ZThn16_N1CD0Ev(%class.C* noundef %this)
+
+// CHECKI686RET-LABEL: define{{.*}} %class.C* @_ZN1CC2EPiPc(%class.C* {{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
+// CHECKI686RET-LABEL: define{{.*}} %class.C* @_ZN1CC1EPiPc(%class.C* {{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
+// CHECKI686RET-LABEL: define{{.*}} %class.C* @_ZN1CD2Ev(%class.C* {{[^,]*}} %this)
+// CHECKI686RET-LABEL: define{{.*}} %class.C* @_ZN1CD1Ev(%class.C* {{[^,]*}} %this)
+// CHECKI686RET-LABEL: define{{.*}} %class.C* @_ZThn8_N1CD1Ev(%class.C* noundef %this)
+// CHECKI686RET-LABEL: define{{.*}} void @_ZN1CD0Ev(%class.C* {{[^,]*}} %this)
+// CHECKI686RET-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(%class.C* noundef %this)
 
 // CHECKIOS5-LABEL: define{{.*}} %class.C* @_ZN1CC2EPiPc(%class.C* {{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
 // CHECKIOS5-LABEL: define{{.*}} %class.C* @_ZN1CC1EPiPc(%class.C* {{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
@@ -115,10 +132,15 @@ D::~D() { }
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1DD2Ev(%class.D* {{[^,]*}} %this, i8** noundef %vtt)
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1DD1Ev(%class.D* {{[^,]*}} %this)
 
-// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i8** noundef %vtt)
-// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
-// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DD2Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i8** noundef %vtt)
-// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i8** noundef %vtt)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.D* @_ZN1DD2Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i8** noundef %vtt)
+// CHECKARM-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
+
+// CHECKI686RET-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} %this, i8** noundef %vtt)
+// CHECKI686RET-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} %this)
+// CHECKI686RET-LABEL: define{{.*}} %class.D* @_ZN1DD2Ev(%class.D* {{[^,]*}} %this, i8** noundef %vtt)
+// CHECKI686RET-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} %this)
 
 // CHECKIOS5-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} %this, i8** noundef %vtt)
 // CHECKIOS5-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} %this)
@@ -147,17 +169,17 @@ void test_destructor() {
   e2->~E();
 }
 
-// CHECKARM-LABEL,CHECKFUCHSIA-LABEL: define{{.*}} void @_Z15test_destructorv()
+// CHECKARM-LABEL,CHECKFUCHSIA-LABEL,CHECKAARCH64RET-LABEL: define{{.*}} void @_Z15test_destructorv()
 
 // Verify that virtual calls to destructors are not marked with a 'returned'
 // this parameter at the call site...
-// CHECKARM: [[VFN:%.*]] = getelementptr inbounds %class.E* (%class.E*)*, %class.E* (%class.E*)**
-// CHECKARM: [[THUNK:%.*]] = load %class.E* (%class.E*)*, %class.E* (%class.E*)** [[VFN]]
+// CHECKARM,CHECKAARCH64RET: [[VFN:%.*]] = getelementptr inbounds %class.E* (%class.E*)*, %class.E* (%class.E*)**
+// CHECKARM,CHECKAARCH64RET: [[THUNK:%.*]] = load %class.E* (%class.E*)*, %class.E* (%class.E*)** [[VFN]]
 // CHECKFUCHSIA: [[THUNK_I8:%.*]] = call i8* @llvm.load.relative.i32(i8* {{.*}}, i32 0)
 // CHECKFUCHSIA: [[THUNK:%.*]] = bitcast i8* [[THUNK_I8]] to %class.E* (%class.E*)*
-// CHECKARM,CHECKFUCHSIA: call noundef %class.E* [[THUNK]](%class.E* {{[^,]*}} %
+// CHECKARM,CHECKFUCHSIA,CHECKAARCH64RET: call noundef %class.E* [[THUNK]](%class.E* {{[^,]*}} %
 
 // ...but static calls create declarations with 'returned' this
-// CHECKARM,CHECKFUCHSIA: {{%.*}} = call noundef %class.E* @_ZN1ED1Ev(%class.E* {{[^,]*}} %
+// CHECKARM,CHECKFUCHSIA,CHECKAARCH64RET: {{%.*}} = call noundef %class.E* @_ZN1ED1Ev(%class.E* {{[^,]*}} %
 
-// CHECKARM,CHECKFUCHSIA: declare noundef  %class.E* @_ZN1ED1Ev(%class.E* {{[^,]*}} returned{{[^,]*}})
+// CHECKARM,CHECKFUCHSIA,CHECKAARCH64RET: declare noundef  %class.E* @_ZN1ED1Ev(%class.E* {{[^,]*}} returned{{[^,]*}})
