@@ -1334,7 +1334,7 @@ def TileVectorOpV128 : MatrixTileVectorOperand<128, 4, MPR128, 1>;
 //
 
 class MatrixAsmOperand<string RC, int EltSize> : AsmOperandClass {
-  let Name = "Matrix";
+  let Name = "Matrix" # !if(EltSize, !cast<string>(EltSize), "");
   let DiagnosticType = "Invalid" # Name;
   let ParserMethod = "tryParseMatrixRegister";
   let RenderMethod = "addMatrixOperands";
@@ -1349,6 +1349,9 @@ class MatrixOperand<RegisterClass RC, int EltSize> : RegisterOperand<RC> {
 }
 
 def MatrixOp : MatrixOperand<MPR, 0>;
+// SME2 register operands and classes
+def MatrixOp32 : MatrixOperand<MPR, 32>;
+def MatrixOp64 : MatrixOperand<MPR, 64>;
 
 class MatrixTileListAsmOperand : AsmOperandClass {
   let Name = "MatrixTileList";
@@ -1366,11 +1369,17 @@ class MatrixTileListOperand : Operand<i8> {
 
 def MatrixTileList : MatrixTileListOperand<>;
 
+def MatrixIndexGPR32_8_11 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 8, 11)> {
+   let DiagnosticType = "InvalidMatrixIndexGPR32_8_11";
+}
 def MatrixIndexGPR32_12_15 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 12, 15)> {
   let DiagnosticType = "InvalidMatrixIndexGPR32_12_15";
 }
+def MatrixIndexGPR32Op8_11 : RegisterOperand<MatrixIndexGPR32_8_11> {
+  let EncoderMethod = "encodeMatrixIndexGPR32<AArch64::W8>";
+}
 def MatrixIndexGPR32Op12_15 : RegisterOperand<MatrixIndexGPR32_12_15> {
-  let EncoderMethod = "encodeMatrixIndexGPR32";
+  let EncoderMethod = "encodeMatrixIndexGPR32<AArch64::W12>";
 }
 
 def SVCROperand : AsmOperandClass {
