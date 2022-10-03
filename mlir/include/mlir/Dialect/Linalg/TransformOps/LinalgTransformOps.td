@@ -705,14 +705,14 @@ def TileToForeachThreadOp :
       - the new scf.foreach_thread op,
       - the tiled op that implements TilingInterface.
 
-    ### Example using `num_threads`
+    #### Example using `num_threads`
 
     ```
     %0 = pdl_match @match_matmul in %arg1
     %3:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20]
     ```
 
-    ### Example using `tile_sizes`
+    #### Example using `tile_sizes`
 
     ```
     %0 = pdl_match @match_matmul in %arg1
