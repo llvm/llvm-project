@@ -1241,7 +1241,8 @@ static void createAliases() {
   for (const auto &pair : config->aliasedSymbols) {
     if (const auto &sym = symtab->find(pair.first)) {
       if (const auto &defined = dyn_cast<Defined>(sym)) {
-        symtab->aliasDefined(defined, pair.second, defined->getFile());
+        symtab->aliasDefined(defined, pair.second, defined->getFile())
+            ->noDeadStrip = true;
       } else {
         error("TODO: support aliasing to symbols of kind " +
               Twine(sym->kind()));
