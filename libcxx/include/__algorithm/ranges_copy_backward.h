@@ -14,6 +14,7 @@
 #include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/reverse_iterator.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
