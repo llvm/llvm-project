@@ -1261,8 +1261,7 @@ OpFoldResult arith::FPToSIOp::fold(ArrayRef<Attribute> operands) {
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-bool arith::IndexCastOp::areCastCompatible(TypeRange inputs,
-                                           TypeRange outputs) {
+static bool areIndexCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (!areValidCastInputsAndOutputs(inputs, outputs))
     return false;
 
@@ -1273,6 +1272,11 @@ bool arith::IndexCastOp::areCastCompatible(TypeRange inputs,
 
   return (srcType.isIndex() && dstType.isSignlessInteger()) ||
          (srcType.isSignlessInteger() && dstType.isIndex());
+}
+
+bool arith::IndexCastOp::areCastCompatible(TypeRange inputs,
+                                           TypeRange outputs) {
+  return areIndexCastCompatible(inputs, outputs);
 }
 
 OpFoldResult arith::IndexCastOp::fold(ArrayRef<Attribute> operands) {
@@ -1288,6 +1292,30 @@ OpFoldResult arith::IndexCastOp::fold(ArrayRef<Attribute> operands) {
 void arith::IndexCastOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns.add<IndexCastOfIndexCast, IndexCastOfExtSI>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// IndexCastUIOp
+//===----------------------------------------------------------------------===//
+
+bool arith::IndexCastUIOp::areCastCompatible(TypeRange inputs,
+                                             TypeRange outputs) {
+  return areIndexCastCompatible(inputs, outputs);
+}
+
+OpFoldResult arith::IndexCastUIOp::fold(ArrayRef<Attribute> operands) {
+  // index_castui(constant) -> constant
+  // A little hack because we go through int. Otherwise, the size of the
+  // constant might need to change.
+  if (auto value = operands[0].dyn_cast_or_null<IntegerAttr>())
+    return IntegerAttr::get(getType(), value.getUInt());
+
+  return {};
+}
+
+void arith::IndexCastUIOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<IndexCastUIOfIndexCastUI, IndexCastUIOfExtUI>(context);
 }
 
 //===----------------------------------------------------------------------===//

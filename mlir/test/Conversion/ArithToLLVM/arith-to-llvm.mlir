@@ -92,6 +92,23 @@ func.func @vector_index_cast(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
   return
 }
 
+func.func @index_castui(%arg0: index, %arg1: i1) {
+// CHECK: = llvm.trunc %0 : i{{.*}} to i1
+  %0 = arith.index_castui %arg0: index to i1
+// CHECK-NEXT: = llvm.zext %arg1 : i1 to i{{.*}}
+  %1 = arith.index_castui %arg1: i1 to index
+  return
+}
+
+// CHECK-LABEL: @vector_index_castui
+func.func @vector_index_castui(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
+// CHECK: = llvm.trunc %{{.*}} : vector<2xi{{.*}}> to vector<2xi1>
+  %0 = arith.index_castui %arg0: vector<2xindex> to vector<2xi1>
+// CHECK-NEXT: = llvm.zext %{{.*}} : vector<2xi1> to vector<2xi{{.*}}>
+  %1 = arith.index_castui %arg1: vector<2xi1> to vector<2xindex>
+  return
+}
+
 // Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
 func.func @sitofp(%arg0 : i32, %arg1 : i64) {

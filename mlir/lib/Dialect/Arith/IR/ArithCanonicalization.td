@@ -152,6 +152,21 @@ def IndexCastOfExtSI :
     Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x)), (Arith_IndexCastOp $x)>;
 
 //===----------------------------------------------------------------------===//
+// IndexCastUIOp
+//===----------------------------------------------------------------------===//
+
+// index_castui(index_castui(x)) -> x, if dstType == srcType.
+def IndexCastUIOfIndexCastUI :
+    Pat<(Arith_IndexCastUIOp:$res (Arith_IndexCastUIOp $x)),
+        (replaceWithValue $x),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
+
+// index_castui(extui(x)) -> index_castui(x)
+def IndexCastUIOfExtUI :
+    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x)), (Arith_IndexCastUIOp $x)>;
+
+
+//===----------------------------------------------------------------------===//
 // BitcastOp
 //===----------------------------------------------------------------------===//
 
