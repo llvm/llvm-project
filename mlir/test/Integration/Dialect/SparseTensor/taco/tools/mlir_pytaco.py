@@ -353,7 +353,7 @@ class Format:
   def get_permutation_and_sparsity(self) -> Tuple[np.ndarray, np.ndarray]:
     """Constructs the numpy arrays for the permutation and sparsity."""
     perm = np.array(self.ordering.ordering, dtype=np.ulonglong)
-    a = [0 if s == ModeFormat.DENSE else 1 for s in self.format_pack.formats]
+    a = [f.value for f in self.format_pack.formats]
     sparse = np.array(a, dtype=np.uint8)
     return (perm, sparse)
 
