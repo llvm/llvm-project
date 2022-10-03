@@ -161,9 +161,9 @@ define <2 x float> @fadd_x_n0_vec_undef_elt(<2 x float> %a) {
   ret <2 x float> %ret
 }
 
-; fmul 1.0, X ==> X
-define double @fmul_1_X(double %a) {
-; CHECK-LABEL: @fmul_1_X(
+; fmul X, 1.0 ==> X
+define double @fmul_X_1(double %a) {
+; CHECK-LABEL: @fmul_X_1(
 ; CHECK-NEXT:    ret double [[A:%.*]]
 ;
   %b = fmul double 1.0, %a
