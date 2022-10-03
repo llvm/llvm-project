@@ -1414,8 +1414,7 @@ LogicalResult BytecodeReader::parseIRSection(ArrayRef<uint8_t> sectionData,
   // Splice the parsed operations over to the provided top-level block.
   auto &parsedOps = moduleOp->getBody()->getOperations();
   auto &destOps = block->getOperations();
-  destOps.splice(destOps.empty() ? destOps.end() : std::prev(destOps.end()),
-                 parsedOps, parsedOps.begin(), parsedOps.end());
+  destOps.splice(destOps.end(), parsedOps, parsedOps.begin(), parsedOps.end());
   return success();
 }
 
