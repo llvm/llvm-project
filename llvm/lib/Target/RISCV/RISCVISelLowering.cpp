@@ -4192,9 +4192,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // Lower vector SELECTs to VSELECTs by splatting the condition.
   if (VT.isVector()) {
     MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
-    SDValue CondSplat = VT.isScalableVector()
-                            ? DAG.getSplatVector(SplatCondVT, DL, CondV)
-                            : DAG.getSplatBuildVector(SplatCondVT, DL, CondV);
+    SDValue CondSplat = DAG.getSplat(SplatCondVT, DL, CondV);
     return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
