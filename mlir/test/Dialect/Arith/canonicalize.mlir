@@ -308,6 +308,15 @@ func.func @indexCastOfSignExtend(%arg0: i8) -> index {
   return %idx : index
 }
 
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
+//       CHECK:   return %[[res]]
+func.func @indexCastUIOfUnsignedExtend(%arg0: i8) -> index {
+  %ext = arith.extui %arg0 : i8 to i16
+  %idx = arith.index_castui %ext : i16 to index
+  return %idx : index
+}
+
 // CHECK-LABEL: @signExtendConstant
 //       CHECK:   %[[cres:.+]] = arith.constant -2 : i16
 //       CHECK:   return %[[cres]]
