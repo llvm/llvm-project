@@ -274,6 +274,10 @@ enum affinity_top_method __kmp_affinity_top_method =
 
 // Regular thread affinity settings from KMP_AFFINITY
 kmp_affinity_t __kmp_affinity = KMP_AFFINITY_INIT("KMP_AFFINITY");
+// Hidden helper thread affinity settings from KMP_HIDDEN_HELPER_AFFINITY
+kmp_affinity_t __kmp_hh_affinity =
+    KMP_AFFINITY_INIT("KMP_HIDDEN_HELPER_AFFINITY");
+kmp_affinity_t *__kmp_affinities[] = {&__kmp_affinity, &__kmp_hh_affinity};
 
 char *__kmp_cpuinfo_file = NULL;
 

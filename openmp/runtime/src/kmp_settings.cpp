@@ -1247,7 +1247,7 @@ static void __kmp_stg_parse_num_hidden_helper_threads(char const *name,
   if (__kmp_hidden_helper_threads_num == 0) {
     __kmp_enable_hidden_helper = FALSE;
   } else {
-    // Since the main thread of hidden helper team dooes not participate
+    // Since the main thread of hidden helper team does not participate
     // in tasks execution let's increment the number of threads by one
     // so that requested number of threads do actual job.
     __kmp_hidden_helper_threads_num++;
@@ -2542,9 +2542,21 @@ static void __kmp_stg_parse_affinity(char const *name, char const *value,
   __kmp_parse_affinity_env(name, value, &__kmp_affinity);
 
 } // __kmp_stg_parse_affinity
+static void __kmp_stg_parse_hh_affinity(char const *name, char const *value,
+                                        void *data) {
+  __kmp_parse_affinity_env(name, value, &__kmp_hh_affinity);
+  // Warn about unused parts of hidden helper affinity settings if specified.
+  if (__kmp_hh_affinity.flags.reset) {
+    KMP_WARNING(AffInvalidParam, name, "reset");
+  }
+  if (__kmp_hh_affinity.flags.respect != affinity_respect_mask_default) {
+    KMP_WARNING(AffInvalidParam, name, "respect");
+  }
+}
 
 static void __kmp_print_affinity_env(kmp_str_buf_t *buffer, char const *name,
                                      const kmp_affinity_t &affinity) {
+  bool is_hh_affinity = (&affinity == &__kmp_hh_affinity);
   if (__kmp_env_format) {
     KMP_STR_BUF_PRINT_NAME_EX(name);
   } else {
@@ -2561,15 +2573,19 @@ static void __kmp_print_affinity_env(kmp_str_buf_t *buffer, char const *name,
     __kmp_str_buf_print(buffer, "%s,", "nowarnings");
   }
   if (KMP_AFFINITY_CAPABLE()) {
-    if (affinity.flags.respect) {
-      __kmp_str_buf_print(buffer, "%s,", "respect");
-    } else {
-      __kmp_str_buf_print(buffer, "%s,", "norespect");
-    }
-    if (affinity.flags.reset) {
-      __kmp_str_buf_print(buffer, "%s,", "reset");
-    } else {
-      __kmp_str_buf_print(buffer, "%s,", "noreset");
+    // Hidden helper affinity does not affect global reset
+    // or respect flags. That is still solely controlled by KMP_AFFINITY.
+    if (!is_hh_affinity) {
+      if (affinity.flags.respect) {
+        __kmp_str_buf_print(buffer, "%s,", "respect");
+      } else {
+        __kmp_str_buf_print(buffer, "%s,", "norespect");
+      }
+      if (affinity.flags.reset) {
+        __kmp_str_buf_print(buffer, "%s,", "reset");
+      } else {
+        __kmp_str_buf_print(buffer, "%s,", "noreset");
+      }
     }
     __kmp_str_buf_print(buffer, "granularity=%s,",
                         __kmp_hw_get_keyword(affinity.gran, false));
@@ -2619,6 +2635,10 @@ static void __kmp_print_affinity_env(kmp_str_buf_t *buffer, char const *name,
 static void __kmp_stg_print_affinity(kmp_str_buf_t *buffer, char const *name,
                                      void *data) {
   __kmp_print_affinity_env(buffer, name, __kmp_affinity);
+}
+static void __kmp_stg_print_hh_affinity(kmp_str_buf_t *buffer, char const *name,
+                                        void *data) {
+  __kmp_print_affinity_env(buffer, name, __kmp_hh_affinity);
 }
 
 #ifdef KMP_GOMP_COMPAT
@@ -5472,6 +5492,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if KMP_AFFINITY_SUPPORTED
     {"KMP_AFFINITY", __kmp_stg_parse_affinity, __kmp_stg_print_affinity, NULL,
      0, 0},
+    {"KMP_HIDDEN_HELPER_AFFINITY", __kmp_stg_parse_hh_affinity,
+     __kmp_stg_print_hh_affinity, NULL, 0, 0},
 #ifdef KMP_GOMP_COMPAT
     {"GOMP_CPU_AFFINITY", __kmp_stg_parse_gomp_cpu_affinity, NULL,
      /* no print */ NULL, 0, 0},
@@ -6199,10 +6221,14 @@ void __kmp_env_initialize(char const *string) {
           __kmp_affinity.type = affinity_compact;
           __kmp_nested_proc_bind.bind_types[0] = proc_bind_intel;
         }
+        if (__kmp_hh_affinity.type == affinity_default)
+          __kmp_hh_affinity.type = affinity_compact;
         if (__kmp_affinity_top_method == affinity_top_method_default)
           __kmp_affinity_top_method = affinity_top_method_all;
         if (__kmp_affinity.gran == KMP_HW_UNKNOWN)
           __kmp_affinity.gran = KMP_HW_PROC_GROUP;
+        if (__kmp_hh_affinity.gran == KMP_HW_UNKNOWN)
+          __kmp_hh_affinity.gran = KMP_HW_PROC_GROUP;
       } else
 
 #endif /* KMP_GROUP_AFFINITY */
@@ -6242,6 +6268,8 @@ void __kmp_env_initialize(char const *string) {
             __kmp_affinity.type = affinity_none;
           }
         }
+        if (__kmp_hh_affinity.type == affinity_default)
+          __kmp_hh_affinity.type = affinity_none;
         if ((__kmp_affinity.gran == KMP_HW_UNKNOWN) &&
             (__kmp_affinity.gran_levels < 0)) {
 #if KMP_MIC_SUPPORTED
@@ -6253,6 +6281,17 @@ void __kmp_env_initialize(char const *string) {
             __kmp_affinity.gran = KMP_HW_CORE;
           }
         }
+        if ((__kmp_hh_affinity.gran == KMP_HW_UNKNOWN) &&
+            (__kmp_hh_affinity.gran_levels < 0)) {
+#if KMP_MIC_SUPPORTED
+          if (__kmp_mic_type != non_mic) {
+            __kmp_hh_affinity.gran = KMP_HW_THREAD;
+          } else
+#endif
+          {
+            __kmp_hh_affinity.gran = KMP_HW_CORE;
+          }
+        }
         if (__kmp_affinity_top_method == affinity_top_method_default) {
           __kmp_affinity_top_method = affinity_top_method_all;
         }
@@ -6260,7 +6299,8 @@ void __kmp_env_initialize(char const *string) {
     }
 
 #ifdef KMP_DEBUG
-    __kmp_print_affinity_settings(&__kmp_affinity);
+    for (const kmp_affinity_t *affinity : __kmp_affinities)
+      __kmp_print_affinity_settings(affinity);
     KMP_DEBUG_ASSERT(__kmp_nested_proc_bind.bind_types[0] != proc_bind_default);
     K_DIAG(1, ("__kmp_nested_proc_bind.bind_types[0] == %d\n",
                __kmp_nested_proc_bind.bind_types[0]));

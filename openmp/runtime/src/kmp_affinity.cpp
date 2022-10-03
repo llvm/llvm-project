@@ -174,9 +174,10 @@ int kmp_hw_thread_t::compare_compact(const void *a, const void *b) {
   const kmp_hw_thread_t *aa = (const kmp_hw_thread_t *)a;
   const kmp_hw_thread_t *bb = (const kmp_hw_thread_t *)b;
   int depth = __kmp_topology->get_depth();
-  KMP_DEBUG_ASSERT(__kmp_affinity.compact >= 0);
-  KMP_DEBUG_ASSERT(__kmp_affinity.compact <= depth);
-  for (i = 0; i < __kmp_affinity.compact; i++) {
+  int compact = __kmp_topology->compact;
+  KMP_DEBUG_ASSERT(compact >= 0);
+  KMP_DEBUG_ASSERT(compact <= depth);
+  for (i = 0; i < compact; i++) {
     int j = depth - i - 1;
     if (aa->sub_ids[j] < bb->sub_ids[j])
       return -1;
@@ -184,7 +185,7 @@ int kmp_hw_thread_t::compare_compact(const void *a, const void *b) {
       return 1;
   }
   for (; i < depth; i++) {
-    int j = i - __kmp_affinity.compact;
+    int j = i - compact;
     if (aa->sub_ids[j] < bb->sub_ids[j])
       return -1;
     if (aa->sub_ids[j] > bb->sub_ids[j])
@@ -583,6 +584,7 @@ kmp_topology_t *kmp_topology_t::allocate(int nproc, int ndepth,
   retval->count = arr + 2 * (size_t)KMP_HW_LAST;
   retval->num_core_efficiencies = 0;
   retval->num_core_types = 0;
+  retval->compact = 0;
   for (int i = 0; i < KMP_HW_MAX_NUM_CORE_TYPES; ++i)
     retval->core_types[i] = KMP_HW_CORE_TYPE_UNKNOWN;
   KMP_FOREACH_HW_TYPE(type) { retval->equivalent[type] = KMP_HW_UNKNOWN; }
@@ -4287,6 +4289,7 @@ static bool __kmp_aux_affinity_initialize_topology(kmp_affinity_t &affinity) {
 
 static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
   bool is_regular_affinity = (&affinity == &__kmp_affinity);
+  bool is_hidden_helper_affinity = (&affinity == &__kmp_hh_affinity);
   const char *env_var = affinity.env_var;
 
   if (affinity.flags.initialized) {
@@ -4335,7 +4338,8 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
 
   case affinity_explicit:
     KMP_DEBUG_ASSERT(affinity.proclist != NULL);
-    if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_intel) {
+    if (is_hidden_helper_affinity ||
+        __kmp_nested_proc_bind.bind_types[0] == proc_bind_intel) {
       __kmp_affinity_process_proclist(affinity);
     } else {
       __kmp_affinity_process_placelist(affinity);
@@ -4391,7 +4395,7 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
     goto sortTopology;
 
   case affinity_balanced:
-    if (depth <= 1) {
+    if (depth <= 1 || is_hidden_helper_affinity) {
       KMP_AFF_WARNING(affinity, AffBalancedNotAvail, env_var);
       affinity.type = affinity_none;
       __kmp_create_affinity_none_places(affinity);
@@ -4451,7 +4455,8 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
 
     if ((__kmp_nested_proc_bind.bind_types[0] != proc_bind_intel) &&
         (__kmp_affinity_num_places > 0) &&
-        ((unsigned)__kmp_affinity_num_places < affinity.num_masks)) {
+        ((unsigned)__kmp_affinity_num_places < affinity.num_masks) &&
+        !is_hidden_helper_affinity) {
       affinity.num_masks = __kmp_affinity_num_places;
     }
 
@@ -4459,7 +4464,7 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
 
     // Sort the topology table according to the current setting of
     // affinity.compact, then fill out affinity.masks.
-    __kmp_topology->sort_compact();
+    __kmp_topology->sort_compact(affinity);
     {
       int i;
       unsigned j;
@@ -4510,8 +4515,7 @@ void __kmp_affinity_initialize(kmp_affinity_t &affinity) {
 }
 
 void __kmp_affinity_uninitialize(void) {
-  {
-    kmp_affinity_t *affinity = &__kmp_affinity;
+  for (kmp_affinity_t *affinity : __kmp_affinities) {
     if (affinity->masks != NULL)
       KMP_CPU_FREE_ARRAY(affinity->masks, affinity->num_masks);
     if (affinity->os_id_masks != NULL)
@@ -4546,6 +4550,21 @@ void __kmp_affinity_uninitialize(void) {
   KMPAffinity::destroy_api();
 }
 
+static void __kmp_select_mask_by_gtid(int gtid, const kmp_affinity_t *affinity,
+                                      int *place, kmp_affin_mask_t **mask) {
+  int mask_idx;
+  bool is_hidden_helper = KMP_HIDDEN_HELPER_THREAD(gtid);
+  if (is_hidden_helper)
+    // The first gtid is the regular primary thread, the second gtid is the main
+    // thread of hidden team which does not participate in task execution.
+    mask_idx = gtid - 2;
+  else
+    mask_idx = __kmp_adjust_gtid_for_hidden_helpers(gtid);
+  KMP_DEBUG_ASSERT(affinity->num_masks > 0);
+  *place = (mask_idx + affinity->offset) % affinity->num_masks;
+  *mask = KMP_CPU_INDEX(affinity->masks, *place);
+}
+
 void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
   if (!KMP_AFFINITY_CAPABLE()) {
     return;
@@ -4565,13 +4584,20 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
   // same as the mask of the initialization thread.
   kmp_affin_mask_t *mask;
   int i;
-  const kmp_affinity_t *affinity = &__kmp_affinity;
-  const char *env_var = affinity->env_var;
+  const kmp_affinity_t *affinity;
+  const char *env_var;
+  bool is_hidden_helper = KMP_HIDDEN_HELPER_THREAD(gtid);
 
-  if (KMP_AFFINITY_NON_PROC_BIND) {
+  if (is_hidden_helper)
+    affinity = &__kmp_hh_affinity;
+  else
+    affinity = &__kmp_affinity;
+  env_var = affinity->env_var;
+
+  if (KMP_AFFINITY_NON_PROC_BIND || is_hidden_helper) {
     if ((affinity->type == affinity_none) ||
         (affinity->type == affinity_balanced) ||
-        KMP_HIDDEN_HELPER_THREAD(gtid)) {
+        KMP_HIDDEN_HELPER_MAIN_THREAD(gtid)) {
 #if KMP_GROUP_AFFINITY
       if (__kmp_num_proc_groups > 1) {
         return;
@@ -4581,14 +4607,10 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
       i = 0;
       mask = __kmp_affin_fullMask;
     } else {
-      int mask_idx = __kmp_adjust_gtid_for_hidden_helpers(gtid);
-      KMP_DEBUG_ASSERT(affinity->num_masks > 0);
-      i = (mask_idx + affinity->offset) % affinity->num_masks;
-      mask = KMP_CPU_INDEX(affinity->masks, i);
+      __kmp_select_mask_by_gtid(gtid, affinity, &i, &mask);
     }
   } else {
-    if ((!isa_root) || KMP_HIDDEN_HELPER_THREAD(gtid) ||
-        (__kmp_nested_proc_bind.bind_types[0] == proc_bind_false)) {
+    if (!isa_root || __kmp_nested_proc_bind.bind_types[0] == proc_bind_false) {
 #if KMP_GROUP_AFFINITY
       if (__kmp_num_proc_groups > 1) {
         return;
@@ -4598,17 +4620,12 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
       i = KMP_PLACE_ALL;
       mask = __kmp_affin_fullMask;
     } else {
-      // int i = some hash function or just a counter that doesn't
-      // always start at 0.  Use adjusted gtid for now.
-      int mask_idx = __kmp_adjust_gtid_for_hidden_helpers(gtid);
-      KMP_DEBUG_ASSERT(affinity->num_masks > 0);
-      i = (mask_idx + affinity->offset) % affinity->num_masks;
-      mask = KMP_CPU_INDEX(affinity->masks, i);
+      __kmp_select_mask_by_gtid(gtid, affinity, &i, &mask);
     }
   }
 
   th->th.th_current_place = i;
-  if (isa_root || KMP_HIDDEN_HELPER_THREAD(gtid)) {
+  if (isa_root && !is_hidden_helper) {
     th->th.th_new_place = i;
     th->th.th_first_place = 0;
     th->th.th_last_place = affinity->num_masks - 1;
@@ -4629,27 +4646,17 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
 
   KMP_CPU_COPY(th->th.th_affin_mask, mask);
 
-  if (affinity->flags.verbose && !KMP_HIDDEN_HELPER_THREAD(gtid)
-      /* to avoid duplicate printing (will be correctly printed on barrier) */
-      && (affinity->type == affinity_none ||
-          (i != KMP_PLACE_ALL && affinity->type != affinity_balanced))) {
+  /* to avoid duplicate printing (will be correctly printed on barrier) */
+  if (affinity->flags.verbose &&
+      (affinity->type == affinity_none ||
+       (i != KMP_PLACE_ALL && affinity->type != affinity_balanced)) &&
+      !KMP_HIDDEN_HELPER_MAIN_THREAD(gtid)) {
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
                               th->th.th_affin_mask);
     KMP_INFORM(BoundToOSProcSet, env_var, (kmp_int32)getpid(), __kmp_gettid(),
                gtid, buf);
   }
-
-#if KMP_DEBUG
-  // Hidden helper thread affinity only printed for debug builds
-  if (affinity->flags.verbose && KMP_HIDDEN_HELPER_THREAD(gtid)) {
-    char buf[KMP_AFFIN_MASK_PRINT_LEN];
-    __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
-                              th->th.th_affin_mask);
-    KMP_INFORM(BoundToOSProcSet, "KMP_AFFINITY (hidden helper thread)",
-               (kmp_int32)getpid(), __kmp_gettid(), gtid, buf);
-  }
-#endif
 
 #if KMP_OS_WINDOWS
   // On Windows* OS, the process affinity mask might have changed. If the user
@@ -4663,7 +4670,8 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
 }
 
 void __kmp_affinity_set_place(int gtid) {
-  if (!KMP_AFFINITY_CAPABLE()) {
+  // Hidden helper threads should not be affected by OMP_PLACES/OMP_PROC_BIND
+  if (!KMP_AFFINITY_CAPABLE() || KMP_HIDDEN_HELPER_THREAD(gtid)) {
     return;
   }
 
