@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-transform-dialect-interpreter -verify-diagnostics -allow-unregistered-dialect | FileCheck %s
 
-// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (((d0 - d1) floordiv d2) mod 2)>
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
 // CHECK-LABEL: func @multi_buffer
@@ -17,7 +17,7 @@ func.func @multi_buffer(%in: memref<16xf32>) {
 
   // CHECK: scf.for %[[IV:.*]] = %[[C0]]
   scf.for %i0 = %c0 to %c16 step %c4 {
-    // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]], %[[C0]], %[[C4]])
+    // CHECK: %[[I:.*]] = affine.apply #[[$MAP0]](%[[IV]])
     // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 4] [1, 1] : memref<2x4xf32> to memref<4xf32, strided<[1], offset: ?>>
     %1 = memref.subview %in[%i0] [4] [1] : memref<16xf32> to memref<4xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
     // CHECK: memref.copy %{{.*}}, %[[SV]] : memref<4xf32, #[[$MAP1]]> to memref<4xf32, strided<[1], offset: ?>>
