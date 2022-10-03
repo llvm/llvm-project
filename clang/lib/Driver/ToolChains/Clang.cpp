@@ -3103,7 +3103,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   if (!MathErrno && AssociativeMath && ReciprocalMath && !SignedZeros &&
       ApproxFunc && !TrappingMath)
-    CmdArgs.push_back("-menable-unsafe-fp-math");
+    CmdArgs.push_back("-funsafe-math-optimizations");
 
   if (!SignedZeros)
     CmdArgs.push_back("-fno-signed-zeros");
