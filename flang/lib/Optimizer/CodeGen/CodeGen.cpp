@@ -1349,8 +1349,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
 
     llvm::SmallVector<mlir::Value> typeparams = lenParams;
     if constexpr (!std::is_same_v<BOX, fir::EmboxOp>) {
-      if (!box.substr().empty() && fir::hasDynamicSize(boxTy.getEleTy()))
-        typeparams.push_back(box.substr()[1]);
+      if (!box.getSubstr().empty() && fir::hasDynamicSize(boxTy.getEleTy()))
+        typeparams.push_back(box.getSubstr()[1]);
     }
 
     // Write each of the fields with the appropriate values
@@ -1461,7 +1461,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
            "fir.embox codegen dynamic size component in derived type");
     indices.append(operands.begin() + xbox.subcomponentOffset(),
                    operands.begin() + xbox.subcomponentOffset() +
-                       xbox.subcomponent().size());
+                       xbox.getSubcomponent().size());
   }
 
   /// If the embox is not in a globalOp body, allocate storage for the box;
@@ -1534,11 +1534,11 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::IntegerType::get(xbox.getContext(), 64);
     mlir::Value base = operands[0];
-    assert(!xbox.shape().empty() && "must have a shape");
+    assert(!xbox.getShape().empty() && "must have a shape");
     unsigned shapeOffset = xbox.shapeOffset();
-    bool hasShift = !xbox.shift().empty();
+    bool hasShift = !xbox.getShift().empty();
     unsigned shiftOffset = xbox.shiftOffset();
-    bool hasSlice = !xbox.slice().empty();
+    bool hasSlice = !xbox.getSlice().empty();
     unsigned sliceOffset = xbox.sliceOffset();
     mlir::Location loc = xbox.getLoc();
     mlir::Value zero = genConstantIndex(loc, i64Ty, rewriter, 0);
@@ -1549,7 +1549,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     llvm::SmallVector<mlir::Value> cstInteriorIndices;
     unsigned constRows = 0;
     mlir::Value ptrOffset = zero;
-    mlir::Type memEleTy = fir::dyn_cast_ptrEleTy(xbox.memref().getType());
+    mlir::Type memEleTy = fir::dyn_cast_ptrEleTy(xbox.getMemref().getType());
     assert(memEleTy.isa<fir::SequenceType>());
     auto seqTy = memEleTy.cast<fir::SequenceType>();
     mlir::Type seqEleTy = seqTy.getEleTy();
@@ -1567,8 +1567,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       constRows = seqTy.getConstantRows();
     }
 
-    const auto hasSubcomp = !xbox.subcomponent().empty();
-    const bool hasSubstr = !xbox.substr().empty();
+    const auto hasSubcomp = !xbox.getSubcomponent().empty();
+    const bool hasSubstr = !xbox.getSubstr().empty();
     // Initial element stride that will be use to compute the step in
     // each dimension.
     mlir::Value prevDimByteStride = eleSize;
@@ -1612,7 +1612,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
               rewriter.create<mlir::LLVM::AddOp>(loc, i64Ty, dimOff, ptrOffset);
         }
         if (mlir::isa_and_nonnull<fir::UndefOp>(
-                xbox.slice()[3 * di + 1].getDefiningOp())) {
+                xbox.getSlice()[3 * di + 1].getDefiningOp())) {
           // This dimension contains a scalar expression in the array slice op.
           // The dimension is loop invariant, will be dropped, and will not
           // appear in the descriptor.
@@ -1678,7 +1678,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       llvm::SmallVector<mlir::Value> fieldIndices;
       llvm::Optional<mlir::Value> substringOffset;
       if (hasSubcomp)
-        getSubcomponentIndices(xbox, xbox.memref(), operands, fieldIndices);
+        getSubcomponentIndices(xbox, xbox.getMemref(), operands, fieldIndices);
       if (hasSubstr)
         substringOffset = operands[xbox.substrOffset()];
       base = genBoxOffsetGep(rewriter, loc, base, ptrOffset, cstInteriorIndices,
@@ -1748,7 +1748,7 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
     mlir::Value baseAddr =
         loadBaseAddrFromBox(loc, baseTy, loweredBox, rewriter);
 
-    if (!rebox.slice().empty() || !rebox.subcomponent().empty())
+    if (!rebox.getSlice().empty() || !rebox.getSubcomponent().empty())
       return sliceBox(rebox, dest, baseAddr, inputExtents, inputStrides,
                       operands, rewriter);
     return reshapeBox(rebox, dest, baseAddr, inputExtents, inputStrides,
@@ -1799,7 +1799,7 @@ private:
     mlir::Type idxTy = lowerTy().indexType();
     mlir::Value zero = genConstantIndex(loc, idxTy, rewriter, 0);
     // Apply subcomponent and substring shift on base address.
-    if (!rebox.subcomponent().empty() || !rebox.substr().empty()) {
+    if (!rebox.getSubcomponent().empty() || !rebox.getSubstr().empty()) {
       // Cast to inputEleTy* so that a GEP can be used.
       mlir::Type inputEleTy = getInputEleTy(rebox);
       auto llvmElePtrTy =
@@ -1808,16 +1808,16 @@ private:
 
       llvm::SmallVector<mlir::Value> fieldIndices;
       llvm::Optional<mlir::Value> substringOffset;
-      if (!rebox.subcomponent().empty())
-        getSubcomponentIndices(rebox, rebox.box(), operands, fieldIndices);
-      if (!rebox.substr().empty())
+      if (!rebox.getSubcomponent().empty())
+        getSubcomponentIndices(rebox, rebox.getBox(), operands, fieldIndices);
+      if (!rebox.getSubstr().empty())
         substringOffset = operands[rebox.substrOffset()];
       base = genBoxOffsetGep(rewriter, loc, base, zero,
                              /*cstInteriorIndices=*/llvm::None, fieldIndices,
                              substringOffset);
     }
 
-    if (rebox.slice().empty())
+    if (rebox.getSlice().empty())
       // The array section is of the form array[%component][substring], keep
       // the input array extents and strides.
       return finalizeRebox(rebox, dest, base, /*lbounds*/ llvm::None,
@@ -1831,7 +1831,7 @@ private:
     llvm::SmallVector<mlir::Value> slicedExtents;
     llvm::SmallVector<mlir::Value> slicedStrides;
     mlir::Value one = genConstantIndex(loc, idxTy, rewriter, 1);
-    const bool sliceHasOrigins = !rebox.shift().empty();
+    const bool sliceHasOrigins = !rebox.getShift().empty();
     unsigned sliceOps = rebox.sliceOffset();
     unsigned shiftOps = rebox.shiftOffset();
     auto strideOps = inputStrides.begin();
@@ -1883,8 +1883,8 @@ private:
              mlir::ConversionPatternRewriter &rewriter) const {
     mlir::ValueRange reboxShifts{operands.begin() + rebox.shiftOffset(),
                                  operands.begin() + rebox.shiftOffset() +
-                                     rebox.shift().size()};
-    if (rebox.shape().empty()) {
+                                     rebox.getShift().size()};
+    if (rebox.getShape().empty()) {
       // Only setting new lower bounds.
       return finalizeRebox(rebox, dest, base, reboxShifts, inputExtents,
                            inputStrides, rewriter);
@@ -1905,7 +1905,7 @@ private:
     mlir::Value stride = inputStrides.empty()
                              ? genConstantIndex(loc, idxTy, rewriter, 1)
                              : inputStrides[0];
-    for (unsigned i = 0; i < rebox.shape().size(); ++i) {
+    for (unsigned i = 0; i < rebox.getShape().size(); ++i) {
       mlir::Value rawExtent = operands[rebox.shapeOffset() + i];
       mlir::Value extent = integerCast(loc, rewriter, idxTy, rawExtent);
       newExtents.emplace_back(extent);
@@ -1919,7 +1919,7 @@ private:
 
   /// Return scalar element type of the input box.
   static mlir::Type getInputEleTy(fir::cg::XReboxOp rebox) {
-    auto ty = fir::dyn_cast_ptrOrBoxEleTy(rebox.box().getType());
+    auto ty = fir::dyn_cast_ptrOrBoxEleTy(rebox.getBox().getType());
     if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
       return seqTy.getEleTy();
     return ty;
@@ -2104,22 +2104,22 @@ struct XArrayCoorOpConversion
     auto loc = coor.getLoc();
     mlir::ValueRange operands = adaptor.getOperands();
     unsigned rank = coor.getRank();
-    assert(coor.indices().size() == rank);
-    assert(coor.shape().empty() || coor.shape().size() == rank);
-    assert(coor.shift().empty() || coor.shift().size() == rank);
-    assert(coor.slice().empty() || coor.slice().size() == 3 * rank);
+    assert(coor.getIndices().size() == rank);
+    assert(coor.getShape().empty() || coor.getShape().size() == rank);
+    assert(coor.getShift().empty() || coor.getShift().size() == rank);
+    assert(coor.getSlice().empty() || coor.getSlice().size() == 3 * rank);
     mlir::Type idxTy = lowerTy().indexType();
     unsigned indexOffset = coor.indicesOffset();
     unsigned shapeOffset = coor.shapeOffset();
     unsigned shiftOffset = coor.shiftOffset();
     unsigned sliceOffset = coor.sliceOffset();
-    auto sliceOps = coor.slice().begin();
+    auto sliceOps = coor.getSlice().begin();
     mlir::Value one = genConstantIndex(loc, idxTy, rewriter, 1);
     mlir::Value prevExt = one;
     mlir::Value offset = genConstantIndex(loc, idxTy, rewriter, 0);
-    const bool isShifted = !coor.shift().empty();
-    const bool isSliced = !coor.slice().empty();
-    const bool baseIsBoxed = coor.memref().getType().isa<fir::BoxType>();
+    const bool isShifted = !coor.getShift().empty();
+    const bool isSliced = !coor.getSlice().empty();
+    const bool baseIsBoxed = coor.getMemref().getType().isa<fir::BoxType>();
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
@@ -2180,14 +2180,14 @@ struct XArrayCoorOpConversion
       llvm::SmallVector<mlir::LLVM::GEPArg> args{offset};
       auto addr =
           rewriter.create<mlir::LLVM::GEPOp>(loc, voidPtrTy, base, args);
-      if (coor.subcomponent().empty()) {
+      if (coor.getSubcomponent().empty()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(coor, ty, addr);
         return mlir::success();
       }
       auto casted = rewriter.create<mlir::LLVM::BitcastOp>(loc, baseTy, addr);
       args.clear();
       args.push_back(0);
-      if (!coor.lenParams().empty()) {
+      if (!coor.getLenParams().empty()) {
         // If type parameters are present, then we don't want to use a GEPOp
         // as below, as the LLVM struct type cannot be statically defined.
         TODO(loc, "derived type with type parameters");
@@ -2204,14 +2204,14 @@ struct XArrayCoorOpConversion
     // element offset and the base type is kept in the GEP unless the element
     // type size is itself dynamic.
     mlir::Value base;
-    if (coor.subcomponent().empty()) {
+    if (coor.getSubcomponent().empty()) {
       // No subcomponent.
-      if (!coor.lenParams().empty()) {
+      if (!coor.getLenParams().empty()) {
         // Type parameters. Adjust element size explicitly.
         auto eleTy = fir::dyn_cast_ptrEleTy(coor.getType());
         assert(eleTy && "result must be a reference-like type");
         if (fir::characterWithDynamicLen(eleTy)) {
-          assert(coor.lenParams().size() == 1);
+          assert(coor.getLenParams().size() == 1);
           auto length = integerCast(loc, rewriter, idxTy,
                                     operands[coor.lenParamsOffset()]);
           offset =
